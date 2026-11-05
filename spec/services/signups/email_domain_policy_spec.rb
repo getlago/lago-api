@@ -177,4 +177,40 @@ RSpec.describe Signups::EmailDomainPolicy do
       end
     end
   end
+
+  describe ".allowed_domains" do
+    subject(:domains) { described_class.allowed_domains }
+
+    let(:value) { " Acme.com, ,beta.io " } # a no-break space, as a paste from a chat app can bring
+
+    before do
+      stub_const("ENV", ENV.to_h.merge("LAGO_SIGNUP_ALLOWED_EMAIL_DOMAINS" => value))
+      allow(Rails.logger).to receive(:error)
+    end
+
+    it "reads the domains from LAGO_SIGNUP_ALLOWED_EMAIL_DOMAINS" do
+      expect(domains).to eq(Set["acme.com", "beta.io"]).and be_frozen
+      expect(Rails.logger).not_to have_received(:error)
+    end
+
+    context "when the variable is unset" do
+      let(:value) { nil }
+
+      it "is empty" do
+        expect(domains).to eq(Set[])
+      end
+    end
+
+    context "with entries that are not domain names" do
+      let(:value) { "acme.com;beta.io, gamma.io, jane@acme.com, \xFF.com" }
+
+      it "skips and logs each of them, keeping the others" do
+        expect(domains).to eq(Set["gamma.io"])
+        expect(Rails.logger).to have_received(:error).with(%(LAGO_SIGNUP_ALLOWED_EMAIL_DOMAINS: "acme.com;beta.io" is not a domain name, entry ignored))
+        expect(Rails.logger).to have_received(:error).with(%(LAGO_SIGNUP_ALLOWED_EMAIL_DOMAINS: " jane@acme.com" is not a domain name, entry ignored))
+        expect(Rails.logger).to have_received(:error).with(%(LAGO_SIGNUP_ALLOWED_EMAIL_DOMAINS: " �.com" is not a domain name, entry ignored))
+        expect(Rails.logger).to have_received(:error).exactly(3).times
+      end
+    end
+  end
 end

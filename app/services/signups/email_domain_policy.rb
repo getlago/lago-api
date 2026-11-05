@@ -9,20 +9,27 @@ module Signups
     ALLOWED_ENV = "LAGO_SIGNUP_ALLOWED_EMAIL_DOMAINS"
     OVERRIDES_PATH = Rails.root.join("app/config/signup_email_domains.yaml")
 
+    # Raises on an entry that is not a domain name, unless a block takes the message instead.
     def self.parse_domains(value, source:)
       entries = value.is_a?(String) ? value.split(",") : Array(value)
 
       entries.filter_map do |entry|
-        domain = entry.to_s.strip.downcase
+        domain = entry.to_s.squish.downcase
         next if domain.empty?
-        raise ArgumentError, "#{source}: #{entry.inspect} is not a domain name" unless HOSTNAME.match?(domain)
+        next domain.freeze if HOSTNAME.match?(domain)
 
-        domain.freeze
+        message = "#{source}: #{entry.inspect} is not a domain name"
+        block_given? ? yield(message) : raise(ArgumentError, message)
+        nil
       end.to_set.freeze
     end
 
-    # Allowed entries name prospects, so they come from the environment, not from this public repository.
-    ALLOWED_DOMAINS = parse_domains(ENV[ALLOWED_ENV], source: ALLOWED_ENV)
+    # Allowed entries name prospects, so they come from the environment, not from this public repository. A typo can
+    # never match a domain, so it is logged and skipped: raising would stop signup, or every process if read at boot.
+    def self.allowed_domains(value: ENV[ALLOWED_ENV])
+      parse_domains(value.to_s.scrub, source: ALLOWED_ENV) { Rails.logger.error("#{it}, entry ignored") }
+    end
+
     OVERRIDES = YAML.safe_load_file(OVERRIDES_PATH).to_h.freeze
     DENIED_DOMAINS = parse_domains(OVERRIDES["denied"], source: "signup_email_domains.yaml")
     COMPANY_SUFFIXES = parse_domains(OVERRIDES["company_suffixes"], source: "signup_email_domains.yaml")
@@ -36,7 +43,7 @@ module Signups
         free: EmailData.free_email_domains,
         disposable: EmailData.disposable_domains,
         private_relays: EmailData.private_relays,
-        allowed: ALLOWED_DOMAINS,
+        allowed: allowed_domains,
         denied: DENIED_DOMAINS,
         company_suffixes: COMPANY_SUFFIXES
       )
