@@ -51,7 +51,7 @@ module Signups
 
     private
 
-    attr_reader :token, :signup_secret, :password, :checked_password_digest
+    attr_reader :token, :signup_secret, :password
 
     def check_password(token_record, pending_signup)
       return result.single_validation_failure!(field: :password, error_code: "password_required") if password.blank?
@@ -59,7 +59,6 @@ module Signups
       return incorrect_password if password.bytesize > ActiveModel::SecurePassword::MAX_PASSWORD_LENGTH_ALLOWED
       return refuse(token_record.reload) unless claim_password_try(token_record)
 
-      @checked_password_digest = pending_signup.password_digest
       incorrect_password unless pending_signup.authenticate(password)
     end
 
@@ -81,7 +80,6 @@ module Signups
       status = token_record.verification_status(by_password:)
       # A password try claimed within the limit stays valid, even when it is the one that reached the limit.
       status = :valid if status == :locked && by_password
-      status = :already_verified if status == :valid && by_password && pending_signup.password_digest != checked_password_digest
       unless status == :valid
         refuse(token_record, status:)
         return
