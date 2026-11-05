@@ -20,9 +20,10 @@ class PendingSignup < ApplicationRecord
   validates :email, :normalized_email, :mailbox_key, :signup_secret_digest, :expires_at, presence: true
   validates :password_digest, presence: true, on: :create
 
-  # The normalization of the user lookups (LOWER(email)) and of Auth::AttemptsThrottle.
+  # The normalization of the user lookups (LOWER(email)), composed after downcasing as the mailbox key is, so both
+  # Unicode spellings of an address share it.
   def self.normalize_email(email)
-    User.normalize_value_for(:email, email.to_s).to_s.downcase
+    User.normalize_value_for(:email, email.to_s).to_s.downcase.unicode_normalize(:nfc)
   end
 
   def self.mailbox_key(email)

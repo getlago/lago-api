@@ -30,7 +30,7 @@ module Signups
         next false if PendingSignup.mailbox_send_refusal(mailbox_key, now)
 
         pending_signup = PendingSignup.create!(
-          email: User.normalize_value_for(:email, email),
+          email: stored_email(validation.email),
           normalized_email: PendingSignup.normalize_email(validation.email),
           mailbox_key:,
           password_digest:,
@@ -57,6 +57,13 @@ module Signups
       password_errors = password.blank? ? ["value_is_mandatory"] : PasswordPolicy.violations(password)
 
       {email: validation.error&.messages&.dig(:email), password: password_errors.presence}.compact
+    end
+
+    # The typed case for an ASCII address. Otherwise the lookup key itself, so that LOWER(email) of the user confirm
+    # creates equals it: PostgreSQL lowercases İ otherwise than Ruby, and J̌ composes only once lowercased.
+    def stored_email(key)
+      typed = User.normalize_value_for(:email, email)
+      typed.ascii_only? ? typed : key
     end
 
     # The hourly budget is hit only when the minute one passed, so a refused double click does not use it up.

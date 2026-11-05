@@ -27,6 +27,11 @@ RSpec.describe PendingSignup do
     it "sanitizes and downcases like the user lookups" do
       expect(described_class.normalize_email(" Jane​@GetLago.com ")).to eq("jane@getlago.com")
     end
+
+    it "composes after downcasing, as the mailbox key does" do
+      expect(described_class.normalize_email("Joa\u0303o@GetLago.com")).to eq("jo\u00E3o@getlago.com")
+      expect(described_class.normalize_email("J\u030Cohn@getlago.com")).to eq("\u01F0ohn@getlago.com")
+    end
   end
 
   describe ".mailbox_key" do

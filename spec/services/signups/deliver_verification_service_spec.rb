@@ -43,6 +43,19 @@ RSpec.describe Signups::DeliverVerificationService do
     end
   end
 
+  context "when the address has a user and the attempt spells it decomposed" do
+    let(:pending_signup) { create(:pending_signup, email: "Joa\u0303o@GetLago.com") }
+
+    before { create(:user, email: "jo\u00E3o@getlago.com") }
+
+    it "emails that an account exists" do
+      result
+
+      expect(ActionMailer::Base.deliveries.last.subject).to eq("You already have a Lago account")
+      expect(pending_signup.tokens).to be_empty
+    end
+  end
+
   context "when the attempt is verified" do
     let(:pending_signup) { create(:pending_signup, :verified) }
 

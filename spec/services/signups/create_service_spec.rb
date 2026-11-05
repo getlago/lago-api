@@ -41,6 +41,16 @@ RSpec.describe Signups::CreateService do
     end
   end
 
+  context "with an address pasted in its decomposed Unicode form" do
+    let(:email) { "Joa\u0303o@GetLago.com" }
+
+    it "stores it as its lowercase composed lookup key" do
+      result
+
+      expect(PendingSignup.sole).to have_attributes(email: "jo\u00E3o@getlago.com", normalized_email: "jo\u00E3o@getlago.com")
+    end
+  end
+
   context "when the address already has a user, whatever its case" do
     before { create(:user, email: "jane@getlago.com") }
 
