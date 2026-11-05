@@ -1534,6 +1534,7 @@ DROP TYPE IF EXISTS public.entitlement_privilege_value_types;
 DROP TYPE IF EXISTS public.customer_type;
 DROP TYPE IF EXISTS public.customer_account_type;
 DROP TYPE IF EXISTS public.contract_status;
+DROP TYPE IF EXISTS public.contract_rate_cards_units_application_timing;
 DROP TYPE IF EXISTS public.contract_payment_method_type;
 DROP TYPE IF EXISTS public.contract_billing_time;
 DROP TYPE IF EXISTS public.connection_category;
@@ -1668,6 +1669,16 @@ CREATE TYPE public.contract_billing_time AS ENUM (
 CREATE TYPE public.contract_payment_method_type AS ENUM (
     'provider',
     'manual'
+);
+
+
+--
+-- Name: contract_rate_cards_units_application_timing; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.contract_rate_cards_units_application_timing AS ENUM (
+    'current_billing_cycle',
+    'next_billing_cycle'
 );
 
 
@@ -2849,7 +2860,8 @@ CREATE TABLE public.contract_rate_cards_units (
     units numeric NOT NULL,
     effective_date date NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    application_timing public.contract_rate_cards_units_application_timing DEFAULT 'current_billing_cycle'::public.contract_rate_cards_units_application_timing NOT NULL
 );
 
 
@@ -16063,6 +16075,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261105094449'),
 ('20261104144002'),
 ('20261103084714'),
 ('20261103084708'),

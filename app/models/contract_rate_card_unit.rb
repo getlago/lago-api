@@ -3,6 +3,13 @@
 class ContractRateCardUnit < ApplicationRecord
   self.table_name = "contract_rate_cards_units"
 
+  APPLICATION_TIMINGS = {
+    current_billing_cycle: "current_billing_cycle",
+    next_billing_cycle: "next_billing_cycle"
+  }.freeze
+
+  enum :application_timing, APPLICATION_TIMINGS, default: :current_billing_cycle, validate: true
+
   belongs_to :organization
   belongs_to :contract_rate_card, -> { with_discarded }, inverse_of: :units
 
@@ -26,6 +33,7 @@ end
 # Database name: primary
 #
 #  id                    :uuid             not null, primary key
+#  application_timing    :enum             default("current_billing_cycle"), not null
 #  effective_date        :date             not null
 #  units                 :decimal(, )      not null
 #  created_at            :datetime         not null

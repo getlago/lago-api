@@ -5,6 +5,16 @@ require "rails_helper"
 RSpec.describe ContractRateCardUnit do
   subject(:unit) { build(:contract_rate_card_unit) }
 
+  describe "enums" do
+    it do
+      expect(unit).to define_enum_for(:application_timing)
+        .backed_by_column_of_type(:enum)
+        .with_values(current_billing_cycle: "current_billing_cycle", next_billing_cycle: "next_billing_cycle")
+        .with_default(:current_billing_cycle)
+        .validating(allowing_nil: false)
+    end
+  end
+
   describe "associations" do
     it do
       expect(unit).to belong_to(:organization)
@@ -47,6 +57,31 @@ RSpec.describe ContractRateCardUnit do
       it "is invalid" do
         expect(unit).not_to be_valid
         expect(unit.errors.attribute_names).to include(:effective_date)
+      end
+    end
+  end
+
+  describe "application_timing persistence" do
+    let(:unit) { create(:contract_rate_card_unit, application_timing: :next_billing_cycle) }
+
+    it "persists next_billing_cycle" do
+      expect(unit.reload.application_timing).to eq("next_billing_cycle")
+    end
+
+    context "when no timing is supplied" do
+      let(:unit) { create(:contract_rate_card_unit) }
+
+      it "persists the default timing" do
+        expect(unit.reload.application_timing).to eq("current_billing_cycle")
+      end
+    end
+
+    context "with an invalid timing" do
+      let(:unit) { build(:contract_rate_card_unit, application_timing: "invalid") }
+
+      it "rejects the value" do
+        expect(unit).not_to be_valid
+        expect(unit.errors.attribute_names).to include(:application_timing)
       end
     end
   end
