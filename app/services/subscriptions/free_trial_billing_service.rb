@@ -13,7 +13,8 @@ module Subscriptions
     def call
       ending_trial_subscriptions.each do |subscription|
         if !subscription.was_already_billed_today &&
-            !already_billed_on_day_one?(subscription)
+            !already_billed_on_day_one?(subscription) &&
+            !periodic_billing_day?(subscription)
 
           if subscription.plan.pay_in_advance?
             BillSubscriptionJob.perform_later(
@@ -40,6 +41,19 @@ module Subscriptions
     private
 
     attr_reader :timestamp
+
+    # When the trial ends on the billing day itself, the periodic biller owns that day:
+    # it will charge the full period (the trial is over for the whole period being billed).
+    # Billing here too would duplicate the subscription fee, since both jobs may overlap
+    # before either invoice is persisted.
+    def periodic_billing_day?(subscription)
+      tz = subscription.customer.applicable_timezone
+      period_start = Subscriptions::DatesService
+        .new_instance(subscription, timestamp, current_usage: false)
+        .from_datetime&.in_time_zone(tz)&.to_date
+
+      period_start.present? && period_start == subscription.trial_end_datetime.in_time_zone(tz).to_date
+    end
 
     # This is to avoid billing at the end of the trial if the customer was billed at the beginning
     # It's only for users who started billing customer AND upgraded their lago with this feature
@@ -76,7 +90,10 @@ module Subscriptions
           subscriptions.status = 1
           AND plans.trial_period > 0
           AND subscriptions.trial_ended_at IS NULL
-          AND #{trial_end_date + at_time_zone} <= '#{timestamp}'#{at_time_zone}
+          -- Compare DATES in the customer timezone, not exact instants: fees already treat the
+          -- whole trial end date as the first paid day (Fees::SubscriptionService), so billing
+          -- must happen on that date too, not up to a day later when the signup time of day passes.
+          AND DATE(#{trial_end_date + at_time_zone}) <= DATE('#{timestamp}'#{at_time_zone})
       SQL
 
       Subscription.find_by_sql([sql, {timestamp:}])
