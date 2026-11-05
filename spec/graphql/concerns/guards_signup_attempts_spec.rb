@@ -137,6 +137,18 @@ RSpec.describe GuardsSignupAttempts do
     expect(code(start(ip: "2001:db8:1:ff::a"))).to eq("too_many_requests")
   end
 
+  it "keeps attempts refused by a network's own limit out of its /48's budget" do
+    60.times { start(ip: "2001:db8:1:2::a") } # 10 pass, then the /64 is over its limit
+
+    expect(code(start(ip: "2001:db8:1:3::a"))).to be_nil
+  end
+
+  it "keeps attempts refused by the hourly limit out of the daily budget" do
+    30.times { start } # 10 pass, 20 refused
+
+    travel_to(61.minutes.from_now) { expect(Array.new(10) { code(start) }).to all(be_nil) }
+  end
+
   it "verifies the cross-device confirm with its own action and limit" do
     stub_recaptcha_siteverify(action: Signups::VerifyCaptchaService::SIGNUP_CONFIRM)
     confirm = -> { run("mutation($token: String) { confirmThing(input: {captchaToken: $token}) { ok } }") }

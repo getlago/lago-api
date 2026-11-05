@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Public self-serve signup endpoints call signup_guard_error right after the self-serve gate, before any other work.
-# GUARDS holds each endpoint's rules and reCAPTCHA action, so endpoints declare none of their own.
+# GUARDS holds each endpoint's rules, narrowest first, and reCAPTCHA action, so endpoints declare none of their own.
 module GuardsSignupAttempts
   extend ActiveSupport::Concern
   include ThrottlesAuthAttempts
@@ -59,11 +59,12 @@ module GuardsSignupAttempts
     result_error(captcha) unless captcha.success?
   end
 
-  # Every rule counts the attempt before any is checked, so concurrent requests cannot all pass under a limit.
+  # Stops at the first rule over its limit, so a refused attempt never uses up a wider budget (its /48, its day). Each
+  # counter increments before its check, so concurrent requests cannot all pass under a limit.
   def signup_rules_over_limit?(rules)
-    over = rules.select { Auth::AttemptsThrottle.hit!(it, client_ip) }
-    report_signup_limit(over) if over.any?
-    over.any?
+    rule = rules.find { Auth::AttemptsThrottle.hit!(it, client_ip) }
+    report_signup_limit([rule]) if rule
+    !rule.nil?
   end
 
   # Never logs the IP. A trip from a trusted proxy address usually means the proxy in front of the API forwards no client
