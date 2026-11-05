@@ -69,6 +69,29 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
       totals = result["data"]["contractCurrentUsageTotal"]
       expect(totals).to eq("amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200")
     end
+
+    context "when the tax provider fails" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:endpoint) { "https://api.nango.dev/action/trigger" }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        create(:netsuite_collection_mapping, integration:, mapping_type: :fallback_item,
+          settings: {external_id: "1", external_account_code: "11", external_name: ""})
+        create(:rate_card_applied_tax, rate_card:, tax: create(:tax, organization:, rate: 20))
+        stub_request(:post, endpoint).to_raise(Net::ReadTimeout)
+      end
+
+      it "falls back to the untaxed total instead of failing the whole query" do
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:, variables: {contractId: contract.id}
+        )
+
+        totals = result["data"]["contractCurrentUsageTotal"]
+        expect(totals).to eq("amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200")
+      end
+    end
   end
 
   context "when the contract belongs to another organization" do
