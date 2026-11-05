@@ -25,7 +25,7 @@ module Resolvers
         }
       )
 
-      result.webhook_endpoints
+      result.webhook_endpoints.includes(:usable_signing_keys)
     end
   end
 end

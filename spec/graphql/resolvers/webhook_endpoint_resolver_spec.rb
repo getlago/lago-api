@@ -15,6 +15,7 @@ RSpec.describe Resolvers::WebhookEndpointResolver do
           id
           webhookUrl
           signatureAlgo
+          signingKeys { id secretKey createdAt }
           name
           eventTypes
           createdAt
@@ -57,5 +58,61 @@ RSpec.describe Resolvers::WebhookEndpointResolver do
     expect(webhook_endpoint_response["updatedAt"]).to eq(webhook_endpoint.updated_at.iso8601)
     expect(webhook_endpoint_response["organization"]["id"]).to eq(organization.id)
     expect(webhook_endpoint_response["organization"]["name"]).to eq(organization.name)
+  end
+
+  describe "signingKeys" do
+    subject(:webhook_endpoint_response) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions:,
+        query:,
+        variables: {webhookEndpointId: webhook_endpoint.id}
+      )["data"]["webhookEndpoint"]
+    end
+
+    let(:permissions) { %w[developers:manage developers:keys:manage] }
+
+    context "with a standard_webhooks endpoint" do
+      let(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks, organization:) }
+
+      it "returns its signing key" do
+        signing_key = webhook_endpoint.signing_keys.sole
+
+        expect(webhook_endpoint_response["signingKeys"]).to eq([{"id" => signing_key.id, "secretKey" => signing_key.secret_key, "createdAt" => signing_key.created_at.iso8601}])
+        expect(signing_key.secret_key).to match(/\Awhsec_/)
+      end
+
+      context "without developers:keys:manage permission" do
+        let(:permissions) { "developers:manage" }
+
+        it "returns null signing keys and resolves the other fields" do
+          expect(webhook_endpoint_response).to include(
+            "id" => webhook_endpoint.id,
+            "webhookUrl" => webhook_endpoint.webhook_url,
+            "signatureAlgo" => "standard_webhooks",
+            "signingKeys" => nil
+          )
+        end
+      end
+    end
+
+    context "with an hmac endpoint" do
+      let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :hmac) }
+
+      it "returns no signing keys" do
+        expect(webhook_endpoint_response).to include("id" => webhook_endpoint.id, "signingKeys" => [])
+      end
+    end
+
+    context "with a jwt endpoint that kept a signing key" do
+      let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :jwt) }
+
+      before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+      it "returns no signing keys" do
+        expect(webhook_endpoint_response).to include("id" => webhook_endpoint.id, "signingKeys" => [])
+      end
+    end
   end
 end

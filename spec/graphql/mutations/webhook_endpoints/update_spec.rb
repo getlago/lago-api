@@ -24,6 +24,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
           id,
           webhookUrl,
           signatureAlgo,
+          signingKeys { id secretKey createdAt },
           name,
           eventTypes
         }
@@ -96,6 +97,31 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
       it "creates a signing key" do
         expect { result }.to change(webhook_endpoint.signing_keys, :count).from(0).to(1)
       end
+
+      it "without developers:keys:manage permission, returns null signing keys" do
+        expect(result["data"]["updateWebhookEndpoint"]).to include("id" => webhook_endpoint.id, "signingKeys" => nil)
+        expect(webhook_endpoint.signing_keys.count).to eq(1)
+      end
+
+      context "with developers:keys:manage permission" do
+        let(:result) do
+          execute_graphql(
+            current_user: membership.user,
+            current_organization: membership.organization,
+            permissions: %w[developers:manage developers:keys:manage],
+            query: mutation,
+            variables: {input:}
+          )
+        end
+
+        it "returns the new signing key" do
+          signing_keys = result["data"]["updateWebhookEndpoint"]["signingKeys"]
+          signing_key = webhook_endpoint.signing_keys.sole
+
+          expect(signing_keys).to eq([{"id" => signing_key.id, "secretKey" => signing_key.secret_key, "createdAt" => signing_key.created_at.iso8601}])
+          expect(signing_key.secret_key).to match(/\Awhsec_/)
+        end
+      end
     end
 
     context "when the endpoint already uses Standard Webhooks" do
@@ -122,6 +148,27 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
           expect(result["data"]["updateWebhookEndpoint"]).to include("signatureAlgo" => "standard_webhooks")
           expect(webhook_endpoint.signing_keys.reload.pluck(:id)).to eq(signing_key_ids)
           expect(signing_key_ids.size).to eq(1)
+        end
+
+        context "when switching back to hmac" do
+          let(:input) { {id: webhook_endpoint.id, webhookUrl: webhook_url, signatureAlgo: "hmac"} }
+          let(:result) do
+            execute_graphql(
+              current_user: membership.user,
+              current_organization: membership.organization,
+              permissions: %w[developers:manage developers:keys:manage],
+              query: mutation,
+              variables: {input:}
+            )
+          end
+
+          it "returns no signing keys" do
+            expect(result["data"]["updateWebhookEndpoint"]).to include(
+              "id" => webhook_endpoint.id,
+              "signatureAlgo" => "hmac",
+              "signingKeys" => []
+            )
+          end
         end
       end
     end

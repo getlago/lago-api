@@ -8,6 +8,7 @@ RSpec.describe Types::WebhookEndpoints::Object do
   it do
     expect(subject).to have_field(:id).of_type("ID!")
     expect(subject).to have_field(:organization).of_type("Organization")
+    expect(subject).to have_field(:signing_keys).of_type("[WebhookEndpointSigningKey!]").with_permission("developers:keys:manage")
     expect(subject).to have_field(:webhook_url).of_type("String!")
     expect(subject).to have_field(:signature_algo).of_type("WebhookEndpointSignatureAlgoEnum")
     expect(subject).to have_field(:name).of_type("String")

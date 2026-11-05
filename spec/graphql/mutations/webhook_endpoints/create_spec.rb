@@ -22,6 +22,7 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
           id,
           webhookUrl,
           signatureAlgo,
+          signingKeys { id secretKey createdAt },
           name,
           eventTypes
         }
@@ -93,6 +94,33 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
 
         endpoint = WebhookEndpoint.find(result["data"]["createWebhookEndpoint"]["id"])
         expect(endpoint.signing_keys.count).to eq(1)
+      end
+
+      it "without developers:keys:manage permission, returns null signing keys" do
+        endpoint = WebhookEndpoint.find(result["data"]["createWebhookEndpoint"]["id"])
+
+        expect(result["data"]["createWebhookEndpoint"]).to include("id" => endpoint.id, "signingKeys" => nil)
+        expect(endpoint.signing_keys.count).to eq(1)
+      end
+
+      context "with developers:keys:manage permission" do
+        let(:result) do
+          execute_graphql(
+            current_user: membership.user,
+            current_organization: membership.organization,
+            permissions: %w[developers:manage developers:keys:manage],
+            query: mutation,
+            variables: {input:}
+          )
+        end
+
+        it "returns the new signing key" do
+          endpoint_response = result["data"]["createWebhookEndpoint"]
+          signing_key = WebhookEndpoint.find(endpoint_response["id"]).signing_keys.sole
+
+          expect(endpoint_response["signingKeys"]).to eq([{"id" => signing_key.id, "secretKey" => signing_key.secret_key, "createdAt" => signing_key.created_at.iso8601}])
+          expect(signing_key.secret_key).to match(/\Awhsec_/)
+        end
       end
     end
   end

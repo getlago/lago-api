@@ -8,7 +8,7 @@ RSpec.describe Resolvers::WebhookEndpointsResolver do
     <<~GQL
       query {
         webhookEndpoints(limit: 5) {
-          collection { id webhookUrl signatureAlgo name eventTypes }
+          collection { id webhookUrl signatureAlgo name eventTypes signingKeys { id secretKey createdAt } }
           metadata { currentPage, totalCount }
         }
       }
@@ -44,5 +44,40 @@ RSpec.describe Resolvers::WebhookEndpointsResolver do
       "currentPage" => 1,
       "totalCount" => 1
     )
+  end
+
+  context "with standard_webhooks endpoints" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: %w[developers:manage developers:keys:manage],
+        query:
+      )
+    end
+
+    let(:membership) { create(:membership, organization: create(:organization, webhook_url: nil)) }
+    let(:first_endpoint) { create(:webhook_endpoint, :standard_webhooks, organization:) }
+    let(:second_endpoint) { create(:webhook_endpoint, :standard_webhooks, organization:) }
+    let(:hmac_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :hmac) }
+
+    before do
+      first_endpoint
+      second_endpoint
+      create(:webhook_endpoint_signing_key, webhook_endpoint: hmac_endpoint)
+    end
+
+    it "returns the signing keys of each standard_webhooks endpoint in one query" do
+      statements = capture_sql { result }
+
+      expect(result["data"]["webhookEndpoints"]["collection"].map { it.slice("id", "signingKeys") }).to match_array(
+        [
+          {"id" => first_endpoint.id, "signingKeys" => [{"id" => first_endpoint.signing_keys.sole.id, "secretKey" => first_endpoint.signing_keys.sole.secret_key, "createdAt" => first_endpoint.signing_keys.sole.created_at.iso8601}]},
+          {"id" => second_endpoint.id, "signingKeys" => [{"id" => second_endpoint.signing_keys.sole.id, "secretKey" => second_endpoint.signing_keys.sole.secret_key, "createdAt" => second_endpoint.signing_keys.sole.created_at.iso8601}]},
+          {"id" => hmac_endpoint.id, "signingKeys" => []}
+        ]
+      )
+      expect(statements.grep(/FROM "webhook_endpoint_signing_keys"/).size).to eq(1)
+    end
   end
 end

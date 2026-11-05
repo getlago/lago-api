@@ -17400,6 +17400,7 @@ type WebhookEndpoint {
   name: String
   organization: Organization
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
+  signingKeys: [WebhookEndpointSigningKey!]
   updatedAt: ISO8601DateTime!
   webhookUrl: String!
 }
@@ -17437,6 +17438,12 @@ enum WebhookEndpointSignatureAlgoEnum {
   hmac
   jwt
   standard_webhooks
+}
+
+type WebhookEndpointSigningKey {
+  createdAt: ISO8601DateTime!
+  id: ID!
+  secretKey: String!
 }
 
 """
