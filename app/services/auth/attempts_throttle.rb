@@ -99,11 +99,11 @@ module Auth
       "auth_attempts:#{rule_name}:#{Digest::SHA256.hexdigest(value)}"
     end
 
-    # Emails go through the same normalization as the User lookup (invisible characters removed,
-    # dash lookalikes replaced), so spelling variants of one address share a counter.
+    # Emails go through the normalization of the User lookup (invisible characters removed, dash lookalikes replaced,
+    # case and Unicode spelling ignored), so spelling variants of one address share a counter.
     def normalize(type, identifier)
       case type
-      when :email then User.normalize_value_for(:email, identifier.to_s).to_s.strip.downcase
+      when :email then PendingSignup.normalize_email(identifier)
       when :ip_network then ip_prefix(identifier, ipv6_prefix: 64)
       when :ip_block then ip_prefix(identifier, ipv6_prefix: 48)
       else identifier.to_s.strip.downcase
