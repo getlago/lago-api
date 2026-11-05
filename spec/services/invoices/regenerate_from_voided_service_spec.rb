@@ -94,6 +94,39 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "with the payment term" do
+      it "inherits the voided invoice's snapshotted term instead of the live customer term" do
+        voided_invoice.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+        customer.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+
+        invoice = regenerate_result.invoice
+        expect(invoice.payment_term).to eq("term_type" => "net", "days" => 60)
+        expect(invoice.net_payment_term).to eq(60)
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date + 60.days)
+      end
+
+      it "calculates a non-net snapshot from the new issuing date" do
+        voided_invoice.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+        customer.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+
+        invoice = regenerate_result.invoice
+
+        expect(invoice.payment_term).to eq("term_type" => "end_of_month")
+        expect(invoice.net_payment_term).to be_nil
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date.end_of_month)
+      end
+
+      it "derives a net term from the integer alias of a pre-feature voided invoice" do
+        voided_invoice.update!(payment_term: nil, net_payment_term: 30, payment_term_source: nil)
+
+        invoice = regenerate_result.invoice
+        expect(invoice.payment_term).to eq("term_type" => "net", "days" => 30)
+        expect(invoice.payment_term_source).to be_nil
+        expect(invoice.net_payment_term).to eq(30)
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date + 30.days)
+      end
+    end
+
     context "with the purchase order number" do
       before { voided_invoice.update!(purchase_order_number: "PO-ORIGINAL") }
 
@@ -285,6 +318,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           :customer,
           organization:,
           invoice_grace_period: 30,
+          payment_term: {term_type: "net", days: 30},
           net_payment_term: 30,
           subscription_invoice_issuing_date_anchor:,
           subscription_invoice_issuing_date_adjustment:
