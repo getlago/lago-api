@@ -568,6 +568,7 @@ module Lago
           setting("Enriched events topic", "LAGO_KAFKA_ENRICHED_EVENTS_TOPIC")
           setting("Product raw events topic", "LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC")
           setting("Product enriched events topic", "LAGO_KAFKA_PRODUCT_ENRICHED_EVENTS_TOPIC")
+          setting("Product events dead letter topic", "LAGO_KAFKA_PRODUCT_EVENTS_DEAD_LETTER_TOPIC")
           setting("API logs topic", "LAGO_KAFKA_API_LOGS_TOPIC")
           setting("Activity logs topic", "LAGO_KAFKA_ACTIVITY_LOGS_TOPIC")
           setting("Security logs topic", "LAGO_KAFKA_SECURITY_LOGS_TOPIC")
