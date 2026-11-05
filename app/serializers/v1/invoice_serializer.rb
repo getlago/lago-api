@@ -76,7 +76,7 @@ module V1
     def subscriptions
       ::CollectionSerializer.new(
         model.sorted_invoice_subscriptions
-          .includes(subscription: [:plan, :billing_object_connections, {customer: [:payment_provider_customers, :integration_customers]}])
+          .includes(subscription: [:plan, :billing_entity, :billing_object_connections, {customer: [:billing_entity, :payment_provider_customers, :integration_customers]}])
           .map(&:subscription),
         ::V1::SubscriptionSerializer,
         collection_name: "subscriptions",

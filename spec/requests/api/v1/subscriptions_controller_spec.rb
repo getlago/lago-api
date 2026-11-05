@@ -337,6 +337,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(response).to have_http_status(:ok)
           subscription = Subscription.find_by(external_id: params[:external_id])
           expect(subscription.billing_entity_id).to eq(billing_entity.id)
+          expect(json[:subscription][:billing_entity_code]).to eq(billing_entity.code)
         end
 
         context "when binding via billing_entity_id instead of code" do
@@ -376,6 +377,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(response).to have_http_status(:ok)
           subscription = Subscription.find_by(external_id: params[:external_id])
           expect(subscription.billing_entity_id).to be_nil
+          expect(json[:subscription][:billing_entity_code]).to eq(customer.billing_entity.code)
         end
       end
     end
@@ -1969,6 +1971,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
               expect(response).to have_http_status(:success)
               expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+              expect(json[:subscription][:billing_entity_code]).to eq(new_billing_entity.code)
             end
           end
 

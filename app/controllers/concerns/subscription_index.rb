@@ -24,6 +24,7 @@ module SubscriptionIndex
       subscriptions = result.subscriptions
         .includes(
           :plan,
+          :billing_entity,
           :activation_rules,
           :billing_object_connections,
           previous_subscription: :plan,
