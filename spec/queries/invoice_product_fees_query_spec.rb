@@ -71,6 +71,14 @@ RSpec.describe InvoiceProductFeesQuery do
     ])
   end
 
+  context "with a blank invoice display name" do
+    let(:salad) { create(:product, organization:, product_category: food, name: "Salad", code: "salad", invoice_display_name: " ") }
+
+    it "sorts on the name, as the PDF does" do
+      expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+  end
+
   context "with a contract without a name or a plan" do
     before { product_fee(create(:contract, organization:, customer:, name: nil, catalog_plan: nil), wine, amount_cents: 1) }
 
