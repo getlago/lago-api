@@ -215,11 +215,12 @@ RSpec.describe Signups::VerifyCaptchaService do
   end
 
   context "when Google fails" do
-    it "is unavailable for an error status, a timeout, a refused connection or an unexpected body" do
+    it "is unavailable for an error status, a timeout, a refused connection, a garbled reply or an unexpected body" do
       [
         -> { it.to_return(status: 500, body: "") },
         -> { it.to_timeout },
         -> { it.to_raise(Errno::ECONNREFUSED) },
+        -> { it.to_raise(Net::HTTPBadResponse) },
         -> { it.to_return(status: 200, body: "<html>") },
         -> { it.to_return(status: 200, body: "[]") }
       ].each do |answer|

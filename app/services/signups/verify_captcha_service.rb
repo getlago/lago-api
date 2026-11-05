@@ -15,7 +15,10 @@ module Signups
     MAX_TOKEN_LENGTH = 4_096
     # Verdicts on the token itself (bot, replay, expired page), as opposed to our secret or request.
     TOKEN_ERROR_CODES = %w[missing-input-response invalid-input-response timeout-or-duplicate].freeze
-    NETWORK_ERRORS = [IOError, OpenSSL::SSL::SSLError, SocketError, SystemCallError, Timeout::Error].freeze
+    NETWORK_ERRORS = [
+      IOError, OpenSSL::SSL::SSLError, SocketError, SystemCallError, Timeout::Error,
+      Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError, Zlib::Error
+    ].freeze
 
     Result = BaseResult[:score]
 
