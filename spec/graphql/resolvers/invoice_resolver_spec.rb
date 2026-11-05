@@ -571,7 +571,8 @@ RSpec.describe Resolvers::InvoiceResolver do
       contract_rate_card = create(:contract_rate_card, contract:, rate_card:)
 
       create(:fee, invoice:, subscription: nil, fee_type: :product,
-        invoiceable: product, contract:, contract_rate_card:, product_filter:, amount_cents:)
+        invoiceable: product, contract:, contract_rate_card:, product_filter:, amount_cents:,
+        rate_card_rate: create(:rate_card_rate, rate_card:))
     end
 
     it "groups the fees by contract, category, product and filter" do
