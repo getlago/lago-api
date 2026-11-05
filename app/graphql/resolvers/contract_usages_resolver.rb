@@ -24,6 +24,11 @@ module Resolvers
     type Types::RateCardUsages::Object.collection_type, null: false
 
     def resolve(contract_id:, page: 1, limit: 20, search_term: nil, **filters)
+      page ||= 1
+      limit ||= 20
+      return validation_error(messages: {page: ["value_is_out_of_range"]}) unless page.positive?
+      return validation_error(messages: {limit: ["value_is_out_of_range"]}) unless limit.positive?
+
       contract = current_organization.contracts.find_by(id: contract_id)
       return not_found_error(resource: "contract") unless contract
 
