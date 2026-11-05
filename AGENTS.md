@@ -67,7 +67,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - Never drop the failure of an inner service: check `success?` and pass it on with `result.fail_with_error!(inner_result.error)`, or use `call!`.
 - Inside a transaction, enqueue jobs with `SomeJob.perform_after_commit(...)` or an `after_commit {}` block. A plain `perform_later` can run before the commit and miss the data.
 - Roll back by raising. `ActiveRecord::Rollback` is ignored when an outer transaction exists.
-- Serialize concurrent work on a customer with `Customers::LockService`, inside a transaction.
+- Serialize concurrent work on a customer with `Customers::LockService`, inside a transaction. A lock not built on `BaseLockService` polls with the query cache off and clears it once held: the executor caches reads for the whole request or job, so a check repeated under the lock would read the answer from before it.
 - A uniqueness validation checks before writing, so a concurrent request can pass it and hit the unique index. Rescue `ActiveRecord::RecordNotUnique` with `unique_index_failure!(e, "<index name>" => :field)`, which answers `value_already_exist` as the validation does and raises any other violation (`violated_unique_index(e)` gives the index name).
 - `Webhooks::*` services, `CacheService` subclasses and the payment provider services built on `TypedResults` follow their own base classes. Do not use them as a model for other services.
 

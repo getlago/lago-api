@@ -33,11 +33,16 @@ module Users
       key = Digest::SHA256.digest("user-email:#{Signups::ValidateEmailService.mailbox_key(email)}").unpack1("q>")
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout_seconds
 
-      until locked?(key)
-        raise BaseLockService::FailedToAcquireLock, "Failed to acquire the email lock" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+      # The executor caches reads for the whole request or job: each poll must reach the database, and a check
+      # repeated under the lock must not read the answer cached before it.
+      ApplicationRecord.uncached do
+        until locked?(key)
+          raise BaseLockService::FailedToAcquireLock, "Failed to acquire the email lock" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
 
-        sleep(rand(RETRY_DELAY))
+          sleep(rand(RETRY_DELAY))
+        end
       end
+      ApplicationRecord.connection_pool.clear_query_cache
     end
 
     def locked?(key)
