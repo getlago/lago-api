@@ -69,6 +69,12 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
     expect(rendered_text).to include("Due date #{I18n.l(Date.new(2026, 11, 15), format: :default)}")
   end
 
+  it "shows the snapshotted payment term" do
+    invoice.update!(payment_term: {"term_type" => "end_of_month"})
+
+    expect(rendered_text).to include("Payment term Due at end of month")
+  end
+
   context "when the invoice bills charges paid in advance" do
     let(:invoice_type) { :advance_charges }
 
