@@ -6,6 +6,8 @@ module Signups
     Result = BaseResult[:email, :domain, :mailbox_key]
 
     MAX_INPUT_LENGTH = 512
+    # The encodings every later step handles; US-ASCII is what nil.to_s gives.
+    INPUT_ENCODINGS = [Encoding::UTF_8, Encoding::US_ASCII].freeze
     MAX_LENGTH = 254
     MAX_LOCAL_PART_LENGTH = 64
     MAX_DOMAIN_LENGTH = 253
@@ -16,7 +18,8 @@ module Signups
     # Most providers deliver user+tag@ to user@ (a convention, not a standard), so limits and locks count by mailbox.
     # Where + belongs to a separate address, they only get stricter: user lookups never use this key.
     def self.mailbox_key(address)
-      address = EmailSanitizer.call(address.to_s.scrub).to_s.downcase
+      # Never raises: the email lock calls it with addresses that were not validated (Okta, Entra ID, invites, Google).
+      address = EmailSanitizer.call(to_utf8(address.to_s)).to_s.downcase
       local_part, at, domain = address.rpartition("@")
       return address if at.empty?
 
@@ -26,14 +29,22 @@ module Signups
       "#{base.unicode_normalize(:nfc)}@#{domain}"
     end
 
+    # Bytes that cannot be decoded become U+FFFD, also in an encoding Ruby cannot convert from (UTF-7).
+    def self.to_utf8(text)
+      text.encode(Encoding::UTF_8, invalid: :replace, undef: :replace)
+    rescue Encoding::ConverterNotFoundError
+      text.b.encode(Encoding::UTF_8, invalid: :replace, undef: :replace)
+    end
+    private_class_method :to_utf8
+
     def initialize(email:)
       @email = email.to_s
       super
     end
 
     def call
-      # Before any regex: GraphQL variables have no size limit, and invalid UTF-8 would raise.
-      return failure("invalid_email_format") if email.length > MAX_INPUT_LENGTH || !email.valid_encoding?
+      # Before any regex: GraphQL variables have no size limit, and another encoding or invalid UTF-8 would raise.
+      return failure("invalid_email_format") unless readable?(email)
 
       address = User.normalize_value_for(:email, email)
       return failure("value_is_mandatory") if address.blank?
@@ -53,6 +64,10 @@ module Signups
     private
 
     attr_reader :email
+
+    def readable?(input)
+      input.length <= MAX_INPUT_LENGTH && INPUT_ENCODINGS.include?(input.encoding) && input.valid_encoding?
+    end
 
     # Regex::EMAIL also accepts unbounded lengths and numeric domains.
     def well_formed?(address, local_part, domain)

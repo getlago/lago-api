@@ -75,7 +75,8 @@ RSpec.describe Signups::ValidateEmailService do
       "jane@gеtlago.com", "jane@bücher.de", "jane＠getlago.com", (+"jane\xFF@getlago.com").force_encoding("UTF-8"),
       "#{"a" * 65}@getlago.com", "jane@#{"a" * 64}.com", "#{"a" * 60}@#{"b" * 63}.#{"c" * 63}.#{"d" * 63}.com",
       "#{"a" * 513}@getlago.com", "=?utf-8?q?attacker=40evil.com=3e=00?=x@getlago.com", "jane%evil.com@getlago.com",
-      "evil.com!jane@getlago.com", "jane=doe@getlago.com", "jane/doe@getlago.com"
+      "evil.com!jane@getlago.com", "jane=doe@getlago.com", "jane/doe@getlago.com",
+      "jane\xC3\xA9@getlago.com".b, "jane@getlago.com".b, "jane@getlago.com".encode("UTF-16LE")
     ]
 
     expect(errors_for(emails)).to eq(emails.index_with { {email: ["invalid_email_format"]} })
@@ -102,6 +103,13 @@ RSpec.describe Signups::ValidateEmailService do
       expect(described_class.mailbox_key(" Jane+X@Gmail.com ")).to eq("jane@gmail.com")
       expect(described_class.mailbox_key("JANE@getlago.com")).to eq(described_class.call(email: "jane+a@getlago.com").mailbox_key)
       expect(described_class.mailbox_key("not-an-email")).to eq("not-an-email")
+    end
+
+    it "accepts a string in any encoding" do
+      expect(described_class.mailbox_key("Jane+X@GetLago.com".encode("UTF-16LE"))).to eq("jane@getlago.com")
+      expect(described_class.mailbox_key("jane@getlago.com".b)).to eq("jane@getlago.com")
+      expect(described_class.mailbox_key("jane\xC3\xA9@getlago.com".b)).to eq("jane\u{FFFD}\u{FFFD}@getlago.com")
+      expect(described_class.mailbox_key((+"Jane@GetLago.com").force_encoding("UTF-7"))).to eq("jane@getlago.com")
     end
   end
 end
