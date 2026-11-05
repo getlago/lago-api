@@ -137,9 +137,9 @@ namespace :recipes do
       puts(if compared.zero?
         "No subscription could be compared."
       elsif mismatching.positive?
-        "Mismatches detected, investigate before enabling the organization."
+        "Mismatches detected, investigate them: billing reads the snapshots."
       elsif (failed + pay_in_advance_failed).positive?
-        "No mismatch over the comparisons that ran, but #{failed + pay_in_advance_failed} failed: rerun them before enabling the organization."
+        "No mismatch over the comparisons that ran, but #{failed + pay_in_advance_failed} failed: rerun them."
       elsif compared == without_snapshot
         "No subscription read a snapshot: this run says nothing about parity."
       elsif pay_in_advance_charges.positive? && pay_in_advance_snapshot_buckets.zero?
