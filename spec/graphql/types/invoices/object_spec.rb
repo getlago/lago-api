@@ -69,6 +69,7 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:credit_notes).of_type("[CreditNote!]")
     expect(subject).to have_field(:fees).of_type("[Fee!]")
     expect(subject).to have_field(:invoice_subscriptions).of_type("[InvoiceSubscription!]")
+    expect(subject).to have_field(:product_catalog_contracts).of_type("[InvoiceProductCatalogContract!]")
     expect(subject).to have_field(:subscriptions).of_type("[Subscription!]")
 
     expect(subject).to have_field(:external_hubspot_integration_id).of_type("String")
@@ -141,6 +142,30 @@ RSpec.describe Types::Invoices::Object do
         "Alpha Plan",
         "Zebra Plan"
       ])
+    end
+  end
+
+  describe "#product_catalog_contracts" do
+    subject(:contracts) { run_graphql_field("Invoice.productCatalogContracts", invoice) }
+
+    let(:invoice) { create(:invoice) }
+
+    context "without contract fees" do
+      it { is_expected.to be_nil }
+    end
+
+    context "with contract fees" do
+      let(:contract) { create(:contract, organization: invoice.organization, customer: invoice.customer) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization: invoice.organization, contract:) }
+
+      before do
+        create(:fee, invoice:, subscription: nil, fee_type: :product,
+          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:)
+      end
+
+      it "groups the fees by contract" do
+        expect(contracts.map(&:contract)).to eq([contract])
+      end
     end
   end
 
