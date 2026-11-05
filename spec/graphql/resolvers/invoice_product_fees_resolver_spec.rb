@@ -13,7 +13,7 @@ RSpec.describe Resolvers::InvoiceProductFeesResolver do
     )
   end
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
 
   let(:required_permission) { "invoices:view" }
