@@ -59,6 +59,8 @@ module Signups
       return :ip_literal if domain.start_with?("[")
       raise ArgumentError, "expected a domain name" unless HOSTNAME.match?(domain)
 
+      # Unknown TLDs pass through the default * rule: the list spells IDN TLDs in Unicode, never in the xn-- form that
+      # HOSTNAME admits, and lags newly delegated TLDs. An address that cannot receive mail fails at verification.
       registrable_domain = PublicSuffix.domain(domain, ignore_private: true)
       return :public_suffix unless registrable_domain
 
