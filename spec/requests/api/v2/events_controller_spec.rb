@@ -227,12 +227,12 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
     context "with nested properties" do
       let(:attributes) { super().merge(properties: {:values => [1, nil, {flag: true}], "bad\u0000key" => "value"}) }
 
-      it "preserves null entries in properties and strips null bytes" do
+      it "normalizes property arrays and strips null bytes" do
         request
 
         expect(response).to have_http_status(:ok)
         payload = json[:event] || json[:events].first
-        expect(payload[:properties]).to eq(values: [1, nil, {flag: true}], badkey: "value")
+        expect(payload[:properties]).to eq(values: [1, {flag: true}], badkey: "value")
       end
     end
 
@@ -403,11 +403,23 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       expect(Events::PostProcessJob).to have_been_enqueued.twice
     end
 
+    context "with null batch entries" do
+      let(:batch) { [nil, attributes, nil] }
+
+      it "creates the event after Rails removes null entries" do
+        expect { request }.to change(Event, :count).by(1)
+
+        expect(response).to have_http_status(:ok)
+        expect(json).to eq(events: [expected_payload(Event.find_by!(transaction_id: attributes[:transaction_id]))])
+        expect(Events::PostProcessJob).to have_been_enqueued.once
+      end
+    end
+
     [nil, "invalid", [], {}, [nil], ["invalid"], [["invalid"]]].each do |value|
       context "with malformed batch #{value.inspect}" do
         let(:batch) { value }
 
-        it "does not silently discard invalid entries" do
+        it "rejects an empty or malformed batch" do
           expect { request }.not_to change(Event, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
@@ -417,7 +429,7 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       end
     end
 
-    [nil, "invalid", []].each do |value|
+    ["invalid", []].each do |value|
       context "with a valid event followed by #{value.inspect}" do
         let(:batch) { [attributes, value] }
 
@@ -794,6 +806,16 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
         expect(response).to have_http_status(:ok)
         expect(json).to eq(events: [acknowledged_event, acknowledged_event.merge(transaction_id: "second-event")])
         expect(kafka_messages.map { it[:topic] }).to eq(%w[product-events product-events])
+      end
+
+      it "publishes a batch after Rails removes null batch entries" do
+        expect {
+          post_with_token(organization, "/api/v2/events/batch", events: [nil, attributes, nil])
+        }.not_to change(Event, :count)
+
+        expect(response).to have_http_status(:ok)
+        expect(json).to eq(events: [acknowledged_event])
+        expect(kafka_messages.map { it[:topic] }).to eq(["product-events"])
       end
 
       context "with a subscription id" do

@@ -23,8 +23,8 @@ module Api
       end
 
       def create
-        params.expect(event: {})
-        validation = ::Events::ValidateApiInputService.call(params: raw_input[:event])
+        input = params.expect(event: {})
+        validation = ::Events::ValidateApiInputService.call(params: input.to_h)
         return render_error_response(validation) unless validation.success?
 
         result = ::Events::CreateService.call(
@@ -43,7 +43,7 @@ module Api
       end
 
       def batch
-        validation = ::Events::ValidateApiInputService.call(params: raw_input[:events], batch: true)
+        validation = ::Events::ValidateApiInputService.call(params: params.to_unsafe_h[:events], batch: true)
         return render_error_response(validation) unless validation.success?
 
         result = ::Events::CreateBatchService.call(
@@ -86,25 +86,11 @@ module Api
       end
 
       def event_params
-        raw_params.require(:event).permit(*EVENT_FIELDS, properties: {})
+        params.require(:event).permit(*EVENT_FIELDS, properties: {})
       end
 
       def batch_params
-        raw_params.permit(events: [*EVENT_FIELDS, {properties: {}}])
-      end
-
-      def raw_params
-        ActionController::Parameters.new(raw_input)
-      end
-
-      # Rails removes null array entries before strong parameters; validate the original batch.
-      def raw_input
-        @raw_input ||= if request.content_mime_type == Mime[:json] && request.raw_post.present?
-          body = JSON.parse(request.raw_post)
-          body.is_a?(Hash) ? NullByteGuard.sanitize(request, body).deep_symbolize_keys : {}
-        else
-          params.to_unsafe_h.deep_symbolize_keys
-        end
+        params.permit(events: [*EVENT_FIELDS, {properties: {}}])
       end
 
       def event_metadata
