@@ -101,6 +101,10 @@ RSpec.describe PendingSignupToken do
       let(:record) { create(:pending_signup_token, :locked, pending_signup:) }
 
       it { is_expected.to eq(:locked) }
+
+      it "stays valid for the path that does not use a password" do
+        expect(record.verification_status(by_password: false)).to eq(:valid)
+      end
     end
 
     context "when its attempt was closed and the address has no user" do

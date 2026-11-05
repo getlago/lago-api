@@ -25,6 +25,15 @@ RSpec.describe Signups::TokenStatusService do
     end
   end
 
+  context "with the secret of the attempt, on a link locked by password tries" do
+    let(:signup_secret) { attempt_secret }
+    let!(:token_record) { create(:pending_signup_token, :locked, pending_signup:, token:) }
+
+    it "answers valid, without asking for the password" do
+      expect([result.status, result.password_required]).to eq([:valid, false])
+    end
+  end
+
   context "with the secret of another attempt of the same address" do
     let(:signup_secret) { PendingSignup.generate_signup_secret }
 

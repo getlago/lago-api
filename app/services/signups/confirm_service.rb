@@ -25,9 +25,10 @@ module Signups
       return result.not_found_failure!(resource: "signup_token") unless token_record
 
       pending_signup = token_record.pending_signup
-      return refuse(token_record) unless token_record.verification_status == :valid
-
       by_password = !pending_signup.signup_secret_matches?(signup_secret)
+      status = token_record.verification_status(by_password:)
+      return refuse(token_record, status:) unless status == :valid
+
       if by_password
         check_password(token_record, pending_signup)
         return result unless result.success?
@@ -77,7 +78,7 @@ module Signups
       pending_signup.lock!
 
       # Another attempt's confirm, an invite or a Google signup may have created the user meanwhile.
-      status = token_record.verification_status
+      status = token_record.verification_status(by_password:)
       # A password try claimed within the limit stays valid, even when it is the one that reached the limit.
       status = :valid if status == :locked && by_password
       status = :already_verified if status == :valid && by_password && pending_signup.password_digest != checked_password_digest

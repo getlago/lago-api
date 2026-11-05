@@ -36,7 +36,7 @@ class PendingSignupToken < ApplicationRecord
 
   # One precedence for the state query and the confirm. Only the holder of the link sees it, so saying that the
   # address has an account reveals nothing to a stranger.
-  def verification_status(now = Time.current)
+  def verification_status(now = Time.current, by_password: true)
     if consumed? || pending_signup.verified? || pending_signup.email_registered?
       :already_verified
     elsif replaced?
@@ -44,7 +44,8 @@ class PendingSignupToken < ApplicationRecord
     elsif expired?(now) || pending_signup.closed?
       # A closed attempt with no user ended unconfirmed: its password digest is gone.
       :expired
-    elsif locked?
+    elsif by_password && locked?
+      # Failed passwords lock only the password path: the attempt's signup secret is a far stronger proof.
       :locked
     else
       :valid

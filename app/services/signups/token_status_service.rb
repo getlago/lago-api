@@ -16,11 +16,11 @@ module Signups
       token_record = PendingSignupToken.for_token(token)
       pending_signup = token_record&.pending_signup
 
-      result.status = token_record ? token_record.verification_status : :invalid
-      result.email = pending_signup.email if result.status == :valid
       # Without the secret of the attempt that sent the link (another device, or an earlier signup), the page asks
       # for that attempt's password.
       result.password_required = !pending_signup&.signup_secret_matches?(signup_secret)
+      result.status = token_record ? token_record.verification_status(by_password: result.password_required) : :invalid
+      result.email = pending_signup.email if result.status == :valid
       result
     end
 
