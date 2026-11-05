@@ -8,6 +8,8 @@ module DailyUsages
     MAX_VALUE_CELLS = 10_000
     DECIMAL_SCALE = 10**20
     OTHER_VALUE = :__other__
+    FIT_DIGITS = 9
+    MAX_FIT_ROUNDS = 10_000
 
     def initialize(daily_usage:, previous_daily_usage: nil)
       @daily_usage = daily_usage
@@ -134,25 +136,58 @@ module DailyUsages
 
       single.each { |filter, receivers| apply_bucket_diff(filter, receivers.first) }
 
-      claimants = {}.compare_by_identity
-      multiple.each { |filter, receivers| receivers.each { |receiver| (claimants[receiver] ||= []) << filter } }
+      claims = Hash.new { |hash, key| hash[key] = fit_claims(multiple, key) }
 
-      multiple.flat_map { |filter, receivers| deduction_plan(filter, receivers, claimants) }
+      multiple.flat_map { |filter, receivers| deduction_plan(filter, receivers, claims) }
         .each { |slot, part| subtract([slot], [part]) }
     end
 
-    # The share of a receiver's usage a split filter can take, when other split filters route to it too
-    def claim_shares(filter, receivers, claimants, key)
-      receivers.map do |receiver|
-        others = claimants[receiver]
-        next 1 if others.one?
+    # The share of each receiver every split filter takes, so that each one takes its own usage and no receiver
+    # gives more than it holds. Fitted by alternately scaling each filter to its usage and capping each receiver.
+    def fit_claims(multiple, key)
+      receivers = multiple.flat_map(&:last)
+      return multiple.to_h { |filter, own| [filter.object_id, Array.new(own.size, 1)] } if receivers.uniq(&:object_id).size == receivers.size
 
-        weights = others.map { |other| [slot_value([other, key]), BigDecimal(0)].max.to_r }
-        weights.sum.positive? ? [slot_value([filter, key]), BigDecimal(0)].max.to_r / weights.sum : Rational(1, others.size)
+      capacity = ->(hash) { [slot_value([hash, key]), BigDecimal(0)].max.to_r }
+      caps = receivers.uniq(&:object_id).to_h { |receiver| [receiver.object_id, capacity.call(receiver)] }
+      totals = multiple.map { |filter, _receivers| capacity.call(filter).to_f }
+      rows = multiple.map { |_filter, receivers| receivers.map { |receiver| caps[receiver.object_id].to_f } }
+
+      scale = [*caps.values, *totals].max
+      grid = scale.positive? ? Rational(10)**(Math.log10(scale).floor - FIT_DIGITS) : 1
+
+      MAX_FIT_ROUNDS.times do
+        previous_rows = rows.map(&:dup)
+
+        rows.each_with_index do |row, index|
+          sum = row.sum
+          row.map! { |value| value * totals[index] / sum } if sum.positive?
+        end
+
+        columns = Hash.new(0.0)
+        multiple.each_with_index do |(_filter, receivers), i|
+          receivers.each_with_index { |receiver, j| columns[receiver.object_id] += rows[i][j] }
+        end
+        multiple.each_with_index do |(_filter, receivers), i|
+          receivers.each_with_index do |receiver, j|
+            cap = caps[receiver.object_id].to_f
+            rows[i][j] *= cap / columns[receiver.object_id] if columns[receiver.object_id] > cap
+          end
+        end
+
+        break if rows.flatten.zip(previous_rows.flatten).all? { |value, previous| (value - previous).abs < grid / 100 }
+      end
+
+      multiple.each_with_index.to_h do |(filter, receivers), i|
+        shares = receivers.each_with_index.map do |receiver, j|
+          cap = caps[receiver.object_id]
+          cap.positive? ? (rows[i][j] / grid).round * grid / cap : Rational(1, receivers.size)
+        end
+        [filter.object_id, shares]
       end
     end
 
-    def deduction_plan(filter, receivers, claimants)
+    def deduction_plan(filter, receivers, claims)
       plan = []
       breakdown_units = Array.new(receivers.size, BigDecimal(0))
       covered = Array(filter["presentation_breakdowns"]).any?
@@ -168,7 +203,7 @@ module DailyUsages
           next
         end
 
-        unit_shares = claim_shares(filter, receivers, claimants, "units")
+        unit_shares = claims["units"][filter.object_id]
         parts = split(slot_value([breakdown, "units"]), indexed_slots.map(&:first), indexed_slots.map { |_slot, index| unit_shares[index] })
         indexed_slots.zip(parts).each do |(slot, index), part|
           plan << [slot, part]
@@ -181,7 +216,7 @@ module DailyUsages
       unit_parts = if covered && breakdown_units.sum == units
         breakdown_units
       else
-        split(units, unit_slots, claim_shares(filter, receivers, claimants, "units"))
+        split(units, unit_slots, claims["units"][filter.object_id])
       end
 
       amount = slot_value([filter, "amount_cents"])
@@ -189,11 +224,11 @@ module DailyUsages
       amount_parts = if units.positive?
         allocate(amount, unit_parts.map { |part| part.to_r / units.to_r }, integer: integer_slots?(amount_slots))
       else
-        split(amount, amount_slots, claim_shares(filter, receivers, claimants, "amount_cents"))
+        split(amount, amount_slots, claims["amount_cents"][filter.object_id])
       end
 
       event_slots = receivers.map { |receiver| [receiver, "events_count"] }
-      event_parts = split(slot_value([filter, "events_count"]), event_slots, claim_shares(filter, receivers, claimants, "events_count"))
+      event_parts = split(slot_value([filter, "events_count"]), event_slots, claims["events_count"][filter.object_id])
 
       plan + unit_slots.zip(unit_parts) + amount_slots.zip(amount_parts) + event_slots.zip(event_parts)
     end

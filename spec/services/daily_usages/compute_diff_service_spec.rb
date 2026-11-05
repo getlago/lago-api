@@ -2117,6 +2117,50 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
 
+    context "when two edited filters move whole values into the same new filter without new usage" do
+      let(:previous_usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a b]}, 1000, "10.0", 10), filter_usage({"model" => %w[c d]}, 1000, "10.0", 10)],
+          2000, "20.0", 20
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, a_usage, "#{a_usage / 100}.0", a_usage / 100),
+            filter_usage({"model" => %w[b c]}, 600, "6.0", 6),
+            filter_usage({"model" => %w[d]}, 1400 - a_usage, "#{14 - (a_usage / 100)}.0", 14 - (a_usage / 100))
+          ],
+          2000, "20.0", 20
+        )
+      end
+
+      let(:no_diff) do
+        [
+          {"values" => {"model" => %w[a]}, **usage_values(0, "0.0", 0)},
+          {"values" => {"model" => %w[b c]}, **usage_values(0, "0.0", 0)},
+          {"values" => {"model" => %w[d]}, **usage_values(0, "0.0", 0)}
+        ]
+      end
+
+      context "when the shared filter gets most of its usage from the first filter" do
+        let(:a_usage) { 500 }
+
+        it "gives every filter a zero diff" do
+          expect(diff_filters).to eq(no_diff)
+        end
+      end
+
+      context "when the shared filter gets most of its usage from the second filter" do
+        let(:a_usage) { 900 }
+
+        it "gives every filter a zero diff" do
+          expect(diff_filters).to eq(no_diff)
+        end
+      end
+    end
+
     context "when filters nested in grouped usage are edited" do
       let(:previous_usage) do
         payload = usage_payload([], 1000, "10.0", 10)
