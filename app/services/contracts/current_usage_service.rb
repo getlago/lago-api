@@ -127,7 +127,7 @@ module Contracts
       return true if search_term.blank?
 
       rate_card = card.rate_card
-      haystacks = [rate_card.name, rate_card.product.name, (rate_card.product_filter || rate_card.product).invoice_name]
+      haystacks = [rate_card.name, rate_card.code, rate_card.product.name, (rate_card.product_filter || rate_card.product).invoice_name]
 
       haystacks.any? { |value| value&.downcase&.include?(search_term.downcase) }
     end

@@ -625,6 +625,15 @@ RSpec.describe Contracts::CurrentUsageService do
       end
     end
 
+    context "when the term matches only the rate card's code" do
+      let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:, currency: "EUR", code: "ent-tier-42") }
+      let(:search_term) { "ent-tier" }
+
+      it "still matches, independent of the rate card's name" do
+        expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+      end
+    end
+
     context "when the term matches only the product filter's invoice_display_name" do
       let(:product_filter) { create(:product_filter, organization:, product:, invoice_display_name: "Premium support add-on") }
       let(:rate_card) { create(:rate_card, organization:, product:, product_filter:, billing_timing:, currency: "EUR") }
