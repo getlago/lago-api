@@ -35,6 +35,7 @@ module Signups
       response = siteverify
       return unavailable!("unexpected_response") unless response.is_a?(Hash)
       return token_rejected!(response["error-codes"]) unless response["success"] == true
+      return misconfigured!("missing_action") if response["action"].blank?
       return refuse!("wrong_action") unless response["action"] == action
       return wrong_hostname!(response["hostname"]) unless response["hostname"].to_s.downcase == expected_hostname
 
@@ -75,7 +76,8 @@ module Signups
 
     def token_rejected!(error_codes)
       if Array(error_codes).all? { TOKEN_ERROR_CODES.include?(it) }
-        refuse!("rejected")
+        # A wrong secret also answers invalid-input-response, like a bot: the codes in the log let a rise show it.
+        refuse!("rejected:#{Array(error_codes).join("+")}")
       else
         unavailable!("google_error")
       end
@@ -91,6 +93,14 @@ module Signups
         )
       end
       refuse!("wrong_hostname")
+    end
+
+    # A v2 or invisible key answers with no action, but so does a bot calling our site key without one: warn, refuse.
+    def misconfigured!(reason)
+      if Auth::AttemptsThrottle.first_in_period?("captcha_misconfigured:#{reason}", 10.minutes)
+        Sentry.capture_message("reCAPTCHA answer suggests a key misconfiguration", level: :warning, extra: {reason:, action:})
+      end
+      refuse!(reason)
     end
 
     def refuse!(reason, score: nil)

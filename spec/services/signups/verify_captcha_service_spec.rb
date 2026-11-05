@@ -93,6 +93,26 @@ RSpec.describe Signups::VerifyCaptchaService do
     end
   end
 
+  context "when Google answers without an action, as for a v2 key", :sentry do
+    before do
+      stub_recaptcha_siteverify(action:)
+      stub_request(:post, described_class::SITEVERIFY_URL).to_return(
+        status: 200,
+        body: {success: true, hostname: URI(Rails.application.config.lago_front_url).host}.to_json,
+        headers: {"Content-Type" => "application/json"}
+      )
+      Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new
+    end
+
+    it "refuses and warns once per window" do
+      codes = Array.new(2) { described_class.call(token:, action:).error.code }
+
+      expect(codes).to eq(%w[captcha_failed captcha_failed])
+      expect(sentry_events.map { [it.message, it.level, it.extra[:reason]] })
+        .to eq([["reCAPTCHA answer suggests a key misconfiguration", :warning, "missing_action"]])
+    end
+  end
+
   context "when the token was made for another action" do
     let(:siteverify) { stub_recaptcha_siteverify(action: described_class::SIGNUP_RESEND) }
 
@@ -214,6 +234,19 @@ RSpec.describe Signups::VerifyCaptchaService do
 
       expect(Rails.logger).to have_received(:info)
         .with("Signups::VerifyCaptchaService action=signup outcome=refused reason=low_score score=0.3")
+    end
+
+    context "with a token Google rejects" do
+      let(:siteverify_answer) { {success: false, error_codes: ["invalid-input-response"]} }
+
+      before { allow(Rails.logger).to receive(:info).and_call_original }
+
+      it "logs Google's codes" do
+        result
+
+        expect(Rails.logger).to have_received(:info)
+          .with("Signups::VerifyCaptchaService action=signup outcome=refused reason=rejected:invalid-input-response score=")
+      end
     end
   end
 end
