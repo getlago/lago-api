@@ -252,7 +252,15 @@ RSpec.describe UsageAttributionValues::TrackService do
   end
 
   context "when a call brings more new values than the remaining capacity", cache: :memory do
-    let(:entries) { %w[carol carol dave erin].map { entry({"user" => it}) } }
+    # Entries are tracked newest first, so carol and dave take the remaining capacity before erin.
+    let(:entries) do
+      [
+        entry({"user" => "carol"}, at: seen_at + 3.minutes),
+        entry({"user" => "carol"}, at: seen_at + 2.minutes),
+        entry({"user" => "dave"}, at: seen_at + 1.minute),
+        entry({"user" => "erin"})
+      ]
+    end
 
     before do
       stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 3)

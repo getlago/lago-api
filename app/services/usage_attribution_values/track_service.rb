@@ -119,7 +119,7 @@ module UsageAttributionValues
         .where(
           customer_id: resolved_entries.map(&:first).uniq,
           usage_attribution_type_id: attribution_types.map(&:id),
-          value: resolved_entries.flat_map { |_, labels, _| labels.values }.uniq
+          value: resolved_entries.flat_map { |_, labels, _| labels.values.select { valid_value?(it) } }.uniq
         )
         .pluck(:customer_id, :usage_attribution_type_id, :value)
         .to_set
