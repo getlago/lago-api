@@ -2161,6 +2161,40 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
 
+    context "when two edited filters with presentation breakdowns move whole values into the same new filter" do
+      def breakdowns(units_by_provider)
+        units_by_provider.map { |provider, units| {"presentation_by" => {"provider" => provider}, "units" => units} }
+      end
+
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a b]}, 1000, "10.0", 10, presentation_breakdowns: breakdowns("aws" => "5.0", "gcp" => "5.0")),
+            filter_usage({"model" => %w[c d]}, 1000, "10.0", 10, presentation_breakdowns: breakdowns("aws" => "1.0", "gcp" => "9.0"))
+          ],
+          2000, "20.0", 20
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 500, "5.0", 5, presentation_breakdowns: breakdowns("aws" => "5.0")),
+            filter_usage({"model" => %w[b c]}, 600, "6.0", 6, presentation_breakdowns: breakdowns("aws" => "1.0", "gcp" => "5.0")),
+            filter_usage({"model" => %w[d]}, 900, "9.0", 9, presentation_breakdowns: breakdowns("gcp" => "9.0"))
+          ],
+          2000, "20.0", 20
+        )
+      end
+
+      it "gives every filter and breakdown a zero diff" do
+        diff_charge.fetch("filters").each do |f|
+          expect(f.slice("amount_cents", "units", "events_count")).to eq(usage_values(0, "0.0", 0))
+          expect(f["presentation_breakdowns"].map { |pb| BigDecimal(pb["units"]) }).to all(be_zero)
+        end
+      end
+    end
+
     context "when filters nested in grouped usage are edited" do
       let(:previous_usage) do
         payload = usage_payload([], 1000, "10.0", 10)

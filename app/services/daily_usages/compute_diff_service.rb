@@ -8,7 +8,7 @@ module DailyUsages
     MAX_VALUE_CELLS = 10_000
     DECIMAL_SCALE = 10**20
     OTHER_VALUE = :__other__
-    FIT_DIGITS = 9
+    FIT_DIGITS = 12
     MAX_FIT_ROUNDS = 10_000
 
     def initialize(daily_usage:, previous_daily_usage: nil)
@@ -136,22 +136,52 @@ module DailyUsages
 
       single.each { |filter, receivers| apply_bucket_diff(filter, receivers.first) }
 
-      claims = Hash.new { |hash, key| hash[key] = fit_claims(multiple, key) }
+      claims = Hash.new do |hash, key|
+        hash[key] = if key.is_a?(Array)
+          breakdown_claims(multiple, key.last)
+        else
+          fit_claims(multiple.map { |filter, receivers| [filter, [filter, key], receivers.map { |r| [r, key] }] })
+        end
+      end
 
       multiple.flat_map { |filter, receivers| deduction_plan(filter, receivers, claims) }
         .each { |slot, part| subtract([slot], [part]) }
     end
 
+    def breakdown_claims(multiple, presentation_by)
+      fit_claims(
+        multiple.filter_map do |filter, receivers|
+          breakdown = find_breakdown(filter, presentation_by)
+          next unless breakdown
+
+          [filter, [breakdown, "units"], receivers.filter_map { |r| find_breakdown(r, presentation_by)&.then { |pb| [pb, "units"] } }]
+        end
+      )
+    end
+
+    def find_breakdown(filter, presentation_by)
+      Array(filter["presentation_breakdowns"]).find { |pb| pb["presentation_by"] == presentation_by }
+    end
+
     # The share of each receiver every split filter takes, so that each one takes its own usage and no receiver
     # gives more than it holds. Fitted by alternately scaling each filter to its usage and capping each receiver.
-    def fit_claims(multiple, key)
-      receivers = multiple.flat_map(&:last)
-      return multiple.to_h { |filter, own| [filter.object_id, Array.new(own.size, 1)] } if receivers.uniq(&:object_id).size == receivers.size
+    def fit_claims(entries)
+      receivers = entries.flat_map { |_filter, _total, slots| slots.map(&:first) }
+      if receivers.uniq(&:object_id).size == receivers.size
+        return entries.to_h { |filter, _total, slots| [filter.object_id, Array.new(slots.size, 1)] }
+      end
 
-      capacity = ->(hash) { [slot_value([hash, key]), BigDecimal(0)].max.to_r }
-      caps = receivers.uniq(&:object_id).to_h { |receiver| [receiver.object_id, capacity.call(receiver)] }
-      totals = multiple.map { |filter, _receivers| capacity.call(filter).to_f }
-      rows = multiple.map { |_filter, receivers| receivers.map { |receiver| caps[receiver.object_id].to_f } }
+      capacity = ->(slot) { [slot_value(slot), BigDecimal(0)].max.to_r }
+      caps = entries.flat_map(&:last).to_h { |slot| [slot.first.object_id, capacity.call(slot)] }
+      totals = entries.map { |_filter, total, _slots| capacity.call(total).to_f }
+      usable = usable_edges(
+        entries.map { |_filter, total, _slots| capacity.call(total) },
+        entries.map { |_filter, _total, slots| slots.map { |slot| slot.first.object_id } },
+        caps
+      )
+      rows = entries.each_with_index.map do |(_filter, _total, slots), i|
+        slots.each_with_index.map { |slot, j| usable[i][j] ? caps[slot.first.object_id].to_f : 0.0 }
+      end
 
       scale = [*caps.values, *totals].max
       grid = scale.positive? ? Rational(10)**(Math.log10(scale).floor - FIT_DIGITS) : 1
@@ -165,25 +195,97 @@ module DailyUsages
         end
 
         columns = Hash.new(0.0)
-        multiple.each_with_index do |(_filter, receivers), i|
-          receivers.each_with_index { |receiver, j| columns[receiver.object_id] += rows[i][j] }
+        entries.each_with_index do |(_filter, _total, slots), i|
+          slots.each_with_index { |slot, j| columns[slot.first.object_id] += rows[i][j] }
         end
-        multiple.each_with_index do |(_filter, receivers), i|
-          receivers.each_with_index do |receiver, j|
-            cap = caps[receiver.object_id].to_f
-            rows[i][j] *= cap / columns[receiver.object_id] if columns[receiver.object_id] > cap
+        entries.each_with_index do |(_filter, _total, slots), i|
+          slots.each_with_index do |slot, j|
+            cap = caps[slot.first.object_id].to_f
+            rows[i][j] *= cap / columns[slot.first.object_id] if columns[slot.first.object_id] > cap
           end
         end
 
         break if rows.flatten.zip(previous_rows.flatten).all? { |value, previous| (value - previous).abs < grid / 100 }
       end
 
-      multiple.each_with_index.to_h do |(filter, receivers), i|
-        shares = receivers.each_with_index.map do |receiver, j|
-          cap = caps[receiver.object_id]
-          cap.positive? ? (rows[i][j] / grid).round * grid / cap : Rational(1, receivers.size)
+      entries.each_with_index.to_h do |(filter, _total, slots), i|
+        shares = slots.each_with_index.map do |slot, j|
+          cap = caps[slot.first.object_id]
+          cap.positive? ? (rows[i][j] / grid).round * grid / cap : Rational(1, slots.size)
         end
         [filter.object_id, shares]
+      end
+    end
+
+    # The fit only reaches a zero share slowly, so the edges no valid split can use are removed first. With an
+    # exact max flow, an unused edge can carry usage only if the residual graph leads back from its receiver to its
+    # filter.
+    def usable_edges(totals, edges, caps)
+      flows = edges.map { |row| Array.new(row.size, Rational(0)) }
+      row_flow = ->(i) { flows[i].sum }
+      column_flow = ->(id) { edges.each_with_index.sum { |row, i| row.each_with_index.sum { |rid, j| (rid == id) ? flows[i][j] : 0 } } }
+
+      neighbors = lambda do |node|
+        kind, index = node
+        case kind
+        when :source
+          totals.each_index.filter_map { |i| [:row, i] if row_flow.call(i) < totals[i] }
+        when :row
+          edges[index].uniq.map { |id| [:column, id] } + (row_flow.call(index).positive? ? [[:source]] : [])
+        when :column
+          backward = edges.each_with_index.flat_map { |row, i| row.each_index.select { |j| row[j] == index && flows[i][j].positive? }.map { [:row, i] } }
+          backward + ((column_flow.call(index) < caps[index]) ? [[:sink]] : [])
+        when :sink
+          caps.keys.select { |id| column_flow.call(id).positive? }.map { |id| [:column, id] }
+        end
+      end
+
+      path_to = lambda do |from, to|
+        parents = {from => nil}
+        queue = [from]
+        until queue.empty?
+          node = queue.shift
+          return parents if node == to
+
+          neighbors.call(node).each do |neighbor|
+            next if parents.key?(neighbor)
+
+            parents[neighbor] = node
+            queue << neighbor
+          end
+        end
+        nil
+      end
+
+      while (parents = path_to.call([:source], [:sink]))
+        path = [[:sink]]
+        path.unshift(parents[path.first]) while parents[path.first]
+        steps = path.each_cons(2).to_a
+
+        room = steps.map do |(kind, index), (next_kind, next_index)|
+          if kind == :source then totals[next_index] - row_flow.call(next_index)
+          elsif next_kind == :sink then caps[index] - column_flow.call(index)
+          elsif kind == :row then nil
+          else edges[next_index].each_index.select { |j| edges[next_index][j] == index }.sum { |j| flows[next_index][j] }
+          end
+        end.compact.min
+
+        steps.each do |(kind, index), (next_kind, next_index)|
+          if kind == :row && next_kind == :column
+            flows[index][edges[index].index(next_index)] += room
+          elsif kind == :column && next_kind == :row
+            left = room
+            edges[next_index].each_index.select { |j| edges[next_index][j] == index }.each do |j|
+              taken = [left, flows[next_index][j]].min
+              flows[next_index][j] -= taken
+              left -= taken
+            end
+          end
+        end
+      end
+
+      edges.each_with_index.map do |row, i|
+        row.each_with_index.map { |id, j| flows[i][j].positive? || path_to.call([:column, id], [:row, i]).present? }
       end
     end
 
@@ -194,7 +296,7 @@ module DailyUsages
 
       Array(filter["presentation_breakdowns"]).each do |breakdown|
         indexed_slots = receivers.each_with_index.filter_map do |receiver, index|
-          match = Array(receiver["presentation_breakdowns"]).find { |pb| pb["presentation_by"] == breakdown["presentation_by"] }
+          match = find_breakdown(receiver, breakdown["presentation_by"])
           [[match, "units"], index] if match
         end
 
@@ -203,8 +305,8 @@ module DailyUsages
           next
         end
 
-        unit_shares = claims["units"][filter.object_id]
-        parts = split(slot_value([breakdown, "units"]), indexed_slots.map(&:first), indexed_slots.map { |_slot, index| unit_shares[index] })
+        shares = claims[[:breakdown, breakdown["presentation_by"]]][filter.object_id]
+        parts = split(slot_value([breakdown, "units"]), indexed_slots.map(&:first), shares)
         indexed_slots.zip(parts).each do |(slot, index), part|
           plan << [slot, part]
           breakdown_units[index] += part
