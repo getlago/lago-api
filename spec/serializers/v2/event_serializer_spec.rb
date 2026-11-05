@@ -22,11 +22,7 @@ RSpec.describe V2::EventSerializer do
       timestamp: event.timestamp.iso8601(6),
       created_at: event.created_at.iso8601(6),
       updated_at: event.updated_at.iso8601(6),
-      deleted_at: nil,
-      enriched_at: nil,
-      value: nil,
-      decimal_value: nil,
-      attribution_labels: {}
+      deleted_at: nil
     )
   end
 
@@ -38,21 +34,12 @@ RSpec.describe V2::EventSerializer do
 
     it "does not invent persistence timestamps or ids" do
       expect(payload).to eq(
-        lago_id: nil,
         transaction_id: "transaction.eu",
-        lago_customer_id: nil,
         external_contract_id: "contract.eu",
         code: "api.requests",
         precise_total_amount_cents: nil,
         properties: {},
-        timestamp: event.timestamp.iso8601(6),
-        created_at: nil,
-        updated_at: nil,
-        deleted_at: nil,
-        enriched_at: nil,
-        value: nil,
-        decimal_value: nil,
-        attribution_labels: {}
+        timestamp: event.timestamp.iso8601(6)
       )
     end
   end

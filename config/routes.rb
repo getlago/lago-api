@@ -23,13 +23,20 @@ Rails.application.routes.draw do
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
       resources :security_logs, param: :log_id, only: %i[index show]
+      get :events_enriched, to: "events#index_enriched"
+      resources :events, only: %i[create show index], constraints: {id: /[^\/]+/} do
+        post :batch, on: :collection
+        post :estimate_fees, on: :collection
+        post :estimate_instant_fees, on: :collection
+        post :batch_estimate_instant_fees, on: :collection
+      end
       draw(:shared_api)
     end
 
     # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
-      resources :events, only: %i[index show create], constraints: {id: /[^\/]+/} do
+      resources :events, only: %i[index create] do
         post :batch, on: :collection
       end
       resources :billable_metrics, param: :code, code: /.*/, only: %i[index show create update destroy]
@@ -116,8 +123,6 @@ Rails.application.routes.draw do
       # An invoice route v2 does not serve is unknown on v2, not a v1 fallback.
       match "invoices(/*path)", to: "/application#not_found", via: :all
       match "billable_metrics(/*path)", to: "/application#not_found", via: :all
-      match "events(/*path)", to: "/application#not_found", via: :all
-      match "events_enriched", to: "/application#not_found", via: :all
       # Credit-note paths are native v2 only when explicitly routed above. Do not
       # let unsupported actions fall through to their v1 beta equivalents.
       match "credit_notes(/*path)", to: "/application#not_found", via: :all

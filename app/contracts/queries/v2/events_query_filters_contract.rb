@@ -7,22 +7,9 @@ module Queries
         optional(:code).maybe(:string)
         optional(:transaction_id).maybe(:string)
         optional(:external_contract_id).maybe(:string)
-        optional(:external_subscription_id)
         optional(:timestamp_from_started_at).value(:"coercible.string", included_in?: %w[true false])
         optional(:timestamp_from)
         optional(:timestamp_to)
-        optional(:created_at_from)
-        optional(:created_at_to)
-      end
-
-      rule(:external_subscription_id) do
-        key.failure("use external_contract_id") if key?
-      end
-
-      %i[created_at_from created_at_to].each do |field|
-        rule(field) do
-          key.failure("use timestamp_from and timestamp_to") if key?
-        end
       end
 
       rule(:timestamp_from_started_at, :timestamp_from) do

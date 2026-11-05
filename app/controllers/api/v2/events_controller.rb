@@ -10,6 +10,7 @@ module Api
       serializable_with ::V2::EventSerializer
 
       before_action :ensure_product_event_pipeline!, only: %i[create batch]
+      before_action :reject_unsupported_filters!, only: :index
 
       def index
         result = ::V2::EventsQuery.call(organization: current_organization, pagination: cursor, filters: index_filters)
@@ -18,20 +19,6 @@ module Api
           render_events(result.events)
         else
           render_error_response(result)
-        end
-      end
-
-      def show
-        filters = params.slice(:external_contract_id, :external_subscription_id).to_unsafe_h.symbolize_keys
-        result = ::V2::EventsQuery.call(organization: current_organization, pagination: nil, filters: filters.merge(transaction_id: params[:id]))
-        return render_error_response(result) unless result.success?
-
-        event = result.events.first
-
-        if event
-          render_event(event)
-        else
-          not_found_error(resource: "event")
         end
       end
 
@@ -86,17 +73,28 @@ module Api
       end
 
       def index_filters
-        # Pass removed filters through validation so they are rejected rather than ignored.
-        params.slice(:code, :external_contract_id, :external_subscription_id, :timestamp_from_started_at,
-          :timestamp_from, :timestamp_to, :created_at_from, :created_at_to).to_unsafe_h.symbolize_keys
+        params.slice(:code, :transaction_id, :external_contract_id, :timestamp_from_started_at,
+          :timestamp_from, :timestamp_to).to_unsafe_h.symbolize_keys
+      end
+
+      def reject_unsupported_filters!
+        unsupported_filters = params.slice(:external_subscription_id, :created_at_from, :created_at_to).keys
+
+        if unsupported_filters.any?
+          validation_errors(errors: unsupported_filters.index_with { ["value_is_invalid"] })
+        end
       end
 
       def event_params
-        raw_input[:event].slice(*EVENT_FIELDS, :properties)
+        raw_params.require(:event).permit(*EVENT_FIELDS, properties: {})
       end
 
       def batch_params
-        {events: raw_input[:events].map { it.slice(*EVENT_FIELDS, :properties) }}
+        raw_params.permit(events: [*EVENT_FIELDS, {properties: {}}])
+      end
+
+      def raw_params
+        ActionController::Parameters.new(raw_input)
       end
 
       # Rails removes null array entries before strong parameters; validate the original batch.

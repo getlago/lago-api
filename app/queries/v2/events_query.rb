@@ -4,8 +4,7 @@ module V2
   class EventsQuery < BaseQuery
     Result = BaseResult[:events]
     Filters = BaseFilters[
-      :code, :transaction_id, :external_contract_id, :external_subscription_id, :timestamp_from_started_at,
-      :timestamp_from, :timestamp_to, :created_at_from, :created_at_to
+      :code, :transaction_id, :external_contract_id, :timestamp_from_started_at, :timestamp_from, :timestamp_to
     ]
 
     def self.event_model(organization:)

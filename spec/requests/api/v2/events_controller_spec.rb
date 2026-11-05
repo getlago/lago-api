@@ -28,29 +28,38 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       timestamp: record.timestamp.iso8601(6),
       created_at: record.created_at.iso8601(6),
       updated_at: record.updated_at.iso8601(6),
-      deleted_at: record.deleted_at&.iso8601(6),
-      enriched_at: nil,
-      value: nil,
-      decimal_value: nil,
-      attribution_labels: {}
+      deleted_at: record.deleted_at&.iso8601(6)
     }
   end
 
-  shared_examples "rejects subscription filters" do
-    [
-      {external_subscription_id: "contract.eu"},
-      {external_subscription_id: nil},
-      {external_subscription_id: "other", external_contract_id: "contract.eu"}
-    ].each do |filters|
-      context "with unsupported filters #{filters.inspect}" do
-        let(:params) { filters }
+  shared_examples "rejects unsupported filters" do
+    %i[external_subscription_id created_at_from created_at_to].each do |field|
+      ["2026-10-01T00:00:00Z", nil, ["invalid"], {value: "invalid"}].each do |value|
+        context "with unsupported filter #{field}: #{value.inspect}" do
+          let(:params) { {:external_contract_id => "contract.eu", field => value} }
 
-        it "rejects the subscription filter instead of treating it as a contract id" do
-          request
+          it "rejects the filter even alongside a supported one" do
+            request
 
-          expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "external_subscription_id", meta: {}}])
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+          end
         end
+      end
+    end
+
+    context "with several unsupported filters" do
+      let(:params) { {created_at_to: nil, created_at_from: nil, external_subscription_id: nil} }
+
+      it "reports every unsupported filter" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [
+          {code: "value_is_invalid", field: "external_subscription_id", meta: {}},
+          {code: "value_is_invalid", field: "created_at_from", meta: {}},
+          {code: "value_is_invalid", field: "created_at_to", meta: {}}
+        ])
       end
     end
   end
@@ -64,7 +73,7 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
     before { event }
 
     include_examples "requires API permission", "event", "read"
-    include_examples "rejects subscription filters"
+    include_examples "rejects unsupported filters"
 
     it "returns flat events with cursor metadata" do
       request
@@ -77,19 +86,6 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       let(:paginated_path) { path }
       let(:create_paginated_record) do
         ->(created_at) { create(:event, organization:, external_subscription_id: contract.external_id, created_at:) }
-      end
-    end
-
-    %i[created_at_from created_at_to].each do |field|
-      context "when using #{field}" do
-        let(:params) { {field => Time.current.iso8601} }
-
-        it "rejects a creation-time filter instead of silently ignoring it" do
-          request
-
-          expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
-        end
       end
     end
 
@@ -107,8 +103,40 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       end
     end
 
+    context "when contracts reuse a transaction id" do
+      let(:params) { {transaction_id: event.transaction_id} }
+      let(:matching_event) do
+        create(:event, organization:, external_subscription_id: "other-contract", transaction_id: event.transaction_id,
+          created_at: event.created_at + 1.second)
+      end
+      let(:other_event) { create(:event, organization:, external_subscription_id: contract.external_id) }
+
+      before do
+        matching_event
+        other_event
+      end
+
+      it "lists all matching events rather than choosing one" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events]).to eq([expected_payload(matching_event), expected_payload(event)])
+      end
+
+      context "with a contract filter" do
+        let(:params) { super().merge(external_contract_id: contract.external_id) }
+
+        it "lists only the matching contract's event" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:events]).to eq([expected_payload(event)])
+        end
+      end
+    end
+
     context "with malformed scalar filters" do
-      %i[code external_contract_id external_subscription_id timestamp_from_started_at].each do |field|
+      %i[code transaction_id external_contract_id timestamp_from_started_at].each do |field|
         context "with an array for #{field}" do
           let(:params) { {field => ["invalid"]} }
 
@@ -161,88 +189,14 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       end
     end
 
-    context "without product catalog", product_catalog: false do
-      let(:organization) { create(:organization) }
-
-      it "refuses the endpoint" do
-        request
-
-        expect(response).to have_http_status(:forbidden)
-        expect(json).to eq(code: "feature_unavailable", details: [])
-      end
-    end
-  end
-
-  describe "GET /api/v2/events/:id" do
-    subject(:request) { get_with_token(organization, "/api/v2/events/#{transaction_id}", params) }
-
-    let(:transaction_id) { event.transaction_id }
-    let(:params) { {} }
-
-    include_examples "requires API permission", "event", "read"
-    include_examples "rejects subscription filters"
-
-    it "looks up a dotted transaction id and returns the complete payload" do
-      request
-
-      expect(response).to have_http_status(:ok)
-      expect(json).to eq(event: expected_payload(event))
-    end
-
-    context "with a missing event" do
-      let(:transaction_id) { "missing" }
-
-      it "returns the v2 not-found error" do
-        request
-
-        expect(response).to be_v2_not_found_error("event")
-      end
-    end
-
-    context "when another contract reused the transaction id" do
-      let(:newer_event) do
-        create(:event, organization:, external_subscription_id: "other-contract", transaction_id: event.transaction_id,
-          created_at: event.created_at + 1.second)
-      end
-
-      before { newer_event }
-
-      it "returns the latest event deterministically" do
-        request
-
-        expect(response).to have_http_status(:ok)
-        expect(json).to eq(event: expected_payload(newer_event))
-      end
-
-      context "with a contract filter" do
-        let(:params) { {external_contract_id: contract.external_id} }
-
-        it "returns the event for that contract" do
-          request
-
-          expect(response).to have_http_status(:ok)
-          expect(json).to eq(event: expected_payload(event))
-        end
-      end
-    end
-
     context "with a discarded event" do
       let(:event) { create(:event, organization:, external_subscription_id: contract.external_id, deleted_at: Time.current) }
 
-      it "does not expose the discarded event" do
+      it "does not list the discarded event" do
         request
 
-        expect(response).to be_v2_not_found_error("event")
-      end
-    end
-
-    context "with another organization's event" do
-      let(:event) { create(:event, organization: create(:organization)) }
-
-      it "does not expose it" do
-        request
-
-        expect(response).to be_v2_not_found_error("event")
+        expect(response).to have_http_status(:ok)
+        expect(json[:events]).to eq([])
       end
     end
 
@@ -256,9 +210,43 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
         expect(json[:code]).to eq("expand_not_supported")
       end
     end
+
+    context "without product catalog", product_catalog: false do
+      let(:organization) { create(:organization) }
+
+      it "refuses the endpoint" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "feature_unavailable", details: [])
+      end
+    end
   end
 
   shared_examples "validates event input" do
+    context "with nested properties" do
+      let(:attributes) { super().merge(properties: {:values => [1, nil, {flag: true}], "bad\u0000key" => "value"}) }
+
+      it "preserves null entries in properties and strips null bytes" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        payload = json[:event] || json[:events].first
+        expect(payload[:properties]).to eq(values: [1, nil, {flag: true}], badkey: "value")
+      end
+    end
+
+    context "with unpermitted ownership fields" do
+      let(:attributes) { super().merge(organization_id: SecureRandom.uuid, customer_id: SecureRandom.uuid) }
+
+      it "ignores them rather than changing ownership" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(Event.find_by!(transaction_id: "created-event")).to have_attributes(organization_id: organization.id, customer_id: nil)
+      end
+    end
+
     [
       {external_subscription_id: "subscription"},
       {external_subscription_id: nil, external_contract_id: "contract.eu"},
@@ -380,28 +368,6 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(code: "validation_errors", details: [{code: "value_already_exist", field: "transaction_id", meta: {}}])
-      end
-    end
-
-    context "with nested properties" do
-      let(:attributes) { super().merge(properties: {:values => [1, nil, {flag: true}], "bad\u0000key" => "value"}) }
-
-      it "preserves null entries in properties and strips null bytes" do
-        request
-
-        expect(response).to have_http_status(:ok)
-        expect(json[:event][:properties]).to eq(values: [1, nil, {flag: true}], badkey: "value")
-      end
-    end
-
-    context "with unpermitted ownership fields" do
-      let(:attributes) { super().merge(organization_id: SecureRandom.uuid, customer_id: SecureRandom.uuid) }
-
-      it "ignores them rather than changing ownership" do
-        request
-
-        expect(response).to have_http_status(:ok)
-        expect(Event.find_by!(transaction_id: "created-event")).to have_attributes(organization_id: organization.id, customer_id: nil)
       end
     end
 
@@ -529,7 +495,7 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
 
   describe "removed v2 routes", v2_timestamps: false do
     [
-      [:get, "/events_enriched"], [:post, "/events/estimate_fees"], [:post, "/events/estimate_instant_fees"],
+      [:get, "/events/example.eu"], [:get, "/events_enriched"], [:post, "/events/estimate_fees"], [:post, "/events/estimate_instant_fees"],
       [:post, "/events/batch_estimate_instant_fees"], [:put, "/events/example"], [:delete, "/events/example"]
     ].each do |verb, path|
       it "returns 404 for #{verb.upcase} #{path}" do
@@ -595,17 +561,12 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
 
     def expected_enriched_payload(record)
       {
-        lago_id: nil,
         transaction_id: record.transaction_id,
-        lago_customer_id: nil,
         external_contract_id: record.external_contract_id,
         code: record.code,
         precise_total_amount_cents: record.precise_total_amount_cents&.to_s,
         properties: record.properties.deep_symbolize_keys,
         timestamp: record.timestamp.iso8601(6),
-        created_at: nil,
-        updated_at: nil,
-        deleted_at: nil,
         enriched_at: record.enriched_at.iso8601(6),
         value: record.value,
         decimal_value: record.decimal_value&.to_s,
@@ -613,18 +574,17 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       }
     end
 
+    context "with unsupported list filters" do
+      subject(:request) { get_with_token(organization, "/api/v2/events", params) }
+
+      include_examples "rejects unsupported filters"
+    end
+
     it "lists enriched product events" do
       get_with_token(organization, "/api/v2/events")
 
       expect(response).to have_http_status(:ok)
       expect(json).to eq(events: [expected_enriched_payload(enriched_event)], meta: {next_cursor: nil, prev_cursor: nil})
-    end
-
-    it "fetches a product event by its transaction id" do
-      get_with_token(organization, "/api/v2/events/transaction.eu")
-
-      expect(response).to have_http_status(:ok)
-      expect(json).to eq(event: expected_enriched_payload(enriched_event))
     end
 
     it "filters on event time rather than processing time" do
@@ -701,11 +661,18 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
         expect(all_events.size).to eq(5)
       end
 
-      it "can disambiguate a transaction by its contract id" do
-        get_with_token(organization, "/api/v2/events/same-transaction", external_contract_id: "contract.b")
+      it "lists the matching event when filtering by transaction and contract" do
+        get_with_token(organization, "/api/v2/events", transaction_id: "same-transaction", external_contract_id: "contract.b")
 
         expect(response).to have_http_status(:ok)
-        expect(json).to eq(event: expected_enriched_payload(enriched_events.second))
+        expect(json[:events]).to eq([expected_enriched_payload(enriched_events.second)])
+      end
+
+      it "lists all contracts matching a transaction id" do
+        get_with_token(organization, "/api/v2/events", transaction_id: "same-transaction")
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events]).to eq(enriched_events.reverse.map { expected_enriched_payload(it) })
       end
 
       it "does not skip an unseen event when it is reprocessed between pages" do
@@ -735,12 +702,6 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
         expect(response).to have_http_status(:ok)
         expect(json[:events]).to eq([expected_enriched_payload(enriched_event)])
       end
-
-      it "returns 404 rather than exposing a raw event" do
-        get_with_token(organization, "/api/v2/events/pending-event")
-
-        expect(response).to be_v2_not_found_error("event")
-      end
     end
 
     context "when an event has multiple enrichment versions" do
@@ -763,13 +724,6 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
         expect(response).to have_http_status(:ok)
         expect(json).to eq(events: [expected_enriched_payload(new_version)], meta: {next_cursor: nil, prev_cursor: nil, total_count: 1})
       end
-
-      it "fetches the latest version" do
-        get_with_token(organization, "/api/v2/events/transaction.eu")
-
-        expect(response).to have_http_status(:ok)
-        expect(json).to eq(event: expected_enriched_payload(new_version))
-      end
     end
 
     context "when the catalog Kafka topic is not configured" do
@@ -790,12 +744,6 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
         expect(json[:events]).to eq([expected_enriched_payload(enriched_event)])
       end
 
-      it "does not fetch the legacy event" do
-        get_with_token(organization, "/api/v2/events/legacy-event")
-
-        expect(response).to be_v2_not_found_error("event")
-      end
-
       %w[/events /events/batch].each do |path|
         it "refuses #{path} ingestion rather than publishing to the subscription topic" do
           expect { post_with_token(organization, "/api/v2#{path}", event: attributes, events: [attributes]) }.not_to change(Event, :count)
@@ -808,28 +756,43 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
     end
 
     context "when creating an event" do
+      let(:acknowledged_event) do
+        {
+          transaction_id: attributes[:transaction_id],
+          external_contract_id: attributes[:external_contract_id],
+          code: attributes[:code],
+          timestamp: Time.current.iso8601(6),
+          precise_total_amount_cents: attributes[:precise_total_amount_cents],
+          properties: attributes[:properties]
+        }
+      end
+
+      before { freeze_time }
+
       it "uses asynchronous ingestion without writing a PostgreSQL event" do
         expect { post_with_token(organization, "/api/v2/events", event: attributes) }.not_to change(Event, :count)
 
         expect(response).to have_http_status(:ok)
-        expect(json[:event][:external_contract_id]).to eq(contract.external_id)
+        expect(json).to eq(event: acknowledged_event)
         expect(Events::PostProcessJob).not_to have_been_enqueued
         expect(kafka_messages.map { it[:topic] }).to eq(["product-events"])
       end
 
-      it "acknowledges receipt before the event is available for GET" do
+      it "acknowledges receipt before the event appears in the list" do
         post_with_token(organization, "/api/v2/events", event: attributes)
         expect(response).to have_http_status(:ok)
 
-        get_with_token(organization, "/api/v2/events/created-event")
+        get_with_token(organization, "/api/v2/events", transaction_id: "created-event")
 
-        expect(response).to be_v2_not_found_error("event")
+        expect(response).to have_http_status(:ok)
+        expect(json[:events]).to eq([])
       end
 
       it "publishes a batch only to the product topic" do
         post_with_token(organization, "/api/v2/events/batch", events: [attributes, attributes.merge(transaction_id: "second-event")])
 
         expect(response).to have_http_status(:ok)
+        expect(json).to eq(events: [acknowledged_event, acknowledged_event.merge(transaction_id: "second-event")])
         expect(kafka_messages.map { it[:topic] }).to eq(%w[product-events product-events])
       end
 
