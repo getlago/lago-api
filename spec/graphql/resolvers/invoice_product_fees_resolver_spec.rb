@@ -24,7 +24,8 @@ RSpec.describe Resolvers::InvoiceProductFeesResolver do
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:)) }
   let(:fee) do
     create(:fee, invoice:, organization:, subscription: nil, fee_type: "product",
-      invoiceable: product, contract:, contract_rate_card:, amount_cents: 1_000)
+      invoiceable: product, contract:, contract_rate_card:, amount_cents: 1_000,
+      rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card))
   end
   let(:variables) { {invoiceId: invoice.id} }
   let(:query) do

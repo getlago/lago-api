@@ -47,6 +47,7 @@ RSpec.describe InvoiceProductFeesQuery do
       invoiceable_id: product.id,
       contract:,
       contract_rate_card:,
+      rate_card_rate: create(:rate_card_rate, organization:, rate_card:),
       product_filter: true_up_parent_fee ? nil : product_filter,
       true_up_parent_fee:,
       amount_cents:,
@@ -68,6 +69,14 @@ RSpec.describe InvoiceProductFeesQuery do
       3_000, # catering > food > hamburger, true-up right after its parent
       6_001 # catering > food > salad
     ])
+  end
+
+  context "with a contract without a name or a plan" do
+    before { product_fee(create(:contract, organization:, customer:, name: nil, catalog_plan: nil), wine, amount_cents: 1) }
+
+    it "lists it first, as the PDF does" do
+      expect(amounts.first).to eq(1)
+    end
   end
 
   it "leaves out the fees of other invoices and other fee types" do
