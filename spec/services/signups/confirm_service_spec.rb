@@ -108,6 +108,12 @@ RSpec.describe Signups::ConfirmService do
     end
   end
 
+  context "with a link locked by password tries, and the attempt's secret" do
+    let!(:token_record) { create(:pending_signup_token, :locked, pending_signup:, token:) }
+
+    it_behaves_like "a confirmed signup"
+  end
+
   context "with a password over 72 bytes" do
     let(:signup_secret) { nil }
     let(:password) { "Aa1-#{"é" * 40}" }
