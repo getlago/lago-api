@@ -16,13 +16,9 @@ RSpec.describe BillSubscriptionJob do
   let(:invoicing_reason) { :subscription_starting }
   let(:result) { Invoices::SubscriptionService::Result.new }
 
-  # NOTE: when an invoice is given, the job skips term resolution and passes nils
-  let(:payment_term) { invoice ? nil : PaymentTerm.from_h({"term_type" => "due_on_receipt"}) }
-  let(:payment_term_source) { invoice ? nil : "default" }
-
   before do
     allow(Invoices::SubscriptionService).to receive(:call)
-      .with(subscriptions:, timestamp:, invoicing_reason:, invoice:, skip_charges: false, payment_term:, payment_term_source:)
+      .with(subscriptions:, timestamp:, invoicing_reason:, invoice:, skip_charges: false)
       .and_return(result)
   end
 
@@ -113,37 +109,32 @@ RSpec.describe BillSubscriptionJob do
     let(:subscription2) { create(:subscription, customer:) }
     let(:subscriptions) { [subscription1, subscription2] }
 
-    let(:net_resolution) do
-      PaymentTerms::ResolveService::Result.new.tap do |resolution|
-        resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
-        resolution.source = "customer"
-      end
-    end
-
-    let(:eom_resolution) do
-      PaymentTerms::ResolveService::Result.new.tap do |resolution|
-        resolution.payment_term = PaymentTerm.from_h({"term_type" => "end_of_month"})
-        resolution.source = "subscription"
-      end
-    end
-
     let(:splits) { Yabeda.payment_terms.splits_total }
 
     before { allow(splits).to receive(:increment) }
 
-    context "when subscriptions resolve to mixed terms" do
-      before do
-        allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, eom_resolution)
-        allow(Invoices::SubscriptionService).to receive(:call)
+    context "when the service reports mixed payment terms" do
+      let(:result) do
+        result = Invoices::SubscriptionService::Result.new
+        result.payment_term_groups = [[subscription1], [subscription2]]
+        result.validation_failure!(errors: {payment_term: ["mixed_payment_terms"]})
       end
 
-      it "splits into one job per term group without calling the service" do
+      before { allow(Invoices::SubscriptionService).to receive(:call).and_return(result) }
+
+      it "splits into one job per term group" do
         described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
 
-        expect(Invoices::SubscriptionService).not_to have_received(:call)
         expect(described_class).to have_been_enqueued.with([subscription1], timestamp, invoicing_reason:)
         expect(described_class).to have_been_enqueued.with([subscription2], timestamp, invoicing_reason:)
         expect(splits).to have_received(:increment).with({invoicing_reason: invoicing_reason.to_s})
+      end
+
+      it "neither raises nor records a generation error" do
+        expect { described_class.perform_now(subscriptions, timestamp, invoicing_reason:) }
+          .not_to raise_error
+
+        expect(ErrorDetail.invoice_generation_error.count).to eq(0)
       end
 
       it "gives each child the lock key a direct enqueue of its group would have" do
@@ -167,78 +158,15 @@ RSpec.describe BillSubscriptionJob do
       end
     end
 
-    context "when subscriptions resolve to the same term with different sources" do
+    context "when the service bills the group" do
       before do
-        allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, net_customer_resolution)
+        result.invoice = create(:invoice, customer:)
         allow(Invoices::SubscriptionService).to receive(:call).and_return(result)
       end
 
-      let(:net_customer_resolution) do
-        PaymentTerms::ResolveService::Result.new.tap do |resolution|
-          resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
-          resolution.source = "subscription"
-        end
-      end
-
-      it "calls the service once with the mixed source" do
+      it "does not split" do
         described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
 
-        expect(Invoices::SubscriptionService).to have_received(:call).with(
-          subscriptions:,
-          timestamp:,
-          invoicing_reason:,
-          invoice: nil,
-          skip_charges: false,
-          payment_term: PaymentTerm.from_h({"term_type" => "net", "days" => 30}),
-          payment_term_source: "mixed"
-        )
-        expect(described_class).not_to have_been_enqueued
-      end
-    end
-
-    context "when subscriptions resolve to different terms giving the same due date" do
-      let(:net_zero_resolution) do
-        PaymentTerms::ResolveService::Result.new.tap do |resolution|
-          resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 0})
-          resolution.source = "customer"
-        end
-      end
-
-      let(:due_on_receipt_resolution) do
-        PaymentTerms::ResolveService::Result.new.tap do |resolution|
-          resolution.payment_term = PaymentTerm.from_h({"term_type" => "due_on_receipt"})
-          resolution.source = "customer"
-        end
-      end
-
-      before do
-        allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_zero_resolution, due_on_receipt_resolution)
-        allow(Invoices::SubscriptionService).to receive(:call).and_return(result)
-      end
-
-      it "bills them together without splitting" do
-        described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
-
-        expect(Invoices::SubscriptionService).to have_received(:call).with(hash_including(subscriptions:))
-        expect(described_class).not_to have_been_enqueued
-        expect(splits).not_to have_received(:increment)
-      end
-    end
-
-    context "when an invoice is given" do
-      let(:invoice) { create(:invoice, :generating, customer:) }
-
-      before do
-        create(:invoice_subscription, invoice:, subscription: subscription1)
-        create(:invoice_subscription, invoice:, subscription: subscription2)
-        allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, eom_resolution)
-      end
-
-      it "keeps the combined invoice instead of splitting it, even when the terms have diverged" do
-        described_class.perform_now(subscriptions, timestamp, invoicing_reason:, invoice:)
-
-        expect(PaymentTerms::ResolveService).not_to have_received(:call!)
-        expect(Invoices::SubscriptionService).to have_received(:call).with(hash_including(subscriptions:, invoice:))
         expect(described_class).not_to have_been_enqueued
         expect(splits).not_to have_received(:increment)
       end

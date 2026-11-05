@@ -17,36 +17,17 @@ class BillSubscriptionJob < ApplicationJob
   def perform(subscriptions, timestamp, invoicing_reason:, invoice: nil, skip_charges: false)
     Rails.logger.info("BillSubscriptionJob[Invoice ID: #{invoice&.id}] - Started")
 
-    # NOTE: A payment term can change between job enqueue and execution, making the group mixed.
-    #       Re-resolve here: mixed groups are split into one job per term instead of failing.
-    #       Retries always carry `invoice:` whose snapshot is frozen, so they never split.
-    resolutions = invoice.nil? ? resolve_payment_terms(subscriptions) : []
-
-    if mixed_payment_terms?(resolutions)
-      term_groups = subscriptions.zip(resolutions).group_by { |_, resolution| resolution.payment_term.grouping_key }.values
-      Rails.logger.info("BillSubscriptionJob - Mixed payment terms, splitting into #{term_groups.size} groups")
-
-      Yabeda.payment_terms.splits_total.increment({invoicing_reason: invoicing_reason.to_s})
-
-      # Same kwargs as this job so a child's lock key matches the one its caller would compute
-      term_groups.each do |pairs|
-        self.class.perform_later(pairs.map(&:first), timestamp, **arguments.last)
-      end
-
-      return
-    end
-
-    sources = resolutions.map(&:source).uniq
-
     result = Invoices::SubscriptionService.call(
       subscriptions:,
       timestamp:,
       invoicing_reason:,
       invoice:,
-      skip_charges:,
-      payment_term: resolutions.first&.payment_term,
-      payment_term_source: sources.many? ? "mixed" : sources.first
+      skip_charges:
     )
+
+    # NOTE: A payment term can change between job enqueue and execution, making the group mixed.
+    #       Mixed groups are split into one job per term instead of failing.
+    return split_by_payment_term(result.payment_term_groups, timestamp, invoicing_reason) if result.payment_term_groups.present?
 
     if result.success?
       Rails.logger.info("BillSubscriptionJob[Invoice ID: #{invoice&.id}] - Finished [SUCCESS]")
@@ -105,11 +86,13 @@ class BillSubscriptionJob < ApplicationJob
 
   private
 
-  def resolve_payment_terms(subscriptions)
-    subscriptions.map { |sub| PaymentTerms::ResolveService.call!(customer: sub.customer) }
-  end
+  def split_by_payment_term(subscription_groups, timestamp, invoicing_reason)
+    Rails.logger.info("BillSubscriptionJob - Mixed payment terms, splitting into #{subscription_groups.size} groups")
+    Yabeda.payment_terms.splits_total.increment({invoicing_reason: invoicing_reason.to_s})
 
-  def mixed_payment_terms?(resolutions)
-    resolutions.map { |resolution| resolution.payment_term.grouping_key }.uniq.many?
+    # Same kwargs as this job so a child's lock key matches the one its caller would compute
+    subscription_groups.each do |subscriptions|
+      self.class.perform_later(subscriptions, timestamp, **arguments.last)
+    end
   end
 end
