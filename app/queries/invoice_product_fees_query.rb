@@ -93,17 +93,19 @@ class InvoiceProductFeesQuery < BaseQuery
     )
   end
 
+  # The names compare bytewise (COLLATE "C"), as the PDF and the tree compare them in Ruby, whatever the
+  # collation of the database. A contract without a name or a plan sorts as an empty name, first.
   def ordered(scope)
     scope.order(
-      Arel.sql("LOWER(COALESCE(NULLIF(contracts.name, ''), NULLIF(catalog_plans.invoice_display_name, ''), catalog_plans.name))"),
+      Arel.sql("LOWER(COALESCE(NULLIF(contracts.name, ''), NULLIF(catalog_plans.invoice_display_name, ''), catalog_plans.name, '')) COLLATE \"C\""),
       Arel.sql("contracts.id"),
       Arel.sql("product_categories.id IS NULL"),
-      Arel.sql("LOWER(COALESCE(NULLIF(product_categories.invoice_display_name, ''), product_categories.name))"),
+      Arel.sql("LOWER(COALESCE(NULLIF(product_categories.invoice_display_name, ''), product_categories.name)) COLLATE \"C\""),
       Arel.sql("product_categories.id"),
-      Arel.sql("LOWER(COALESCE(NULLIF(products.invoice_display_name, ''), products.name))"),
+      Arel.sql("LOWER(COALESCE(NULLIF(products.invoice_display_name, ''), products.name)) COLLATE \"C\""),
       Arel.sql("products.id"),
       Arel.sql("product_filters.id IS NOT NULL"),
-      Arel.sql("LOWER(COALESCE(NULLIF(product_filters.invoice_display_name, ''), product_filters.name))"),
+      Arel.sql("LOWER(COALESCE(NULLIF(product_filters.invoice_display_name, ''), product_filters.name)) COLLATE \"C\""),
       Arel.sql("product_filters.id"),
       Arel.sql("COALESCE(parent_fees.properties ->> 'from_datetime', fees.properties ->> 'from_datetime', '')"),
       Arel.sql("COALESCE(parent_fees.id, fees.id)"),
