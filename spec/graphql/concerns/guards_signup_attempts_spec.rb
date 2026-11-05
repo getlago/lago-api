@@ -31,6 +31,17 @@ module GuardsSignupAttemptsSpec
     end
   end
 
+  class ConfirmLinkThing < Mutations::BaseMutation
+    include GuardsSignupAttempts
+
+    graphql_name "GuardsSignupAttemptsConfirmLinkThing"
+    type ThingType
+
+    def resolve
+      signup_guard_error(:confirm_signup_email_with_secret) || {ok: true}
+    end
+  end
+
   class CheckThing < Resolvers::BaseResolver
     include GuardsSignupAttempts
 
@@ -44,6 +55,7 @@ module GuardsSignupAttemptsSpec
   class MutationType < Types::BaseObject
     field :start_thing, mutation: StartThing
     field :confirm_thing, mutation: ConfirmThing
+    field :confirm_link_thing, mutation: ConfirmLinkThing
   end
 
   class QueryType < Types::BaseObject
@@ -170,8 +182,18 @@ RSpec.describe GuardsSignupAttempts do
     stub_recaptcha_siteverify(action: Signups::VerifyCaptchaService::SIGNUP_CONFIRM)
     confirm = -> { run("mutation($token: String) { confirmThing(input: {captchaToken: $token}) { ok } }") }
 
-    expect(Array.new(20) { code(confirm.call) }).to all(be_nil)
+    expect(Array.new(10) { code(confirm.call) }).to all(be_nil)
     expect(code(confirm.call)).to eq("too_many_requests")
+  end
+
+  context "with confirms on both paths" do
+    let(:siteverify) { stub_recaptcha_siteverify(action: Signups::VerifyCaptchaService::SIGNUP_CONFIRM) }
+
+    it "keeps link confirms out of the password confirm budget" do
+      20.times { run("mutation { confirmLinkThing(input: {}) { ok } }") }
+
+      expect(code(run("mutation($token: String) { confirmThing(input: {captchaToken: $token}) { ok } }"))).to be_nil
+    end
   end
 
   it "keeps lookups refused by a network's own limit out of its /48's budget" do

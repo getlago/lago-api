@@ -29,6 +29,7 @@ module Auth
       signup_resend_per_ip: Rule.new(limit: 10, period: 1.hour, identifier: :ip_network),
       signup_resend_per_ip_block: Rule.new(limit: 50, period: 1.hour, identifier: :ip_block),
       signup_confirm_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip_network),
+      signup_confirm_password_per_ip: Rule.new(limit: 10, period: 10.minutes, identifier: :ip_network),
       # Lookups by a link token, a signup secret or an email, before any other work:
       signup_verification_per_ip: Rule.new(limit: 30, period: 10.minutes, identifier: :ip_network),
       signup_status_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip_network),

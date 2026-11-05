@@ -19,10 +19,10 @@ module GuardsSignupAttempts
       captcha_action: Signups::VerifyCaptchaService::SIGNUP_RESEND,
       rules: %i[signup_resend_per_ip signup_resend_per_ip_block]
     ),
-    # The password path runs bcrypt; the link also counts its own failed passwords in the database.
+    # The password path runs bcrypt, so it has its own lower limit; the link also counts its failed passwords itself.
     confirm_signup_email_with_password: Guard.new(
       captcha_action: Signups::VerifyCaptchaService::SIGNUP_CONFIRM,
-      rules: %i[signup_confirm_per_ip]
+      rules: %i[signup_confirm_password_per_ip]
     ),
     # The lookups below need a 256-bit link token or signup secret, so a captcha would add nothing.
     confirm_signup_email_with_secret: Guard.new(
