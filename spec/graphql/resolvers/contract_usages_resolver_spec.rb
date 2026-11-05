@@ -8,6 +8,16 @@ RSpec.describe Resolvers::ContractUsagesResolver do
   let_it_be(:organization, refind: true) { create_default(:organization, feature_flags: [:product_catalog]) }
   let_it_be(:membership, refind: true) { create_default(:membership) }
   let(:required_permission) { "contracts:view" }
+  let(:query) do
+    <<~GQL
+      query($contractId: ID!, $withoutProductCategory: Boolean) {
+        contractUsages(contractId: $contractId, withoutProductCategory: $withoutProductCategory) {
+          collection { rateCardCode productName units amountCents }
+          metadata { currentPage totalCount }
+        }
+      }
+    GQL
+  end
   let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
   let(:contract) { create(:contract, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
@@ -35,17 +45,6 @@ RSpec.describe Resolvers::ContractUsagesResolver do
     categorized_contract_rate_card
     create(:rate_card_rate, organization:, rate_card: categorized_rate_card,
       effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
-  end
-
-  let(:query) do
-    <<~GQL
-      query($contractId: ID!, $withoutProductCategory: Boolean) {
-        contractUsages(contractId: $contractId, withoutProductCategory: $withoutProductCategory) {
-          collection { rateCardCode productName units amountCents }
-          metadata { currentPage totalCount }
-        }
-      }
-    GQL
   end
 
   it_behaves_like "requires current user"

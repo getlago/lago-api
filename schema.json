@@ -65557,31 +65557,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "productCategoryIds",
-                  "description": null,
-                  "type": {
-                    "kind": "LIST",
-                    "name": null,
-                    "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "ID",
-                        "ofType": null
-                      }
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "withoutProductCategory",
+                  "name": "limit",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
-                    "name": "Boolean",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -65589,7 +65569,19 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "productIds",
+                  "name": "page",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "productCategoryIds",
                   "description": null,
                   "type": {
                     "kind": "LIST",
@@ -65629,12 +65621,20 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "withoutProductFilter",
+                  "name": "productIds",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "ID",
+                        "ofType": null
+                      }
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
@@ -65665,11 +65665,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "page",
+                  "name": "withoutProductCategory",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
-                    "name": "Int",
+                    "name": "Boolean",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -65677,11 +65677,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "limit",
+                  "name": "withoutProductFilter",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
-                    "name": "Int",
+                    "name": "Boolean",
                     "ofType": null
                   },
                   "defaultValue": null,
