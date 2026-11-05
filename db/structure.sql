@@ -424,6 +424,7 @@ DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_organization_address_nonce;
 DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_created_at;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_unpaid_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
@@ -658,6 +659,7 @@ DROP INDEX IF EXISTS public.index_payments_by_cursor;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
+DROP INDEX IF EXISTS public.index_payment_requests_by_cursor;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_payment_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_billing_entity_id;
@@ -721,8 +723,10 @@ DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_search_terms_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_overdue_cursor;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_purchase_order_number;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_invoice_type_cursor;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
@@ -805,6 +809,7 @@ DROP INDEX IF EXISTS public.index_fixed_charge_events_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fixed_charge_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_fixed_charge_events_on_fixed_charge_id;
 DROP INDEX IF EXISTS public.index_fixed_charge_events_on_deleted_at;
+DROP INDEX IF EXISTS public.index_finalized_credit_notes_by_cursor;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
@@ -1005,6 +1010,7 @@ DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_org_id_and_code_and_expr;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_deleted_at;
+DROP INDEX IF EXISTS public.index_billable_metrics_by_cursor;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
@@ -3760,6 +3766,7 @@ CREATE TABLE public.organizations (
     slug character varying NOT NULL,
     pagination_max_page_size integer,
     document_url_expiration_days integer DEFAULT 30 NOT NULL,
+    customer_portal_locked_fields character varying[] DEFAULT '{country,zipcode,tax_identification_number}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -8626,6 +8633,13 @@ CREATE INDEX index_billable_metric_filters_on_organization_id ON public.billable
 
 
 --
+-- Name: index_billable_metrics_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billable_metrics_by_cursor ON public.billable_metrics USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_billable_metrics_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10026,6 +10040,13 @@ CREATE INDEX index_fees_taxes_on_tax_id ON public.fees_taxes USING btree (tax_id
 
 
 --
+-- Name: index_finalized_credit_notes_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_finalized_credit_notes_by_cursor ON public.credit_notes USING btree (organization_id, created_at DESC, id DESC) WHERE (status = 1);
+
+
+--
 -- Name: index_fixed_charge_events_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10600,6 +10621,13 @@ CREATE INDEX index_invoices_on_organization_id_and_customer_id ON public.invoice
 
 
 --
+-- Name: index_invoices_on_organization_id_invoice_type_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_invoice_type_cursor ON public.invoices USING btree (organization_id, invoice_type, issuing_date DESC, created_at DESC, id);
+
+
+--
 -- Name: index_invoices_on_organization_id_lower_purchase_order_number; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10611,6 +10639,13 @@ CREATE INDEX index_invoices_on_organization_id_lower_purchase_order_number ON pu
 --
 
 CREATE INDEX index_invoices_on_organization_id_number_gin_trgm_ops ON public.invoices USING gin (organization_id, number public.gin_trgm_ops);
+
+
+--
+-- Name: index_invoices_on_organization_id_overdue_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_overdue_cursor ON public.invoices USING btree (organization_id, issuing_date DESC, created_at DESC, id) WHERE (payment_overdue = true);
 
 
 --
@@ -11052,6 +11087,13 @@ CREATE INDEX index_payment_receipts_on_organization_id ON public.payment_receipt
 --
 
 CREATE UNIQUE INDEX index_payment_receipts_on_payment_id ON public.payment_receipts USING btree (payment_id);
+
+
+--
+-- Name: index_payment_requests_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_requests_by_cursor ON public.payment_requests USING btree (organization_id, created_at DESC, id DESC);
 
 
 --
@@ -12690,6 +12732,13 @@ CREATE INDEX index_x402_settlements_on_pending_reconcile_after ON public.x402_se
 --
 
 CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (wallet_transaction_id IS NULL));
+
+
+--
+-- Name: index_x402_settlements_on_unpaid_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_unpaid_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'invoice_payment'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (payment_id IS NULL) AND ((error_reason)::text IS DISTINCT FROM 'payment_not_recorded'::text));
 
 
 --
@@ -15963,9 +16012,15 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261103084714'),
+('20261103084708'),
+('20261102160958'),
+('20261029112805'),
 ('20261029111437'),
 ('20261028184732'),
 ('20261028184731'),
+('20261027135959'),
+('20261027100000'),
 ('20261026150420'),
 ('20261026101445'),
 ('20261022090030'),
@@ -15976,6 +16031,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261016163945'),
 ('20261016163943'),
 ('20261016153657'),
+('20261016024339'),
 ('20261014180403'),
 ('20261014123350'),
 ('20261014123349'),
@@ -16060,6 +16116,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260826235313'),
 ('20260826235312'),
 ('20260824115446'),
+('20260819134021'),
 ('20260819111435'),
 ('20260819111434'),
 ('20260819000710'),
@@ -17173,4 +17230,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

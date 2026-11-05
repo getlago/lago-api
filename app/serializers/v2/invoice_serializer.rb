@@ -4,17 +4,16 @@ module V2
   # An invoice billed from the product catalog: it names the contracts its
   # fees came from, not the v1 subscriptions and billing periods.
   class InvoiceSerializer < ModelSerializer
-    expandable :fees, serializer: ::V2::FeeSerializer
-    expandable :applied_taxes, serializer: ::V2::Invoices::AppliedTaxSerializer
-    expandable :customer, serializer: ::V2::CustomerSerializer
-    expandable :contracts, serializer: ::V2::ContractSerializer
-    expandable :applied_invoice_custom_sections, serializer: ::V2::Invoices::AppliedInvoiceCustomSectionSerializer
-    expandable :error_details, serializer: ::V2::ErrorDetailSerializer
+    timestamps :payment_dispute_lost_at, :voided_at, :created_at, :updated_at
 
-    # The body of an invoice event, its webhook and its activity log, which cannot ask for
-    # expansions: everything but the fees, so that its size does not grow with the invoice. A
-    # consumer reads the fees through the API.
-    EVENT_INCLUDES = %i[applied_taxes contracts applied_invoice_custom_sections error_details].freeze
+    # Webhooks and activity logs leave out the fees, so that their size does not grow with the
+    # invoice, and the customer: a consumer reads both through the API.
+    expandable :fees, serializer: ::V2::FeeSerializer
+    expandable :applied_taxes, serializer: ::V2::Invoices::AppliedTaxSerializer, webhooks: true
+    expandable :customer, serializer: ::V2::CustomerSerializer
+    expandable :contracts, serializer: ::V2::ContractSerializer, webhooks: true
+    expandable :applied_invoice_custom_sections, serializer: ::V2::Invoices::AppliedInvoiceCustomSectionSerializer, webhooks: true
+    expandable :error_details, serializer: ::V2::ErrorDetailSerializer, webhooks: true
 
     def serialize
       {
@@ -30,7 +29,6 @@ module V2
         issuing_date: format_date(model.issuing_date),
         payment_due_date: format_date(model.payment_due_date),
         payment_overdue: model.payment_overdue,
-        payment_dispute_lost_at: format_time(model.payment_dispute_lost_at),
         purchase_order_number: model.purchase_order_number,
         fees_amount_cents: model.fees_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents,
@@ -42,10 +40,7 @@ module V2
         total_paid_amount_cents: model.total_paid_amount_cents,
         total_due_amount_cents: model.total_due_amount_cents,
         pdf_url: model.file_url,
-        xml_url: model.xml_url,
-        voided_at: format_time(model.voided_at),
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at)
+        xml_url: model.xml_url
       }
     end
 

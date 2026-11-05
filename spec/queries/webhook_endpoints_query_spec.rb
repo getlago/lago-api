@@ -48,6 +48,31 @@ RSpec.describe WebhookEndpointsQuery do
     end
   end
 
+  context "with a created_at range" do
+    subject(:result) do
+      described_class.call(organization:, filters: {created_at_from: "2026-10-01", created_at_to: "2026-10-31"})
+    end
+
+    before do
+      webhook_endpoint_first.update!(created_at: Time.zone.parse("2026-09-30T23:59:59Z"))
+      webhook_endpoint_second.update!(created_at: Time.zone.parse("2026-10-31T23:59:59Z"))
+      webhook_endpoint_third.update!(created_at: Time.zone.parse("2026-11-01T00:00:00Z"))
+    end
+
+    it "returns the endpoints created in the range, its last day included" do
+      expect(returned_ids).to eq([webhook_endpoint_second.id])
+    end
+  end
+
+  context "with an invalid created_at bound" do
+    subject(:result) { described_class.call(organization:, filters: {created_at_from: "2026-13-01"}) }
+
+    it "fails with invalid_date" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(created_at_from: ["invalid_date"])
+    end
+  end
+
   context "when searching for /lago/ term" do
     let(:search_term) { "lago" }
 

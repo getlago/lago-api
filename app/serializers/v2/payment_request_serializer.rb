@@ -2,6 +2,8 @@
 
 module V2
   class PaymentRequestSerializer < ModelSerializer
+    timestamps :created_at, :updated_at
+
     PRELOADS = %i[customer applied_invoices].freeze
 
     def serialize
@@ -13,9 +15,7 @@ module V2
         amount_cents: model.amount_cents,
         currency: model.amount_currency,
         payment_status: model.payment_status,
-        lago_invoice_ids: model.applied_invoices.map(&:invoice_id),
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at)
+        lago_invoice_ids: model.applied_invoices.map(&:invoice_id)
       }
     end
   end

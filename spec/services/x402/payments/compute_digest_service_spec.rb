@@ -218,6 +218,12 @@ describe X402::Payments::ComputeDigestService do
       it_behaves_like "a malformed payment", "invalid_authorization"
     end
 
+    context "when from is not valid UTF-8" do
+      let(:payment) { {"payload" => {"authorization" => authorization.merge("from" => "0x\xFF".dup.force_encoding("UTF-8"))}} }
+
+      it_behaves_like "a malformed payment", "invalid_authorization"
+    end
+
     context "when from is not an EVM address" do
       let(:payment) { {"payload" => {"authorization" => authorization.merge("from" => "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4")}} }
 

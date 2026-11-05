@@ -81,6 +81,8 @@ module Customers
         customer.lastname = params[:lastname] if params.key?(:lastname)
         customer.customer_type = params[:customer_type] if params.key?(:customer_type)
 
+        PaymentTerms::AssignService.call(record: customer, params:)
+
         if customer.organization.revenue_share_enabled? && customer.editable?
           customer.account_type = params[:account_type] if params.key?(:account_type)
           customer.exclude_from_dunning_campaign = customer.partner_account?
@@ -319,6 +321,12 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.reload
+    rescue BaseService::ThirdPartyFailure => e
+      # v1 answered an Adyen or Moneyhash refusal of a synchronous sync with this validation error
+      # before it was a third-party failure. A GoCardless refusal answered a 500.
+      raise unless %w[Adyen Moneyhash].include?(e.third_party)
+
+      result.single_validation_failure!(error_code: e.error_code).raise_if_error!
     end
 
     def discard_payment_methods(payment_methods)

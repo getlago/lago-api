@@ -36,6 +36,23 @@ RSpec.describe PaymentProviders::Gocardless::Customers::CreateService do
       end
     end
 
+    context "when GoCardless refuses a synchronous creation" do
+      let(:params) { {provider_customer_id: nil, sync_with_provider: true} }
+      let(:async) { false }
+
+      before do
+        allow(GoCardlessPro::Client).to receive(:new)
+          .and_raise(GoCardlessPro::ValidationError.new("message" => "Validation failed", "code" => 422))
+      end
+
+      it "returns a third-party failure" do
+        result = create_service.call
+
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "GoCardless", error_code: 422, error_message: "Validation failed")
+      end
+    end
+
     context "when removing the provider customer id and should create on service" do
       let(:params) do
         {provider_customer_id: nil, sync_with_provider: true}

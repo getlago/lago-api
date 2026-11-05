@@ -6,6 +6,8 @@ module Invoices
       include Customers::PaymentProviderFinder
       include TypedResults
 
+      PROVIDER_NAME = "Moneyhash"
+
       RESULTS = {
         update_payment_status: BaseResult[:payment, :invoice],
         generate_payment_url: BaseResult[:payment_url]
@@ -52,9 +54,9 @@ module Invoices
         moneyhash_result_data = moneyhash_result["data"]
         result.payment_url = "#{moneyhash_result_data["embed_url"]}?lago_request=generate_payment_url"
         result
+      # GeneratePaymentUrlService delivers the error webhook of a third-party failure.
       rescue LagoHttpClient::HttpError => e
-        deliver_error_webhook(e)
-        result.service_failure!(code: e.error_code, message: e.message)
+        result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.error_code, error_message: e.message)
       end
 
       attr_accessor :invoice
@@ -180,16 +182,6 @@ module Invoices
         end
 
         params
-      end
-
-      def deliver_error_webhook(moneyhash_error)
-        DeliverErrorWebhookService.call_async(invoice, {
-          provider_customer_id: customer.moneyhash_customer.provider_customer_id,
-          provider_error: {
-            message: moneyhash_error.message,
-            error_code: moneyhash_error.error_code
-          }
-        })
       end
     end
   end

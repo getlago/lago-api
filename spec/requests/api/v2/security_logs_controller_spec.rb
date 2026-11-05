@@ -235,5 +235,16 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
         expect(response).to be_v2_not_found_error("security_log")
       end
     end
+
+    context "when ClickHouse is not available" do
+      before { allow(SecurityLogsQuery).to receive(:available?).and_return(false) }
+
+      it "returns a forbidden error, as the list does" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "feature_unavailable", details: [])
+      end
+    end
   end
 end

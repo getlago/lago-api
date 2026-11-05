@@ -2,7 +2,9 @@
 
 module V2
   class CatalogPlanSerializer < ModelSerializer
-    expandable :taxes, serializer: ::V2::TaxSerializer
+    timestamps :created_at, :deleted_at
+
+    expandable :taxes, serializer: ::V2::TaxSerializer, webhooks: true
 
     def serialize
       {
@@ -12,9 +14,7 @@ module V2
         code: model.code,
         description: model.description,
         currency: model.currency,
-        **counts,
-        created_at: format_time(model.created_at),
-        deleted_at: format_time(model.deleted_at)
+        **counts
       }
     end
 

@@ -2,6 +2,8 @@
 
 module V2
   class BillingEntitySerializer < ModelSerializer
+    timestamps :created_at, :updated_at, :archived_at, :deleted_at
+
     expandable :taxes, serializer: ::V2::TaxSerializer
     expandable :selected_invoice_custom_sections, serializer: ::V2::InvoiceCustomSectionSerializer
 
@@ -17,11 +19,7 @@ module V2
         periodic_invoice_issuing_date_adjustment: model.subscription_invoice_issuing_date_adjustment,
         lago_id: model.id,
         is_default: model.organization.default_billing_entity&.id == model.id,
-        logo_url: model.logo_url,
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        archived_at: format_time(model.archived_at),
-        deleted_at: format_time(model.deleted_at)
+        logo_url: model.logo_url
       )
     end
 

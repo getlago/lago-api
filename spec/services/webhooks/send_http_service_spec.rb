@@ -192,6 +192,36 @@ RSpec.describe Webhooks::SendHttpService do
     end
   end
 
+  [Errno::ENETUNREACH, Errno::EADDRNOTAVAIL].each do |error_class|
+    context "when the connection fails with #{error_class}" do
+      before do
+        WebMock.stub_request(:post, "https://wh.test.com").to_raise(error_class)
+      end
+
+      it "schedules a retry" do
+        expect { service.call }.not_to raise_error
+
+        expect(webhook).to be_retrying
+        expect(webhook.response).to eq "Connection failed"
+        expect(webhook.retries).to eq 1
+        expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
+      end
+
+      context "when it is the last attempt" do
+        let(:webhook) { create(:webhook, :retrying, retries: 2, webhook_endpoint:) }
+
+        it "marks the webhook as failed" do
+          expect { service.call }.not_to raise_error
+
+          expect(webhook).to be_failed
+          expect(webhook.response).to eq "Connection failed"
+          expect(webhook.reload.retries).to eq 3
+          expect(SendHttpWebhookJob).not_to have_been_enqueued
+        end
+      end
+    end
+  end
+
   context "when the endpoint resolves to a private address" do
     before do
       webhook
@@ -206,6 +236,54 @@ RSpec.describe Webhooks::SendHttpService do
       expect(WebMock).not_to have_requested(:post, "https://wh.test.com")
       expect(webhook).to be_retrying
       expect(webhook.response).to eq "Destination address is not allowed"
+    end
+  end
+
+  context "when the first resolved address of a dual-stack endpoint is unreachable" do
+    let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url: "http://wh.test.com/hooks") }
+
+    before do
+      webhook
+      stub_const("ENV", ENV.to_h.merge("LAGO_WEBHOOK_ALLOW_PRIVATE_URLS" => "false"))
+      allow(Addrinfo).to receive(:getaddrinfo)
+        .and_return([Addrinfo.tcp("2606:4700::6812:11db", 0), Addrinfo.tcp("104.18.17.219", 0)])
+      # Plain HTTP connects to the pinned address, so each address has its own URL.
+      WebMock.stub_request(:post, "http://[2606:4700::6812:11db]/hooks").to_raise(Errno::ENETUNREACH)
+      WebMock.stub_request(:post, "http://104.18.17.219/hooks").to_return(status: 200, body: "ok")
+    end
+
+    it "delivers the webhook to the next address" do
+      service.call
+
+      expect(WebMock).to have_requested(:post, "http://104.18.17.219/hooks")
+        .with(headers: {"Host" => "wh.test.com"}).once
+      expect(webhook).to be_succeeded
+      expect(webhook.http_status).to eq 200
+      expect(webhook.response).to eq "ok"
+    end
+  end
+
+  context "when no resolved address of a dual-stack endpoint is reachable" do
+    let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url: "http://wh.test.com/hooks") }
+
+    before do
+      webhook
+      stub_const("ENV", ENV.to_h.merge("LAGO_WEBHOOK_ALLOW_PRIVATE_URLS" => "false"))
+      allow(Addrinfo).to receive(:getaddrinfo)
+        .and_return([Addrinfo.tcp("2606:4700::6812:11db", 0), Addrinfo.tcp("104.18.17.219", 0)])
+      WebMock.stub_request(:post, "http://[2606:4700::6812:11db]/hooks").to_raise(Errno::ENETUNREACH)
+      WebMock.stub_request(:post, "http://104.18.17.219/hooks").to_raise(Errno::ENETUNREACH)
+    end
+
+    it "tries every address then schedules a retry" do
+      expect { service.call }.not_to raise_error
+
+      expect(WebMock).to have_requested(:post, "http://[2606:4700::6812:11db]/hooks").once
+      expect(WebMock).to have_requested(:post, "http://104.18.17.219/hooks").once
+      expect(webhook).to be_retrying
+      expect(webhook.response).to eq "Connection failed"
+      expect(webhook.retries).to eq 1
+      expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
     end
   end
 

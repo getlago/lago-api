@@ -2,15 +2,11 @@
 
 module Integrations
   module Aggregator
-    class AccountsService < BaseService
+    class AccountsService < BaseRecordsService
       Result = BaseResult[:accounts]
 
       LIMIT = 450
       MAX_SUBSEQUENT_REQUESTS = 15
-
-      def action_path
-        "v1/#{provider}/accounts"
-      end
 
       def call
         @cursor = nil
@@ -20,7 +16,7 @@ module Integrations
           integration.integration_items.where(item_type: :account).destroy_all
 
           MAX_SUBSEQUENT_REQUESTS.times do |_i|
-            response = http_client.get(headers:, params:)
+            response = fetch_records(limit: LIMIT, cursor:)
 
             handle_accounts(response["records"])
             @cursor = response["next_cursor"]
@@ -36,14 +32,6 @@ module Integrations
       private
 
       attr_reader :cursor, :items
-
-      def headers
-        {
-          "Connection-Id" => integration.connection_id,
-          "Authorization" => "Bearer #{secret_key}",
-          "Provider-Config-Key" => provider_key
-        }
-      end
 
       def handle_accounts(new_items)
         new_items.each do |item|
@@ -62,10 +50,8 @@ module Integrations
         end
       end
 
-      def params
-        return {limit: LIMIT} if cursor.blank?
-
-        {limit: LIMIT, cursor:}
+      def model
+        "Account"
       end
     end
   end

@@ -2,21 +2,23 @@
 
 class BillableMetricsQuery < BaseQuery
   Result = BaseResult[:billable_metrics]
-  Filters = BaseFilters[:organization_id, :recurring, :aggregation_types, :plan_id]
+  Filters = BaseFilters[:organization_id, :recurring, :aggregation_types, :plan_id, :created_at_from, :created_at_to]
 
   def call
     return result unless validate_filters.success?
 
     metrics = base_scope.result
-    metrics = paginate(metrics)
-    metrics = apply_consistent_ordering(metrics)
-
     metrics = with_recurring(metrics) unless filters.recurring.nil?
     metrics = with_aggregation_type(metrics) if filters.aggregation_types.present?
 
     metrics = with_plan(metrics) if filters.plan_id.present?
+    metrics = with_date_range(metrics, :created_at)
+    metrics = apply_consistent_ordering(metrics)
+    metrics = paginate(metrics)
 
     result.billable_metrics = metrics
+    result
+  rescue BaseService::FailedResult
     result
   end
 

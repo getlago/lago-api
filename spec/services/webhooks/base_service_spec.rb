@@ -65,6 +65,29 @@ RSpec.describe Webhooks::BaseService do
       end
     end
 
+    context "with a serializer that declares an expansion for webhooks" do
+      subject(:webhook_service) { WebhooksSpec::ExpandingClass.new(object:, options:) }
+
+      it "embeds the expansion in the body" do
+        webhook_service.call
+
+        expect(Webhook.order(created_at: :desc).first.payload.fetch("dummy")).to eq(
+          "lago_id" => invoice.id,
+          "customer" => {"external_id" => customer.external_id}
+        )
+      end
+
+      context "when the service builds it with webhook: false" do
+        subject(:webhook_service) { WebhooksSpec::FlatClass.new(object:, options:) }
+
+        it "keeps the body flat" do
+          webhook_service.call
+
+          expect(Webhook.order(created_at: :desc).first.payload.fetch("dummy")).to eq("lago_id" => invoice.id)
+        end
+      end
+    end
+
     context "when organization has one webhook endpoint" do
       it "enqueues one http job" do
         webhook_service.call
@@ -268,6 +291,31 @@ module WebhooksSpec
 
     def object_type
       "product"
+    end
+  end
+
+  class CustomerIdSerializer < ModelSerializer
+    def serialize = {external_id: model.external_id}
+  end
+
+  # Declares an expansion for webhooks, as the v2 serializers of contracts and rate cards do.
+  class ExpandingSerializer < ModelSerializer
+    expandable :customer, serializer: CustomerIdSerializer, webhooks: true
+
+    def serialize = {lago_id: model.id}
+  end
+
+  # Builds it without a webhook option, as most webhook services do.
+  class ExpandingClass < DummyClass
+    def object_serializer
+      ExpandingSerializer.new(object, root_name: "invoice")
+    end
+  end
+
+  # Builds it with webhook: false, as rate_card.deleted does.
+  class FlatClass < DummyClass
+    def object_serializer
+      ExpandingSerializer.new(object, root_name: "invoice", webhook: false)
     end
   end
 end

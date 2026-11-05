@@ -79,11 +79,6 @@ module Api
           return not_found_error(resource: "product_category")
         end
 
-        # The column is a PG enum: an unknown value would fail the SQL cast.
-        if params[:product_type].present? && !Product::PRODUCT_TYPES.value?(params[:product_type])
-          return validation_errors(errors: {product_type: ["value_is_invalid"]})
-        end
-
         result = ::ProductsQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
@@ -149,8 +144,7 @@ module Api
 
       def render_item_error(result)
         if result.error.is_a?(BaseService::ValidationFailure)
-          messages = result.error.messages.transform_keys { |key| ERROR_FIELDS[key.to_sym] || key }
-          return validation_errors(errors: messages)
+          result.fail_with_error!(result.error.remap(result) { ERROR_FIELDS[it.to_sym] || it })
         end
 
         render_error_response(result)

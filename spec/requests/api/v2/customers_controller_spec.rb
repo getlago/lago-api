@@ -54,6 +54,48 @@ RSpec.describe Api::V2::CustomersController do
         expect(PaymentProviderCustomers::StripeCreateJob).to have_been_enqueued
       end
     end
+
+    context "when GoCardless refuses the customer" do
+      let(:provider) { create(:gocardless_provider, organization:) }
+      let(:attributes) { super().merge(payment_provider: "gocardless") }
+
+      before do
+        allow(GoCardlessPro::Client).to receive(:new)
+          .and_raise(GoCardlessPro::ValidationError.new("message" => "Validation failed", "code" => 422))
+      end
+
+      it "returns a provider error naming the provider" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "gocardless"}}])
+      end
+    end
+
+    context "when Adyen refuses the payment link of the customer" do
+      let(:provider) { create(:adyen_provider, organization:) }
+      let(:attributes) { super().merge(payment_provider: "adyen") }
+      let(:adyen_client) { instance_double(Adyen::Client) }
+      let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+      let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
+
+      before do
+        allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+        allow(adyen_client).to receive(:checkout).and_return(checkout)
+        allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+        allow(payment_links_api).to receive(:payment_links).and_return(generate(:adyen_payment_links_error_response))
+      end
+
+      it "returns a provider error naming the provider" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "provider_error",
+          details: [{code: "provider_error", field: "base", meta: {provider_name: "adyen", provider_error_code: "validation"}}]
+        )
+      end
+    end
   end
 
   describe "POST /api/v2/customers" do
@@ -149,6 +191,17 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
+    context "with a name longer than the model allows" do
+      let(:attributes) { super().merge(name: "a" * 256) }
+
+      it "returns a validation error with the bound of the model" do
+        expect { request }.not_to change(organization.customers, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_too_long", field: "name", meta: {max_length: 255}}])
+      end
+    end
+
     context "with a non-string enum value" do
       let(:attributes) { super().merge(finalize_zero_amount_invoice: false) }
 
@@ -156,7 +209,7 @@ RSpec.describe Api::V2::CustomersController do
         request
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {allowed_values: %w[inherit skip finalize]}}])
       end
     end
 
@@ -361,7 +414,10 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
-    %i[periodic_invoice_issuing_date_anchor periodic_invoice_issuing_date_adjustment].each do |field|
+    {
+      periodic_invoice_issuing_date_anchor: %w[current_period_end next_period_start],
+      periodic_invoice_issuing_date_adjustment: %w[keep_anchor align_with_finalization_date]
+    }.each do |field, allowed_values|
       ["unknown", false].each do |value|
         context "with #{field} set to #{value.inspect}" do
           let(:attributes) { super().merge(field => value) }
@@ -370,7 +426,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change(organization.customers, :count)
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {allowed_values:}}])
           end
         end
       end
@@ -615,7 +671,10 @@ RSpec.describe Api::V2::CustomersController do
         end
       end
 
-      %i[periodic_invoice_issuing_date_anchor periodic_invoice_issuing_date_adjustment].each do |field|
+      {
+        periodic_invoice_issuing_date_anchor: %w[current_period_end next_period_start],
+        periodic_invoice_issuing_date_adjustment: %w[keep_anchor align_with_finalization_date]
+      }.each do |field, allowed_values|
         context "with an invalid #{field}" do
           let(:attributes) { {:name => "Must not change", field => "unknown"} }
 
@@ -623,7 +682,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change { customer.reload.attributes }
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {allowed_values:}}])
           end
         end
       end
@@ -635,7 +694,7 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change { customer.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {}}])
+          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {allowed_values: %w[inherit skip finalize]}}])
         end
       end
 

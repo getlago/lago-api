@@ -97,6 +97,18 @@ RSpec.describe Organization do
       expect(organization).to be_valid
     end
 
+    it "caps a changed net_payment_term at 365" do
+      expect(organization).to allow_value(365).for(:net_payment_term)
+      expect(organization).not_to allow_value(366).for(:net_payment_term)
+    end
+
+    it "keeps a net_payment_term stored above 365 valid while it is unchanged" do
+      organization.net_payment_term = 400
+      organization.clear_changes_information
+
+      expect(organization).to be_valid
+    end
+
     it "is not valid without name" do
       organization.name = nil
 
@@ -186,6 +198,25 @@ RSpec.describe Organization do
 
       expect(organization).not_to be_valid
       expect(organization.errors.first.attribute).to eq(:email_settings)
+      expect(organization.errors.first.type).to eq(:unsupported_value)
+    end
+
+    it "locks the tax determining fields in the customer portal by default" do
+      expect(described_class.new.customer_portal_locked_fields).to match_array(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS)
+      expect(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS).to match_array(%w[country zipcode tax_identification_number])
+    end
+
+    it "is valid with every customer portal field locked" do
+      organization.customer_portal_locked_fields = described_class::CUSTOMER_PORTAL_FIELDS
+
+      expect(organization).to be_valid
+    end
+
+    it "is invalid with non permitted customer_portal_locked_fields value" do
+      organization.customer_portal_locked_fields = ["currency"]
+
+      expect(organization).not_to be_valid
+      expect(organization.errors.first.attribute).to eq(:customer_portal_locked_fields)
       expect(organization.errors.first.type).to eq(:unsupported_value)
     end
 

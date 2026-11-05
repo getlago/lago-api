@@ -88,8 +88,10 @@ module PaymentReceipts
       pdf_file&.unlink
     end
 
+    # Catalog invoices have no subscriptions or charges for the v1 receipt body to render.
     def template
-      "payment_receipts/v1"
+      payable = payment_receipt.payment.payable
+      (payable.is_a?(Invoice) && payable.product_catalog?) ? "payment_receipts/product_catalog" : "payment_receipts/v1"
     end
   end
 end

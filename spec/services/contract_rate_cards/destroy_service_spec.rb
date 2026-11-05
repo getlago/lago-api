@@ -122,4 +122,13 @@ RSpec.describe ContractRateCards::DestroyService do
       expect(result.error.resource).to eq("applied_rate_card")
     end
   end
+
+  context "when a concurrent request removed the card first" do
+    before { ContractRateCard.find(contract_rate_card.id).discard! }
+
+    it "returns a not found failure" do
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.resource).to eq("applied_rate_card")
+    end
+  end
 end

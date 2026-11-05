@@ -30,7 +30,7 @@ RSpec.describe Api::V1::CustomersController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq({base: ["value_is_out_of_range"]})
+        expect(json[:error_details]).to eq({net_payment_term: ["value_is_out_of_range"]})
       end
     end
 
@@ -254,6 +254,60 @@ RSpec.describe Api::V1::CustomersController do
           expect(billing[:subscription_invoice_issuing_date_adjustment]).to eq("keep_anchor")
           expect(billing[:document_locale]).to eq("fr")
           expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
+        end
+      end
+    end
+
+    context "when the provider refuses a synchronous sync" do
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: "Foo Bar",
+          billing_configuration: {payment_provider:, payment_provider_code: provider.code, sync_with_provider: true, sync: true}
+        }
+      end
+
+      context "with Adyen" do
+        let(:payment_provider) { "adyen" }
+        let(:provider) { create(:adyen_provider, organization:) }
+        let(:adyen_client) { instance_double(Adyen::Client) }
+        let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+        let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
+
+        before do
+          allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+          allow(adyen_client).to receive(:checkout).and_return(checkout)
+          allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+          allow(payment_links_api).to receive(:payment_links).and_return(generate(:adyen_payment_links_error_response))
+        end
+
+        it "returns a validation error on the provider's code" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "validation_errors", error_details: {base: ["validation"]})
+        end
+      end
+
+      context "with GoCardless" do
+        let(:payment_provider) { "gocardless" }
+        let(:provider) { create(:gocardless_provider, organization:) }
+
+        before do
+          allow(GoCardlessPro::Client).to receive(:new)
+            .and_raise(GoCardlessPro::ValidationError.new("message" => "Validation failed", "code" => 422))
+        end
+
+        it "returns a third-party error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(
+            status: 422,
+            error: "Unprocessable Entity",
+            code: "third_party_error",
+            error_details: {third_party: "GoCardless", thirdparty_error: "Validation failed"}
+          )
         end
       end
     end

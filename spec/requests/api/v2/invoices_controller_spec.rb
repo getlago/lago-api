@@ -102,7 +102,10 @@ RSpec.describe Api::V2::InvoicesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "invoice_type", meta: {}}])
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "invoice_type", meta: {allowed_values: %w[contract advance_fees]}}]
+        )
       end
     end
 
@@ -227,7 +230,7 @@ RSpec.describe Api::V2::InvoicesController do
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
           code: "expansion_too_large",
-          details: [{code: "expansion_too_large", field: "expands", meta: {invalid_values: ["fees"], max: 1}}]
+          details: [{code: "expansion_too_large", field: "expands", meta: {invalid_values: ["fees"], max_items: 1}}]
         )
       end
 
@@ -514,6 +517,34 @@ RSpec.describe Api::V2::InvoicesController do
       end
     end
 
+    context "when recipients have an invalid email format", :premium do
+      let(:params) { {to: ["not-an-email"], cc: ["cc@example.com"], bcc: ["also-not-an-email"]} }
+
+      it "returns a token code per field, without the addresses" do
+        expect { subject }.not_to have_enqueued_mail(InvoiceMailer, :created)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [
+            {code: "invalid_email_format", field: "to", meta: {}},
+            {code: "invalid_email_format", field: "bcc", meta: {}}
+          ]
+        )
+      end
+    end
+
+    context "when the billing entity has no email", :premium do
+      before { customer.billing_entity.update!(email: nil) }
+
+      it "returns the refusal on base" do
+        expect { subject }.not_to have_enqueued_mail(InvoiceMailer, :created)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "billing_entity_email_not_configured", field: "base", meta: {}}])
+      end
+    end
+
     context "when the invoice is a legacy one", :premium do
       let(:invoice_id) { legacy_invoice.id }
 
@@ -723,10 +754,11 @@ RSpec.describe Api::V2::InvoicesController do
   end
 
   describe "PUT /api/v2/invoices/:id" do
-    subject { put_with_token(organization, "/api/v2/invoices/#{invoice_id}", {invoice: {payment_status: "succeeded"}}) }
+    subject { put_with_token(organization, "/api/v2/invoices/#{invoice_id}", {invoice: {payment_status:}}) }
 
     let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
     let(:invoice_id) { invoice.id }
+    let(:payment_status) { "succeeded" }
 
     include_examples "requires API permission", "invoice", "write"
 
@@ -737,6 +769,21 @@ RSpec.describe Api::V2::InvoicesController do
       expect(invoice.reload).to be_payment_succeeded
       expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", payment_status: "succeeded")
       expect(json[:invoice]).not_to have_key(:fees)
+    end
+
+    context "with an unknown payment status" do
+      let(:payment_status) { "paid" }
+
+      it "returns a validation error with the statuses allowed, without updating it" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "payment_status", meta: {allowed_values: %w[pending succeeded failed]}}]
+        )
+        expect(invoice.reload).to be_payment_pending
+      end
     end
 
     context "when the invoice is voided" do
