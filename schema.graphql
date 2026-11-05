@@ -1176,6 +1176,7 @@ type AttributedUsage {
   metadata: CollectionMetadata!
   rows: [AttributedUsageRow!]!
   splitFiltersCount: Int
+  splitFiltersLimit: Int
   subscriptionId: ID!
   toDatetime: ISO8601DateTime!
   totals: AttributedUsageAggregate!
@@ -5292,6 +5293,7 @@ type CurrentOrganization {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+  customerPortalLockedFields: [CustomerPortalFieldEnum!]!
   defaultCurrency: CurrencyEnum!
   documentNumberPrefix: String!
   documentNumbering: DocumentNumberingEnum!
@@ -5311,6 +5313,11 @@ type CurrentOrganization {
   name: String!
   netPaymentTerm: Int!
   premiumIntegrations: [PremiumIntegrationTypeEnum!]!
+
+  """
+  True when usage reports can be served from the real-time usage buckets
+  """
+  realtimeUsageEnabled: Boolean!
   slug: String!
   state: String
   stripePaymentProviders: [StripeProvider!]
@@ -5521,7 +5528,7 @@ type CustomerCollection {
   """
   Pagination Metadata for navigating the Pagination
   """
-  metadata: CollectionMetadata!
+  metadata: InvoiceCollectionMetadata!
 }
 
 type CustomerCreditNotesBalance {
@@ -5584,10 +5591,32 @@ type CustomerPortalCustomer {
 }
 
 """
+Customer fields that can be sent from the customer portal
+"""
+enum CustomerPortalFieldEnum {
+  address_line1
+  address_line2
+  city
+  country
+  customer_type
+  document_locale
+  email
+  firstname
+  lastname
+  legal_name
+  name
+  shipping_address
+  state
+  tax_identification_number
+  zipcode
+}
+
+"""
 CustomerPortalOrganization
 """
 type CustomerPortalOrganization {
   billingConfiguration: OrganizationBillingConfiguration
+  customerPortalLockedFields: [CustomerPortalFieldEnum!]!
   defaultCurrency: CurrencyEnum!
   id: ID!
   logoUrl: String
@@ -7789,42 +7818,6 @@ type GroupedChargeUsage {
   id: ID!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitAmountCents: BigInt
-  units: Float!
-}
-
-"""
-Usage of a single charge filter within one hour
-"""
-type HourlyUsageBreakdown {
-  chargeFilterId: ID
-  eventsCount: Int!
-  other: Boolean!
-  units: Float!
-}
-
-"""
-A charge filter with usage in the window, and its window totals
-"""
-type HourlyUsageFilter {
-  chargeFilterId: ID
-  eventsCount: Int!
-  invoiceDisplayName: String
-
-  """
-  True for the series folding every filter past the biggest ones
-  """
-  other: Boolean!
-  units: Float!
-  values: ChargeFilterValues!
-}
-
-"""
-One hour of the window, broken down by charge filter
-"""
-type HourlyUsagePoint {
-  breakdown: [HourlyUsageBreakdown!]!
-  eventsCount: Int!
-  time: ISO8601DateTime!
   units: Float!
 }
 
@@ -13375,6 +13368,31 @@ type Query {
   rateCards(code: String, currency: CurrencyEnum, excludePricedOnContractId: ID, excludePricedOnPlanId: ID, limit: Int, page: Int, productCategoryIds: [ID!], productCode: String, productFilterCode: String, productFilterIds: [ID!], productIds: [ID!], searchTerm: String, withoutProductCategory: Boolean): RateCardCollection!
 
   """
+  Query the real-time usage of a billable metric, per period and per dimension
+  """
+  realtimeUsageBillableMetric(billableMetricCode: String!, dimensionKeys: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, toDatetime: ISO8601DateTime): RealtimeUsageBillableMetric!
+
+  """
+  Query the real-time usage of the billable metrics of the organization, per period and per dimension
+  """
+  realtimeUsageBillableMetrics(externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, page: Int, toDatetime: ISO8601DateTime): RealtimeUsageBillableMetricCollection!
+
+  """
+  Query the dimensions of a billable metric, biggest first, over the longest window by default
+  """
+  realtimeUsageDimensionNames(billableMetricCode: String!, externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, toDatetime: ISO8601DateTime): [RealtimeUsageDimensionName!]!
+
+  """
+  Query every dimension of a billable metric, with its real-time usage per period
+  """
+  realtimeUsageDimensions(billableMetricCode: String!, dimensionKeys: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, page: Int, toDatetime: ISO8601DateTime): RealtimeUsageDimensionRowCollection!
+
+  """
+  Query the events counted on the usage-based charges of the organization, per period
+  """
+  realtimeUsageEvents(externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, toDatetime: ISO8601DateTime): RealtimeUsageEvents!
+
+  """
   Query a single role
   """
   role(
@@ -13469,11 +13487,6 @@ type Query {
   Query entitlements of a subscriptions
   """
   subscriptionEntitlements(subscriptionId: ID!): SubscriptionEntitlementCollection!
-
-  """
-  Query the hourly usage of a subscription charge, broken down by charge filter
-  """
-  subscriptionHourlyUsage(chargeId: ID!, fromDatetime: ISO8601DateTime, subscriptionId: ID!, toDatetime: ISO8601DateTime): SubscriptionHourlyUsage!
 
   """
   Query subscriptions of an organization
@@ -13735,6 +13748,12 @@ type RateCard {
   displayOnInvoice: Boolean!
   id: ID!
   name: String!
+  nextPendingRate(
+    """
+    Perspective to resolve the soonest pending rate from. Defaults to now.
+    """
+    effectiveFrom: ISO8601DateTime
+  ): RateCardRate
   organization: Organization
   product: Product!
   productFilter: ProductFilter
@@ -13953,6 +13972,157 @@ input RateTierInput {
   Upper bound of the tier; null on the last tier
   """
   toValue: String
+}
+
+"""
+Units of a billable metric over the window, per period and per dimension
+"""
+type RealtimeUsageBillableMetric {
+  aggregationType: AggregationTypeEnum!
+  billableMetricCode: String!
+  billableMetricId: ID!
+  billableMetricName: String!
+  dimensions: [RealtimeUsageDimension!]!
+  fromDatetime: ISO8601DateTime!
+  points: [RealtimeUsagePoint!]!
+  timeGranularity: RealtimeUsageTimeGranularityEnum!
+  timezone: TimezoneEnum!
+  toDatetime: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+RealtimeUsageBillableMetricCollection type
+"""
+type RealtimeUsageBillableMetricCollection {
+  """
+  A collection of paginated RealtimeUsageBillableMetricCollection
+  """
+  collection: [RealtimeUsageBillableMetric!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
+A charge filter or pricing group value a usage is split on, and its window total
+"""
+type RealtimeUsageDimension {
+  """
+  Opaque key, to pass back as a dimension filter, except on the folded series
+  """
+  key: String!
+
+  """
+  Null for the usage of no charge filter or pricing group
+  """
+  name: String
+
+  """
+  True for the series folding every dimension past the biggest ones
+  """
+  other: Boolean!
+  units: Float!
+}
+
+"""
+A dimension of a billable metric, without its usage
+"""
+type RealtimeUsageDimensionName {
+  """
+  Opaque key, to pass back as a dimension filter
+  """
+  key: String!
+
+  """
+  Null for the usage of no charge filter or pricing group
+  """
+  name: String
+}
+
+"""
+Units of a dimension within one period
+"""
+type RealtimeUsageDimensionPoint {
+  time: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+A dimension of a billable metric, with its units per period
+"""
+type RealtimeUsageDimensionRow {
+  """
+  Opaque key, to pass back as a dimension filter
+  """
+  key: String!
+
+  """
+  Null for the usage of no charge filter or pricing group
+  """
+  name: String
+  points: [RealtimeUsageDimensionPoint!]!
+  units: Float!
+}
+
+"""
+RealtimeUsageDimensionRowCollection type
+"""
+type RealtimeUsageDimensionRowCollection {
+  """
+  A collection of paginated RealtimeUsageDimensionRowCollection
+  """
+  collection: [RealtimeUsageDimensionRow!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
+Events counted on the usage-based charges of the organization, per period
+"""
+type RealtimeUsageEvents {
+  eventsCount: BigInt!
+  fromDatetime: ISO8601DateTime!
+  lastIngestedAt: ISO8601DateTime
+  points: [RealtimeUsageEventsPoint!]!
+  timeGranularity: RealtimeUsageTimeGranularityEnum!
+  timezone: TimezoneEnum!
+  toDatetime: ISO8601DateTime!
+}
+
+"""
+Events counted in one period of the window
+"""
+type RealtimeUsageEventsPoint {
+  eventsCount: BigInt!
+  time: ISO8601DateTime!
+}
+
+"""
+One period of the window, broken down by dimension
+"""
+type RealtimeUsagePoint {
+  breakdown: [RealtimeUsagePointBreakdown!]!
+  time: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+Units of a single dimension within one period
+"""
+type RealtimeUsagePointBreakdown {
+  dimensionKey: String!
+  units: Float!
+}
+
+enum RealtimeUsageTimeGranularityEnum {
+  day
+  hour
 }
 
 enum RecurringTransactionIntervalEnum {
@@ -14748,19 +14918,6 @@ type SubscriptionEntitlementPrivilegeObject {
   name: String
   value: String
   valueType: PrivilegeValueTypeEnum!
-}
-
-"""
-Realtime usage of a charge, per hour and per charge filter
-"""
-type SubscriptionHourlyUsage {
-  aggregationType: AggregationTypeEnum!
-  filters: [HourlyUsageFilter!]!
-  fromDatetime: ISO8601DateTime!
-  hours: [HourlyUsagePoint!]!
-  lastIngestedAt: ISO8601DateTime
-  timezone: TimezoneEnum!
-  toDatetime: ISO8601DateTime!
 }
 
 type SubscriptionLifetimeUsage {
@@ -16489,6 +16646,7 @@ input UpdateOrganizationInput {
   """
   clientMutationId: String
   country: CountryCode
+  customerPortalLockedFields: [CustomerPortalFieldEnum!]
   defaultCurrency: CurrencyEnum
   documentNumberPrefix: String
   documentNumbering: DocumentNumberingEnum

@@ -378,6 +378,12 @@ RSpec.describe Fees::ChargeService::MeteredItem do
 
         expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => nil)
       end
+
+      it "stores non-string event properties as text, as the grouped reads return them" do
+        event_properties.merge!("cloud" => false, "region" => 1)
+
+        expect(metered_item.grouped_by_values).to eq("cloud" => "false", "region" => "1")
+      end
     end
 
     context "with legacy grouped_by properties" do

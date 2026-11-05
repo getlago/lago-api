@@ -137,6 +137,37 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
       end
     end
 
+    context "when the role is missing" do
+      let(:params) { {usage_attribution_type: {code: "user", attribution_keys: ["user_id"]}} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(role: ["value_is_mandatory"])
+      end
+    end
+
+    context "with a parent_code on a flat type" do
+      let(:params) do
+        {
+          usage_attribution_type: {
+            code: "model",
+            attribution_keys: ["model"],
+            role: "flat",
+            parent_code: department.code
+          }
+        }
+      end
+
+      it "returns the validation error on parent_code" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(parent_code: ["forbidden_for_flat_role"])
+      end
+    end
+
     context "when the payload root is missing" do
       let(:params) { {} }
 
@@ -361,6 +392,17 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details][:code]).to eq(["usage_already_attributed"])
+        end
+      end
+
+      context "when a parent_code is submitted" do
+        let(:params) { {usage_attribution_type: {parent_code: department.code}} }
+
+        it "returns the validation error on parent_code" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(parent_code: ["usage_already_attributed"])
         end
       end
     end

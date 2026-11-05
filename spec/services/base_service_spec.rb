@@ -168,4 +168,43 @@ RSpec.describe ::BaseService do
       end
     end
   end
+
+  context "when a write hits a unique index" do
+    subject(:result) { service_class.call(tax:, fields:) }
+
+    # Writes a copy of the tax past its uniqueness validation, as a concurrent request does.
+    let(:service_class) do
+      Class.new(described_class) do
+        const_set(:Result, BaseResult)
+
+        def initialize(tax:, fields:)
+          @tax = tax
+          @fields = fields
+          super
+        end
+
+        def call
+          Tax.insert!(@tax.attributes.except("id")) # rubocop:disable Rails/SkipsModelValidations
+          result
+        rescue ActiveRecord::RecordNotUnique => e
+          unique_index_failure!(e, @fields)
+        end
+      end
+    end
+    let(:tax) { create(:tax) }
+    let(:fields) { {"idx_unique_tax_code_per_organization" => :code} }
+
+    it "answers as the uniqueness validation of the index's field" do
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq(code: ["value_already_exist"])
+    end
+
+    context "when the index is not one of the fields" do
+      let(:fields) { {"index_products_on_organization_id_and_code" => :code} }
+
+      it "raises the database error" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
+  end
 end

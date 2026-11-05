@@ -54,7 +54,7 @@ module BillableMetrics
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: "aggregation_failure", message: e.message)
+        fail_aggregation!(e)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -120,7 +120,7 @@ module BillableMetrics
 
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: "aggregation_failure", message: e.message)
+        fail_aggregation!(e)
       end
 
       def compute_per_event_prorated_aggregation
@@ -151,6 +151,11 @@ module BillableMetrics
       end
 
       protected
+
+      # The base aggregator reads the snapshots
+      def snapshot_read_error?(error)
+        super || base_aggregator.snapshot_read_error?(error)
+      end
 
       # NOTE: recurring sum read by the base aggregator, from the snapshot of the previous period
       #       when it has one. Nil when the persisted events are read with their own query.

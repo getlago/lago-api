@@ -62,6 +62,8 @@ module RateCards
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, "index_rate_cards_on_organization_id_and_code" => :code)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e.result.error)
     end
@@ -81,12 +83,11 @@ module RateCards
     end
 
     def create_rates(rate_card)
-      (params[:rates] || []).each do |rate_params|
+      (params[:rates] || []).each_with_index do |rate_params, index|
         RateCardRates::CreateService.call!(rate_card:, params: rate_params, emit_events: false)
+      rescue BaseService::ValidationFailure => e
+        result.fail_with_error!(e.remap(result) { BaseService::ValidationFailure.item_field(:rates, index, it) }).raise_if_error!
       end
-    rescue BaseService::ValidationFailure => e
-      errors = e.messages.transform_keys { |key| :"rates.#{key}" }
-      result.validation_failure!(errors:).raise_if_error!
     end
   end
 end

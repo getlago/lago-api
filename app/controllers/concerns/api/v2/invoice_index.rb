@@ -25,7 +25,10 @@ module Api
         filters = index_filters
 
         if filters[:invoice_type].present? && !INVOICE_TYPES.key?(filters[:invoice_type])
-          return validation_errors(errors: {invoice_type: ["value_is_invalid"]})
+          return validation_errors(
+            errors: {invoice_type: ["value_is_invalid"]},
+            meta: {invoice_type: {allowed_values: INVOICE_TYPES.keys}}
+          )
         end
 
         billing_entity_codes = Array(filters[:billing_entity_codes]).uniq

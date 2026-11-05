@@ -160,9 +160,6 @@ class SendWebhookJob < ApplicationJob
   end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
-    # Jobs enqueued by the previous release still use the former names.
-    # TODO: Remove after one release.
-    webhook_type = WebhookEndpoint::RENAMED_EVENT_TYPES.fetch(webhook_type, webhook_type)
     raise(UnknownWebhookTypeError, webhook_type.to_s) unless WEBHOOK_SERVICES.include?(webhook_type)
 
     # NOTE: This condition is only temporary to handle enqueued jobs

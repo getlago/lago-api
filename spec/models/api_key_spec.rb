@@ -129,6 +129,34 @@ RSpec.describe ApiKey do
     it "returns API keys with either no expiration or future expiration dates" do
       expect(subject).to match_array scoped
     end
+
+    context "with a key expiring exactly now" do
+      let(:expiring_now) { create(:api_key, expires_at: Time.current) }
+
+      it "excludes the key" do
+        freeze_time do
+          expiring_now
+          expect(subject).to match_array scoped
+        end
+      end
+    end
+  end
+
+  describe ".active" do
+    context "when the server closed the connection", transaction: false do
+      let(:api_key) { create(:api_key) }
+
+      it "answers the first lookup on a new connection" do
+        api_key
+        pid = described_class.connection.select_value("SELECT pg_backend_pid()")
+        config = described_class.connection_db_config.configuration_hash
+        admin = PG.connect(host: config[:host], port: config[:port], user: config[:username], password: config[:password], dbname: config[:database])
+        admin.exec_params("SELECT pg_terminate_backend($1)", [pid])
+        admin.close
+
+        expect(described_class.includes(:organization).find_by(value: api_key.value)).to eq(api_key)
+      end
+    end
   end
 
   describe ".non_expiring" do

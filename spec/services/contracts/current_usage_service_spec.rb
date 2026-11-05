@@ -335,7 +335,7 @@ RSpec.describe Contracts::CurrentUsageService do
   context "when the customer is linked to a tax provider" do
     let(:apply_taxes) { true }
     let(:integration) { create(:anrok_integration, organization:) }
-    let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
 
     before do
       create(:anrok_customer, integration:, customer:)
@@ -346,7 +346,7 @@ RSpec.describe Contracts::CurrentUsageService do
       stub_request(:post, endpoint).to_return do |request|
         response = JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")))
         provider_fee = response["succeededInvoices"].first["fees"].last
-        provider_fee["item_key"] = JSON.parse(request.body).first["fees"].last["item_key"]
+        provider_fee["item_key"] = JSON.parse(request.body)["input"].first["fees"].last["item_key"]
         provider_fee["amount_cents"] = 200
         provider_fee["tax_amount_cents"] = 17
         provider_fee["tax_breakdown"].first["tax_amount"] = 17
@@ -368,9 +368,10 @@ RSpec.describe Contracts::CurrentUsageService do
           .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
       end
 
-      it "returns a tax error instead of usage" do
+      it "returns a failure of the provider instead of usage" do
         expect(result).not_to be_success
-        expect(result.error.messages).to eq(tax_error: ["taxDateTooFarInFuture: Service failure"])
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "anrok", error_code: nil, error_message: "taxDateTooFarInFuture: Service failure")
       end
     end
 
@@ -386,6 +387,41 @@ RSpec.describe Contracts::CurrentUsageService do
         expect(result.error).to be_a(BaseService::TooManyProviderRequestsFailure)
         expect(result.error).to have_attributes(provider_name: :anrok, message: "Service anrok is not available. Try again later.")
         expect(WebMock).not_to have_requested(:post, endpoint)
+      end
+    end
+
+    context "when the provider's request limit is reached" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before do
+        stub_request(:post, endpoint).to_return(status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json)
+      end
+
+      it "returns a too many provider requests failure instead of usage" do
+        expect(result.error).to be_a(BaseService::TooManyProviderRequestsFailure)
+        expect(result.error).to have_attributes(provider_name: "anrok", error: an_instance_of(Integrations::Aggregator::RequestLimitError))
+      end
+    end
+
+    context "when the provider fails with a transient error" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before { stub_request(:post, endpoint).to_return(status: 502, body: "") }
+
+      it "returns a failure of the provider instead of usage" do
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "anrok", error_code: nil)
+      end
+    end
+
+    context "when the provider does not answer in time" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before { stub_request(:post, endpoint).to_raise(Net::ReadTimeout) }
+
+      it "returns a failure of the provider instead of usage" do
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "anrok", error_code: nil, error_message: start_with("Net::ReadTimeout"))
       end
     end
 

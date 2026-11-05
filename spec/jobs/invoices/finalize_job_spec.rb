@@ -26,7 +26,7 @@ RSpec.describe Invoices::FinalizeJob do
     let(:integration_customer) { create(:anrok_customer, customer: invoice.customer) }
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
     let(:integration_collection_mapping) do
       create(
         :netsuite_collection_mapping,

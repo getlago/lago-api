@@ -4,6 +4,7 @@ class ProductFilter < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   include CatalogCodeFormat
+  include FilterPrecedence
 
   self.discard_column = :deleted_at
 

@@ -35,6 +35,8 @@ module Taxes
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, "idx_unique_tax_code_per_organization" => :code)
     end
 
     private

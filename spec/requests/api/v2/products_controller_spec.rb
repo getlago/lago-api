@@ -372,7 +372,7 @@ RSpec.describe Api::V2::ProductsController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:details]).to eq([{code: "value_is_invalid", field: "product_type", meta: {}}])
+          expect(json[:details]).to eq([{code: "value_is_invalid", field: "product_type", meta: {allowed_values: %w[metered fixed]}}])
         end
       end
     end

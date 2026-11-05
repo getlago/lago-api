@@ -43,8 +43,9 @@ module PaymentProviderCustomers
 
       res = client.checkout.payment_links_api.payment_links(Lago::Adyen::Params.new(payment_link_params).to_h)
       adyen_success, adyen_error = handle_adyen_response(res)
-      result.service_failure!(code: adyen_error.code, message: adyen_error.msg) unless adyen_success
-      return result unless result.success?
+      unless adyen_success
+        return result.third_party_failure!(third_party: "Adyen", error_code: adyen_error.code, error_message: adyen_error.msg)
+      end
 
       result.checkout_url = res.response["url"]
 

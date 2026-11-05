@@ -160,5 +160,17 @@ RSpec.describe Taxes::UpdateService do
         expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
     end
+
+    context "when a concurrent request takes the new code" do
+      before do
+        create(:tax, organization:, code: "updated code")
+        # The uniqueness validation ran before the concurrent request committed.
+        allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+      end
+
+      it "returns the validation error of a taken value" do
+        expect(update_service.call.error.messages).to eq(code: ["value_already_exist"])
+      end
+    end
   end
 end

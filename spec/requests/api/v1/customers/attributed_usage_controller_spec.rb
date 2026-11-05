@@ -287,6 +287,17 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
+    context "without group_by" do
+      let(:params) { {external_subscription_id: subscription.external_id} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(group_by: ["value_is_mandatory"])
+      end
+    end
+
     context "with an invalid datetime" do
       let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", from_datetime: "yesterday"} }
 

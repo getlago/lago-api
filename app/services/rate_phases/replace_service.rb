@@ -43,6 +43,8 @@ module RatePhases
               billing_interval_cycle_count: phase[:billing_interval_cycle_count],
               rate_override: overrides[index]
             )
+          rescue ActiveRecord::RecordInvalid => e
+            result.record_validation_failure!(record: e.record) { phase_field(phase, it) }.raise_if_error!
           end
         end
       end
@@ -92,6 +94,15 @@ module RatePhases
         rate_card: applied_rate_card.rate_card,
         params: phase[:rate_override]
       ).raise_if_error!.rate_override
+    rescue BaseService::ValidationFailure => e
+      renamed = e.remap(result) { phase_field(phase, (it.to_sym == :base) ? :rate_override : "rate_override.#{it}") }
+      result.fail_with_error!(renamed).raise_if_error!
+    end
+
+    # Phases are created in the order of their positions, but a field names the phase where the request
+    # put it.
+    def phase_field(phase, field)
+      BaseService::ValidationFailure.item_field(:rate_phases, phases_params.index { it.equal?(phase) }, field)
     end
 
     def ordered_params

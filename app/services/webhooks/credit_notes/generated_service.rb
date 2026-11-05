@@ -6,11 +6,15 @@ module Webhooks
       private
 
       def object_serializer
-        ::V1::CreditNoteSerializer.new(
-          object,
-          root_name: "credit_note",
-          includes: %i[customer]
-        )
+        if object.invoice.product_catalog?
+          ::V2::CreditNoteSerializer.new(object, root_name: "credit_note")
+        else
+          ::V1::CreditNoteSerializer.new(
+            object,
+            root_name: "credit_note",
+            includes: %i[customer]
+          )
+        end
       end
 
       def webhook_type

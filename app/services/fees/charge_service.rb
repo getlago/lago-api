@@ -41,11 +41,16 @@ module Fees
     end
 
     def call
-      return result if !options.current_usage? && already_billed?
+      return result if !options.current_usage? && !options.snapshot_backfill? && already_billed?
 
       init_metered_items_fees
       return result if options.current_usage?
       return result unless result.success?
+
+      if options.snapshot_backfill?
+        persist_recurring_snapshots
+        return result
+      end
 
       if invoice.nil? || !invoice.progressive_billing?
         init_true_up_fee
@@ -504,7 +509,6 @@ module Fees
     def build_aggregator(selected_metered_item)
       aggregate = true
       aggregate = filtered_aggregations.include?(selected_metered_item.filter_id) unless filtered_aggregations.nil?
-      initial = recurring_initial_value(selected_metered_item)
 
       BillableMetrics::AggregationFactory.new_instance(
         metered_item: selected_metered_item,
@@ -515,8 +519,7 @@ module Fees
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate,
         aggregated_filter_ids: aggregated_filter_ids(selected_metered_item),
-        initial_value: initial&.snapshots,
-        initial_period: initial&.period
+        initial_snapshots: recurring_initial_snapshots(selected_metered_item)
       )
     end
 
@@ -540,7 +543,7 @@ module Fees
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
-      return if options.current_usage? || options.invoice_preview? || options.advance_renewal?
+      return if options.current_usage? || options.invoice_preview? || options.advance_renewal? || options.snapshot_backfill?
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
@@ -627,8 +630,9 @@ module Fees
     end
 
     def snapshot_recurring_units?(selected_metered_item)
-      return false unless billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
       return false if options.current_usage? || options.invoice_preview?
+      # A backfill is run by hand on the organizations its caller picked
+      return false unless options.snapshot_backfill? || billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
 
       # A progressive billing invoice stops mid-period, its units do not close the period
       !invoice&.progressive_billing? && snapshot_eligible?(selected_metered_item)
@@ -638,18 +642,30 @@ module Fees
       RecurringAggregationSnapshot.eligible?(metered_item: selected_metered_item, billing_context:)
     end
 
-    # Usage filtered by group narrows the events read, but snapshots hold every group's units
-    def recurring_initial_value(selected_metered_item)
-      if RecurringAggregationSnapshot.readable?(metered_item: selected_metered_item, billing_context:) &&
-          options.usage_filters.filter_by_group.blank?
+    # Fetched once the aggregation reads them: a fee served from the cache or the usage buckets needs none.
+    # Usage filtered by group narrows the events read, but snapshots hold every group's units.
+    def recurring_initial_snapshots(selected_metered_item)
+      return unless RecurringAggregationSnapshot.readable?(metered_item: selected_metered_item, billing_context:)
+      return if options.usage_filters.filter_by_group.present?
+
+      arguments = RecurringAggregationSnapshot.fetch_arguments(
+        metered_item: selected_metered_item, billing_context:, grouped_by_keys: grouped_by_keys(selected_metered_item:)
+      )
+
+      lambda do
         RecurringAggregationSnapshots::FetchService.call!(
-          subscription:,
-          charge: selected_metered_item.charge,
-          charge_filter: selected_metered_item.charge_filter,
-          grouped_by_keys: grouped_by_keys(selected_metered_item:),
-          from_datetime: selected_metered_item.boundaries.charges_from_datetime
+          **arguments,
+          charge_period: recurring_charge_period(arguments[:charge], arguments[:from_datetime])
         )
       end
+    end
+
+    # One per charge, as the marker and the filter check are the same for all its charge filters
+    def recurring_charge_period(charge, from_datetime)
+      @recurring_charge_periods ||= {}
+      @recurring_charge_periods[[charge.id, from_datetime]] ||= RecurringAggregationSnapshots::ChargePeriod.new(
+        subscription:, charge:, from_datetime:
+      )
     end
 
     def recurring_snapshots

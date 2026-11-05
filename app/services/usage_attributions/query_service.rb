@@ -4,7 +4,7 @@ module UsageAttributions
   class QueryService < BaseService
     Result = BaseResult[
       :subscription, :group_by, :rows, :unattributed, :totals, :groups_count, :basis, :from_datetime, :to_datetime,
-      :currency, :limit, :offset, :split_filters_count
+      :currency, :limit, :offset, :split_filters_count, :split_filters_limit
     ]
 
     Row = Data.define(:value, :rank, :amount_cents, :events_count, :split_charge_units, :cells)
@@ -57,6 +57,7 @@ module UsageAttributions
       return result.forbidden_failure! unless available?
       return result.not_allowed_failure!(code: "subscription_not_started") unless subscription.started_at
       return result.not_allowed_failure!(code: "subscription_not_active") unless subscription.active?
+      return result.single_validation_failure!(field: :group_by, error_code: "value_is_mandatory") if group_by.blank?
       return result.not_found_failure!(resource: "usage_attribution_type") unless attribution_types_found?
       return result.not_found_failure!(resource: "charge") unless requested_charges_in_plan?
       return result.validation_failure!(errors: validation_errors) if validation_errors.any?
@@ -69,7 +70,10 @@ module UsageAttributions
       result.from_datetime = window_from
       result.to_datetime = window_to
       result.currency = currency.iso_code
-      result.split_filters_count = split_filter_ids.size if split_charge
+      if split_charge
+        result.split_filters_count = split_filter_ids.size
+        result.split_filters_limit = SPLIT_FILTERS_PER_PAGE
+      end
 
       assign_result(fetch_rows)
       result

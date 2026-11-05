@@ -165,7 +165,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:details]).to eq([{code: "value_is_invalid", field: "product_type", meta: {}}])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "product_type", meta: {allowed_values: %w[metered fixed]}}])
       end
     end
 
@@ -197,18 +197,15 @@ RSpec.describe Api::V2::Contracts::UsageController do
 
       before do
         create(:anrok_customer, integration:, customer:)
-        stub_request(:post, "https://api.nango.dev/v1/anrok/draft_invoices")
+        stub_request(:post, "https://api.nango.dev/action/trigger")
           .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
       end
 
-      it "answers with the tax error" do
+      it "answers with a provider error naming the provider, without its message" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(
-          code: "validation_errors",
-          details: [{code: "taxDateTooFarInFuture: Service failure", field: "tax_error", meta: {}}]
-        )
+        expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "anrok"}}])
       end
     end
 
@@ -222,6 +219,43 @@ RSpec.describe Api::V2::Contracts::UsageController do
       end
 
       it "answers with a too many provider requests error naming the provider, without its message" do
+        subject
+
+        expect(response).to have_http_status(:too_many_requests)
+        expect(json).to eq(
+          code: "too_many_provider_requests",
+          details: [{code: "too_many_provider_requests", field: "base", meta: {provider_name: "anrok"}}]
+        )
+      end
+    end
+
+    # As above, the error renders no entry, so the eager loading the entries need goes unused.
+    context "when the customer's tax provider fails with a transient error", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        stub_request(:post, "https://api.nango.dev/action/trigger").to_return(status: 502, body: "")
+      end
+
+      it "answers with a provider error naming the provider" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "anrok"}}])
+      end
+    end
+
+    context "when the request limit of the customer's tax provider is reached", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        stub_request(:post, "https://api.nango.dev/action/trigger")
+          .to_return(status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json)
+      end
+
+      it "answers with a too many provider requests error naming the provider" do
         subject
 
         expect(response).to have_http_status(:too_many_requests)

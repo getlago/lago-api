@@ -18,14 +18,18 @@ module Customers
     def call
       value = params[:finalize_zero_amount_invoice]
       if !value.nil? && (!value.is_a?(String) || !Customer::FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS.include?(value.to_sym))
-        return result.single_validation_failure!(field: :finalize_zero_amount_invoice, error_code: "invalid_value")
+        return result.single_validation_failure!(
+          field: :finalize_zero_amount_invoice,
+          error_code: "invalid_value",
+          meta: {allowed_values: Customer::FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS.map(&:to_s)}
+        )
       end
 
       # Validated here so that the error names the REST field, not the column it is stored in.
       ISSUING_DATE_SETTINGS.each do |setting, (field, allowed_values)|
         value = params.dig(:billing_configuration, setting)
         if !value.nil? && !allowed_values.value?(value)
-          return result.single_validation_failure!(field:, error_code: "value_is_invalid")
+          return result.single_validation_failure!(field:, error_code: "value_is_invalid", meta: {allowed_values: allowed_values.values})
         end
       end
 

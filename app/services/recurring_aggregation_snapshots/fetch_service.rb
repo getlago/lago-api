@@ -12,12 +12,23 @@ module RecurringAggregationSnapshots
 
     Result = BaseResult[:snapshots, :period]
 
-    def initialize(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:)
+    # charge_period: a ChargePeriod shared by the charge filters of the charge, loaded once for all of them
+    # grouped_by_values: returns only the snapshots of that group, as pay in advance reads one group
+    # all_buckets: false loads only the charge filter's bucket, as pay in advance reads one. A charge_period
+    # given carries its own choice, which the previous subscription lookup follows too.
+    def initialize(
+      subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, charge_period: nil, grouped_by_values: nil, all_buckets: true
+    )
       @subscription = subscription
       @charge = charge
       @charge_filter = charge_filter
       @grouped_by_keys = grouped_by_keys
       @from_datetime = from_datetime
+      @grouped_by_values = grouped_by_values.presence && normalized_group(grouped_by_values)
+      @charge_period = charge_period || ChargePeriod.new(
+        subscription:, charge:, from_datetime:, grouped_by_values: @grouped_by_values, grouped_by_keys: Array(grouped_by_keys),
+        charge_filter_ids: (all_buckets ? nil : [charge_filter&.id].compact)
+      )
 
       super
     end
@@ -25,62 +36,30 @@ module RecurringAggregationSnapshots
     # Returns the snapshots of the latest period closed before from_datetime, one per group with
     # units or events, and that period. Both are nil when the aggregation must fall back to a full scan.
     def call
-      period_records = latest_period_records.to_a
-      marker = period_records.find { it.charge_filter_id.nil? }
-      return result unless marker && !filters_changed_since?(marker)
-
-      records = period_records.select { it.charge_filter_id == charge_filter&.id }
-      return result unless records.all? { same_grouped_by_keys?(it) }
-      return result if records.empty? && filter_edited_since?(marker)
+      marker, records = own_period || previous_subscription_period
+      return result unless marker && records.all? { same_grouped_by_keys?(it) }
 
       result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark)
-      result.snapshots = records.map { to_snapshot(it) }
+      result.snapshots = records.select { in_group?(it) }.map { to_snapshot(it) }
       result
     end
 
     private
 
-    attr_reader :subscription, :charge, :charge_filter, :grouped_by_keys, :from_datetime
+    attr_reader :subscription, :charge, :charge_filter, :grouped_by_keys, :from_datetime, :charge_period, :grouped_by_values
 
-    def charge_snapshots
-      RecurringAggregationSnapshot.where(
-        organization_id: subscription.organization_id,
-        subscription_id: subscription.id,
-        charge_id: charge.id
+    def own_period
+      period = charge_period.period(charge_filter:)
+      marker, records = period
+      (marker && records.empty? && filter_edited_since?(marker)) ? [] : period
+    end
+
+    # An upgrade or downgrade keeps the external id, so the events counted by the previous
+    # subscription are the ones this one reads.
+    def previous_subscription_period
+      subscription.previous_recurring_aggregation_snapshots.period(
+        charge:, charge_filter:, all_buckets: charge_period.all_buckets?, grouped_by_values:, grouped_by_keys: Array(grouped_by_keys)
       )
-    end
-
-    # The default bucket keeps a row for every closed period, other buckets only for groups with
-    # units or events: the marker tells a bucket without usage from a period never closed.
-    # One statement reads the marker and the bucket, so a run rewriting the period cannot land in between.
-    def latest_period_records
-      latest_to_datetime = charge_snapshots
-        .where(charge_filter_id: nil, to_datetime: ...from_datetime)
-        .order(to_datetime: :desc)
-        .limit(1)
-        .select(:to_datetime)
-
-      charge_snapshots.where(charge_filter_id: [nil, charge_filter&.id].uniq, to_datetime: latest_to_datetime)
-    end
-
-    # A filter or filter value created, edited or removed since the marker moves older events between
-    # buckets, so the snapshots of every bucket of the charge are stale, not only the one of that filter.
-    # A value set to all values reads the metric filter's values, which change without touching it.
-    def filters_changed_since?(marker)
-      charge_filters = ChargeFilter.with_discarded.unscope(:order)
-        .where(organization_id: subscription.organization_id, charge_id: charge.id)
-      charge_filter_values = ChargeFilterValue.with_discarded.unscope(:order)
-        .where(organization_id: subscription.organization_id, charge_filter_id: charge_filters.select(:id))
-
-      charge_filters.where("created_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark).exists? ||
-        charge_filter_values.where("updated_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark).exists? ||
-        BillableMetricFilter.with_discarded.unscope(:order)
-          .where(
-            organization_id: subscription.organization_id,
-            id: charge_filter_values.where(values: [ChargeFilterValue::ALL_FILTER_VALUES]).select(:billable_metric_filter_id)
-          )
-          .where("updated_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark)
-          .exists?
     end
 
     # Snapshots grouped on other keys cannot be regrouped, only a full scan can. Checked on the
@@ -93,6 +72,17 @@ module RecurringAggregationSnapshots
     # properties can regroup units that netted to zero into non-zero groups
     def filter_edited_since?(marker)
       charge_filter.present? && charge_filter.updated_at > marker.watermark
+    end
+
+    # A group without a snapshot had neither units nor events at the period, so it starts from zero.
+    # Same match as of_group, which also loads one snapshot of another group per bucket.
+    def in_group?(record)
+      grouped_by_values.nil? || record.grouped_by.slice(*grouped_by_values.keys) == grouped_by_values
+    end
+
+    # The stores group a blank value with a missing one, so a snapshot holds an event's "" as nil
+    def normalized_group(grouped_by)
+      grouped_by.to_h { |key, value| [key.to_s, value&.to_s.presence] }
     end
 
     def to_snapshot(record)

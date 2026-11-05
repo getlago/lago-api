@@ -247,7 +247,7 @@ module Events
       def active_unique_property?(event)
         previous_event = Events::Stores::Utils::ClickhouseConnection.with_retry do
           query = events
-            .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
+            .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property]&.to_s)
 
           if event.persisted? && event.transaction_id.present?
             query
