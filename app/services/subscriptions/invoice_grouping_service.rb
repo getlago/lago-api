@@ -76,6 +76,7 @@ module Subscriptions
         groups = subscriptions.group_by do |subscription|
           PaymentTerms::ResolveService.call!(
             customer: subscription.customer,
+            subscription:,
             billing_entity: subscription.billing_entity
           ).payment_term.grouping_key
         end.values
