@@ -8,6 +8,8 @@ module Types
 
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
+      field :taxes_unavailable, Boolean, null: false,
+        description: "True when the tax provider failed and amount/total above are the untaxed fallback"
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
     end
   end

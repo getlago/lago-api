@@ -14,26 +14,36 @@ module Resolvers
 
     type Types::Contracts::CurrentUsageTotal, null: false
 
+    Totals = Struct.new(:amount_cents, :taxes_amount_cents, :total_amount_cents, :taxes_unavailable, keyword_init: true)
+
     def resolve(contract_id:)
       contract = current_organization.contracts.find_by(id: contract_id)
       return not_found_error(resource: "contract") unless contract
 
       result = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: true)
-      return result if result.success?
+      return totals(result, taxes_unavailable: false) if result.success?
       return result_error(result) unless provider_failure?(result)
 
       # The provider being down shouldn't hide the summary line entirely - fall back to the
-      # untaxed total rather than failing the whole query.
+      # untaxed total rather than failing the whole query, but flag it so the client can tell
+      # this isn't a genuine zero-tax result.
       fallback = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: false)
       return result_error(fallback) unless fallback.success?
 
-      fallback
+      totals(fallback, taxes_unavailable: true)
     end
 
     private
 
     def provider_failure?(result)
       result.error.is_a?(BaseService::ThirdPartyFailure) || result.error.is_a?(BaseService::TooManyProviderRequestsFailure)
+    end
+
+    def totals(result, taxes_unavailable:)
+      Totals.new(
+        amount_cents: result.amount_cents, taxes_amount_cents: result.taxes_amount_cents,
+        total_amount_cents: result.total_amount_cents, taxes_unavailable:
+      )
     end
   end
 end
