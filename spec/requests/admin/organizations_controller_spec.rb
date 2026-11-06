@@ -138,4 +138,30 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
       end
     end
   end
+
+  describe "POST /admin/organizations/:id/link_sandbox" do
+    include_context "with self-serve enabled"
+
+    # The context replaces ENV, which drops the admin key the helper stubs on it.
+    let(:self_serve_env) { {"LAGO_SELF_SERVE_ENABLED" => "true", "ADMIN_API_KEY" => AdminHelper::ADMIN_API_KEY} }
+    let(:target) { create(:organization) }
+
+    it "links the sandbox" do
+      admin_post("/admin/organizations/#{organization.id}/link_sandbox", {sandbox_organization_id: target.id}, admin_headers)
+
+      expect(response).to have_http_status(:ok)
+      expect(json[:sandbox_organization]).to include(id: target.id, environment: "sandbox",
+        production_organization_id: organization.id)
+      expect(json[:organization]).to include(id: organization.id, sandbox_organization_id: target.id)
+    end
+
+    it "answers a refusal with its code" do
+      create(:membership, organization: target)
+
+      admin_post("/admin/organizations/#{organization.id}/link_sandbox", {sandbox_organization_id: target.id}, admin_headers)
+
+      expect(response).to have_http_status(:method_not_allowed)
+      expect(json[:code]).to eq("sandbox_has_other_members")
+    end
+  end
 end

@@ -48,6 +48,23 @@ RSpec.describe Admin::SlackNotificationService do
         }).to have_been_made.once
       end
 
+      context "when a sandbox was linked" do
+        let(:audit_log) do
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "Test Org")
+          create(:cs_admin_audit_log, organization: sandbox, action: :sandbox_linked, feature_type: "organization",
+            feature_key: organization.id, before_value: false, actor_email: "admin@lago.com",
+            reason: "Enabling for customer onboarding POC")
+        end
+
+        it "names both organizations" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("Sandbox linked] *Test Org* is now the sandbox of *ACME Corp*")
+          }).to have_been_made.once
+        end
+      end
+
       context "when a sandbox was created" do
         let(:audit_log) do
           sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME Corp Sandbox")

@@ -50,7 +50,10 @@ module Admin
     end
 
     def message_text
-      if audit_log.feature_type == "organization" && audit_log.organization.sandbox?
+      if audit_log.sandbox_linked?
+        production = Organization.find_by(id: audit_log.feature_key)
+        "[#{emoji} Sandbox linked] *#{escape_mrkdwn(audit_log.organization.name)}* is now the sandbox of *#{escape_mrkdwn(production&.name)}* by #{escape_mrkdwn(audit_log.actor_email)}, reason: \"#{escape_mrkdwn(audit_log.reason)}\""
+      elsif audit_log.feature_type == "organization" && audit_log.organization.sandbox?
         "[#{emoji} Sandbox created] *#{escape_mrkdwn(audit_log.organization.name)}* for *#{escape_mrkdwn(audit_log.organization.production_organization&.name)}* by #{escape_mrkdwn(audit_log.actor_email)}, reason: \"#{escape_mrkdwn(audit_log.reason)}\""
       elsif audit_log.feature_type == "organization"
         "[#{emoji} Organization created] *#{escape_mrkdwn(audit_log.organization.name)}* by #{escape_mrkdwn(audit_log.actor_email)} — reason: \"#{escape_mrkdwn(audit_log.reason)}\""
@@ -78,7 +81,7 @@ module Admin
     end
 
     def emoji
-      if audit_log.toggle_on? || audit_log.org_created?
+      if audit_log.toggle_on? || audit_log.org_created? || audit_log.sandbox_linked?
         "✅"
       else
         "❌"

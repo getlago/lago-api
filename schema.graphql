@@ -706,6 +706,11 @@ enum AdminActionEnum {
   rollback
 
   """
+  Organization was linked as a sandbox
+  """
+  sandbox_linked
+
+  """
   Feature was disabled
   """
   toggle_off
@@ -796,6 +801,24 @@ enum AdminFeatureTypeEnum {
   Premium integration toggle
   """
   premium_integration
+}
+
+"""
+Link sandbox organization input arguments
+"""
+input AdminLinkSandboxOrganizationInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  productionOrganizationId: ID!
+  reason: String!
+  sandboxOrganizationId: ID!
+}
+
+type AdminLinkSandboxOrganizationPayload {
+  organization: AdminOrganization!
+  sandboxOrganization: AdminOrganization!
 }
 
 type AdminOrganization {
@@ -8884,6 +8907,16 @@ type Mutation {
     """
     input: AdminCreateOrganizationInput!
   ): AdminCreateOrganizationPayload
+
+  """
+  Turns an existing organization into the sandbox of a production organization
+  """
+  adminLinkSandboxOrganization(
+    """
+    Parameters for AdminLinkSandboxOrganization
+    """
+    input: AdminLinkSandboxOrganizationInput!
+  ): AdminLinkSandboxOrganizationPayload
 
   """
   Rollback a single admin audit log entry
