@@ -57,25 +57,31 @@ class PendingSignup < ApplicationRecord
       .pluck(:emails_sent_at).flatten.select { it > window_start }.sort
   end
 
-  def self.mailbox_send_refusal(mailbox_key, now)
+  # The refusal of a send to the mailbox (:limit_reached, :too_soon or nil) and the seconds before one is allowed,
+  # from one read of its sends.
+  def self.mailbox_send_state(mailbox_key, now)
     sends = mailbox_sends(mailbox_key, now)
 
-    if sends.size >= MAX_EMAILS_PER_MAILBOX
+    refusal = if sends.size >= MAX_EMAILS_PER_MAILBOX
       :limit_reached
     elsif sends.last&.after?(now - MIN_EMAIL_INTERVAL)
       :too_soon
     end
-  end
-
-  # Seconds before a send to the mailbox is allowed: the minute rule, and the hour rule once 3 emails are in it.
-  def self.seconds_until_mailbox_send(mailbox_key, now)
-    sends = mailbox_sends(mailbox_key, now)
+    # The minute rule, and the hour rule once 3 emails are in it.
     next_send_at = [
       (sends.last + MIN_EMAIL_INTERVAL if sends.any?),
       (sends[-MAX_EMAILS_PER_MAILBOX] + EMAIL_WINDOW if sends.size >= MAX_EMAILS_PER_MAILBOX)
     ].compact.max
 
-    next_send_at ? [(next_send_at - now).ceil, 0].max : 0
+    [refusal, next_send_at ? [(next_send_at - now).ceil, 0].max : 0]
+  end
+
+  def self.mailbox_send_refusal(mailbox_key, now)
+    mailbox_send_state(mailbox_key, now).first
+  end
+
+  def self.seconds_until_mailbox_send(mailbox_key, now)
+    mailbox_send_state(mailbox_key, now).last
   end
 
   def signup_secret_matches?(secret)

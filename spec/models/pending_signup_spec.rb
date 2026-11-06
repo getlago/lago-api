@@ -177,6 +177,21 @@ RSpec.describe PendingSignup do
     end
   end
 
+  describe ".mailbox_send_state" do
+    it "answers the refusal and the wait from one read of the sends" do
+      freeze_time
+      create(:pending_signup, email: "jane@acme.com", emails_sent_at: [20.seconds.ago])
+      queries = 0
+      counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+
+      state = ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+        described_class.mailbox_send_state("jane@acme.com", Time.current)
+      end
+
+      expect([state, queries]).to eq([[:too_soon, 40], 1])
+    end
+  end
+
   describe ".seconds_until_mailbox_send" do
     it "waits until the oldest of 3 sends leaves the hour" do
       freeze_time

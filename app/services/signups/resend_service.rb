@@ -59,9 +59,11 @@ module Signups
         result.not_allowed_failure!(code: "signup_expired")
       elsif pending_signup.resend_limit_reached?
         result.not_allowed_failure!(code: "signup_resend_exhausted")
-      elsif (refusal = PendingSignup.mailbox_send_refusal(pending_signup.mailbox_key, now))
-        wait = PendingSignup.seconds_until_mailbox_send(pending_signup.mailbox_key, now)
-        retry_later(pending_signup, now, wait, (refusal == :limit_reached) ? "resend_limit_reached" : "resend_too_soon")
+      else
+        refusal, wait = PendingSignup.mailbox_send_state(pending_signup.mailbox_key, now)
+        if refusal
+          retry_later(pending_signup, now, wait, (refusal == :limit_reached) ? "resend_limit_reached" : "resend_too_soon")
+        end
       end
 
       result.failure?
