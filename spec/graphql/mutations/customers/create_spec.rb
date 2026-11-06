@@ -333,5 +333,26 @@ RSpec.describe Mutations::Customers::Create do
       customer = Customer.find(result["data"]["createCustomer"]["id"])
       expect(customer.payment_term).to eq("term_type" => "net_end_of_month", "days" => 15)
     end
+
+    it "ignores non-applicable fields sent as null" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permissions,
+        query: payment_term_mutation,
+        variables: {
+          input: {
+            name: "Payment term customer",
+            externalId: SecureRandom.uuid,
+            paymentTerm: {termType: "net", days: 30, dayOfMonth: nil, monthOffset: nil}
+          }
+        }
+      )
+
+      expect(result["errors"]).to be_nil
+
+      customer = Customer.find(result["data"]["createCustomer"]["id"])
+      expect(customer.payment_term).to eq("term_type" => "net", "days" => 30)
+    end
   end
 end

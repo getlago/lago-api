@@ -428,6 +428,14 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       expect(Subscription.find(data["id"]).payment_term).to eq("term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1)
     end
 
+    it "ignores non-applicable fields sent as null" do
+      response = write_payment_term({termType: "net", days: 30, dayOfMonth: nil, monthOffset: nil})
+      data = response.dig("data", "updateSubscription")
+
+      expect(response["errors"]).to be_nil
+      expect(Subscription.find(data["id"]).payment_term).to eq("term_type" => "net", "days" => 30)
+    end
+
     it "rejects a term missing required days" do
       response = write_payment_term({termType: "net"})
 
