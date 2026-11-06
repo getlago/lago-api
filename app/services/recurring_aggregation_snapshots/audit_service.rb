@@ -233,8 +233,10 @@ module RecurringAggregationSnapshots
       ChargeFilter.with_discarded.where(id: ids).includes(values: :billable_metric_filter)
     end
 
+    # A removed filter has its values discarded with it
     def filter_values(charge_filter)
-      charge_filter.to_h.transform_values(&:sort)
+      values = charge_filter.discarded? ? charge_filter.to_h_with_discarded : charge_filter.to_h
+      values.transform_values(&:sort)
     end
 
     # Group values come back from JSON on both sides, the zero-unit marker with nil values

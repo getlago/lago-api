@@ -447,6 +447,17 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
         end
       end
 
+      context "when the parent filter was removed after the invoice" do
+        before do
+          ChargeFilterValue.where(charge_filter: parent_filter).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          parent_filter.discard!
+        end
+
+        it "matches it on its discarded values" do
+          expect(result.differences).to be_empty
+        end
+      end
+
       context "when the parent filter has other values" do
         let(:override_values) { %w[us] }
 
