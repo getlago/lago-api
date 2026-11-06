@@ -24,6 +24,15 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
     end
   end
 
+  describe "INVALIDATED_MARKER" do
+    it "reads as an expired cached key for the previous cache reader" do
+      cache_json = JSON.parse(described_class::INVALIDATED_MARKER)
+      api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
+
+      expect(api_key).to be_expired
+    end
+  end
+
   describe "#expire_all_cache" do
     let(:organization) { create(:organization, api_keys:) }
     let(:api_keys) { create_list(:api_key, 3) }
