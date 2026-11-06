@@ -1513,4 +1513,81 @@ describe "Pay in advance fixed charge units change mid-period", :premium do
       end
     end
   end
+
+  describe "when units increase outside the first month of a yearly plan billing charges monthly" do
+    let(:plan) do
+      create(
+        :plan,
+        organization:,
+        amount_cents: 0,
+        interval: "yearly",
+        pay_in_advance: true,
+        bill_charges_monthly: true,
+        bill_fixed_charges_monthly: false
+      )
+    end
+    let(:fixed_charge) do
+      create(
+        :fixed_charge,
+        plan:,
+        add_on:,
+        units: 10,
+        properties: {amount: "10"},
+        prorated: true,
+        pay_in_advance: true
+      )
+    end
+    let(:subscription_date) { DateTime.new(2026, 7, 6) }
+    let(:subscription) { customer.subscriptions.first }
+
+    before do
+      fixed_charge
+
+      travel_to subscription_date do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_#{customer.external_id}",
+            plan_code: plan.code,
+            billing_time: "anniversary"
+          }
+        )
+      end
+
+      travel_to subscription_date + 1.minute do
+        perform_all_enqueued_jobs
+      end
+
+      travel_to DateTime.new(2026, 10, 15) do
+        update_plan(
+          plan,
+          {
+            fixed_charges: [{
+              id: fixed_charge.id,
+              units: 20,
+              apply_units_immediately: true,
+              properties: {amount: "10"}
+            }]
+          }
+        )
+        perform_all_enqueued_jobs
+      end
+    end
+
+    it "bills the added units prorated on the yearly fixed charge period" do
+      invoices = subscription.reload.invoices.order(:created_at)
+      expect(invoices.count).to eq(2)
+      expect(invoices.first.fees.fixed_charge.sole).to have_attributes(units: 10, amount_cents: 10_000)
+
+      # 10 added units for the 264 days from 2026-10-15 to 2027-07-05 out of 365:
+      # 10 * 1_000 * 264 / 365 = 7_232.88
+      delta_fee = invoices.last.fees.fixed_charge.sole
+      expect(delta_fee).to have_attributes(units: 10, amount_cents: 7_233)
+      expect(delta_fee.properties).to include(
+        "fixed_charges_from_datetime" => "2026-07-06T00:00:00.000Z",
+        "fixed_charges_to_datetime" => "2027-07-05T23:59:59.999Z"
+      )
+      expect(invoices.last.fees_amount_cents).to eq(7_233)
+    end
+  end
 end

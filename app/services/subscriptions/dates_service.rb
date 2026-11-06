@@ -46,8 +46,8 @@ module Subscriptions
       )
 
       {
-        fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
-        fixed_charges_to_datetime: date_service.fixed_charges_to_datetime,
+        fixed_charges_from_datetime: date_service.fixed_charges_period_from_datetime,
+        fixed_charges_to_datetime: date_service.fixed_charges_period_to_datetime,
         fixed_charges_duration: date_service.fixed_charges_duration_in_days
       }
     end
@@ -129,8 +129,18 @@ module Subscriptions
     end
 
     def fixed_charges_from_datetime
-      return unless subscription.started_at
       return unless should_fill_fixed_charges_boundaries?
+
+      fixed_charges_period_from_datetime
+    end
+
+    # Start of the current fixed-charges period, regardless of whether fixed charges are billed
+    # this cycle. `fixed_charges_from_datetime` gates this behind `should_fill_fixed_charges_boundaries?`
+    # to compute invoice boundaries; the pay in advance fixed charge flow needs the boundary even on
+    # cycles that skip fixed-charge billing (e.g. yearly/semiannual plans billing charges monthly but
+    # fixed charges per period).
+    def fixed_charges_period_from_datetime
+      return unless subscription.started_at
 
       datetime = customer_timezone_shift(compute_fixed_charges_from_date)
 
