@@ -1124,6 +1124,40 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             invoicing_reason: :subscription_periodic
           )
       end
+
+      context "when subscriptions carry different payment terms" do
+        before do
+          first_subscription.update!(payment_term: {"term_type" => "net", "days" => 30})
+          second_subscription.update!(payment_term: {"term_type" => "end_of_month"})
+        end
+
+        it "produces separate billing jobs per payment term" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([first_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([second_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
+        end
+      end
+
+      context "when subscriptions carry different terms giving the same due date" do
+        before do
+          first_subscription.update!(payment_term: {"term_type" => "net", "days" => 0})
+          second_subscription.update!(payment_term: {"term_type" => "due_on_receipt"})
+        end
+
+        it "groups them into a single billing job" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(first_subscription, second_subscription),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
     end
 
     context "when a subscription opts out of invoice consolidation" do
