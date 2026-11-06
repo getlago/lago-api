@@ -24,12 +24,14 @@ class GraphqlController < ApplicationController
     operation_name = params[:operationName]
     context = {
       login_method:,
+      session_claims:,
       current_user:,
       current_organization:,
       current_membership:,
+      organization_refused_for_session: organization_refused_for_session?,
       customer_portal_user:,
       request:,
-      permissions: (current_membership || Permission)&.permissions_hash
+      permissions: context_permissions
     }
 
     CurrentContext.device_info = Utils::DeviceInfo.parse(request)
@@ -61,6 +63,14 @@ class GraphqlController < ApplicationController
   end
 
   private
+
+  # NOTE: A customer portal request is authorized by its portal token only. Merchant credentials sent with it
+  #       must not grant permissions on the portal customer's data, which can belong to another organization.
+  def context_permissions
+    return Permission.permissions_hash if customer_portal_user
+
+    (current_membership || Permission).permissions_hash
+  end
 
   # Handle variables in form data, JSON body, or a blank value
   def prepare_variables(variables_param)

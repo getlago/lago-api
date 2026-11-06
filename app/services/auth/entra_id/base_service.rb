@@ -3,6 +3,8 @@
 module Auth
   module EntraId
     class BaseService < BaseService
+      include Auth::SsoIntegrationChecks
+
       # Microsoft's OIDC userinfo endpoint. Azure AD exposes userinfo through
       # Microsoft Graph (not the tenant login host), so it is the same for every
       # commercial Entra tenant. Sovereign clouds (US Gov, China) use a different
@@ -38,6 +40,14 @@ module Auth
         raise ValidationError, "domain_not_configured" if entra_id_integration.blank?
 
         result.entra_id_integration = entra_id_integration
+      end
+
+      def sso_integration
+        result.entra_id_integration
+      end
+
+      def sso_login_method
+        Organizations::AuthenticationMethods::ENTRA_ID
       end
 
       def check_invite(email)

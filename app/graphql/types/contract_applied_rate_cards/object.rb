@@ -6,11 +6,12 @@ module Types
       graphql_name "ContractAppliedRateCard"
       description "Rate card applied to a contract"
 
-      dataload_association :product, :rate_card
+      dataload_association :contract, :product, :rate_card
 
       field :id, ID, null: false
       field :units, GraphQL::Types::Float, null: true
 
+      field :contract, Types::Contracts::Object, null: false
       field :product, Types::Products::Object, null: false
       field :rate_card, Types::RateCards::Object, null: false
 

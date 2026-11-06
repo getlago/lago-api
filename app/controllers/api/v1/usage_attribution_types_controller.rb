@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class UsageAttributionTypesController < Api::BaseController
+    class UsageAttributionTypesController < Api::V1::BaseController
       before_action :ensure_feature_flag!
 
       def create
@@ -17,7 +17,7 @@ module Api
         if result.success?
           render_usage_attribution_type(result.usage_attribution_type)
         else
-          render_error_response(result)
+          render_service_error(result)
         end
       end
 
@@ -36,7 +36,7 @@ module Api
         if result.success?
           render_usage_attribution_type(result.usage_attribution_type)
         else
-          render_error_response(result)
+          render_service_error(result)
         end
       end
 
@@ -63,8 +63,8 @@ module Api
         result = ::UsageAttributionTypesQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: {role: params[:role]},
           search_term: params[:search_term]
@@ -112,6 +112,14 @@ module Api
             root_name: "usage_attribution_type"
           )
         )
+      end
+
+      def render_service_error(result)
+        if result.error.is_a?(BaseService::ValidationFailure)
+          validation_errors(errors: result.error.messages.transform_keys { (it.to_s == "parent_id") ? :parent_code : it })
+        else
+          render_error_response(result)
+        end
       end
 
       def ensure_feature_flag!

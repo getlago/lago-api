@@ -55,7 +55,6 @@ RSpec.describe Organizations::CreateService do
 
           it "enables clickhouse_events_store" do
             expect(service_result.organization.reload.clickhouse_events_store).to be true
-            expect(service_result.organization.clickhouse_deduplication_enabled).to be true
           end
         end
 
@@ -70,7 +69,6 @@ RSpec.describe Organizations::CreateService do
 
           it "leaves clickhouse_events_store disabled" do
             expect(service_result.organization.reload.clickhouse_events_store).to be false
-            expect(service_result.organization.clickhouse_deduplication_enabled).to be false
           end
         end
       end
@@ -86,7 +84,6 @@ RSpec.describe Organizations::CreateService do
 
         it "leaves clickhouse_events_store disabled" do
           expect(service_result.organization.reload.clickhouse_events_store).to be false
-          expect(service_result.organization.clickhouse_deduplication_enabled).to be false
         end
       end
 

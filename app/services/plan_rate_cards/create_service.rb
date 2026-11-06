@@ -4,6 +4,11 @@ module PlanRateCards
   class CreateService < BaseService
     Result = BaseResult[:plan_rate_card]
 
+    activity_loggable(
+      action: "plan_rate_card.created",
+      record: -> { result.plan_rate_card }
+    )
+
     def initialize(catalog_plan:, params:)
       @catalog_plan = catalog_plan
       @params = params.to_h.with_indifferent_access
@@ -48,12 +53,14 @@ module PlanRateCards
         # back. Omitted or null, the entry starts on a single default terminal
         # phase.
         if params.key?(:rate_phases) && !params[:rate_phases].nil?
-          RatePhases::ReplaceService.call!(plan_rate_card:, phases_params: params[:rate_phases])
+          RatePhases::ReplaceService.call!(plan_rate_card:, phases_params: params[:rate_phases], emit_events: false)
         else
-          RatePhases::CreateService.call!(plan_rate_card:, params: {code: "default", position: 1})
+          RatePhases::CreateService.call!(plan_rate_card:, params: {code: "default", position: 1}, emit_events: false)
         end
 
         result.plan_rate_card = plan_rate_card
+        plan_rate_card.association(:rate_phases).reset
+        SendWebhookJob.perform_after_commit("plan_rate_card.created", plan_rate_card)
       end
 
       result

@@ -28,6 +28,8 @@ RSpec.describe Mutations::CatalogPlans::Destroy do
 
   before { organization.enable_feature_flag!(:product_catalog) }
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:delete"
 
   it "soft deletes the catalog plan" do

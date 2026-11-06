@@ -22,7 +22,7 @@ module Types
       field :address_line2, String
       field :city, String
       field :country, Types::CountryCodeEnum
-      field :net_payment_term, Integer, null: false
+      field :net_payment_term, Integer
       field :state, String
       field :zipcode, String
 
@@ -45,8 +45,11 @@ module Types
       field :premium_integrations, [Types::Integrations::PremiumIntegrationTypeEnum], null: false
 
       field :feature_flags, [Types::Organizations::FeatureFlagEnum], null: false
+      field :realtime_usage_enabled, Boolean, null: false, description: "True when usage reports can be served from the real-time usage buckets"
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, permission: "organization:invoices:view"
+      field :customer_portal_locked_fields, [Types::Organizations::CustomerPortalFieldEnum], null: false
+      field :document_url_expiration_days, Integer, null: false
       field :email_settings, [Types::Organizations::EmailSettingsEnum], permission: "organization:emails:view"
       field :finalize_zero_amount_invoice, Boolean, null: false
       field :taxes, [Types::Taxes::Object], resolver: Resolvers::TaxesResolver, permission: "organization:taxes:view"
@@ -67,6 +70,17 @@ module Types
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }
       end
 
+      def realtime_usage_enabled
+        ::RealtimeUsage.enabled?(object)
+      end
+
+      # The organization column is no longer written when the default billing entity's term changes.
+      def net_payment_term
+        return object.net_payment_term unless object.default_billing_entity
+
+        object.default_billing_entity.net_payment_term
+      end
+
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first
       end
@@ -76,7 +90,7 @@ module Types
       end
 
       def accessible_by_current_session
-        object.authentication_methods.include?(context[:login_method])
+        object.accessible_by_session?(**context[:session_claims].to_h)
       end
 
       def authenticated_method

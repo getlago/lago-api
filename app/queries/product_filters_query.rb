@@ -2,18 +2,21 @@
 
 class ProductFiltersQuery < BaseQuery
   Result = BaseResult[:product_filters]
-  Filters = BaseFilters[:product_id, :product_category_ids, :without_product_category]
+  Filters = BaseFilters[:product_id, :product_category_ids, :without_product_category, :created_at_from, :created_at_to]
 
   def call
-    product_filters = base_scope.result.includes(values: :billable_metric_filter)
+    product_filters = base_scope.result.includes(product: :product_category, values: :billable_metric_filter)
     product_filters = apply_consistent_ordering(product_filters)
 
     product_filters = with_product(product_filters) if filters.product_id.present?
     if filters.product_category_ids.present? || filters.without_product_category.present?
       product_filters = with_product_category(product_filters)
     end
+    product_filters = with_date_range(product_filters, :created_at)
 
     result.product_filters = paginate(product_filters)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

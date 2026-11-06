@@ -99,7 +99,7 @@ module Events
             return yield(from_datetime:, to_datetime:, before: nil)
           end
 
-          key = cache_key(from_datetime:, to_datetime:, deduplicate: store.deduplicate)
+          key = cache_key(from_datetime:, to_datetime:)
           batch = Digest::SHA256.hexdigest([conditions, group_keys].to_json)
 
           base = base_rows(store:, key:, batch:, now:, cut:, from_datetime:, &)
@@ -163,7 +163,7 @@ module Events
         def late_events?(store:, from_datetime:, entry:)
           where = [
             store.deduplicated_events_where_sql(from_datetime:, to_datetime: nil, before: entry.cut),
-            ActiveRecord::Base.sanitize_sql_for_conditions(["enriched_at > ?", entry.watermark])
+            store.sanitize_clickhouse_sql(["enriched_at > ?", entry.watermark])
           ].join(" AND ")
           sql = "SELECT 1 FROM events_enriched WHERE #{where} LIMIT 1"
 
@@ -187,7 +187,7 @@ module Events
         # The metric decides which value of an event is aggregated and how, so editing it, or the
         # charge or its filters, starts a new base. Which events each filter keeps is not bound to
         # these timestamps: the batch's conditions are compared on every computation (see #rows).
-        def cache_key(from_datetime:, to_datetime:, deduplicate:)
+        def cache_key(from_datetime:, to_datetime:)
           [
             "charge-scan-incremental",
             CACHE_KEY_VERSION,
@@ -198,8 +198,7 @@ module Events
             charge.filters.map(&:updated_at).max&.iso8601(6),
             charge.billable_metric.updated_at.iso8601(6),
             from_datetime&.iso8601(6),
-            to_datetime&.iso8601(6),
-            deduplicate
+            to_datetime&.iso8601(6)
           ].join("/")
         end
 

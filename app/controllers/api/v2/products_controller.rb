@@ -4,6 +4,8 @@ module Api
   module V2
     class ProductsController < Api::V2::BaseController
       cursor_paginated_index(Product)
+      date_range_filtered_index(:created_at)
+      serializable_with ::V2::ProductSerializer
 
       ERROR_FIELDS = {billable_metric: :billable_metric_code, product_category: :product_category_code}.freeze
 
@@ -77,11 +79,6 @@ module Api
           return not_found_error(resource: "product_category")
         end
 
-        # The column is a PG enum: an unknown value would fail the SQL cast.
-        if params[:product_type].present? && !Product::PRODUCT_TYPES.value?(params[:product_type])
-          return validation_errors(errors: {product_type: ["value_is_invalid"]})
-        end
-
         result = ::ProductsQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
@@ -89,22 +86,13 @@ module Api
           filters: {
             product_category_ids: index_product_categories.map(&:id).presence,
             without_product_category: ActiveModel::Type::Boolean.new.cast(params[:without_product_category]),
-            product_type: params[:product_type]
+            product_type: params[:product_type],
+            **date_range_filters
           }
         )
 
         if result.success?
-          # Preloaded so filters_count reads the loaded association.
-          page = ::CursorPagination::Page.new(records: result.products.includes(:filters), cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::ProductSerializer,
-              collection_name: "products",
-              meta: page.meta
-            )
-          )
+          render_products(result.products)
         else
           render_error_response(result)
         end
@@ -154,14 +142,9 @@ module Api
         )
       end
 
-      def render_product(product)
-        render(json: ::V2::ProductSerializer.new(product, root_name: "product"))
-      end
-
       def render_item_error(result)
         if result.error.is_a?(BaseService::ValidationFailure)
-          messages = result.error.messages.transform_keys { |key| ERROR_FIELDS[key.to_sym] || key }
-          return validation_errors(errors: messages)
+          result.fail_with_error!(result.error.remap(result) { ERROR_FIELDS[it.to_sym] || it })
         end
 
         render_error_response(result)

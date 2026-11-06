@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class SecurityLogsController < Api::BaseController
+    class SecurityLogsController < Api::V1::BaseController
       include PremiumFeatureOnly
 
       skip_audit_logs!
@@ -13,8 +13,8 @@ module Api
         result = SecurityLogsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters
         )
@@ -34,6 +34,9 @@ module Api
       end
 
       def show
+        # As in index, whose query checks it: the logs live in ClickHouse.
+        return forbidden_error(code: "feature_unavailable") unless SecurityLogsQuery.available?
+
         security_log = current_organization.security_logs.find_by(
           log_id: params[:log_id]
         )

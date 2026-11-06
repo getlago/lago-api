@@ -102,7 +102,7 @@ module Resolvers
         ]
       ).call
 
-      Invoice.preload_offset_amounts(invoices)
+      ::Invoice.preload_aggregations(invoices)
     end
   end
 end

@@ -106,7 +106,7 @@ namespace :recipes do
       puts "      Confirming below acknowledges this check has been performed."
       puts ""
       TaskPrompt.confirm!("Do you want to proceed? (y/n): ")
-      organization.update!(clickhouse_events_store: true, clickhouse_deduplication_enabled: true)
+      organization.update!(clickhouse_events_store: true)
       ApiKeys::CacheService.expire_all_cache(organization)
 
       puts "DONE."
@@ -123,10 +123,7 @@ def compute_usage_totals(subscription)
   )
   legacy_fees = legacy_result.usage&.fees || []
 
-  enriched_result = Events::Stores::StoreFactory.with_override(
-    store_class: Events::Stores::ClickhouseStore,
-    deduplicate: true
-  ) do
+  enriched_result = Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore) do
     Invoices::CustomerUsageService.call(
       customer: subscription.customer,
       subscription:,

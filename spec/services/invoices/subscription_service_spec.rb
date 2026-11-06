@@ -48,20 +48,6 @@ RSpec.describe Invoices::SubscriptionService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
-    it "calls SegmentTrackJob" do
-      invoice = invoice_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -125,6 +111,19 @@ RSpec.describe Invoices::SubscriptionService do
         result = invoice_service.call
 
         expect(result.invoice.fees.subscription.first.billing_entity_id).to eq(subscription_billing_entity.id)
+      end
+
+      context "when the billing entity has an invoice grace period" do
+        let(:subscription_billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
+
+        it "creates a draft invoice using that grace period" do
+          result = invoice_service.call
+
+          expect(result.invoice).to have_attributes(
+            status: "draft",
+            expected_finalization_date: timestamp.to_date + 3.days
+          )
+        end
       end
     end
 

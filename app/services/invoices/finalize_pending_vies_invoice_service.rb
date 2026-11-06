@@ -50,7 +50,6 @@ module Invoices
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
           create_payment
-          Utils::SegmentTrack.invoice_created(invoice)
         end
       end
 
@@ -92,7 +91,7 @@ module Invoices
     end
 
     def payment_due_date
-      @payment_due_date ||= issuing_date + customer.applicable_net_payment_term.days
+      @payment_due_date ||= invoice.snapshotted_payment_term.due_date_for(issuing_date)
     end
 
     def should_create_credit_note_credit?

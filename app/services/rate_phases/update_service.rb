@@ -6,9 +6,10 @@ module RatePhases
   class UpdateService < BaseService
     Result = BaseResult[:rate_phase]
 
-    def initialize(rate_phase:, params:)
+    def initialize(rate_phase:, params:, emit_events: true)
       @rate_phase = rate_phase
       @params = params.to_h.with_indifferent_access
+      @emit_events = emit_events
       super
     end
 
@@ -32,6 +33,7 @@ module RatePhases
         rate_phase.reload
         return result.not_found_failure!(resource: "rate_phase") if rate_phase.discarded?
 
+        applied_rate_card.association(:rate_phases).reset
         siblings = applied_rate_card.rate_phases.order(:position).to_a
         last = siblings.last == rate_phase
 
@@ -51,26 +53,30 @@ module RatePhases
           target = RatePhase.parse_position(params[:position])
           failure = position_failure(target, siblings, last)
           return failure if failure
-
-          move_to(target, siblings)
         end
 
-        rate_phase.name = params[:name] if params.key?(:name)
-        rate_phase.code = params[:code] if params.key?(:code)
-        if params.key?(:billing_interval_cycle_count)
-          rate_phase.billing_interval_cycle_count = params[:billing_interval_cycle_count]
-        end
+        rate_override = build_override if params.key?(:rate_override)
 
-        superseded_override_id = nil
-        if params.key?(:rate_override)
-          superseded_override_id = rate_phase.rate_override_id
-          rate_phase.rate_override = build_override
-        end
+        publish_owner_update do
+          move_to(target, siblings) if params.key?(:position)
 
-        rate_phase.save!
+          rate_phase.name = params[:name] if params.key?(:name)
+          rate_phase.code = params[:code] if params.key?(:code)
+          if params.key?(:billing_interval_cycle_count)
+            rate_phase.billing_interval_cycle_count = params[:billing_interval_cycle_count]
+          end
 
-        if superseded_override_id && superseded_override_id != rate_phase.rate_override_id
-          RateOverride.find_by(id: superseded_override_id)&.discard!
+          superseded_override_id = nil
+          if params.key?(:rate_override)
+            superseded_override_id = rate_phase.rate_override_id
+            rate_phase.rate_override = rate_override
+          end
+
+          rate_phase.save!
+
+          if superseded_override_id && superseded_override_id != rate_phase.rate_override_id
+            RateOverride.find_by(id: superseded_override_id)&.discard!
+          end
         end
       end
 
@@ -84,10 +90,23 @@ module RatePhases
 
     private
 
-    attr_reader :rate_phase, :params
+    attr_reader :rate_phase, :params, :emit_events
 
     def applied_rate_card
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
+    end
+
+    def publish_owner_update
+      event_type = rate_phase.plan_rate_card_id ? "plan_rate_card.updated" : "contract_rate_card.updated"
+      if emit_events
+        Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type) do
+          yield
+          SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
+          result
+        end
+      else
+        yield
+      end
     end
 
     # A provided rate_override replaces the phase's override; null clears it.

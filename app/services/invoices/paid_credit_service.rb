@@ -39,7 +39,6 @@ module Invoices
       end
 
       if invoice.finalized?
-        Utils::SegmentTrack.invoice_created(result.invoice)
         SendWebhookJob.perform_later("invoice.paid_credit_added", result.invoice)
         Utils::ActivityLog.produce(invoice, "invoice.paid_credit_added")
         GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
@@ -101,7 +100,11 @@ module Invoices
     end
 
     def create_payment(invoice)
-      Invoices::Payments::CreateService.call_async(invoice:)
+      if wallet_transaction.x402?
+        X402::CreditPurchases::CreatePaymentJob.perform_later(invoice, wallet_transaction)
+      else
+        Invoices::Payments::CreateService.call_async(invoice:)
+      end
     end
 
     def should_deliver_email?

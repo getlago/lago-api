@@ -100,7 +100,7 @@ module Events
 
       def grouped_count(columns = grouped_by)
         results = events
-          .group(columns.map { sanitized_property_name(it) })
+          .group(columns.map { sanitized_group_name(it) })
           .count
           .map { |group, value| [group, value].flatten }
 
@@ -111,7 +111,9 @@ module Events
       #       unique property
       def active_unique_property?(event)
         previous_events = events.where.not(id: event.id)
-          .where("events.properties @> ?", {aggregation_property => event.properties[aggregation_property]}.to_json)
+          .where(
+            sanitize_sql_for_conditions(["events.properties->>? = ?", aggregation_property, event.properties[aggregation_property]&.to_s])
+          )
 
         if event.persisted? && event.id.present? && event.created_at.present?
           previous_events = previous_events.where(
@@ -230,7 +232,7 @@ module Events
       end
 
       def grouped_max(columns = grouped_by, with_count: true)
-        groups = columns.map { sanitized_property_name(it) }
+        groups = columns.map { sanitized_group_name(it) }
 
         results = events
           .group(groups)
@@ -254,8 +256,8 @@ module Events
       end
 
       def grouped_last(columns = grouped_by, with_count: true)
-        sanitized_columns = columns.map { sanitized_property_name(it) }
-        distinct_on_columns = grouped_by.present? ? grouped_by.map { sanitized_property_name(it) } : []
+        sanitized_columns = columns.map { sanitized_group_name(it) }
+        distinct_on_columns = grouped_by.present? ? sanitized_grouped_by : []
 
         sql = if distinct_on_columns.empty?
           count_select = with_count ? "COUNT(*) OVER ()" : "NULL"
@@ -298,7 +300,7 @@ module Events
       end
 
       def grouped_sum(columns = grouped_by, with_count: true)
-        groups = columns.map { sanitized_property_name(it) }
+        groups = columns.map { sanitized_group_name(it) }
 
         results = events
           .group(groups)
@@ -312,6 +314,23 @@ module Events
           )
 
         prepare_grouped_aggregated_values(results, columns: columns)
+      end
+
+      def recurring_sum(watermark:, period: nil)
+        sql = recurring_events(period)
+          .select(recurring_sum_sql(watermark))
+          .to_sql
+
+        build_recurring_aggregation_result(select_one(sql))
+      end
+
+      def grouped_recurring_sum(watermark:, period: nil)
+        sql = recurring_events(period)
+          .group(sanitized_grouped_by)
+          .select("#{sanitized_grouped_by.join(", ")}, #{recurring_sum_sql(watermark)}")
+          .to_sql
+
+        prepare_grouped_recurring_values(select_all(sql).rows)
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
@@ -474,6 +493,27 @@ module Events
         end
       end
 
+      def recurring_events(period)
+        return events if period.nil?
+
+        events.where(
+          "events.timestamp > :to_datetime OR events.created_at > :watermark",
+          to_datetime: period.to_datetime,
+          watermark: period.watermark
+        )
+      end
+
+      def recurring_sum_sql(watermark)
+        ingested_before_watermark = sanitize_sql_for_conditions(["events.created_at <= ?", watermark])
+
+        <<~SQL.squish
+          SUM((#{sanitized_property_name})::numeric) AS value,
+          SUM((#{sanitized_property_name})::numeric) FILTER (WHERE #{ingested_before_watermark}) AS snapshot_value,
+          COUNT(*) AS events_count,
+          COUNT(*) FILTER (WHERE #{ingested_before_watermark}) AS snapshot_events_count
+        SQL
+      end
+
       def filters_scope(scope)
         matching_filters.each do |key, values|
           scope = scope.where(
@@ -504,10 +544,11 @@ module Events
       def apply_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           scope = if grouped_by_value.present?
-            scope.where("events.properties @> ?", {grouped_by.to_s => grouped_by_value.to_s}.to_json)
+            # Text comparison, so a numeric value matches as it does in the grouped reads
+            scope.where(sanitize_sql_for_conditions(["events.properties->>? = ?", grouped_by.to_s, grouped_by_value.to_s]))
           else
             scope.where(
-              sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') = ''", grouped_by])
+              sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') ~ ?", grouped_by, BLANK_VALUE_PATTERN])
             )
           end
         end
@@ -533,7 +574,13 @@ module Events
       end
 
       def sanitized_grouped_by
-        grouped_by.map { sanitized_property_name(it) }
+        grouped_by.map { sanitized_group_name(it) }
+      end
+
+      # A missing, blank or whitespace-only value is one group, as the single group filter reads them
+      def sanitized_group_name(property)
+        name = sanitized_property_name(property)
+        "CASE WHEN #{name} ~ #{connection.quote(BLANK_VALUE_PATTERN)} THEN NULL ELSE #{name} END"
       end
 
       delegate :connection, to: :Event

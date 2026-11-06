@@ -239,7 +239,7 @@ module Events
 
         attr_reader :store
 
-        delegate :events, :charges_duration, :sanitized_property_name, :operation_type_sql, to: :store
+        delegate :events, :charges_duration, :sanitized_property_name, :sanitized_group_name, :operation_type_sql, to: :store
 
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
@@ -257,7 +257,7 @@ module Events
 
         def grouped_events_cte_sql
           groups = store.grouped_by.map.with_index do |group, index|
-            "#{sanitized_property_name(group)} AS g_#{index}"
+            "#{sanitized_group_name(group)} AS g_#{index}"
           end
 
           <<-SQL
@@ -425,7 +425,7 @@ module Events
                 1
               FROM events_data next_event
               WHERE next_event.property = e.property
-                AND #{group_names.map { |name| "next_event.#{name} = e.#{name}" }.join(" AND ")}
+                AND #{group_names.map { |name| "next_event.#{name} IS NOT DISTINCT FROM e.#{name}" }.join(" AND ")}
                 AND DATE((next_event.timestamp)::timestamptz AT TIME ZONE :timezone) = DATE((e.timestamp)::timestamptz AT TIME ZONE :timezone)
                 AND next_event.operation_type <> e.operation_type
                 AND next_event.timestamp > e.timestamp

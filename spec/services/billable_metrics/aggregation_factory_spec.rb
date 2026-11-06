@@ -144,7 +144,6 @@ RSpec.describe BillableMetrics::AggregationFactory do
         expect(store.code).to eq(billable_metric.code)
         expect(store.billing_context).to eq(billing_context)
         expect(store.boundaries).to eq(boundaries)
-        expect(store.deduplicate).to be(false)
       end
 
       it "forwards the aggregation filters" do
@@ -156,20 +155,19 @@ RSpec.describe BillableMetrics::AggregationFactory do
         expect(store.filters).to eq(filters)
       end
 
-      context "when the organization deduplicates its clickhouse events" do
+      context "when the organization uses the clickhouse events store" do
         include_context "with clickhouse availability"
 
         let(:billable_metric) do
           create(
             billable_aggregation,
             recurring:,
-            organization: create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true)
+            organization: create(:organization, clickhouse_events_store: true)
           )
         end
 
-        it "resolves the store class and the deduplication mode from the organization" do
+        it "resolves the store class from the organization" do
           expect(store).to be_a(Events::Stores::ClickhouseStore)
-          expect(store.deduplicate).to be(true)
         end
       end
 

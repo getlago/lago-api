@@ -4,10 +4,11 @@ module RatePhases
   class ReplaceService < BaseService
     Result = BaseResult[:rate_phases]
 
-    def initialize(plan_rate_card: nil, contract_rate_card: nil, phases_params: [])
+    def initialize(plan_rate_card: nil, contract_rate_card: nil, phases_params: [], emit_events: true)
       @plan_rate_card = plan_rate_card
       @contract_rate_card = contract_rate_card
       @phases_params = Array.wrap(phases_params).map { |phase| phase.to_h.with_indifferent_access }
+      @emit_events = emit_events
       super
     end
 
@@ -25,19 +26,26 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phases, error_code: blocked)
         end
 
-        discard_existing_phases
+        overrides = ordered_params.map { |phase| build_override(phase) }
 
-        result.rate_phases = ordered_params.map do |phase|
-          applied_rate_card.rate_phases.create!(
-            organization:,
-            plan_rate_card:,
-            contract_rate_card:,
-            code: phase[:code],
-            position: phase[:position],
-            name: phase[:name],
-            billing_interval_cycle_count: phase[:billing_interval_cycle_count],
-            rate_override: build_override(phase)
-          )
+        publish_owner_update do
+          applied_rate_card.association(:rate_phases).reset
+          discard_existing_phases
+
+          result.rate_phases = ordered_params.each_with_index.map do |phase, index|
+            applied_rate_card.rate_phases.create!(
+              organization:,
+              plan_rate_card:,
+              contract_rate_card:,
+              code: phase[:code],
+              position: phase[:position],
+              name: phase[:name],
+              billing_interval_cycle_count: phase[:billing_interval_cycle_count],
+              rate_override: overrides[index]
+            )
+          rescue ActiveRecord::RecordInvalid => e
+            result.record_validation_failure!(record: e.record) { phase_field(phase, it) }.raise_if_error!
+          end
         end
       end
 
@@ -50,10 +58,23 @@ module RatePhases
 
     private
 
-    attr_reader :plan_rate_card, :contract_rate_card, :phases_params
+    attr_reader :plan_rate_card, :contract_rate_card, :phases_params, :emit_events
 
     def applied_rate_card
       plan_rate_card || contract_rate_card
+    end
+
+    def publish_owner_update
+      event_type = plan_rate_card ? "plan_rate_card.updated" : "contract_rate_card.updated"
+      if emit_events
+        Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type) do
+          yield
+          SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
+          result
+        end
+      else
+        yield
+      end
     end
 
     def organization
@@ -73,6 +94,15 @@ module RatePhases
         rate_card: applied_rate_card.rate_card,
         params: phase[:rate_override]
       ).raise_if_error!.rate_override
+    rescue BaseService::ValidationFailure => e
+      renamed = e.remap(result) { phase_field(phase, (it.to_sym == :base) ? :rate_override : "rate_override.#{it}") }
+      result.fail_with_error!(renamed).raise_if_error!
+    end
+
+    # Phases are created in the order of their positions, but a field names the phase where the request
+    # put it.
+    def phase_field(phase, field)
+      BaseService::ValidationFailure.item_field(:rate_phases, phases_params.index { it.equal?(phase) }, field)
     end
 
     def ordered_params

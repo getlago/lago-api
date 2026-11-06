@@ -28,7 +28,7 @@ module PaymentProviders
       old_code = cashfree_provider.code
 
       cashfree_provider.client_id = args[:client_id] if args.key?(:client_id)
-      cashfree_provider.client_secret = args[:client_secret] if args.key?(:client_secret)
+      cashfree_provider.client_secret = args[:client_secret] if args.key?(:client_secret) && !Types::ObfuscatedStringType.obfuscated?(args[:client_secret])
       cashfree_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       cashfree_provider.code = args[:code] if args.key?(:code)
       cashfree_provider.name = args[:name] if args.key?(:name)

@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class ApiLogsController < Api::BaseController
+    class ApiLogsController < Api::V1::BaseController
       include PremiumFeatureOnly
 
       skip_audit_logs!
@@ -11,8 +11,8 @@ module Api
         result = ApiLogsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters
         )
@@ -32,6 +32,9 @@ module Api
       end
 
       def show
+        # As in index, whose query checks it: the logs live in ClickHouse.
+        return forbidden_error(code: "feature_unavailable") unless Utils::ApiLog.available?
+
         api_log = current_organization.api_logs.find_by(
           request_id: params[:request_id]
         )

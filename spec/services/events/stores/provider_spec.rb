@@ -34,7 +34,6 @@ RSpec.describe Events::Stores::Provider do
       expect(store.code).to eq(billable_metric.code)
       expect(store.billing_context).to eq(billing_context)
       expect(store.boundaries).to eq(boundaries)
-      expect(store.deduplicate).to be(false)
     end
 
     it "forwards the filters" do
@@ -131,17 +130,12 @@ RSpec.describe Events::Stores::Provider do
       end
     end
 
-    context "when the organization deduplicates its events" do
+    context "when realtime usage is enabled for the organization" do
       let(:organization) do
-        create(
-          :organization,
-          clickhouse_events_store: true,
-          clickhouse_deduplication_enabled: true,
-          feature_flags: ["realtime_usage"]
-        )
+        create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
       end
 
-      it "is true, because the stream deduplicates as well" do
+      it "is true" do
         expect(provider.may_precompute?).to be(true)
       end
     end
@@ -300,21 +294,6 @@ RSpec.describe Events::Stores::Provider do
       it "reads events, without asking clickhouse for buckets" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
         expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
-      end
-    end
-
-    context "when the organization deduplicates its clickhouse events" do
-      let(:organization) do
-        create(
-          :organization,
-          feature_flags: ["realtime_usage"],
-          clickhouse_events_store: true,
-          clickhouse_deduplication_enabled: true
-        )
-      end
-
-      it "serves the buckets, as the stream deduplicates as well" do
-        expect(store).to be_a(Events::Stores::UsageBucketStore)
       end
     end
 
@@ -581,32 +560,8 @@ RSpec.describe Events::Stores::Provider do
 
     context "with an active store override" do
       it "honors the override" do
-        Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore, deduplicate: true) do
+        Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore) do
           expect(provider.store_class).to eq(Events::Stores::ClickhouseStore)
-        end
-      end
-    end
-  end
-
-  describe "#deduplicate" do
-    it "is false when the organization does not deduplicate" do
-      expect(provider.deduplicate).to be(false)
-    end
-
-    context "when the organization deduplicates its clickhouse events" do
-      let(:organization) do
-        create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true)
-      end
-
-      it "is true" do
-        expect(provider.deduplicate).to be(true)
-      end
-    end
-
-    context "with an active store override" do
-      it "honors the override" do
-        Events::Stores::StoreFactory.with_override(store_class: Events::Stores::PostgresStore, deduplicate: true) do
-          expect(provider.deduplicate).to be(true)
         end
       end
     end

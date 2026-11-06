@@ -59,4 +59,16 @@ RSpec.describe "exports_invoices view" do # rubocop:disable RSpec/DescribeClass
       end
     end
   end
+
+  describe "invoice types" do
+    %i[subscription add_on credit one_off advance_charges progressive_billing contract].each do |invoice_type|
+      context "when the invoice is #{invoice_type}" do
+        let!(:invoice) { create(:invoice, :draft, invoice_type:, organization:, customer:) }
+
+        it "is exported with invoice_type '#{invoice_type}'" do
+          expect(rows_for(invoice.id).sole["invoice_type"]).to eq(invoice_type.to_s)
+        end
+      end
+    end
+  end
 end

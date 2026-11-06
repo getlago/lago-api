@@ -49,6 +49,22 @@ RSpec.describe Invoices::Payments::AdyenService do
       payment
     end
 
+    context "when payment belongs to another organization" do
+      it "does not update the payment nor the invoice" do
+        result = described_class.call(
+          :update_payment_status,
+          organization_id: create(:organization).id,
+          provider_payment_id: "ch_123456",
+          status: "Authorised"
+        )
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(payment.reload.status).to eq("Pending")
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
+    end
+
     it "updates the payment and invoice payment_status" do
       result = described_class.call(
         :update_payment_status,
@@ -335,6 +351,26 @@ RSpec.describe Invoices::Payments::AdyenService do
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
         expect(result.error.third_party).to eq("Adyen")
         expect(result.error.error_message).to eq("error")
+      end
+    end
+
+    context "when Adyen refuses the payment link" do
+      before do
+        allow(payment_links_api).to receive(:payment_links)
+          .and_return(generate(:adyen_payment_links_error_response))
+      end
+
+      it "returns a third-party failure, whose webhook the caller delivers" do
+        result = nil
+
+        expect { result = described_class.call(:generate_payment_url, invoice, payment_intent) }
+          .not_to have_enqueued_job(SendWebhookJob)
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(
+          third_party: "Adyen",
+          error_code: "validation",
+          error_message: "There are no payment methods available for the given parameters."
+        )
       end
     end
   end

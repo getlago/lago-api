@@ -16,7 +16,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
       charges_duration: 30
     }
   end
-  let(:deduplicate) { true }
 
   # 12:07 puts the cut at 11:45: a quarter of an hour behind, rounded down.
   let(:now) { Time.zone.parse("2026-09-15 12:07:00") }
@@ -74,8 +73,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
       code: billable_metric.code,
       billing_context:,
       boundaries:,
-      filters: store_filters(item),
-      deduplicate:
+      filters: store_filters(item)
     ).tap do |store|
       store.numeric_property = true
       store.aggregation_property = billable_metric.field_name
@@ -398,16 +396,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
       expect(computation).to eq(totals(incremental: false))
       expect(computation.values).to match_array([{value: 3, events_count: 4}, {value: 2, events_count: 1}, {value: nil, events_count: 0}])
       expect(reads).to eq([{from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}])
-    end
-  end
-
-  context "without deduplication" do
-    let(:deduplicate) { false }
-
-    before { computation }
-
-    it "answers the plain scan's totals" do
-      expect(computation).to eq(totals(incremental: false))
     end
   end
 

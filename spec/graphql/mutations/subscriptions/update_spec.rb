@@ -66,6 +66,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:update"
 
   it "updates an subscription" do

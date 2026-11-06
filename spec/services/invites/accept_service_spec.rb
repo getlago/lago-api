@@ -5,10 +5,9 @@ require "rails_helper"
 RSpec.describe Invites::AcceptService do
   subject(:accept_service) { described_class.new }
 
-  let_it_be(:organization, refind: true) { create_default(:organization) }
-  let_it_be(:membership, refind: true) { create(:membership) }
-  let(:user) { create(:user) }
-  let(:invite) { create(:invite, organization:, email: user.email) }
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:membership, refind: true) { create(:membership, organization:) }
+  let(:invite) { create(:invite, organization:, email: Faker::Internet.email) }
   let(:accept_args) do
     {
       token: invite.token,
@@ -21,8 +20,9 @@ RSpec.describe Invites::AcceptService do
     before { allow(UserDevices::RegisterService).to receive(:call!) }
 
     it "registers the user device" do
-      accept_service.call(**accept_args)
-      expect(UserDevices::RegisterService).to have_received(:call!).with(user:, skip_log: false)
+      result = accept_service.call(**accept_args)
+
+      expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user, skip_log: true)
     end
 
     it "sets the recipient of the invite" do
@@ -47,25 +47,254 @@ RSpec.describe Invites::AcceptService do
       expect(result.token).to be_present
     end
 
-    context "when user have already been invited then revoked" do
-      let(:revoked_membership) { create(:membership, :revoked, organization:) }
-      let(:accepted_invite) do
-        create(:invite, organization:, email: revoked_membership.user.email, status: :accepted)
+    context "when an account is created before invitation registration" do
+      subject(:accept_result) { accept_service.call(**accept_args) }
+
+      let(:registered_password) { "ExistingPassword!" }
+      let(:registered_user) { create(:user, email: invite.email.downcase, password: registered_password) }
+      let(:registered_password_digest) { registered_user.password_digest }
+      let(:user_authentication_methods) { %w[email_password google_oauth] }
+      let(:user_organization) { create(:organization, authentication_methods: user_authentication_methods) }
+      let(:registered_membership) { create(:membership, user: registered_user, organization: user_organization, roles: %w[admin]) }
+      let(:invite) { create(:invite, organization:, email: "Invited@example.com") }
+
+      before do
+        allow(UsersService).to receive(:call).and_wrap_original do |original, *args, **kwargs|
+          registered_membership
+          registered_password_digest
+          original.call(*args, **kwargs)
+        end
       end
-      let(:new_invite) { create(:invite, organization:, email: revoked_membership.user.email) }
 
-      it "sets user, membership and organization" do
-        result = accept_service.call(
-          password: accept_args[:password],
-          token: new_invite[:token],
-          login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD
-        )
+      it "rejects the wrong password without granting access" do
+        expect(accept_result).not_to be_success
+        expect(accept_result.error.messages[:base]).to eq(["incorrect_login_or_password"])
+        expect(accept_result.token).to be_nil
+        expect(invite.reload.status).to eq("pending")
+        expect(organization.memberships.active.where(user: registered_user)).to be_empty
+        expect(registered_user.reload.password_digest).to eq(registered_password_digest)
+        expect(registered_membership.reload).to be_active
+        expect(User.where("lower(email) = ?", invite.email.downcase).count).to eq(1)
+        expect(UserDevices::RegisterService).not_to have_received(:call!)
+      end
 
-        expect(result).to be_success
-        expect(result.user).to be_present
-        expect(result.membership).to be_present
-        expect(result.organization).to be_present
-        expect(result.token).to be_present
+      context "with the existing password" do
+        let(:accept_args) { super().merge(password: registered_password) }
+
+        it "accepts the invitation for the existing account" do
+          expect(accept_result).to be_success
+          expect(accept_result.user).to eq(registered_user)
+          expect(Utils::AuthToken.decode(token: accept_result.token)["sub"]).to eq(registered_user.id)
+          expect(invite.reload.status).to eq("accepted")
+          expect(registered_user.reload.password_digest).to eq(registered_password_digest)
+          expect(registered_membership.reload).to be_active
+        end
+
+        context "when the user's organization requires SSO" do
+          let(:user_authentication_methods) { %w[google_oauth] }
+
+          it "rejects a password session without accepting the invitation" do
+            expect(accept_result).not_to be_success
+            expect(accept_result.error.messages[:email_password]).to eq(["login_method_not_authorized"])
+            expect(accept_result.token).to be_nil
+            expect(invite.reload.status).to eq("pending")
+            expect(organization.memberships.active.where(user: registered_user)).to be_empty
+          end
+        end
+      end
+
+      context "with an identity verified by SSO" do
+        let(:accept_args) { super().merge(login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH) }
+
+        it "accepts the invitation without replacing the existing password" do
+          expect(accept_result).to be_success
+          expect(accept_result.user).to eq(registered_user)
+          expect(Utils::AuthToken.decode(token: accept_result.token)["login_method"]).to eq("google_oauth")
+          expect(registered_user.reload.password_digest).to eq(registered_password_digest)
+        end
+      end
+    end
+
+    context "when the invited email belongs to an existing user" do
+      let!(:user) { create(:user, email: invite.email, password: "ILoveLago") }
+
+      context "with an incorrect password" do
+        it "returns an incorrect_login_or_password error" do
+          result = accept_service.call(**accept_args)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:base]).to eq(["incorrect_login_or_password"])
+        end
+
+        it "does not create a membership nor accept the invite" do
+          expect { accept_service.call(**accept_args) }.not_to change(Membership, :count)
+          expect(invite.reload.status).to eq("pending")
+        end
+
+        it "does not change the password of the existing user" do
+          expect { accept_service.call(**accept_args) }.not_to change { user.reload.password_digest }
+        end
+
+        context "when the user is an active member of another organization" do
+          before { create(:membership, user:) }
+
+          it "does not grant access to the organizations of the user" do
+            expect { accept_service.call(**accept_args) }.not_to change { user.reload.memberships.count }
+          end
+        end
+      end
+
+      context "with the password of the existing user" do
+        let(:accept_args) do
+          {
+            token: invite.token,
+            password: "ILoveLago",
+            login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD
+          }
+        end
+
+        it "adds the membership to the existing user" do
+          result = accept_service.call(**accept_args)
+
+          expect(result).to be_success
+          expect(result.user).to eq(user)
+          expect(result.membership).to be_persisted
+          expect(result.organization).to eq(organization)
+          expect(result.token).to be_present
+        end
+
+        it "marks the invite as accepted" do
+          expect { accept_service.call(**accept_args) }
+            .to change { invite.reload.status }.from("pending").to("accepted")
+        end
+
+        it "keeps the existing password" do
+          expect { accept_service.call(**accept_args) }.not_to change { user.reload.password_digest }
+        end
+
+        it "does not create another user" do
+          expect { accept_service.call(**accept_args) }.not_to change(User, :count)
+        end
+
+        # A user whose memberships were all revoked cannot log in anymore: accepting an invitation
+        # is the only way to restore their access.
+        context "when all the memberships of the user are revoked" do
+          before { create(:membership, :revoked, organization:, user:) }
+
+          it "adds the membership to the existing user" do
+            result = accept_service.call(**accept_args)
+
+            expect(result).to be_success
+            expect(result.user).to eq(user)
+            expect(result.membership).to be_active
+          end
+        end
+
+        # The authentication methods of the inviting organization are controlled by whoever created
+        # the invitation: they must not let a password session be opened for a user whose own
+        # organizations mandate SSO.
+        context "when the organizations of the user do not allow the login method" do
+          let(:user_organization) { create(:organization) }
+
+          before do
+            create(:membership, organization: user_organization, user:)
+            user_organization.disable_email_password_authentication!
+          end
+
+          it "returns a login_method_not_authorized error" do
+            result = accept_service.call(**accept_args)
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:email_password]).to eq(["login_method_not_authorized"])
+          end
+
+          it "does not create a membership nor accept the invite" do
+            expect { accept_service.call(**accept_args) }.not_to change(Membership, :count)
+            expect(invite.reload.status).to eq("pending")
+          end
+
+          it "does not issue a session" do
+            expect(accept_service.call(**accept_args).token).to be_nil
+          end
+
+          context "when another organization of the user allows the login method" do
+            before { create(:membership, user:) }
+
+            it "adds the membership to the existing user" do
+              result = accept_service.call(**accept_args)
+
+              expect(result).to be_success
+              expect(result.membership).to be_persisted
+            end
+          end
+
+          context "when the memberships of the user are revoked" do
+            before { user.memberships.each(&:mark_as_revoked!) }
+
+            it "adds the membership to the existing user" do
+              result = accept_service.call(**accept_args)
+
+              expect(result).to be_success
+              expect(result.membership).to be_active
+            end
+          end
+        end
+
+        context "when the user is already an active member of the organization" do
+          before { create(:membership, organization:, user:) }
+
+          it "returns an email_already_used error" do
+            result = accept_service.call(**accept_args)
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:email]).to eq(["email_already_used"])
+          end
+        end
+
+        context "when the email of the invite has a different case" do
+          let(:invite) { create(:invite, organization:, email: "Victim@example.com") }
+          let!(:user) { create(:user, email: "victim@example.com", password: "ILoveLago") }
+
+          # The organization of the invite comes with its own owner: it must exist before the
+          # examples count the users.
+          before { invite }
+
+          it "adds the membership to the existing user" do
+            result = accept_service.call(**accept_args)
+
+            expect(result).to be_success
+            expect(result.user).to eq(user)
+          end
+
+          it "does not create another user" do
+            expect { accept_service.call(**accept_args) }.not_to change(User, :count)
+          end
+        end
+      end
+
+      context "when the login method verifies the identity" do
+        let(:accept_args) do
+          {
+            token: invite.token,
+            password: SecureRandom.hex,
+            login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH
+          }
+        end
+
+        it "adds the membership to the existing user" do
+          result = accept_service.call(**accept_args)
+
+          expect(result).to be_success
+          expect(result.user).to eq(user)
+          expect(result.membership).to be_persisted
+          expect(result.token).to be_present
+        end
+
+        it "keeps the existing password" do
+          expect { accept_service.call(**accept_args) }.not_to change { user.reload.password_digest }
+        end
       end
     end
 
@@ -100,8 +329,6 @@ RSpec.describe Invites::AcceptService do
     end
 
     context "without password" do
-      let(:invite) { create(:invite, organization:, email: Faker::Internet.email) }
-
       it "returns an error" do
         result = accept_service.call(password: nil, **accept_args.slice(:token, :login_method))
 
@@ -121,8 +348,6 @@ RSpec.describe Invites::AcceptService do
     end
 
     context "with invalid login_method" do
-      let(:invite) { create(:invite, organization:, email: Faker::Internet.email) }
-
       before do
         organization.disable_email_password_authentication!
       end

@@ -4,6 +4,8 @@ module Api
   module V2
     class ProductCategoriesController < Api::V2::BaseController
       cursor_paginated_index(ProductCategory)
+      date_range_filtered_index(:created_at)
+      serializable_with ::V2::ProductCategorySerializer
 
       def create
         result = ::ProductCategories::CreateService.call(
@@ -52,21 +54,12 @@ module Api
         result = ::ProductCategoriesQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
-          pagination: cursor
+          pagination: cursor,
+          filters: date_range_filters
         )
 
         if result.success?
-          # Preloaded so products_count reads the loaded association.
-          page = ::CursorPagination::Page.new(records: result.product_categories.includes(:products), cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::ProductCategorySerializer,
-              collection_name: "product_categories",
-              meta: page.meta
-            )
-          )
+          render_product_categories(result.product_categories)
         else
           render_error_response(result)
         end
@@ -90,10 +83,6 @@ module Api
           :description,
           :invoice_display_name
         )
-      end
-
-      def render_product_category(product_category)
-        render(json: ::V2::ProductCategorySerializer.new(product_category, root_name: "product_category"))
       end
 
       def resource_name

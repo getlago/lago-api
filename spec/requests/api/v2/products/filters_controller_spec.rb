@@ -41,6 +41,17 @@ RSpec.describe Api::V2::Products::FiltersController do
       end
     end
 
+    context "when a value has no key" do
+      let(:create_params) { {name: "US", code: "us", values: [{key: region_filter.key, value: "us"}, {value: "eu"}]} }
+
+      it "returns a validation error on the key of that value" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "values[1].key", meta: {}}])
+      end
+    end
+
     context "when values reference the metric filter by key" do
       let(:create_params) do
         {name: "US", code: "us_by_key", values: [{key: region_filter.key, value: "us"}]}
@@ -76,7 +87,7 @@ RSpec.describe Api::V2::Products::FiltersController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :values)).to eq(["key_only_conflicts_with_values"])
+        expect(json[:details]).to eq([{code: "key_only_conflicts_with_values", field: "values", meta: {}}])
       end
     end
 
@@ -86,7 +97,7 @@ RSpec.describe Api::V2::Products::FiltersController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product")
+        expect(response).to be_v2_not_found_error("product")
       end
     end
   end
@@ -138,7 +149,7 @@ RSpec.describe Api::V2::Products::FiltersController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details][:code]).to eq(%w[attached_to_plan_or_subscription])
+          expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "code", meta: {}}])
         end
       end
     end
@@ -149,7 +160,7 @@ RSpec.describe Api::V2::Products::FiltersController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product_filter")
+        expect(response).to be_v2_not_found_error("product_filter")
       end
     end
   end
@@ -167,6 +178,7 @@ RSpec.describe Api::V2::Products::FiltersController do
       expect(response).to have_http_status(:success)
       expect(json[:filter][:lago_id]).to eq(filter.id)
       expect(json[:filter][:values].count).to eq(1)
+      expect(json[:filter]).to include(created_at: filter.created_at.iso8601(6), updated_at: filter.updated_at.iso8601(6), deleted_at: nil)
     end
   end
 
@@ -188,6 +200,36 @@ RSpec.describe Api::V2::Products::FiltersController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
+    context "with include_total_count" do
+      subject { get_with_token(organization, "/api/v2/products/#{product.code}/filters", {include_total_count: true}) }
+
+      before do
+        create(:product_filter, organization:, product:)
+        create(:product_filter, organization:, product:, deleted_at: Time.current)
+      end
+
+      it "counts the kept filters of the product" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 2)
+      end
+    end
+
+    context "with multiple filters on the product" do
+      before { create(:product_filter, organization:, product:) }
+
+      it "serializes parent codes without N+1 queries", bullet: {unused_eager_loading: false} do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filters].size).to eq(2)
+        expect(json[:filters].map { [it[:product_code], it[:product_category_code]] }).to eq(
+          Array.new(2) { [product.code, product.product_category.code] }
+        )
+      end
+    end
+
     context "with an invalid limit and an unknown product" do
       subject { get_with_token(organization, "/api/v2/products/unknown/filters", {limit: 0}) }
 
@@ -202,6 +244,11 @@ RSpec.describe Api::V2::Products::FiltersController do
     it_behaves_like "a cursor paginated v2 endpoint", collection: :filters, model: ProductFilter do
       let(:paginated_path) { "/api/v2/products/#{product.code}/filters" }
       let(:create_paginated_record) { ->(created_at) { create(:product_filter, organization:, product:, created_at:) } }
+    end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :filters do
+      let(:filtered_path) { "/api/v2/products/#{product.code}/filters" }
+      let(:create_filtered_record) { ->(created_at) { create(:product_filter, organization:, product:, created_at:) } }
     end
 
     context "with a search term" do
@@ -225,13 +272,14 @@ RSpec.describe Api::V2::Products::FiltersController do
 
     include_examples "requires API permission", "product", "write"
 
-    it "soft deletes the filter and echoes its values" do
+    it "soft deletes the filter and returns no values" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:filter][:lago_id]).to eq(filter.id)
-      expect(json[:filter][:values].count).to eq(1)
+      expect(json[:filter][:values]).to eq([])
       expect(filter.reload).to be_discarded
+      expect(json[:filter][:deleted_at]).to eq(filter.deleted_at.iso8601(6))
     end
 
     context "when the item is attached to a plan" do
@@ -244,7 +292,7 @@ RSpec.describe Api::V2::Products::FiltersController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:product_filter]).to eq(%w[attached_to_plan_or_subscription])
+        expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "product_filter", meta: {}}])
         expect(filter.reload).not_to be_discarded
       end
     end

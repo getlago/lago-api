@@ -11,7 +11,7 @@ module Clock
     private
 
     def pending_customer_ids
-      BillingSegment.awaiting_invoicing
+      BillingSegment.ready_for_invoicing
         .joins(:customer)
         .where(customers: {deleted_at: nil})
         .distinct

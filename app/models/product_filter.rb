@@ -4,11 +4,12 @@ class ProductFilter < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   include CatalogCodeFormat
+  include FilterPrecedence
 
   self.discard_column = :deleted_at
 
   belongs_to :organization
-  belongs_to :product
+  belongs_to :product, -> { with_discarded }
 
   has_many :values, class_name: "ProductFilterValue"
   has_many :billable_metric_filters, through: :values

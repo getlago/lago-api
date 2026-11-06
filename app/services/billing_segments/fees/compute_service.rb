@@ -23,7 +23,7 @@ module BillingSegments
       attr_reader :billing_segment
 
       delegate :rate, :rate_card_rate, :rate_override, :contract_rate_card, to: :billing_segment
-      delegate :product, to: :contract_rate_card
+      delegate :product, :rate_card, to: :contract_rate_card
 
       def fee
         @fee ||= Fee.new(
@@ -43,6 +43,7 @@ module BillingSegments
           precise_amount_cents: amount.precise_amount_cents,
           amount_details: charge_model_result.amount_details,
           pricing_unit_usage: amount.pricing_unit_usage,
+          pay_in_advance: rate_card.advance?,
           properties: boundaries.to_contract_fee_properties
         )
       end

@@ -24,9 +24,26 @@ module Events
             "toTimezone(toDateTime64(:date, 5, 'UTC'), :timezone)"
           end
 
-          ActiveRecord::Base.sanitize_sql_for_conditions(
-            [sql, {date: date_value, timezone:}]
-          )
+          sanitize_clickhouse_sql([sql, {date: date_value, timezone:}])
+        end
+
+        # NOTE: ClickHouse reads a backslash inside a string literal as an escape character, which the
+        #       PostgreSQL quoting of `ActiveRecord::Base.sanitize_sql_for_conditions` leaves alone: a value
+        #       ending with one escapes its closing quote. Values are quoted by the ClickHouse adapter instead,
+        #       except times, which it renders without their fractional seconds.
+        def sanitize_clickhouse_sql(statement)
+          template, *values = statement
+
+          ::Clickhouse::BaseRecord.sanitize_sql_for_conditions([template, *values.map { clickhouse_bind_value(it) }])
+        end
+
+        def clickhouse_bind_value(value)
+          case value
+          when Array then value.map { clickhouse_bind_value(it) }
+          when Hash then value.transform_values { clickhouse_bind_value(it) }
+          when Time, DateTime, ActiveSupport::TimeWithZone then ActiveRecord::Base.with_connection { it.quoted_date(value) }
+          else value
+          end
         end
 
         def quote(value)
@@ -41,7 +58,7 @@ module Events
         end
 
         def sql_condition(template, *values)
-          ActiveRecord::Base.sanitize_sql_for_conditions([template, *values])
+          sanitize_clickhouse_sql([template, *values])
         end
 
         # When the boundary is the pay-in-advance event's own timestamp, tie-break events

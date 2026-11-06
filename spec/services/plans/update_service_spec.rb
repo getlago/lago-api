@@ -1767,6 +1767,69 @@ RSpec.describe Plans::UpdateService do
           end
         end
       end
+
+      context "when a new fixed charge has no add-on" do
+        let(:existing_fixed_charge) { create(:fixed_charge, plan:, add_on:) }
+        let(:fixed_charges_args) do
+          [
+            {
+              id: existing_fixed_charge.id,
+              add_on_id: add_on.id,
+              charge_model: "standard",
+              units: 1,
+              properties: {amount: "150"}
+            },
+            {
+              charge_model: "standard",
+              invoice_display_name: "new_fixed_charge",
+              units: 1,
+              properties: {amount: "100"}
+            }
+          ]
+        end
+
+        before { existing_fixed_charge }
+
+        it "returns a validation error and leaves the plan fixed charges unchanged" do
+          result = plans_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({add_on_id: ["value_is_mandatory"]})
+          expect(plan.reload.fixed_charges.pluck(:id)).to eq([existing_fixed_charge.id])
+        end
+      end
+
+      context "when an existing fixed charge is sent without add-on" do
+        let(:existing_fixed_charge) do
+          create(:fixed_charge, plan:, add_on:, invoice_display_name: "old_name", units: 1)
+        end
+        let(:fixed_charges_args) do
+          [
+            {
+              id: existing_fixed_charge.id,
+              charge_model: "standard",
+              invoice_display_name: "new_name",
+              units: 3,
+              properties: {amount: "150"}
+            }
+          ]
+        end
+
+        before { existing_fixed_charge }
+
+        it "updates the fixed charge" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(existing_fixed_charge.reload).to have_attributes(
+            invoice_display_name: "new_name",
+            units: 3,
+            add_on_id: add_on.id
+          )
+          expect(result.plan.fixed_charges.pluck(:id)).to eq([existing_fixed_charge.id])
+        end
+      end
     end
   end
 

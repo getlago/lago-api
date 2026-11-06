@@ -7,7 +7,9 @@ module Integrations
         private
 
         def mapped_item(fee)
-          if fee.charge?
+          if fee.product?
+            product_item(fee)
+          elsif fee.charge?
             billable_metric_item(fee)
           elsif fee.add_on_id.present?
             add_on_item(fee)

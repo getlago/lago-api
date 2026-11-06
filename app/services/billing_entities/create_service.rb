@@ -19,12 +19,22 @@ module BillingEntities
     def call
       return result.forbidden_failure! unless organization.can_create_billing_entity?
 
+      unless PaymentTerms::ValidateService.new(result, **params.slice(:payment_term, :net_payment_term)).valid?
+        return result
+      end
+
       ActiveRecord::Base.transaction do
         billing_entity.assign_attributes(create_attributes)
         billing_entity.id = params[:id] if params[:id]
         billing_entity.invoice_footer = billing_config[:invoice_footer]
         billing_entity.document_locale = billing_config[:document_locale] if billing_config[:document_locale]
         billing_entity.einvoicing = params[:einvoicing] if params[:einvoicing]
+
+        PaymentTerms::AssignService.call(record: billing_entity, params:)
+        # Mirror the net_payment_term column default so a new entity never carries a NULL payment_term.
+        if billing_entity.payment_term.nil?
+          billing_entity.payment_term = PaymentTerm.from_net_payment_term(billing_entity.net_payment_term)&.to_h
+        end
 
         handle_eu_tax_management if params[:eu_tax_management]
         handle_base64_logo
@@ -38,6 +48,12 @@ module BillingEntities
         end
 
         billing_entity.save!
+
+        if params.key?(:tax_codes)
+          BillingEntities::Taxes::ManageTaxesService.call!(billing_entity:, tax_codes: params[:tax_codes])
+        end
+
+        attach_invoice_custom_sections if params.key?(:invoice_custom_section_ids) || params.key?(:invoice_custom_section_codes)
       end
 
       track_billing_entity_created
@@ -47,6 +63,8 @@ module BillingEntities
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, "index_billing_entities_on_code_and_organization_id" => :code)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     end
@@ -71,7 +89,6 @@ module BillingEntities
           legal_name
           legal_number
           name
-          net_payment_term
           phone
           state
           tax_identification_number
@@ -100,6 +117,19 @@ module BillingEntities
         filename: "logo",
         content_type:
       )
+    end
+
+    def attach_invoice_custom_sections
+      sections = organization.invoice_custom_sections
+      sections = if params[:invoice_custom_section_ids]
+        sections.where(id: params[:invoice_custom_section_ids])
+      else
+        sections.where(code: params[:invoice_custom_section_codes])
+      end
+
+      sections.ids.each do |invoice_custom_section_id|
+        billing_entity.applied_invoice_custom_sections.create!(invoice_custom_section_id:, organization:)
+      end
     end
 
     def handle_eu_tax_management

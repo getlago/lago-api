@@ -137,4 +137,28 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionResolver do
       expect_graphql_error(result:, message: "Resource not found")
     end
   end
+
+  context "when requesting the activity logs" do
+    let(:query) do
+      <<~GQL
+        query($subscriptionId: ID!) {
+          customerPortalSubscription(id: $subscriptionId) {
+            id
+            activityLogs { activityId }
+          }
+        }
+      GQL
+    end
+
+    it "returns null" do
+      result = execute_graphql(
+        customer_portal_user: customer,
+        query:,
+        variables: {subscriptionId: subscription.id}
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["customerPortalSubscription"]).to eq("id" => subscription.id, "activityLogs" => nil)
+    end
+  end
 end

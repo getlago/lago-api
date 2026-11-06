@@ -6,10 +6,11 @@ module Webhooks
       private
 
       def object_serializer
-        ::V1::FeeSerializer.new(
-          object,
-          root_name: "fee"
-        )
+        if object.product?
+          ::V2::FeeSerializer.new(object, root_name: "fee")
+        else
+          ::V1::FeeSerializer.new(object, root_name: "fee")
+        end
       end
 
       def webhook_type

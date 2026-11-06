@@ -147,6 +147,18 @@ RSpec.describe InvoicesQuery do
     end
   end
 
+  context "with cursor pagination" do
+    let(:pagination) { CursorPagination::Cursor.new(table: "invoices", sort: Api::V2::InvoiceIndex::SORT, limit: 2) }
+    let(:filters) { {status: "finalized"} }
+
+    it "paginates after filtering, in the order of the v1 lists" do
+      page = CursorPagination::Page.new(records: result.invoices, cursor: pagination)
+
+      expect(page.records.map(&:id)).to eq(Invoice.where(status: "finalized").order(Api::V2::InvoiceIndex::SORT).limit(2).ids)
+      expect(page.meta[:next_cursor]).to be_present
+    end
+  end
+
   context "when filtering by draft status" do
     let(:filters) { {status: "draft"} }
 
@@ -211,6 +223,23 @@ RSpec.describe InvoicesQuery do
       expect(returned_ids).to include(invoice_fourth.id)
       expect(returned_ids).to include(invoice_fifth.id)
       expect(returned_ids).not_to include(invoice_sixth.id)
+    end
+  end
+
+  context "when filtering by payment dispute lost false as a string" do
+    let(:filters) { {payment_dispute_lost: "false"} }
+
+    it "excludes the invoices whose dispute was lost" do
+      expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id, invoice_fourth.id, invoice_fifth.id])
+    end
+  end
+
+  context "when filtering by payment dispute lost with a value that is not a boolean" do
+    let(:filters) { {payment_dispute_lost: "maybe"} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages.keys).to eq([:payment_dispute_lost])
     end
   end
 
@@ -298,6 +327,36 @@ RSpec.describe InvoicesQuery do
 
     it "returns 1 invoice" do
       expect(returned_ids).to eq [invoice_fifth.id]
+    end
+  end
+
+  context "when filtering by product_catalog" do
+    let(:filters) { {product_catalog: true} }
+    let(:contract_invoice) { create(:invoice, organization:, customer: customer_first, invoice_type: :contract, number: "7777777777") }
+    let(:invoice_with_product_fee) { create(:invoice, organization:, customer: customer_first, number: "8888888888") }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer: customer_first)) }
+
+    before do
+      contract_invoice
+      create(:fee, invoice: invoice_with_product_fee, subscription: nil, fee_type: :product,
+        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:,
+        rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card))
+    end
+
+    it "returns the invoices billed from the product catalog" do
+      expect(returned_ids).to match_array([contract_invoice.id, invoice_with_product_fee.id])
+    end
+
+    context "when searching" do
+      let(:search_term) { "7777" }
+      let(:returned_ids) do
+        [contract_invoice, invoice_with_product_fee].each { |invoice| Invoices::RefreshSearchTermsService.call!(invoice:) }
+        result.invoices.pluck(:id)
+      end
+
+      it "keeps the search scope on both branches" do
+        expect(returned_ids).to eq([contract_invoice.id])
+      end
     end
   end
 
@@ -622,6 +681,16 @@ RSpec.describe InvoicesQuery do
       it "returns invoices with total cents amount in provided range" do
         expect(result).to be_success
         expect(result.invoices.pluck(:id)).to match_array invoices[1..3].pluck(:id)
+      end
+    end
+
+    context "when an amount is not a number" do
+      let(:amount_from) { "abc" }
+      let(:amount_to) { nil }
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages.keys).to eq([:amount_from])
       end
     end
 
@@ -953,6 +1022,110 @@ RSpec.describe InvoicesQuery do
 
       it "returns only invoices in that status" do
         expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id, invoice_sixth.id])
+      end
+    end
+  end
+
+  context "with many invoices of the organization that match neither filter", transaction: false do
+    let(:pagination) { {page: 1, limit: 20} }
+    let(:other_organization) { create(:organization) }
+
+    # EXPLAIN with sequential and bitmap scans off, in a transaction so that SET LOCAL applies. Sorts stay on:
+    # several invoice types read from the type index come out of order and need one.
+    def explain(relation)
+      ActiveRecord::Base.transaction do
+        %w[enable_seqscan enable_bitmapscan].each do |setting|
+          ActiveRecord::Base.connection.execute("SET LOCAL #{setting} = off")
+        end
+        ActiveRecord::Base.connection.select_rows("EXPLAIN #{relation.to_sql}").flatten.join("\n")
+      end
+    end
+
+    before do
+      # Subscription invoices that are not overdue, so that an index on the filters beats walking
+      # index_invoices_by_cursor and filtering every invoice of the organization.
+      ActiveRecord::Base.connection.execute(<<~SQL)
+        INSERT INTO invoices (id, organization_id, customer_id, billing_entity_id, invoice_type, status, payment_overdue, issuing_date, currency, number, created_at, updated_at)
+        SELECT gen_random_uuid(), organization_id, customer_id, billing_entity_id, 0, 1, false, issuing_date - (n % 30), currency, 'BULK-' || n, created_at, updated_at
+        FROM invoices, generate_series(1, 5000) AS n
+        WHERE invoices.id = '#{invoice_first.id}'
+      SQL
+      ActiveRecord::Base.connection.execute("ANALYZE invoices")
+    end
+
+    context "when filtering by invoice type and payment overdue in a large organization" do
+      let(:filters) do
+        {
+          invoice_type: ["one_off"],
+          status: %w[draft failed finalized voided pending],
+          issuing_date_from: 2.months.ago.to_date.iso8601,
+          issuing_date_to: Time.current.to_date.iso8601,
+          payment_overdue: true
+        }
+      end
+      let(:overdue_one_off_recent) { create(:invoice, organization:, customer: customer_first, invoice_type: :one_off, status: :finalized, payment_overdue: true, issuing_date: 2.days.ago) }
+      let(:overdue_one_off_older) { create(:invoice, organization:, customer: customer_second, invoice_type: :one_off, status: :finalized, payment_overdue: true, issuing_date: 3.weeks.ago) }
+      let(:not_overdue_one_off) { create(:invoice, organization:, customer: customer_first, invoice_type: :one_off, status: :finalized, payment_overdue: false, issuing_date: 2.days.ago) }
+      let(:overdue_add_on) { create(:invoice, organization:, customer: customer_first, invoice_type: :add_on, status: :finalized, payment_overdue: true, issuing_date: 2.days.ago) }
+      let(:other_organization_invoice) { create(:invoice, organization: other_organization, invoice_type: :one_off, status: :finalized, payment_overdue: true, issuing_date: 2.days.ago) }
+
+      before do
+        overdue_one_off_recent
+        overdue_one_off_older
+        not_overdue_one_off
+        overdue_add_on
+        other_organization_invoice
+        ActiveRecord::Base.connection.execute("ANALYZE invoices")
+      end
+
+      it "reads the matching invoices through an index on the filters and returns them in list order" do
+        plan = explain(result.invoices)
+
+        expect(plan).to match(/index_invoices_on_organization_id_invoice_type_cursor|index_invoices_on_organization_id_overdue_cursor/)
+        expect(returned_ids).to eq([overdue_one_off_recent.id, overdue_one_off_older.id])
+      end
+    end
+
+    context "when filtering by invoice type only" do
+      let(:filters) { {invoice_type: ["add_on", "advance_charges"]} }
+      let(:add_on_invoice) { create(:invoice, organization:, customer: customer_first, invoice_type: :add_on, status: :finalized, issuing_date: 2.days.ago) }
+      let(:advance_charges_invoice) { create(:invoice, organization:, customer: customer_second, invoice_type: :advance_charges, status: :finalized, issuing_date: 3.weeks.ago) }
+      let(:one_off_invoice) { create(:invoice, organization:, customer: customer_first, invoice_type: :one_off, status: :finalized, issuing_date: 2.days.ago) }
+      let(:other_organization_add_on) { create(:invoice, organization: other_organization, invoice_type: :add_on, status: :finalized, issuing_date: 2.days.ago) }
+
+      before do
+        add_on_invoice
+        advance_charges_invoice
+        one_off_invoice
+        other_organization_add_on
+        ActiveRecord::Base.connection.execute("ANALYZE invoices")
+      end
+
+      it "reads the invoices of these types through the invoice type cursor index" do
+        expect(explain(result.invoices)).to include("index_invoices_on_organization_id_invoice_type_cursor")
+        expect(returned_ids).to match_array([add_on_invoice.id, advance_charges_invoice.id])
+      end
+    end
+
+    context "when filtering on overdue invoices only" do
+      let(:filters) { {payment_overdue: true} }
+      let(:overdue_recent) { create(:invoice, organization:, customer: customer_first, status: :finalized, payment_overdue: true, issuing_date: 2.days.ago) }
+      let(:overdue_older) { create(:invoice, organization:, customer: customer_second, status: :finalized, payment_overdue: true, issuing_date: 2.months.ago) }
+      let(:not_overdue) { create(:invoice, organization:, customer: customer_first, status: :finalized, payment_overdue: false, issuing_date: 2.days.ago) }
+      let(:other_organization_overdue) { create(:invoice, organization: other_organization, status: :finalized, payment_overdue: true, issuing_date: 2.days.ago) }
+
+      before do
+        overdue_recent
+        overdue_older
+        not_overdue
+        other_organization_overdue
+        ActiveRecord::Base.connection.execute("ANALYZE invoices")
+      end
+
+      it "reads the overdue invoices through the overdue cursor index, in list order" do
+        expect(explain(result.invoices)).to include("index_invoices_on_organization_id_overdue_cursor")
+        # invoice_third of the outer setup is overdue too, issued 3 weeks ago
+        expect(returned_ids).to eq([overdue_recent.id, invoice_third.id, overdue_older.id])
       end
     end
   end

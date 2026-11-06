@@ -6,6 +6,7 @@ module RequiredOrganization
   private
 
   def ready?(**args)
+    raise organization_error("Login method not allowed for this organization") if context[:organization_refused_for_session]
     raise organization_error("Missing organization id") unless current_organization
     raise organization_error("Missing membership") unless current_membership
     raise organization_error("Not in organization") unless user_is_member_of_organization?

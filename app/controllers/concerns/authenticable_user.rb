@@ -10,7 +10,7 @@ module AuthenticableUser
   private
 
   def current_user
-    @current_user ||= User.find_by(id: decoded_token["sub"]) if token && decoded_token
+    @current_user ||= User.find_by(id: decoded_token["sub"]) if token && decoded_token && !sso_session_without_claims?
   end
 
   def current_organization
@@ -23,7 +23,17 @@ module AuthenticableUser
   def current_membership
     return unless current_user
 
-    @current_membership ||= current_user.memberships.active.find_by(organization_id: organization_header)
+    return @current_membership if defined?(@current_membership)
+
+    @current_membership = organization_membership if organization_membership&.organization&.accessible_by_session?(**session_claims)
+  end
+
+  def organization_membership
+    @organization_membership ||= current_user.memberships.active.find_by(organization_id: organization_header)
+  end
+
+  def organization_refused_for_session?
+    current_user.present? && organization_membership.present? && current_membership.nil?
   end
 
   def organization_header
@@ -32,6 +42,14 @@ module AuthenticableUser
 
   def login_method
     @login_method ||= decoded_token["login_method"] if token && decoded_token
+  end
+
+  def session_claims
+    (token && decoded_token) ? Utils::AuthToken.session_claims(decoded_token) : {}
+  end
+
+  def sso_session_without_claims?
+    Utils::AuthToken.sso_session_without_claims?(decoded_token)
   end
 
   def token

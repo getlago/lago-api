@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Contracts::CreateService do
+RSpec.describe Contracts::CreateService, :capture_kafka_messages do
   subject(:result) { described_class.call(organization:, params:) }
 
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
@@ -17,9 +17,15 @@ RSpec.describe Contracts::CreateService do
     }
   end
 
+  before do
+    allow(Utils::ActivityLog).to receive(:produce)
+    allow(Utils::ActivityLog).to receive(:produce_after_commit)
+  end
+
   it "creates an active contract on the plan and materializes its rate cards" do
     rate_card = create(:rate_card, organization:)
-    create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5)
+    plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5)
+    create(:rate_phase, organization:, plan_rate_card:, position: 1)
 
     expect { result }.to change(Contract, :count).by(1).and change(ContractRateCard, :count).by(1)
 
@@ -33,6 +39,64 @@ RSpec.describe Contracts::CreateService do
     )
     expect(contract.started_at).to be_within(5.seconds).of(Time.current)
     expect(contract.applied_rate_cards.sole).to have_attributes(rate_card:, units: 5)
+  end
+
+  it "publishes created and started with the same post-materialization snapshot when immediately active" do
+    rate_card = create(:rate_card, organization:)
+    plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5)
+    create(:rate_phase, organization:, plan_rate_card:, position: 1)
+    section = create(:invoice_custom_section, organization:)
+    params[:invoice_custom_section] = {invoice_custom_section_ids: [section.id]}
+
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(2).times
+
+    contract = result.contract
+    expect(SendWebhookJob).to have_been_enqueued.with("contract.created", contract)
+    expect(SendWebhookJob).to have_been_enqueued.with("contract.started", contract)
+    expect(contract.applied_rate_cards.sole.rate_phases.size).to eq(1)
+    expect(contract.selected_invoice_custom_sections).to be_present
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.created")
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
+      contract,
+      "contract.started"
+    )
+  end
+
+  it "produces created before started activities", transaction: false do
+    customer
+    catalog_plan
+    allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+
+    result
+
+    activity_types = kafka_messages.map do |message|
+      JSON.parse(message[:payload]).fetch("activity_type")
+    end
+    expect(activity_types).to eq(%w[contract.created contract.started])
+  end
+
+  context "when the surrounding transaction rolls back" do
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "delivers neither created nor started", transaction: false do
+      customer
+      catalog_plan
+
+      expect do
+        ActiveRecord::Base.transaction do
+          result
+          raise ActiveRecord::Rollback
+        end
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(kafka_messages).to be_empty
+    end
   end
 
   context "with invoice custom sections" do
@@ -81,9 +145,17 @@ RSpec.describe Contracts::CreateService do
     let(:params) { super().merge(started_at: 1.month.from_now.iso8601) }
 
     it "creates a pending contract" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |event, record, *extra|
+        expect(event).to eq("contract.created")
+        expect(record).to eq(result.contract)
+        expect(extra).to be_empty
+      end
       expect(result).to be_success
       expect(result.contract.status).to eq("pending")
       expect(result.contract.started_at).to be_within(5.seconds).of(1.month.from_now)
+      expect(SendWebhookJob).not_to have_been_enqueued.with("contract.started", anything, any_args)
+      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(result.contract, "contract.created")
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end
 

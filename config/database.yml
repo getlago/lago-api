@@ -110,6 +110,12 @@ staging:
     debug: false
     database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>
 
+# `POSTGRES_SCHEMA` holds the Lago tables. `public` is kept at the end of the
+# search path because the extensions (pg_trgm, pgcrypto, ...) live there.
+# `db/structure.sql` creates everything in `public`, so it is not loaded when the
+# first schema is another one: a fresh database runs every migration instead.
+<% postgres_search_path = (ENV.fetch('POSTGRES_SCHEMA', 'public').split(',').map(&:strip) | ['public']).join(',') %>
+<% postgres_custom_schema = postgres_search_path.split(',').first != 'public' %>
 production:
   primary:
     <<: *default
@@ -120,19 +126,20 @@ production:
     # When DATABASE_PROXY_URL is unset, fall back to the previous
     # DATABASE_PREPARED_STATEMENTS knob (default true).
     prepared_statements: <%= ENV['DATABASE_PROXY_URL'].present? ? false : ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
-    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+    schema_search_path: <%= postgres_search_path %>
+    schema_dump: <%= postgres_custom_schema ? false : 'structure.sql' %>
   direct:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
-    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+    schema_search_path: <%= postgres_search_path %>
     database_tasks: false
   events:
     <<: *default
     url: <%= ENV.fetch('DATABASE_PROXY_URL', ENV['DATABASE_URL']) %>
     pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
     prepared_statements: <%= ENV['DATABASE_PROXY_URL'].present? ? false : ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
-    schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
+    schema_search_path: <%= postgres_search_path %>
     database_tasks: false
   clickhouse:
     adapter: clickhouse

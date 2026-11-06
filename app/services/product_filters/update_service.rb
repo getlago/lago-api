@@ -4,16 +4,16 @@ module ProductFilters
   class UpdateService < BaseService
     Result = BaseResult[:product_filter]
 
+    activity_loggable(
+      action: "product_filter.updated",
+      record: -> { product_filter }
+    )
+
     def initialize(product_filter:, params:)
       @product_filter = product_filter
       @params = params.to_h.with_indifferent_access
       super
     end
-
-    activity_loggable(
-      action: "product_filter.updated",
-      record: -> { product_filter }
-    )
 
     def call
       return result.not_found_failure!(resource: "product_filter") unless product_filter
@@ -42,25 +42,24 @@ module ProductFilters
           return values_validation unless values_validation.success?
         end
 
+        changed_values = params.key?(:values) && values_changed?
         product_filter.name = params[:name] if params.key?(:name)
         product_filter.description = params[:description] if params.key?(:description)
         product_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
         product_filter.code = params[:code]&.strip if params.key?(:code)
         product_filter.save!
 
-        replace_values if params.key?(:values) && values_changed?
+        replace_values if changed_values
 
         result.product_filter = product_filter
+        SendWebhookJob.perform_after_commit("product_filter.updated", product_filter)
       end
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      if e.record.is_a?(ProductFilterValue)
-        errors = e.record.errors.messages.transform_keys { |key| :"values.#{key}" }
-        result.validation_failure!(errors:)
-      else
-        result.record_validation_failure!(record: e.record)
-      end
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e.result.error)
     end
 
     private
@@ -81,15 +80,18 @@ module ProductFilters
       )
     end
 
+    # A value its model refuses fails under its path in the request, and rolls the update back.
     def replace_values
       product_filter.values.discard_all!
 
-      resolved_values.values_params.each do |value_params|
+      resolved_values.values_params.each_with_index do |value_params, index|
         product_filter.values.create!(
           organization_id: product_filter.organization_id,
           billable_metric_filter_id: value_params[:billable_metric_filter_id],
           value: value_params[:value]
         )
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record) { ResolveValuesService.field(value_params, index, it) }.raise_if_error!
       end
     end
   end

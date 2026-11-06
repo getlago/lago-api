@@ -3,7 +3,7 @@
 module Api
   module V1
     module Analytics
-      class BaseController < Api::BaseController
+      class BaseController < Api::V1::BaseController
         def index
           if @result.success?
             render_result(@result)

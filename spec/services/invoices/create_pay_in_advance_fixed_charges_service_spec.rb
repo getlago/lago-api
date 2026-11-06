@@ -107,20 +107,6 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end
     end
 
-    it "calls SegmentTrackJob" do
-      invoice = invoice_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -462,7 +448,7 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
       let(:response) { instance_double(Net::HTTPOK) }
       let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+      let(:endpoint) { "https://api.nango.dev/action/trigger" }
       let(:body) do
         p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
         File.read(p)

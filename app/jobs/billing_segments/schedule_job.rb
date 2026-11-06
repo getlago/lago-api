@@ -17,7 +17,7 @@ module BillingSegments
     def perform(customer_id)
       ScheduleService.call!(customer: Customer.find(customer_id))
 
-      ProcessJob.perform_later(customer_id) if BillingSegment.awaiting_invoicing.exists?(customer_id:)
+      ProcessJob.perform_later(customer_id) if BillingSegment.ready_for_invoicing.exists?(customer_id:)
     end
   end
 end

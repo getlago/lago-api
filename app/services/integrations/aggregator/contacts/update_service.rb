@@ -10,12 +10,25 @@ module Integrations
           super(integration:)
         end
 
+        def action_name
+          case provider
+          when "netsuite"
+            "netsuite-update-contact"
+          when "xero"
+            "xero-update-contact"
+          when "hubspot"
+            "update-contact"
+          when "avalara"
+            "update-customer"
+          end
+        end
+
         def call
           Integrations::Hubspot::Contacts::DeployPropertiesService.call(integration:)
 
           throttle!(:anrok, :hubspot, :netsuite, :xero)
 
-          response = http_client.put_with_response(params, headers)
+          response = trigger_action(params)
           body = JSON.parse(response.body)
 
           if body.is_a?(Hash)
@@ -26,7 +39,7 @@ module Integrations
 
           result
         rescue LagoHttpClient::HttpError => e
-          raise RequestLimitError(e) if request_limit_error?(e)
+          raise RequestLimitError.new(e) if request_limit_error?(e)
 
           code = code(e)
           message = message(e)

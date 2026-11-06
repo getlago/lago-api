@@ -4,6 +4,8 @@ module Api
   module V2
     class ContractsController < Api::V2::BaseController
       cursor_paginated_index(Contract)
+      date_range_filtered_index(:created_at)
+      serializable_with ::V2::ContractSerializer
 
       def create
         result = ::Contracts::CreateService.call(
@@ -49,6 +51,7 @@ module Api
 
       def index
         filters = params.permit(:plan_code, :external_customer_id, :external_id, :has_rate_overrides, billing_entity_ids: [])
+          .to_h.merge(date_range_filters)
         # Accept both ?status=pending and ?status[]=pending — strong params
         # would silently drop the scalar form and hand back active contracts
         # to a caller who believes they filtered.
@@ -63,23 +66,7 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, customer: :billing_entity), cursor:)
-
-          # One grouped query instead of one COUNT per row in the serializer.
-          applied_rate_cards_counts = ContractRateCard
-            .where(contract_id: page.records.map(&:id))
-            .group(:contract_id)
-            .count
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::ContractSerializer,
-              collection_name: "contracts",
-              meta: page.meta,
-              applied_rate_cards_counts:
-            )
-          )
+          render_contracts(result.contracts.includes(:catalog_plan, customer: :billing_entity))
         else
           render_error_response(result)
         end
@@ -100,13 +87,7 @@ module Api
           end
         return not_found_error(resource: "contract") unless contract
 
-        render(
-          json: ::V2::ContractSerializer.new(
-            contract,
-            root_name: "contract",
-            includes: %i[applied_rate_cards applied_invoice_custom_sections]
-          )
-        )
+        render_contract(contract)
       end
 
       private
@@ -152,10 +133,6 @@ module Api
           :purchase_order_number,
           invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
-      end
-
-      def render_contract(contract)
-        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards applied_invoice_custom_sections]))
       end
 
       def resource_name

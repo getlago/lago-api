@@ -3,6 +3,13 @@
 module Events
   module Stores
     class BaseStore
+      # Unicode White_Space, as Ruby's `blank?`: `[[:space:]]` is ASCII-only in RE2 and locale-dependent in PostgreSQL
+      BLANK_VALUE_CHARS = [*0x09..0x0D, 0x20, 0x85, 0xA0, 0x1680, *0x2000..0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000]
+        .map { it.chr(Encoding::UTF_8) }.freeze
+
+      # Matches the values Ruby's `blank?` reads as missing, so SQL groups them like `build_groups`
+      BLANK_VALUE_PATTERN = "^[#{BLANK_VALUE_CHARS.join}]*$"
+
       AggregationResult = Data.define(
         :value,
         :events_count
@@ -56,7 +63,29 @@ module Events
         :events_count
       )
 
-      def initialize(billing_context:, boundaries:, code: nil, filters: {}, deduplicate: false)
+      # NOTE: result of a recurring sum. The `snapshot_*` fields only cover the events ingested up to
+      #       the watermark, as the next period counts the later ones.
+      RecurringAggregationResult = Data.define(
+        :value,
+        :snapshot_value,
+        :events_count,
+        :snapshot_events_count
+      )
+
+      # NOTE: grouped variant of RecurringAggregationResult.
+      GroupedRecurringAggregationResult = Data.define(
+        :groups,
+        :value,
+        :snapshot_value,
+        :events_count,
+        :snapshot_events_count
+      ) do
+        def to_grouped_hash
+          {groups:, value:}
+        end
+      end
+
+      def initialize(billing_context:, boundaries:, code: nil, filters: {})
         @code = code
         @billing_context = billing_context
         @boundaries = boundaries
@@ -74,7 +103,6 @@ module Events
         @aggregation_property = nil
         @numeric_property = false
         @use_from_boundary = true
-        @deduplicate = deduplicate
       end
 
       def grouped_by_values?
@@ -99,7 +127,7 @@ module Events
       #       `use_from_boundary` is left to the caller: a window with no lower bound must
       #       not apply one.
       def for_window(filters: nil, **boundaries)
-        store = self.class.new(code:, billing_context:, boundaries:, filters: filters || self.filters, deduplicate:)
+        store = self.class.new(code:, billing_context:, boundaries:, filters: filters || self.filters)
 
         store.aggregation_property = aggregation_property
         store.numeric_property = numeric_property
@@ -168,8 +196,25 @@ module Events
         raise NotImplementedError
       end
 
+      # NOTE: sum of a recurring metric. Without a period, it covers the full history. With the period
+      #       of the latest snapshots, it only covers what they did not count: the events dated after
+      #       it, and the late events dated before it but ingested after its watermark.
+      #       `watermark` bounds the snapshot_value of the snapshot to persist for this period.
+      def recurring_sum(watermark:, period: nil)
+        raise NotImplementedError
+      end
+
+      def grouped_recurring_sum(watermark:, period: nil)
+        raise NotImplementedError
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         raise NotImplementedError
+      end
+
+      # A store keeping its rows between computations answers a sum cheaper than a snapshot delta.
+      def incremental_sum?
+        false
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
@@ -232,7 +277,7 @@ module Events
 
       attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
-      attr_reader :code, :billing_context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
+      attr_reader :code, :billing_context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters
 
       protected
 
@@ -307,6 +352,29 @@ module Events
       # NOTE: Build the { column => value } groups hash used by grouped aggregation results.
       def build_groups(values, columns: grouped_by)
         columns.zip(values.map(&:presence)).to_h
+      end
+
+      def build_recurring_aggregation_result(row)
+        RecurringAggregationResult.new(
+          value: row["value"] || 0,
+          snapshot_value: row["snapshot_value"] || 0,
+          events_count: row["events_count"].to_i,
+          snapshot_events_count: row["snapshot_events_count"].to_i
+        )
+      end
+
+      def prepare_grouped_recurring_values(rows, columns: grouped_by)
+        rows.map do |row|
+          *groups, value, snapshot_value, events_count, snapshot_events_count = row.flatten
+
+          GroupedRecurringAggregationResult.new(
+            groups: build_groups(groups, columns:),
+            value: value || 0,
+            snapshot_value: snapshot_value || 0,
+            events_count: events_count.to_i,
+            snapshot_events_count: snapshot_events_count.to_i
+          )
+        end
       end
 
       # NOTE: grouped variant of build_weighted_aggregation_result.

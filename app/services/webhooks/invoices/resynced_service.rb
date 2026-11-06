@@ -3,14 +3,12 @@
 module Webhooks
   module Invoices
     class ResyncedService < Webhooks::BaseService
+      include Webhooks::Invoices::ProductCatalogPayload
+
       private
 
-      def object_serializer
-        ::V1::InvoiceSerializer.new(
-          object,
-          root_name: "invoice",
-          includes: %i[customer billing_periods integration_customers subscriptions fees credits applied_taxes]
-        )
+      def v1_includes
+        %i[customer billing_periods integration_customers subscriptions fees credits applied_taxes]
       end
 
       def webhook_type

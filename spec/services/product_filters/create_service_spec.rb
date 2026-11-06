@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ProductFilters::CreateService do
   subject(:result) { described_class.call(product:, params:) }
 
-  let_it_be(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
   let(:product) { create(:product, organization:, billable_metric:) }
   let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
@@ -23,6 +23,8 @@ RSpec.describe ProductFilters::CreateService do
       ]
     }
   end
+
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
 
   it "creates a product filter with its values" do
     expect { result }.to change(ProductFilter, :count).by(1)
@@ -54,11 +56,20 @@ RSpec.describe ProductFilters::CreateService do
     end
 
     context "with an unknown key" do
-      let(:params) { {name: "Broken", code: "broken", values: [{key: "unknown", value: "us"}]} }
+      let(:params) { {name: "Broken", code: "broken", values: [{key: region_filter.key, value: "us"}, {key: "unknown", value: "us"}]} }
 
-      it "returns a validation failure on the key" do
+      it "returns a validation failure on the key of that value" do
         expect(result).not_to be_success
-        expect(result.error.messages[:"values.key"]).to eq(["value_is_invalid"])
+        expect(result.error.messages).to eq("values[1].key": ["value_is_invalid"])
+      end
+    end
+
+    context "with a value that names no filter" do
+      let(:params) { {name: "Broken", code: "broken", values: [{key: region_filter.key, value: "us"}, {value: "eu"}]} }
+
+      it "returns a validation failure on the key of that value" do
+        expect { result }.not_to change(ProductFilter, :count)
+        expect(result.error.messages).to eq("values[1].key": ["value_is_mandatory"])
       end
     end
   end
@@ -147,11 +158,24 @@ RSpec.describe ProductFilters::CreateService do
   context "when a billable metric filter belongs to another metric" do
     let(:other_metric_filter) { create(:billable_metric_filter, organization:) }
 
-    before { params[:values] = [{billable_metric_filter_id: other_metric_filter.id, value: "anything"}] }
+    before do
+      params[:values] = [
+        {billable_metric_filter_id: region_filter.id, value: "us"},
+        {billable_metric_filter_id: other_metric_filter.id, value: "anything"}
+      ]
+    end
 
-    it "returns a validation failure" do
+    it "returns a validation failure on the filter of that value" do
       expect(result).not_to be_success
-      expect(result.error.messages[:"values.billable_metric_filter"]).to eq(["value_is_invalid"])
+      expect(result.error.messages).to eq("values[1].billable_metric_filter": ["value_is_invalid"])
+    end
+  end
+
+  context "when a value carries a blank filter id, as GraphQL can send" do
+    before { params[:values] = [{billable_metric_filter_id: "", value: "us"}] }
+
+    it "returns a validation failure on the filter, not on a key GraphQL has no field for" do
+      expect(result.error.messages).to eq("values[0].billable_metric_filter": ["value_is_invalid"])
     end
   end
 
@@ -211,11 +235,17 @@ RSpec.describe ProductFilters::CreateService do
   end
 
   context "when a value does not belong to the metric filter values" do
-    before { params[:values] = [{billable_metric_filter_id: region_filter.id, value: "mars"}] }
+    before do
+      params[:values] = [
+        {billable_metric_filter_id: region_filter.id, value: "us"},
+        {billable_metric_filter_id: region_filter.id, value: "mars"}
+      ]
+    end
 
-    it "returns a validation failure on the value" do
+    it "returns a validation failure on that value, and creates nothing" do
+      expect { result }.not_to change(ProductFilterValue, :count)
       expect(result).not_to be_success
-      expect(result.error.messages[:"values.value"]).to be_present
+      expect(result.error.messages.keys).to eq([:"values[1].value"])
     end
   end
 
@@ -230,7 +260,27 @@ RSpec.describe ProductFilters::CreateService do
 
   it "produces an activity log" do
     filter = result.product_filter
-    expect(Utils::ActivityLog).to have_produced("product_filter.created").after_commit.with(filter)
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      filter,
+      "product_filter.created",
+      after_commit: true
+    )
+  end
+
+  it "enqueues a product_filter.created webhook with the record" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+      expect(args).to eq(["product_filter.created", result.product_filter])
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "creates and publishes the filter event" do
+      expect { result }.to have_enqueued_job(SendWebhookJob)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(anything, "product_filter.created", any_args)
+    end
   end
 
   # Deleting a metric discards its filters asynchronously; a create landing in
@@ -249,7 +299,16 @@ RSpec.describe ProductFilters::CreateService do
     it "blocks the create instead of orphaning a reference" do
       expect { result }.not_to change(ProductFilter, :count)
       expect(result).not_to be_success
-      expect(result.error.messages[:"values.billable_metric_filter"]).to eq(["billable_metric_deleted"])
+      expect(result.error.messages).to eq("values[0].billable_metric_filter": ["billable_metric_deleted"])
+    end
+
+    context "when the value names its filter by key" do
+      let(:params) { {name: "US", code: "us", values: [{key: region_filter.key, value: "us"}]} }
+
+      it "fails on the key the request sent" do
+        expect { result }.not_to change(ProductFilter, :count)
+        expect(result.error.messages).to eq("values[0].key": ["billable_metric_deleted"])
+      end
     end
   end
 end

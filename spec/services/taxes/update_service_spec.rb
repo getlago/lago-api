@@ -113,6 +113,23 @@ RSpec.describe Taxes::UpdateService do
       expect { update_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
     end
 
+    context "when the tax is applied only to a Rate Card" do
+      let(:tax) { create(:tax, organization:) }
+      let(:rate_card) { create(:rate_card, organization:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+      let(:draft_invoice) { create(:invoice, :draft, organization:, customer:) }
+
+      before do
+        create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+        fee = create(:product_fee, invoice: draft_invoice, rate_card_rate:)
+        create(:fee_applied_tax, fee:, tax:)
+      end
+
+      it "marks the draft invoice as ready to be refreshed" do
+        expect { update_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
+      end
+    end
+
     context "when tax is not found" do
       let(:tax) { nil }
 
@@ -141,6 +158,18 @@ RSpec.describe Taxes::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
+      end
+    end
+
+    context "when a concurrent request takes the new code" do
+      before do
+        create(:tax, organization:, code: "updated code")
+        # The uniqueness validation ran before the concurrent request committed.
+        allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+      end
+
+      it "returns the validation error of a taken value" do
+        expect(update_service.call.error.messages).to eq(code: ["value_already_exist"])
       end
     end
   end

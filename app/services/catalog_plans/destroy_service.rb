@@ -27,13 +27,13 @@ module CatalogPlans
 
       ActiveRecord::Base.transaction do
         catalog_plan.applied_rate_cards.to_a.each do |plan_rate_card|
-          PlanRateCards::DestroyService.call!(plan_rate_card:)
+          PlanRateCards::DestroyService.call!(plan_rate_card:, emit_events: false)
         end
         catalog_plan.discard!
+        SendWebhookJob.perform_after_commit("plan.deleted", catalog_plan)
       end
 
       result.catalog_plan = catalog_plan
-      SendWebhookJob.perform_after_commit("plan.deleted", catalog_plan)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

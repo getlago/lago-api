@@ -148,9 +148,10 @@ RSpec.describe OrderForm do
       expect(order_form.signed_document_url).to be_nil
     end
 
-    it "returns a blob url when a document is attached" do
+    it "returns an expiring document url when a document is attached" do
       order_form = create(:order_form, :with_signed_document)
-      expect(order_form.signed_document_url).to include("/rails/active_storage/blobs")
+      expect(order_form.signed_document_url).to include("/documents/")
+      expect(order_form.signed_document_url_expires_at).to be_present
     end
 
     it "returns nil when the attached document is not persisted yet" do

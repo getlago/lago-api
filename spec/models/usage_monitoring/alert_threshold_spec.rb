@@ -15,6 +15,10 @@ RSpec.describe UsageMonitoring::AlertThreshold do
     it "notifies on trigger only by default" do
       expect(create(:alert_threshold).notify_on).to eq(["triggered"])
     end
+
+    it "drops duplicates and keeps one order" do
+      expect(create(:alert_threshold, notify_on: %w[resolved triggered resolved]).notify_on).to eq(%w[triggered resolved])
+    end
   end
 
   describe "#notify_on_resolved?" do

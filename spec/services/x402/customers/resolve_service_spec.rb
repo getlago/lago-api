@@ -171,7 +171,12 @@ describe X402::Customers::ResolveService do
   context "when the create fails after the insert" do
     subject(:result) { ActiveRecord::Base.transaction { described_class.call(organization:, address:, family: :evm) } }
 
-    let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.tap { |eu_result| eu_result.tax_code = "lago_eu_missing" } }
+    let(:eu_tax_result) do
+      Customers::EuAutoTaxesService::Result.new.tap do |eu_result|
+        eu_result.tax_code = "lago_eu_missing"
+        eu_result.tax_codes = ["lago_eu_missing"]
+      end
+    end
 
     before { allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result) }
 

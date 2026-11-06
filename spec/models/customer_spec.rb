@@ -126,6 +126,18 @@ RSpec.describe Customer do
 
     let(:external_id) { SecureRandom.uuid }
 
+    it "caps a changed net_payment_term at 365" do
+      expect(customer).to allow_value(365).for(:net_payment_term)
+      expect(customer).not_to allow_value(366).for(:net_payment_term)
+    end
+
+    it "keeps a net_payment_term stored above 365 valid while it is unchanged" do
+      customer.net_payment_term = 400
+      customer.clear_changes_information
+
+      expect(customer).to be_valid
+    end
+
     it "validates the language code" do
       customer.document_locale = nil
       expect(customer).to be_valid
@@ -166,6 +178,40 @@ RSpec.describe Customer do
       customer.update_column(:name, "a" * 256) # rubocop:disable Rails/SkipsModelValidations
       customer.timezone = "Europe/Paris"
       expect(customer).to be_valid
+    end
+
+    {
+      name: 255, firstname: 255, lastname: 255, legal_name: 255, tax_identification_number: 255,
+      address_line1: 500, address_line2: 500, zipcode: 255, city: 255, state: 255,
+      shipping_address_line1: 500, shipping_address_line2: 500, shipping_zipcode: 255, shipping_city: 255,
+      shipping_state: 255
+    }.each do |field, max_length|
+      describe "#{field} length validation" do
+        it "accepts #{max_length} characters" do
+          customer[field] = "a" * max_length
+          expect(customer).to be_valid
+        end
+
+        it "rejects #{max_length + 1} characters with value_is_too_long" do
+          customer[field] = "a" * (max_length + 1)
+
+          expect(customer).not_to be_valid
+          expect(customer.errors.where(field, :too_long)).to be_present
+          expect(customer.errors.messages[field]).to eq(["value_is_too_long"])
+        end
+
+        context "when the stored value is already over #{max_length} characters" do
+          before do
+            customer.save!
+            customer.update_column(field, "a" * (max_length + 1)) # rubocop:disable Rails/SkipsModelValidations
+          end
+
+          it "stays valid when another attribute changes" do
+            customer.timezone = "Europe/Paris"
+            expect(customer).to be_valid
+          end
+        end
+      end
     end
 
     describe "of email" do
@@ -848,6 +894,14 @@ RSpec.describe Customer do
       expect(customer.applicable_invoice_grace_period).to eq(3)
     end
 
+    context "when another billing entity is provided" do
+      let(:other_billing_entity) { build(:billing_entity, invoice_grace_period: 7) }
+
+      it "keeps the customer invoice_grace_period" do
+        expect(customer.applicable_invoice_grace_period(billing_entity: other_billing_entity)).to eq(3)
+      end
+    end
+
     context "when customer does not have an invoice grace period" do
       let(:billing_entity_invoice_grace_period) { 5 }
 
@@ -858,6 +912,14 @@ RSpec.describe Customer do
 
       it "returns the billing entity invoice_grace_period" do
         expect(customer.applicable_invoice_grace_period).to eq(5)
+      end
+
+      context "when another billing entity is provided" do
+        let(:other_billing_entity) { build(:billing_entity, invoice_grace_period: 7) }
+
+        it "returns the provided billing entity invoice_grace_period" do
+          expect(customer.applicable_invoice_grace_period(billing_entity: other_billing_entity)).to eq(7)
+        end
       end
 
       context "when billing entity invoice_grace_period is nil" do

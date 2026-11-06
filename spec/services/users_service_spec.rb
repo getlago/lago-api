@@ -73,6 +73,22 @@ RSpec.describe UsersService do
       it_behaves_like "does not produce a security log" do
         before { described_class.call(:register, user.email, "password", "organization_name") }
       end
+
+      context "when the email differs only by case" do
+        subject(:registration_result) do
+          described_class.call(:register, "jane@acme.com", "password", "organization_name")
+        end
+
+        let(:user) { create(:user, email: "Jane@acme.com") }
+
+        before { user }
+
+        it "fails without creating a duplicate user" do
+          expect { registration_result }.not_to change(User, :count)
+          expect(registration_result).not_to be_success
+          expect(registration_result.error.messages[:email]).to include("user_already_exists")
+        end
+      end
     end
 
     context "when signup is disabled" do
@@ -84,11 +100,12 @@ RSpec.describe UsersService do
         ENV["LAGO_DISABLE_SIGNUP"] = nil
       end
 
-      it "returns a not allowed error" do
+      it "returns a forbidden error" do
         result = described_class.call(:register, "email", "password", "organization_name")
 
         expect(result).not_to be_success
-        expect(result.error.message).to eq("signup_disabled")
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("signup_disabled")
       end
 
       it_behaves_like "does not produce a security log" do
@@ -98,15 +115,21 @@ RSpec.describe UsersService do
   end
 
   describe ".call(:register_from_invite)" do
+    subject(:registration_result) { described_class.call(:register_from_invite, invite, password, login_method:) }
+
     let(:email) { Faker::Internet.email }
     let(:password) { SecureRandom.hex(16) }
     let(:invite) { create(:invite, email:) }
+    let(:login_method) { Organizations::AuthenticationMethods::EMAIL_PASSWORD }
 
     context "when is existing user" do
-      let!(:user) { create(:user, email:, password: "old_password") }
+      let(:user) { create(:user, email:, password: "old_password") }
+      let(:password) { "old_password" }
+
+      before { user }
 
       it "reuse user and adds membership" do
-        result = described_class.call(:register_from_invite, invite, password)
+        result = registration_result
 
         expect(result.user).to be_persisted
         expect(result.user.email).to eq email
@@ -115,16 +138,68 @@ RSpec.describe UsersService do
         expect(result.token).to be_present
       end
 
+      context "with an incorrect password" do
+        let(:password) { "wrong_password" }
+
+        before { invite }
+
+        it "does not grant a membership or session" do
+          expect { registration_result }.not_to change(Membership, :count)
+          expect(registration_result).not_to be_success
+          expect(registration_result.error.messages[:base]).to eq(["incorrect_login_or_password"])
+          expect(registration_result.token).to be_nil
+          expect(user.reload.authenticate("old_password")).to eq(user)
+        end
+
+        context "without a password" do
+          let(:password) { nil }
+
+          it "returns a validation failure" do
+            expect(registration_result.error.messages[:base]).to eq(["incorrect_login_or_password"])
+            expect(registration_result.token).to be_nil
+          end
+        end
+
+        context "with a null byte in the password" do
+          let(:password) { "old_password\u0000" }
+
+          it "returns a validation failure" do
+            expect(registration_result.error.messages[:base]).to eq(["incorrect_login_or_password"])
+            expect(registration_result.token).to be_nil
+          end
+        end
+
+        context "with an identity verified by SSO" do
+          let(:login_method) { Organizations::AuthenticationMethods::GOOGLE_OAUTH }
+
+          it "reuses the account without checking or replacing its password" do
+            expect { registration_result }.not_to change { user.reload.password_digest }
+            expect(registration_result).to be_success
+            expect(registration_result.user).to eq(user)
+            expect(registration_result.token).to be_present
+          end
+        end
+      end
+
       context "without active memberships" do
         before { create(:membership, user:, status: :revoked) }
 
-        it "updates the password" do
-          result = described_class.call(:register_from_invite, invite, password)
+        it "keeps the existing password" do
+          expect { registration_result }.not_to change { user.reload.password_digest }
+          expect(registration_result).to be_success
+          expect(registration_result.user).to eq(user)
+          expect(registration_result.token).to be_present
+        end
+      end
+
+      context "when the invite email differs from the user email by case" do
+        let(:invite) { create(:invite, email: email.upcase) }
+
+        it "reuses the existing user" do
+          result = registration_result
 
           expect(result.user).to eq user
-          expect(result.user.authenticate(password).id).to eq(user.id)
-          expect(result.user.authenticate("old_password")).to be false
-          expect(result.token).to be_present
+          expect(User.where("lower(email) = ?", email.downcase).count).to eq(1)
         end
       end
 
@@ -132,19 +207,33 @@ RSpec.describe UsersService do
         before { create(:membership, user:, status: :active) }
 
         it "keeps the existing password" do
-          result = described_class.call(:register_from_invite, invite, password)
+          expect { registration_result }.not_to change { user.reload.password_digest }
+          expect(registration_result).to be_success
+          expect(registration_result.user).to eq(user)
+          expect(registration_result.token).to be_present
+        end
+      end
 
-          expect(result.user).to eq user
-          expect(result.user.authenticate(password)).to eq false
-          expect(result.user.authenticate("old_password").id).to eq(user.id)
-          expect(result.token).to be_present
+      context "when the user's organization requires SSO" do
+        let(:sso_organization) { create(:organization, authentication_methods: %w[google_oauth]) }
+
+        before do
+          create(:membership, user:, organization: sso_organization)
+          invite
+        end
+
+        it "does not grant a password session" do
+          expect { registration_result }.not_to change(Membership, :count)
+          expect(registration_result).not_to be_success
+          expect(registration_result.error.messages[:email_password]).to eq(["login_method_not_authorized"])
+          expect(registration_result.token).to be_nil
         end
       end
     end
 
     context "when is a new user" do
       it "creates user and membership" do
-        result = described_class.call(:register_from_invite, invite, password)
+        result = registration_result
 
         expect(result).to be_a(BaseResult)
         expect(result.user).to be_persisted
@@ -311,6 +400,22 @@ RSpec.describe UsersService do
         subject
 
         expect(SegmentIdentifyJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when the stored email casing differs from the login email" do
+      let(:email) { "jane@acme.com" }
+      let(:password) { "password" }
+      let(:mixed_case_user) { create(:user, email: "Jane@acme.com", password:) }
+
+      before do
+        create(:membership, :active, user: mixed_case_user)
+        allow(UserDevices::RegisterService).to receive(:call!)
+      end
+
+      it "logs in the existing user" do
+        expect(result).to be_success
+        expect(result.user).to eq(mixed_case_user)
       end
     end
   end

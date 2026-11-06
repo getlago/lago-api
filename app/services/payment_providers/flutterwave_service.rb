@@ -23,7 +23,7 @@ module PaymentProviders
 
       old_code = flutterwave_provider.code
 
-      flutterwave_provider.secret_key = args[:secret_key] if args.key?(:secret_key)
+      flutterwave_provider.secret_key = args[:secret_key] if args.key?(:secret_key) && !Types::ObfuscatedStringType.obfuscated?(args[:secret_key])
       flutterwave_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       flutterwave_provider.code = args[:code] if args.key?(:code)
       flutterwave_provider.name = args[:name] if args.key?(:name)

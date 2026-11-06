@@ -4,25 +4,26 @@ module UsageAttributions
   class QueryService < BaseService
     Result = BaseResult[
       :subscription, :group_by, :rows, :unattributed, :totals, :groups_count, :basis, :from_datetime, :to_datetime,
-      :currency, :limit, :offset
+      :currency, :limit, :offset, :split_filters_count, :split_filters_limit
     ]
 
-    Row = Data.define(:value, :rank, :amount_cents, :events_count, :cells)
-    Aggregate = Data.define(:amount_cents, :events_count, :cells)
+    Row = Data.define(:value, :rank, :amount_cents, :events_count, :split_charge_units, :cells)
+    Aggregate = Data.define(:amount_cents, :events_count, :split_charge_units, :cells)
     Cell = Data.define(:charge, :charge_filter, :units, :amount_cents, :events_count)
 
     DEFAULT_LIMIT = 50
     MAX_LIMIT = 100
     MAX_FILTER_VALUES = 20
     MAX_FLAT_FILTERS = 3
-    MAX_SPLIT_FILTERS = 10
+    SPLIT_FILTERS_PER_PAGE = 10
+    MAX_SPLIT_FILTERS_OFFSET = ChargePriceLookupService::MAX_ENTRIES
     MAX_SEARCH_LENGTH = 100
     MAX_CUSTOM_WINDOW = 31.days
     MAX_GROUPS = 250_000
     MAX_EXECUTION_TIME = 8
 
     BASES = %w[units amount].freeze
-    ORDERS = %w[amount events_count].freeze
+    ORDERS = %w[amount units events_count].freeze
     SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
     PRICED_CHARGE_MODELS = %w[standard].freeze
 
@@ -33,7 +34,7 @@ module UsageAttributions
     }.freeze
 
     def initialize(subscription:, group_by:, filters: {}, from_datetime: nil, to_datetime: nil, charges: nil,
-      split_charge: nil, search: nil, basis: "units", order_by: nil, limit: DEFAULT_LIMIT, offset: 0)
+      split_charge: nil, split_filters_offset: 0, search: nil, basis: "units", order_by: nil, limit: DEFAULT_LIMIT, offset: 0)
       @subscription = subscription
       @group_by = group_by.to_s
       @filters = filters.to_h.to_h { |code, values| [code.to_s, (values.is_a?(Array) ? values : [values]).map(&:to_s)] }
@@ -41,9 +42,10 @@ module UsageAttributions
       @to_datetime = to_datetime
       @requested_charges = charges&.to_a
       @split_charge = split_charge
+      @split_filters_offset = split_filters_offset
       @search = search.presence
       @basis = basis.to_s
-      @order_by = (order_by || ((@basis == "amount") ? "amount" : "events_count")).to_s
+      @order_by = (order_by || ((@basis == "amount") ? "amount" : "units")).to_s
       @limit = limit
       @offset = offset
 
@@ -55,6 +57,7 @@ module UsageAttributions
       return result.forbidden_failure! unless available?
       return result.not_allowed_failure!(code: "subscription_not_started") unless subscription.started_at
       return result.not_allowed_failure!(code: "subscription_not_active") unless subscription.active?
+      return result.single_validation_failure!(field: :group_by, error_code: "value_is_mandatory") if group_by.blank?
       return result.not_found_failure!(resource: "usage_attribution_type") unless attribution_types_found?
       return result.not_found_failure!(resource: "charge") unless requested_charges_in_plan?
       return result.validation_failure!(errors: validation_errors) if validation_errors.any?
@@ -67,6 +70,10 @@ module UsageAttributions
       result.from_datetime = window_from
       result.to_datetime = window_to
       result.currency = currency.iso_code
+      if split_charge
+        result.split_filters_count = split_filter_ids.size
+        result.split_filters_limit = SPLIT_FILTERS_PER_PAGE
+      end
 
       assign_result(fetch_rows)
       result
@@ -82,7 +89,7 @@ module UsageAttributions
 
     private
 
-    attr_reader :subscription, :group_by, :filters, :from_datetime, :to_datetime, :requested_charges, :split_charge,
+    attr_reader :subscription, :group_by, :filters, :from_datetime, :to_datetime, :requested_charges, :split_charge, :split_filters_offset,
       :search, :basis, :order_by, :limit, :offset
 
     delegate :organization, to: :subscription
@@ -112,20 +119,30 @@ module UsageAttributions
         basis: (["value_is_invalid"] unless BASES.include?(basis)),
         order_by: order_by_errors,
         charges: charges_errors,
-        split_charge: split_charge_errors
+        split_charge: split_charge_errors,
+        split_filters_offset: (["value_is_out_of_range"] unless split_filters_offset.is_a?(Integer) && split_filters_offset.between?(0, MAX_SPLIT_FILTERS_OFFSET))
       }.compact_blank
+    end
+
+    def group_by_errors
+      errors = []
+      errors << "parent_filter_required" if parent_filter_required?
+      errors << "too_many_values" if values_limit_reached?
+      errors
     end
 
     # A level of the hierarchy is read under one of its parents, as the tree is expanded one level at a
     # time. The top level, and a level whose parent type was deleted, need no filter.
-    def group_by_errors
+    def parent_filter_required?
       parent = attribution_types[group_by].parent
+      !(parent.nil? || parent.discarded? || filters.key?(parent.code))
+    end
 
-      if parent.nil? || parent.discarded? || filters.key?(parent.code)
-        []
-      else
-        ["parent_filter_required"]
-      end
+    def values_limit_reached?
+      parent = attribution_types[group_by].parent
+      narrowed = parent.present? && filters.key?(parent.code)
+
+      !narrowed && UsageAttributionValue.limit_reached?(customer_id: subscription.customer_id, usage_attribution_type_id: attribution_types[group_by].id)
     end
 
     def order_by_errors
@@ -152,7 +169,7 @@ module UsageAttributions
       filters_count = filters_count_by_charge_id.fetch(split_charge.id, 0)
       if filters_count.zero?
         errors << "must_have_filters"
-      elsif filters_count > MAX_SPLIT_FILTERS || (supported_charge?(split_charge) && price_lookup(split_charge).nil?)
+      elsif supported_charge?(split_charge) && price_lookup(split_charge).nil?
         errors << "too_many_filters"
       end
 
@@ -189,16 +206,18 @@ module UsageAttributions
     end
 
     # The current billing period. A period longer than a custom window (quarterly or yearly charges)
-    # is narrowed to its last MAX_CUSTOM_WINDOW up to now, so the default view scans as much as a
-    # custom one at most.
+    # runs from MAX_CUSTOM_WINDOW before today to the end of today in the customer's timezone, so the
+    # default view scans about as much as a custom one, and its boundaries, and so its cache entry,
+    # last the whole day.
     def default_window
       @default_window ||= begin
         period_from = dates_service.charges_from_datetime
         period_to = dates_service.charges_to_datetime
 
         if period_to - period_from > MAX_CUSTOM_WINDOW
-          period_to = [period_to, Time.current].min
-          period_from = [period_from, period_to - MAX_CUSTOM_WINDOW].max
+          today = Time.current.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day
+          period_from = [period_from, today - MAX_CUSTOM_WINDOW].max
+          period_to = [period_to, today.end_of_day].min
         end
 
         [period_from, period_to]
@@ -263,12 +282,15 @@ module UsageAttributions
         search:,
         limit:,
         offset:,
-        deduplicate: organization.clickhouse_deduplication_enabled?,
+        # Attributed usage is a breakdown, not a bill: it reads without FINAL, as FINAL makes the
+        # scan several times slower. An event sent twice counts twice here until ClickHouse merges
+        # the copies; invoices keep FINAL.
+        deduplicate: false,
         max_groups: MAX_GROUPS,
         max_execution_time: MAX_EXECUTION_TIME
       )
       @cells = query.cells
-      query.rows
+      RowsCacheService.call!(subscription:, query:).rows
     end
 
     def charge_column(charge)
@@ -283,7 +305,7 @@ module UsageAttributions
         count: charge.billable_metric.count_agg?,
         unit_amount_cents: (unit_amount_cents(charge) if priced),
         lookup:,
-        split:
+        split_filter_ids: (split_filters.map(&:id) if split)
       )
     end
 
@@ -320,6 +342,7 @@ module UsageAttributions
         rank: row["rank"].to_i,
         amount_cents: (values["amount"] if amount_basis?),
         events_count: values["events"].to_i,
+        split_charge_units: (values["split_units"] if split_charge),
         cells: build_cells(values)
       )
     end
@@ -328,12 +351,13 @@ module UsageAttributions
       Aggregate.new(
         amount_cents: (values["amount"] if amount_basis?),
         events_count: values["events"].to_i,
+        split_charge_units: (values["split_units"] if split_charge),
         cells: build_cells(values)
       )
     end
 
     def build_cells(values)
-      ordered_cells.map do |cell, index|
+      Array(@cells).each_with_index.map do |cell, index|
         Cell.new(
           charge: charges_by_id.fetch(cell.charge_id),
           charge_filter: split_filters_by_id[cell.charge_filter_id],
@@ -344,29 +368,32 @@ module UsageAttributions
       end
     end
 
-    # The query cells, each with the index of its columns in the returned rows, in the order of the
-    # charges. A split charge lists its filters in their own order and the default last, while the
-    # query ranks them by specificity.
-    def ordered_cells
-      @ordered_cells ||= Array(@cells).each_with_index.sort_by do |cell, index|
-        [cell.column_index, split_filter_positions.fetch(cell.charge_filter_id, split_filters.size), index]
-      end
-    end
-
     def charges_by_id
       @charges_by_id ||= charges.index_by(&:id)
     end
 
+    def split_filter_ids
+      @split_filter_ids ||= begin
+        matchable = price_lookup(split_charge).filter_ids.to_set
+        ordered_split_filters.pluck(:id).select { matchable.include?(it) }
+      end
+    end
+
     def split_filters
-      @split_filters ||= split_charge ? split_charge.filters.includes(values: :billable_metric_filter).to_a : []
+      @split_filters ||= if split_charge
+        page_ids = split_filter_ids.slice(split_filters_offset, SPLIT_FILTERS_PER_PAGE)
+        ordered_split_filters.where(id: page_ids).includes(values: :billable_metric_filter).to_a
+      else
+        []
+      end
+    end
+
+    def ordered_split_filters
+      split_charge.filters.reorder(:updated_at, :id)
     end
 
     def split_filters_by_id
       @split_filters_by_id ||= split_filters.index_by(&:id)
-    end
-
-    def split_filter_positions
-      @split_filter_positions ||= split_filters.each_with_index.to_h { |filter, position| [filter.id, position] }
     end
 
     # The values of a returned row, by column name: {"amount" => ..., "events" => ..., "units_0" => ...}.
@@ -376,7 +403,7 @@ module UsageAttributions
     end
 
     def column_names
-      @column_names ||= %w[amount events] + Array(@cells).each_index.flat_map do |index|
+      @column_names ||= ["amount", "events", *("split_units" if split_charge)] + Array(@cells).each_index.flat_map do |index|
         ["units_#{index}", "amount_#{index}", "events_#{index}"]
       end
     end

@@ -26,7 +26,9 @@ module Invoices
     end
 
     def render_html
-      Utils::PdfGenerator.new(template:, context: invoice).render_html
+      I18n.with_locale(invoice.customer.preferred_document_locale) do
+        Utils::PdfGenerator.new(template:, context: invoice, **page_layout).render_html
+      end
     end
 
     private
@@ -45,7 +47,7 @@ module Invoices
     end
 
     def build_pdf_file
-      pdf_content = Utils::PdfGenerator.call(template:, context: invoice).io.read
+      pdf_content = Utils::PdfGenerator.call(template:, context: invoice, **page_layout).io.read
 
       pdf_file = Tempfile.new([invoice.number, ".pdf"])
       pdf_file.binmode
@@ -77,8 +79,18 @@ module Invoices
       pdf_file&.unlink
     end
 
+    def page_layout
+      if invoice.product_catalog?
+        {footer: "invoices/product_catalog/footer", margin_bottom: "1.0167"}
+      else
+        {}
+      end
+    end
+
     def template
-      if invoice.self_billed?
+      if invoice.product_catalog?
+        "invoices/product_catalog/contract"
+      elsif invoice.self_billed?
         "invoices/v#{invoice.version_number}/self_billed"
 
       elsif invoice.one_off?
@@ -103,6 +115,8 @@ module Invoices
     end
 
     def should_generate_cii_einvoice_xml?
+      return false if invoice.product_catalog?
+
       invoice.billing_entity.eligible_for_einvoicing?
     end
 

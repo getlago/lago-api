@@ -28,6 +28,7 @@ RSpec.describe Resolvers::EventTypesResolver do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:manage"
 
   it "marks exactly the approved product catalog event types" do
@@ -64,6 +65,26 @@ RSpec.describe Resolvers::EventTypesResolver do
       event_types_response = result["data"]["eventTypes"].map { |event_type| event_type["name"] }
       expect(event_types_response).to match_array(WebhookEndpoint::WEBHOOK_EVENT_TYPES)
       expect(event_types_response & product_catalog_event_types).to match_array(product_catalog_event_types)
+    end
+
+    it "groups plan rate card events under plans and contract events under contracts" do
+      result = execute_graphql(
+        current_user: user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      categories_by_name = result["data"]["eventTypes"].to_h { |event_type| event_type.values_at("name", "category") }
+
+      plan_rate_card_events = %w[plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted]
+      contract_events = %w[
+        contract.created contract.updated contract.started contract.terminated contract.canceled
+        contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
+      ]
+
+      expect(categories_by_name.slice(*plan_rate_card_events)).to eq(plan_rate_card_events.index_with("PLANS"))
+      expect(categories_by_name.slice(*contract_events)).to eq(contract_events.index_with("CONTRACTS"))
     end
   end
 

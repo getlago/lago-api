@@ -54,7 +54,7 @@ RSpec.describe RealtimeUsage do
 
     context "with an active store override" do
       it "refuses, so the clickhouse migration keeps comparing two event stores" do
-        Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore, deduplicate: false) do
+        Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore) do
           expect(described_class.enabled?(organization)).to be(false)
         end
       end

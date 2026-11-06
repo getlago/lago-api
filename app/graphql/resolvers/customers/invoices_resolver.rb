@@ -35,7 +35,8 @@ module Resolvers
 
         return result_error(result) unless result.success?
 
-        Invoice.preload_offset_amounts(result.invoices)
+        ActiveRecord::Associations::Preloader.new(records: result.invoices.to_a, associations: [:contract_fees]).call
+        Invoice.preload_aggregations(result.invoices, :offset_amount_cents)
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: "customer")
       end

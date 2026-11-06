@@ -17,13 +17,13 @@ class UsersService < BaseService
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
-    result.user = User.find_by(email:)&.authenticate(password)
+    result.user = find_user_by_email(email)&.authenticate(password)
 
     unless result.user.present? && result.user.memberships.active.any?
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
-    unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+    unless result.user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
       return result.single_validation_failure!(
         error_code: "login_method_not_authorized",
         field: Organizations::AuthenticationMethods::EMAIL_PASSWORD
@@ -43,10 +43,10 @@ class UsersService < BaseService
 
   def register(email, password, organization_name)
     if ENV.fetch("LAGO_DISABLE_SIGNUP", "false") == "true"
-      return result.not_allowed_failure!(code: "signup_disabled")
+      return result.forbidden_failure!(code: "signup_disabled")
     end
 
-    if User.exists?(email:)
+    if find_user_by_email(email)
       result.single_validation_failure!(field: :email, error_code: "user_already_exists")
 
       return result
@@ -86,33 +86,29 @@ class UsersService < BaseService
     result
   end
 
-  def register_from_invite(invite, password)
+  def register_from_invite(invite, password, login_method:)
     ActiveRecord::Base.transaction do
-      user = User.find_or_initialize_by(email: invite.email)
+      # NOTE: Same case insensitive lookup as Invite#existing_user, so an invitation never creates
+      #       a second user for an email that only differs by case.
+      user = invite.existing_user || User.new(email: invite.email)
 
+      # The caller's earlier lookup can become stale, so authenticate the account found here.
+      if user.persisted? && login_method == Organizations::AuthenticationMethods::EMAIL_PASSWORD
+        authentication_result = Invites::AuthenticateUserService.call(user:, password:)
+        return result.fail_with_error!(authentication_result.error) unless authentication_result.success?
+      end
+
+      # NOTE: The password is only set when the user is created. The password of an existing user
+      #       is never reset by an invitation.
       if user.new_record?
         user.password = password
         user.save!
-      elsif user.memberships.active.none?
-        user.update!(password:)
       end
 
       result.user = user
       result.organization = invite.organization
 
-      result.membership = Membership.create!(
-        user: result.user,
-        organization: result.organization
-      )
-
-      invite.roles.each do |role_code|
-        role = Role.with_code(role_code).with_organization(invite.organization_id).first!
-        MembershipRole.create!(
-          organization: result.organization,
-          membership: result.membership,
-          role:
-        )
-      end
+      result.membership = Memberships::CreateFromInviteService.call!(invite:, user:).membership
 
       result.token = generate_token
     rescue ActiveRecord::RecordInvalid => e
@@ -126,6 +122,11 @@ class UsersService < BaseService
     Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
   rescue => e
     result.service_failure!(code: "token_encoding_error", message: e.message)
+  end
+
+  def find_user_by_email(email)
+    User.find_by(email:) ||
+      User.where("LOWER(email) = ?", email.to_s.downcase).order(:created_at).first
   end
 
   def track_organization_registered(organization, membership)

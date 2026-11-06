@@ -42,6 +42,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:webhook_endpoints)
       expect(subject).to have_many(:streaming_destinations).class_name("StreamingDestinations::BaseDestination")
       expect(subject).to have_many(:webhooks)
+      expect(subject).to have_many(:recurring_aggregation_snapshots)
       expect(subject).to have_many(:hubspot_integrations)
       expect(subject).to have_many(:netsuite_integrations)
       expect(subject).to have_many(:xero_integrations)
@@ -65,6 +66,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:usage_attribution_values)
       expect(subject).to have_many(:x402_connections).class_name("X402::Connection")
       expect(subject).to have_many(:x402_settlements).class_name("X402::Settlement")
+      expect(subject).to have_many(:x402_sign_in_nonces).class_name("X402::SignInNonce")
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
       expect(subject).to have_many(:pending_vies_checks)
@@ -88,9 +90,22 @@ RSpec.describe Organization do
   describe "Validations" do
     it do
       expect(subject).to validate_inclusion_of(:default_currency).in_array(described_class.currency_list)
+      expect(subject).to validate_numericality_of(:pagination_max_page_size).only_integer.is_greater_than(0).allow_nil
     end
 
     it "is valid with valid attributes" do
+      expect(organization).to be_valid
+    end
+
+    it "caps a changed net_payment_term at 365" do
+      expect(organization).to allow_value(365).for(:net_payment_term)
+      expect(organization).not_to allow_value(366).for(:net_payment_term)
+    end
+
+    it "keeps a net_payment_term stored above 365 valid while it is unchanged" do
+      organization.net_payment_term = 400
+      organization.clear_changes_information
+
       expect(organization).to be_valid
     end
 
@@ -186,11 +201,36 @@ RSpec.describe Organization do
       expect(organization.errors.first.type).to eq(:unsupported_value)
     end
 
+    it "locks the tax determining fields in the customer portal by default" do
+      expect(described_class.new.customer_portal_locked_fields).to match_array(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS)
+      expect(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS).to match_array(%w[country zipcode tax_identification_number])
+    end
+
+    it "is valid with every customer portal field locked" do
+      organization.customer_portal_locked_fields = described_class::CUSTOMER_PORTAL_FIELDS
+
+      expect(organization).to be_valid
+    end
+
+    it "is invalid with non permitted customer_portal_locked_fields value" do
+      organization.customer_portal_locked_fields = ["currency"]
+
+      expect(organization).not_to be_valid
+      expect(organization.errors.first.attribute).to eq(:customer_portal_locked_fields)
+      expect(organization.errors.first.type).to eq(:unsupported_value)
+    end
+
     it "dont allow finalize_zero_amount_invoice with null value" do
       expect(organization.finalize_zero_amount_invoice).to eq true
       organization.finalize_zero_amount_invoice = nil
 
       expect(organization).not_to be_valid
+    end
+
+    it "allows document_url_expiration_days between 30 and 120" do
+      expect(organization.document_url_expiration_days).to eq(30)
+      expect(organization).to validate_numericality_of(:document_url_expiration_days)
+        .only_integer.is_greater_than_or_equal_to(30).is_less_than_or_equal_to(120)
     end
 
     describe "of hmac key uniqueness" do

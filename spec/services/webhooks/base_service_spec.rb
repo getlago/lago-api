@@ -3,13 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Webhooks::BaseService do
-  subject(:webhook_service) { WebhooksSpec::DummyClass.new(object:) }
+  subject(:webhook_service) { WebhooksSpec::DummyClass.new(object:, options:) }
 
   let_it_be(:organization) { create(:organization) }
   let_it_be(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:object) { invoice }
+  let(:options) { {} }
   let(:previous_webhook) { nil }
 
   describe ".call" do
@@ -36,6 +37,55 @@ RSpec.describe Webhooks::BaseService do
 
       expect(webhook.payload_key).to start_with("webhooks/")
       expect(webhook.read_attribute(:payload)).to be_nil
+    end
+
+    context "when the object changes before delivery" do
+      before do
+        allow(V1::InvoiceSerializer).to receive(:new).and_call_original
+        invoice.update!(number: "mutated-before-delivery")
+      end
+
+      it "uses the owning handler serializer and the object's current state" do
+        webhook_service.call
+
+        expect(V1::InvoiceSerializer).to have_received(:new).with(invoice, root_name: "invoice")
+        expect(Webhook.order(created_at: :desc).first.payload["dummy"]).to include(
+          "number" => "mutated-before-delivery"
+        )
+      end
+    end
+
+    context "when options are nil" do
+      let(:options) { nil }
+
+      it "serializes the object as before" do
+        webhook_service.call
+
+        expect(Webhook.order(created_at: :desc).first.payload.fetch("dummy")).to include("number" => invoice.number)
+      end
+    end
+
+    context "with a serializer that declares an expansion for webhooks" do
+      subject(:webhook_service) { WebhooksSpec::ExpandingClass.new(object:, options:) }
+
+      it "embeds the expansion in the body" do
+        webhook_service.call
+
+        expect(Webhook.order(created_at: :desc).first.payload.fetch("dummy")).to eq(
+          "lago_id" => invoice.id,
+          "customer" => {"external_id" => customer.external_id}
+        )
+      end
+
+      context "when the service builds it with webhook: false" do
+        subject(:webhook_service) { WebhooksSpec::FlatClass.new(object:, options:) }
+
+        it "keeps the body flat" do
+          webhook_service.call
+
+          expect(Webhook.order(created_at: :desc).first.payload.fetch("dummy")).to eq("lago_id" => invoice.id)
+        end
+      end
     end
 
     context "when organization has one webhook endpoint" do
@@ -166,6 +216,49 @@ RSpec.describe Webhooks::BaseService do
         end
       end
     end
+
+    context "when the event is product-catalog-only" do
+      subject(:webhook_service) { WebhooksSpec::CatalogClass.new(object:, options:) }
+
+      context "when product catalog is disabled and endpoint subscribes to all events" do
+        before do
+          allow(object.organization).to receive(:product_catalog_enabled?).and_return(false)
+        end
+
+        it "does not create a webhook or enqueue delivery" do
+          webhook_service.call
+
+          expect(Webhook.where(object: invoice)).not_to exist
+          expect(SendHttpWebhookJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when product catalog is enabled" do
+        before do
+          allow(object.organization).to receive(:product_catalog_enabled?).and_return(true)
+        end
+
+        it "creates the catalog webhook" do
+          webhook_service.call
+
+          expect(Webhook.where(object: invoice)).to exist
+          expect(SendHttpWebhookJob).to have_been_enqueued.once
+        end
+      end
+    end
+
+    context "when a legacy event is sent while product catalog is disabled" do
+      before do
+        allow(object.organization).to receive(:product_catalog_enabled?).and_return(false)
+      end
+
+      it "still creates the legacy webhook" do
+        webhook_service.call
+
+        expect(Webhook.where(object: invoice)).to exist
+        expect(SendHttpWebhookJob).to have_been_enqueued.once
+      end
+    end
   end
 end
 
@@ -188,6 +281,41 @@ module WebhooksSpec
 
     def object_type
       "dummy"
+    end
+  end
+
+  class CatalogClass < DummyClass
+    def webhook_type
+      "product.created"
+    end
+
+    def object_type
+      "product"
+    end
+  end
+
+  class CustomerIdSerializer < ModelSerializer
+    def serialize = {external_id: model.external_id}
+  end
+
+  # Declares an expansion for webhooks, as the v2 serializers of contracts and rate cards do.
+  class ExpandingSerializer < ModelSerializer
+    expandable :customer, serializer: CustomerIdSerializer, webhooks: true
+
+    def serialize = {lago_id: model.id}
+  end
+
+  # Builds it without a webhook option, as most webhook services do.
+  class ExpandingClass < DummyClass
+    def object_serializer
+      ExpandingSerializer.new(object, root_name: "invoice")
+    end
+  end
+
+  # Builds it with webhook: false, as rate_card.deleted does.
+  class FlatClass < DummyClass
+    def object_serializer
+      ExpandingSerializer.new(object, root_name: "invoice", webhook: false)
     end
   end
 end

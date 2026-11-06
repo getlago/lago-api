@@ -4,15 +4,15 @@ module RateCards
   class DestroyService < BaseService
     Result = BaseResult[:rate_card]
 
-    def initialize(rate_card:)
-      @rate_card = rate_card
-      super
-    end
-
     activity_loggable(
       action: "rate_card.deleted",
       record: -> { result.rate_card }
     )
+
+    def initialize(rate_card:)
+      @rate_card = rate_card
+      super
+    end
 
     def call
       return result.not_found_failure!(resource: "rate_card") unless rate_card
@@ -24,6 +24,7 @@ module RateCards
       ActiveRecord::Base.transaction do
         rate_card.rates.discard_all!
         rate_card.discard!
+        SendWebhookJob.perform_after_commit("rate_card.deleted", rate_card)
       end
 
       result.rate_card = rate_card

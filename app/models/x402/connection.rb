@@ -10,6 +10,7 @@ module X402
     FACILITATORS = {coinbase_cdp: "coinbase_cdp"}.freeze
     ASSETS = {usdc: "usdc"}.freeze
     PAYOUT_FAMILIES = {"evm" => :evm, "svm" => :svm}.freeze
+    MAX_ALLOWED_ORIGINS = 10
 
     belongs_to :organization
     has_many :settlements, class_name: "X402::Settlement", foreign_key: :x402_connection_id, inverse_of: :x402_connection
@@ -20,12 +21,14 @@ module X402
     secrets_accessors :cdp_api_key_id, :cdp_api_key_secret
 
     before_validation :normalize_payout_addresses
+    before_validation :normalize_allowed_origins
 
     validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
     validates :name, :networks, :cdp_api_key_id, :cdp_api_key_secret, presence: true
     validates :auto_create_customers, inclusion: {in: [true, false]}
     validate :validate_networks
     validate :validate_payout_addresses
+    validate :validate_allowed_origins
 
     default_scope -> { kept }
 
@@ -39,10 +42,26 @@ module X402
       end
     end
 
+    def environment_enabled?
+      known_networks.all? { |network| X402::Network.environment(network) == enabled_environment }
+    end
+
+    def mainnet?
+      known_networks.any? { |network| X402::Network.environment(network) == :mainnet }
+    end
+
     private
 
     def known_networks
       Array(networks).select { |network| X402::Network::NETWORKS.key?(network) }
+    end
+
+    def enabled_environment
+      organization.feature_flag_enabled?(:x402_mainnet) ? :mainnet : :testnet
+    end
+
+    def stored_on_mainnet?
+      Array(networks_in_database).any? { |network| X402::Network::NETWORKS[network] == :mainnet }
     end
 
     def normalize_payout_addresses
@@ -51,13 +70,39 @@ module X402
       end
     end
 
+    def normalize_allowed_origins
+      if allowed_origins.is_a?(Array)
+        self.allowed_origins = allowed_origins.map { |origin| X402::Origin.normalize(origin) || origin }.uniq
+      end
+    end
+
+    def validate_allowed_origins
+      origins = Array(allowed_origins)
+
+      errors.add(:allowed_origins, :blank) if origins.empty?
+
+      if origins.any? { |origin| !(origin.is_a?(String) && X402::Origin.normalize(origin) == origin) }
+        errors.add(:allowed_origins, :invalid_format)
+      end
+
+      if origins.size > MAX_ALLOWED_ORIGINS
+        errors.add(:allowed_origins, :too_long)
+      end
+    end
+
     def validate_networks
       if known_networks.size < Array(networks).size
         errors.add(:networks, :invalid)
       end
 
-      if known_networks.map { |network| X402::Network.environment(network) }.uniq.size > 1
+      environments = known_networks.map { |network| X402::Network.environment(network) }.uniq
+
+      if environments.size > 1
         errors.add(:networks, :mixed_environments)
+      elsif organization && !environment_enabled?
+        errors.add(:networks, :environment_not_enabled)
+      elsif environments == [:testnet] && stored_on_mainnet?
+        errors.add(:networks, :mainnet_not_downgradable)
       end
     end
 
@@ -99,6 +144,7 @@ end
 # Database name: primary
 #
 #  id                    :uuid             not null, primary key
+#  allowed_origins       :string           default([]), not null, is an Array
 #  asset                 :enum             default("usdc"), not null
 #  auto_create_customers :boolean          default(TRUE), not null
 #  code                  :string           not null

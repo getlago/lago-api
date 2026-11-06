@@ -13,6 +13,7 @@ module Wallets
       end
 
       def call
+        return result unless License.premium?
         return result unless valid_payment_methods?
         return result unless valid_connections?
 

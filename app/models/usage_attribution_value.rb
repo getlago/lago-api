@@ -5,6 +5,9 @@ class UsageAttributionValue < ApplicationRecord
 
   self.discard_column = :deleted_at
 
+  MAX_PER_CUSTOMER_AND_TYPE = 100_000
+  LIMIT_REACHED_CACHE_TTL = 1.hour
+
   belongs_to :organization
   belongs_to :usage_attribution_type, -> { with_discarded }
   belongs_to :customer, -> { with_discarded }
@@ -14,6 +17,24 @@ class UsageAttributionValue < ApplicationRecord
   validates :value, presence: true, length: {maximum: 255}, uniqueness: {scope: %i[customer_id usage_attribution_type_id]}
 
   default_scope -> { kept }
+
+  def self.remaining_capacity(customer_id:, usage_attribution_type_id:)
+    cache_key = "usage_attribution_values/limit_reached/#{customer_id}/#{usage_attribution_type_id}"
+    return 0 if Rails.cache.read(cache_key)
+
+    remaining = MAX_PER_CUSTOMER_AND_TYPE - where(customer_id:, usage_attribution_type_id:).limit(MAX_PER_CUSTOMER_AND_TYPE).count
+
+    if remaining.zero?
+      Rails.cache.write(cache_key, true, expires_in: LIMIT_REACHED_CACHE_TTL)
+      Rails.logger.warn("Usage attribution values limit reached: customer #{customer_id}, usage attribution type #{usage_attribution_type_id}")
+    end
+
+    remaining
+  end
+
+  def self.limit_reached?(customer_id:, usage_attribution_type_id:)
+    remaining_capacity(customer_id:, usage_attribution_type_id:).zero?
+  end
 end
 
 # == Schema Information

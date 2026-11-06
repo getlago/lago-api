@@ -43,6 +43,38 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver do
     expect(invoices_response["metadata"]["totalCount"]).to eq(2)
   end
 
+  context "when requesting merchant only fields" do
+    let(:query) do
+      <<~GQL
+        query {
+          customerPortalInvoices(limit: 5) {
+            collection {
+              id
+              activityLogs { activityId }
+              metadata { key value }
+            }
+          }
+        }
+      GQL
+    end
+
+    before { create(:invoice_metadata, invoice: finalized_invoice, organization:) }
+
+    it "returns null for the activity logs and the invoice metadata" do
+      result = execute_graphql(
+        customer_portal_user: customer,
+        query:
+      )
+
+      expect(result["errors"]).to be_nil
+
+      collection = result["data"]["customerPortalInvoices"]["collection"]
+      expect(collection.count).to eq(2)
+      expect(collection.pluck("activityLogs")).to all(be_nil)
+      expect(collection.pluck("metadata")).to all(be_nil)
+    end
+  end
+
   context "with filter on status" do
     let(:query) do
       <<~GQL

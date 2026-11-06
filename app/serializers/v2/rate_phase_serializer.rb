@@ -2,6 +2,8 @@
 
 module V2
   class RatePhaseSerializer < ModelSerializer
+    timestamps :deleted_at
+
     def serialize
       {
         lago_id: model.id,
@@ -18,7 +20,7 @@ module V2
     def rate_override
       return unless model.rate_override
 
-      ::V2::RateOverrideSerializer.new(model.rate_override).serialize
+      ::V2::RateOverrideSerializer.new(model.rate_override, nested_options).serialize
     end
   end
 end

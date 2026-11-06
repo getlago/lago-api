@@ -32,6 +32,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       "issuing_date" => invoice.issuing_date.iso8601,
       "payment_due_date" => invoice.payment_due_date.iso8601,
       "net_payment_term" => invoice.net_payment_term,
+      "payment_term" => {"term_type" => "net", "days" => invoice.net_payment_term},
       "invoice_type" => invoice.invoice_type,
       "status" => invoice.status,
       "payment_status" => invoice.payment_status,
@@ -51,7 +52,9 @@ RSpec.describe ::V1::InvoiceSerializer do
       "total_amount_cents" => invoice.total_amount_cents,
       "total_due_amount_cents" => invoice.total_due_amount_cents,
       "file_url" => invoice.file_url,
+      "file_url_expires_at" => nil,
       "xml_url" => invoice.xml_url,
+      "xml_url_expires_at" => nil,
       "web_url" => invoice.web_url,
       "error_details" => [
         {
@@ -232,6 +235,59 @@ RSpec.describe ::V1::InvoiceSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["invoice"]["applied_taxes"].sole["lago_tax_id"]).to be_present
+    end
+  end
+
+  context "with an x402 payment link" do
+    subject(:serializer) { described_class.new(x402_invoice, root_name: "invoice") }
+
+    let(:x402_customer) { create(:customer) }
+    let(:x402_invoice) { create(:invoice, customer: x402_customer, x402_payment_token: "ab" * 32) }
+
+    context "without x402 payments" do
+      it "omits x402_payment_url" do
+        expect(JSON.parse(serializer.to_json)["invoice"]).not_to have_key("x402_payment_url")
+      end
+    end
+
+    context "with x402 payments enabled" do
+      let(:x402_customer) { create(:customer, organization: create(:organization, feature_flags: ["x402_payments"])) }
+
+      context "without premium" do
+        it "omits x402_payment_url" do
+          expect(JSON.parse(serializer.to_json)["invoice"]).not_to have_key("x402_payment_url")
+        end
+      end
+
+      context "with premium", :premium do
+        it "serializes x402_payment_url" do
+          expect(JSON.parse(serializer.to_json)["invoice"]["x402_payment_url"]).to eq(x402_invoice.x402_payment_url)
+        end
+
+        context "without a minted link" do
+          let(:x402_invoice) { create(:invoice, customer: x402_customer) }
+
+          it "serializes a null x402_payment_url" do
+            expect(JSON.parse(serializer.to_json)["invoice"]).to include("x402_payment_url" => nil)
+          end
+        end
+      end
+    end
+  end
+
+  context "with attached documents" do
+    before do
+      invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "invoice.pdf")
+      invoice.xml_file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.xml")), filename: "invoice.xml")
+    end
+
+    it "serializes expiring urls with their expiry" do
+      result = JSON.parse(serializer.to_json)["invoice"]
+      expires_at = invoice.document_url_expires_at.iso8601
+
+      expect(result["file_url"]).to include("/documents/")
+      expect(result["xml_url"]).to include("/documents/")
+      expect(result).to include("file_url_expires_at" => expires_at, "xml_url_expires_at" => expires_at)
     end
   end
 end

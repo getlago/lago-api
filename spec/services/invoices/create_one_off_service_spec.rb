@@ -137,20 +137,6 @@ RSpec.describe Invoices::CreateOneOffService do
       let(:service_call) { described_class.call(**args) }
     end
 
-    it "calls SegmentTrackJob" do
-      invoice = described_class.call(**args).invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -204,7 +190,7 @@ RSpec.describe Invoices::CreateOneOffService do
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
       let(:response) { instance_double(Net::HTTPOK) }
       let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+      let(:endpoint) { "https://api.nango.dev/action/trigger" }
       let(:body) do
         p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json")
         json = File.read(p)

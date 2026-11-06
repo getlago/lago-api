@@ -415,16 +415,5 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       it { expect(fetch).to be_success }
       it { expect(fetch.usage_buckets).to be_nil }
     end
-
-    context "when the organization deduplicates its events" do
-      let(:organization) do
-        create(:organization, feature_flags: ["realtime_usage"], clickhouse_events_store: true, clickhouse_deduplication_enabled: true)
-      end
-
-      it "reads the buckets, as the stream deduplicates as well" do
-        expect(fetch).to be_success
-        expect(fetch.usage_buckets).not_to be_empty
-      end
-    end
   end
 end

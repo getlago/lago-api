@@ -10,7 +10,7 @@ module Types
       field :name, String, null: false
 
       field :client_id, String, null: true, permission: "organization:integrations:view"
-      field :client_secret, String, null: true, permission: "organization:integrations:view"
+      field :client_secret, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
       field :success_redirect_url, String, null: true, permission: "organization:integrations:view"
     end
   end

@@ -57,8 +57,12 @@ RSpec.describe Wallets::Balance::DecreaseService do
       expect { subject }.to have_enqueued_job(SendWebhookJob).with("wallet.updated", Wallet)
     end
 
-    it "enqueues a ProcessWalletAlertsJob" do
-      expect { subject }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).at_least(:once)
+    it "dispatches the wallet alerts" do
+      allow(UsageMonitoring::DispatchWalletAlertsService).to receive(:call)
+
+      subject
+
+      expect(UsageMonitoring::DispatchWalletAlertsService).to have_received(:call).with(wallet:)
     end
 
     context "when skip refresh flag is set" do

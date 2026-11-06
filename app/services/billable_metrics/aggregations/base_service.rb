@@ -24,6 +24,7 @@ module BillableMetrics
         # Pay in advance fields
         :pay_in_advance_event, # Event that is triggering a pay in advance aggregation
         :pay_in_advance_aggregation, # Aggregation result for a single pay in advance event
+        :pay_in_advance_count_delta, # Event-count contribution used to price the triggering event
         :pay_in_advance_breakdowns, # Breakdown result for a single pay in advance event
         :pay_in_advance_precise_total_amount_cents, # Precise total amount in cents when in a pay in advance scenario
         # Cached aggregation fields
@@ -31,7 +32,11 @@ module BillableMetrics
         :max_aggregation, # Maximum aggregation result cached in a pay in advance scenario (billing and current usage)
         :max_aggregation_with_proration, # Similar to max_aggregation but with proration on billing period applied
         :units_applied, # Number of units applied by the event and cached in a pay in advance scenario (billing and current usage)
-        :recurring_updated_at # Date when the recurring cached aggregation was updated
+        :recurring_updated_at, # Date when the recurring cached aggregation was updated
+        # Recurring aggregation snapshot fields
+        :recurring_units, # Cumulative units of a recurring metric at the end of the period, before rounding
+        :recurring_events_count, # Number of events behind recurring_units, only set for a sum
+        :recurring_breakdowns # Units of each presentation group at the end of the period, only set for a weighted sum
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
@@ -48,7 +53,11 @@ module BillableMetrics
         result
       end
 
-      def initialize(event_store:, metered_item:, billing_context:, boundaries:, filters: {}, bypass_aggregation: false)
+      # initial_value and initial_period: snapshots and period of RecurringAggregationSnapshots::FetchService.
+      # Without a period a recurring aggregation scans the full history; with one, a missing group had no usage.
+      # initial_snapshots: a callable returning that service's result instead, called on the first read so that
+      # an aggregator served from the cache or the usage buckets fetches nothing.
+      def initialize(event_store:, metered_item:, billing_context:, boundaries:, filters: {}, bypass_aggregation: false, initial_value: nil, initial_period: nil, initial_snapshots: nil)
         super(nil)
         @event_store = event_store
         @metered_item = metered_item
@@ -65,6 +74,9 @@ module BillableMetrics
         @boundaries = boundaries
 
         @bypass_aggregation = bypass_aggregation
+        @initial_value = initial_value
+        @initial_period = initial_period
+        @initial_snapshots = initial_snapshots
 
         result.aggregator = self
         result.pay_in_advance_event = event if event
@@ -133,6 +145,10 @@ module BillableMetrics
 
       protected
 
+      def snapshot_read_error?(error)
+        error.equal?(@snapshot_read_error)
+      end
+
       attr_accessor :event_store,
         :metered_item,
         :billing_context,
@@ -149,6 +165,16 @@ module BillableMetrics
       delegate :billable_metric, to: :metered_item
 
       delegate :customer, to: :billing_context
+
+      def initial_value
+        load_initial_snapshots
+        @initial_value
+      end
+
+      def initial_period
+        load_initial_snapshots
+        @initial_period
+      end
 
       def from_datetime
         boundaries[:from_datetime]
@@ -214,7 +240,7 @@ module BillableMetrics
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: billing_context.external_id)
-          .where(charge_id: metered_item.charge_id)
+          .where(metered_item.cached_aggregation_identity)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
           .where(grouped_by: grouped_by.presence || {})
@@ -244,6 +270,28 @@ module BillableMetrics
           result.current_usage_units = BillableMetrics::Aggregations::ApplyRoundingService
             .call(billable_metric:, units: result.current_usage_units)
             .units
+        end
+      end
+
+      def load_initial_snapshots
+        return unless @initial_snapshots
+
+        fetched = @initial_snapshots.call
+        @initial_snapshots = nil
+        @initial_value = fetched&.snapshots
+        @initial_period = fetched&.period
+      rescue ActiveRecord::StatementInvalid => e
+        @snapshot_read_error = e
+        raise
+      end
+
+      # The snapshots are read lazily, inside the rescue of the aggregation: their failure is not
+      # an event aggregation failure, so it raises as it did when they were read before aggregating.
+      def fail_aggregation!(error)
+        if snapshot_read_error?(error)
+          raise error
+        else
+          result.service_failure!(code: "aggregation_failure", message: error.message)
         end
       end
     end

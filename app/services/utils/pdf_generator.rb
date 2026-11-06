@@ -6,9 +6,11 @@ module Utils
 
     include ActiveSupport::NumberHelper
 
-    def initialize(template:, context:)
+    def initialize(template:, context:, footer: "documents/footer", margin_bottom: "0.6")
       @template = template
       @context = context
+      @footer = footer
+      @margin_bottom = margin_bottom
 
       super(nil)
     end
@@ -24,7 +26,7 @@ module Utils
 
     private
 
-    attr_reader :template, :context
+    attr_reader :template, :context, :footer, :margin_bottom
 
     def template_file
       Rails.root.join("app/views/templates/#{template}.slim")
@@ -47,7 +49,7 @@ module Utils
         file3: prepare_http_files(render_footer, "text/html", "footer.html"),
         scale: "1.28",
         marginTop: "0.42",
-        marginBottom: "0.6",
+        marginBottom: margin_bottom,
         marginLeft: "0.42",
         marginRight: "0.42"
       )
@@ -56,7 +58,7 @@ module Utils
     end
 
     def render_footer
-      SlimHelper.render("templates/documents/footer", context)
+      SlimHelper.render("templates/#{footer}", context)
     end
 
     def prepare_http_files(content, type, name)

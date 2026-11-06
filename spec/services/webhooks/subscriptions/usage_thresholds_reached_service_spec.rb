@@ -16,5 +16,21 @@ RSpec.describe Webhooks::Subscriptions::UsageThresholdsReachedService do
       "usage_threshold" => Hash,
       "applicable_usage_thresholds" => Array
     }
+
+    context "when SIDEKIQ_WEBHOOK is true" do
+      around do |example|
+        original_value = ENV["SIDEKIQ_WEBHOOK"]
+        ENV["SIDEKIQ_WEBHOOK"] = "true"
+        example.run
+      ensure
+        ENV["SIDEKIQ_WEBHOOK"] = original_value
+      end
+
+      it "enqueues the http job on the high priority queue" do
+        webhook_service.call
+
+        expect(SendHttpWebhookJob).to have_been_enqueued.on_queue("webhook_worker_high_priority")
+      end
+    end
   end
 end

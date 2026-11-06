@@ -20,15 +20,12 @@ module Auth
         query_entra_id_access_token
         check_userinfo(result.email)
 
-        find_or_create_user
-        find_or_create_membership
+        return login_method_not_authorized_failure unless integration_organization_allows_login_method?
 
-        unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::ENTRA_ID)
-          return result.single_validation_failure!(
-            error_code: "login_method_not_authorized",
-            field: Organizations::AuthenticationMethods::ENTRA_ID
-          )
-        end
+        find_or_create_user
+        return login_method_not_authorized_failure unless user_trusted_by_integration?(result.user)
+
+        find_or_create_membership
 
         UserDevices::RegisterService.call!(user: result.user)
         generate_token
@@ -42,7 +39,11 @@ module Auth
       attr_reader :code, :state
 
       def generate_token
-        result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::ENTRA_ID)
+        result.token = Utils::AuthToken.encode(
+          user: result.user,
+          login_method: Organizations::AuthenticationMethods::ENTRA_ID,
+          **sso_token_claims
+        )
         result
       rescue => e
         result.service_failure!(code: "token_encoding_error", message: e.message)

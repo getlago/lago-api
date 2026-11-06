@@ -350,6 +350,38 @@ RSpec.describe Api::V1::EventsController do
       end
     end
 
+    context "with per_page equal to the maximum page size" do
+      let(:params) { {per_page: 5} }
+
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_API_PAGINATION_MAX_PAGE_SIZE").and_return("5")
+      end
+
+      it "returns events" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events].count).to eq(1)
+      end
+    end
+
+    context "with per_page above the maximum page size" do
+      let(:params) { {per_page: 6} }
+
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_API_PAGINATION_MAX_PAGE_SIZE").and_return("5")
+      end
+
+      it "returns an out of range error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({per_page: ["value_is_out_of_range"]})
+      end
+    end
+
     context "with code" do
       let(:params) { {code: event.code} }
 

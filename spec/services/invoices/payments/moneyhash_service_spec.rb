@@ -24,6 +24,42 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       moneyhash_customer
     end
 
+    context "when the invoice belongs to another organization" do
+      it "does not create a payment nor update the invoice" do
+        expect do
+          described_class.call(
+            :update_payment_status,
+            organization_id: create(:organization).id,
+            provider_payment_id: intent_processed_json.dig("data", "intent_id"),
+            status: "SUCCESSFUL",
+            metadata: intent_processed_json.dig("data", "intent", "custom_fields")
+          )
+        end.not_to change(Payment, :count)
+
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
+    end
+
+    context "when the existing payment belongs to another organization" do
+      let!(:payment) do
+        create(:payment, payable: invoice, payment_provider: moneyhash_provider,
+          provider_payment_id: intent_processed_json.dig("data", "intent_id"), status: "pending")
+      end
+
+      it "does not update the payment nor the invoice" do
+        described_class.call(
+          :update_payment_status,
+          organization_id: create(:organization).id,
+          provider_payment_id: intent_processed_json.dig("data", "intent_id"),
+          status: "SUCCESSFUL",
+          metadata: intent_processed_json.dig("data", "intent", "custom_fields")
+        )
+
+        expect(payment.reload.status).to eq("pending")
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
+    end
+
     it "creates a payment and updates the invoice payment status" do
       result = described_class.call(
         :update_payment_status,
@@ -102,6 +138,21 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       result = described_class.call(:generate_payment_url, invoice, payment_intent)
       expect(result).to be_success
       expect(result.payment_url).to eq("#{payment_url_response.dig("data", "embed_url")}?lago_request=generate_payment_url")
+    end
+
+    context "when Moneyhash refuses the payment" do
+      let(:http_error) { LagoHttpClient::HttpError.new(422, {status: {code: 422}}.to_json, endpoint) }
+
+      before { allow(lago_client).to receive(:post_with_response).and_raise(http_error) }
+
+      it "returns a third-party failure, whose webhook the caller delivers" do
+        result = nil
+
+        expect { result = described_class.call(:generate_payment_url, invoice, payment_intent) }
+          .not_to have_enqueued_job(SendWebhookJob)
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "Moneyhash", error_code: 422, error_message: http_error.message)
+      end
     end
   end
 end

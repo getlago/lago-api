@@ -19,6 +19,9 @@ module Types
       field :product_type, Types::Products::ProductTypeEnum, null: false
 
       field :billable_metric, Types::BillableMetrics::Object, null: true
+      field :integration_mappings, [Types::IntegrationMappings::Object], null: true do
+        argument :integration_id, ID, required: false
+      end
       field :product_category, Types::ProductCategories::Object, null: true
 
       field :filters_count, Integer, null: false
@@ -32,6 +35,10 @@ module Types
 
       def filters_count
         dataloader.with(Sources::CountByForeignKey, ProductFilter, :product_id).load(object.id)
+      end
+
+      def integration_mappings(integration_id: nil)
+        dataloader.with(Sources::IntegrationMappingsByMappable, integration_id).load(object)
       end
     end
   end

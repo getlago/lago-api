@@ -7,7 +7,8 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
 
   let(:service) { described_class.new(credit_note: credit_note.reload) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/netsuite/creditnotes" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "netsuite-create-credit-note" }
   let(:charge) { create(:standard_charge, billable_metric:) }
   let(:integration_collection_mapping1) do
     create(
@@ -265,6 +266,18 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
   end
 
   describe "#call" do
+    context "when the credit note is on a product catalog invoice" do
+      before do
+        invoice.update!(invoice_type: :contract)
+        allow(lago_client).to receive(:post_with_response)
+      end
+
+      it "does not send it to the integration" do
+        expect(service_call).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+    end
+
     context "when integration_credit_note exists" do
       let(:integration_credit_note) do
         create(:integration_resource, integration:, syncable: credit_note, resource_type: "credit_note")
@@ -273,7 +286,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         integration_credit_note
       end
 
@@ -290,7 +303,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
@@ -380,7 +393,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(http_error)
       end
 
       context "when it is a server error" do
@@ -410,13 +423,22 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
 
         it_behaves_like "throttles!", :anrok, :netsuite, :xero
       end
+
+      context "when it is a request limit error" do
+        let(:error_code) { 429 }
+        let(:body) { {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json }
+
+        it "raises RequestLimitError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::RequestLimitError)
+        end
+      end
     end
 
     context "when there is payload error" do
       let(:integration) { create(:xero_integration, organization:) }
       let(:integration_customer) { create(:xero_customer, integration:, customer:) }
       let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { "https://api.nango.dev/v1/xero/creditnotes" }
+      let(:action_name) { "xero-create-credit-note" }
       let(:integration_collection_mapping1) { nil }
       let(:integration_collection_mapping2) { nil }
       let(:integration_collection_mapping3) { nil }
@@ -439,7 +461,7 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       end
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 

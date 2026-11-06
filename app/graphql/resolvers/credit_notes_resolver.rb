@@ -43,7 +43,7 @@ module Resolvers
         :customer,
         :error_details,
         :metadata,
-        {invoice: :billing_entity},
+        {invoice: [:billing_entity, :contract_fees]},
         items: {
           fee: [
             :charge_filter,

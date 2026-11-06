@@ -3,8 +3,8 @@
 module Fees
   class ChargeService
     module Sources
-      BillingSegment = Data.define(:billing_segment, :product_filter) do
-        def initialize(billing_segment:, product_filter: nil)
+      BillingSegment = Data.define(:billing_segment, :product_filter, :max_timestamp) do
+        def initialize(billing_segment:, product_filter: nil, max_timestamp: nil)
           unless billing_segment.is_a?(::BillingSegment)
             raise ArgumentError, "billing_segment must be a BillingSegment"
           end
@@ -48,7 +48,11 @@ module Fees
         end
 
         def pricing_buckets(event: nil)
-          return [with_filter(rate_card.product_filter)] unless event
+          unless event
+            return [] if rate_card.product_filter && rate_card.product_filter.to_h_with_all_values.empty?
+
+            return [with_filter(rate_card.product_filter)]
+          end
 
           matching_filter = Events::BillingPeriodFilters::EventMatchingService.call(
             target_filter: Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:),
@@ -69,7 +73,7 @@ module Fees
         end
 
         def with_filter(filter)
-          self.class.new(billing_segment:, product_filter: filter)
+          self.class.new(billing_segment:, product_filter: filter, max_timestamp:)
         end
 
         def boundaries
@@ -80,7 +84,8 @@ module Fees
             charges_from_datetime: billing_segment.started_at,
             charges_to_datetime: billing_segment.ended_at,
             charges_duration: duration_in_days,
-            timestamp: billing_segment.billing_at
+            timestamp: billing_segment.billing_at,
+            max_timestamp:
           )
         end
 
@@ -149,7 +154,13 @@ module Fees
         end
 
         def duration_in_days
-          billing_segment.duration_in_days
+          segment_duration = billing_segment.duration_in_days
+          return segment_duration unless rate_card.proration? && billable_metric.recurring?
+
+          proration_ratio = billing_segment.proration_ratio.to_f
+          return segment_duration unless proration_ratio.positive?
+
+          (segment_duration / proration_ratio).round
         end
       end
     end

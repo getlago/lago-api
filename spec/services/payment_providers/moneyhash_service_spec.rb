@@ -42,6 +42,25 @@ RSpec.describe PaymentProviders::MoneyhashService do
       expect(result.moneyhash_provider.flow_id).to eq("updated_flow_id")
     end
 
+    it "keeps the api key when the masked value is sent back" do
+      moneyhash_provider.update!(signature_key: "same_signature_key")
+      api_key = moneyhash_provider.api_key
+
+      result = described_class.new.create_or_update(organization:, code: moneyhash_provider.code, api_key: "••••••••…#{api_key[-3..]}")
+
+      expect(result).to be_success
+      expect(result.moneyhash_provider.reload.api_key).to eq(api_key)
+    end
+
+    it "updates the api key when a new value is sent" do
+      moneyhash_provider.update!(signature_key: "same_signature_key")
+
+      result = described_class.new.create_or_update(organization:, code: moneyhash_provider.code, api_key: "new_api_key")
+
+      expect(result).to be_success
+      expect(result.moneyhash_provider.reload.api_key).to eq("new_api_key")
+    end
+
     it_behaves_like "produces a security log", "integration.updated" do
       before do
         moneyhash_provider.update!(signature_key: "same_signature_key")

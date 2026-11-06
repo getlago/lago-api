@@ -7,9 +7,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
 
   let(:service) { described_class.new(subscription:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:lago_properties_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/hubspot/records" }
-  let(:properties_endpoint) { "https://api.nango.dev/v1/hubspot/properties" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "create-record" }
   let(:subscription_file_url) { subscription.file_url }
   let(:file_url) { Faker::Internet.url }
   let(:due_date) { subscription.payment_due_date.strftime("%Y-%m-%d") }
@@ -33,9 +32,6 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
     allow(LagoHttpClient::Client).to receive(:new)
       .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
       .and_return(lago_client)
-    allow(LagoHttpClient::Client).to receive(:new)
-      .with(properties_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-      .and_return(lago_properties_client)
 
     integration_customer
     integration.sync_subscriptions = true
@@ -84,8 +80,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
         let(:response) { instance_double(Net::HTTPOK) }
 
         before do
-          allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
-          allow(lago_properties_client).to receive(:post_with_response)
+          allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
+          allow(lago_client).to receive(:post_with_response).with(hash_including(action_name: "create-properties"), headers)
           allow(response).to receive(:body).and_return(body)
         end
 
@@ -145,8 +141,8 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
         let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
         before do
-          allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
-          allow(lago_properties_client).to receive(:post_with_response)
+          allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(http_error)
+          allow(lago_client).to receive(:post_with_response).with(hash_including(action_name: "create-properties"), headers)
         end
 
         context "when it is a server error" do
@@ -179,6 +175,15 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
           end
 
           it_behaves_like "throttles!", :hubspot
+        end
+
+        context "when it is a request limit error" do
+          let(:error_code) { 429 }
+          let(:body) { {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json }
+
+          it "raises RequestLimitError" do
+            expect { service_call }.to raise_error(Integrations::Aggregator::RequestLimitError)
+          end
         end
       end
     end

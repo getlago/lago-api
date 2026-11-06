@@ -470,6 +470,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
         result = count_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0)
+        expect(result.pay_in_advance_count_delta).to eq(0)
       end
 
       context "with presentation group keys" do
@@ -514,6 +515,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
           result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(1)
+          expect(result.pay_in_advance_count_delta).to eq(1)
         end
       end
 
@@ -561,6 +563,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
           result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(1)
+          expect(result.pay_in_advance_count_delta).to eq(1)
         end
       end
 
@@ -596,6 +599,7 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
           result = count_service.aggregate
 
           expect(result.pay_in_advance_aggregation).to eq(0)
+          expect(result.pay_in_advance_count_delta).to eq(0)
         end
       end
     end

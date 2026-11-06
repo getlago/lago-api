@@ -8,13 +8,37 @@ class Organization < ApplicationRecord
   include HasFeatureFlags
   include Organizations::Sluggable
 
-  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events]
+  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events, :clickhouse_deduplication_enabled]
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
     "credit_note.created",
     "payment_receipt.created"
   ].freeze
+
+  # NOTE: Every field a customer can send from the customer portal. A spec checks it matches the portal update
+  #       input, so a new portal field has to be added here, and its default lock decided, before it ships.
+  CUSTOMER_PORTAL_FIELDS = %w[
+    customer_type
+    document_locale
+    email
+    firstname
+    lastname
+    legal_name
+    name
+    tax_identification_number
+    address_line1
+    address_line2
+    city
+    country
+    state
+    zipcode
+    shipping_address
+  ].freeze
+
+  # NOTE: Country, zipcode and tax identification number drive the EU tax rate applied to the customer,
+  #       so they stay merchant owned unless the organization explicitly unlocks them in the customer portal.
+  DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS = %w[country tax_identification_number zipcode].freeze
 
   MULTI_ENTITIES_MAX = {
     default: 1,
@@ -79,6 +103,7 @@ class Organization < ApplicationRecord
   has_many :webhook_endpoints
   has_many :webhooks
   has_many :cached_aggregations
+  has_many :recurring_aggregation_snapshots
   has_many :data_exports
   has_many :error_details
   has_many :dunning_campaigns
@@ -99,6 +124,7 @@ class Organization < ApplicationRecord
 
   has_many :x402_connections, class_name: "X402::Connection"
   has_many :x402_settlements, class_name: "X402::Settlement"
+  has_many :x402_sign_in_nonces, class_name: "X402::SignInNonce"
 
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
@@ -184,7 +210,11 @@ class Organization < ApplicationRecord
   validates :invoice_footer, length: {maximum: 600}
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
+  validates :pagination_max_page_size, numericality: {only_integer: true, greater_than: 0}, allow_nil: true
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
+  # Rows stored above 365 before the cap stay valid until net_payment_term changes
+  validates :net_payment_term, numericality: {less_than_or_equal_to: 365}, allow_nil: true, if: :will_save_change_to_net_payment_term?
+  validates :document_url_expiration_days, numericality: {only_integer: true, greater_than_or_equal_to: 30, less_than_or_equal_to: 120}
   validates :logo,
     image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
     if: :logo?
@@ -197,6 +227,7 @@ class Organization < ApplicationRecord
 
   validate :validate_premium_integrations
   validate :validate_email_settings
+  validate :validate_customer_portal_locked_fields
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -326,6 +357,13 @@ class Organization < ApplicationRecord
     errors.add(:email_settings, :unsupported_value)
   end
 
+  def validate_customer_portal_locked_fields
+    return errors.add(:customer_portal_locked_fields, "value_is_mandatory") if customer_portal_locked_fields.nil?
+    return if customer_portal_locked_fields.all? { |v| CUSTOMER_PORTAL_FIELDS.include?(v) }
+
+    errors.add(:customer_portal_locked_fields, :unsupported_value)
+  end
+
   def validate_premium_integrations
     return if premium_integrations.all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
 
@@ -352,45 +390,47 @@ end
 # Table name: organizations
 # Database name: primary
 #
-#  id                               :uuid             not null, primary key
-#  address_line1                    :string
-#  address_line2                    :string
-#  api_key                          :string
-#  audit_logs_period                :integer          default(30)
-#  authentication_methods           :string           default(["email_password", "google_oauth"]), not null, is an Array
-#  city                             :string
-#  clickhouse_deduplication_enabled :boolean          default(FALSE), not null
-#  clickhouse_events_store          :boolean          default(FALSE), not null
-#  country                          :string
-#  custom_aggregation               :boolean          default(FALSE)
-#  default_currency                 :string           default("USD"), not null
-#  document_locale                  :string           default("en"), not null
-#  document_number_prefix           :string
-#  document_numbering               :integer          default("per_customer"), not null
-#  email                            :string
-#  email_settings                   :string           default([]), not null, is an Array
-#  eu_tax_management                :boolean          default(FALSE)
-#  feature_flags                    :string           default([]), not null, is an Array
-#  finalize_zero_amount_invoice     :boolean          default(TRUE), not null
-#  hmac_key                         :string           not null
-#  invoice_footer                   :text
-#  invoice_grace_period             :integer          default(0), not null
-#  legal_name                       :string
-#  legal_number                     :string
-#  logo                             :string
-#  max_wallets                      :integer
-#  name                             :string           not null
-#  net_payment_term                 :integer          default(0), not null
-#  premium_integrations             :string           default([]), not null, is an Array
-#  slug                             :string           not null
-#  state                            :string
-#  tax_identification_number        :string
-#  timezone                         :string           default("UTC"), not null
-#  vat_rate                         :float            default(0.0), not null
-#  webhook_url                      :string
-#  zipcode                          :string
-#  created_at                       :datetime         not null
-#  updated_at                       :datetime         not null
+#  id                            :uuid             not null, primary key
+#  address_line1                 :string
+#  address_line2                 :string
+#  api_key                       :string
+#  audit_logs_period             :integer          default(30)
+#  authentication_methods        :string           default(["email_password", "google_oauth"]), not null, is an Array
+#  city                          :string
+#  clickhouse_events_store       :boolean          default(FALSE), not null
+#  country                       :string
+#  custom_aggregation            :boolean          default(FALSE)
+#  customer_portal_locked_fields :string           default(["country", "zipcode", "tax_identification_number"]), not null, is an Array
+#  default_currency              :string           default("USD"), not null
+#  document_locale               :string           default("en"), not null
+#  document_number_prefix        :string
+#  document_numbering            :integer          default("per_customer"), not null
+#  document_url_expiration_days  :integer          default(30), not null
+#  email                         :string
+#  email_settings                :string           default([]), not null, is an Array
+#  eu_tax_management             :boolean          default(FALSE)
+#  feature_flags                 :string           default([]), not null, is an Array
+#  finalize_zero_amount_invoice  :boolean          default(TRUE), not null
+#  hmac_key                      :string           not null
+#  invoice_footer                :text
+#  invoice_grace_period          :integer          default(0), not null
+#  legal_name                    :string
+#  legal_number                  :string
+#  logo                          :string
+#  max_wallets                   :integer
+#  name                          :string           not null
+#  net_payment_term              :integer          default(0), not null
+#  pagination_max_page_size      :integer
+#  premium_integrations          :string           default([]), not null, is an Array
+#  slug                          :string           not null
+#  state                         :string
+#  tax_identification_number     :string
+#  timezone                      :string           default("UTC"), not null
+#  vat_rate                      :float            default(0.0), not null
+#  webhook_url                   :string
+#  zipcode                       :string
+#  created_at                    :datetime         not null
+#  updated_at                    :datetime         not null
 #
 # Indexes
 #

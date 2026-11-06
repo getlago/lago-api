@@ -78,6 +78,34 @@ RSpec.describe SecurityLogsQuery, clickhouse: true do
       end
     end
 
+    context "with a cursor pagination" do
+      let(:pagination) do
+        CursorPagination::Cursor.new(table: "security_logs", sort: {logged_at: :desc, log_id: :desc}, limit: 10)
+      end
+
+      it "paginates on the keyset, ordered logged_at then log_id descending" do
+        expect(result).to be_success
+        expect(result.security_logs.to_sql).to include(
+          "ORDER BY security_logs.logged_at DESC, security_logs.log_id DESC"
+        )
+        expect(result.security_logs.pluck(:log_id)).to include(security_log.log_id)
+      end
+
+      context "with several logs sharing a logged_at" do
+        let(:sibling_log) do
+          create(:clickhouse_security_log, organization:, logged_at: security_log.logged_at)
+        end
+
+        before { sibling_log }
+
+        it "orders the tie on the log_id tiebreak, descending" do
+          ordered = [security_log.log_id, sibling_log.log_id].sort.reverse
+
+          expect(result.security_logs.pluck(:log_id)).to eq(ordered)
+        end
+      end
+    end
+
     context "with from_date and to_date filters" do
       it "returns expected security logs" do
         filters = {from_date: security_log.logged_at + 1.day, to_date: security_log.logged_at + 2.days}

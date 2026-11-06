@@ -4,6 +4,8 @@ module Api
   module V2
     class PlansController < Api::V2::BaseController
       cursor_paginated_index(CatalogPlan)
+      date_range_filtered_index(:created_at)
+      serializable_with ::V2::CatalogPlanSerializer
 
       def index
         result = ::CatalogPlansQuery.call(
@@ -14,21 +16,13 @@ module Api
             product_ids: Array(params[:product_id]).presence,
             product_filter_ids: Array(params[:product_filter_id]).presence,
             product_category_ids: Array(params[:product_category_id]).presence,
-            rate_card_ids: Array(params[:rate_card_id]).presence
+            rate_card_ids: Array(params[:rate_card_id]).presence,
+            **date_range_filters
           }
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.catalog_plans, cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::CatalogPlanSerializer,
-              collection_name: "plans",
-              meta: page.meta
-            )
-          )
+          render_plans(result.catalog_plans)
         else
           render_error_response(result)
         end
@@ -65,11 +59,7 @@ module Api
       private
 
       def input_params
-        params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency)
-      end
-
-      def render_plan(catalog_plan)
-        render(json: ::V2::CatalogPlanSerializer.new(catalog_plan, root_name: "plan"))
+        params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency, tax_codes: [])
       end
 
       def resource_name

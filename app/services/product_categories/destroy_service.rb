@@ -4,15 +4,15 @@ module ProductCategories
   class DestroyService < BaseService
     Result = BaseResult[:product_category]
 
+    activity_loggable(
+      action: "product_category.deleted",
+      record: -> { product_category }
+    )
+
     def initialize(product_category:)
       @product_category = product_category
       super
     end
-
-    activity_loggable(
-      action: "product_category.deleted",
-      record: -> { result.product_category }
-    )
 
     def call
       return result.not_found_failure!(resource: "product_category") unless product_category
@@ -23,10 +23,11 @@ module ProductCategories
 
       ActiveRecord::Base.transaction do
         product_category.products.find_each do |product|
-          Products::DestroyService.call!(product:)
+          Products::DestroyService.call!(product:, emit_events: false)
         end
 
         product_category.discard!
+        SendWebhookJob.perform_after_commit("product_category.deleted", product_category)
       end
 
       result.product_category = product_category

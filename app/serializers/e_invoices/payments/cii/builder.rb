@@ -45,6 +45,7 @@ module EInvoices
 
       def pay_method
         return "manual" if payment.payment_type_manual?
+        return "x402" if payment.payment_type_x402?
         return "provider" if payment.provider_payment_method_data.blank?
 
         payment.provider_payment_method_data["type"]

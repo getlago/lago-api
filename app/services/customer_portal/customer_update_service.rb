@@ -4,6 +4,22 @@ module CustomerPortal
   class CustomerUpdateService < BaseService
     Result = BaseResult[:customer]
 
+    FREE_TEXT_FIELDS = %i[
+      name firstname lastname legal_name tax_identification_number
+      address_line1 address_line2 zipcode city state
+    ].freeze
+    SHIPPING_FREE_TEXT_FIELDS = {
+      shipping_address_line1: :address_line1,
+      shipping_address_line2: :address_line2,
+      shipping_zipcode: :zipcode,
+      shipping_city: :city,
+      shipping_state: :state
+    }.freeze
+    # Control characters, format characters (bidi overrides, zero-width characters) and the
+    # Unicode line and paragraph separators, which a model reads as line breaks.
+    INVALID_CHARACTERS = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/
+    private_constant :FREE_TEXT_FIELDS, :SHIPPING_FREE_TEXT_FIELDS, :INVALID_CHARACTERS
+
     def initialize(customer:, args:)
       @customer = customer
       @args = args
@@ -13,6 +29,12 @@ module CustomerPortal
 
     def call
       return result.not_found_failure!(resource: "customer") unless customer
+      return result.validation_failure!(errors: locked_fields_errors) if locked_fields_errors.present?
+
+      @args = args.except(*locked_fields)
+
+      errors = invalid_character_errors
+      return result.validation_failure!(errors:) if errors.present?
 
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
@@ -57,7 +79,7 @@ module CustomerPortal
           new_record: false,
           tax_attributes_changed: original_tax_values.any? { |key, value| args.key?(key) && args[key] != value }
         )
-        tax_codes << eu_tax_code_result.tax_code if eu_tax_code_result.success?
+        tax_codes = eu_tax_code_result.tax_codes if eu_tax_code_result.success?
 
         if tax_codes.present?
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes:)
@@ -76,5 +98,50 @@ module CustomerPortal
     private
 
     attr_reader :customer, :args
+
+    def locked_fields
+      @locked_fields ||= begin
+        organization_locked_fields = customer.organization.customer_portal_locked_fields
+        args.keys.select { |field| organization_locked_fields.include?(field.to_s) }
+      end
+    end
+
+    # NOTE: Portal versions released before the locked fields setting send the whole form,
+    #       so a locked field sent with its current value is ignored and only an actual change is refused.
+    def locked_fields_errors
+      @locked_fields_errors ||= locked_fields
+        .reject { |field| unchanged_value?(field) }
+        .to_h { |field| [field.to_sym, ["value_is_not_editable"]] }
+    end
+
+    def unchanged_value?(field)
+      case field.to_sym
+      when :shipping_address
+        (args[field]&.to_h || {}).all? do |key, value|
+          same_value?(customer.public_send(:"shipping_#{key}"), value, upcase: key.to_sym == :country)
+        end
+      else
+        same_value?(customer.public_send(field), args[field], upcase: field.to_sym == :country)
+      end
+    end
+
+    def same_value?(current_value, new_value, upcase: false)
+      current_value, new_value = [current_value, new_value].map { |value| value&.upcase } if upcase
+
+      current_value.presence == new_value.presence
+    end
+
+    def invalid_character_errors
+      shipping_address = args[:shipping_address]&.to_h || {}
+      sources = FREE_TEXT_FIELDS.map { |attribute| [attribute, args, attribute] } +
+        SHIPPING_FREE_TEXT_FIELDS.map { |attribute, key| [attribute, shipping_address, key] }
+
+      offending = sources.filter_map do |attribute, source, key|
+        value = source[key]
+        attribute if source.key?(key) && value.is_a?(String) && value != customer[attribute] && value.match?(INVALID_CHARACTERS)
+      end
+
+      offending.index_with { ["invalid_characters"] }
+    end
   end
 end

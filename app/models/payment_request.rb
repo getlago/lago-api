@@ -82,6 +82,7 @@ end
 #
 # Indexes
 #
+#  index_payment_requests_by_cursor               (organization_id,created_at DESC,id DESC)
 #  index_payment_requests_on_customer_id          (customer_id)
 #  index_payment_requests_on_dunning_campaign_id  (dunning_campaign_id)
 #  index_payment_requests_on_organization_id      (organization_id)

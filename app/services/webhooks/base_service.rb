@@ -7,17 +7,18 @@ module Webhooks
   class BaseService
     def initialize(object:, options: {})
       @object = object
-      @options = options&.with_indifferent_access
+      @options = (options || {}).with_indifferent_access
     end
 
     def call
+      return if product_catalog_only_event? && !current_organization.product_catalog_enabled?
       return if current_organization.webhook_endpoints.none?
 
       payload = {
         :webhook_type => webhook_type,
         :object_type => object_type,
         :organization_id => current_organization.id,
-        object_type => object_serializer.serialize
+        object_type => object_serializer.for_webhook!.serialize
       }
 
       # TODO: Wrap in transaction so we create all webhook models or none
@@ -26,7 +27,7 @@ module Webhooks
         next unless subscribed?(webhook_endpoint)
 
         webhook = create_webhook(webhook_endpoint, payload)
-        SendHttpWebhookJob.set(queue: SendWebhookJob.queue_for(webhook_type)).perform_later(webhook)
+        SendHttpWebhookJob.perform_later(webhook)
       rescue ActiveRecord::InvalidForeignKey
         # The webhook endpoint was deleted while the transaction was in progress
         Rails.logger.error("SendWebhookJob failed for deleted webhook endpoint #{webhook_endpoint.id}")
@@ -43,8 +44,14 @@ module Webhooks
       webhook_endpoint.event_types.include?(webhook_type)
     end
 
+    # The record's render. `call` sends it through `for_webhook!`, which embeds the expansions its
+    # serializer declares with `webhooks: true`, unless the service built it with `webhook: false`.
     def object_serializer
       # Empty
+    end
+
+    def product_catalog_only_event?
+      WebhookEndpoint::PRODUCT_CATALOG_ONLY_EVENT_TYPES.include?(webhook_type)
     end
 
     def current_organization

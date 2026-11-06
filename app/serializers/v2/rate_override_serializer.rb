@@ -2,6 +2,8 @@
 
 module V2
   class RateOverrideSerializer < ModelSerializer
+    timestamps :deleted_at
+
     def serialize
       {
         lago_id: model.id,

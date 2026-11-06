@@ -4,6 +4,8 @@ module Api
   module V2
     class RateCardsController < Api::V2::BaseController
       cursor_paginated_index(RateCard)
+      date_range_filtered_index(:created_at)
+      serializable_with ::V2::RateCardSerializer
 
       def create
         if create_params[:product_filter_code].present? && product && product_filter.nil?
@@ -64,21 +66,13 @@ module Api
             product_filter_ids: Array(params[:product_filter_id]).presence,
             code: params[:code],
             product_code: params[:product_code],
-            product_filter_code: params[:product_filter_code]
+            product_filter_code: params[:product_filter_code],
+            **date_range_filters
           }
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.rate_cards.includes(:product, :product_filter, :rates), cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::RateCardSerializer,
-              collection_name: "rate_cards",
-              meta: page.meta
-            )
-          )
+          render_rate_cards(result.rate_cards.includes(:product, :product_filter))
         else
           render_error_response(result)
         end
@@ -140,10 +134,6 @@ module Api
           :applied_pricing_unit_code,
           tax_codes: []
         )
-      end
-
-      def render_rate_card(rate_card)
-        render(json: ::V2::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate taxes]))
       end
 
       def resource_name

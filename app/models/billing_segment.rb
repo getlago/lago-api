@@ -30,23 +30,22 @@ class BillingSegment < ApplicationRecord
 
   enum :status, STATUSES, validate: true, prefix: true
 
-  # What the periodic consumer still owes an invoice for. One name for both ends of the pipe:
-  # the clock selects customers by it and the consumer selects their segments by it, so
-  # neither can drift into offering work the other will not do.
-  #
-  # Pending advance-metered segments are priced per event, not on the tick. Once processing,
-  # they can have paid fees to reconcile. Other segments are invoiced while pending.
-  scope :awaiting_invoicing, -> {
-    where(status: [:pending, :processing])
+  # Pending periodic segments are ready immediately. Advance-metered usage is reconciled
+  # after its segment ends, except displayed recurring usage, which bills at renewal.
+  scope :ready_for_invoicing, ->(timestamp = Time.current) {
+    status_pending
       .joins(contract_rate_card: {rate_card: :product})
+      .joins("LEFT OUTER JOIN billable_metrics ON billable_metrics.id = products.billable_metric_id")
       .where(
-        "(billing_segments.status = :pending AND NOT (rate_cards.billing_timing = :advance AND " \
-          "products.product_type = :metered)) OR (billing_segments.status = :processing AND " \
-          "rate_cards.billing_timing = :advance AND products.product_type = :metered)",
-        pending: STATUSES[:pending],
-        processing: STATUSES[:processing],
+        "(NOT (rate_cards.billing_timing = :advance AND products.product_type = :metered) OR " \
+        "(rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
+        "billing_segments.ended_at <= :timestamp) OR " \
+        "(rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
+        "rate_cards.display_on_invoice = TRUE AND " \
+        "billable_metrics.recurring = TRUE AND billing_segments.billing_at <= :timestamp))",
         advance: RateCard::BILLING_TIMINGS[:advance],
-        metered: Product::PRODUCT_TYPES[:metered]
+        metered: Product::PRODUCT_TYPES[:metered],
+        timestamp:
       )
   }
 
@@ -65,6 +64,14 @@ class BillingSegment < ApplicationRecord
     rate_override || rate_card_rate
   end
 
+  def recurring_advance_invoiceable?
+    rate_card = contract_rate_card.rate_card
+    product = rate_card.product
+    metric = product.billable_metric
+
+    rate_card.advance? && product.metered? && rate_card.display_on_invoice? && metric&.recurring?
+  end
+
   def target_key
     "contract-#{contract_id}-#{contract_rate_card.product.target_key}"
   end
@@ -73,6 +80,22 @@ class BillingSegment < ApplicationRecord
   # This mirrors the empty ChargeFilter in app/services/fees/charge_service.rb:85-95.
   def empty_product_filter
     ProductFilter.new(organization:, product: contract_rate_card.rate_card.product)
+  end
+
+  # Product filters priced by applied rate cards effective during this segment.
+  # effective_date is a customer-local day, so derive both boundaries in that timezone.
+  def priced_product_filter_ids
+    product = contract_rate_card.rate_card.product
+    timezone = customer.applicable_timezone
+    date_range = started_at.in_time_zone(timezone).to_date..ended_at.in_time_zone(timezone).to_date
+    cache_key = [product.id, date_range]
+    @priced_product_filter_ids_cache ||= {}
+    @priced_product_filter_ids_cache[cache_key] ||= contract.applied_rate_cards
+      .joins(:rate_card)
+      .where(effective_date: date_range)
+      .where(rate_cards: {product_id: product.id})
+      .where.not(rate_cards: {product_filter_id: nil})
+      .pluck("rate_cards.product_filter_id")
   end
 
   def duration_in_days

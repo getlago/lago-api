@@ -12,8 +12,8 @@ module Api
           charges = subscription.plan.charges
             .includes(:billable_metric, :taxes, :applied_pricing_unit, :pricing_unit, filters: :billable_metric_filters)
             .order(created_at: :desc)
-            .page(params[:page])
-            .per(params[:per_page] || PER_PAGE)
+            .page(page_number)
+            .per(page_size)
 
           render(
             json: ::CollectionSerializer.new(

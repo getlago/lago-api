@@ -13,11 +13,12 @@ module X402
         "index_x402_settlements_on_pending_invoice_id" => "invoice_payment_pending"
       }.freeze
 
-      def initialize(verified_payment:, kind:, invoice: nil, purchase_settings: nil)
+      def initialize(verified_payment:, kind:, invoice: nil, purchase_settings: nil, request_key_digest: nil)
         @verified_payment = verified_payment
         @kind = kind
         @invoice = invoice
         @purchase_settings = purchase_settings
+        @request_key_digest = request_key_digest
 
         super
       end
@@ -31,6 +32,9 @@ module X402
         settlement = insert_pending
         return result if result.failure?
 
+        refusal = fail_on_changed_invoice(settlement)
+        return refuse_changed_invoice(refusal) if refusal
+
         result.settlement = settlement
         settle(settlement)
         result
@@ -38,7 +42,7 @@ module X402
 
       private
 
-      attr_reader :verified_payment, :kind, :invoice, :purchase_settings
+      attr_reader :verified_payment, :kind, :invoice, :purchase_settings, :request_key_digest
 
       delegate :connection, :network, :asset, to: :verified_payment, private: true
 
@@ -77,6 +81,7 @@ module X402
           settled_amount_atomic: verified_payment.settled_amount_atomic,
           settled_amount_cents: verified_payment.settled_amount_cents,
           payment_digest: verified_payment.payment_digest,
+          request_key_digest:,
           reconcile_after:,
           payload: {
             "payment" => verified_payment.payment,
@@ -94,6 +99,33 @@ module X402
         else
           raise
         end
+      end
+
+      def fail_on_changed_invoice(settlement)
+        invoice&.with_lock do
+          refusal = changed_invoice_refusal(settlement)
+          settlement.update!(status: :failed, error_reason: refusal.last) if refusal
+          refusal
+        end
+      end
+
+      def changed_invoice_refusal(settlement)
+        if invoice.x402_connection_id != connection.id
+          [:invoice, "x402_connection_changed"]
+        elsif verified_payment.settled_amount_atomic != amount_due_atomic
+          [:payment, "amount_mismatch"]
+        elsif invoice.payment_succeeded?
+          [:base, "invalid_invoice_status_or_payment_status"]
+        elsif invoice.x402_settlements.where.not(id: settlement.id).where.not(status: :failed).exists?
+          [:base, "invoice_payment_pending"]
+        end
+      end
+
+      def refuse_changed_invoice(refusal)
+        field, code = refusal
+
+        log_failure(code)
+        result.single_validation_failure!(field:, error_code: code)
       end
 
       def reconcile_after

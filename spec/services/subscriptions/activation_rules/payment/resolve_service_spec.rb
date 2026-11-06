@@ -123,14 +123,6 @@ RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
       end
     end
 
-    it "tracks invoice creation in segment" do
-      allow(Utils::SegmentTrack).to receive(:invoice_created)
-
-      result
-
-      expect(Utils::SegmentTrack).to have_received(:invoice_created).with(invoice)
-    end
-
     context "with the succeeded payment for the invoice" do
       let(:payment) do
         create(:payment, payable: invoice, organization:, customer:,

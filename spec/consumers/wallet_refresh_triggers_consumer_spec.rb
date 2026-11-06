@@ -156,23 +156,6 @@ RSpec.describe WalletRefreshTriggersConsumer do
     end
   end
 
-  context "when the organization deduplicates its events" do
-    let(:organization) do
-      create(
-        :organization,
-        clickhouse_events_store: true,
-        clickhouse_deduplication_enabled: true,
-        feature_flags: ["realtime_usage"]
-      )
-    end
-
-    it "refreshes, as the stream deduplicates as well" do
-      consumer.consume
-
-      expect(Wallets::RealtimeRefreshService).to have_received(:call)
-    end
-  end
-
   context "without an active wallet" do
     let(:wallet_status) { :terminated }
 

@@ -33,7 +33,7 @@ class RateCardRate < ApplicationRecord
   }.freeze
 
   belongs_to :organization
-  belongs_to :rate_card
+  belongs_to :rate_card, -> { with_discarded }
 
   has_many :fees
 

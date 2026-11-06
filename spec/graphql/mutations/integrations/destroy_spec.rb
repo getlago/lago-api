@@ -44,6 +44,7 @@ RSpec.describe Mutations::Integrations::Destroy do
   end
 
   context "when okta integration", :premium do
+    let(:required_permission) { %w[organization:integrations:delete authentication_methods:update] }
     let(:integration) { create(:okta_integration, organization:) }
 
     before do
@@ -59,6 +60,24 @@ RSpec.describe Mutations::Integrations::Destroy do
 
     it_behaves_like "produces a security log", "integration.deleted" do
       before { result }
+    end
+
+    context "without the authentication methods permission" do
+      let(:required_permission) { "organization:integrations:delete" }
+
+      it "does not delete the integration" do
+        expect { result }.not_to change(::Integrations::BaseIntegration, :count)
+        expect_forbidden_error(result)
+      end
+    end
+  end
+
+  context "when entra id integration without the authentication methods permission", :premium do
+    let(:integration) { create(:entra_id_integration, organization:) }
+
+    it "does not delete the integration" do
+      expect { result }.not_to change(::Integrations::BaseIntegration, :count)
+      expect_forbidden_error(result)
     end
   end
 end

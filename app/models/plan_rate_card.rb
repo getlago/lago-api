@@ -7,8 +7,8 @@ class PlanRateCard < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :organization
-  belongs_to :catalog_plan
-  belongs_to :rate_card
+  belongs_to :catalog_plan, -> { with_discarded }
+  belongs_to :rate_card, -> { with_discarded }
 
   has_one :product, through: :rate_card
 

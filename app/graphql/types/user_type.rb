@@ -16,7 +16,7 @@ module Types
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
     def memberships
-      object.memberships.active.includes(:organization)
+      object.memberships.active.includes(organization: :integrations)
     end
 
     def organizations

@@ -20,6 +20,57 @@ RSpec.describe ContractRateCard do
   end
 
   describe "Scopes" do
+    describe ".priced" do
+      let(:organization) { create(:organization) }
+
+      it "takes the cards whose rate card has a rate" do
+        priced = create(:contract_rate_card, organization:, rate_card: create(:rate_card_rate, organization:).rate_card)
+        create(:contract_rate_card, organization:)
+
+        expect(described_class.priced).to contain_exactly(priced)
+      end
+    end
+
+    describe ".starting_before_contract_end" do
+      let(:organization) { create(:organization) }
+      let(:contract) { create(:contract, organization:, started_at: Time.utc(2026, 1, 1), ended_at:, terminated_at:) }
+      let(:ended_at) { nil }
+      let(:terminated_at) { nil }
+      let(:card) { create(:contract_rate_card, organization:, contract:, effective_date: Date.new(2026, 3, 1)) }
+
+      before { card }
+
+      it "takes a card whose contract has no end" do
+        expect(described_class.starting_before_contract_end).to eq([card])
+      end
+
+      context "when the contract is terminated on the card's first day" do
+        let(:terminated_at) { Time.utc(2026, 3, 1, 14) }
+
+        it "takes the card" do
+          expect(described_class.starting_before_contract_end).to eq([card])
+        end
+      end
+
+      context "when the contract is terminated before the card starts" do
+        let(:terminated_at) { Time.utc(2026, 2, 15) }
+
+        it "leaves out the card" do
+          expect(described_class.starting_before_contract_end).to be_empty
+        end
+      end
+
+      # A contract kept running past its planned end still stopped serving at that end.
+      context "when the planned end came before the termination" do
+        let(:ended_at) { Time.utc(2026, 2, 15) }
+        let(:terminated_at) { Time.utc(2026, 4, 1) }
+
+        it "leaves out the card" do
+          expect(described_class.starting_before_contract_end).to be_empty
+        end
+      end
+    end
+
     describe ".due_for_billing" do
       let(:timestamp) { Time.zone.parse("2026-03-01 00:00:00") }
       let(:organization) { create(:organization) }

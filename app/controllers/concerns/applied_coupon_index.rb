@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module AppliedCouponIndex
-  include Pagination
   extend ActiveSupport::Concern
 
   def applied_coupon_index(external_customer_id:)
@@ -10,8 +9,8 @@ module AppliedCouponIndex
     result = AppliedCouponsQuery.call(
       organization: current_organization,
       pagination: {
-        page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        page: page_number,
+        limit: page_size
       },
       filters: filters
     )

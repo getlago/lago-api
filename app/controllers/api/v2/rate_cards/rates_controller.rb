@@ -4,6 +4,8 @@ module Api
   module V2
     module RateCards
       class RatesController < Api::V2::BaseController
+        serializable_with ::V2::RateCardRateSerializer
+
         # Before the lookups, like the cursor of the paginated lists.
         before_action :reject_offset_pagination!, only: :index
         before_action :find_rate_card
@@ -19,13 +21,7 @@ module Api
           )
 
           if result.success?
-            render(
-              json: ::CollectionSerializer.new(
-                result.rate_card_rates,
-                ::V2::RateCardRateSerializer,
-                collection_name: "rates"
-              )
-            )
+            render_rates(result.rate_card_rates)
           else
             render_error_response(result)
           end
@@ -98,10 +94,6 @@ module Api
             :applied_pricing_unit_conversion_rate,
             rate_properties: {}
           )
-        end
-
-        def render_rate(rate)
-          render(json: ::V2::RateCardRateSerializer.new(rate, root_name: "rate"))
         end
 
         def resource_name

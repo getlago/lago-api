@@ -47,6 +47,28 @@ RSpec.describe BillingEntities::CreateService do
         before { result }
       end
 
+      it "mirrors the default alias into the structured payment term when net_payment_term is not provided" do
+        expect(result).to be_success
+        expect(result.billing_entity.reload.net_payment_term).to eq(0)
+        expect(result.billing_entity.reload.payment_term).to eq("term_type" => "net", "days" => 0)
+      end
+
+      it "writes a provided payment_term with a null alias" do
+        params[:payment_term] = {term_type: "end_of_month"}
+
+        expect(result).to be_success
+        expect(result.billing_entity.reload.payment_term).to eq("term_type" => "end_of_month")
+        expect(result.billing_entity.reload.net_payment_term).to be_nil
+      end
+
+      it "returns a validation failure on an invalid payment_term shape" do
+        params[:payment_term] = "not-an-object"
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:payment_term]).to eq(["invalid_format"])
+      end
+
       it "does not set eu_tax_management when not provided" do
         expect(result).to be_success
         expect(result.billing_entity.eu_tax_management).to be false
@@ -177,6 +199,7 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.legal_name).to eq("Legal Name")
           expect(result.billing_entity.legal_number).to eq("Legal Number")
           expect(result.billing_entity.net_payment_term).to eq(90)
+          expect(result.billing_entity.payment_term).to eq("term_type" => "net", "days" => 90)
           expect(result.billing_entity.state).to eq("State")
           expect(result.billing_entity.tax_identification_number).to eq("EU123456789")
           expect(result.billing_entity.vat_rate).to eq(1)
@@ -277,6 +300,57 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
         end
       end
+
+      context "with tax codes and invoice custom section ids" do
+        let(:tax) { create(:tax, organization:) }
+        let(:section) { create(:invoice_custom_section, organization:) }
+        let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization)) }
+        let(:params) { super().merge(tax_codes: [tax.code], invoice_custom_section_ids: [section.id, foreign_section.id]) }
+
+        it "applies the taxes and the organization's sections" do
+          expect(result).to be_success
+          expect(result.billing_entity.taxes).to eq([tax])
+          expect(result.billing_entity.selected_invoice_custom_sections).to eq([section])
+        end
+
+        context "with invoice custom section codes" do
+          let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization), code: section.code) }
+          let(:params) { super().except(:invoice_custom_section_ids).merge(invoice_custom_section_codes: [section.code]) }
+
+          before { foreign_section }
+
+          it "applies only the organization's section" do
+            expect(result).to be_success
+            expect(result.billing_entity.selected_invoice_custom_sections).to eq([section])
+            expect(foreign_section.billing_entity_applied_invoice_custom_sections).to be_empty
+          end
+        end
+
+        context "with an unknown tax code" do
+          let(:params) { super().merge(tax_codes: ["unknown"]) }
+
+          it "fails without creating the billing entity" do
+            expect { result }.not_to change(organization.all_billing_entities, :count)
+
+            expect(result).to be_failure
+            expect(result.error.error_code).to eq("tax_not_found")
+          end
+        end
+      end
+    end
+  end
+
+  context "when a concurrent request creates the same code", :premium do
+    let(:organization) { create(:organization, premium_integrations: ["multi_entities_enterprise"]) }
+
+    before do
+      create(:billing_entity, organization:, code: "billing-entity")
+      # The uniqueness validation ran before the concurrent request committed.
+      allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it "returns the validation error of a taken value" do
+      expect(result.error.messages).to eq(code: ["value_already_exist"])
     end
   end
 end

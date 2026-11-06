@@ -19,6 +19,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
+      return result.not_allowed_failure!(code: "product_catalog_invoice_not_regenerable") if voided_invoice.product_catalog?
 
       ActiveRecord::Base.transaction do
         create_regenerated_invoice
@@ -74,7 +75,7 @@ module Invoices
     end
 
     def payment_due_date
-      @payment_due_date ||= issuing_date + customer.applicable_net_payment_term.days
+      @payment_due_date ||= regenerated_invoice.snapshotted_payment_term.due_date_for(issuing_date)
     end
 
     def should_create_credit_note_credit?
@@ -281,7 +282,9 @@ module Invoices
         invoice_type: voided_invoice.invoice_type,
         currency: voided_invoice.currency,
         datetime: voided_invoice.created_at,
-        billing_entity: voided_invoice.billing_entity
+        billing_entity: voided_invoice.billing_entity,
+        payment_term: voided_invoice.snapshotted_payment_term,
+        payment_term_source: voided_invoice.payment_term_source
       ).invoice.tap do |invoice|
         invoice.update!(
           voided_invoice_id: voided_invoice.id,
@@ -303,7 +306,6 @@ module Invoices
     def call_invoice_finalization_jobs(invoice)
       return if invoice.closed?
 
-      Utils::SegmentTrack.invoice_created(invoice)
       SendWebhookJob.perform_later("invoice.created", invoice)
       Utils::ActivityLog.produce(invoice, "invoice.created")
       GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)

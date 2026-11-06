@@ -82,7 +82,8 @@ class Payment < ApplicationRecord
     return false unless payable.is_a?(Invoice)
 
     payable.finalized? && succeeded? &&
-      customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
+      customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments } &&
+      !payable.product_catalog?
   end
 
   def payment_provider_type

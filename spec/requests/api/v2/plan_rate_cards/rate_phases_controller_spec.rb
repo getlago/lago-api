@@ -29,7 +29,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("applied_rate_card")
+        expect(response).to be_v2_not_found_error("applied_rate_card")
       end
     end
   end
@@ -80,7 +80,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :billing_interval_cycle_count)).to eq(["indefinite_phase_must_be_last"])
+        expect(json[:details]).to eq([{code: "indefinite_phase_must_be_last", field: "billing_interval_cycle_count", meta: {}}])
       end
     end
   end
@@ -136,7 +136,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json.dig(:error_details, :position)).to eq(["positions_must_be_contiguous"])
+          expect(json[:details]).to eq([{code: "positions_must_be_contiguous", field: "position", meta: {}}])
           expect(plan_rate_card.rate_phases.order(:position).pluck(:code)).to eq(%w[launch ramp forever])
         end
       end
@@ -148,7 +148,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json.dig(:error_details, :position)).to eq(["positions_must_be_contiguous"])
+          expect(json[:details]).to eq([{code: "positions_must_be_contiguous", field: "position", meta: {}}])
         end
       end
 
@@ -159,7 +159,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json.dig(:error_details, :position)).to eq(["last_phase_must_be_indefinite"])
+          expect(json[:details]).to eq([{code: "last_phase_must_be_indefinite", field: "position", meta: {}}])
           expect(plan_rate_card.rate_phases.order(:position).pluck(:code)).to eq(%w[launch ramp forever])
         end
       end
@@ -180,7 +180,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :billing_interval_cycle_count)).to eq(["last_phase_must_be_indefinite"])
+        expect(json[:details]).to eq([{code: "last_phase_must_be_indefinite", field: "billing_interval_cycle_count", meta: {}}])
       end
     end
 
@@ -242,10 +242,8 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
-          status: 400,
-          error: "Bad Request",
           code: "missing_parameter",
-          error_details: {rate_phase: {reason: "missing"}}
+          details: [{code: "missing", field: "rate_phase", meta: {}}]
         )
       end
     end
@@ -263,7 +261,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :billing_timing)).to eq(["not_overridable"])
+        expect(json[:details]).to eq([{code: "not_overridable", field: "billing_timing", meta: {}}])
         expect(rate_phase.reload.rate_override).to be_nil
       end
     end
@@ -280,7 +278,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_phase")
+        expect(response).to be_v2_not_found_error("rate_phase")
       end
     end
   end
@@ -291,7 +289,8 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
     end
 
     let(:phase_code) { launch.code }
-    let!(:launch) { create(:rate_phase, organization:, plan_rate_card:, position: 1, billing_interval_cycle_count: 3) }
+    let(:launch_override) { nil }
+    let!(:launch) { create(:rate_phase, organization:, plan_rate_card:, position: 1, billing_interval_cycle_count: 3, rate_override: launch_override) }
     let!(:terminal) { create(:rate_phase, organization:, plan_rate_card:, position: 2, billing_interval_cycle_count: nil) }
 
     include_examples "requires API permission", "plan_rate_card", "write"
@@ -302,6 +301,18 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(response).to have_http_status(:success)
       expect(launch.reload).to be_discarded
       expect(terminal.reload.position).to eq(1)
+      expect(json[:rate_phase][:deleted_at]).to eq(launch.deleted_at.iso8601(6))
+    end
+
+    context "with a rate override" do
+      let(:launch_override) { create(:rate_override, organization:) }
+
+      it "returns the override with its deletion date" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phase][:rate_override][:deleted_at]).to eq(launch_override.reload.deleted_at.iso8601(6))
+      end
     end
 
     context "when deleting the indefinite tail" do
@@ -311,7 +322,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :rate_phase)).to eq(["indefinite_phase_not_deletable"])
+        expect(json[:details]).to eq([{code: "indefinite_phase_not_deletable", field: "rate_phase", meta: {}}])
         expect(terminal.reload).not_to be_discarded
         expect(launch.reload.billing_interval_cycle_count).to eq(3)
       end

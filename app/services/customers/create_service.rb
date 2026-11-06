@@ -34,6 +34,13 @@ module Customers
         )
       end
 
+      integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: args[:integration_customers])
+      return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
+
+      unless PaymentTerms::ValidateService.new(result, **args.slice(:payment_term, :net_payment_term)).valid?
+        return result
+      end
+
       customer = billing_entity.customers.new(
         organization_id: organization.id,
         external_id: args[:external_id],
@@ -56,7 +63,6 @@ module Customers
         logo_url: args[:logo_url],
         legal_name: args[:legal_name],
         legal_number: args[:legal_number],
-        net_payment_term: args[:net_payment_term],
         external_salesforce_id: args[:external_salesforce_id],
         payment_provider: args[:payment_provider],
         payment_provider_code: args[:payment_provider_code],
@@ -70,6 +76,8 @@ module Customers
         customer_type: args[:customer_type],
         x402_agent_address: args[:x402_agent_address]
       )
+
+      PaymentTerms::AssignService.call(record: customer, params: args)
 
       if customer&.organization&.revenue_share_enabled?
         customer.account_type = args[:account_type] if args.key?(:account_type)
@@ -86,19 +94,33 @@ module Customers
 
       assign_premium_attributes(customer, args)
 
+      if api_context? && customer.payment_provider.present? && !args.key?(:payment_provider_customers)
+        customer.payment_provider_code = required_payment_provider(customer).code
+      end
+
       ActiveRecord::Base.transaction do
         customer.save!
 
-        eu_tax_code_result = Customers::EuAutoTaxesService.call(customer:, new_record: true, tax_attributes_changed: true)
-
-        if eu_tax_code_result.success?
-          args[:tax_codes] ||= []
-          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
-        end
+        eu_tax_code_result = Customers::EuAutoTaxesService.call(
+          customer:,
+          new_record: true,
+          tax_attributes_changed: true,
+          tax_codes: args[:tax_codes]
+        )
+        args[:tax_codes] = eu_tax_code_result.tax_codes if eu_tax_code_result.success?
 
         if args[:tax_codes].present?
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])
           taxes_result.raise_if_error!
+        end
+
+        if args.key?(:skip_invoice_custom_sections) || args.key?(:invoice_custom_section_codes) || args.key?(:configurable_invoice_custom_section_ids)
+          Customers::ManageInvoiceCustomSectionsService.call(
+            customer:,
+            skip_invoice_custom_sections: args[:skip_invoice_custom_sections],
+            section_ids: args[:configurable_invoice_custom_section_ids],
+            section_codes: args[:invoice_custom_section_codes]
+          ).raise_if_error!
         end
 
         args[:metadata].each { |m| create_metadata(customer:, args: m) } if args[:metadata].present?
@@ -135,6 +157,13 @@ module Customers
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      if e.cause.is_a?(PG::UniqueViolation) &&
+          e.cause.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME) == "index_customers_on_external_id_and_organization_id"
+        result.single_validation_failure!(field: :external_id, error_code: "value_already_exist")
+      else
+        raise
+      end
     end
 
     private
@@ -170,20 +199,6 @@ module Customers
       create_provider_customer = billing_configuration[:sync_with_provider]
       create_provider_customer ||= billing_configuration[:provider_customer_id]
       return unless create_provider_customer
-
-      if api_context?
-        customer.payment_provider = billing_configuration[:payment_provider]
-
-        payment_provider_result = PaymentProviders::FindService.new(
-          organization_id: customer.organization_id,
-          code: billing_configuration[:payment_provider_code].presence,
-          payment_provider_type: customer.payment_provider
-        ).call
-        payment_provider_result.raise_if_error!
-
-        customer.payment_provider_code = payment_provider_result.payment_provider.code
-        customer.save!
-      end
 
       create_or_update_provider_customer(customer, billing_configuration)
     end

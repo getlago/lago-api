@@ -24,6 +24,7 @@ module CreditNotes
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless should_create_credit_note?
+      return result.forbidden_failure! if product_fee_feature_unavailable?
       return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
       ActiveRecord::Base.transaction do
@@ -144,8 +145,17 @@ module CreditNotes
       License.premium?
     end
 
+    def product_fee_feature_unavailable?
+      return false if invoice.organization.feature_flag_enabled?(:product_catalog)
+      return false unless items_attr.is_a?(Array)
+
+      fee_ids = items_attr.filter_map { |item| item[:fee_id] if item.respond_to?(:key?) && item.key?(:fee_id) }
+      invoice.fees.where(id: fee_ids).product.exists?
+    end
+
     def valid_type_or_status?
       return true if automatic
+      return false if invoice.status.in?(%w[pending failed])
 
       if invoice.credit?
         return false if prepaid_credit_wallet.nil?
@@ -182,7 +192,8 @@ module CreditNotes
       return result.validation_failure!(errors: {items: ["must_be_an_array"]}) unless items_attr.is_a?(Array)
 
       items_attr.each do |item_attr|
-        amount_cents = item_attr[:amount_cents] || 0
+        amount_cents = parse_item_amount_cents(item_attr[:amount_cents])
+        return result.single_validation_failure!(field: :amount_cents, error_code: "invalid_value") unless amount_cents
 
         item = credit_note.items.new(
           organization_id: invoice.organization_id,
@@ -195,6 +206,16 @@ module CreditNotes
 
         item.save! unless context == :preview
       end
+    end
+
+    def parse_item_amount_cents(value)
+      return BigDecimal(0) if value.nil?
+      return unless value.is_a?(Numeric) || value.is_a?(String)
+
+      amount_cents = BigDecimal(value.to_s)
+      amount_cents if amount_cents.finite?
+    rescue ArgumentError
+      nil
     end
 
     def valid_item?(item)

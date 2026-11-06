@@ -136,6 +136,26 @@ RSpec.describe Mutations::Customers::Update do
     expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
   end
 
+  context "when replacing the payment provider" do
+    let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
+    let(:old_provider_customer) { customer.stripe_customer }
+    let(:payment_method) { create(:payment_method, payment_provider_customer: old_provider_customer) }
+    let(:provider) { create(:gocardless_provider, organization:) }
+    let(:input) { {id: customer.id, externalId: customer.external_id, paymentProvider: "gocardless", paymentProviderCode: provider.code} }
+
+    before { payment_method }
+
+    it "keeps the existing payment methods" do
+      result = execute_query(query: mutation, input:)
+
+      expect(result["errors"]).to be_nil
+      expect(result.dig("data", "updateCustomer", "paymentProvider")).to eq("gocardless")
+      expect(payment_method.reload).not_to be_discarded
+      expect(payment_method).to be_is_default
+      expect(old_provider_customer.reload).not_to be_discarded
+    end
+  end
+
   context "when stripe customer does not exist" do
     before do
       stripe_provider
@@ -203,6 +223,31 @@ RSpec.describe Mutations::Customers::Update do
       expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
       expect(result_data["providerCustomer"]).to be_present
       expect(result_data["metadata"]).to be_present
+    end
+  end
+
+  # The GraphQL enum lists every premium integration, not only those a customer can connect to.
+  [nil, "progressive_billing"].each do |integration_type|
+    context "with #{integration_type.inspect} as integration type" do
+      let(:integration_customer) { create(:netsuite_customer, customer:) }
+      let(:input) do
+        {
+          id: customer.id,
+          externalId: customer.external_id,
+          name: "Must not change",
+          integrationCustomers: [{integrationType: integration_type, integrationCode: integration_customer.integration.code}.compact]
+        }
+      end
+
+      before { integration_customer }
+
+      it "returns a validation error without modifying the customer or its integrations" do
+        result = execute_query(query: mutation, input:)
+
+        expect_unprocessable_entity(result, details: {integrationType: ["value_is_invalid"]})
+        expect(customer.reload.name).not_to eq("Must not change")
+        expect(customer.integration_customers).to eq([integration_customer])
+      end
     end
   end
 

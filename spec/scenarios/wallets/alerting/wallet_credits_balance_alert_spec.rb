@@ -204,11 +204,10 @@ describe "Wallet Credits Balance Alerts", :premium, transaction: false do
       alert.reload
       expect(alert.triggered_alerts.count).to eq(2)
       ta2 = alert.triggered_alerts.order(:created_at).last
-      # Recurring thresholds are crossed starting from the initial (90) going down by step (10)
+      # The balance was already at 70, reported by the previous alert, so only 60 and 50 are crossed
       expect(ta2.crossed_thresholds).to eq([
         {"code" => "low", "value" => "50.0", "recurring" => true},
-        {"code" => "low", "value" => "60.0", "recurring" => true},
-        {"code" => "low", "value" => "70.0", "recurring" => true}
+        {"code" => "low", "value" => "60.0", "recurring" => true}
       ])
     end
   end

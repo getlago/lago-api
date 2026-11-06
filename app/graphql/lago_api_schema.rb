@@ -1,11 +1,20 @@
 # frozen_string_literal: true
 
 class LagoApiSchema < GraphQL::Schema
+  # The ActionCable transport delivers a subscription's final update (unsubscribe with a value) but keeps the
+  # subscription registered. It is removed here once delivered, as GraphQL::Subscriptions#execute does.
+  class ActionCableSubscriptions < GraphQL::Subscriptions::ActionCableSubscriptions
+    def deliver(subscription_id, result)
+      super
+      delete_subscription(subscription_id) if result.context.namespace(:subscriptions)[:final_update]
+    end
+  end
+
   mutation(Types::MutationType)
   query(Types::QueryType)
   subscription(Types::GraphqlSubscriptionType)
 
-  use GraphQL::Subscriptions::ActionCableSubscriptions
+  use ActionCableSubscriptions
 
   # For batch-loading (see https://graphql-ruby.org/dataloader/overview.html)
   use GraphQL::Dataloader
@@ -19,6 +28,19 @@ class LagoApiSchema < GraphQL::Schema
       "Unprocessable Entity",
       extensions: {status: 422, code: "unprocessable_entity", details: {"base" => ["value_is_out_of_range"]}}
     )
+  end
+
+  # The schema is only described to clients (__schema, __type) in development and test, where
+  # the front codegen and the schema dump specs need it. Elsewhere it stays hidden unless
+  # LAGO_GRAPHQL_INTROSPECTION_ENABLED is set, for example on an API booted only to run codegen.
+  def self.introspection_enabled?(env: Rails.env, flag: ENV["LAGO_GRAPHQL_INTROSPECTION_ENABLED"])
+    env.development? || env.test? || ActiveModel::Type::Boolean.new.cast(flag) == true
+  end
+
+  unless introspection_enabled?
+    disable_introspection_entry_points
+    # Field name suggestions ("Did you mean ...?") would let a client rebuild the schema anyway.
+    did_you_mean nil
   end
 
   # GraphQL-Ruby calls this when something goes wrong while running a query:

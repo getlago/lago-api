@@ -84,6 +84,26 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
     it "changes the payment_due_date by 3 days" do
       expect { subject.call }.to change(invoice, :payment_due_date).by(3)
     end
+
+    context "when the invoice uses another billing entity" do
+      let(:invoice_billing_entity) { create(:billing_entity, organization: customer.organization) }
+      let(:invoice) do
+        create(
+          :invoice,
+          :draft,
+          customer:,
+          billing_entity: invoice_billing_entity,
+          issuing_date:,
+          expected_finalization_date:,
+          payment_due_date:,
+          applied_grace_period: 12
+        )
+      end
+
+      it "uses the invoice billing entity grace period" do
+        expect { subject.call }.to change(invoice, :applied_grace_period).to(15)
+      end
+    end
   end
 
   context "when going from 12 to 9 days" do
@@ -103,6 +123,38 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
 
     it "changes the payment_due_date by 3 days" do
       expect { subject.call }.to change(invoice, :payment_due_date).by(-3)
+    end
+  end
+
+  context "when the invoice has a snapshotted payment term" do
+    let(:invoice) do
+      create(:invoice, :draft, customer:, issuing_date:, expected_finalization_date:, payment_due_date:, applied_grace_period: 12,
+        payment_term: {term_type: "net", days: 5}, net_payment_term: 5)
+    end
+
+    let(:payment_due_date) { issuing_date + 5.days }
+    let(:new_grace_period) { 15 }
+
+    it "recomputes the due date from the snapshot and the new issuing date" do
+      subject.call
+
+      expect(invoice.payment_due_date).to eq(invoice.issuing_date + 5.days)
+    end
+  end
+
+  context "when the invoice has a non-net snapshotted term" do
+    let(:invoice) do
+      create(:invoice, :draft, customer:, issuing_date:, expected_finalization_date:, payment_due_date:, applied_grace_period: 12,
+        payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+    end
+
+    let(:payment_due_date) { issuing_date.end_of_month }
+    let(:new_grace_period) { 15 }
+
+    it "recomputes an end-of-month due date from the new issuing date" do
+      subject.call
+
+      expect(invoice.payment_due_date).to eq(invoice.issuing_date.to_date.end_of_month)
     end
   end
 

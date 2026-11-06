@@ -95,6 +95,75 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         )
       end
 
+      context "with a maximum aggregation timestamp" do
+        let(:max_timestamp) { Time.zone.parse("2027-01-20 23:59:59 UTC") }
+        let(:event) { nil }
+        let(:source) { described_class.new(billing_segment:, max_timestamp:) }
+
+        it "preserves the cutoff through pricing bucket sources and boundaries" do
+          bucket = source.pricing_buckets(event:).sole
+
+          expect(source.boundaries.max_timestamp).to eq(max_timestamp)
+          expect(bucket.boundaries.max_timestamp).to eq(max_timestamp)
+        end
+      end
+
+      context "with prorated recurring advance billing" do
+        let(:rate_card) { build(:rate_card, :advance, organization:, product:, currency: "USD", proration: true) }
+        let(:billable_metric) do
+          build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: true)
+        end
+        let(:proration_ratio) { 25.fdiv(31) }
+        let(:billing_segment) do
+          build(
+            :billing_segment,
+            organization:,
+            contract_rate_card:,
+            rate_card_rate:,
+            cycle_started_at: Time.zone.parse("2026-10-01"),
+            started_at: Time.zone.parse("2026-10-07"),
+            ended_at: Time.zone.parse("2026-10-31 23:59:59.999999"),
+            proration_ratio:
+          )
+        end
+
+        it "uses the full anchored cycle duration without changing the segment window" do
+          expect(boundaries).to have_attributes(
+            from_datetime: billing_segment.started_at,
+            to_datetime: billing_segment.ended_at,
+            charges_from_datetime: billing_segment.started_at,
+            charges_to_datetime: billing_segment.ended_at,
+            charges_duration: 31
+          )
+        end
+
+        context "with a nonrecurring metric" do
+          let(:billable_metric) do
+            build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: false)
+          end
+
+          it "keeps the segment duration" do
+            expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+          end
+        end
+
+        context "without proration" do
+          let(:rate_card) { build(:rate_card, :advance, organization:, product:, currency: "USD", proration: false) }
+
+          it "keeps the segment duration" do
+            expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+          end
+        end
+
+        context "with a zero proration ratio" do
+          let(:proration_ratio) { 0 }
+
+          it "safely keeps the segment duration" do
+            expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+          end
+        end
+      end
+
       context "with graduated pricing" do
         let(:rate_model) { "graduated" }
 
@@ -163,6 +232,62 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
       end
     end
+
+    context "with prorated recurring arrears billing" do
+      let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: true) }
+      let(:billable_metric) do
+        build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: true)
+      end
+      let(:proration_ratio) { 25.fdiv(31) }
+      let(:billing_segment) do
+        build(
+          :billing_segment,
+          organization:,
+          contract_rate_card:,
+          rate_card_rate:,
+          cycle_started_at: Time.zone.parse("2026-10-01"),
+          started_at: Time.zone.parse("2026-10-07"),
+          ended_at: Time.zone.parse("2026-10-31 23:59:59.999999"),
+          proration_ratio:
+        )
+      end
+
+      it "uses the full anchored cycle duration without changing the segment window" do
+        expect(boundaries).to have_attributes(
+          from_datetime: billing_segment.started_at,
+          to_datetime: billing_segment.ended_at,
+          charges_from_datetime: billing_segment.started_at,
+          charges_to_datetime: billing_segment.ended_at,
+          charges_duration: 31
+        )
+      end
+
+      context "with a nonrecurring metric" do
+        let(:billable_metric) do
+          build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: false)
+        end
+
+        it "keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+
+      context "without proration" do
+        let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: false) }
+
+        it "keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+
+      context "with a zero proration ratio" do
+        let(:proration_ratio) { 0 }
+
+        it "safely keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+    end
   end
 
   describe "fee identity" do
@@ -200,7 +325,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     let(:product) { create(:product, organization:, billable_metric:) }
     let(:product_filter) { create(:product_filter, organization:, product:) }
     let(:rate_card) { create(:rate_card, organization:, product:, product_filter:) }
-    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:, effective_date: Date.new(2026, 9, 1)) }
     let(:region_filter) do
       create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us])
     end
@@ -229,6 +354,14 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       it "returns the rate card product filter" do
         expect(pricing_buckets.sole).to have_attributes(product_filter:)
       end
+
+      context "when the explicit product filter is empty" do
+        before { product_filter.values.destroy_all }
+
+        it "does not create an empty-filter fee bucket" do
+          expect(pricing_buckets).to be_empty
+        end
+      end
     end
 
     context "when the event matches the rate card product filter" do
@@ -249,6 +382,41 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
 
       it "returns no pricing buckets" do
         expect(pricing_buckets).to be_empty
+      end
+    end
+
+    context "when a more specific product filter wins for the event" do
+      let(:event) do
+        build(:common_event, organization_id: organization.id, code: billable_metric.code,
+          properties: {"region" => "eu", "kind" => "paid"})
+      end
+
+      let(:precise_filter) { create(:product_filter, organization:, product:, created_at: 1.day.from_now) }
+      let(:precise_filter_priced) { true }
+
+      before do
+        kind_filter = create(:billable_metric_filter, organization:, billable_metric:, key: "kind", values: ["paid"])
+        create(:product_filter_value, organization:, product_filter: precise_filter,
+          billable_metric_filter: region_filter, value: "eu")
+        create(:product_filter_value, organization:, product_filter: precise_filter,
+          billable_metric_filter: kind_filter, value: "paid")
+        if precise_filter_priced
+          precise_rate_card = create(:rate_card, organization:, product:, product_filter: precise_filter)
+          create(:contract_rate_card, organization:, contract: contract_rate_card.contract, rate_card: precise_rate_card,
+            effective_date: Date.new(2026, 9, 1))
+        end
+      end
+
+      it "does not assign current usage to the less-specific rate-card filter bucket" do
+        expect(pricing_buckets).to be_empty
+      end
+
+      context "when the contract does not price the more specific filter" do
+        let(:precise_filter_priced) { false }
+
+        it "assigns the usage to the rate-card filter bucket" do
+          expect(pricing_buckets.sole).to have_attributes(product_filter:)
+        end
       end
     end
 
@@ -274,7 +442,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
 
     let(:source) { described_class.new(billing_segment:, product_filter:) }
     let(:product_filter) { nil }
-    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:, effective_date: Date.new(2026, 9, 1)) }
 
     it "memoizes the result per source without sharing it with a new filter source" do
       allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_return(BaseResult.new)
@@ -330,12 +498,18 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       context "with an explicit filter value" do
         let(:product_filter) { us_filter }
 
+        context "when the contract prices only the selected filter" do
+          let(:rate_card) { build(:rate_card, organization:, product:, product_filter: us_filter, currency: "USD") }
+
+          it "does not exclude the unpriced more specific filter" do
+            expect(service_result.matching_filters).to eq("region" => ["us"])
+            expect(service_result.ignored_filters).to eq([])
+          end
+        end
+
         it "excludes the more specific filter and the remaining configured region" do
           expect(service_result.matching_filters).to eq("region" => ["us"])
-          expect(service_result.ignored_filters).to match_array([
-            {"region" => ["us"], "size" => ["512"]},
-            {"region" => ["eu"]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"region" => ["us"], "size" => ["512"]}])
         end
 
         it "uses default-bucket exclusions when the selected filter is cleared" do

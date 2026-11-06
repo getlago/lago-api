@@ -13,7 +13,7 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
 
   describe ".call" do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { "https://api.nango.dev/v1/account-information" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
 
     let(:headers) do
       {
@@ -25,14 +25,16 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
 
     let(:aggregator_response) do
       path = Rails.root.join("spec/fixtures/integration_aggregator/account_information_response.json")
-      JSON.parse(File.read(path))
+      instance_double(Net::HTTPOK, body: File.read(path))
     end
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
         .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(lago_client)
-      allow(lago_client).to receive(:get).with(headers:).and_return(aggregator_response)
+      allow(lago_client).to receive(:post_with_response)
+        .with({action_name: "fetch-account-information", input: {}}, headers)
+        .and_return(aggregator_response)
     end
 
     it "successfully fetches account information" do
@@ -40,10 +42,18 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
       account_information = result.account_information
 
       expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-      expect(lago_client).to have_received(:get)
+      expect(lago_client).to have_received(:post_with_response)
       expect(account_information.id).to eq("1234567890")
     end
 
     it_behaves_like "throttles!", :hubspot
+
+    context "when the template returns the portal id as portalId" do
+      let(:aggregator_response) { instance_double(Net::HTTPOK, body: {portalId: 1234567890}.to_json) }
+
+      it "reads the portal id from portalId" do
+        expect(service.call.account_information.id).to eq("1234567890")
+      end
+    end
   end
 end

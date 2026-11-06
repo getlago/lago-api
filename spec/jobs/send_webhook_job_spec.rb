@@ -71,8 +71,9 @@ RSpec.describe SendWebhookJob do
       before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
       after { ENV.delete("SIDEKIQ_WEBHOOK") }
 
-      it "uses the high priority queue for alerts" do
-        expect(described_class.queue_for("alert.triggered")).to eq(:webhook_worker_high_priority)
+      it "uses the high priority queue for usage webhooks" do
+        expect(%w[alert.triggered alert.resolved subscription.usage_threshold_reached wallet.depleted_ongoing_balance].map { described_class.queue_for(it) })
+          .to eq(%i[webhook_worker_high_priority webhook_worker_high_priority webhook_worker_high_priority webhook_worker_high_priority])
       end
 
       it "uses the webhook_worker queue for other webhook types" do
@@ -87,6 +88,35 @@ RSpec.describe SendWebhookJob do
       it "enqueues other webhooks on the webhook_worker queue" do
         expect { described_class.perform_later("invoice.created", invoice) }
           .to have_enqueued_job(described_class).on_queue("webhook_worker")
+      end
+    end
+
+    context "when SIDEKIQ_WEBHOOK_ALERT is true" do
+      before { ENV["SIDEKIQ_WEBHOOK_ALERT"] = "true" }
+      after { ENV.delete("SIDEKIQ_WEBHOOK_ALERT") }
+
+      it "uses the webhook_alert_worker queue for usage webhooks" do
+        expect(%w[alert.triggered subscription.usage_threshold_reached wallet.depleted_ongoing_balance].map { described_class.queue_for(it) })
+          .to eq(%i[webhook_alert_worker webhook_alert_worker webhook_alert_worker])
+      end
+
+      it "uses the webhook queue for other webhook types" do
+        expect(described_class.queue_for("invoice.created")).to eq(:webhook)
+      end
+
+      context "when SIDEKIQ_WEBHOOK is true" do
+        before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
+        after { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+        it "keeps usage webhooks on the webhook_alert_worker queue" do
+          expect([described_class.queue_for("alert.triggered"), described_class.queue_for("invoice.created")])
+            .to eq(%i[webhook_alert_worker webhook_worker])
+        end
+      end
+
+      it "enqueues alert webhooks on the webhook_alert_worker queue" do
+        expect { described_class.perform_later("alert.triggered", triggered_alert) }
+          .to have_enqueued_job(described_class).on_queue("webhook_alert_worker")
       end
     end
   end
@@ -452,7 +482,7 @@ RSpec.describe SendWebhookJob do
       end
     end
 
-    context "when webhook_type is credit_note.provider_refund_failure" do
+    context "when webhook_type is credit_note.refund_failure" do
       let(:webhook_service) { instance_double(Webhooks::CreditNotes::PaymentProviderRefundFailureService) }
       let(:credit_note) { create(:credit_note) }
 
@@ -474,7 +504,7 @@ RSpec.describe SendWebhookJob do
 
       it "calls the webhook service" do
         described_class.perform_now(
-          "credit_note.provider_refund_failure",
+          "credit_note.refund_failure",
           credit_note,
           webhook_options
         )
@@ -528,10 +558,20 @@ RSpec.describe SendWebhookJob do
       end
     end
 
-    context "with not implemented webhook type" do
-      it "raises a NotImplementedError" do
-        expect { send_webhook_job.perform_now(:subscription, invoice) }
-          .to raise_error(NotImplementedError)
+    context "with a webhook type this process does not know" do
+      it "retries the job instead of dropping the event" do
+        expect { send_webhook_job.perform_now("unknown.type", invoice) }
+          .to have_enqueued_job(described_class).with("unknown.type", invoice)
+      end
+
+      context "when the last attempt fails" do
+        let(:job) { described_class.new("unknown.type", invoice) }
+
+        before { job.exception_executions["[SendWebhookJob::UnknownWebhookTypeError]"] = 4 }
+
+        it "gives up" do
+          expect { job.perform_now }.to raise_error(SendWebhookJob::UnknownWebhookTypeError, "unknown.type")
+        end
       end
     end
 
@@ -765,6 +805,22 @@ RSpec.describe SendWebhookJob do
       end
     end
 
+    context "with add_on webhooks" do
+      let(:object) { create(:add_on, organization:) }
+
+      it_behaves_like "a webhook service",
+        "add_on.created",
+        Webhooks::AddOns::CreatedService
+
+      it_behaves_like "a webhook service",
+        "add_on.updated",
+        Webhooks::AddOns::UpdatedService
+
+      it_behaves_like "a webhook service",
+        "add_on.deleted",
+        Webhooks::AddOns::DeletedService
+    end
+
     context "with billable metric webhooks" do
       let(:object) { create(:billable_metric, organization:) }
 
@@ -779,6 +835,26 @@ RSpec.describe SendWebhookJob do
       it_behaves_like "a webhook service",
         "billable_metric.deleted",
         Webhooks::BillableMetrics::DeletedService
+    end
+
+    context "with coupon webhooks" do
+      let(:object) { create(:coupon, organization:) }
+
+      it_behaves_like "a webhook service",
+        "coupon.created",
+        Webhooks::Coupons::CreatedService
+
+      it_behaves_like "a webhook service",
+        "coupon.updated",
+        Webhooks::Coupons::UpdatedService
+
+      it_behaves_like "a webhook service",
+        "coupon.deleted",
+        Webhooks::Coupons::DeletedService
+
+      it_behaves_like "a webhook service",
+        "coupon.terminated",
+        Webhooks::Coupons::TerminatedService
     end
 
     context "with quote webhooks" do
@@ -851,6 +927,44 @@ RSpec.describe SendWebhookJob do
 
         expect(Webhooks::DunningCampaigns::FinishedService).to have_received(:new)
         expect(webhook_service).to have_received(:call)
+      end
+    end
+
+    context "with product catalog deletion" do
+      let(:product) { create(:product, :standalone, organization:) }
+
+      before do
+        product.discard
+      end
+
+      context "when product catalog is enabled" do
+        let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: "http://foo.bar") }
+
+        before { allow(V2::ProductSerializer).to receive(:new).and_call_original }
+
+        it "serializes the discarded product with its current state at delivery time" do
+          expect do
+            described_class.perform_later("product.deleted", product)
+            product.update!(name: "Changed before delivery")
+            perform_enqueued_jobs(only: described_class)
+          end.to change(Webhook, :count).by(1)
+
+          webhook = Webhook.order(created_at: :desc).first
+          expect(webhook.object_id).to eq(product.id)
+          expect(V2::ProductSerializer).to have_received(:new).with(product, root_name: "product")
+          expect(webhook.payload.fetch("product")).to include("name" => "Changed before delivery")
+        end
+      end
+
+      context "when product catalog is disabled" do
+        let(:organization) { create(:organization, webhook_url: "http://foo.bar") }
+
+        it "does not create a webhook for the wildcard endpoint" do
+          expect do
+            described_class.perform_later("product.deleted", product)
+            perform_enqueued_jobs(only: described_class)
+          end.not_to change(Webhook, :count)
+        end
       end
     end
   end

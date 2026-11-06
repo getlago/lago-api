@@ -67,6 +67,16 @@ RSpec.describe PaymentIntents::FetchService do
 
           expect(result.payment_intent.provider_session_id).to eq("cs_123")
         end
+
+        context "with a provider that returns no checkout session" do
+          let(:payment_provider_service) { class_double(Invoices::Payments::AdyenService) }
+          let(:generate_payment_url_result) { Invoices::Payments::AdyenService::RESULTS.fetch(:generate_payment_url).new }
+
+          it "saves the payment URL without a session id" do
+            expect(result).to be_success
+            expect(result.payment_intent).to have_attributes(payment_url:, provider_session_id: nil)
+          end
+        end
       end
 
       context "when payment provider fails to generate URL" do
@@ -94,6 +104,31 @@ RSpec.describe PaymentIntents::FetchService do
           expect(result).to be_success
           expect(result.payment_intent.payment_url).to eq(payment_url)
           expect(payment_provider_service).to have_received(:call!).with(:generate_payment_url, invoice, instance_of(PaymentIntent))
+        end
+      end
+
+      context "when a concurrent request creates the active intent first" do
+        let(:non_expired) { instance_double(ActiveRecord::Relation) }
+        let(:database_error) { PG::UniqueViolation.new("duplicate value") }
+        let(:constraint) { "index_payment_intents_on_invoice_id_and_status" }
+
+        before do
+          allow(database_error).to receive(:result).and_return(instance_double(PG::Result, error_field: constraint))
+          allow(PaymentIntent).to receive(:non_expired).and_return(non_expired)
+          allow(non_expired).to receive(:find_or_create_by!) { raise ActiveRecord::RecordNotUnique, "duplicate value", cause: database_error }
+        end
+
+        it "returns a lock failure, which a retry overcomes" do
+          expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+          expect(payment_provider_service).not_to have_received(:call!)
+        end
+
+        context "with another unique violation" do
+          let(:constraint) { "payment_intents_pkey" }
+
+          it "does not hide the database error" do
+            expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+          end
         end
       end
     end

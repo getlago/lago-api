@@ -12,19 +12,25 @@ module Integrations
           super(invoice:)
         end
 
-        def action_path
-          "v1/#{provider}/creditnotes"
+        def action_name
+          case provider
+          when "netsuite"
+            "netsuite-create-credit-note"
+          when "xero"
+            "xero-create-credit-note"
+          end
         end
 
         def call
           return result unless integration
           return result unless integration.sync_credit_notes
           return result unless credit_note.finalized?
+          return result if invoice.product_catalog?
           return result if payload.integration_credit_note
 
           throttle!(:anrok, :netsuite, :xero)
 
-          response = http_client.post_with_response(payload.body, headers)
+          response = trigger_action(payload.body)
           body = JSON.parse(response.body)
 
           if body.is_a?(Hash)
@@ -46,7 +52,7 @@ module Integrations
 
           result
         rescue LagoHttpClient::HttpError => e
-          raise RequestLimitError(e) if request_limit_error?(e)
+          raise RequestLimitError.new(e) if request_limit_error?(e)
 
           code = code(e)
           message = message(e)

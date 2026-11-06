@@ -32,7 +32,7 @@ module Types
         return false if context[:current_user].nil?
 
         context[:current_user].organizations.include?(object) &&
-          object.authentication_methods.include?(context[:login_method])
+          object.accessible_by_session?(**context[:session_claims].to_h)
       end
     end
   end

@@ -203,6 +203,47 @@ RSpec.describe CursorPagination::Page do
       expect(backward).to eq(products)
     end
 
+    context "with a sort on the issuing date" do
+      let(:sort) { {issuing_date: :desc, created_at: :desc, id: :desc} }
+      let(:customer) { create(:customer, organization:) }
+
+      # Ties on the issuing date, then on the timestamp, so that pages break on each.
+      let(:invoices) do
+        [[0, 0], [0, 0], [0, 1], [1, 0], [1, 0], [1, 1]]
+          .map { |days, seconds| create(:invoice, customer:, issuing_date: Date.new(2026, 9, 28) - days, created_at: created_at - seconds) }
+          .sort_by { [it.issuing_date, it.created_at, it.id] }.reverse
+      end
+
+      before { invoices }
+
+      def fetch(params)
+        cursor = CursorPagination::Cursor.new(table: "invoices", sort:, limit: 2, **params)
+        described_class.new(records: CursorPagination::Keyset.apply(Invoice.where(organization:), cursor), cursor:)
+      end
+
+      it "returns every row exactly once, forward then backward" do
+        forward = []
+        current = fetch({})
+        loop do
+          forward.concat(current.records)
+          break unless current.meta[:next_cursor]
+
+          current = fetch(after: current.meta[:next_cursor])
+        end
+
+        backward = []
+        loop do
+          backward.unshift(*current.records)
+          break unless current.meta[:prev_cursor]
+
+          current = fetch(before: current.meta[:prev_cursor])
+        end
+
+        expect(forward).to eq(invoices)
+        expect(backward).to eq(invoices)
+      end
+    end
+
     it "keeps every row that existed throughout despite inserts and deletes between pages" do
       first = fetch({})
       next_cursor = first.meta[:next_cursor]

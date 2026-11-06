@@ -95,6 +95,84 @@ RSpec.describe Customers::UpsertFromApiService do
     )
   end
 
+  context "when net_payment_term is provided" do
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        external_id:,
+        net_payment_term: 30,
+        payment_term: {"term_type" => "net", "days" => 30}
+      )
+    end
+
+    before do
+      customer
+      create_args[:net_payment_term] = 45
+    end
+
+    it "writes the structured payment term alias" do
+      expect(result.customer).to have_attributes(
+        net_payment_term: 45,
+        payment_term: {"term_type" => "net", "days" => 45}
+      )
+    end
+  end
+
+  context "when net_payment_term is cleared" do
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        external_id:,
+        net_payment_term: 30,
+        payment_term: {"term_type" => "net", "days" => 30}
+      )
+    end
+
+    let(:create_args) { {external_id:, net_payment_term: nil} }
+
+    before { customer }
+
+    it "clears the structured payment term alias" do
+      expect(result.customer).to have_attributes(net_payment_term: nil, payment_term: nil)
+    end
+  end
+
+  context "when payment_term is provided" do
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        external_id:,
+        net_payment_term: 30,
+        payment_term: {"term_type" => "net", "days" => 30}
+      )
+    end
+
+    before do
+      customer
+      create_args[:payment_term] = {term_type: "day_of_month", day_of_month: 15}
+    end
+
+    it "writes the structured term with a null alias" do
+      expect(result.customer).to have_attributes(
+        net_payment_term: nil,
+        payment_term: {"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1}
+      )
+    end
+  end
+
+  context "when payment_term has an invalid shape" do
+    before { create_args[:payment_term] = {term_type: "fortnightly"} }
+
+    it "returns a validation failure" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages[:payment_term]).to eq(["invalid_term_type"])
+    end
+  end
+
   it "calls SendWebhookJob with customer.created" do
     customer = result.customer
 
@@ -390,6 +468,61 @@ RSpec.describe Customers::UpsertFromApiService do
       it "keeps the existing customer tax" do
         expect(result).to be_success
         expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_fr_standard"])
+      end
+    end
+  end
+
+  context "when a non EU customer without tax identification number has a custom tax" do
+    let_it_be(:eu_billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+    let_it_be(:exempt_tax) { create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0) }
+    let_it_be(:custom_tax) { create(:tax, organization:, code: "uk_vat", rate: 20.0) }
+
+    context "when the customer is created with the custom tax" do
+      let(:create_args) { {external_id:, country: "GB", billing_entity_code: eu_billing_entity.code, tax_codes: ["uk_vat"]} }
+
+      it "applies the custom tax only" do
+        expect(result).to be_success
+        expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+      end
+    end
+
+    context "when the customer already has the custom tax" do
+      let(:customer) do
+        create(:customer, organization:, external_id:, billing_entity: eu_billing_entity, country: "GB", zipcode: "SW1A 1AA", tax_identification_number: nil)
+      end
+
+      before { create(:customer_applied_tax, organization:, customer:, tax: custom_tax) }
+
+      context "when the name changes" do
+        let(:create_args) { {external_id:, name: "New name"} }
+
+        it "keeps the custom tax" do
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+        end
+      end
+
+      context "when the zipcode changes without tax codes" do
+        let(:create_args) { {external_id:, zipcode: "EC1A 1BB"} }
+
+        it "keeps the custom tax" do
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+        end
+      end
+    end
+
+    context "when the custom tax is added to an exempt customer" do
+      let(:customer) do
+        create(:customer, organization:, external_id:, billing_entity: eu_billing_entity, country: "GB", tax_identification_number: nil)
+      end
+      let(:create_args) { {external_id:, tax_codes: ["uk_vat"]} }
+
+      before { create(:customer_applied_tax, organization:, customer:, tax: exempt_tax) }
+
+      it "replaces the exemption with the custom tax" do
+        expect(result).to be_success
+        expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
       end
     end
   end
@@ -1400,6 +1533,7 @@ RSpec.describe Customers::UpsertFromApiService do
       organization.update(eu_tax_management: true)
 
       eu_tax_result.tax_code = tax_code
+      eu_tax_result.tax_codes = [tax_code]
       allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
     end
 

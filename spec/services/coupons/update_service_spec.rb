@@ -48,6 +48,12 @@ RSpec.describe Coupons::UpdateService do
       expect(Utils::ActivityLog).to have_produced("coupon.updated").after_commit.with(coupon)
     end
 
+    it "enqueues a coupon.updated webhook" do
+      result = update_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("coupon.updated", result.coupon)
+    end
+
     context "with validation error" do
       let(:name) { nil }
 

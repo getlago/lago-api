@@ -29,6 +29,8 @@ module Webhooks
       Errno::ECONNREFUSED,
       Errno::EPIPE,
       Errno::EHOSTUNREACH,
+      Errno::ENETUNREACH,
+      Errno::EADDRNOTAVAIL,
       OpenSSL::SSL::SSLError,
       SocketError,
       EOFError => e

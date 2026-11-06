@@ -31,6 +31,7 @@ RSpec.describe Webhooks::Invoices::CreatedService do
 
   describe ".call" do
     it_behaves_like "creates webhook", "invoice.created", "invoice", {"fees" => Array, "credits" => Array}
+    it_behaves_like "sends the catalog invoice on v2"
 
     it "includes presentation_breakdowns in fees" do
       webhook_service.call

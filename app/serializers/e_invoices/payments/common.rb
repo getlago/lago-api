@@ -11,7 +11,7 @@ module EInvoices
 
       def credits_and_payments(&block)
         case payment.payment_type
-        when Payment::PAYMENT_TYPES[:manual]
+        when Payment::PAYMENT_TYPES[:manual], Payment::PAYMENT_TYPES[:x402]
           yield EInvoices::BaseSerializer::STANDARD_PAYMENT, Money.new(payment.amount_cents)
         when Payment::PAYMENT_TYPES[:provider]
           yield EInvoices::BaseSerializer::CREDIT_CARD_PAYMENT, Money.new(payment.amount_cents)
@@ -25,7 +25,13 @@ module EInvoices
       end
 
       def payment_mode
-        payment.payment_type_manual? ? "Manual" : payment.payment_provider_type
+        if payment.payment_type_manual?
+          "Manual"
+        elsif payment.payment_type_x402?
+          "x402"
+        else
+          payment.payment_provider_type
+        end
       end
     end
   end

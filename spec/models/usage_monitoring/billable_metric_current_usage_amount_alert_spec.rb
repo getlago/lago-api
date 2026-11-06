@@ -21,4 +21,26 @@ RSpec.describe UsageMonitoring::BillableMetricCurrentUsageAmountAlert do
       expect(subject).to eq(8)
     end
   end
+
+  describe "#window_resets_each_period?" do
+    let(:alert) do
+      create(:billable_metric_current_usage_amount_alert, subscription_external_id: "test", billable_metric:)
+    end
+
+    context "when the metric is not recurring" do
+      let(:billable_metric) { create(:sum_billable_metric) }
+
+      it "resets" do
+        expect(alert.window_resets_each_period?(nil)).to be true
+      end
+    end
+
+    context "when the metric is recurring" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring) }
+
+      it "keeps the baseline" do
+        expect(alert.window_resets_each_period?(nil)).to be false
+      end
+    end
+  end
 end

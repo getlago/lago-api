@@ -16,14 +16,38 @@ Rails.application.routes.draw do
   get "/health", to: "application#health"
   get "/ready", to: "application#ready"
 
+  get "/documents/:signed_id/*filename", to: "documents#show", as: :document
+
   namespace :api do
     namespace :v1 do
+      resources :activity_logs, param: :activity_id, only: %i[index show]
+      resources :api_logs, param: :request_id, only: %i[index show]
+      resources :security_logs, param: :log_id, only: %i[index show]
       draw(:shared_api)
     end
 
-    # Drawn first so catalog routes win recognition; everything else on /api/v2
+    # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
+      resources :billable_metrics, param: :code, code: /.*/, only: %i[index show create update destroy]
+      resources :billing_entities, param: :code, constraints: {code: /[^\/]+/}, only: %i[index show create update]
+      resources :payments, only: %i[index show create]
+      resources :payment_requests, only: %i[index show create]
+      get "/organizations", to: "organizations#show"
+      put "/organizations", to: "organizations#update"
+      resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy] do
+        scope module: :customers do
+          post :checkout_url, to: "checkout_urls#create"
+          resources :invoices, only: :index
+          resources :credit_notes, only: :index
+          resources :payments, only: :index
+          resources :payment_requests, only: :index
+          resources :payment_methods, only: %i[index destroy] do
+            put :set_as_default, on: :member
+          end
+        end
+      end
+      resources :taxes, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end
@@ -42,6 +66,7 @@ Rails.application.routes.draw do
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
+        get :current_usage, on: :member, to: "contracts/usage#current"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
@@ -51,6 +76,46 @@ Rails.application.routes.draw do
       # A contract is never destroyed — DELETE ends its lifecycle, the same
       # idiom subscriptions follow.
       delete "/contracts/:external_id", to: "contracts#terminate", constraints: {external_id: /[^\/]+/}
+      resources :invoices, only: %i[index show update destroy] do
+        post :void, on: :member
+        post :lose_dispute, on: :member
+        post :download_pdf, on: :member
+        post :resend_email, on: :member
+        post :retry_taxes, on: :member
+        post :retry_payment, on: :member
+        post :payment_url, on: :member, to: "invoices/payment_urls#create"
+        put :refresh, on: :member
+        put :finalize, on: :member
+      end
+      resources :credit_notes, only: %i[index show create update] do
+        post :download_pdf, on: :member
+        post :download_xml, on: :member
+        post :resend_email, on: :member
+        put :void, on: :member
+        post :estimate, on: :collection
+        scope module: :credit_notes do
+          resource :metadata, only: %i[create update destroy] do
+            delete ":key", action: :destroy_key, on: :member
+          end
+        end
+      end
+      resources :fees, only: %i[index show update destroy]
+      resources :payment_receipts, only: %i[index show] do
+        post :resend_email, on: :member
+      end
+      resources :webhook_endpoints, only: %i[index show create update destroy]
+      # The v2 log endpoints have their own route here and a matching v1 route
+      # above, rather than a shared definition, so each version maps to its own
+      # controller (v2 for the cursor pagination and v2 error body).
+      resources :activity_logs, param: :activity_id, only: %i[index show]
+      resources :api_logs, param: :request_id, only: %i[index show]
+      resources :security_logs, param: :log_id, only: %i[index show]
+      # An invoice route v2 does not serve is unknown on v2, not a v1 fallback.
+      match "invoices(/*path)", to: "/application#not_found", via: :all
+      match "billable_metrics(/*path)", to: "/application#not_found", via: :all
+      # Credit-note paths are native v2 only when explicitly routed above. Do not
+      # let unsupported actions fall through to their v1 beta equivalents.
+      match "credit_notes(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do
@@ -65,6 +130,11 @@ Rails.application.routes.draw do
     post "gocardless/:organization_id", to: "webhooks#gocardless", on: :collection, as: :gocardless
     post "adyen/:organization_id", to: "webhooks#adyen", on: :collection, as: :adyen
     post "moneyhash/:organization_id", to: "webhooks#moneyhash", on: :collection, as: :moneyhash
+  end
+
+  namespace :x402 do
+    get "invoice_payments/:token", to: "invoice_payments#show", as: :invoice_payment
+    post "invoice_payments/:token", to: "invoice_payments#create"
   end
 
   if Rails.env.local?

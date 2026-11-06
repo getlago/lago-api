@@ -55,7 +55,7 @@ RSpec.describe Mutations::PaymentProviders::Cashfree::Create do
     expect(result_data["code"]).to eq(code)
     expect(result_data["name"]).to eq(name)
     expect(result_data["clientId"]).to eq(client_id)
-    expect(result_data["clientSecret"]).to eq(client_secret)
+    expect(result_data["clientSecret"]).to eq("••••••••…456")
     expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
   end
 end

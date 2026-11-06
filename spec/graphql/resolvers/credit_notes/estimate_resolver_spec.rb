@@ -80,6 +80,71 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
     expect(estimate_response["appliedTaxes"]).to be_blank
   end
 
+  context "with a contract product fee" do
+    before { Organization.find(organization.id).enable_feature_flag!(:product_catalog) }
+
+    let(:invoice) do
+      create(:invoice, organization: contract_organization, customer:, payment_status: :succeeded, currency: "EUR", status: :finalized,
+        fees_amount_cents: 100, total_amount_cents: 100, total_paid_amount_cents: 100, taxes_amount_cents: 0,
+        version_number: 3)
+    end
+    let(:contract_organization) { Organization.find(organization.id) }
+    let(:graphql_organization) { Organization.find(organization.id) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
+    let(:fee) do
+      create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100, taxes_rate: 0,
+        invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, taxes_amount_cents: 0,
+        taxes_precise_amount_cents: 0)
+    end
+    let(:other_organization) { create(:organization) }
+    let(:other_customer) { create(:customer, organization: other_organization) }
+    let(:other_invoice) { create(:invoice, organization: other_organization, customer: other_customer) }
+    let(:other_contract) { create(:contract, organization: other_organization, customer: other_customer) }
+    let(:other_rate_card) { create(:contract_rate_card, organization: other_organization, contract: other_contract) }
+    let(:other_rate_card_rate) { create(:rate_card_rate, organization: other_organization, rate_card: other_rate_card.rate_card) }
+    let(:foreign_fee) do
+      create(:fee, invoice: other_invoice, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100,
+        invoiceable: other_rate_card.rate_card.product, contract: other_contract, contract_rate_card: other_rate_card,
+        rate_card_rate: other_rate_card_rate, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+    end
+
+    it "estimates a partial credit without requiring a subscription" do
+      result = execute_graphql(current_user: membership.user, current_organization: graphql_organization,
+        permissions: "credit_notes:create", query:,
+        variables: {invoiceId: invoice.id, items: [{feeId: fee.id, amountCents: 40}]})
+
+      estimate = result.dig("data", "creditNoteEstimate")
+      expect(estimate["subTotalExcludingTaxesAmountCents"]).to eq("40")
+      expect(estimate["items"].sole.dig("fee", "id")).to eq(fee.id)
+      expect(invoice.reload).to have_attributes(status: "finalized", total_amount_cents: 100)
+    end
+
+    context "when the product catalog flag is disabled" do
+      before { Organization.find(organization.id).disable_feature_flag!(:product_catalog) }
+
+      it "rejects the estimate" do
+        result = nil
+        expect do
+          result = execute_graphql(current_user: membership.user, current_organization: graphql_organization,
+            permissions: "credit_notes:create", query:,
+            variables: {invoiceId: invoice.id, items: [{feeId: fee.id, amountCents: 40}]})
+        end.not_to change(CreditNote, :count)
+
+        expect(result.dig("errors", 0, "extensions", "code")).to eq("feature_unavailable")
+      end
+    end
+
+    it "rejects a fee ID from another organization" do
+      result = execute_graphql(current_user: membership.user, current_organization: graphql_organization,
+        permissions: "credit_notes:create", query:,
+        variables: {invoiceId: invoice.id, items: [{feeId: foreign_fee.id, amountCents: 40}]})
+
+      expect_not_found(result)
+    end
+  end
+
   context "with invalid invoice" do
     it "returns an error" do
       result = execute_graphql(

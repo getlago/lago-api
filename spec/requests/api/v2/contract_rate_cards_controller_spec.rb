@@ -7,6 +7,12 @@ RSpec.describe Api::V2::ContractRateCardsController do
   let(:customer) { create(:customer, organization:, currency: "EUR") }
   let(:contract) { create(:contract, :pending, organization:, customer:) }
   let(:rate_card) { create(:rate_card, organization:, currency: "EUR") }
+  let(:flat_keys) do
+    %i[
+      lago_id external_contract_id rate_card_code units effective_date billing_anchor_date next_billing_at
+      created_at updated_at deleted_at
+    ]
+  end
 
   describe "POST /api/v2/contracts/:external_id/applied_rate_cards" do
     subject { post_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards", {applied_rate_card: create_params}) }
@@ -23,7 +29,8 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:applied_rate_card][:lago_id]).to be_present
       expect(json[:applied_rate_card][:external_contract_id]).to eq(contract.external_id)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
-      expect(json[:applied_rate_card][:rate_phases_count]).to eq(1)
+      expect(json[:applied_rate_card].keys).to eq(flat_keys)
+      expect(ContractRateCard.find(json[:applied_rate_card][:lago_id]).rate_phases.count).to eq(1)
     end
 
     context "when the contract does not exist" do
@@ -31,7 +38,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 
@@ -40,7 +47,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
 
@@ -83,7 +90,24 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { it[:lago_id] }).to eq([contract_rate_card.id])
+      expect(json[:applied_rate_cards].sole.keys).to eq(flat_keys)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "with include_total_count" do
+      subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards", {include_total_count: true}) }
+
+      before do
+        create(:contract_rate_card, organization:, contract:)
+        create(:contract_rate_card, organization:, contract:, deleted_at: Time.current)
+      end
+
+      it "counts the kept rate cards of the contract" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 2)
+      end
     end
 
     context "with an invalid limit and an unknown contract" do
@@ -103,6 +127,11 @@ RSpec.describe Api::V2::ContractRateCardsController do
       # Rendered under the same collection name, from another table.
       let(:other_table_record) { create(:plan_rate_card, organization:) }
     end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :applied_rate_cards do
+      let(:filtered_path) { "/api/v2/contracts/#{contract.external_id}/applied_rate_cards" }
+      let(:create_filtered_record) { ->(created_at) { create(:contract_rate_card, organization:, contract:, created_at:) } }
+    end
   end
 
   describe "GET /api/v2/contracts/:external_id/applied_rate_cards/:code" do
@@ -119,6 +148,8 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:lago_id]).to eq(contract_rate_card.id)
+      expect(json[:applied_rate_card]).to include(deleted_at: nil)
+      expect(json[:applied_rate_card].keys).to eq(flat_keys)
     end
 
     # A finished schedule has no next instant, and the payload has to say so rather than raise.
@@ -137,7 +168,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("applied_rate_card")
+        expect(response).to be_v2_not_found_error("applied_rate_card")
       end
     end
   end
@@ -169,6 +200,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(contract_rate_card.reload.discarded?).to be(true)
+      expect(json[:applied_rate_card][:deleted_at]).to eq(contract_rate_card.deleted_at.iso8601(6))
     end
   end
 end

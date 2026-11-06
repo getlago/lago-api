@@ -73,6 +73,14 @@ RSpec.describe EInvoices::Payments::Cii::Builder do
           it "contains the notes" do
             expect(subject.xpath("#{root}/ram:IncludedNote/ram:Content").length).to eq(1)
           end
+
+          context "with an x402 payment" do
+            let(:payment) { create(:payment, :x402_payment, customer:, payable: invoice, currency: "BRL", amount_cents: 1000) }
+
+            it "names x402 as the payment mode" do
+              expect(subject.xpath("#{root}/ram:IncludedNote/ram:Content").text).to include("received via x402 for invoice INV-24680-OIC-E")
+            end
+          end
         end
       end
     end
@@ -213,6 +221,19 @@ RSpec.describe EInvoices::Payments::Cii::Builder do
           end
         end
       end
+
+      context "when payment is x402" do
+        let(:payment) { create(:payment, :x402_payment, customer:, payable: invoice, currency: "BRL", amount_cents: 1000) }
+
+        it "contains TypeCode" do
+          expect(subject).to contains_xml_node("//ram:SpecifiedTradeSettlementPaymentMeans/ram:TypeCode")
+            .with_value(described_class::STANDARD_PAYMENT)
+        end
+
+        it "does not contains card attributes" do
+          expect(subject).not_to contains_xml_node("//ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeSettlementFinancialCard")
+        end
+      end
     end
 
     context "when ApplicableTradeTax tag" do
@@ -241,6 +262,14 @@ RSpec.describe EInvoices::Payments::Cii::Builder do
         expect(subject).to contains_xml_node("//ram:SpecifiedTradePaymentTerms//udt:DateTimeString")
           .with_value(payment.created_at.strftime(described_class::DATEFORMAT))
           .with_attribute("format", described_class::CCYYMMDD)
+      end
+
+      context "with an x402 payment" do
+        let(:payment) { create(:payment, :x402_payment, customer:, payable: invoice, currency: "BRL", amount_cents: 1000) }
+
+        it "describes an x402 payment" do
+          expect(subject.xpath("//ram:SpecifiedTradePaymentTerms/ram:Description").text).to start_with("X402 payment received on")
+        end
       end
     end
 

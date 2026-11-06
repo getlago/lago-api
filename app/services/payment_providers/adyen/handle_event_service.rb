@@ -45,14 +45,14 @@ module PaymentProviders
           return result if event["success"] != "true"
 
           provider_payment_id = event["originalReference"]
-          payment = Payment.find_by(provider_payment_id:) if provider_payment_id
+          payment = Payment.find_by(provider_payment_id:, organization_id: organization.id) if provider_payment_id
           return result unless payment
 
           metadata = {lago_payable_type: payment.payable_type}
           service_klass = payment_service_klass(metadata)
           service_klass.call!(
             :update_payment_status,
-            **organization_params(service_klass),
+            organization_id: organization.id,
             provider_payment_id:,
             status: "Cancelled",
             metadata:
@@ -63,7 +63,7 @@ module PaymentProviders
           provider_refund_id = event["pspReference"]
           status = (event["success"] == "true") ? :succeeded : :failed
 
-          result = service.update_status(provider_refund_id:, status:)
+          result = service.update_status(organization_id: organization.id, provider_refund_id:, status:)
           result.raise_if_error!
         when "CHARGEBACK"
           PaymentProviders::Adyen::Webhooks::ChargebackService.call(
@@ -77,7 +77,7 @@ module PaymentProviders
 
           provider_refund_id = event["pspReference"]
 
-          result = service.update_status(provider_refund_id:, status: :failed)
+          result = service.update_status(organization_id: organization.id, provider_refund_id:, status: :failed)
           result.raise_if_error!
         end
       end
@@ -103,22 +103,12 @@ module PaymentProviders
         service_klass = payment_service_klass(metadata)
         service_klass.call!(
           :update_payment_status,
-          **organization_params(service_klass),
+          organization_id: organization.id,
           provider_payment_id:,
           status:,
           amount_cents: event.dig("amount", "value"),
           metadata:
         )
-      end
-
-      # NOTE: only the invoice service scopes its payable lookup by organization,
-      #       the payment request one still resolves its payable without it.
-      def organization_params(service_klass)
-        if service_klass == Invoices::Payments::AdyenService
-          {organization_id: organization.id}
-        else
-          {}
-        end
       end
 
       def payment_service_klass(metadata)

@@ -9,8 +9,7 @@ RSpec.describe Mutations::PasswordResets::Create do
   let_it_be(:membership) { create_default(:membership, organization:) }
   let(:user) { membership.user }
   let(:email) { user.email }
-  # A fresh store per example: other specs can leave a memory store in Rails.cache, and the counters
-  # would then carry over between examples.
+  # A fresh store per example, so the counters do not carry over between examples.
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
 
   let(:mutation) do
@@ -23,7 +22,7 @@ RSpec.describe Mutations::PasswordResets::Create do
     GQL
   end
 
-  before { allow(Rails).to receive(:cache).and_return(cache) }
+  before { Auth::AttemptsThrottle.store = cache }
 
   def request_reset(email)
     execute_graphql(query: mutation, variables: {input: {email:}})
@@ -81,6 +80,23 @@ RSpec.describe Mutations::PasswordResets::Create do
       result = nil
       expect { result = request_reset(email) }.not_to have_enqueued_job(PasswordResets::CreateJob)
       expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+    end
+
+    context "when the requests come from one client IP" do
+      let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+
+      def request_reset(email)
+        execute_graphql(query: mutation, request:, variables: {input: {email:}})
+      end
+
+      it "allows 10 requests per hour across emails" do
+        expect { 10.times { |i| request_reset("user-#{i}@example.com") } }
+          .to have_enqueued_job(PasswordResets::CreateJob).exactly(10).times
+
+        result = nil
+        expect { result = request_reset(email) }.not_to have_enqueued_job(PasswordResets::CreateJob)
+        expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+      end
     end
   end
 end

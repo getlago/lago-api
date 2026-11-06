@@ -9,6 +9,32 @@ RSpec.describe Invite do
 
   it_behaves_like "paper_trail traceable"
 
+  describe "#existing_user?" do
+    context "when a user with the invited email exists" do
+      before { create(:user, email: invite.email) }
+
+      it "returns true" do
+        expect(invite).to be_existing_user
+      end
+    end
+
+    context "when a user with the invited email exists with a different case" do
+      subject(:invite) { create(:invite, email: "Invited@example.com") }
+
+      before { create(:user, email: "invited@example.com") }
+
+      it "returns true" do
+        expect(invite).to be_existing_user
+      end
+    end
+
+    context "when no user with the invited email exists" do
+      it "returns false" do
+        expect(invite).not_to be_existing_user
+      end
+    end
+  end
+
   describe "#mark_as_revoked" do
     it "revokes the invite with a Time" do
       freeze_time do

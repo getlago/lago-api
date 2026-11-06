@@ -3,7 +3,7 @@
 module Api
   module V1
     module X402
-      class BaseController < Api::BaseController
+      class BaseController < Api::V1::BaseController
         include PremiumFeatureOnly
 
         before_action :ensure_x402_payments_enabled

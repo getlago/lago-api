@@ -12,6 +12,7 @@ module V1
         issuing_date: model.issuing_date&.iso8601,
         payment_due_date: model.payment_due_date&.iso8601,
         net_payment_term: model.net_payment_term,
+        payment_term: model.snapshotted_payment_term&.to_h,
         invoice_type: model.invoice_type,
         status: model.status,
         payment_status: model.payment_status,
@@ -33,7 +34,9 @@ module V1
         prepaid_granted_credit_amount_cents: model.prepaid_granted_credit_amount_cents,
         prepaid_purchased_credit_amount_cents: model.prepaid_purchased_credit_amount_cents,
         file_url: model.file_url,
+        file_url_expires_at: model.file_url_expires_at&.iso8601,
         xml_url: model.xml_url,
+        xml_url_expires_at: model.xml_url_expires_at&.iso8601,
         web_url: model.web_url,
         version_number: model.version_number,
         self_billed: model.self_billed,
@@ -41,6 +44,8 @@ module V1
         updated_at: model.updated_at.iso8601,
         voided_at: model.voided_at&.iso8601
       }
+
+      payload[:x402_payment_url] = model.x402_payment_url if model.organization.x402_payments_enabled?
 
       payload.merge!(customer) if include?(:customer)
       payload.merge!(subscriptions) if include?(:subscriptions)

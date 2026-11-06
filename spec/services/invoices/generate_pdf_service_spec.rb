@@ -132,6 +132,33 @@ RSpec.describe Invoices::GeneratePdfService do
       end
     end
 
+    context "when invoice comes from the product catalog" do
+      let(:invoice) do
+        create(:invoice, :self_billed, invoice_type: :contract, customer:, status: :finalized, organization:)
+      end
+
+      let(:pdf_generator) { instance_double(Utils::PdfGenerator, call_with_middlewares: pdf_response) }
+
+      let(:pdf_response) do
+        Utils::PdfGenerator::Result.new.tap { |r| r.io = StringIO.new(File.read(blank_pdf_path)) }
+      end
+
+      before do
+        allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
+      end
+
+      it "calls the product catalog template and footer, even when self billed" do
+        described_class.call(invoice:, context:)
+
+        expect(Utils::PdfGenerator).to have_received(:new).with(
+          template: "invoices/product_catalog/contract",
+          context: invoice,
+          footer: "invoices/product_catalog/footer",
+          margin_bottom: "1.0167"
+        )
+      end
+    end
+
     context "when in API context" do
       let(:context) { "api" }
 
@@ -201,6 +228,18 @@ RSpec.describe Invoices::GeneratePdfService do
           expect(result.invoice.file).to be_present
         end
 
+        context "when the invoice is a contract invoice" do
+          let(:invoice) { create(:invoice, customer:, status: :finalized, organization:, invoice_type: :contract) }
+
+          it "does not attach the CII XML" do
+            result = described_class.call(invoice:, context:)
+
+            expect(EInvoices::Invoices::Cii::CreateService).not_to have_received(:call)
+            expect(Utils::PdfAttachmentService).not_to have_received(:call!)
+            expect(result.invoice.file).to be_present
+          end
+        end
+
         context "when attaching the CII XML fails" do
           let(:attachment_error) do
             BaseService::ThirdPartyFailure.new(
@@ -220,6 +259,22 @@ RSpec.describe Invoices::GeneratePdfService do
           end
         end
       end
+    end
+  end
+
+  describe "#render_html" do
+    subject(:html) { described_class.new(invoice:).render_html }
+
+    let(:customer) { create(:customer, organization:, document_locale: "fr") }
+    let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+
+    before do
+      allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
+      allow(pdf_generator).to receive(:render_html) { I18n.locale.to_s }
+    end
+
+    it "renders in the customer document locale" do
+      expect(html).to eq("fr")
     end
   end
 end

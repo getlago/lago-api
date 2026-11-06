@@ -33,43 +33,87 @@ RSpec.describe BillingSegment do
   end
 
   describe "Scopes" do
-    describe ".awaiting_invoicing" do
-      subject(:segments) { described_class.awaiting_invoicing }
+    describe ".ready_for_invoicing" do
+      subject(:segments) { described_class.ready_for_invoicing(timestamp) }
 
+      let(:timestamp) { Time.zone.parse("2026-10-01") }
       let(:organization) { create(:organization) }
       let(:product) { create(:product, organization:) }
-      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+      let(:billing_timing) { :advance }
+      let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:) }
       let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+      let(:status) { :pending }
+      let(:ended_at) { timestamp + 1.day }
       let(:segment) do
         create(:billing_segment, organization:, contract_rate_card:, contract: contract_rate_card.contract,
-          customer: contract_rate_card.contract.customer, status:)
+          customer: contract_rate_card.contract.customer, status:, cycle_started_at: timestamp - 1.month,
+          started_at: timestamp - 1.month, ended_at:, billing_at: timestamp - 1.day)
       end
-      let(:status) { :pending }
 
       before { segment }
 
-      it "excludes pending advance-metered segments" do
+      it "excludes active pending advance-metered usage" do
         expect(segments).to be_empty
       end
 
-      context "when the advance-metered segment is processing" do
-        let(:status) { :processing }
+      context "when pending advance-metered usage has ended" do
+        let(:ended_at) { timestamp }
 
         it "selects it for reconciliation" do
           expect(segments).to eq([segment])
         end
       end
 
-      context "when the segment bills in arrears" do
-        let(:rate_card) { create(:rate_card, organization:, product:) }
+      context "with displayed recurring advance-metered usage" do
+        let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "value", recurring: true) }
+        let(:product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:rate_card) do
+          create(:rate_card, organization:, product:, billing_timing:, display_on_invoice: true)
+        end
 
-        it "selects it while pending" do
-          expect(segments).to eq([segment])
+        context "with sum aggregation" do
+          let(:aggregation_type) { :sum_agg }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
+        end
+
+        context "with unique-count aggregation" do
+          let(:aggregation_type) { :unique_count_agg }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
+        end
+
+        context "with custom aggregation" do
+          let(:billable_metric) { create(:custom_billable_metric, organization:, recurring: true) }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
         end
       end
 
-      context "when the advance product is fixed" do
-        let(:product) { create(:product, :fixed, organization:) }
+      context "when the advance-metered segment is already processing" do
+        let(:status) { :processing }
+
+        it "excludes it while active" do
+          expect(segments).to be_empty
+        end
+
+        context "when the segment has ended" do
+          let(:ended_at) { timestamp }
+
+          it "excludes the processing segment" do
+            expect(segments).to be_empty
+          end
+        end
+      end
+
+      context "when the segment bills in arrears" do
+        let(:billing_timing) { :arrears }
 
         it "selects it while pending" do
           expect(segments).to eq([segment])
@@ -143,6 +187,80 @@ RSpec.describe BillingSegment do
         new_record?: true
       )
       expect(filter.to_h_with_all_values).to eq({})
+    end
+  end
+
+  describe "#priced_product_filter_ids" do
+    subject(:segment) do
+      create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
+        cycle_started_at: started_at, started_at:, ended_at:)
+    end
+
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:product) { create(:product, organization:) }
+    let(:start_date) { Date.new(2026, 10, 1) }
+    let(:end_date) { Date.new(2026, 10, 3) }
+    let(:started_at) { Time.utc(2026, 10, 1, 7) }
+    let(:ended_at) { Time.utc(2026, 10, 4, 6) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: start_date) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:priced_filter) { create(:product_filter, organization:, product:) }
+    let(:discarded_rate_card_filter) { create(:product_filter, organization:, product:) }
+    let(:before_filter) { create(:product_filter, organization:, product:) }
+    let(:after_filter) { create(:product_filter, organization:, product:) }
+    let(:removed_card_filter) { create(:product_filter, organization:, product:) }
+    let(:other_product) { create(:product, organization:) }
+    let(:other_product_filter) { create(:product_filter, organization:, product: other_product) }
+
+    before do
+      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:, product_filter: priced_filter), effective_date: start_date)
+      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:, product_filter: discarded_rate_card_filter), effective_date: end_date).rate_card.discard!
+      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:, product_filter: before_filter), effective_date: start_date - 1.day)
+      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:, product_filter: after_filter), effective_date: end_date + 1.day)
+      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:, product_filter: removed_card_filter), effective_date: start_date).discard!
+      create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product: other_product, product_filter: other_product_filter))
+    end
+
+    it "returns filters from kept cards for the product effective within the customer-local segment dates" do
+      expect(segment.priced_product_filter_ids).to match_array([priced_filter.id, discarded_rate_card_filter.id])
+    end
+
+    it "caches the result for the same segment window" do
+      segment.priced_product_filter_ids
+
+      expect(capture_sql { segment.priced_product_filter_ids }).to be_empty
+    end
+
+    context "with two segment windows on the same contract" do
+      let(:first_date) { Date.new(2026, 10, 10) }
+      let(:second_date) { Date.new(2026, 10, 11) }
+      let(:first_filter) { create(:product_filter, organization:, product:) }
+      let(:second_filter) { create(:product_filter, organization:, product:) }
+      let(:first_rate_card) { create(:rate_card, organization:, product:, product_filter: first_filter) }
+      let(:second_rate_card) { create(:rate_card, organization:, product:, product_filter: second_filter) }
+      let(:first_segment) do
+        build(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
+          cycle_started_at: first_date.in_time_zone("America/Los_Angeles"),
+          started_at: first_date.in_time_zone("America/Los_Angeles"), ended_at: first_date.end_of_day.in_time_zone("America/Los_Angeles"))
+      end
+      let(:second_segment) do
+        build(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
+          cycle_started_at: second_date.in_time_zone("America/Los_Angeles"),
+          started_at: second_date.in_time_zone("America/Los_Angeles"), ended_at: second_date.end_of_day.in_time_zone("America/Los_Angeles"))
+      end
+
+      before do
+        create(:contract_rate_card, organization:, contract:, rate_card: first_rate_card, effective_date: first_date)
+        create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card, effective_date: second_date)
+      end
+
+      it "does not reuse priced filters from the other window" do
+        expect(first_segment.priced_product_filter_ids).to eq([first_filter.id])
+        expect(second_segment.priced_product_filter_ids).to eq([second_filter.id])
+      end
     end
   end
 

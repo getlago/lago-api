@@ -48,6 +48,14 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
       billing_segment:, event: Events::CommonFactory.new_instance(source: event)
     )
   end
+  let(:billing_segment_max_timestamp) { Time.zone.parse("2026-09-15 12:34:56") }
+  let(:billing_segment_metered_item_with_max_timestamp) do
+    Fees::ChargeService::MeteredItem.from_billing_segment(
+      billing_segment:,
+      max_timestamp: billing_segment_max_timestamp,
+      event: Events::CommonFactory.new_instance(source: event)
+    )
+  end
   let(:product_filter) { create(:product_filter, organization:, product:) }
 
   describe ".serialize?" do
@@ -90,16 +98,20 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
 
       expect(serialized).to include(
         "source_type" => "billing_segment",
-        "billing_segment" => anything,
+        "billing_segment" => a_hash_including(
+          "rate_card_rate_id" => rate_card_rate.id,
+          "rate_properties" => a_hash_including("amount" => "20"),
+          "started_at" => anything,
+          "ended_at" => anything
+        ),
         "product_filter" => nil,
+        "max_timestamp" => nil,
         "event" => anything
       )
-      expect(serialized.fetch("billing_segment")).to include(
-        "organization_id" => billing_segment.organization_id,
-        "contract_id" => billing_segment.contract_id,
-        "contract_rate_card_id" => billing_segment.contract_rate_card_id
-      )
-      expect(serialized.fetch("billing_segment")).not_to include("_aj_globalid", "id", "created_at", "updated_at")
+      expect(serialized["billing_segment"]).not_to have_key("id")
+      expect(serialized["billing_segment"]).not_to have_key("_aj_globalid")
+      expect(serialized["billing_segment"]).not_to have_key("created_at")
+      expect(serialized["billing_segment"]).not_to have_key("updated_at")
       expect(serialized).not_to have_key("charge")
       expect(serialized).not_to have_key("boundaries")
       expect(serialized).not_to have_key("charge_filter")
@@ -132,6 +144,69 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
       expect(deserialized.billing_segment.attributes.except("id", "created_at", "updated_at"))
         .to eq(billing_segment.attributes.except("id", "created_at", "updated_at"))
       expect(deserialized.event.timestamp).to eq(event.timestamp)
+    end
+
+    it "round trips the billing segment max timestamp" do
+      serialized = JSON.parse(ActiveJob::Arguments.serialize([billing_segment_metered_item_with_max_timestamp]).to_json).first
+      deserialized = ActiveJob::Arguments.deserialize([serialized]).first
+
+      expect(deserialized.source.max_timestamp).to eq(billing_segment_max_timestamp)
+    end
+
+    it "deserializes a billing segment job without a max timestamp" do
+      serialized = ActiveJob::Arguments.serialize([billing_segment_metered_item]).first
+      serialized.delete("max_timestamp")
+
+      deserialized = ActiveJob::Arguments.deserialize([serialized]).first
+
+      expect(deserialized.source.max_timestamp).to be_nil
+    end
+
+    context "when the stored segment changes after the job is queued" do
+      subject(:deserialized) { ActiveJob::Arguments.deserialize([serialized]).first }
+
+      let(:serialized) { JSON.parse(ActiveJob::Arguments.serialize([billing_segment_metered_item]).to_json).first }
+      let(:original_ended_at) { billing_segment.ended_at }
+
+      before do
+        original_ended_at
+        serialized
+        billing_segment.update!(rate_properties: {"amount" => "99"}, ended_at: Time.zone.parse("2026-10-01").end_of_day)
+      end
+
+      it "uses the rate and service period captured when the segment was built" do
+        expect(deserialized.billing_segment).to be_new_record
+        expect(deserialized.billing_segment.rate_properties).to eq("amount" => "20")
+        expect(deserialized.billing_segment.ended_at).to eq(original_ended_at)
+        expect(deserialized.billing_segment.rate_card_rate).to eq(rate_card_rate)
+      end
+    end
+
+    context "when the event pricing segment is not persisted" do
+      subject(:deserialized) do
+        serialized = JSON.parse(ActiveJob::Arguments.serialize([metered_item]).to_json).first
+        ActiveJob::Arguments.deserialize([serialized]).first
+      end
+
+      let(:unsaved_segment) { billing_segment.dup }
+      let(:metered_item) do
+        Fees::ChargeService::MeteredItem.from_billing_segment(
+          billing_segment: unsaved_segment, event: Events::CommonFactory.new_instance(source: event)
+        )
+      end
+
+      it "round trips the selected pricing and service period without writing a segment" do
+        expect(deserialized.billing_segment).to be_new_record
+        expect(deserialized.billing_segment).to have_attributes(
+          contract_rate_card:,
+          rate_card_rate:,
+          rate_properties: {"amount" => "20"},
+          started_at: unsaved_segment.started_at,
+          ended_at: unsaved_segment.ended_at,
+          billing_at: unsaved_segment.billing_at
+        )
+        expect(deserialized.event.timestamp).to eq(event.timestamp)
+      end
     end
 
     it "preserves the selected billing segment product filter" do

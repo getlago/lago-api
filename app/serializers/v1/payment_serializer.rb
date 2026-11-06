@@ -31,6 +31,7 @@ module V1
 
       payload.merge!(payment_receipt) if include?(:payment_receipt)
       payload.merge!(payment_method) if include?(:payment_method) && model.payment_method
+      payload[:x402_settlement] = x402_settlement if model.payment_type_x402?
       payload
     end
 
@@ -48,6 +49,19 @@ module V1
           ::V1::PaymentReceiptSerializer.new(model.payment_receipt).serialize :
           {}
       }
+    end
+
+    def x402_settlement
+      settlement = model.x402_settlement
+
+      if settlement
+        {
+          lago_id: settlement.id,
+          network: settlement.network,
+          transaction_hash: settlement.transaction_hash,
+          payer_address: settlement.payer_address
+        }
+      end
     end
 
     # The payable can be missing when the invoice or payment request row it points to

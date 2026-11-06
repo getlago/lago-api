@@ -4,15 +4,17 @@ module Products
   class DestroyService < BaseService
     Result = BaseResult[:product]
 
-    def initialize(product:)
-      @product = product
-      super
-    end
-
     activity_loggable(
       action: "product.deleted",
-      record: -> { result.product }
+      record: -> { product },
+      condition: -> { emit_events }
     )
+
+    def initialize(product:, emit_events: true)
+      @product = product
+      @emit_events = emit_events
+      super
+    end
 
     def call
       return result.not_found_failure!(resource: "product") unless product
@@ -27,6 +29,9 @@ module Products
         RateCardRate.where(rate_card_id: product.rate_cards.ids).discard_all!
         product.rate_cards.discard_all!
         product.discard!
+        if emit_events
+          SendWebhookJob.perform_after_commit("product.deleted", product)
+        end
       end
 
       result.product = product
@@ -35,6 +40,6 @@ module Products
 
     private
 
-    attr_reader :product
+    attr_reader :product, :emit_events
   end
 end

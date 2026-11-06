@@ -4,6 +4,7 @@ module Mutations
   module Invoices
     class Update < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "invoices:update"
 

@@ -10,16 +10,16 @@ module RateCards
     # alter what the existing rates mean; create a new card instead.
     LOCKED_WITH_RATES = %i[currency applied_pricing_unit_code billing_timing proration regroup_paid_fees display_on_invoice].freeze
 
+    activity_loggable(
+      action: "rate_card.updated",
+      record: -> { rate_card }
+    )
+
     def initialize(rate_card:, params:)
       @rate_card = rate_card
       @params = params.to_h.with_indifferent_access
       super
     end
-
-    activity_loggable(
-      action: "rate_card.updated",
-      record: -> { rate_card }
-    )
 
     def call
       return result.not_found_failure!(resource: "rate_card") unless rate_card
@@ -53,12 +53,16 @@ module RateCards
         assign_attributes
         rate_card.save!
         apply_taxes
+
+        SendWebhookJob.perform_after_commit("rate_card.updated", rate_card)
       end
 
       result.rate_card = rate_card
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, "index_rate_cards_on_organization_id_and_code" => :code)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e.result.error)
     end

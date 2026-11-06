@@ -2,7 +2,9 @@
 
 module Api
   module V1
-    class CustomersController < Api::BaseController
+    class CustomersController < Api::V1::BaseController
+      include RawPaymentTermParams
+
       def create
         result = ::Customers::UpsertFromApiService.call(
           organization: current_organization,
@@ -59,8 +61,8 @@ module Api
         result = CustomersQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           search_term:,
           filters: filter_params.merge(billing_entity_ids: billing_entities&.ids)
@@ -121,7 +123,7 @@ module Api
       private
 
       def create_params
-        params.expect(customer: [
+        permitted = params.expect(customer: [
           :account_type,
           :external_id,
           :name,
@@ -191,6 +193,8 @@ module Api
           tax_codes: [],
           invoice_custom_section_codes: []
         ])
+
+        with_raw_payment_term(permitted, params[:customer])
       end
 
       def render_customer(customer)

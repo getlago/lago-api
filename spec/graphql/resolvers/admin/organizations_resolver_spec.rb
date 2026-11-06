@@ -24,6 +24,23 @@ RSpec.describe Resolvers::Admin::OrganizationsResolver do
     result["data"]["adminOrganizations"]
   end
 
+  %w[okta entra_id].each do |login_method|
+    it "refuses a #{login_method} session", :premium do
+      result = execute_graphql(current_user: admin_user, login_method:, query:)
+
+      expect(result["data"]).to be_nil
+      expect(result["errors"].first["extensions"]["code"]).to eq("unauthorized")
+    end
+  end
+
+  %w[email_password google_oauth].each do |login_method|
+    it "accepts a #{login_method} session", :premium do
+      result = execute_graphql(current_user: admin_user, login_method:, query:)
+
+      expect(result["data"]["adminOrganizations"]["metadata"]["totalCount"]).to eq(2)
+    end
+  end
+
   it "returns every organization, newest first", :premium do
     organizations = fetch
 

@@ -44,6 +44,9 @@ module PaymentProviders
           result
         rescue ActiveRecord::RecordInvalid => e
           result.record_validation_failure!(record: e.record)
+        # Only a synchronous sync gets here: its jobs retry the errors they can and raise the others.
+        rescue ::GoCardlessPro::Error => e
+          result.third_party_failure!(third_party: "GoCardless", error_code: e.code, error_message: e.message)
         end
 
         private

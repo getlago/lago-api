@@ -63,7 +63,7 @@ module Events
 
         attr_reader :store
 
-        delegate :events, :charges_duration, :sanitized_property_name, :created_at_ordering_column, to: :store
+        delegate :events, :charges_duration, :sanitized_property_name, :sanitized_group_name, :created_at_ordering_column, to: :store
 
         def events_cte_sql
           <<-SQL
@@ -120,7 +120,7 @@ module Events
 
         def grouped_events_cte_sql(initial_values)
           groups = store.grouped_by.map.with_index do |group, index|
-            "#{sanitized_property_name(group)} AS g_#{index}"
+            "#{sanitized_group_name(group)} AS g_#{index}"
           end
 
           <<-SQL
@@ -177,7 +177,7 @@ module Events
         def quoted_group_values(initial_value)
           store.grouped_by.map do |group|
             value = initial_value[:groups][group]
-            value ? ActiveRecord::Base.connection.quote(value.to_s) : "NULL"
+            value.present? ? ActiveRecord::Base.connection.quote(value.to_s) : "NULL"
           end
         end
 

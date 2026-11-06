@@ -29,7 +29,7 @@ module PaymentProviders
         data = "#{timestamp}#{body}"
         gen_signature = Base64.strict_encode64(OpenSSL::HMAC.digest("sha256", secret_key, data))
 
-        unless gen_signature == signature
+        unless ActiveSupport::SecurityUtils.secure_compare(gen_signature, signature.to_s)
           return result.service_failure!(code: "webhook_error", message: "Invalid signature")
         end
 

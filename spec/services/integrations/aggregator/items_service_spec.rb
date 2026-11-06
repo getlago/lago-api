@@ -18,7 +18,7 @@ RSpec.describe Integrations::Aggregator::ItemsService do
     end
 
     before do
-      stub_request(:get, "https://api.nango.dev/v1/netsuite/items?limit=450")
+      stub_request(:get, "https://api.nango.dev/records?model=Item&limit=450")
         .to_return(
           status: 200,
           body: aggregator_response.to_json,
@@ -51,7 +51,7 @@ RSpec.describe Integrations::Aggregator::ItemsService do
             }
           ]
         }
-        stub_request(:get, "https://api.nango.dev/v1/netsuite/items?limit=450&cursor=abc123")
+        stub_request(:get, "https://api.nango.dev/records?model=Item&limit=450&cursor=abc123")
           .to_return(
             status: 200,
             body: second_page_response.to_json,
@@ -71,7 +71,7 @@ RSpec.describe Integrations::Aggregator::ItemsService do
       let(:integration) { create(:xero_integration) }
 
       before do
-        stub_request(:get, "https://api.nango.dev/v1/xero/items?limit=450")
+        stub_request(:get, "https://api.nango.dev/records?model=Item&limit=450")
           .to_return(
             status: 200,
             body: aggregator_response.to_json,
@@ -162,7 +162,7 @@ RSpec.describe Integrations::Aggregator::ItemsService do
   describe "#action_path" do
     subject(:action_path_call) { items_service.action_path }
 
-    let(:action_path) { "v1/netsuite/items" }
+    let(:action_path) { "records" }
 
     it "returns the path" do
       expect(subject).to eq(action_path)

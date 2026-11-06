@@ -12,7 +12,7 @@ input AcceptInviteInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  email: String!
+  email: String @deprecated(reason: "The email is resolved from the invitation token.")
   password: String!
 
   """
@@ -1175,6 +1175,8 @@ type AttributedUsage {
   groupBy: String!
   metadata: CollectionMetadata!
   rows: [AttributedUsageRow!]!
+  splitFiltersCount: Int
+  splitFiltersLimit: Int
   subscriptionId: ID!
   toDatetime: ISO8601DateTime!
   totals: AttributedUsageAggregate!
@@ -1193,6 +1195,11 @@ type AttributedUsageAggregate {
   Null with the units basis
   """
   preciseAmountCents: Float
+
+  """
+  Units of the split charge over all its filters. Null without a split charge
+  """
+  splitChargeUnits: Float
 }
 
 enum AttributedUsageBasisEnum {
@@ -1245,6 +1252,11 @@ type AttributedUsageRow {
   Position of the value in the whole level
   """
   rank: Int!
+
+  """
+  Units of the split charge over all its filters. Null without a split charge
+  """
+  splitChargeUnits: Float
   value: String!
 }
 
@@ -1382,7 +1394,7 @@ type BillingEntity {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   organization: Organization!
   phone: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
@@ -1496,7 +1508,7 @@ enum CancellationReasonEnum {
 
 type CashfreeProvider {
   clientId: String
-  clientSecret: String
+  clientSecret: ObfuscatedString
   code: String!
   id: ID!
   name: String!
@@ -1525,6 +1537,7 @@ type CatalogPlan {
   invoiceDisplayName: String
   name: String!
   organization: Organization
+  taxes: [Tax!]!
   updatedAt: ISO8601DateTime!
 }
 
@@ -1910,6 +1923,7 @@ Rate card applied to a contract
 """
 type ContractAppliedRateCard {
   billingAnchorDate: ISO8601Date!
+  contract: Contract!
   createdAt: ISO8601DateTime!
   effectiveDate: ISO8601Date!
   id: ID!
@@ -3467,6 +3481,7 @@ input CreateCatalogPlanInput {
   description: String
   invoiceDisplayName: String
   name: String!
+  taxCodes: [String!]
 }
 
 """
@@ -3664,13 +3679,13 @@ input CreateCustomerWalletInput {
   currency: CurrencyEnum!
   customerId: ID!
   expirationAt: ISO8601DateTime
-  grantedCredits: String!
-  ignorePaidTopUpLimitsOnCreation: Boolean
+  grantedCredits: String @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
+  ignorePaidTopUpLimitsOnCreation: Boolean @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   metadata: [MetadataInput!]
   name: String
-  paidCredits: String!
+  paidCredits: String @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
@@ -3678,7 +3693,7 @@ input CreateCustomerWalletInput {
   purchaseOrderNumber: String
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
-  transactionName: String
+  transactionName: String @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
 }
 
 """
@@ -4385,6 +4400,7 @@ type CreditNote {
   errorDetails: [ErrorDetail!]
   externalIntegrationId: String
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   integrationSyncable: Boolean!
   invoice: Invoice
@@ -4407,6 +4423,7 @@ type CreditNote {
   updatedAt: ISO8601DateTime!
   voidedAt: ISO8601DateTime
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type CreditNoteAppliedTax implements AppliedTax {
@@ -5257,9 +5274,11 @@ type CurrentOrganization {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+  customerPortalLockedFields: [CustomerPortalFieldEnum!]!
   defaultCurrency: CurrencyEnum!
   documentNumberPrefix: String!
   documentNumbering: DocumentNumberingEnum!
+  documentUrlExpirationDays: Int!
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
@@ -5273,8 +5292,13 @@ type CurrentOrganization {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   premiumIntegrations: [PremiumIntegrationTypeEnum!]!
+
+  """
+  True when usage reports can be served from the real-time usage buckets
+  """
+  realtimeUsageEnabled: Boolean!
   slug: String!
   state: String
   stripePaymentProviders: [StripeProvider!]
@@ -5484,7 +5508,7 @@ type CustomerCollection {
   """
   Pagination Metadata for navigating the Pagination
   """
-  metadata: CollectionMetadata!
+  metadata: InvoiceCollectionMetadata!
 }
 
 type CustomerCreditNotesBalance {
@@ -5547,10 +5571,32 @@ type CustomerPortalCustomer {
 }
 
 """
+Customer fields that can be sent from the customer portal
+"""
+enum CustomerPortalFieldEnum {
+  address_line1
+  address_line2
+  city
+  country
+  customer_type
+  document_locale
+  email
+  firstname
+  lastname
+  legal_name
+  name
+  shipping_address
+  state
+  tax_identification_number
+  zipcode
+}
+
+"""
 CustomerPortalOrganization
 """
 type CustomerPortalOrganization {
   billingConfiguration: OrganizationBillingConfiguration
+  customerPortalLockedFields: [CustomerPortalFieldEnum!]!
   defaultCurrency: CurrencyEnum!
   id: ID!
   logoUrl: String
@@ -6970,8 +7016,11 @@ type Event {
 }
 
 enum EventCategoryEnum {
+  ADD_ONS
   ALERTS
   BILLABLE_METRICS
+  CONTRACTS
+  COUPONS
   CREDIT_NOTES
   CUSTOMERS
   DUNNING_CAMPAIGNS
@@ -7004,6 +7053,10 @@ type EventCollection {
 }
 
 enum EventTypeEnum {
+  add_on_created
+  add_on_deleted
+  add_on_updated
+  alert_resolved
   alert_triggered
   all
   billable_metric_created
@@ -7017,6 +7070,10 @@ enum EventTypeEnum {
   contract_started
   contract_terminated
   contract_updated
+  coupon_created
+  coupon_deleted
+  coupon_terminated
+  coupon_updated
   credit_note_created
   credit_note_generated
   credit_note_provider_refund_failure
@@ -7155,14 +7212,18 @@ enum FeatureFlagEnum {
   incremental_charge_cache
   multi_connection
   order_forms
+  persisted_recurring_values
   postgres_enriched_events
   product_catalog
   realtime_usage
+  recurring_aggregation_snapshots
   skip_credit_invoice_auto_payment_delay
+  sso_cross_organization_sessions
   stripe_shared_payment_token
   usage_prefilter_incremental
   usage_prefilter_short_cache
   wallet_traceability
+  x402_mainnet
   x402_payments
   x402_reservation_counter_disabled
 }
@@ -7202,6 +7263,8 @@ type Fee implements InvoiceItem {
   appliedTaxes: [FeeAppliedTax!]
   charge: Charge
   chargeFilter: ChargeFilter
+  contract: Contract
+  contractRateCard: ContractAppliedRateCard
   creditableAmountCents: BigInt!
   currency: CurrencyEnum!
   description: String
@@ -7717,42 +7780,6 @@ type GroupedChargeUsage {
 }
 
 """
-Usage of a single charge filter within one hour
-"""
-type HourlyUsageBreakdown {
-  chargeFilterId: ID
-  eventsCount: Int!
-  other: Boolean!
-  units: Float!
-}
-
-"""
-A charge filter with usage in the window, and its window totals
-"""
-type HourlyUsageFilter {
-  chargeFilterId: ID
-  eventsCount: Int!
-  invoiceDisplayName: String
-
-  """
-  True for the series folding every filter past the biggest ones
-  """
-  other: Boolean!
-  units: Float!
-  values: ChargeFilterValues!
-}
-
-"""
-One hour of the window, broken down by charge filter
-"""
-type HourlyUsagePoint {
-  breakdown: [HourlyUsageBreakdown!]!
-  eventsCount: Int!
-  time: ISO8601DateTime!
-  units: Float!
-}
-
-"""
 Api Logs http method enums
 """
 enum HttpMethodEnum {
@@ -7913,6 +7940,7 @@ enum IntegrationTypeEnum {
 type Invite {
   acceptedAt: ISO8601DateTime
   email: String!
+  existingUser: Boolean!
   id: ID!
   organization: Organization!
   recipient: Membership!
@@ -7970,6 +7998,7 @@ type Invoice {
   fees: [Fee!]
   feesAmountCents: BigInt!
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   integrationHubspotSyncable: Boolean!
   integrationSalesforceSyncable: Boolean!
@@ -8016,6 +8045,7 @@ type Invoice {
   voidedAt: ISO8601DateTime
   voidedInvoiceId: String
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type InvoiceAppliedTax implements AppliedTax {
@@ -8210,6 +8240,7 @@ enum InvoiceTaxStatusTypeEnum {
 enum InvoiceTypeEnum {
   add_on
   advance_charges
+  contract
   credit
   one_off
   progressive_billing
@@ -8250,6 +8281,21 @@ type ItemMetadata {
 Represents untyped JSON
 """
 scalar JSON
+
+"""
+Autogenerated input type of JoinOrganization
+"""
+input JoinOrganizationInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  Unique token of the Invite
+  """
+  token: String!
+}
 
 input LimitationInput {
   billableMetricIds: [ID!]
@@ -8457,6 +8503,7 @@ input LoseInvoiceDisputeInput {
 enum MappableTypeEnum {
   AddOn
   BillableMetric
+  Product
 }
 
 type Mapping {
@@ -8564,7 +8611,7 @@ input MetadataInput {
 }
 
 type MoneyhashProvider {
-  apiKey: String
+  apiKey: ObfuscatedString
   code: String!
   flowId: String
   id: ID!
@@ -9989,6 +10036,16 @@ type Mutation {
   ): RegisterUser
 
   """
+  Joins the organization of an Invite as the authenticated user
+  """
+  joinOrganization(
+    """
+    Parameters for JoinOrganization
+    """
+    input: JoinOrganizationInput!
+  ): Membership
+
+  """
   Opens a session for an existing user
   """
   loginUser(
@@ -11193,6 +11250,7 @@ type OrderForm {
   quote: Quote!
   signedAt: ISO8601DateTime
   signedDocumentUrl: String
+  signedDocumentUrlExpiresAt: ISO8601DateTime
   status: OrderFormStatusEnum!
   updatedAt: ISO8601DateTime!
   voidReason: OrderFormVoidReasonEnum
@@ -11419,11 +11477,13 @@ PaymentReceipt
 type PaymentReceipt {
   createdAt: ISO8601DateTime!
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   number: String!
   organization: Organization!
   payment: Payment!
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type PaymentRequest {
@@ -11834,6 +11894,7 @@ type Plan {
 Rate card applied to a plan
 """
 type PlanAppliedRateCard {
+  catalogPlan: CatalogPlan!
   createdAt: ISO8601DateTime!
   id: ID!
   product: Product!
@@ -12071,6 +12132,7 @@ type Product {
   description: String
   filtersCount: Int!
   id: ID!
+  integrationMappings(integrationId: ID): [Mapping!]
   invoiceDisplayName: String
   name: String!
   organization: Organization
@@ -12455,6 +12517,11 @@ type Query {
     page: Int
     searchTerm: String
     splitChargeId: ID
+
+    """
+    Index of the first filter of the split charge to list
+    """
+    splitFiltersOffset: Int
     subscriptionId: ID!
 
     """
@@ -12527,6 +12594,16 @@ type Query {
     """
     id: ID!
   ): Contract
+
+  """
+  Query a single rate card applied to a contract
+  """
+  contractAppliedRateCard(
+    """
+    Uniq ID of the applied rate card
+    """
+    id: ID!
+  ): ContractAppliedRateCard
 
   """
   Query rate cards applied to a contract
@@ -13089,6 +13166,16 @@ type Query {
   ): Plan
 
   """
+  Query a single rate card applied to a plan
+  """
+  planAppliedRateCard(
+    """
+    Uniq ID of the applied rate card
+    """
+    id: ID!
+  ): PlanAppliedRateCard
+
+  """
   Query rate cards applied to a plan
   """
   planAppliedRateCards(hasRateOverrides: Boolean, limit: Int, page: Int, planId: ID, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): PlanAppliedRateCardCollection!
@@ -13206,7 +13293,32 @@ type Query {
   """
   Query rate cards of an organization
   """
-  rateCards(code: String, limit: Int, page: Int, productCategoryIds: [ID!], productCode: String, productFilterCode: String, productFilterIds: [ID!], productIds: [ID!], searchTerm: String, withoutProductCategory: Boolean): RateCardCollection!
+  rateCards(code: String, currency: CurrencyEnum, excludePricedOnContractId: ID, excludePricedOnPlanId: ID, limit: Int, page: Int, productCategoryIds: [ID!], productCode: String, productFilterCode: String, productFilterIds: [ID!], productIds: [ID!], searchTerm: String, withoutProductCategory: Boolean): RateCardCollection!
+
+  """
+  Query the real-time usage of a billable metric, per period and per dimension
+  """
+  realtimeUsageBillableMetric(billableMetricCode: String!, dimensionKeys: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, toDatetime: ISO8601DateTime): RealtimeUsageBillableMetric!
+
+  """
+  Query the real-time usage of the billable metrics of the organization, per period and per dimension
+  """
+  realtimeUsageBillableMetrics(externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, page: Int, toDatetime: ISO8601DateTime): RealtimeUsageBillableMetricCollection!
+
+  """
+  Query the dimensions of a billable metric, biggest first, over the longest window by default
+  """
+  realtimeUsageDimensionNames(billableMetricCode: String!, externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, toDatetime: ISO8601DateTime): [RealtimeUsageDimensionName!]!
+
+  """
+  Query every dimension of a billable metric, with its real-time usage per period
+  """
+  realtimeUsageDimensions(billableMetricCode: String!, dimensionKeys: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, page: Int, toDatetime: ISO8601DateTime): RealtimeUsageDimensionRowCollection!
+
+  """
+  Query the events counted on the usage-based charges of the organization, per period
+  """
+  realtimeUsageEvents(externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, toDatetime: ISO8601DateTime): RealtimeUsageEvents!
 
   """
   Query a single role
@@ -13303,11 +13415,6 @@ type Query {
   Query entitlements of a subscriptions
   """
   subscriptionEntitlements(subscriptionId: ID!): SubscriptionEntitlementCollection!
-
-  """
-  Query the hourly usage of a subscription charge, broken down by charge filter
-  """
-  subscriptionHourlyUsage(chargeId: ID!, fromDatetime: ISO8601DateTime, subscriptionId: ID!, toDatetime: ISO8601DateTime): SubscriptionHourlyUsage!
 
   """
   Query subscriptions of an organization
@@ -13554,6 +13661,12 @@ type RateCard {
   displayOnInvoice: Boolean!
   id: ID!
   name: String!
+  nextPendingRate(
+    """
+    Perspective to resolve the soonest pending rate from. Defaults to now.
+    """
+    effectiveFrom: ISO8601DateTime
+  ): RateCardRate
   organization: Organization
   product: Product!
   productFilter: ProductFilter
@@ -13772,6 +13885,157 @@ input RateTierInput {
   Upper bound of the tier; null on the last tier
   """
   toValue: String
+}
+
+"""
+Units of a billable metric over the window, per period and per dimension
+"""
+type RealtimeUsageBillableMetric {
+  aggregationType: AggregationTypeEnum!
+  billableMetricCode: String!
+  billableMetricId: ID!
+  billableMetricName: String!
+  dimensions: [RealtimeUsageDimension!]!
+  fromDatetime: ISO8601DateTime!
+  points: [RealtimeUsagePoint!]!
+  timeGranularity: RealtimeUsageTimeGranularityEnum!
+  timezone: TimezoneEnum!
+  toDatetime: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+RealtimeUsageBillableMetricCollection type
+"""
+type RealtimeUsageBillableMetricCollection {
+  """
+  A collection of paginated RealtimeUsageBillableMetricCollection
+  """
+  collection: [RealtimeUsageBillableMetric!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
+A charge filter or pricing group value a usage is split on, and its window total
+"""
+type RealtimeUsageDimension {
+  """
+  Opaque key, to pass back as a dimension filter, except on the folded series
+  """
+  key: String!
+
+  """
+  Null for the usage of no charge filter or pricing group
+  """
+  name: String
+
+  """
+  True for the series folding every dimension past the biggest ones
+  """
+  other: Boolean!
+  units: Float!
+}
+
+"""
+A dimension of a billable metric, without its usage
+"""
+type RealtimeUsageDimensionName {
+  """
+  Opaque key, to pass back as a dimension filter
+  """
+  key: String!
+
+  """
+  Null for the usage of no charge filter or pricing group
+  """
+  name: String
+}
+
+"""
+Units of a dimension within one period
+"""
+type RealtimeUsageDimensionPoint {
+  time: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+A dimension of a billable metric, with its units per period
+"""
+type RealtimeUsageDimensionRow {
+  """
+  Opaque key, to pass back as a dimension filter
+  """
+  key: String!
+
+  """
+  Null for the usage of no charge filter or pricing group
+  """
+  name: String
+  points: [RealtimeUsageDimensionPoint!]!
+  units: Float!
+}
+
+"""
+RealtimeUsageDimensionRowCollection type
+"""
+type RealtimeUsageDimensionRowCollection {
+  """
+  A collection of paginated RealtimeUsageDimensionRowCollection
+  """
+  collection: [RealtimeUsageDimensionRow!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
+Events counted on the usage-based charges of the organization, per period
+"""
+type RealtimeUsageEvents {
+  eventsCount: BigInt!
+  fromDatetime: ISO8601DateTime!
+  lastIngestedAt: ISO8601DateTime
+  points: [RealtimeUsageEventsPoint!]!
+  timeGranularity: RealtimeUsageTimeGranularityEnum!
+  timezone: TimezoneEnum!
+  toDatetime: ISO8601DateTime!
+}
+
+"""
+Events counted in one period of the window
+"""
+type RealtimeUsageEventsPoint {
+  eventsCount: BigInt!
+  time: ISO8601DateTime!
+}
+
+"""
+One period of the window, broken down by dimension
+"""
+type RealtimeUsagePoint {
+  breakdown: [RealtimeUsagePointBreakdown!]!
+  time: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+Units of a single dimension within one period
+"""
+type RealtimeUsagePointBreakdown {
+  dimensionKey: String!
+  units: Float!
+}
+
+enum RealtimeUsageTimeGranularityEnum {
+  day
+  hour
 }
 
 enum RecurringTransactionIntervalEnum {
@@ -14567,19 +14831,6 @@ type SubscriptionEntitlementPrivilegeObject {
   name: String
   value: String
   valueType: PrivilegeValueTypeEnum!
-}
-
-"""
-Realtime usage of a charge, per hour and per charge filter
-"""
-type SubscriptionHourlyUsage {
-  aggregationType: AggregationTypeEnum!
-  filters: [HourlyUsageFilter!]!
-  fromDatetime: ISO8601DateTime!
-  hours: [HourlyUsagePoint!]!
-  lastIngestedAt: ISO8601DateTime
-  timezone: TimezoneEnum!
-  toDatetime: ISO8601DateTime!
 }
 
 type SubscriptionLifetimeUsage {
@@ -15765,6 +16016,7 @@ input UpdateCatalogPlanInput {
   id: ID!
   invoiceDisplayName: String
   name: String
+  taxCodes: [String!]
 }
 
 """
@@ -16307,9 +16559,11 @@ input UpdateOrganizationInput {
   """
   clientMutationId: String
   country: CountryCode
+  customerPortalLockedFields: [CustomerPortalFieldEnum!]
   defaultCurrency: CurrencyEnum
   documentNumberPrefix: String
   documentNumbering: DocumentNumberingEnum
+  documentUrlExpirationDays: Int
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean

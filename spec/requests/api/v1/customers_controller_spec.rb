@@ -30,7 +30,158 @@ RSpec.describe Api::V1::CustomersController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq({base: ["value_is_out_of_range"]})
+        expect(json[:error_details]).to eq({net_payment_term: ["value_is_out_of_range"]})
+      end
+    end
+
+    context "with a structured payment_term" do
+      before { create_params[:payment_term] = {term_type: "day_of_month", day_of_month: 15, month_offset: 2} }
+
+      it "writes the term and returns it with a null alias" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to eq(term_type: "day_of_month", day_of_month: 15, month_offset: 2)
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
+    context "with a payment_term conflicting with the net_payment_term sent alongside" do
+      before { create_params.merge!(payment_term: {term_type: "net", days: 30}, net_payment_term: 60) }
+
+      it "lets payment_term win" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to eq(term_type: "net", days: 30)
+        expect(json[:customer][:net_payment_term]).to eq(30)
+      end
+    end
+
+    context "with a payment_term carrying an unexpected field" do
+      before { create_params[:payment_term] = {term_type: "end_of_month", days: 3} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["unexpected_fields"])
+      end
+    end
+
+    context "with a payment_term whose days exceed 365" do
+      before { create_params[:payment_term] = {term_type: "net_end_of_month", days: 10**12} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_days"])
+      end
+    end
+
+    context "with a payment_term sent as an array of objects" do
+      before { create_params[:payment_term] = [{term_type: "net", days: 30}] }
+
+      it "returns a validation error instead of raising" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "with a non-hash payment_term" do
+      before { create_params[:payment_term] = "net 30" }
+
+      it "returns a validation error instead of silently dropping the value" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "with a null payment_term" do
+      let(:customer) do
+        create(:customer, organization:, payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, payment_term: nil) }
+
+      it "clears the term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to be_nil
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
+    context "with a null payment_term alongside a net_payment_term (alias matrix row 9)" do
+      let(:customer) do
+        create(:customer, organization:, payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, net_payment_term: 20, payment_term: nil) }
+
+      it "lets the null payment_term win and clears both" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to be_nil
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
+    context "with a net_payment_term as a digit string" do
+      before { create_params.merge!(net_payment_term: "45") }
+
+      it "casts it to an integer" do
+        subject
+
+        expect(response).to be_successful
+        expect(json[:customer][:net_payment_term]).to eq(45)
+        expect(json[:customer][:payment_term]).to eq(term_type: "net", days: 45)
+      end
+    end
+
+    context "with a decimal net_payment_term" do
+      before { create_params.merge!(net_payment_term: 30.5) }
+
+      it "truncates it to an integer" do
+        subject
+
+        expect(response).to be_successful
+        expect(json[:customer][:net_payment_term]).to eq(30)
+        expect(json[:customer][:payment_term]).to eq(term_type: "net", days: 30)
+      end
+    end
+
+    context "with a negative net_payment_term" do
+      before { create_params.merge!(net_payment_term: -1) }
+
+      it "fails with the legacy value_is_out_of_range code" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:net_payment_term]).to eq(["value_is_out_of_range"])
+      end
+    end
+
+    context "with an object net_payment_term for an existing customer" do
+      let(:customer) do
+        create(:customer, organization:, currency: "EUR", net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, net_payment_term: {days: 60}) }
+
+      it "ignores it and keeps the term" do
+        subject
+
+        expect(response).to be_successful
+        expect(customer.reload.net_payment_term).to eq(30)
+        expect(customer.payment_term).to eq("term_type" => "net", "days" => 30)
       end
     end
 
@@ -267,6 +418,60 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "when the provider refuses a synchronous sync" do
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: "Foo Bar",
+          billing_configuration: {payment_provider:, payment_provider_code: provider.code, sync_with_provider: true, sync: true}
+        }
+      end
+
+      context "with Adyen" do
+        let(:payment_provider) { "adyen" }
+        let(:provider) { create(:adyen_provider, organization:) }
+        let(:adyen_client) { instance_double(Adyen::Client) }
+        let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+        let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
+
+        before do
+          allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+          allow(adyen_client).to receive(:checkout).and_return(checkout)
+          allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+          allow(payment_links_api).to receive(:payment_links).and_return(generate(:adyen_payment_links_error_response))
+        end
+
+        it "returns a validation error on the provider's code" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "validation_errors", error_details: {base: ["validation"]})
+        end
+      end
+
+      context "with GoCardless" do
+        let(:payment_provider) { "gocardless" }
+        let(:provider) { create(:gocardless_provider, organization:) }
+
+        before do
+          allow(GoCardlessPro::Client).to receive(:new)
+            .and_raise(GoCardlessPro::ValidationError.new("message" => "Validation failed", "code" => 422))
+        end
+
+        it "returns a third-party error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(
+            status: 422,
+            error: "Unprocessable Entity",
+            code: "third_party_error",
+            error_details: {third_party: "GoCardless", thirdparty_error: "Validation failed"}
+          )
+        end
+      end
+    end
+
     context "with account_type partner", :premium do
       let(:organization) { create(:organization, premium_integrations: ["revenue_share"]) }
 
@@ -317,6 +522,40 @@ RSpec.describe Api::V1::CustomersController do
           customer: a_kind_of(Customer)
         )
         expect(response).to have_http_status(:success)
+      end
+
+      [nil, "bogus"].each do |integration_type|
+        context "with #{integration_type.inspect} as integration type" do
+          let(:create_params) do
+            {
+              external_id: SecureRandom.uuid,
+              name: "Foo Bar",
+              integration_customers: [{integration_type:, integration_code: "netsuite", sync_with_provider: true}.compact]
+            }
+          end
+
+          it "returns a validation error without creating the customer" do
+            expect { subject }.not_to change(organization.customers, :count)
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(integration_type: ["value_is_invalid"])
+          end
+
+          context "when the customer already exists" do
+            let(:customer) { create(:customer, organization:, external_id: create_params[:external_id]) }
+            let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
+
+            before { integration_customer }
+
+            it "returns a validation error without modifying the customer or its integrations" do
+              expect { subject }.not_to change { customer.reload.attributes }
+
+              expect(response).to have_http_status(:unprocessable_content)
+              expect(json[:error_details]).to eq(integration_type: ["value_is_invalid"])
+              expect(customer.integration_customers).to eq([integration_customer])
+            end
+          end
+        end
       end
     end
 

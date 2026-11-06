@@ -3,7 +3,7 @@
 module Api
   module V1
     module Plans
-      class BaseController < Api::BaseController
+      class BaseController < Api::V1::BaseController
         before_action :find_plan
 
         private

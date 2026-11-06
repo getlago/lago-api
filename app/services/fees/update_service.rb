@@ -21,7 +21,8 @@ module Fees
         unless valid_payment_status?(params[:payment_status])
           return result.single_validation_failure!(
             field: :payment_status,
-            error_code: "value_is_invalid"
+            error_code: "value_is_invalid",
+            meta: {allowed_values: Fee::PAYMENT_STATUS.map(&:to_s)}
           )
         end
 
@@ -38,8 +39,9 @@ module Fees
 
     attr_reader :fee, :params
 
+    # A JSON body can carry any scalar here (1, true), not only a string
     def valid_payment_status?(payment_status)
-      Fee::PAYMENT_STATUS.include?(payment_status&.to_sym)
+      Fee::PAYMENT_STATUS.map(&:to_s).include?(payment_status.to_s)
     end
 
     def update_payment_status(payment_status)

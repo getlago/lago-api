@@ -8,11 +8,27 @@ RSpec.describe BillingSegments::ProcessService do
 
     let(:organization) { create(:organization) }
     let(:customer) do
-      create(:customer, organization:, currency: "USD", finalize_zero_amount_invoice: customer_finalize_zero_amount_invoice)
+      create(
+        :customer,
+        organization:,
+        currency: "USD",
+        finalize_zero_amount_invoice: customer_finalize_zero_amount_invoice,
+        invoice_grace_period:
+      )
     end
     let(:customer_finalize_zero_amount_invoice) { "inherit" }
+    let(:invoice_grace_period) { 0 }
+    let(:catalog_plan) { nil }
     let(:contract) do
-      create(:contract, organization:, customer:, consolidate_invoice:, purchase_order_number: purchase_number, started_at: Time.zone.parse("2026-07-01"))
+      create(
+        :contract,
+        organization:,
+        customer:,
+        catalog_plan:,
+        consolidate_invoice:,
+        purchase_order_number: purchase_number,
+        started_at: Time.zone.parse("2026-07-01")
+      )
     end
     let(:consolidate_invoice) { true }
     let(:purchase_number) { nil }
@@ -32,6 +48,9 @@ RSpec.describe BillingSegments::ProcessService do
     let(:billing_segment_proration_ratio) { 1 }
     let(:billing_segment_status) { :pending }
     let(:billing_segment_billing_at) { Time.zone.parse("2026-08-31 23:59:59") }
+    let(:billing_segment_cycle_started_at) { Time.zone.parse("2026-08-01") }
+    let(:billing_segment_started_at) { Time.zone.parse("2026-08-01") }
+    let(:billing_segment_ended_at) { Time.zone.parse("2026-08-31 23:59:59") }
     let(:min_amount_cents) { 0 }
     let(:billing_segment) do
       create(
@@ -48,14 +67,27 @@ RSpec.describe BillingSegments::ProcessService do
         proration_ratio: billing_segment_proration_ratio,
         status: billing_segment_status,
         billing_at: billing_segment_billing_at,
-        cycle_started_at: Time.zone.parse("2026-08-01"),
-        started_at: Time.zone.parse("2026-08-01"),
-        ended_at: Time.zone.parse("2026-08-31 23:59:59")
+        cycle_started_at: billing_segment_cycle_started_at,
+        started_at: billing_segment_started_at,
+        ended_at: billing_segment_ended_at
       )
     end
 
     before do
       billing_segment
+      allow(Invoices::FinalizeContractInvoiceService).to receive(:call!).and_call_original
+    end
+
+    it "builds the arrears invoice with the contract type" do
+      expect(result.invoices.sole.reload).to have_attributes(invoice_type: "contract", status: "finalized")
+    end
+
+    it "publishes the contract invoice through the contract finalization service" do
+      invoice = result.invoices.sole
+
+      expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).once.with(invoice:)
+      expect(SendWebhookJob).to have_been_enqueued.once.with("invoice.created", invoice)
+      expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.once.with(invoice:, notify: false)
     end
 
     context "when a contract selects invoice custom sections" do
@@ -101,7 +133,7 @@ RSpec.describe BillingSegments::ProcessService do
     end
 
     describe "#grouped_segments" do
-      it "loads and groups segments with one query while sharing rate card records" do
+      it "loads and groups segments without redundant rate card queries" do
         billing_segment_queries = []
         rate_card_queries = []
         subscriber = ->(_name, _start, _finish, _id, payload) {
@@ -114,8 +146,8 @@ RSpec.describe BillingSegments::ProcessService do
             service = described_class.new(customer:)
             segment = service.send(:pending_segments).sole
 
-            expect(segment.contract_rate_card.rate_card).to equal(segment.rate_card_rate.rate_card)
-            expect(service.send(:processing_advance_segments)).to eq([])
+            expect(segment.contract_rate_card.rate_card.id).to eq(segment.rate_card_rate.rate_card_id)
+            expect(service.send(:pending_advance_segments)).to eq([])
           end
         end
 
@@ -129,12 +161,13 @@ RSpec.describe BillingSegments::ProcessService do
       let(:product) { create(:product, :metered, organization:, billable_metric:) }
       let(:rate_override) { nil }
       let(:billing_segment_rate_properties) { rate_properties }
+      let(:event_timestamps) { [Time.zone.parse("2026-08-10"), Time.zone.parse("2026-08-20")] }
 
       before do
-        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
-          code: billable_metric.code, timestamp: Time.zone.parse("2026-08-10"), properties: event_properties)
-        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
-          code: billable_metric.code, timestamp: Time.zone.parse("2026-08-20"), properties: event_properties)
+        event_timestamps.each do |timestamp|
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp:, properties: event_properties)
+        end
       end
 
       context "with an advance card" do
@@ -144,16 +177,48 @@ RSpec.describe BillingSegments::ProcessService do
         let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
         let(:billing_segment_billing_at) { Time.zone.parse("2026-08-01") }
 
-        it "does not process the segment through periodic billing" do
+        it "completes an advance segment without paid fees" do
           expect { result }.not_to change(Invoice, :count)
 
           expect(result).to be_success
           expect(result.invoices).to be_empty
-          expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice_id: nil)
         end
 
-        context "when the segment is processing" do
-          let(:billing_segment_status) { :processing }
+        context "when the advance segment has not ended" do
+          let(:billing_segment_ended_at) { 1.day.from_now }
+
+          it "leaves the segment pending for later usage" do
+            expect { result }.not_to change(Invoice, :count)
+
+            expect(result.invoices).to eq([])
+            expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+          end
+        end
+
+        context "with recurring custom usage" do
+          let(:billable_metric) { create(:custom_billable_metric, organization:, recurring: true) }
+
+          it "processes the segment at renewal instead of reconciling it at segment end" do
+            renewal_time = billing_segment_billing_at
+            end_time = billing_segment_ended_at
+            allow(Fees::AdvanceChargesService).to receive(:call!).and_call_original
+
+            at_renewal = described_class.call!(customer:, timestamp: renewal_time)
+            expect(at_renewal.invoices).to be_empty
+            expect(billing_segment.reload.status).to eq("done")
+            expect(Event.where(organization:, external_subscription_id: contract.external_id).count).to eq(event_timestamps.size)
+            expect(Fee.where(contract:, fee_type: :product)).to be_empty
+            expect(Fees::AdvanceChargesService).not_to have_received(:call!)
+
+            after_end = described_class.call!(customer:, timestamp: end_time)
+            expect(after_end.invoices).to be_empty
+            expect(Fees::AdvanceChargesService).not_to have_received(:call!)
+            expect(Fee.where(contract:, fee_type: :product)).to be_empty
+          end
+        end
+
+        context "when the segment has paid fees" do
           let(:rate_card) do
             create(
               :rate_card,
@@ -212,6 +277,23 @@ RSpec.describe BillingSegments::ProcessService do
             expect(Invoices::FinalizeAndPublishAdvanceChargesService).to have_received(:call!).once.with(invoice:)
           end
 
+          context "when reconciling the paid fees" do
+            let(:status_during_reconciliation) { [] }
+
+            before do
+              allow(Fees::AdvanceChargesService).to receive(:call!).and_wrap_original do |original, **arguments|
+                status_during_reconciliation << billing_segment.reload.status
+                original.call(**arguments)
+              end
+            end
+
+            it "keeps the segment pending until reconciliation commits" do
+              expect(result).to be_success
+              expect(status_during_reconciliation).to eq(["pending"])
+              expect(billing_segment.reload.status).to eq("done")
+            end
+          end
+
           it "does not publish or record another payment on a repeated run" do
             result
 
@@ -225,7 +307,6 @@ RSpec.describe BillingSegments::ProcessService do
             expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", invoice)
             expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
             expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: false)
-            expect(SegmentTrackJob).to have_been_enqueued.once
             expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
               organization:,
               params: {
@@ -243,6 +324,46 @@ RSpec.describe BillingSegments::ProcessService do
             invoice = result.invoices.sole.reload
             expect(invoice.total_paid_amount_cents).to eq(invoice.total_amount_cents)
             expect(invoice.total_due_amount_cents).to eq(0)
+          end
+
+          context "with an available credit note for a previously invoiced fee" do
+            let(:source_invoice) do
+              create(:invoice, organization:, customer:, billing_entity: customer.billing_entity, currency: "USD", total_amount_cents: 500)
+            end
+            let(:credit_note) do
+              create(
+                :credit_note,
+                invoice: source_invoice,
+                customer:,
+                total_amount_cents: 500,
+                total_amount_currency: "USD",
+                credit_amount_cents: 500,
+                credit_amount_currency: "USD",
+                balance_amount_cents: 500,
+                balance_amount_currency: "USD",
+                credit_status: :available
+              )
+            end
+
+            before { create(:credit_note_item, credit_note:, fee: create(:product_fee, invoice: source_invoice)) }
+
+            it "does not apply the credit to the invoice for fees already paid in advance" do
+              invoice = result.invoices.sole.reload
+              expect(invoice).to have_attributes(total_amount_cents: 600, payment_status: "succeeded")
+              expect(invoice.credits.where(credit_note:)).to be_empty
+              expect(Credit.where(credit_note:)).to be_empty
+              expect(credit_note.reload.balance_amount_cents).to eq(500)
+              expect(paid_fee.reload.payment_status).to eq("succeeded")
+              expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
+                organization:,
+                params: {
+                  invoice_id: invoice.id,
+                  amount_cents: 600,
+                  reference: I18n.t("invoice.charges_paid_in_advance"),
+                  created_at: invoice.created_at
+                }
+              )
+            end
           end
 
           context "with customer invoice custom sections" do
@@ -328,7 +449,7 @@ RSpec.describe BillingSegments::ProcessService do
                 expect { result }.to raise_error(ActiveRecord::RecordInvalid)
               end.not_to change(Invoice, :count)
 
-              expect(billing_segment.reload).to have_attributes(status: "processing", invoice_id: nil)
+              expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
               expect(paid_fee.reload.invoice_id).to be_nil
             end
           end
@@ -392,6 +513,47 @@ RSpec.describe BillingSegments::ProcessService do
           expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
         end
 
+        context "with an invoice grace period" do
+          let(:invoice_grace_period) { 3 }
+          let(:late_event) do
+            create(
+              :event,
+              organization:,
+              customer:,
+              external_subscription_id: contract.external_id,
+              code: billable_metric.code,
+              timestamp: Time.zone.parse("2026-08-25"),
+              properties: event_properties
+            )
+          end
+
+          it "includes usage received during the grace period when finalizing" do
+            invoice = result.invoices.sole.reload
+            expect(invoice.fees.sole).to have_attributes(units: 2, amount_cents: 3_000)
+
+            late_event
+            Invoices::RefreshDraftAndFinalizeService.call!(invoice:)
+
+            expect(invoice.reload.status).to eq("finalized")
+            expect(invoice.fees.sole).to have_attributes(units: 3, amount_cents: 4_500)
+          end
+        end
+
+        context "when the contract belongs to a catalog plan with taxes" do
+          let(:catalog_plan) { create(:catalog_plan, organization:) }
+          let(:tax) { create(:tax, organization:, rate: 20) }
+
+          before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
+
+          it "applies the catalog plan taxes to the fee" do
+            expect(result).to be_success
+
+            fee = result.invoices.sole.fees.sole.reload
+            expect(fee).to have_attributes(taxes_amount_cents: 600, taxes_rate: 20)
+            expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 600)
+          end
+        end
+
         context "with a minimum amount" do
           let(:min_amount_cents) { 10_000 }
 
@@ -452,6 +614,56 @@ RSpec.describe BillingSegments::ProcessService do
             expect(fee.amount_details["graduated_ranges"].size).to eq(2)
           end
         end
+
+        context "with an empty recurring advance renewal" do
+          let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "quantity", recurring: true) }
+          let(:rate_card) do
+            create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance, display_on_invoice: true)
+          end
+          let(:billing_segment_billing_at) { Time.zone.parse("2026-09-01") }
+          let(:billing_segment_cycle_started_at) { billing_segment_billing_at }
+          let(:billing_segment_started_at) { billing_segment_billing_at }
+          let(:billing_segment_ended_at) { Time.zone.parse("2026-09-30 23:59:59") }
+          let(:renewal_timestamp) { billing_segment_billing_at }
+          let(:event_timestamps) { [] }
+
+          context "without an invoice grace period" do
+            it "suppresses the empty invoice and completes the segment" do
+              expect do
+                described_class.call!(customer:, timestamp: renewal_timestamp)
+              end.not_to change(Invoice, :count)
+
+              expect(billing_segment.reload).to have_attributes(status: "done", invoice_id: nil)
+            end
+          end
+
+          context "with an invoice grace period" do
+            let(:invoice_grace_period) { 3 }
+
+            it "retains the empty draft and linked segment without duplicating it on a repeated run" do
+              first_result = described_class.call!(customer:, timestamp: renewal_timestamp)
+              invoice = first_result.invoices.sole.reload
+
+              expect(invoice).to have_attributes(status: "draft", expected_finalization_date: Date.parse("2026-09-04"))
+              expect(invoice.fees).to be_empty
+              expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+              expect(SendWebhookJob).to have_been_enqueued.with("invoice.drafted", invoice)
+              expect(SendWebhookJob).to have_been_enqueued.with("invoice.ready_to_finalize", invoice)
+
+              expect do
+                described_class.call!(customer:, timestamp: renewal_timestamp)
+              end.not_to change(Invoice, :count)
+
+              expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+              expect(invoice.reload.fees).to be_empty
+
+              create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+                code: billable_metric.code, timestamp: Time.zone.parse("2026-08-25"), properties: event_properties)
+              expect(Invoices::RefreshDraftService.call(invoice:)).to be_success
+              expect(invoice.reload.fees.sole).to have_attributes(units: 10, amount_cents: 2_500)
+            end
+          end
+        end
       end
 
       context "with mixed fixed and metered segments" do
@@ -486,7 +698,7 @@ RSpec.describe BillingSegments::ProcessService do
           expect(result).to be_success
 
           invoice = result.invoices.sole.reload
-          expect(invoice.status).to eq("finalized")
+          expect(invoice).to have_attributes(invoice_type: "contract", status: "finalized")
           expect(invoice.fees.count).to eq(2)
 
           metered_fee = invoice.fees.find { |f| f.invoiceable == product }
@@ -500,6 +712,90 @@ RSpec.describe BillingSegments::ProcessService do
 
           expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
           expect(fixed_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+      end
+
+      context "when an available contract-product credit note exists" do
+        let(:aggregation_type) { :count_agg }
+        let(:field_name) { nil }
+        let(:event_properties) { {} }
+        let(:rate_properties) { {"amount" => "15.00"} }
+        let(:available_credit_cents) { 500 }
+        let(:source_invoice) do
+          create(:invoice, organization:, customer:, billing_entity: customer.billing_entity, currency: "USD", total_amount_cents: available_credit_cents)
+        end
+        let(:source_fee) { create(:product_fee, invoice: source_invoice) }
+        let(:credit_note) do
+          create(
+            :credit_note,
+            invoice: source_invoice,
+            customer:,
+            total_amount_cents: available_credit_cents,
+            total_amount_currency: "USD",
+            credit_amount_cents: available_credit_cents,
+            credit_amount_currency: "USD",
+            balance_amount_cents: available_credit_cents,
+            balance_amount_currency: "USD"
+          )
+        end
+
+        before do
+          create(:credit_note_item, credit_note:, fee: source_fee)
+        end
+
+        it "deducts newly applied credit from the finalized invoice total" do
+          invoice = result.invoices.sole.reload
+
+          expect(invoice).to have_attributes(total_amount_cents: 2_500, payment_status: "pending")
+          expect(invoice.credits.where(credit_note:).sum(:amount_cents)).to eq(500)
+          expect(credit_note.reload.balance_amount_cents).to eq(0)
+        end
+
+        context "when invoice processing fails after applying credit" do
+          before do
+            allow(Invoices::ApplyInvoiceCustomSectionsService).to receive(:call!).and_raise(ActiveRecord::RecordInvalid)
+          end
+
+          it "rolls back the credit and invoice together" do
+            expect { result }.to raise_error(ActiveRecord::RecordInvalid)
+            expect(credit_note.reload.balance_amount_cents).to eq(500)
+            expect(Credit.where(credit_note:)).to be_empty
+            expect(billing_segment.reload).to have_attributes(status: "pending", invoice: nil)
+          end
+        end
+
+        context "when the credit covers the full invoice" do
+          let(:available_credit_cents) { 3_000 }
+
+          it "marks the invoice as paid with no remaining amount due" do
+            invoice = result.invoices.sole.reload
+
+            expect(invoice).to have_attributes(total_amount_cents: 0, payment_status: "succeeded")
+          end
+        end
+
+        context "with an invoice grace period" do
+          let(:invoice_grace_period) { 3 }
+
+          it "leaves the available credit untouched while the invoice is a draft" do
+            invoice = result.invoices.sole.reload
+
+            expect(invoice.status).to eq("draft")
+            expect(invoice.credits.where(credit_note:)).to be_empty
+            expect(credit_note.reload.balance_amount_cents).to eq(500)
+          end
+        end
+
+        it "does not deduct the same credit again on a repeated run" do
+          invoice = result.invoices.sole
+          total_amount_cents = invoice.total_amount_cents
+
+          expect { described_class.call!(customer:) }.not_to change { invoice.reload.total_amount_cents }
+          expect do
+            BillingSegments::ComputeInvoiceService.call!(invoice:, billing_segments: [], context: :finalize)
+          end.not_to change { invoice.reload.total_amount_cents }
+          expect(invoice.reload.total_amount_cents).to eq(total_amount_cents)
+          expect(invoice.credits.where(credit_note:).sum(:amount_cents)).to eq(500)
         end
       end
 
@@ -762,11 +1058,61 @@ RSpec.describe BillingSegments::ProcessService do
       end
     end
 
+    context "with an advance fixed segment and an arrears metered segment on the same billing date" do
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
+      let(:metered_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+      let(:metered_product) { create(:product, :metered, organization:, billable_metric: metered_metric) }
+      let(:metered_rate_card) { create(:rate_card, organization:, product: metered_product, currency: "USD") }
+      let(:metered_contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card: metered_rate_card, effective_date: Date.parse("2026-07-01"))
+      end
+      let(:metered_rate_card_rate) do
+        create(:rate_card_rate, organization:, rate_card: metered_rate_card, rate_properties: {"amount" => "10.00"})
+      end
+      let(:metered_segment) do
+        create(
+          :billing_segment, organization:, contract:, customer:,
+          contract_rate_card: metered_contract_rate_card, rate_card_rate: metered_rate_card_rate,
+          currency: "USD", rate_properties: {"amount" => "10.00"},
+          billing_at: billing_segment_billing_at, cycle_started_at: Time.zone.parse("2026-07-01"),
+          started_at: Time.zone.parse("2026-07-01"), ended_at: Time.zone.parse("2026-07-31 23:59:59")
+        )
+      end
+
+      before do
+        metered_segment
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: metered_metric.code, timestamp: Time.zone.parse("2026-07-15"), properties: {})
+      end
+
+      it "consolidates both fees into one invoice dated from the shared billing date" do
+        expect(result).to be_success
+
+        invoice = result.invoices.sole.reload
+        expect(invoice.issuing_date).to eq(billing_segment_billing_at.in_time_zone(customer.applicable_timezone).to_date)
+        expect(invoice.fees.size).to eq(2)
+        expect(invoice.fees.find { |fee| fee.invoiceable == product }).to have_attributes(amount_cents: 7_500)
+        expect(invoice.fees.find { |fee| fee.invoiceable == metered_product }).to have_attributes(amount_cents: 1_000)
+        expect(billing_segment.cycle_started_at).not_to eq(metered_segment.cycle_started_at)
+      end
+    end
+
     describe "#invoice_key" do
       subject(:invoice_key) { described_class.new(customer:).send(:invoice_key, billing_segment) }
 
+      let(:pending_segment_with_later_billing_at) do
+        billing_segment.dup.tap { |segment| segment.billing_at = Time.zone.parse("2026-09-01 00:00:00") }
+      end
+
       it "returns the invoice grouping key" do
         expect(invoice_key).to eq([Date.parse("2026-08-01"), :shared, "USD", customer.billing_entity_id, [nil, "provider"], nil])
+      end
+
+      it "groups pending invoices by the billing date rather than the reconciliation cycle" do
+        pending_key = described_class.new(customer:).send(:pending_invoice_key, pending_segment_with_later_billing_at)
+
+        expect(pending_key.first).to eq(Date.parse("2026-09-01"))
+        expect(invoice_key.first).to eq(Date.parse("2026-08-01"))
       end
 
       context "when the customer timezone changes the cycle start date" do
@@ -880,11 +1226,173 @@ RSpec.describe BillingSegments::ProcessService do
       expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
     end
 
+    context "with an invoice grace period" do
+      let(:invoice_grace_period) { 3 }
+
+      it "creates a draft invoice until the expected finalization date" do
+        invoice = result.invoices.sole.reload
+        expect(invoice).to have_attributes(
+          status: "draft",
+          expected_finalization_date: Date.parse("2026-09-03")
+        )
+        expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+        expect(SendWebhookJob).to have_been_enqueued.with("invoice.drafted", invoice)
+        expect(SendWebhookJob).to have_been_enqueued.with("invoice.ready_to_finalize", invoice)
+      end
+    end
+
+    context "when the contract billing entity has an invoice grace period" do
+      let(:invoice_grace_period) { nil }
+      let(:contract_billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
+      let(:contract) do
+        create(
+          :contract,
+          organization:,
+          customer:,
+          billing_entity: contract_billing_entity,
+          consolidate_invoice:,
+          started_at: Time.zone.parse("2026-07-01")
+        )
+      end
+
+      it "uses the contract billing entity grace period" do
+        invoice = result.invoices.sole.reload
+
+        expect(invoice).to have_attributes(
+          billing_entity: contract_billing_entity,
+          status: "draft",
+          expected_finalization_date: Date.parse("2026-09-03")
+        )
+      end
+    end
+
+    context "when the contract belongs to a catalog plan with taxes" do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:tax) { create(:tax, organization:, rate: 20) }
+
+      before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
+
+      it "applies the catalog plan taxes to the fee" do
+        expect(result).to be_success
+
+        fee = result.invoices.sole.fees.sole.reload
+        expect(fee).to have_attributes(taxes_amount_cents: 1_500, taxes_rate: 20)
+        expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 1_500)
+      end
+
+      context "with an invoice grace period" do
+        let(:invoice_grace_period) { 3 }
+
+        it "keeps the catalog plan taxes when refreshing the draft" do
+          invoice = result.invoices.sole.reload
+          expect(invoice).to have_attributes(status: "draft", total_amount_cents: 9_000)
+
+          expect(Invoices::RefreshDraftService.call(invoice:)).to be_success
+
+          expect(invoice.reload).to have_attributes(status: "draft", total_amount_cents: 9_000)
+          expect(invoice.fees.sole.applied_taxes.sole).to have_attributes(tax:, amount_cents: 1_500)
+        end
+      end
+    end
+
+    context "when the customer uses provider taxes" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:local_tax) { create(:tax, organization:, rate: 20) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        create(:rate_card_applied_tax, organization:, rate_card:, tax: local_tax)
+      end
+
+      it "defers tax calculation to the provider" do
+        expect { result }.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob)
+
+        invoice = result.invoices.sole.reload
+        expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice:)
+        expect(invoice).to have_attributes(
+          status: "pending",
+          tax_status: "pending",
+          fees_amount_cents: 7_500,
+          sub_total_excluding_taxes_amount_cents: 7_500
+        )
+
+        fee = invoice.fees.sole.reload
+        expect(fee).to have_attributes(taxes_amount_cents: 0)
+        expect(fee.applied_taxes).to be_empty
+        expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+      end
+
+      context "with an invoice grace period" do
+        let(:invoice_grace_period) { 3 }
+
+        it "keeps the invoice as a draft while requesting provider taxes on creation and refresh" do
+          expect { result }.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob)
+
+          invoice = result.invoices.sole.reload
+          expect(invoice).to have_attributes(status: "draft", tax_status: "pending", fees_amount_cents: 7_500)
+          expect(invoice.fees.sole.applied_taxes).to be_empty
+
+          expect { Invoices::RefreshDraftService.call!(invoice:) }
+            .to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+
+          expect(invoice.reload).to have_attributes(status: "draft", tax_status: "pending", fees_amount_cents: 7_500)
+          expect(invoice.fees.sole).to have_attributes(taxes_amount_cents: 0)
+          expect(invoice.fees.sole.applied_taxes).to be_empty
+        end
+      end
+
+      context "with an available credit note" do
+        let(:source_invoice) do
+          create(:invoice, organization:, customer:, billing_entity: customer.billing_entity, currency: "USD", total_amount_cents: 500)
+        end
+        let(:credit_note) do
+          create(
+            :credit_note,
+            invoice: source_invoice,
+            customer:,
+            total_amount_cents: 500,
+            total_amount_currency: "USD",
+            credit_amount_cents: 500,
+            credit_amount_currency: "USD",
+            balance_amount_cents: 500,
+            balance_amount_currency: "USD"
+          )
+        end
+
+        before { create(:credit_note_item, credit_note:, fee: create(:product_fee, invoice: source_invoice)) }
+
+        it "does not consume the credit while provider taxes are pending" do
+          invoice = result.invoices.sole.reload
+
+          expect(invoice).to have_attributes(status: "pending", tax_status: "pending", total_amount_cents: 0)
+          expect(invoice.credits.where(credit_note:)).to be_empty
+          expect(credit_note.reload.balance_amount_cents).to eq(500)
+        end
+      end
+    end
+
     it "does not create duplicate invoices or fees on repeated invocation" do
       invoice = result.invoices.sole
 
       expect { described_class.call!(customer:) }.to not_change(Invoice, :count).and not_change(Fee, :count)
       expect(billing_segment.reload.invoice).to eq(invoice)
+    end
+
+    context "when computing a pending segment's fees" do
+      let(:status_during_fee_computation) { [] }
+
+      before do
+        allow(BillingSegments::Fees::ComputeService).to receive(:call!).and_wrap_original do |original, **arguments|
+          status_during_fee_computation << billing_segment.reload.status
+          original.call(**arguments)
+        end
+      end
+
+      it "keeps the segment pending until invoice computation commits" do
+        expect(result).to be_success
+        expect(status_during_fee_computation).to eq(["pending"])
+        expect(billing_segment.reload.status).to eq("done")
+      end
     end
 
     it "raises a retryable error when the advisory lock cannot be acquired" do
@@ -918,6 +1426,24 @@ RSpec.describe BillingSegments::ProcessService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
       expect { described_class.call!(customer:) }.to not_change(Invoice, :count).and not_change(Fee, :count)
       expect(invoice.reload.status).to eq("finalized")
+      expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).with(invoice:).twice
+    end
+
+    context "with a generating subscription invoice left by a previous run" do
+      let(:legacy_invoice) do
+        create(:invoice, :generating, organization:, customer:, invoice_type: :subscription, total_amount_cents: 100, fees_amount_cents: 100)
+      end
+
+      before do
+        create(:billing_segment, organization:, customer:, status: :done, invoice: legacy_invoice)
+      end
+
+      it "finalizes it without the contract finalization service" do
+        expect(result).to be_success
+        expect(legacy_invoice.reload).to be_finalized
+        expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).once
+        expect(Invoices::FinalizeContractInvoiceService).not_to have_received(:call!).with(invoice: legacy_invoice)
+      end
     end
 
     it "does not process another customer's pending segments or generating invoices" do
@@ -929,6 +1455,100 @@ RSpec.describe BillingSegments::ProcessService do
       expect(other_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
       expect(other_done_segment.reload.invoice).to eq(other_invoice)
       expect(other_invoice.reload.status).to eq("generating")
+    end
+
+    context "when finalizing existing generating invoices" do
+      let(:earlier_invoice) do
+        create(:invoice, :generating, organization:, customer:, issuing_date: Date.parse("2026-08-01"))
+      end
+      let(:later_invoice) do
+        create(:invoice, :generating, organization:, customer:, issuing_date: Date.parse("2026-09-01"))
+      end
+      let(:finalized_invoice_ids) { [] }
+
+      before do
+        create(:billing_segment, organization:, customer:, invoice: later_invoice, status: :done)
+        create(:billing_segment, organization:, customer:, invoice: earlier_invoice, status: :done)
+        allow(Invoices::TransitionToFinalStatusService).to receive(:call!).and_wrap_original do |_original, invoice:|
+          finalized_invoice_ids << invoice.id
+        end
+      end
+
+      it "finalizes invoices in issuing-date order" do
+        described_class.new(customer:).send(:finalize_generating_invoices)
+
+        expect(finalized_invoice_ids).to eq([earlier_invoice.id, later_invoice.id])
+      end
+
+      it "catches up credit-note application for existing periodic invoices" do
+        allow(Credits::CreditNoteService).to receive(:call!).and_call_original
+
+        described_class.new(customer:).send(:finalize_generating_invoices)
+
+        expect(Credits::CreditNoteService).to have_received(:call!).with(invoice: earlier_invoice)
+        expect(Credits::CreditNoteService).to have_received(:call!).with(invoice: later_invoice)
+      end
+
+      context "with an available credit note" do
+        let(:earlier_invoice) do
+          create(:invoice, :generating, organization:, customer:, currency: "USD", issuing_date: Date.parse("2026-08-01"),
+            fees_amount_cents: 1_000, total_amount_cents: 1_000)
+        end
+        let(:winning_invoice) { Invoice.find(earlier_invoice.id) }
+        let(:source_invoice) do
+          create(:invoice, organization:, customer:, billing_entity: customer.billing_entity, currency: "USD", total_amount_cents: 500)
+        end
+        let(:credit_note) do
+          create(
+            :credit_note,
+            invoice: source_invoice,
+            customer:,
+            total_amount_cents: 500,
+            total_amount_currency: "USD",
+            credit_amount_cents: 500,
+            credit_amount_currency: "USD",
+            balance_amount_cents: 500,
+            balance_amount_currency: "USD"
+          )
+        end
+
+        before do
+          create(:credit_note_item, credit_note:, fee: create(:product_fee, invoice: source_invoice))
+        end
+
+        it "does not subtract the credit again when catching up a retry" do
+          described_class.new(customer:).send(:finalize_generating_invoices)
+          described_class.new(customer:).send(:finalize_generating_invoices)
+
+          expect(earlier_invoice.reload.total_amount_cents).to eq(500)
+          expect(earlier_invoice.credits.where(credit_note:).sum(:amount_cents)).to eq(500)
+          expect(credit_note.reload.balance_amount_cents).to eq(0)
+        end
+
+        context "when another caller applies credit after invoice selection" do
+          before do
+            allow(Invoices::TransitionToFinalStatusService).to receive(:call!).and_call_original
+            allow(Credits::CreditNoteService).to receive(:call!).and_wrap_original do |original, invoice:|
+              if invoice.id == earlier_invoice.id
+                applied = original.call(invoice: winning_invoice)
+                winning_invoice.total_amount_cents -= applied.credits.sum(&:amount_cents)
+                winning_invoice.payment_status = :pending
+                winning_invoice.save!
+              end
+
+              original.call(invoice:)
+            end
+          end
+
+          it "preserves the credited total and finalizes without a second allocation" do
+            described_class.new(customer:).send(:finalize_generating_invoices)
+
+            expect(earlier_invoice.reload).to have_attributes(total_amount_cents: 500, payment_status: "pending", status: "finalized")
+            expect(earlier_invoice.credits.where(credit_note:).pluck(:amount_cents)).to eq([500])
+            expect(credit_note.reload.balance_amount_cents).to eq(0)
+          end
+        end
+      end
     end
 
     context "with a fractional unit amount and tax" do
@@ -1254,11 +1874,13 @@ RSpec.describe BillingSegments::ProcessService do
       let(:second_rate_card_rate) do
         create(:rate_card_rate, organization:, rate_card: second_rate_card, rate_properties: {"amount" => "20.00"})
       end
+      let(:second_segment_billing_at) { Time.zone.parse("2026-08-31 23:59:59") }
+      let(:second_segment_cycle_started_at) { Time.zone.parse("2026-08-01") }
       let(:second_segment) do
         create(:billing_segment, organization:, contract: second_contract, customer:,
           contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
           currency: second_rate_card.currency, rate_properties: {"amount" => "20.00"},
-          billing_at: Time.zone.parse("2026-09-01 10:00:00"), cycle_started_at: Time.zone.parse("2026-08-01"),
+          billing_at: second_segment_billing_at, cycle_started_at: second_segment_cycle_started_at,
           started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59"))
       end
 
@@ -1271,6 +1893,16 @@ RSpec.describe BillingSegments::ProcessService do
         invoice = result.invoices.sole.reload
         expect(invoice.fees.count).to eq(2)
         expect(BillingSegment.where(customer:).distinct.pluck(:invoice_id)).to eq([invoice.id])
+      end
+
+      context "when the billing dates differ" do
+        let(:second_segment_billing_at) { Time.zone.parse("2026-09-01 10:00:00") }
+
+        it "creates separate invoices" do
+          expect(result).to be_success
+          expect(result.invoices.map { |invoice| invoice.fees.count }).to eq([1, 1])
+          expect(billing_segment.reload.invoice_id).not_to eq(second_segment.reload.invoice_id)
+        end
       end
 
       context "when the contract opts out of invoice consolidation" do
@@ -1317,9 +1949,16 @@ RSpec.describe BillingSegments::ProcessService do
         end
 
         context "with different cycle start dates" do
-          before { second_segment.update!(cycle_started_at: Time.zone.parse("2026-07-01")) }
+          let(:second_segment_cycle_started_at) { Time.zone.parse("2026-07-01") }
 
-          it_behaves_like "splits invoices"
+          it "consolidates segments with the same billing date across cycles" do
+            expect(result).to be_success
+
+            invoice = result.invoices.sole.reload
+            expect(invoice.fees.count).to eq(2)
+            expect(billing_segment.reload.invoice_id).to eq(second_segment.reload.invoice_id)
+            expect(billing_segment.cycle_started_at).not_to eq(second_segment.cycle_started_at)
+          end
         end
 
         context "with different currencies" do

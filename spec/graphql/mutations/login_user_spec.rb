@@ -77,15 +77,19 @@ RSpec.describe Mutations::LoginUser do
 
   context "with attempts throttling" do
     let(:cache) { ActiveSupport::Cache::MemoryStore.new }
-    let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+    let(:request) { request_from("203.0.113.10") }
 
-    before { allow(Rails).to receive(:cache).and_return(cache) }
+    before { Auth::AttemptsThrottle.store = cache }
 
-    def login(password, email: user.email)
+    def request_from(ip)
+      instance_double(ActionDispatch::Request, remote_ip: ip)
+    end
+
+    def login(password, email: user.email, request: self.request)
       execute_graphql(query: mutation, request:, variables: {input: {email:, password:}})
     end
 
-    it "locks the email after 10 failed attempts, even with the right password" do
+    it "locks the email for the IP after 10 failed attempts, even with the right password" do
       10.times { login("badpassword") }
 
       result = login("ILoveLago")
@@ -114,17 +118,47 @@ RSpec.describe Mutations::LoginUser do
       end
     end
 
-    it "counts the attempt before checking the password" do
-      email_attempts = -> { cache.read(Auth::AttemptsThrottle.cache_key(:login_attempts_per_email, user.email), raw: true).to_i }
-      attempts_seen_during_check = nil
-      allow(UsersService).to receive(:call).and_wrap_original do |original, *args|
-        attempts_seen_during_check = email_attempts.call
-        original.call(*args)
+    it "does not lock the email for another IP" do
+      10.times { login("badpassword") }
+
+      result = login("ILoveLago", request: request_from("198.51.100.20"))
+
+      expect(result["data"]["loginUser"]["token"]).to be_present
+    end
+
+    it "locks the email after 100 failed attempts spread over many IPs" do
+      100.times { |i| login("badpassword", request: request_from("198.51.100.#{i}")) }
+
+      result = login("ILoveLago", request: request_from("192.0.2.1"))
+
+      expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+    end
+
+    it "does not count attempts over the IP limit against the email" do
+      30.times { |i| login("badpassword", email: "unknown-#{i}@example.com") }
+      100.times { login("badpassword") }
+
+      expect(login("ILoveLago", request: request_from("198.51.100.20"))["data"]["loginUser"]["token"]).to be_present
+    end
+
+    context "when the password is checked" do
+      let(:attempts_seen_during_check) { [] }
+
+      before do
+        allow(UsersService).to receive(:call).and_wrap_original do |original, *args|
+          attempts_seen_during_check << %i[login_per_email_and_ip login_per_email].map do |rule_name|
+            identifiers = (rule_name == :login_per_email_and_ip) ? [user.email, request.remote_ip] : [user.email]
+            cache.read(Auth::AttemptsThrottle.cache_key(rule_name, *identifiers), raw: true).to_i
+          end
+          original.call(*args)
+        end
       end
 
-      login("badpassword")
+      it "has already counted the attempt" do
+        login("badpassword")
 
-      expect(attempts_seen_during_check).to eq(1)
+        expect(attempts_seen_during_check).to eq([[1, 1]])
+      end
     end
 
     it "resets the failure count after a successful login" do

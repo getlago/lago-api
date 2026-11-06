@@ -62,6 +62,8 @@ module Invoices
       result
     rescue AASM::InvalidTransition => _e
       result.not_allowed_failure!(code: "not_voidable")
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private

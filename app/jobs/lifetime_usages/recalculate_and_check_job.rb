@@ -35,5 +35,12 @@ module LifetimeUsages
     def lock_key_arguments
       [arguments.first]
     end
+
+    # The inline perform_now passes an in-memory current_usage that cannot be serialized,
+    # and would be stale by the time the retry runs: the retry recomputes it.
+    def retry_job(...)
+      self.arguments = [arguments.first]
+      super
+    end
   end
 end

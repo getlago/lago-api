@@ -7,6 +7,7 @@ RSpec.describe Membership do
 
   let_it_be(:organization) { create_default(:organization) }
 
+  it { is_expected.to have_many(:ai_conversations) }
   it { is_expected.to have_many(:data_exports) }
   it { is_expected.to have_many(:membership_roles) }
   it { is_expected.to have_many(:roles).through(:membership_roles) }

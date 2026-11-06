@@ -306,6 +306,19 @@ RSpec.describe Contract do
       end
     end
 
+    describe ".due_for_termination" do
+      let(:timestamp) { Time.zone.parse("2026-09-30T00:00:00Z") }
+
+      it "returns the active contracts whose planned end has arrived" do
+        due = create(:contract, started_at: timestamp - 1.month, ended_at: timestamp)
+        create(:contract, started_at: timestamp - 1.month, ended_at: timestamp + 1.second)
+        create(:contract, started_at: timestamp - 1.month)
+        create(:contract, :terminated, started_at: timestamp - 1.month, ended_at: timestamp - 1.day)
+
+        expect(described_class.due_for_termination(timestamp)).to eq([due])
+      end
+    end
+
     describe ".live" do
       it "returns only pending and active contracts" do
         pending = create(:contract, :pending)

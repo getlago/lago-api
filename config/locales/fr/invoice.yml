@@ -29,7 +29,9 @@ fr:
     credit_notes: Avoir(s)
     date_from: Du
     date_to: au
+    description: Description
     details: Détails de %{resource}
+    details_title: Détails
     document_name: Facture
     document_tax_name: Facture fiscale
     due_date: Date d'échéance le %{date}
@@ -67,8 +69,24 @@ fr:
     paid_invoice: Facture payée
     paid_tax_invoice: Facture fiscale payée
     pay_with_bank_transfer: Payer par virement bancaire
+    payment_due_date: Date d'échéance
     payment_term: Délai de paiement
-    payment_term_days: "%{net_payment_term} jours"
+    payment_terms:
+      day_of_month:
+        following_month: Payable le %{day} du mois suivant
+        months_after: Payable le %{day}, %{months} mois après la facture
+        same_month: Payable le %{day} de ce mois
+      days_end_of_month:
+        one: Paiement à %{days} jour fin de mois
+        other: Paiement à %{days} jours fin de mois
+      due_on_receipt: Payable à réception
+      end_of_month: Payable fin de mois
+      net:
+        one: Paiement sous %{days} jour
+        other: Paiement sous %{days} jours
+      net_end_of_month:
+        one: Payable %{days} jour après fin de mois
+        other: Payable %{days} jours après fin de mois
     percentage:
       adjustment_per_transaction: Ajustement pour min/max par transaction
       fee_per_transaction: Frais fixes par transaction
@@ -82,6 +100,7 @@ fr:
     prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
     progressive_billing_credit: Usage déjà facturé
     purchase_order_number: Nº de bon de commande
+    quantity: Quantité
     quarter: trimestre
     quarterly: trimestriellement
     reached_usage_threshold: Cette facturation progressive est générée car votre usage cumulé a atteint %{usage_amount}, dépassant le seuil de %{threshold_amount}.
@@ -115,6 +134,13 @@ fr:
       fr_tax_exempt: Le client est exonéré de taxe – art. 259-1 du CGI.
       reverse_charge: Taxe soumise à autoliquidation.
       tax_exempt: Le client est exonéré de taxe.
+    tiers:
+      fee_for_first: Frais pour les %{up_to} premières unités
+      fee_for_next: Frais pour les unités jusqu'à %{up_to}
+      fee_for_remaining: Frais pour les unités restantes
+      flat_fee_for_first: Frais fixes pour les %{up_to} premières unités
+      flat_fee_for_next: Frais fixes pour les unités jusqu'à %{up_to}
+      flat_fee_for_remaining: Frais fixes pour les unités restantes
     total: Total
     total_credits: Total crédits
     total_credits_with_value: 'Nombre total de crédits: %{credit_amount} crédits'

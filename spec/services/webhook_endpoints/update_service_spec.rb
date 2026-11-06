@@ -54,6 +54,21 @@ RSpec.describe WebhookEndpoints::UpdateService do
       before { update_service.call }
     end
 
+    [["md5", "unknown"], [nil, "null"]].each do |signature_algo, label|
+      context "when signature_algo is #{label}" do
+        let(:update_params) { {name: "Updated Webhook", signature_algo:} }
+
+        it "returns a validation failure with the allowed values, without changing the endpoint" do
+          result = nil
+          expect { result = update_service.call }.not_to change { webhook_endpoint.reload.attributes }
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq(signature_algo: ["value_is_invalid"])
+          expect(result.error.meta).to eq(signature_algo: {allowed_values: %w[jwt hmac]})
+        end
+      end
+    end
+
     context "when webhook endpoint does not exist" do
       let(:webhook_endpoint) { instance_double(WebhookEndpoint, id: "123456") }
 
@@ -95,11 +110,24 @@ RSpec.describe WebhookEndpoints::UpdateService do
         }
       end
 
-      it "returns a validation failure" do
+      it "returns the sentence to v1 and GraphQL and a token to native v2" do
         result = update_service.call
 
         expect(result).not_to be_success
         expect(result.error.class).to eq(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(event_types: ["contains invalid types: [\"invalid.event\"]"])
+        expect(result.error.codes).to eq(event_types: ["value_is_invalid"])
+      end
+    end
+
+    context "when event_types contains a renamed event type" do
+      let(:update_params) { {event_types: ["customer.updated", "credit_note.provider_refund_failure"]} }
+
+      it "stores its current name" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.webhook_endpoint.event_types).to eq(["customer.updated", "credit_note.refund_failure"])
       end
     end
 

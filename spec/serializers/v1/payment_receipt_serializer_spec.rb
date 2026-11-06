@@ -17,7 +17,9 @@ RSpec.describe ::V1::PaymentReceiptSerializer do
       "number" => payment_receipt.number,
       "created_at" => payment_receipt.created_at.iso8601,
       "file_url" => payment_receipt.file_url,
-      "xml_url" => payment_receipt.xml_url
+      "file_url_expires_at" => nil,
+      "xml_url" => payment_receipt.xml_url,
+      "xml_url_expires_at" => nil
     )
 
     expect(result["payment_receipt"]["payment"]).to include(
@@ -25,5 +27,39 @@ RSpec.describe ::V1::PaymentReceiptSerializer do
       "amount_cents" => payment_receipt.payment.amount_cents,
       "amount_currency" => payment_receipt.payment.amount_currency
     )
+  end
+
+  context "when the number is only set in the database" do
+    before { payment_receipt.number = nil }
+
+    it "reads the number from the database" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["payment_receipt"]["number"]).to eq(PaymentReceipt.find(payment_receipt.id).number)
+    end
+  end
+
+  it "does not reload the preloaded organization" do
+    payment_receipt.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "receipt.pdf")
+    receipt = PaymentReceipt.includes(:organization).find(payment_receipt.id)
+
+    queries = capture_sql { described_class.new(receipt, root_name: "payment_receipt").serialize }
+
+    expect(queries.grep(/FROM "organizations"/)).to be_empty
+  end
+
+  context "with attached documents" do
+    before do
+      payment_receipt.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "receipt.pdf")
+      payment_receipt.xml_file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.xml")), filename: "receipt.xml")
+    end
+
+    it "serializes expiring urls with their expiry" do
+      result = JSON.parse(serializer.to_json)["payment_receipt"]
+      expires_at = payment_receipt.document_url_expires_at.iso8601
+
+      expect(result["file_url"]).to include("/documents/")
+      expect(result).to include("file_url_expires_at" => expires_at, "xml_url_expires_at" => expires_at)
+    end
   end
 end

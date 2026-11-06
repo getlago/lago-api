@@ -6,6 +6,8 @@ module Invoices
       include Customers::PaymentProviderFinder
       include TypedResults
 
+      PROVIDER_NAME = "Moneyhash"
+
       RESULTS = {
         update_payment_status: BaseResult[:payment, :invoice],
         generate_payment_url: BaseResult[:payment_url]
@@ -14,12 +16,8 @@ module Invoices
       private
 
       def update_payment_status(organization_id:, provider_payment_id:, status:, amount_cents: nil, metadata: {})
-        payment_obj = Payment.find_or_initialize_by(provider_payment_id: provider_payment_id)
-        payment = if payment_obj.persisted?
-          payment_obj
-        else
-          create_payment(provider_payment_id:, amount_cents:, metadata:)
-        end
+        payment = Payment.find_by(provider_payment_id:, organization_id:) ||
+          create_payment(organization_id:, provider_payment_id:, amount_cents:, metadata:)
 
         return handle_missing_payment(organization_id, metadata) unless payment
 
@@ -56,9 +54,9 @@ module Invoices
         moneyhash_result_data = moneyhash_result["data"]
         result.payment_url = "#{moneyhash_result_data["embed_url"]}?lago_request=generate_payment_url"
         result
+      # GeneratePaymentUrlService delivers the error webhook of a third-party failure.
       rescue LagoHttpClient::HttpError => e
-        deliver_error_webhook(e)
-        result.service_failure!(code: e.error_code, message: e.message)
+        result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.error_code, error_message: e.message)
       end
 
       attr_accessor :invoice
@@ -95,8 +93,8 @@ module Invoices
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
       end
 
-      def create_payment(provider_payment_id:, metadata:, amount_cents: nil)
-        @invoice ||= Invoice.find_by(id: metadata["lago_payable_id"])
+      def create_payment(organization_id:, provider_payment_id:, metadata:, amount_cents: nil)
+        @invoice ||= Invoice.find_by(id: metadata["lago_payable_id"], organization_id:)
         unless @invoice
           result.not_found_failure!(resource: "invoice")
           return
@@ -184,16 +182,6 @@ module Invoices
         end
 
         params
-      end
-
-      def deliver_error_webhook(moneyhash_error)
-        DeliverErrorWebhookService.call_async(invoice, {
-          provider_customer_id: customer.moneyhash_customer.provider_customer_id,
-          provider_error: {
-            message: moneyhash_error.message,
-            error_code: moneyhash_error.error_code
-          }
-        })
       end
     end
   end

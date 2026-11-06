@@ -66,8 +66,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
     let(:integration_customer_tax) { create(:anrok_customer, integration: integration_tax, customer:) }
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
-    let(:endpoint_draft) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
     let(:body) do
       path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json")
       json = File.read(path)
@@ -98,7 +97,6 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       allow(LagoHttpClient::Client).to receive(:new)
         .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(lago_client)
-      allow(LagoHttpClient::Client).to receive(:new).with(endpoint_draft, retries_on: [OpenSSL::SSL::SSLError]).and_return(lago_client)
       allow(lago_client).to receive(:post_with_response).and_return(response)
       allow(response).to receive(:body).and_return(body)
     end
@@ -181,6 +179,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         end
       end
 
+      context "with a snapshotted payment term" do
+        it "computes the due date from the snapshot, ignoring a later customer term change" do
+          invoice.update!(payment_term: {term_type: "net", days: 10}, net_payment_term: 10)
+          invoice.customer.update!(payment_term: {term_type: "net", days: 3}, net_payment_term: 3)
+
+          freeze_time do
+            expect { pull_taxes_service.call }
+              .to change { invoice.reload.payment_due_date }.to(Time.current.to_date + 10.days)
+          end
+        end
+      end
+
       context "with a recurring invoice" do
         let(:billing_entity) { create(:billing_entity, organization:, subscription_invoice_issuing_date_adjustment:) }
 
@@ -239,6 +249,78 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(result.invoice.total_amount_cents).to eq(3_350)
       end
 
+      context "when the invoice contains Product fees" do
+        let(:fixed_product) { create(:product, :fixed, organization:) }
+        let(:usage_product) { create(:product, organization:) }
+        let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product) }
+        let(:usage_rate_card) { create(:rate_card, organization:, product: usage_product) }
+        let(:fixed_rate) { create(:rate_card_rate, organization:, rate_card: fixed_rate_card) }
+        let(:usage_rate) { create(:rate_card_rate, organization:, rate_card: usage_rate_card) }
+        let(:local_tax) { create(:tax, organization:, rate: 42) }
+        let(:fixed_product_fee) do
+          create(
+            :product_fee,
+            invoice:,
+            subscription:,
+            rate_card_rate: fixed_rate,
+            amount_cents: 2_000,
+            precise_amount_cents: 2_000
+          )
+        end
+        let(:usage_product_fee) do
+          create(
+            :product_fee,
+            invoice:,
+            subscription:,
+            rate_card_rate: usage_rate,
+            amount_cents: 1_000,
+            precise_amount_cents: 1_000
+          )
+        end
+        let(:fee_subscription) { fixed_product_fee }
+        let(:fee_charge) { usage_product_fee }
+
+        before do
+          create(:rate_card_applied_tax, rate_card: fixed_rate_card, tax: local_tax, organization:)
+          create(:rate_card_applied_tax, rate_card: usage_rate_card, tax: local_tax, organization:)
+        end
+
+        it "applies provider taxes to the Product fees and finalizes the invoice" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+          expect(fixed_product_fee.reload.applied_taxes.sole).to have_attributes(
+            tax: nil,
+            tax_code: "gst_hst",
+            tax_rate: 10,
+            amount_cents: 200
+          )
+          expect(usage_product_fee.reload.applied_taxes.sole).to have_attributes(
+            tax: nil,
+            tax_code: "gst_hst",
+            tax_rate: 15,
+            amount_cents: 150
+          )
+          expect(result.invoice).to have_attributes(taxes_amount_cents: 350, total_amount_cents: 3_350)
+          expect(result.invoice.applied_taxes.count).to eq(2)
+        end
+
+        context "when the invoice is a draft" do
+          before { invoice.update!(status: :draft) }
+
+          it "applies provider taxes and keeps the invoice as a draft" do
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(result.invoice).to be_draft
+            expect(fixed_product_fee.reload.applied_taxes.sole.tax).to be_nil
+            expect(usage_product_fee.reload.applied_taxes.sole.tax).to be_nil
+            expect(result.invoice).to have_attributes(taxes_amount_cents: 350, total_amount_cents: 3_350)
+          end
+        end
+      end
+
       it_behaves_like "syncs invoice" do
         let(:service_call) { pull_taxes_service.call }
       end
@@ -285,25 +367,23 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         end
       end
 
-      it "calls SegmentTrackJob" do
-        invoice = pull_taxes_service.call.invoice
-
-        expect(SegmentTrackJob).to have_been_enqueued.with(
-          membership_id: CurrentContext.membership,
-          event: "invoice_created",
-          properties: {
-            organization_id: invoice.organization.id,
-            invoice_id: invoice.id,
-            invoice_type: invoice.invoice_type
-          }
-        )
-      end
-
       it "creates a payment" do
         allow(Invoices::Payments::CreateService).to receive(:call_async)
 
         pull_taxes_service.call
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
+      end
+
+      context "when the customer has an active wallet" do
+        before { create(:wallet, organization:, customer:) }
+
+        it "finalizes the invoice without flagging the customer wallets for refresh" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
       end
 
       context "with credit notes" do
@@ -415,6 +495,33 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
         end
 
+        context "when the customer has an active wallet" do
+          before { create(:wallet, organization:, customer:) }
+
+          it "flags the customer wallets for refresh" do
+            expect(invoice.reload.total_amount_cents).to eq(0)
+            expect(customer.reload.awaiting_wallet_refresh).to be(false)
+
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.total_amount_cents).to eq(3_350) # 2_000 + 1_000 fees + 350 provider taxes
+            expect(customer.reload.awaiting_wallet_refresh).to be(true)
+          end
+        end
+
+        context "when the customer has no active wallet" do
+          before { create(:wallet, :terminated, organization:, customer:) }
+
+          it "does not flag the customer wallets for refresh" do
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.total_amount_cents).to eq(3_350) # 2_000 + 1_000 fees + 350 provider taxes
+            expect(customer.reload.awaiting_wallet_refresh).to be(false)
+          end
+        end
+
         context "with credit notes" do
           let(:credit_note) do
             create(
@@ -472,7 +579,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         pull_taxes_service.call
 
         expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-          expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
+          expect(payload[:input].first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
         end
       end
 
@@ -522,7 +629,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         pull_taxes_service.call
 
         expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-          expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
+          expect(payload[:input].first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
         end
       end
 
@@ -539,6 +646,21 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(result.invoice.taxes_rate).to eq(10.0)
         expect(result.invoice.applied_taxes.count).to eq(1)
       end
+
+      context "when the invoice is a draft and the customer has an active wallet" do
+        before do
+          invoice.update!(status: :draft)
+          create(:wallet, organization:, customer:)
+        end
+
+        it "does not flag the customer wallets for refresh as the total is unchanged" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to have_attributes(status: "draft", total_amount_cents: 0)
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
+      end
     end
 
     context "when failed to fetch taxes" do
@@ -547,11 +669,77 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         File.read(path)
       end
 
+      context "when one Product has no mapping and no fallback" do
+        let(:integration_collection_mapping) { nil }
+        let(:mapped_product) { create(:product, :fixed, organization:) }
+        let(:unmapped_product) { create(:product, :fixed, organization:) }
+        let(:mapped_rate_card) { create(:rate_card, organization:, product: mapped_product) }
+        let(:unmapped_rate_card) { create(:rate_card, organization:, product: unmapped_product) }
+        let(:mapped_rate) { create(:rate_card_rate, organization:, rate_card: mapped_rate_card) }
+        let(:unmapped_rate) { create(:rate_card_rate, organization:, rate_card: unmapped_rate_card) }
+        let(:fee_subscription) do
+          create(:product_fee, invoice:, subscription:, rate_card_rate: mapped_rate, amount_cents: 2_000)
+        end
+        let(:fee_charge) do
+          create(:product_fee, invoice:, subscription:, rate_card_rate: unmapped_rate, amount_cents: 1_000)
+        end
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
+          response = JSON.parse(File.read(path))
+          response["failedInvoices"].first["validation_errors"] =
+            "Request body: lineItems: productExternalId must contain at least one character"
+          response.to_json
+        end
+
+        before do
+          create(
+            :anrok_mapping,
+            integration: integration_tax,
+            organization:,
+            billing_entity:,
+            mappable: mapped_product,
+            settings: {external_id: "mapped-product"}
+          )
+        end
+
+        it "fails the invoice instead of finalizing it without provider taxes" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload).to have_attributes(status: "failed", tax_status: "failed")
+          expect(invoice).not_to be_finalized
+          expect(invoice.error_details.tax_error.sole.details).to include("tax_error" => "validationError")
+          expect(fee_subscription.reload.applied_taxes).to be_empty
+          expect(fee_charge.reload.applied_taxes).to be_empty
+          expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
+            expect(payload[:input].first["fees"]).to contain_exactly(
+              hash_including("item_id" => fee_subscription.id, "item_code" => "mapped-product"),
+              hash_including("item_id" => fee_charge.id, "item_code" => nil)
+            )
+          end
+        end
+      end
+
       it "puts invoice in failed status" do
         result = pull_taxes_service.call
 
         expect(result).to be_success
         expect(invoice.reload.status).to eq("failed")
+      end
+
+      context "when the invoice is a draft and the customer has an active wallet" do
+        before do
+          invoice.update!(status: :draft)
+          create(:wallet, organization:, customer:)
+        end
+
+        it "does not flag the customer wallets for refresh" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload).to have_attributes(status: "draft", tax_status: "failed", total_amount_cents: 0)
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
       end
 
       it "resolves old tax error and creates new one" do
@@ -608,7 +796,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
 
         before do
           allow(lago_client).to receive(:post_with_response)
-            .and_raise(::LagoHttpClient::HttpError.new(500, body, endpoint_draft, response_headers: {}))
+            .and_raise(::LagoHttpClient::HttpError.new(500, body, endpoint, response_headers: {}))
         end
 
         it "puts invoice in failed status" do

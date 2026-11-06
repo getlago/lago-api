@@ -38,6 +38,47 @@ RSpec.describe Resolvers::CreditNotesResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "credit_notes:view"
 
+  context "when selecting integrationSyncable on product catalog credit notes" do
+    let(:query) do
+      <<~GQL
+        query {
+          creditNotes(limit: 5) {
+            collection { id integrationSyncable }
+          }
+        }
+      GQL
+    end
+
+    before do
+      integration = create(:netsuite_integration, organization:, sync_credit_notes: true)
+      create(:netsuite_customer, integration:, customer:)
+
+      3.times do
+        invoice = create(:invoice, organization:, customer:, invoice_type: :advance_charges)
+        contract_rate_card = create(:contract_rate_card, organization:)
+        create(
+          :fee,
+          invoice:,
+          organization:,
+          subscription: nil,
+          fee_type: :product,
+          invoiceable: contract_rate_card.rate_card.product,
+          contract: contract_rate_card.contract,
+          contract_rate_card:,
+          rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+        )
+        create(:credit_note, invoice:, customer:, organization:, status: :finalized)
+      end
+    end
+
+    it "checks the invoices for contract fees in one query" do
+      contract_fee_queries = capture_sql { result }.grep(/"contract_id" IS NOT NULL/)
+
+      expect(contract_fee_queries.size).to eq(1)
+      expect(response_collection.pluck("integrationSyncable").compact.uniq).to eq([false])
+    end
+  end
+
   context "with no arguments" do
     let!(:credit_note) { create(:credit_note, customer:) }
 
@@ -423,6 +464,35 @@ RSpec.describe Resolvers::CreditNotesResolver do
           }
         GQL
       )
+    end
+  end
+
+  context "with N+1 queries detection on document urls", bullet: {unused_eager_loading: false} do
+    before do
+      # NOTE: Attachments are loaded one by one for any document url, this is not covered here
+      Bullet.add_safelist(type: :n_plus_one_query, class_name: "CreditNote", association: :file_attachment)
+      Bullet.add_safelist(type: :n_plus_one_query, class_name: "ActiveStorage::Attachment", association: :blob)
+
+      create_list(:credit_note, 3, customer:, organization:).each do |credit_note|
+        credit_note.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "credit_note.pdf")
+      end
+    end
+
+    it "does not trigger N+1 queries for document urls" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: <<~GQL
+          query {
+            creditNotes(limit: 5) {
+              collection { id fileUrl fileUrlExpiresAt }
+            }
+          }
+        GQL
+      )
+
+      expect(result.dig("data", "creditNotes", "collection").pluck("fileUrlExpiresAt")).to all(be_present)
     end
   end
 end

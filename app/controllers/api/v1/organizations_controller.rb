@@ -2,13 +2,13 @@
 
 module Api
   module V1
-    class OrganizationsController < Api::BaseController
+    class OrganizationsController < Api::V1::BaseController
       def show
         render(
           json: ::V1::OrganizationSerializer.new(
             current_organization,
             root_name: "organization",
-            include: %i[taxes]
+            includes: %i[taxes]
           )
         )
       end
@@ -27,22 +27,6 @@ module Api
         else
           render_error_response(result)
         end
-      end
-
-      def grpc_token
-        payload = {
-          organization_id: current_organization.id,
-          aud: "lago-grpc"
-        }
-        grpc_token = JWT.encode(payload, RsaPrivateKey, "RS256")
-
-        render(
-          json: {
-            organization: {
-              grpc_token:
-            }
-          }
-        )
       end
 
       private
@@ -66,8 +50,10 @@ module Api
           :document_numbering,
           :document_number_prefix,
           :finalize_zero_amount_invoice,
+          :document_url_expiration_days,
           :slug,
           email_settings: [],
+          customer_portal_locked_fields: [],
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,

@@ -415,6 +415,125 @@ describe "Free Trial Billing Subscriptions Scenario" do
     end
   end
 
+  context "when the trial ends late on the renewal day and is billed after midnight" do
+    let(:trial_period) { 31 }
+
+    before do
+      travel_to(Time.zone.parse("2024-10-01T23:40:00")) do
+        create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"})
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: "anniversary"
+          }
+        )
+      end
+    end
+
+    it "bills the subscription fee once, on the renewal invoice" do
+      travel_to(Time.zone.parse("2024-11-01T00:30:00")) { perform_billing }
+
+      renewal_invoice = customer.invoices.sole
+      expect(renewal_invoice.fees.subscription.sole.amount_cents).to eq(5_000_000)
+
+      # NOTE: The trial ends at 23:40, after the last hourly run of the day
+      travel_to(Time.zone.parse("2024-11-01T23:35:00")) { perform_billing }
+      expect(customer.subscriptions.sole.trial_ended_at).to be_nil
+
+      travel_to(Time.zone.parse("2024-11-02T00:35:00")) { perform_billing }
+
+      expect(customer.subscriptions.sole.trial_ended_at).to be_present
+      expect(customer.invoices.reload).to eq([renewal_invoice])
+      expect(Fee.subscription.where(subscription: customer.subscriptions).count).to eq(1)
+    end
+  end
+
+  context "when the trial ends late the day before the renewal" do
+    let(:trial_period) { 30 }
+
+    before do
+      travel_to(Time.zone.parse("2024-10-01T23:40:00")) do
+        create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"})
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: "anniversary"
+          }
+        )
+      end
+    end
+
+    it "bills the subscription fee once, on the renewal invoice" do
+      # NOTE: The trial ends Oct 31 at 23:40. The renewal runs before the next hourly trial run.
+      travel_to(Time.zone.parse("2024-11-01T00:10:00")) do
+        clock_job { Clock::SubscriptionsBillerJob.perform_later }
+      end
+
+      renewal_invoice = customer.invoices.sole
+      expect(renewal_invoice.fees.subscription.sole.amount_cents).to eq(5_000_000)
+
+      travel_to(Time.zone.parse("2024-11-01T00:35:00")) do
+        clock_job { Clock::FreeTrialSubscriptionsBillerJob.perform_later }
+      end
+
+      expect(customer.subscriptions.sole.trial_ended_at).to be_present
+      expect(customer.invoices.reload).to eq([renewal_invoice])
+    end
+  end
+
+  context "when the trial ends while the renewal invoice is a draft" do
+    let(:trial_period) { 31 }
+    let(:customer) { create(:customer, organization:, timezone:, invoice_grace_period: 2) }
+
+    before do
+      travel_to(Time.zone.parse("2024-09-27T12:12:00")) do
+        create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"})
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: "anniversary"
+          }
+        )
+      end
+
+      travel_to(Time.zone.parse("2024-10-27T13:00:00")) { perform_billing }
+    end
+
+    it "bills the subscription fee once, on the trial end invoice" do
+      renewal_invoice = customer.invoices.sole
+      expect(renewal_invoice).to be_draft
+      expect(renewal_invoice.fees.subscription).to be_empty
+
+      travel_to(Time.zone.parse("2024-10-28T13:00:00")) { perform_billing }
+
+      trial_end_invoice = customer.invoices.where.not(id: renewal_invoice.id).sole
+      expect(trial_end_invoice.fees.subscription.sole.amount_cents).to eq(4_838_710) # 5_000_000 * 30 / 31
+
+      travel_to(Time.zone.parse("2024-10-29T13:00:00")) do
+        Clock::FinalizeInvoicesJob.perform_later
+        perform_all_enqueued_jobs
+      end
+
+      expect(renewal_invoice.reload).to be_finalized
+      expect(renewal_invoice.fees.subscription).to be_empty
+      expect(Fee.subscription.where(subscription: customer.subscriptions)).to eq([trial_end_invoice.fees.subscription.sole])
+    end
+
+    it "does not add the subscription fee when the draft is refreshed after the trial ended" do
+      renewal_invoice = customer.invoices.sole
+
+      travel_to(Time.zone.parse("2024-10-29T13:00:00")) { refresh_invoice(renewal_invoice) }
+
+      expect(renewal_invoice.reload.fees.subscription).to be_empty
+    end
+  end
+
   context "with free trial ending on billing day" do
     let(:trial_period) { 10 }
     let(:timezone) { "Europe/Paris" }

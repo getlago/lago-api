@@ -3,6 +3,8 @@
 module Auth
   module Okta
     class BaseService < BaseService
+      include Auth::SsoIntegrationChecks
+
       private
 
       def check_code
@@ -32,6 +34,14 @@ module Auth
         result.okta_integration = okta_integration
       end
 
+      def sso_integration
+        result.okta_integration
+      end
+
+      def sso_login_method
+        Organizations::AuthenticationMethods::OKTA
+      end
+
       def check_invite(email)
         invite = Invite.pending.find_by(token: invite_token)
 
@@ -55,12 +65,13 @@ module Auth
         result.okta_access_token = response["access_token"]
       end
 
+      # NOTE: Okta casing is not guaranteed to match the typed email.
       def check_userinfo(email)
         userinfo_client = LagoHttpClient::Client.new("https://#{result.okta_integration.host}/oauth2/v1/userinfo", block_private_addresses: true)
         userinfo_headers = {"Authorization" => "Bearer #{result.okta_access_token}"}
         response = userinfo_client.get(headers: userinfo_headers)
 
-        raise ValidationError, "okta_userinfo_error" if response["email"] != email
+        raise ValidationError, "okta_userinfo_error" unless response["email"]&.casecmp?(email)
 
         result.userinfo = response
       end

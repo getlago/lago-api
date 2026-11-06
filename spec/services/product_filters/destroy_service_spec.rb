@@ -2,16 +2,13 @@
 
 require "rails_helper"
 
-RSpec.describe ProductFilters::DestroyService do
+RSpec.describe ProductFilters::DestroyService, :capture_kafka_messages do
   subject(:result) { described_class.call(product_filter:) }
 
-  let_it_be(:organization) { create(:organization) }
-
-  before_all do
-    create_default(:billable_metric)
-  end
-
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:product_filter) { create(:product_filter, :with_values, organization:) }
+
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
 
   it "soft deletes the filter and its values" do
     value_ids = product_filter.values.ids
@@ -20,9 +17,41 @@ RSpec.describe ProductFilters::DestroyService do
     expect(ProductFilterValue.with_discarded.where(id: value_ids).map(&:discarded?)).to all(be(true))
   end
 
-  it "produces an activity log" do
+  it "produces an activity log with legacy arguments" do
     result
-    expect(Utils::ActivityLog).to have_produced("product_filter.deleted").after_commit.with(product_filter)
+    expect(Utils::ActivityLog).to have_received(:produce).with(product_filter, "product_filter.deleted", after_commit: true)
+  end
+
+  it "publishes product_filter.deleted without webhook options" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("product_filter.deleted", product_filter)
+    expect(Utils::ActivityLog).to have_received(:produce).with(product_filter, "product_filter.deleted", after_commit: true)
+  end
+
+  it "delivers legacy serialization after deleting values and scoped cards", transaction: false do
+    create(:rate_card, organization:, product: product_filter.product, product_filter:)
+    create(:webhook_endpoint, organization:)
+    allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+
+    perform_enqueued_jobs(only: SendWebhookJob) { result }
+
+    webhook = Webhook.find_by!(webhook_type: "product_filter.deleted")
+    expect(webhook.payload.fetch("product_filter").fetch("values")).to eq([])
+    expect(webhook.payload.fetch("product_filter")).to include("product_code" => product_filter.product.code, "product_category_code" => product_filter.product.product_category.code)
+    expect(webhook.payload.fetch("product_filter")).not_to have_key("rate_cards")
+    activity = JSON.parse(kafka_messages.find { |message| JSON.parse(message[:payload]).fetch("activity_type") == "product_filter.deleted" }.fetch(:payload))
+    expect(activity.fetch("activity_object").fetch("values")).to eq([])
+    expect(activity.fetch("activity_object")).to include("product_code" => product_filter.product.code, "product_category_code" => product_filter.product.product_category.code)
+    expect(activity.fetch("activity_object")).not_to have_key("rate_cards")
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "deletes and publishes the filter event" do
+      expect { result }.to have_enqueued_job(SendWebhookJob).with("product_filter.deleted", product_filter, any_args)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(product_filter, "product_filter.deleted", after_commit: true)
+    end
   end
 
   context "when a scoped rate card exists" do
@@ -42,9 +71,11 @@ RSpec.describe ProductFilters::DestroyService do
     end
 
     it "returns a validation failure and discards nothing" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:product_filter]).to eq(["attached_to_plan_or_subscription"])
       expect(product_filter.reload).not_to be_discarded
+      expect(SendWebhookJob).not_to have_been_enqueued
     end
   end
 
@@ -54,6 +85,25 @@ RSpec.describe ProductFilters::DestroyService do
     it "returns a not found failure" do
       expect(result).not_to be_success
       expect(result.error.resource).to eq("product_filter")
+    end
+  end
+
+  context "when the surrounding transaction rolls back" do
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
+
+    it "restores the filter and suppresses both event channels", transaction: false do
+      value_ids = product_filter.values.ids
+
+      expect do
+        ActiveRecord::Base.transaction do
+          result
+          raise ActiveRecord::Rollback
+        end
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(product_filter.reload).not_to be_discarded
+      expect(ProductFilterValue.with_discarded.where(id: value_ids).map(&:discarded?)).to all(be(false))
+      expect(kafka_messages).to be_empty
     end
   end
 end

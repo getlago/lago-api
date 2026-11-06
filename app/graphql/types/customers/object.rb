@@ -74,7 +74,7 @@ module Types
       field :billing_entity, Types::BillingEntities::Object, null: false
       field :invoices, [Types::Invoices::Object]
 
-      field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :activity_logs, [Types::ActivityLogs::Object], null: true, permission: "audit_logs:view"
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true
       field :applied_coupons, [Types::AppliedCoupons::Object], null: true
       field :taxes, [Types::Taxes::Object], null: true

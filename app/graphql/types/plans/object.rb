@@ -29,7 +29,7 @@ module Types
 
       field :entitlements, [Types::Entitlement::PlanEntitlementObject]
 
-      field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :activity_logs, [Types::ActivityLogs::Object], null: true, permission: "audit_logs:view"
       field :charges, [Types::Charges::Object]
       field :fixed_charges, [Types::FixedCharges::Object]
       field :taxes, [Types::Taxes::Object]
@@ -76,19 +76,28 @@ module Types
         object.fixed_charges.order(created_at: :asc)
       end
 
+      def active_subscriptions_count
+        dataloader.with(Sources::PlanSubscriptionsCount, :active_subscriptions, object.organization_id).load(object.id)
+      end
+
       def charges_count
-        object.charges.count
+        dataloader.with(Sources::CountByForeignKey, Charge, :plan_id).load(object.id)
+      end
+
+      def customers_count
+        dataloader.with(Sources::PlanSubscriptionsCount, :customers, object.organization_id).load(object.id)
+      end
+
+      def draft_invoices_count
+        dataloader.with(Sources::PlanSubscriptionsCount, :draft_invoices, object.organization_id).load(object.id)
       end
 
       def fixed_charges_count
-        object.fixed_charges.count
+        dataloader.with(Sources::CountByForeignKey, FixedCharge, :plan_id).load(object.id)
       end
 
       def subscriptions_count
-        count = object.subscriptions.count
-        return count unless object.children
-
-        count + object.children.joins(:subscriptions).select("subscriptions.id").distinct.count
+        dataloader.with(Sources::PlanSubscriptionsCount, :subscriptions, object.organization_id).load(object.id)
       end
 
       def is_overridden

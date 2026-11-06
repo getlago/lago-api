@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class EventsController < Api::BaseController
+    class EventsController < Api::V1::BaseController
       skip_audit_logs!
 
       before_action :ensure_organization_uses_clickhouse, only: [:index_enriched]
@@ -71,8 +71,8 @@ module Api
         result = EventsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters
         )
@@ -97,8 +97,8 @@ module Api
         result = EventsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters.to_h.merge(enriched: true)
         )

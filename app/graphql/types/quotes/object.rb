@@ -5,7 +5,7 @@ module Types
     class Object < Types::BaseObject
       graphql_name "Quote"
 
-      field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :activity_logs, [Types::ActivityLogs::Object], null: true, permission: "audit_logs:view"
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :current_version, Types::QuoteVersions::Object, null: false
       field :customer, Types::Customers::Object, null: false

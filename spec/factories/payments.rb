@@ -30,6 +30,15 @@ FactoryBot.define do
       association :payment_provider_customer, factory: :cashfree_customer
     end
 
+    trait :x402_payment do
+      payment_provider { nil }
+      payment_provider_customer { nil }
+      provider_payment_id { nil }
+      payment_type { "x402" }
+      status { "succeeded" }
+      payable_payment_status { "succeeded" }
+    end
+
     trait :requires_action do
       status { "requires_action" }
       provider_payment_data do

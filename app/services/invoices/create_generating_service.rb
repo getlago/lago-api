@@ -4,7 +4,7 @@ module Invoices
   class CreateGeneratingService < BaseService
     Result = BaseResult[:invoice]
 
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false, billing_entity: nil, purchase_order_number: nil) # rubocop:disable Metrics/ParameterLists
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false, billing_entity: nil, purchase_order_number: nil, payment_term: nil, payment_term_source: nil) # rubocop:disable Metrics/ParameterLists
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
@@ -16,6 +16,8 @@ module Invoices
       @subscription_gated = subscription_gated
       @billing_entity = billing_entity
       @purchase_order_number = purchase_order_number
+      @payment_term = payment_term
+      @payment_term_source = payment_term_source
 
       super
     end
@@ -27,7 +29,7 @@ module Invoices
         invoice = Invoice.create!(
           id: invoice_id || SecureRandom.uuid,
           organization:,
-          billing_entity: billing_entity || customer.billing_entity,
+          billing_entity: invoice_billing_entity,
           customer:,
           invoice_type:,
           currency:,
@@ -36,7 +38,9 @@ module Invoices
           issuing_date:,
           expected_finalization_date:,
           payment_due_date:,
-          net_payment_term: customer.applicable_net_payment_term,
+          payment_term: payment_term.to_h,
+          payment_term_source:,
+          net_payment_term: payment_term.net_payment_term_alias,
           skip_charges:,
           self_billed: customer.partner_account?,
           purchase_order_number:
@@ -58,12 +62,30 @@ module Invoices
 
     delegate :organization, to: :customer
 
+    # Callers may pass an already-resolved term with its source.
+    # Otherwise use ResolveService.
+    def payment_term
+      @payment_term || resolved_payment_term.payment_term
+    end
+
+    def payment_term_source
+      @payment_term ? @payment_term_source : resolved_payment_term.source
+    end
+
+    def resolved_payment_term
+      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:, billing_entity: invoice_billing_entity)
+    end
+
     # NOTE: accounting date must be in customer timezone
     def issuing_date
       date = datetime.in_time_zone(customer.applicable_timezone).to_date
       return date if !grace_period? || charge_in_advance
 
-      issuing_date_service = Invoices::IssuingDateService.new(customer_settings: customer, recurring:)
+      issuing_date_service = Invoices::IssuingDateService.new(
+        customer_settings: customer,
+        billing_entity_settings: invoice_billing_entity,
+        recurring:
+      )
       date + issuing_date_service.issuing_date_adjustment.days
     end
 
@@ -71,17 +93,25 @@ module Invoices
       date = datetime.in_time_zone(customer.applicable_timezone).to_date
       return date if !grace_period? || charge_in_advance
 
-      date + customer.applicable_invoice_grace_period.days
+      date + applicable_invoice_grace_period.days
     end
 
     def grace_period?
       return false if subscription_gated
 
-      invoice_type.to_sym == :subscription
+      invoice_type.to_sym.in?(%i[subscription contract])
+    end
+
+    def invoice_billing_entity
+      @invoice_billing_entity ||= billing_entity || customer.billing_entity
+    end
+
+    def applicable_invoice_grace_period
+      customer.applicable_invoice_grace_period(billing_entity: invoice_billing_entity)
     end
 
     def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
+      payment_term.due_date_for(issuing_date)
     end
   end
 end

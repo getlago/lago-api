@@ -1,5 +1,5 @@
 / Prepaid credits section - shows breakdown if available, otherwise shows total
-- if (subscription? || progressive_billing?) && wallet_transactions.exists?
+- if (subscription? || progressive_billing? || contract?) && wallet_transactions.exists?
   - if prepaid_granted_credit_amount_cents.present? || prepaid_purchased_credit_amount_cents.present?
     - if prepaid_granted_credit_amount_cents&.positive?
       tr

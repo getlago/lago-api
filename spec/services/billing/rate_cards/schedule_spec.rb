@@ -267,6 +267,12 @@ RSpec.describe Billing::RateCards::Schedule do
 
           expect(segments.map(&:proration_ratio)).to eq([1.0, 1.0])
         end
+
+        it "bills the partial first cycle whole" do
+          first = schedule.segments_due_by(Time.utc(2022, 3, 1)).find { |segment| segment.cycle_index == 0 }
+
+          expect(first.proration_ratio).to eq(1.0)
+        end
       end
     end
 
@@ -436,14 +442,13 @@ RSpec.describe Billing::RateCards::Schedule do
       end
     end
 
-    # An unprorated card pays the full price for whatever it got: the clamp changes what
-    # the cycle covers, never what it costs. Without this the `prorated` flag could be
-    # deleted outright and every other example here would still pass.
+    # An unprorated card pays the full price for whatever it got, its contract's last window
+    # included: the clamp changes what the cycle covers, never what it costs.
     context "when the card does not prorate" do
       let(:prorated) { false }
       let(:ends_at) { Time.utc(2022, 3, 20) }
 
-      it "bills a clamped cycle whole" do
+      it "bills the clamped cycle whole" do
         expect(ratios).to eq([1.0])
       end
 

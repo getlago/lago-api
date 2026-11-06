@@ -18,6 +18,8 @@ RSpec.describe ::V1::OrderFormSerializer do
       "expires_at" => nil,
       "signed_at" => nil,
       "voided_at" => nil,
+      "signed_document_url" => nil,
+      "signed_document_url_expires_at" => nil,
       "lago_organization_id" => order_form.organization_id,
       "lago_customer_id" => order_form.customer_id,
       "lago_quote_id" => order_form.quote_version.quote_id,
@@ -25,5 +27,16 @@ RSpec.describe ::V1::OrderFormSerializer do
       "created_at" => order_form.created_at.iso8601,
       "updated_at" => order_form.updated_at.iso8601
     )
+  end
+
+  context "with a signed document" do
+    let(:order_form) { create(:order_form, :signed, :with_signed_document) }
+
+    it "serializes the expiring url with its expiry" do
+      result = JSON.parse(serializer.to_json)["order_form"]
+
+      expect(result["signed_document_url"]).to include("/documents/")
+      expect(result["signed_document_url_expires_at"]).to eq(order_form.document_url_expires_at.iso8601)
+    end
   end
 end

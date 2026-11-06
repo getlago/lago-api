@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-resources :activity_logs, param: :activity_id, only: %i[index show]
-resources :api_logs, param: :request_id, only: %i[index show]
-resources :security_logs, param: :log_id, only: %i[index show]
-
 namespace :analytics do
   get :gross_revenue, to: "gross_revenues#index", as: :gross_revenue
   get :invoiced_usage, to: "invoiced_usages#index", as: :invoiced_usage
@@ -113,6 +109,7 @@ resources :invoices, only: %i[create update show index destroy] do
   post :retry, on: :member
   post :retry_payment, on: :member
   post :payment_url, on: :member
+  post :x402_payment_url, on: :member
   post :preview, on: :collection
   put :refresh, on: :member
   put :finalize, on: :member
@@ -163,7 +160,6 @@ post "/events/batch", to: "events#batch"
 
 get "/organizations", to: "organizations#show"
 put "/organizations", to: "organizations#update"
-get "/organizations/grpc_token", to: "organizations#grpc_token"
 
 resources :webhook_endpoints, only: %i[create index show destroy update]
 resources :webhooks, only: %i[] do
@@ -175,4 +171,5 @@ resources :x402_connections, param: :code, code: /.*/, controller: "x402/connect
 
 namespace :x402 do
   resources :gate_checks, only: :create
+  resources :credit_purchases, only: :create
 end

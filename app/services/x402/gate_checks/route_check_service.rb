@@ -3,8 +3,6 @@
 module X402
   module GateChecks
     class RouteCheckService < BaseService
-      CURRENCY = "USD"
-
       Result = BaseResult[:plan]
 
       def initialize(organization:, plan_code:, billable_metric_code:)
@@ -18,8 +16,7 @@ module X402
       def call
         return result.not_found_failure!(resource: "plan") unless plan
         return result.not_found_failure!(resource: "charge") if charges.empty?
-        return refuse("plan_currency_not_supported") unless plan.amount_currency == CURRENCY
-        return refuse("plan_not_usage_only") unless usage_only?
+        return refuse(plan_refusal) if plan_refusal
         return refuse("charge_not_targeted") unless targeted?
         return refuse("charge_not_invoiceable") if charges.any? { |charge| charge.pay_in_advance? && !charge.invoiceable? }
 
@@ -39,11 +36,8 @@ module X402
         @charges ||= plan.charges.joins(:billable_metric).where(billable_metric: {code: billable_metric_code}).to_a
       end
 
-      def usage_only?
-        plan.amount_cents.zero? &&
-          plan.minimum_commitment.nil? &&
-          !plan.fixed_charges.exists? &&
-          !plan.charges.where(min_amount_cents: 1..).exists?
+      def plan_refusal
+        @plan_refusal ||= X402::PlanEligibility.refusal(plan)
       end
 
       def targeted?

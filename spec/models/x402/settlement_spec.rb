@@ -87,6 +87,28 @@ describe X402::Settlement do
         expect(described_class.grant_retry_due).to match_array([due, recorded])
       end
     end
+
+    describe ".payment_retry_due" do
+      let(:due) { create(:x402_settlement, :invoice_payment, updated_at: 3.minutes.ago) }
+      let(:due_after_unconfirmed_settle) do
+        create(:x402_settlement, :invoice_payment, error_reason: "settlement_pending", updated_at: 3.minutes.ago)
+      end
+
+      before do
+        due
+        due_after_unconfirmed_settle
+        create(:x402_settlement, :invoice_payment, updated_at: 1.minute.ago)
+        create(:x402_settlement, :invoice_payment, :pending, updated_at: 3.minutes.ago)
+        create(:x402_settlement, :invoice_payment, :failed, updated_at: 3.minutes.ago)
+        create(:x402_settlement, updated_at: 3.minutes.ago)
+        create(:x402_settlement, :invoice_payment, payment: create(:payment), updated_at: 3.minutes.ago)
+        create(:x402_settlement, :invoice_payment, error_reason: "payment_not_recorded", updated_at: 3.minutes.ago)
+      end
+
+      it "returns settled invoice payments left without a payment for two minutes" do
+        expect(described_class.payment_retry_due).to match_array([due, due_after_unconfirmed_settle])
+      end
+    end
   end
 
   describe "validations" do
@@ -132,6 +154,36 @@ describe X402::Settlement do
         subject(:settlement) { build(:x402_settlement, :invoice_payment) }
 
         it { expect(settlement.errors.where(:purchase_settings)).to be_empty }
+      end
+    end
+
+    describe "request key digest validation" do
+      subject(:settlement) { build(:x402_settlement, request_key_digest:) }
+
+      let(:request_key_digest) { "agent-request-0001" }
+
+      before { settlement.valid? }
+
+      it { expect(settlement.errors.where(:request_key_digest, :invalid)).to be_present }
+
+      context "with a SHA-256 digest" do
+        let(:request_key_digest) { described_class.request_key_digest("agent-request-0001") }
+
+        it { expect(settlement.errors.where(:request_key_digest)).to be_empty }
+      end
+
+      context "without a digest" do
+        let(:request_key_digest) { nil }
+
+        it { expect(settlement.errors.where(:request_key_digest)).to be_empty }
+      end
+
+      context "with an invoice payment" do
+        subject(:settlement) { build(:x402_settlement, :invoice_payment, request_key_digest:) }
+
+        let(:request_key_digest) { described_class.request_key_digest("agent-request-0001") }
+
+        it { expect(settlement.errors.where(:request_key_digest, :present)).to be_present }
       end
     end
 
@@ -246,7 +298,10 @@ describe X402::Settlement do
       end
 
       it "keeps an older row updatable after its network is removed" do
-        connection.update!(networks: ["eip155:8453"])
+        connection.update!(
+          networks: ["solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+          payout_addresses: connection.payout_addresses.merge("svm" => "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4")
+        )
 
         expect(settlement.reload.update(status: "failed")).to be(true)
       end
@@ -268,8 +323,46 @@ describe X402::Settlement do
       expect { settlement.purchase_settings = {} }.to raise_error(ActiveRecord::ReadonlyAttributeError)
     end
 
+    it "refuses to bind the settlement to another request" do
+      expect { settlement.request_key_digest = described_class.request_key_digest("agent-request-0001") }.to raise_error(ActiveRecord::ReadonlyAttributeError)
+    end
+
     it "updates the rest" do
       expect { settlement.update!(status: "failed", error_reason: "settle_timeout") }.not_to raise_error
+    end
+  end
+
+  describe ".request_key_digest" do
+    it "returns the key's SHA-256" do
+      expect(described_class.request_key_digest("agent-request-0001")).to eq(OpenSSL::Digest::SHA256.hexdigest("agent-request-0001"))
+    end
+
+    it "returns nil without a key" do
+      expect(described_class.request_key_digest(nil)).to be_nil
+    end
+  end
+
+  describe "#same_request?" do
+    subject(:settlement) { build(:x402_settlement, request_key: "agent-request-0001") }
+
+    it "matches the digest of the key that made the row" do
+      expect(settlement.same_request?(described_class.request_key_digest("agent-request-0001"))).to be(true)
+    end
+
+    it "refuses the digest of another key" do
+      expect(settlement.same_request?(described_class.request_key_digest("agent-request-0002"))).to be(false)
+    end
+
+    it "refuses a request without a key" do
+      expect(settlement.same_request?(nil)).to be(false)
+    end
+
+    context "without a stored key" do
+      subject(:settlement) { build(:x402_settlement) }
+
+      it "refuses every request" do
+        expect(settlement.same_request?(described_class.request_key_digest("agent-request-0001"))).to be(false)
+      end
     end
   end
 
@@ -324,6 +417,18 @@ describe X402::Settlement do
       let(:settlement) { build(:x402_settlement, :merchant, x402_connection: connection) }
 
       it { expect(insert).to be(true) }
+    end
+
+    context "with a malformed request key digest" do
+      let(:settlement) { build(:x402_settlement, x402_connection: connection, request_key_digest: "agent-request-0001") }
+
+      it { expect { insert }.to raise_error(ActiveRecord::StatementInvalid, /PG::CheckViolation.*check_x402_settlements_request_key_digest_format/) }
+    end
+
+    context "with an invoice payment holding a request key digest" do
+      let(:settlement) { build(:x402_settlement, :invoice_payment, x402_connection: connection, request_key: "agent-request-0001") }
+
+      it { expect { insert }.to raise_error(ActiveRecord::StatementInvalid, /PG::CheckViolation.*check_x402_settlements_invoice_payment_has_no_request_key/) }
     end
 
     context "with a granted row without a subscription" do

@@ -633,6 +633,23 @@ RSpec.describe Payment do
     end
   end
 
+  describe "#should_sync_payment? for a product catalog invoice" do
+    subject(:method_call) { payment.should_sync_payment? }
+
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, status: :finalized, invoice_type: :contract) }
+    let(:payment) { create(:payment, payable: invoice, payable_payment_status: :succeeded) }
+
+    before do
+      integration = create(:netsuite_integration, organization:, sync_payments: true)
+      create(:netsuite_customer, integration:, customer:)
+    end
+
+    it "returns false" do
+      expect(method_call).to eq(false)
+    end
+  end
+
   describe "#gated_subscription_activation?" do
     subject(:method_call) { payment.gated_subscription_activation? }
 

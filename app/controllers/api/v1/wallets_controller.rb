@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class WalletsController < Api::BaseController
+    class WalletsController < Api::V1::BaseController
       include WalletActions
 
       def create

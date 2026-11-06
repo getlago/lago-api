@@ -1,0 +1,318 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
+  subject(:result) { described_class.call(subscription:) }
+
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:started_at) { Time.zone.parse("2022-03-01") }
+  let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at:, subscription_at: started_at) }
+  let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+  let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, properties: {amount: "1"}) }
+  let(:snapshot_units) { 5 }
+
+  before do
+    charge
+
+    create_event(timestamp: Time.zone.parse("2022-04-10"), value: 5)
+    create_event(timestamp: Time.zone.parse("2022-05-10"), value: 3)
+    create_snapshot
+
+    travel_to(Time.zone.parse("2022-05-15"))
+    stub_const("#{described_class}::RECHECK_DELAY", 0)
+  end
+
+  def create_snapshot
+    create(
+      :recurring_aggregation_snapshot,
+      organization:,
+      subscription:,
+      charge:,
+      to_datetime: Time.zone.parse("2022-04-30").end_of_day,
+      watermark: Time.zone.parse("2022-05-01"),
+      units: snapshot_units,
+      events_count: 1
+    )
+  end
+
+  def create_event(timestamp:, value: nil, properties: {value:})
+    create(
+      :event,
+      organization_id: organization.id,
+      external_subscription_id: subscription.external_id,
+      code: billable_metric.code,
+      timestamp:,
+      created_at: timestamp,
+      properties:
+    )
+  end
+
+  it "replays the events of the period on both paths and reports no difference when the snapshot is right" do
+    expect(result).to be_success
+    expect(result.compared_charges_count).to eq(1)
+    expect(result.compared_events_count).to eq(1)
+    expect(result.rechecked).to be(false)
+    expect(result.differences).to be_empty
+    expect(result.rows.sole).to have_attributes(
+      event_timestamp: Time.zone.parse("2022-05-10"),
+      charge_id: charge.id,
+      charge_filter_id: nil,
+      grouped_by: {},
+      snapshot_read: true,
+      snapshot: have_attributes(aggregation: 8, pay_in_advance_aggregation: 3),
+      full_scan: have_attributes(aggregation: 8, pay_in_advance_aggregation: 3)
+    )
+  end
+
+  it "persists nothing and leaves the read gate untouched" do
+    expect { result }.not_to change { [Fee.count, CachedAggregation.count, RecurringAggregationSnapshot.count] }
+    expect(RecurringAggregationSnapshots.read_enabled?(organization)).to be(false)
+  end
+
+  context "when newer events have no value for the metric field" do
+    before do
+      create_event(timestamp: Time.zone.parse("2022-05-11"), properties: {})
+      create_event(timestamp: Time.zone.parse("2022-05-12"), value: "")
+      create_event(timestamp: Time.zone.parse("2022-05-13"), value: " ")
+      create_event(timestamp: Time.zone.parse("2022-05-14"), value: "\t\u00A0")
+      [false, [], {}].each.with_index(1) { |value, hour| create_event(timestamp: Time.zone.parse("2022-05-14") + hour.hours, value:) }
+    end
+
+    it "replays only the events billed in advance" do
+      expect(result.compared_events_count).to eq(1)
+      expect(result.rows.sole).to have_attributes(event_timestamp: Time.zone.parse("2022-05-10"))
+    end
+  end
+
+  context "when the snapshot disagrees with the full history" do
+    let(:snapshot_units) { 20 }
+
+    it "reports the event after checking it again" do
+      expect(result.rechecked).to be(true)
+      expect(result.differences.sole).to have_attributes(
+        snapshot: have_attributes(aggregation: 23),
+        full_scan: have_attributes(aggregation: 8)
+      )
+    end
+  end
+
+  context "without a snapshot period" do
+    before { RecurringAggregationSnapshot.delete_all }
+
+    it "does not count the event as read from a snapshot" do
+      expect(result.differences).to be_empty
+      expect(result.rows.sole).to have_attributes(
+        snapshot_read: false,
+        snapshot: have_attributes(aggregation: 8),
+        full_scan: have_attributes(aggregation: 8)
+      )
+    end
+  end
+
+  context "when the snapshot period is invalidated during the snapshot run" do
+    let(:snapshot_units) { 20 }
+
+    before do
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
+        original.call(**args).tap do
+          RecurringAggregationSnapshot.delete_all if RecurringAggregationSnapshots.read_enabled?(organization)
+        end
+      end
+    end
+
+    it "builds the row again from the settled period" do
+      expect(result.rechecked).to be(false)
+      expect(result.differences).to be_empty
+      expect(result.rows.sole).to have_attributes(snapshot_read: false)
+    end
+  end
+
+  context "when the snapshot period is persisted during the snapshot run" do
+    let(:snapshot_units) { 20 }
+
+    before do
+      RecurringAggregationSnapshot.delete_all
+
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
+        original.call(**args).tap do
+          create_snapshot if RecurringAggregationSnapshots.read_enabled?(organization) && RecurringAggregationSnapshot.none?
+        end
+      end
+    end
+
+    it "builds the row again and compares the snapshot it reads" do
+      expect(result.rows.sole).to have_attributes(snapshot_read: true)
+      expect(result.differences.sole).to have_attributes(
+        snapshot: have_attributes(aggregation: 23), # snapshot 20 + 3 on 10 May
+        full_scan: have_attributes(aggregation: 8) # 5 on 10 Apr + 3 on 10 May
+      )
+    end
+  end
+
+  context "when the snapshot period keeps changing during the snapshot run" do
+    before do
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
+        original.call(**args).tap do
+          next unless RecurringAggregationSnapshots.read_enabled?(organization)
+
+          RecurringAggregationSnapshot.any? ? RecurringAggregationSnapshot.delete_all : create_snapshot
+        end
+      end
+    end
+
+    it "fails the comparison as inconclusive" do
+      expect(result).to be_failure
+      expect(result.error.code).to eq("snapshot_period_unsettled")
+    end
+  end
+
+  context "when the aggregation fails" do
+    before do
+      failure = BaseResult.new.tap { it.service_failure!(code: "aggregation_failed", message: "boom") }
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_raise(BaseService::FailedResult.new(failure, "boom"))
+    end
+
+    it "returns the failure" do
+      expect(result).to be_failure
+      expect(result.error.code).to eq("aggregation_failed")
+    end
+  end
+
+  context "when the snapshots of the period miss the event group" do
+    let(:charge) do
+      create(:standard_charge, :pay_in_advance, plan:, billable_metric:, properties: {amount: "1", pricing_group_keys: ["region"]})
+    end
+
+    before { RecurringAggregationSnapshot.update_all(grouped_by: {region: "us"}, updated_at: Time.current) } # rubocop:disable Rails/SkipsModelValidations
+
+    it "counts it as read from the period and reports its difference" do
+      expect(result.differences.sole).to have_attributes(
+        snapshot_read: true,
+        snapshot: have_attributes(aggregation: 3),
+        full_scan: have_attributes(aggregation: 8)
+      )
+    end
+  end
+
+  context "with the ClickHouse events store", clickhouse: true do
+    let(:organization) { create(:organization, clickhouse_events_store: true) }
+    let(:raw_event) do
+      create(
+        :clickhouse_events_raw,
+        organization:,
+        subscription:,
+        billable_metric:,
+        timestamp: Time.zone.parse("2022-05-12"),
+        ingested_at: Time.zone.parse("2022-05-12"),
+        properties: {value: "4"}
+      )
+    end
+
+    before { raw_event }
+
+    it "replays the latest raw events of the period" do
+      expect(result.compared_events_count).to eq(1)
+      expect(result.rows.sole).to have_attributes(event_transaction_id: raw_event.transaction_id, snapshot_read: true)
+    end
+
+    context "when newer events have no value for the metric field" do
+      before do
+        [{}, {value: ""}, {value: " "}, {value: "\t\u00A0"}, {value: "false"}, {value: "[]"}, {value: "{}"}].each.with_index(1) do |properties, hour|
+          create(
+            :clickhouse_events_raw,
+            organization:,
+            subscription:,
+            billable_metric:,
+            timestamp: raw_event.timestamp + hour.hours,
+            ingested_at: raw_event.ingested_at + hour.hours,
+            properties:
+          )
+        end
+      end
+
+      it "replays only the events billed in advance" do
+        expect(result.rows.map(&:event_transaction_id)).to eq([raw_event.transaction_id])
+      end
+    end
+
+    context "when the event was inserted twice" do
+      before { create(:clickhouse_events_raw, raw_event.attributes.symbolize_keys.merge(ingested_at: Time.zone.parse("2022-05-13"))) }
+
+      it "replays it once" do
+        expect(result.compared_events_count).to eq(1)
+      end
+
+      context "with other properties" do
+        before do
+          create(
+            :clickhouse_events_raw,
+            raw_event.attributes.symbolize_keys.merge(ingested_at: Time.zone.parse("2022-05-14"), properties: {value: "6"})
+          )
+        end
+
+        it "replays the latest insert" do
+          expect(result.rows.sole.full_scan).to have_attributes(pay_in_advance_aggregation: 6)
+        end
+      end
+
+      context "when the latest insert has no value for the metric field" do
+        before do
+          create(:clickhouse_events_raw, raw_event.attributes.symbolize_keys.merge(ingested_at: Time.zone.parse("2022-05-14"), properties: {}))
+        end
+
+        it "does not replay an older insert" do
+          expect(result.compared_events_count).to eq(0)
+          expect(result.rows).to be_empty
+        end
+      end
+    end
+
+    context "when the latest event was inserted more times than the sample" do
+      let(:older_raw_event) do
+        create(
+          :clickhouse_events_raw,
+          organization:,
+          subscription:,
+          billable_metric:,
+          timestamp: Time.zone.parse("2022-05-11"),
+          ingested_at: Time.zone.parse("2022-05-11"),
+          properties: {value: "2"}
+        )
+      end
+
+      before do
+        older_raw_event
+        (described_class::EVENTS_PER_BILLABLE_METRIC * 3).times do |index|
+          create(:clickhouse_events_raw, raw_event.attributes.symbolize_keys.merge(ingested_at: raw_event.ingested_at + (index + 1).minutes))
+        end
+      end
+
+      it "still replays the older events" do
+        expect(result.rows.map(&:event_transaction_id)).to eq([raw_event.transaction_id, older_raw_event.transaction_id])
+      end
+    end
+
+    context "when a transaction id is sent again with another timestamp" do
+      before do
+        create(:clickhouse_events_raw, raw_event.attributes.symbolize_keys.merge(timestamp: Time.zone.parse("2022-05-11")))
+      end
+
+      it "replays both events" do
+        expect(result.rows.map(&:event_timestamp)).to eq([Time.zone.parse("2022-05-12"), Time.zone.parse("2022-05-11")])
+      end
+    end
+  end
+
+  context "with a charge that is not paid in advance" do
+    let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+
+    it "compares nothing" do
+      expect(result.compared_charges_count).to eq(0)
+      expect(result.compared_events_count).to eq(0)
+      expect(result.rows).to be_empty
+    end
+  end
+end

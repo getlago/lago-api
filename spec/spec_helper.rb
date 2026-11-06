@@ -120,6 +120,10 @@ RSpec.configure do |config|
   config.define_derived_metadata(file_path: Regexp.new("/spec/scenarios/")) do |metadata|
     metadata[:type] = :request
   end
+  # Native v2 renders datetimes to the microsecond: see the `:v2_timestamps` hook below.
+  config.define_derived_metadata(file_path: Regexp.new("/spec/requests/api/v2/")) do |metadata|
+    metadata[:v2_timestamps] = true unless metadata.key?(:v2_timestamps)
+  end
 
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
@@ -174,6 +178,9 @@ RSpec.configure do |config|
 
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    # Like Rails.cache, auth attempts are not counted unless a spec sets a store, so that examples
+    # do not share counters through the Redis.
+    Auth::AttemptsThrottle.store = ActiveSupport::Cache::NullStore.new
 
     if (clickhouse = metadata[:clickhouse])
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
@@ -259,5 +266,19 @@ RSpec.configure do |config|
     end
 
     example.run
+  end
+
+  # WebMock.reset! keeps after_request callbacks, so a callback of an earlier example would still run,
+  # with records that no longer exist.
+  config.after { WebMock.reset_callbacks }
+
+  # The last JSON response of the example: datetimes to the microsecond, dates as days. A spec of
+  # an endpoint that renders a v1 payload opts out with `v2_timestamps: false`.
+  config.after(:each, :v2_timestamps) do
+    # The session itself, as a spec may name its subject `request` or `response`.
+    session = @integration_session
+    next unless session&.response&.media_type == "application/json" && session.response.body.present?
+
+    expect(session.response.parsed_body).to have_normalized_timestamps
   end
 end

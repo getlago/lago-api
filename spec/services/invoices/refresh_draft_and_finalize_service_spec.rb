@@ -104,6 +104,34 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       end
     end
 
+    context "with a snapshotted payment term" do
+      before do
+        invoice.update!(payment_term: {term_type: "net", days: 10}, net_payment_term: 10)
+      end
+
+      it "computes the due date from the snapshot, ignoring a later customer term change" do
+        invoice.customer.update!(payment_term: {term_type: "net", days: 3}, net_payment_term: 3)
+
+        freeze_time do
+          expect { finalize_service.call }
+            .to change { invoice.reload.payment_due_date }.to(Time.current.to_date + 10.days)
+        end
+      end
+    end
+
+    context "with a pre-feature draft (no jsonb snapshot)" do
+      before do
+        invoice.update!(payment_term: nil, net_payment_term: 10)
+      end
+
+      it "derives the due date from the invoice's integer alias" do
+        freeze_time do
+          expect { finalize_service.call }
+            .to change { invoice.reload.payment_due_date }.to(Time.current.to_date + 10.days)
+        end
+      end
+    end
+
     context "with a recurring invoice" do
       let(:billing_entity) { create(:billing_entity, organization:, subscription_invoice_issuing_date_adjustment:) }
 
@@ -231,20 +259,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       end
     end
 
-    it "calls SegmentTrackJob" do
-      invoice = finalize_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -326,7 +340,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
 
         allow(Invoices::ApplyProviderTaxesService).to receive(:call).and_call_original
         allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
-        allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
       end
 
       context "when taxes are unknown" do
@@ -351,7 +364,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
           expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
           expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
           expect(Invoices::Payments::CreateService).not_to have_received(:new)
-          expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
         end
 
         it "does not change issuing_date on the invoice" do

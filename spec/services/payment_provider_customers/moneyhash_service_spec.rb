@@ -74,6 +74,18 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
         create(:moneyhash_customer, customer:, provider_customer_id: SecureRandom.uuid)
       end
 
+      it "does not update the payment method of a customer from another organization" do
+        result = described_class.call(:update_payment_method,
+          organization_id: create(:organization).id,
+          customer_id: customer.id,
+          payment_method_id: payment_method_id,
+          metadata: custom_fields)
+
+        expect(result).to be_success
+        expect(result.moneyhash_customer).to be_nil
+        expect(moneyhash_customer.reload.payment_method_id).to be_nil
+      end
+
       it "updates the payment method for existing customer" do
         result = described_class.call(:update_payment_method,
           organization_id: organization.id,
@@ -275,6 +287,19 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
           )
         end
       end
+
+      context "when Moneyhash refuses the checkout" do
+        let(:http_error) { LagoHttpClient::HttpError.new(422, {status: {code: 422}}.to_json, "https://moneyhash.test") }
+
+        before { allow(lago_client).to receive(:post_with_response).and_raise(http_error) }
+
+        it "returns a third-party failure" do
+          result = described_class.call(:generate_checkout_url, moneyhash_customer, send_webhook: false)
+
+          expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+          expect(result.error).to have_attributes(third_party: "Moneyhash", error_code: 422, error_message: http_error.message)
+        end
+      end
     end
 
     describe ".call(:delete_payment_method)" do
@@ -288,6 +313,18 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
 
       let!(:moneyhash_customer) do
         create(:moneyhash_customer, customer:, provider_customer_id: SecureRandom.uuid, payment_method_id:)
+      end
+
+      it "does not clear the payment method of a customer from another organization" do
+        result = described_class.call(:delete_payment_method,
+          organization_id: create(:organization).id,
+          customer_id: customer.id,
+          payment_method_id: payment_method_id,
+          metadata: custom_fields)
+
+        expect(result).to be_success
+        expect(result.moneyhash_customer).to be_nil
+        expect(moneyhash_customer.reload.payment_method_id).to eq(payment_method_id)
       end
 
       it "clears the default payment_method_id when it matches" do

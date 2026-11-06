@@ -1,0 +1,430 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe UsageAttributionValues::TrackService do
+  subject(:track) { described_class.call!(organization:, entries:) }
+
+  let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"]) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:, organization:, external_id: "sub_1", started_at: 1.month.ago) }
+
+  let(:department) { create(:usage_attribution_type, organization:, code: "department", attribution_keys: ["department_id"]) }
+  let(:team) { create(:usage_attribution_type, organization:, code: "team", attribution_keys: ["team_id"], parent: department) }
+  let(:user) { create(:usage_attribution_type, organization:, code: "user", attribution_keys: ["user_id"], parent: team) }
+  let(:model) { create(:flat_usage_attribution_type, organization:, code: "model", attribution_keys: ["model"]) }
+
+  let(:seen_at) { Time.zone.parse("2026-10-09T10:00:00Z") }
+  let(:labels) { {"department" => "rnd", "team" => "eng", "user" => "alice", "model" => "opus"} }
+  let(:entries) { [entry(labels)] }
+
+  # An entry as reported by the events-processor.
+  def entry(labels, at: seen_at, subscription_id: subscription.id)
+    {"subscription_id" => subscription_id, "attribution_labels" => labels, "timestamp" => at.to_f}
+  end
+
+  def value_of(attribution_type, value)
+    UsageAttributionValue.with_discarded.find_by(customer:, usage_attribution_type: attribution_type, value:)
+  end
+
+  before do
+    subscription
+    [department, team, user, model]
+  end
+
+  it "creates the values of the chain linked to their parents, and the flat values as roots" do
+    track
+
+    rnd = value_of(department, "rnd")
+    eng = value_of(team, "eng")
+    alice = value_of(user, "alice")
+    opus = value_of(model, "opus")
+
+    expect([rnd, eng, alice, opus].map(&:parent_id)).to eq([nil, rnd.id, eng.id, nil])
+    expect([rnd, eng, alice, opus].map(&:last_seen_at)).to all(eq(seen_at))
+    expect([rnd, eng, alice, opus].map(&:organization_id)).to all(eq(organization.id))
+  end
+
+  context "without the account_tree feature flag" do
+    let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+    it "does not track the values" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when the organization uses the Postgres events store" do
+    let(:organization) { create(:organization, feature_flags: ["account_tree"]) }
+
+    it "does not track the values" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when the chain is partial" do
+    let(:labels) { {"department" => "rnd", "user" => "alice"} }
+
+    it "creates the values without the missing parent" do
+      track
+
+      expect(value_of(department, "rnd").parent_id).to be_nil
+      expect(value_of(user, "alice").parent_id).to be_nil
+      expect(UsageAttributionValue.count).to eq(2)
+    end
+  end
+
+  context "when the same values are tracked again" do
+    before { described_class.call!(organization:, entries:) }
+
+    it "does not duplicate them" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when a value was seen more recently" do
+    before { described_class.call!(organization:, entries: [entry(labels, at: seen_at + 1.day)]) }
+
+    it "keeps the latest last_seen_at" do
+      track
+
+      expect(value_of(user, "alice").last_seen_at).to eq(seen_at + 1.day)
+    end
+  end
+
+  context "when a value is seen later" do
+    before { described_class.call!(organization:, entries: [entry(labels, at: seen_at - 1.day)]) }
+
+    it "moves last_seen_at forward" do
+      track
+
+      expect(value_of(user, "alice").last_seen_at).to eq(seen_at)
+    end
+  end
+
+  context "when a more recent event places a value under another parent" do
+    let(:entries) { [entry(labels.merge("team" => "data"), at: seen_at + 1.hour)] }
+
+    before { described_class.call!(organization:, entries: [entry(labels)]) }
+
+    it "moves it under the new parent" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "data").id)
+    end
+  end
+
+  context "when an older event places a value under another parent" do
+    let(:entries) { [entry(labels.merge("team" => "data"), at: seen_at - 1.hour)] }
+
+    before { described_class.call!(organization:, entries: [entry(labels)]) }
+
+    it "keeps its current parent" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "when a more recent event does not carry the parent level" do
+    let(:entries) { [entry({"department" => "rnd", "user" => "alice"}, at: seen_at + 1.hour)] }
+
+    before { described_class.call!(organization:, entries: [entry(labels)]) }
+
+    it "keeps its current parent" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "with several entries placing a value under different parents" do
+    let(:entries) { [entry(labels.merge("team" => "data"), at: seen_at + 1.hour), entry(labels)] }
+
+    it "places it under the parent of the most recent entry" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "data").id)
+    end
+  end
+
+  context "when a value was discarded" do
+    before do
+      described_class.call!(organization:, entries:)
+      value_of(user, "alice").discard!
+    end
+
+    it "restores it" do
+      track
+
+      expect(value_of(user, "alice")).not_to be_discarded
+    end
+  end
+
+  context "with several entries holding the same value" do
+    let(:entries) do
+      [
+        entry({"department" => "rnd", "team" => "eng"}),
+        entry({"department" => "rnd", "team" => "data"}, at: seen_at + 1.hour)
+      ]
+    end
+
+    it "upserts it once, with the latest last_seen_at" do
+      track
+
+      expect(UsageAttributionValue.where(usage_attribution_type: department).count).to eq(1)
+      expect(value_of(department, "rnd").last_seen_at).to eq(seen_at + 1.hour)
+      expect(value_of(team, "data").parent_id).to eq(value_of(department, "rnd").id)
+    end
+  end
+
+  context "with a label of a deleted or unknown type" do
+    let(:labels) { {"model" => "opus", "region" => "eu"} }
+
+    before { model.discard! }
+
+    it "skips it" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when the parent type was deleted" do
+    let(:labels) { {"department" => "rnd", "team" => "eng"} }
+
+    before { department.discard! }
+
+    it "creates the child as a root" do
+      track
+
+      expect(value_of(team, "eng").parent_id).to be_nil
+      expect(value_of(department, "rnd")).to be_nil
+    end
+  end
+
+  context "when the types form a cycle" do
+    let(:labels) { {"department" => "rnd", "team" => "eng"} }
+
+    # Bypasses the cycle validation, as two concurrent updates could.
+    before { department.update_column(:parent_id, team.id) } # rubocop:disable Rails/SkipsModelValidations
+
+    it "still tracks the values" do
+      track
+
+      expect(UsageAttributionValue.where(customer:).pluck(:value)).to match_array(%w[rnd eng])
+    end
+  end
+
+  context "when the customer reached the values limit of a type", cache: :memory do
+    let(:entries) do
+      [
+        entry({"department" => "rnd", "team" => "eng", "user" => "carol"}),
+        entry({"department" => "rnd", "team" => "eng", "user" => "alice"}, at: seen_at + 1.hour)
+      ]
+    end
+
+    before do
+      stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 2)
+      described_class.call!(organization:, entries: [entry({"user" => "alice"}), entry({"user" => "bob"})])
+    end
+
+    it "skips the new values of the type and still refreshes the existing ones" do
+      track
+
+      expect(value_of(user, "carol")).to be_nil
+      expect(value_of(user, "alice").last_seen_at).to eq(seen_at + 1.hour)
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+
+    it "still creates the values of the other types" do
+      track
+
+      expect(value_of(department, "rnd")).to be_present
+      expect(value_of(team, "eng").parent_id).to eq(value_of(department, "rnd").id)
+    end
+
+    it "still creates the new values of another customer" do
+      other_customer = create(:customer, organization:)
+      other_subscription = create(:subscription, customer: other_customer, organization:)
+
+      described_class.call!(organization:, entries: [entry({"user" => "carol"}, subscription_id: other_subscription.id)])
+
+      expect(UsageAttributionValue.find_by(customer: other_customer, usage_attribution_type: user, value: "carol")).to be_present
+    end
+  end
+
+  context "when a call brings more new values than the remaining capacity", cache: :memory do
+    # Entries are tracked newest first, so carol and dave take the remaining capacity before erin.
+    let(:entries) do
+      [
+        entry({"user" => "carol"}, at: seen_at + 3.minutes),
+        entry({"user" => "carol"}, at: seen_at + 2.minutes),
+        entry({"user" => "dave"}, at: seen_at + 1.minute),
+        entry({"user" => "erin"})
+      ]
+    end
+
+    before do
+      stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 3)
+      described_class.call!(organization:, entries: [entry({"user" => "alice"})])
+      allow(UsageAttributionValue).to receive(:remaining_capacity).and_call_original
+    end
+
+    it "creates the new values up to the limit, reading the capacity once" do
+      track
+
+      expect(UsageAttributionValue.where(customer:, usage_attribution_type: user).pluck(:value)).to match_array(%w[alice carol dave])
+      expect(UsageAttributionValue).to have_received(:remaining_capacity).once
+    end
+  end
+
+  context "when the parent value is skipped by the limit", cache: :memory do
+    let(:entries) do
+      [
+        entry({"department" => "rnd", "team" => "sales", "user" => "carol"}),
+        entry({"department" => "rnd", "team" => "sales", "user" => "alice"}, at: seen_at + 1.hour)
+      ]
+    end
+
+    before do
+      stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 2)
+      described_class.call!(organization:, entries: [entry(labels), entry({"department" => "rnd", "team" => "ops"})])
+    end
+
+    it "skips the new values below it and still refreshes the existing ones" do
+      track
+
+      expect(value_of(team, "sales")).to be_nil
+      expect(value_of(user, "carol")).to be_nil
+      expect(value_of(user, "alice").last_seen_at).to eq(seen_at + 1.hour)
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "when all the values are already tracked" do
+    before do
+      described_class.call!(organization:, entries:)
+      allow(UsageAttributionValue).to receive(:remaining_capacity)
+    end
+
+    it "does not count the values" do
+      track
+
+      expect(UsageAttributionValue).not_to have_received(:remaining_capacity)
+    end
+  end
+
+  context "when the subscription is unknown" do
+    let(:entries) { [entry(labels, subscription_id: SecureRandom.uuid)] }
+
+    it "skips the entry" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when the subscription belongs to another organization" do
+    let(:other_subscription) { create(:subscription) }
+    let(:entries) { [entry(labels, subscription_id: other_subscription.id)] }
+
+    it "skips the entry" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when the subscription is terminated" do
+    let(:subscription) { create(:subscription, :terminated, customer:, organization:) }
+
+    # The events-processor resolved it for this event, e.g. within a grace period.
+    it "still tracks the values" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "when the entry has no labels" do
+    let(:entries) { [{"subscription_id" => subscription.id, "attribution_labels" => nil, "timestamp" => seen_at.to_f}] }
+
+    it "skips the entry" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when an event is dated in the future" do
+    let(:entries) { [entry(labels, at: 1.year.from_now)] }
+
+    before { freeze_time }
+
+    it "counts it as seen now" do
+      track
+
+      expect(value_of(user, "alice").last_seen_at).to eq(Time.current)
+    end
+  end
+
+  context "when the timestamp is missing or not a number" do
+    let(:entries) do
+      [
+        {"subscription_id" => subscription.id, "attribution_labels" => labels},
+        {"subscription_id" => subscription.id, "attribution_labels" => labels, "timestamp" => "2026-10-09"},
+        {"subscription_id" => subscription.id, "attribution_labels" => labels, "timestamp" => [1]}
+      ]
+    end
+
+    it "skips the entries" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "with values the API does not store" do
+    let(:labels) { {"department" => "rnd", "team" => "a" * 256, "user" => "al\0ice", "model" => " "} }
+    let(:entries) { [entry(labels), entry({"department" => "sales", "team" => 42})] }
+
+    it "skips them and tracks the others" do
+      track
+
+      expect(UsageAttributionValue.where(customer:).pluck(:value)).to match_array(%w[rnd sales])
+    end
+  end
+
+  context "with several entries sharing values" do
+    let(:entries) do
+      [
+        entry({"department" => "rnd", "team" => "eng", "user" => "alice"}),
+        entry({"department" => "rnd", "team" => "eng", "user" => "bob"}, at: seen_at + 1.hour)
+      ]
+    end
+
+    before { allow(UsageAttributionValue).to receive(:upsert).and_call_original }
+
+    it "upserts each value once" do
+      track
+
+      # rnd, eng, alice, bob
+      expect(UsageAttributionValue).to have_received(:upsert).exactly(4).times
+      expect(value_of(team, "eng").last_seen_at).to eq(seen_at + 1.hour)
+      expect([value_of(user, "alice"), value_of(user, "bob")].map(&:parent_id)).to all(eq(value_of(team, "eng").id))
+    end
+  end
+
+  context "when a delayed event places a value after an event without the parent level" do
+    let(:entries) { [entry(labels.merge("team" => "data"), at: seen_at + 30.minutes)] }
+
+    before do
+      described_class.call!(organization:, entries: [entry(labels)])
+      described_class.call!(organization:, entries: [entry({"department" => "rnd", "user" => "alice"}, at: seen_at + 1.hour)])
+    end
+
+    it "keeps its current parent" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "when the customer was deleted" do
+    before { customer.discard! }
+
+    it "skips the entry" do
+      expect { track }.not_to change(UsageAttributionValue.with_discarded, :count)
+    end
+  end
+end

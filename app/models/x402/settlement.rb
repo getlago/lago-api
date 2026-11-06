@@ -6,6 +6,7 @@ module X402
     STATUSES = {pending: "pending", settled: "settled", failed: "failed"}.freeze
     SETTLED_BY = {lago: "lago", merchant: "merchant"}.freeze
     GRANT_RETRY_DELAY = 2.minutes
+    PAYMENT_RETRY_DELAY = 2.minutes
 
     belongs_to :organization
     belongs_to :x402_connection, -> { with_discarded }, class_name: "X402::Connection", inverse_of: :settlements
@@ -19,7 +20,7 @@ module X402
     enum :status, STATUSES, validate: true
     enum :settled_by, SETTLED_BY, prefix: true, validate: true
 
-    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings, :invoice_id
+    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings, :invoice_id, :request_key_digest
 
     before_validation :normalize_addresses, on: :create
 
@@ -29,12 +30,27 @@ module X402
     validates :settled_amount_cents, numericality: {only_integer: true}
     validates :invoice, presence: true, if: :invoice_payment?
     validates :purchase_settings, presence: true, if: :credit_purchase?
+    validates :request_key_digest, format: {with: /\A[0-9a-f]{64}\z/}, allow_nil: true
+    validates :request_key_digest, absence: true, if: :invoice_payment?
     validate :validate_addresses
     validate :validate_connection, on: :create
     validate :validate_invoice, on: :create
 
     scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
     scope :grant_retry_due, -> { credit_purchase.settled.where(wallet_transaction_id: nil, updated_at: ..GRANT_RETRY_DELAY.ago) }
+    scope :payment_retry_due, lambda {
+      invoice_payment.settled
+        .where(payment_id: nil, updated_at: ..PAYMENT_RETRY_DELAY.ago)
+        .where(arel_table[:error_reason].is_distinct_from("payment_not_recorded"))
+    }
+
+    def self.request_key_digest(key)
+      OpenSSL::Digest::SHA256.hexdigest(key) if key
+    end
+
+    def same_request?(digest)
+      request_key_digest.present? && digest.present? && ActiveSupport::SecurityUtils.secure_compare(request_key_digest, digest)
+    end
 
     private
 
@@ -108,6 +124,7 @@ end
 #  payment_digest        :string           not null
 #  purchase_settings     :jsonb
 #  reconcile_after       :datetime
+#  request_key_digest    :string
 #  settled_amount_atomic :decimal(38, )    not null
 #  settled_amount_cents  :bigint           not null
 #  settled_by            :enum             default("lago"), not null
@@ -135,6 +152,7 @@ end
 #  index_x402_settlements_on_pending_invoice_id             (invoice_id) UNIQUE WHERE (status = 'pending'::x402_settlement_status)
 #  index_x402_settlements_on_pending_reconcile_after        (reconcile_after) WHERE (status = 'pending'::x402_settlement_status)
 #  index_x402_settlements_on_ungranted_id                   (id) WHERE ((kind = 'credit_purchase'::x402_settlement_kind) AND (status = 'settled'::x402_settlement_status) AND (wallet_transaction_id IS NULL))
+#  index_x402_settlements_on_unpaid_id                      (id) WHERE ((kind = 'invoice_payment'::x402_settlement_kind) AND (status = 'settled'::x402_settlement_status) AND (payment_id IS NULL) AND ((error_reason)::text IS DISTINCT FROM 'payment_not_recorded'::text))
 #  index_x402_settlements_on_x402_connection_id             (x402_connection_id)
 #
 # Foreign Keys

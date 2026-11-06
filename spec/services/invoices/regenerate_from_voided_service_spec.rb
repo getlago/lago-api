@@ -94,6 +94,39 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "with the payment term" do
+      it "inherits the voided invoice's snapshotted term instead of the live customer term" do
+        voided_invoice.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+        customer.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+
+        invoice = regenerate_result.invoice
+        expect(invoice.payment_term).to eq("term_type" => "net", "days" => 60)
+        expect(invoice.net_payment_term).to eq(60)
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date + 60.days)
+      end
+
+      it "calculates a non-net snapshot from the new issuing date" do
+        voided_invoice.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+        customer.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+
+        invoice = regenerate_result.invoice
+
+        expect(invoice.payment_term).to eq("term_type" => "end_of_month")
+        expect(invoice.net_payment_term).to be_nil
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date.end_of_month)
+      end
+
+      it "derives a net term from the integer alias of a pre-feature voided invoice" do
+        voided_invoice.update!(payment_term: nil, net_payment_term: 30, payment_term_source: nil)
+
+        invoice = regenerate_result.invoice
+        expect(invoice.payment_term).to eq("term_type" => "net", "days" => 30)
+        expect(invoice.payment_term_source).to be_nil
+        expect(invoice.net_payment_term).to eq(30)
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date + 30.days)
+      end
+    end
+
     context "with the purchase order number" do
       before { voided_invoice.update!(purchase_order_number: "PO-ORIGINAL") }
 
@@ -285,6 +318,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           :customer,
           organization:,
           invoice_grace_period: 30,
+          payment_term: {term_type: "net", days: 30},
           net_payment_term: 30,
           subscription_invoice_issuing_date_anchor:,
           subscription_invoice_issuing_date_adjustment:
@@ -360,14 +394,6 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       invoice = regenerate_result.invoice
 
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
-    end
-
-    it "produces segment event" do
-      allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
-
-      regenerate_result
-
-      expect(Utils::SegmentTrack).to have_received(:invoice_created)
     end
 
     it "enqueues GenerateDocumentsJob with email false" do
@@ -949,6 +975,28 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           end
         end
       end
+    end
+  end
+
+  context "when the voided invoice was billed from a contract" do
+    subject(:result) { Invoices::RegenerateFromVoidedService.call(voided_invoice:, fees_params:) }
+
+    let(:voided_invoice) { create(:invoice, :voided, organization:, customer:) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:))
+    end
+    let(:product_fee) do
+      create(:fee, invoice: voided_invoice, subscription: nil, fee_type: :product,
+        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:, rate_card_rate:)
+    end
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
+    let(:fees_params) { [{id: product_fee.id, units: 10}] }
+
+    it "refuses to regenerate it" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+      expect(result.error.code).to eq("product_catalog_invoice_not_regenerable")
+      expect(voided_invoice.reload.regenerated_invoice).to be_nil
     end
   end
 end

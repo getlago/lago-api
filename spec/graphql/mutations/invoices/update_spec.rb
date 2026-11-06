@@ -21,6 +21,7 @@ RSpec.describe Mutations::Invoices::Update do
   let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "invoices:update"
 
   it "updates a invoice" do

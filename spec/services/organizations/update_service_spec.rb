@@ -112,6 +112,16 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when document_url_expiration_days is sent" do
+      before { params[:document_url_expiration_days] = 90 }
+
+      it "updates the document url expiration window" do
+        result = update_service.call
+
+        expect(result.organization.document_url_expiration_days).to eq(90)
+      end
+    end
+
     context "when document_number_prefix is invalid" do
       before { params[:document_number_prefix] = "aaaaaaaaaaaaaaa" }
 
@@ -121,6 +131,18 @@ RSpec.describe Organizations::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:document_number_prefix]).to eq(["value_is_too_long"])
+      end
+    end
+
+    context "when customer_portal_locked_fields is null" do
+      before { params[:customer_portal_locked_fields] = nil }
+
+      it "returns a validation error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:customer_portal_locked_fields]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -251,18 +273,24 @@ RSpec.describe Organizations::UpdateService do
 
         before do
           draft_invoice
-          allow(BillingEntities::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
+          organization.default_billing_entity.update!(
+            net_payment_term: 30,
+            payment_term: {"term_type" => "net", "days" => 30}
+          )
         end
 
-        it "updates the corresponding draft invoices" do
+        it "persists the new term on the default billing entity without rewriting drafts" do
           current_date = DateTime.parse("22 Jun 2022")
 
           travel_to(current_date) do
-            result = update_service.call
-            expect(result).to be_success
+            result = nil
 
+            expect { result = update_service.call }
+              .not_to change { draft_invoice.reload.attributes.slice("payment_term", "net_payment_term", "payment_due_date") }
+
+            expect(result).to be_success
             expect(result.organization.net_payment_term).to eq(2)
-            expect(BillingEntities::UpdateInvoicePaymentDueDateService).to have_received(:call).with(billing_entity: organization.default_billing_entity, net_payment_term: 2)
+            expect(result.organization.default_billing_entity.payment_term).to eq("term_type" => "net", "days" => 2)
           end
         end
       end

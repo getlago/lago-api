@@ -33,7 +33,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
     it "returns effective_from as a midnight datetime on an arrears card" do
       subject
 
-      expect(json[:rate][:effective_from]).to eq(1.month.from_now.beginning_of_day.iso8601)
+      expect(json[:rate][:effective_from]).to eq(1.month.from_now.beginning_of_day.iso8601(6))
     end
 
     context "when an arrears card receives a datetime string" do
@@ -43,7 +43,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:rate][:effective_from]).to eq("2026-12-01T00:00:00Z")
+        expect(json[:rate][:effective_from]).to eq("2026-12-01T00:00:00.000000Z")
       end
 
       context "when the day already has a rate" do
@@ -53,7 +53,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json.dig(:error_details, :effective_from)).to eq(["value_already_exist"])
+          expect(json[:details]).to eq([{code: "value_already_exist", field: "effective_from", meta: {}}])
         end
       end
     end
@@ -67,7 +67,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:rate][:effective_from]).to eq("2026-12-01T17:00:00Z")
+        expect(json[:rate][:effective_from]).to eq("2026-12-01T17:00:00.000000Z")
       end
     end
 
@@ -78,7 +78,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :effective_from)).to eq(["value_is_invalid"])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "effective_from", meta: {}}])
       end
     end
 
@@ -89,7 +89,18 @@ RSpec.describe Api::V2::RateCards::RatesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :effective_from)).to eq(["value_is_mandatory"])
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "effective_from", meta: {}}])
+      end
+    end
+
+    context "when min_amount_cents does not fit its column" do
+      let(:create_params) { super().merge(min_amount_cents: 10**20) }
+
+      it "returns a validation error instead of a 500" do
+        expect { subject }.not_to change(RateCardRate, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_out_of_range", field: "base", meta: {}}])
       end
     end
 
@@ -99,7 +110,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
   end
@@ -134,7 +145,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card_rate")
+        expect(response).to be_v2_not_found_error("rate_card_rate")
       end
     end
   end
@@ -151,6 +162,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate][:lago_id]).to eq(rate.id)
+      expect(json[:rate]).to include(effective_from: rate.effective_from.iso8601(6), created_at: rate.created_at.iso8601(6), updated_at: rate.updated_at.iso8601(6), deleted_at: nil)
     end
   end
 
@@ -168,6 +180,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rates].map { it[:lago_id] }).to eq([rate.id])
+      expect(json[:rates].sole[:rate_card_code]).to eq(rate_card.code)
     end
 
     context "with offset pagination parameters" do
@@ -178,7 +191,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_pagination_parameter")
-        expect(json[:error_details]).to eq(page: {reason: "not_paginated"}, per_page: {reason: "not_paginated"})
+        expect(json[:details]).to eq([{code: "not_paginated", field: "page", meta: {}}, {code: "not_paginated", field: "per_page", meta: {}}])
       end
     end
 
@@ -219,6 +232,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
       it "deletes the rate" do
         expect { subject }.to change { rate.reload.discarded? }.from(false).to(true)
         expect(response).to have_http_status(:success)
+        expect(json[:rate][:deleted_at]).to eq(rate.deleted_at.iso8601(6))
       end
     end
 

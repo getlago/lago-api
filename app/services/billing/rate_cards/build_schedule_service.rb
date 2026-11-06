@@ -51,7 +51,9 @@ module Billing
       end
 
       def schedule_ends_at
-        [ends_at, contract_rate_card.contract.ended_at].compact.min
+        contract = contract_rate_card.contract
+
+        [ends_at, contract.ended_at, contract.terminated_at].compact.min
       end
 
       def phases

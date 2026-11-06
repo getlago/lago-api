@@ -11,7 +11,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
-      return result.forbidden_failure! unless invoice.subscription?
+      return result.forbidden_failure! unless invoice.subscription? || invoice.contract?
 
       invoice.with_lock do
         result.invoice = invoice
@@ -50,7 +50,6 @@ module Invoices
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
-          Utils::SegmentTrack.invoice_created(invoice)
         end
 
         invoice.credit_notes.each do |credit_note|
@@ -78,12 +77,16 @@ module Invoices
     end
 
     def issuing_date_keep_anchor?
-      invoice.invoice_subscriptions.first&.recurring? &&
+      recurring_invoice? &&
         invoice.customer.applicable_subscription_invoice_issuing_date_adjustment == "keep_anchor"
     end
 
+    def recurring_invoice?
+      invoice.invoice_subscriptions.first&.recurring? || invoice.billing_segments.exists?
+    end
+
     def payment_due_date
-      @payment_due_date ||= issuing_date + invoice.customer.applicable_net_payment_term.days
+      @payment_due_date ||= invoice.snapshotted_payment_term.due_date_for(issuing_date)
     end
 
     def track_credit_note_created(credit_note)

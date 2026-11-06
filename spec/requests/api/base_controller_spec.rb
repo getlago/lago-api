@@ -4,7 +4,8 @@ require "rails_helper"
 
 RSpec.describe Api::BaseController, type: :controller do
   let_it_be(:organization) { create_default(:organization) }
-  controller do
+  # Api::BaseController is abstract: the v1 base controller adds the renderers its callbacks call.
+  controller(Api::V1::BaseController) do
     def index
       render nothing: true
     end
@@ -25,6 +26,8 @@ RSpec.describe Api::BaseController, type: :controller do
     allow(CurrentContext).to receive(:source=)
     allow(CurrentContext).to receive(:api_key_id=)
   end
+
+  it { expect(described_class).to be_abstract }
 
   it "sets the context source to api" do
     request.headers["Authorization"] = "Bearer #{api_key.value}"

@@ -3,7 +3,6 @@
 module Invoices
   module Payments
     class AdyenService < BaseService
-      include Lago::Adyen::ErrorHandlable
       include Customers::PaymentProviderFinder
       include TypedResults
 
@@ -20,7 +19,7 @@ module Invoices
         payment = if metadata[:payment_type] == "one-time"
           create_payment(organization_id:, provider_payment_id:, amount_cents:, metadata:)
         else
-          Payment.find_by(provider_payment_id:)
+          Payment.find_by(provider_payment_id:, organization_id:)
         end
         return result unless result.success?
         return result.not_found_failure!(resource: "adyen_payment") unless payment
@@ -54,10 +53,14 @@ module Invoices
           headers: {"Idempotency-Key" => payment_intent.id}
         )
 
-        adyen_success, adyen_error = handle_adyen_response(res)
-        result.service_failure!(code: adyen_error.code, message: adyen_error.msg) unless adyen_success
-
-        return result unless result.success?
+        # GeneratePaymentUrlService delivers the error webhook of a third-party failure.
+        if res.status >= 400
+          return result.third_party_failure!(
+            third_party: PROVIDER_NAME,
+            error_code: res.response["errorType"],
+            error_message: res.response["message"]
+          )
+        end
 
         result.payment_url = res.response["url"]
 
@@ -158,16 +161,6 @@ module Invoices
 
       def deliver_webhook
         SendWebhookJob.perform_later("payment.succeeded", result.payment)
-      end
-
-      def deliver_error_webhook(adyen_error)
-        DeliverErrorWebhookService.call_async(invoice, {
-          provider_customer_id: customer.adyen_customer.provider_customer_id,
-          provider_error: {
-            message: adyen_error.msg,
-            error_code: adyen_error.code
-          }
-        })
       end
     end
   end

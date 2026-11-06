@@ -6,10 +6,14 @@ module Types
       graphql_name "Fee"
       implements Types::Invoices::InvoiceItem
 
+      dataload_association :contract, :contract_rate_card
+
       field :id, ID, null: false
 
       field :add_on, Types::AddOns::Object, null: true
       field :charge, Types::Charges::Object, null: true
+      field :contract, Types::Contracts::Object, null: true
+      field :contract_rate_card, Types::ContractAppliedRateCards::Object, null: true
       field :currency, Types::CurrencyEnum, null: false
       field :description, String, null: true
       field :fixed_charge, Types::FixedCharges::Object, null: true

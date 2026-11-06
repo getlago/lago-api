@@ -42,6 +42,8 @@ module Integrations
         end
 
         def perform(invoice:, find_first: false)
+          return if invoice.product_catalog?
+
           # Note: Look upstream before posting in two cases:
           # - "find_first: true": caller (typically the manual SyncInvoice mutation) suspects
           #   the invoice is not in sync because a prior POST may have landed on NetSuite without
