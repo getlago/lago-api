@@ -5,6 +5,8 @@ module Types
     class Object < Types::BaseObject
       graphql_name "Customer"
 
+      dataload_association :organization
+
       field :id, ID, null: false
 
       field :account_type, Types::Customers::AccountTypeEnum, null: false
@@ -37,6 +39,7 @@ module Types
       field :tax_identification_number, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
       field :url, String, null: true
+      field :x402_agent_address, String, null: true
       field :zipcode, String, null: true
 
       field :shipping_address, Types::Customers::Address, null: true
@@ -146,6 +149,10 @@ module Types
 
       def has_overdue_invoices
         object.invoices.payment_overdue.any?
+      end
+
+      def x402_agent_address
+        object.x402_agent_address if organization.x402_payments_enabled?
       end
 
       def overdue_balances

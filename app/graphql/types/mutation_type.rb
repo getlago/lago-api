@@ -323,6 +323,10 @@ module Types
     field :destroy_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Destroy
     field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
 
+    field :create_x402_connection, mutation: Mutations::X402::Connections::Create
+    field :destroy_x402_connection, mutation: Mutations::X402::Connections::Destroy
+    field :update_x402_connection, mutation: Mutations::X402::Connections::Update
+
     field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
     field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
     field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
