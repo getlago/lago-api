@@ -11,8 +11,10 @@ RSpec.describe Invoices::ProgressiveBilling::WalletTerminationService, transacti
   let(:subscription) { create(:subscription, plan:, customer:, started_at: timestamp - 1.week) }
   let(:timestamp) { Time.zone.parse(Date.current.strftime("%Y-%m-%d 10:00:00")) }
 
+  let(:expiration_at) { nil }
+
   let(:wallet) do
-    create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0)
+    create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0, expiration_at:)
   end
 
   let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
@@ -92,6 +94,43 @@ RSpec.describe Invoices::ProgressiveBilling::WalletTerminationService, transacti
 
     it "does not enqueue the invoice side effects" do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
+    end
+  end
+
+  context "when usage happened after the wallet expired" do
+    let(:expiration_at) { timestamp - 30.minutes }
+
+    before do
+      create(
+        :event,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        properties: {billable_metric.field_name => 5},
+        timestamp: timestamp - 15.minutes
+      )
+    end
+
+    it "only invoices the usage until the expiration" do
+      expect(result).to be_success
+      expect(result.invoice).to have_attributes(
+        fees_amount_cents: 100, # 1 unit before the expiration, the 5 units after it are left out
+        prepaid_credit_amount_cents: 100,
+        total_amount_cents: 0
+      )
+      expect(wallet.reload.balance_cents).to eq(900)
+    end
+  end
+
+  context "when the wallet expired before the subscription period" do
+    let(:expiration_at) { subscription.started_at - 1.day }
+
+    it "does not create an invoice" do
+      expect { result }.not_to change(Invoice, :count)
+
+      expect(result).to be_success
+      expect(result.invoice).to be_nil
+      expect(wallet.reload.balance_cents).to eq(1000)
     end
   end
 
