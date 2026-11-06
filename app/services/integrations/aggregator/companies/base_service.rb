@@ -4,10 +4,6 @@ module Integrations
   module Aggregator
     module Companies
       class BaseService < Integrations::Aggregator::Contacts::BaseService
-        def action_path
-          "v1/#{provider}/companies"
-        end
-
         private
 
         def process_hash_result(body)

@@ -13,7 +13,7 @@ RSpec.describe Mutations::ProductCategories::Destroy do
     )
   end
 
-  let(:required_permission) { "product_categories:delete" }
+  let(:required_permission) { "products:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:product_category) { create(:product_category, organization:) }
@@ -28,7 +28,7 @@ RSpec.describe Mutations::ProductCategories::Destroy do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_categories:delete"
+  it_behaves_like "requires permission", "products:delete"
 
   it "soft deletes the product_category" do
     expect(execution["data"]["destroyProductCategory"]["id"]).to eq(product_category.id)

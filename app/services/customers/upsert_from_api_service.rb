@@ -47,6 +47,10 @@ module Customers
       integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: params[:integration_customers])
       return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
 
+      unless PaymentTerms::ValidateService.new(result, **params.slice(:payment_term, :net_payment_term)).valid?
+        return result
+      end
+
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
@@ -74,7 +78,6 @@ module Customers
         customer.logo_url = params[:logo_url] if params.key?(:logo_url)
         customer.legal_name = params[:legal_name] if params.key?(:legal_name)
         customer.legal_number = params[:legal_number] if params.key?(:legal_number)
-        customer.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
         customer.external_salesforce_id = params[:external_salesforce_id] if params.key?(:external_salesforce_id)
         customer.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] || "inherit" if params.key?(:finalize_zero_amount_invoice)
         customer.firstname = params[:firstname] if params.key?(:firstname)
@@ -321,6 +324,12 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.reload
+    rescue BaseService::ThirdPartyFailure => e
+      # v1 answered an Adyen or Moneyhash refusal of a synchronous sync with this validation error
+      # before it was a third-party failure. A GoCardless refusal answered a 500.
+      raise unless %w[Adyen Moneyhash].include?(e.third_party)
+
+      result.single_validation_failure!(error_code: e.error_code).raise_if_error!
     end
 
     def discard_payment_methods(payment_methods)

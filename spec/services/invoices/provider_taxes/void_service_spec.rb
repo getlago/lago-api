@@ -62,11 +62,11 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
     let(:response1) { instance_double(Net::HTTPOK) }
-    let(:lago_client1) { instance_double(LagoHttpClient::Client) }
     let(:response2) { instance_double(Net::HTTPOK) }
-    let(:lago_client2) { instance_double(LagoHttpClient::Client) }
-    let(:void_endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
-    let(:negate_endpoint) { "https://api.nango.dev/v1/anrok/negate_invoices" }
+    let(:lago_client) { instance_double(LagoHttpClient::Client) }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
+    let(:void_action) { "anrok-void-transaction" }
+    let(:negate_action) { "anrok-negate-transaction" }
     let(:body_void) do
       path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
       File.read(path)
@@ -92,16 +92,16 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
 
       allow(LagoHttpClient::Client)
         .to receive(:new)
-        .with(void_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        .and_return(lago_client1)
-      allow(lago_client1).to receive(:post_with_response).and_return(response1)
+        .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        .and_return(lago_client)
+      allow(lago_client).to receive(:post_with_response)
+        .with(hash_including(action_name: void_action), anything)
+        .and_return(response1)
       allow(response1).to receive(:body).and_return(body_void)
 
-      allow(LagoHttpClient::Client)
-        .to receive(:new)
-        .with(negate_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        .and_return(lago_client2)
-      allow(lago_client2).to receive(:post_with_response).and_return(response2)
+      allow(lago_client).to receive(:post_with_response)
+        .with(hash_including(action_name: negate_action), anything)
+        .and_return(response2)
       allow(response2).to receive(:body).and_return(body_negate)
     end
 
@@ -133,7 +133,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
         result = void_service.call
 
         expect(result).to be_success
-        expect(lago_client1).not_to have_received(:post_with_response)
+        expect(lago_client).not_to have_received(:post_with_response)
       end
 
       it "records no tax voiding error" do
@@ -155,7 +155,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
         result = void_service.call
 
         expect(result).to be_success
-        expect(lago_client1).to have_received(:post_with_response)
+        expect(lago_client).to have_received(:post_with_response)
+          .with(hash_including(action_name: void_action), anything)
       end
     end
 
@@ -183,8 +184,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
         result = void_service.call
 
         expect(result).not_to be_success
-        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(LagoHttpClient::Client).not_to have_received(:new).with(negate_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        expect(lago_client).to have_received(:post_with_response).with(hash_including(action_name: void_action), anything)
+        expect(lago_client).not_to have_received(:post_with_response).with(hash_including(action_name: negate_action), anything)
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(invoice.reload.status).to eq("voided")
       end
@@ -214,8 +215,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
         result = void_service.call
 
         expect(result).not_to be_success
-        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        expect(lago_client).to have_received(:post_with_response).with(hash_including(action_name: void_action), anything)
+        expect(lago_client).to have_received(:post_with_response).with(hash_including(action_name: negate_action), anything)
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(invoice.reload.status).to eq("voided")
       end
@@ -234,8 +235,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
     context "when failed result is returned from refund endpoint for avalara customer" do
       let(:integration) { create(:avalara_integration, organization:) }
       let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
-      let(:void_endpoint) { "https://api.nango.dev/v1/avalara/void_invoices" }
-      let(:negate_endpoint) { "https://api.nango.dev/v1/avalara/finalized_invoices" }
+      let(:void_action) { "void-invoice" }
+      let(:negate_action) { "request-tax-finalized-invoice" }
       let(:body_void) do
         path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response_locked_void.json")
         File.read(path)
@@ -249,8 +250,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
         result = void_service.call
 
         expect(result).not_to be_success
-        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        expect(lago_client).to have_received(:post_with_response).with(hash_including(action_name: void_action), anything)
+        expect(lago_client).to have_received(:post_with_response).with(hash_including(action_name: negate_action), anything)
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(invoice.reload.status).to eq("voided")
       end

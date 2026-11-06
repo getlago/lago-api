@@ -67,7 +67,7 @@ module PaymentProviderCustomers
       result
     rescue LagoHttpClient::HttpError => e
       deliver_error_webhook(e)
-      result.service_failure!(code: e.error_code, message: e.message)
+      result.third_party_failure!(third_party: "Moneyhash", error_code: e.error_code, error_message: e.message)
     end
 
     def update_payment_method(organization_id:, customer_id:, payment_method_id:, metadata: {}, card_details: {})

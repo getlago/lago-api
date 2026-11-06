@@ -12,6 +12,10 @@ module Clock
       X402::Settlement.grant_retry_due.find_each do |settlement|
         X402::Settlements::ReconcileJob.perform_later(settlement)
       end
+
+      X402::Settlement.payment_retry_due.find_each do |settlement|
+        X402::Settlements::ReconcileJob.perform_later(settlement)
+      end
     end
   end
 end

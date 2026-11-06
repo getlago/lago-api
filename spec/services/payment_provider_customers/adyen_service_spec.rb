@@ -74,6 +74,15 @@ RSpec.describe PaymentProviderCustomers::AdyenService do
             }
           ).on_queue(webhook_queue)
       end
+
+      it "returns a third-party failure" do
+        expect(adyen_service_create.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(adyen_service_create.error).to have_attributes(
+          third_party: "Adyen",
+          error_code: "validation",
+          error_message: "There are no payment methods available for the given parameters."
+        )
+      end
     end
 
     context "when failing to generate the checkout link" do

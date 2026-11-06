@@ -7,6 +7,10 @@ module Integrations
         class CreateService < BaseService
           Result = BaseResult[:subscription_id, :external_id]
 
+          def action_name
+            "create-record"
+          end
+
           def call
             return result unless integration
             return result unless integration.sync_subscriptions
@@ -15,7 +19,7 @@ module Integrations
 
             Integrations::Hubspot::Subscriptions::DeployPropertiesService.call(integration:)
 
-            response = http_client.post_with_response(payload.create_body, headers)
+            response = trigger_action(payload.create_body)
             body = JSON.parse(response.body)
 
             result.external_id = body["id"]
