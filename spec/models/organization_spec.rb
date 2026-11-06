@@ -12,8 +12,19 @@ RSpec.describe Organization do
     )
   end
 
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:environment).backed_by_column_of_type(:enum).validating
+        .with_values(production: "production", sandbox: "sandbox")
+    end
+  end
+
   describe "associations" do
     it do
+      expect(subject).to belong_to(:production_organization).class_name("Organization").optional
+        .inverse_of(:sandbox_organization)
+      expect(subject).to have_one(:sandbox_organization).class_name("Organization")
+        .with_foreign_key(:production_organization_id).inverse_of(:production_organization)
       expect(subject).to have_many(:stripe_payment_providers)
       expect(subject).to have_many(:gocardless_payment_providers)
       expect(subject).to have_many(:adyen_payment_providers)
@@ -277,6 +288,87 @@ RSpec.describe Organization do
         persisted_org = create(:organization)
         persisted_org.slug = nil
         expect(persisted_org).not_to be_valid
+      end
+    end
+
+    describe "of self_serve" do
+      it "is a production organization, not self-serve and unlinked by default" do
+        organization = create(:organization)
+
+        expect(organization.reload).to have_attributes(self_serve: false, environment: "production",
+          production_organization_id: nil)
+      end
+
+      it "is invalid without a value" do
+        organization.self_serve = nil
+
+        expect(organization).not_to be_valid
+        expect(organization.errors.to_hash).to eq(self_serve: ["value_is_invalid"])
+      end
+    end
+
+    describe "of the sandbox link" do
+      let(:production) { create(:organization) }
+
+      it "accepts a sandbox linked to a production organization" do
+        expect(build(:organization, :sandbox, production_organization: production)).to be_valid
+      end
+
+      it "refuses a sandbox without a production organization" do
+        sandbox = build(:organization, environment: "sandbox")
+
+        expect(sandbox).not_to be_valid
+        expect(sandbox.errors.to_hash).to eq(production_organization_id: ["value_is_mandatory"])
+      end
+
+      it "refuses a production organization with a link" do
+        organization = build(:organization, production_organization: production)
+
+        expect(organization).not_to be_valid
+        expect(organization.errors.to_hash).to eq(production_organization_id: ["value_must_be_blank"])
+      end
+
+      it "refuses a sandbox linked to another sandbox" do
+        other_sandbox = create(:organization, :sandbox, production_organization: production)
+        sandbox = build(:organization, :sandbox, production_organization: other_sandbox)
+
+        expect(sandbox).not_to be_valid
+        expect(sandbox.errors.to_hash).to eq(production_organization_id: ["value_is_invalid"])
+      end
+
+      it "refuses a sandbox linked to itself" do
+        sandbox = create(:organization, :sandbox, production_organization: production)
+        sandbox.production_organization_id = sandbox.id
+
+        expect(sandbox).not_to be_valid
+        expect(sandbox.errors.to_hash).to eq(production_organization_id: ["value_is_invalid"])
+      end
+
+      it "refuses to turn an organization that owns a sandbox into a sandbox" do
+        create(:organization, :sandbox, production_organization: production)
+        production.assign_attributes(environment: "sandbox", production_organization: create(:organization))
+
+        expect(production).not_to be_valid
+        expect(production.errors.to_hash).to eq(environment: ["value_is_invalid"])
+      end
+
+      it "refuses a second sandbox of the same production organization" do
+        create(:organization, :sandbox, production_organization: production)
+        second = build(:organization, :sandbox, production_organization: production)
+
+        expect(second).not_to be_valid
+        expect(second.errors.to_hash).to eq(production_organization_id: ["value_already_exist"])
+        expect { second.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+
+      it "refuses a sandbox without a link in the database, for writes that skip validations" do
+        expect { production.update_columns(environment: "sandbox") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_environment_link/)
+      end
+
+      it "refuses a self link in the database, for writes that skip validations" do
+        expect { production.update_columns(environment: "sandbox", production_organization_id: production.id) } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_production_organization_not_self/)
       end
     end
 

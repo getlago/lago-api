@@ -92,6 +92,20 @@ RSpec.describe Organizations::UpdateService do
       expect(default_billing_entity.document_locale).to eq("fr")
     end
 
+    context "when the self-serve and sandbox fields are sent" do
+      before do
+        params.merge!(self_serve: true, environment: "sandbox", production_organization_id: create(:organization).id)
+      end
+
+      it "ignores them" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.organization.reload).to have_attributes(legal_name: "Foobar", self_serve: false,
+          environment: "production", production_organization_id: nil)
+      end
+    end
+
     context "when document_number_prefix is sent" do
       before { params[:document_number_prefix] = "abc" }
 

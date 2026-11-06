@@ -151,6 +151,9 @@ RSpec.describe Api::V2::OrganizationsController do
           webhook_url: "https://example.com/new-webhook",
           email_settings: ["invoice.finalized"],
           billing_configuration: {invoice_footer: "New footer", invoice_grace_period: 3, document_locale: "fr"},
+          self_serve: true,
+          environment: "sandbox",
+          production_organization_id: create(:organization).id,
           unknown: "ignored"
         )
       end

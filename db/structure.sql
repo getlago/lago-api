@@ -300,6 +300,7 @@ ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_3f7be5debc;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_3ec3563cf3;
+ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS fk_rails_3e812b1fc3;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_3e4df02771;
 ALTER TABLE IF EXISTS ONLY public.orders DROP CONSTRAINT IF EXISTS fk_rails_3dad120da9;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_3d568ff9de;
@@ -701,6 +702,7 @@ DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id;
 DROP INDEX IF EXISTS public.index_password_resets_on_user_id;
 DROP INDEX IF EXISTS public.index_password_resets_on_token;
 DROP INDEX IF EXISTS public.index_organizations_on_slug;
+DROP INDEX IF EXISTS public.index_organizations_on_production_organization_id;
 DROP INDEX IF EXISTS public.index_organizations_on_hmac_key;
 DROP INDEX IF EXISTS public.index_organizations_on_api_key;
 DROP INDEX IF EXISTS public.index_orders_on_organization_id_and_status;
@@ -1541,6 +1543,7 @@ DROP TYPE IF EXISTS public.pending_signup_token_status;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
+DROP TYPE IF EXISTS public.organization_environment;
 DROP TYPE IF EXISTS public.order_status;
 DROP TYPE IF EXISTS public.order_form_void_reason;
 DROP TYPE IF EXISTS public.order_form_status;
@@ -1829,6 +1832,16 @@ CREATE TYPE public.order_status AS ENUM (
     'created',
     'executed',
     'failed'
+);
+
+
+--
+-- Name: organization_environment; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.organization_environment AS ENUM (
+    'production',
+    'sandbox'
 );
 
 
@@ -3803,8 +3816,13 @@ CREATE TABLE public.organizations (
     pagination_max_page_size integer,
     document_url_expiration_days integer DEFAULT 30 NOT NULL,
     customer_portal_locked_fields character varying[] DEFAULT '{country,zipcode,tax_identification_number}'::character varying[] NOT NULL,
+    self_serve boolean DEFAULT false NOT NULL,
+    environment public.organization_environment DEFAULT 'production'::public.organization_environment NOT NULL,
+    production_organization_id uuid,
+    CONSTRAINT check_organizations_on_environment_link CHECK ((((environment = 'production'::public.organization_environment) AND (production_organization_id IS NULL)) OR ((environment = 'sandbox'::public.organization_environment) AND (production_organization_id IS NOT NULL)))),
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
-    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
+    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0)),
+    CONSTRAINT check_organizations_on_production_organization_not_self CHECK (((production_organization_id IS NULL) OR (production_organization_id <> id)))
 );
 
 
@@ -11047,6 +11065,13 @@ CREATE UNIQUE INDEX index_organizations_on_hmac_key ON public.organizations USIN
 
 
 --
+-- Name: index_organizations_on_production_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_organizations_on_production_organization_id ON public.organizations USING btree (production_organization_id);
+
+
+--
 -- Name: index_organizations_on_slug; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13926,6 +13951,14 @@ ALTER TABLE ONLY public.entitlement_privileges
 
 
 --
+-- Name: organizations fk_rails_3e812b1fc3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT fk_rails_3e812b1fc3 FOREIGN KEY (production_organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoices_payment_requests fk_rails_3ec3563cf3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16263,6 +16296,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261109122133'),
 ('20261109082523'),
 ('20261106220629'),
+('20261106134032'),
+('20261106134031'),
+('20261106134030'),
 ('20261104134700'),
 ('20261104133620'),
 ('20261103084714'),
