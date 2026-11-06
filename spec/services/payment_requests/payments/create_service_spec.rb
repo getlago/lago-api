@@ -721,19 +721,38 @@ RSpec.describe PaymentRequests::Payments::CreateService do
           )
         end
 
-        it "charges the payment request total in its currency" do
+        it "keeps the stored amount sent under the same idempotency key" do
           result = create_service.call
 
           expect(result).to be_success
           expect(result.payment).to eq(payment)
 
-          # payment request total: 200 (invoice_1) + 599 (invoice_2), not the stored 10_000
-          expect(payment.reload.amount_cents).to eq(799)
-          expect(payment.amount_currency).to eq("USD")
+          expect(payment.reload.amount_cents).to eq(10_000)
+          expect(payment.amount_currency).to eq("EUR")
           expect(payment.status).to eq("pending")
 
           expect(provider_class).to have_received(:new)
-            .with(hash_including(payment: having_attributes(amount_cents: 799, amount_currency: "USD")))
+            .with(hash_including(payment: having_attributes(amount_cents: 10_000, amount_currency: "EUR")))
+        end
+
+        context "when the provider customer of the pending payment was discarded" do
+          let(:current_provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
+
+          before do
+            provider_customer.discard!
+            current_provider_customer
+          end
+
+          it "charges the payment request total to the current provider customer" do
+            create_service.call
+
+            # payment request total: 200 (invoice_1) + 599 (invoice_2), not the stored 10_000
+            expect(payment.reload.amount_cents).to eq(799)
+            expect(payment.amount_currency).to eq("USD")
+
+            expect(provider_class).to have_received(:new)
+              .with(hash_including(payment: having_attributes(amount_cents: 799, payment_provider_customer_id: current_provider_customer.id)))
+          end
         end
       end
 

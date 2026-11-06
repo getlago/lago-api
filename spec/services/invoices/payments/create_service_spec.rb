@@ -880,6 +880,21 @@ RSpec.describe Invoices::Payments::CreateService do
             .with(hash_including(payment: having_attributes(payment_provider_customer_id: current_provider_customer.id)))
           expect(provider_service).to have_received(:call!)
         end
+
+        context "when the invoice was partially paid after the pending payment was stored" do
+          let(:invoice) do
+            create(:invoice, customer:, organization:, invoice_type: :one_off, total_amount_cents: 10_000, total_paid_amount_cents: 3_000)
+          end
+
+          it "charges the due amount of the invoice to the current provider customer" do
+            create_service.call
+
+            # total 10_000 - paid 3_000 - offset 0
+            expect(payment.reload.amount_cents).to eq(10_000 - 3_000)
+            expect(provider_class).to have_received(:new)
+              .with(hash_including(payment: having_attributes(amount_cents: 7_000, payment_provider_customer_id: current_provider_customer.id)))
+          end
+        end
       end
 
       context "when the reused pending payment has a provider status" do
@@ -890,29 +905,6 @@ RSpec.describe Invoices::Payments::CreateService do
 
           expect(payment.reload.status).to eq("requires_payment_method")
           expect(payment.payable_payment_status).to eq("pending")
-        end
-      end
-
-      context "when the stored currency of the pending payment is outdated" do
-        let(:payment) do
-          create(
-            :payment,
-            payable: invoice,
-            payment_provider:,
-            payment_provider_customer: provider_customer,
-            amount_cents: invoice.total_amount_cents,
-            amount_currency: "JPY",
-            status: "pending",
-            payable_payment_status: payment_status
-          )
-        end
-
-        it "charges the payment in the invoice currency" do
-          create_service.call
-
-          expect(payment.reload.amount_currency).to eq(invoice.currency)
-          expect(provider_class).to have_received(:new)
-            .with(hash_including(payment: having_attributes(amount_currency: invoice.currency)))
         end
       end
 
@@ -974,14 +966,12 @@ RSpec.describe Invoices::Payments::CreateService do
           create(:invoice, customer:, organization:, invoice_type: :one_off, total_amount_cents: 10_000, total_paid_amount_cents: 3_000)
         end
 
-        it "charges the due amount of the invoice" do
+        it "keeps the stored amount sent under the same idempotency key" do
           create_service.call
 
-          # total 10_000 - paid 3_000 - offset 0
-          expect(payment.reload.amount_cents).to eq(10_000 - 3_000)
-          expect(payment.amount_currency).to eq(invoice.currency)
+          expect(payment.reload.amount_cents).to eq(10_000)
           expect(provider_class).to have_received(:new)
-            .with(hash_including(payment: having_attributes(amount_cents: 7_000)))
+            .with(hash_including(payment: having_attributes(amount_cents: 10_000)))
         end
       end
 
@@ -990,11 +980,10 @@ RSpec.describe Invoices::Payments::CreateService do
 
         before { create(:credit_note, invoice:, customer:, organization:, status: :finalized, offset_amount_cents: 2_500) }
 
-        it "charges the due amount of the invoice" do
+        it "keeps the stored amount sent under the same idempotency key" do
           create_service.call
 
-          # total 10_000 - paid 0 - offset 2_500
-          expect(payment.reload.amount_cents).to eq(10_000 - 2_500)
+          expect(payment.reload.amount_cents).to eq(10_000)
         end
       end
 

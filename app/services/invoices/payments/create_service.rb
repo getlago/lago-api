@@ -39,17 +39,20 @@ module Invoices
         payment = Payment.find_or_initialize_by(payable: invoice, payable_payment_status: "pending")
         payment.status = "pending" if payment.new_record?
 
-        # A reused pending payment takes the values of a new one: its provider customer may have been
-        # discarded, the customer may have moved to another provider, or the due amount may have changed.
+        # A reused pending payment takes the current provider customer: the stored one may have been
+        # discarded, or the customer may have moved to another provider.
         payment.assign_attributes(
           organization_id: invoice.organization_id,
           customer_id: invoice.customer_id,
           payment_provider: current_payment_provider,
           payment_provider_customer: current_payment_provider_customer,
-          amount_cents: invoice.total_due_amount_cents,
-          amount_currency: invoice.currency,
           payment_method_id: determine_payment_method&.id
         )
+        # Providers keep the answer of the idempotency key `payment-<id>` for a while, and refuse the same
+        # key with another amount, so the amount only follows the invoice on a new provider customer.
+        if payment.new_record? || payment.payment_provider_customer_id_changed?
+          payment.assign_attributes(amount_cents: invoice.total_due_amount_cents, amount_currency: invoice.currency)
+        end
         payment.save!
 
         result.payment = payment
