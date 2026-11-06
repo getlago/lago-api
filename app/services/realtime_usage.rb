@@ -53,6 +53,14 @@ module RealtimeUsage
       organization.feature_flag_enabled?(:realtime_usage)
     end
 
+    # On top of enabled?, so recurring sums roll back on their own without turning off the buckets
+    # for the organization's other charges.
+    def recurring_sum_enabled?(organization)
+      return true if forced_gate?
+
+      organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
+    end
+
     def floor_to_bucket(time)
       Time.zone.at(time.to_i - (time.to_i % BUCKET_DURATION.to_i))
     end
@@ -76,7 +84,8 @@ module RealtimeUsage
       return "unsupported_aggregation_type" unless SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type)
       return "pay_in_advance" if charge.pay_in_advance?
       return "prorated" if charge.prorated?
-      return "recurring_metric" if billable_metric.recurring?
+      # Within the supported aggregation types, only sum_agg can be recurring.
+      return "recurring_metric" if billable_metric.recurring? && !recurring_sum_enabled?(charge.organization)
 
       # `target_wallet_code` will be handled later.
       return "target_wallet" if charge.accepts_target_wallet

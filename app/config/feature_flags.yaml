@@ -30,6 +30,10 @@ realtime_usage:
   description: "Serve count and sum current usage from the pre-aggregated ClickHouse usage buckets instead of aggregating raw events"
   owners: ["@vincent-pochet"]
 
+realtime_usage_recurring_sum:
+  description: "Serve the current usage of recurring sum charges from the latest snapshot plus the current-period usage buckets, on top of realtime_usage"
+  owners: ["@vincent-pochet"]
+
 charge_filters_single_scan:
   description: "Aggregate every filter of a count or sum charge in one ClickHouse read instead of one read per filter"
   owners: ["@jdenquin"]
