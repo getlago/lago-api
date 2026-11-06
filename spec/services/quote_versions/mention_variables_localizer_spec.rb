@@ -49,10 +49,45 @@ RSpec.describe QuoteVersions::MentionVariablesLocalizer do
     end
 
     context "with payment terms" do
-      let(:mention_variables) { {"commercial_terms_payment_terms" => 30} }
+      let(:mention_variables) { {"commercial_terms_payment_terms" => {"term_type" => "net", "days" => 30}} }
 
-      it "translates the payment terms" do
-        expect(localized).to eq("commercial_terms_payment_terms" => "Net 30")
+      it "renders the invoice label of the term" do
+        expect(localized).to eq("commercial_terms_payment_terms" => "Payment due within 30 days")
+      end
+
+      context "when the term has no legacy days" do
+        let(:mention_variables) { {"commercial_terms_payment_terms" => {"term_type" => "end_of_month"}} }
+
+        it "renders that term" do
+          expect(localized).to eq("commercial_terms_payment_terms" => "Due at end of month")
+        end
+      end
+
+      context "when the term is a day of the month" do
+        let(:mention_variables) do
+          {"commercial_terms_payment_terms" => {"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1}}
+        end
+
+        it "renders the day and offset" do
+          expect(localized).to eq("commercial_terms_payment_terms" => "Due on the 15 of the following month")
+        end
+      end
+
+      context "when the locale is French" do
+        let(:locale) { :fr }
+        let(:mention_variables) { {"commercial_terms_payment_terms" => {"term_type" => "end_of_month"}} }
+
+        it "renders the French label" do
+          expect(localized).to eq("commercial_terms_payment_terms" => I18n.t("invoice.payment_terms.end_of_month", locale: :fr))
+        end
+      end
+
+      context "when the snapshot holds the legacy days" do
+        let(:mention_variables) { {"commercial_terms_payment_terms" => 30} }
+
+        it "keeps the quote wording" do
+          expect(localized).to eq("commercial_terms_payment_terms" => "Net 30")
+        end
       end
     end
 
