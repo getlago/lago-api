@@ -53,6 +53,21 @@ RSpec.describe "recipes:clickhouse:enable_clickhouse_events_store", clickhouse: 
     end
   end
 
+  context "when organization reads recurring aggregation snapshots" do
+    let(:organization) { create(:organization, feature_flags: ["persisted_recurring_values"]) }
+
+    before do
+      allow(Invoices::CustomerUsageService).to receive(:call)
+      stub_stdin(organization.id, "y")
+    end
+
+    it "aborts before comparing usage" do
+      expect { task.invoke }.to raise_error(SystemExit)
+      expect(organization.reload.clickhouse_events_store).to be(false)
+      expect(Invoices::CustomerUsageService).not_to have_received(:call)
+    end
+  end
+
   context "when Postgres and ClickHouse counts do not match" do
     before do
       create(:event,
@@ -120,14 +135,76 @@ RSpec.describe "recipes:clickhouse:enable_clickhouse_events_store", clickhouse: 
         expect(organization.clickhouse_events_store).to be(true)
         expect(ApiKeys::CacheService).to have_received(:expire_all_cache).with(organization)
       end
+
+      context "with recurring aggregation snapshots" do
+        let(:charge) { create(:standard_charge, organization:) }
+        let(:snapshot) { create(:recurring_aggregation_snapshot, charge:) }
+        let(:other_snapshot) { create(:recurring_aggregation_snapshot) }
+
+        before do
+          snapshot
+          other_snapshot
+        end
+
+        it "deletes the organization's snapshots only" do
+          task.invoke
+
+          expect(RecurringAggregationSnapshot.where(organization:)).to be_empty
+          expect(RecurringAggregationSnapshot.all).to eq([other_snapshot])
+        end
+      end
+    end
+
+    context "when a job started before the switch writes a snapshot after it" do
+      let(:charge) { create(:standard_charge, organization:) }
+
+      before do
+        charge
+        answers = [organization.id, "y", "", "y"]
+
+        allow($stdin).to receive(:gets) do
+          next "#{answers.shift}\n" if answers.any?
+
+          create(:recurring_aggregation_snapshot, charge:)
+          "#{second_deletion_answer}\n"
+        end
+      end
+
+      context "when user confirms the second deletion" do
+        let(:second_deletion_answer) { "y" }
+
+        it "deletes the late snapshot" do
+          task.invoke
+
+          expect(organization.reload.clickhouse_events_store).to be(true)
+          expect(RecurringAggregationSnapshot.where(organization:)).to be_empty
+        end
+      end
+
+      context "when user declines the second deletion" do
+        let(:second_deletion_answer) { "n" }
+
+        it "keeps the late snapshot and the store switch" do
+          task.invoke
+
+          expect(organization.reload.clickhouse_events_store).to be(true)
+          expect(RecurringAggregationSnapshot.where(organization:).count).to eq(1)
+        end
+      end
     end
 
     context "when user declines the final confirmation" do
-      before { stub_stdin(organization.id, "y", "", "n") }
+      let(:snapshot) { create(:recurring_aggregation_snapshot, charge: create(:standard_charge, organization:)) }
 
-      it "aborts without updating the organization" do
+      before do
+        snapshot
+        stub_stdin(organization.id, "y", "", "n")
+      end
+
+      it "aborts without updating the organization or its snapshots" do
         expect { task.invoke }.to raise_error(SystemExit)
         expect(organization.reload.clickhouse_events_store).to be(false)
+        expect(RecurringAggregationSnapshot.all).to eq([snapshot])
       end
     end
   end
