@@ -391,6 +391,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:api_keys_cleanup_member_keys" do
+    let(:job) { "schedule:api_keys_cleanup_member_keys" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("2 Apr 2022 00:00:00") }
+
+    it "enqueues a member API keys cleanup job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.minute
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ApiKeys::CleanupMemberKeysJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:retry_pending_vies_checks" do
     let(:job) { "schedule:retry_pending_vies_checks" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:05:00") }
