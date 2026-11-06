@@ -46,8 +46,9 @@ module CreditNotes
     end
 
     def attach_xml_to_credit_note(xml_file)
-      credit_note.xml_file.attach(
-        io: File.open(xml_file.path),
+      Utils::DocumentAttachment.attach(
+        credit_note.xml_file,
+        path: xml_file.path,
         filename: "#{credit_note.number}.xml",
         content_type: "application/xml"
       )

@@ -38,6 +38,16 @@ RSpec.describe Invoices::GenerateXmlService do
       result = described_class.call(invoice:, context:)
 
       expect(result.invoice.xml_file).to be_present
+      expect(result.invoice.xml_file.filename.to_s).to eq("#{invoice.number}.xml")
+      expect(result.invoice.xml_file.content_type).to eq("application/xml")
+      expect(result.invoice.xml_file.download).to eq(fake_xml)
+    end
+
+    context "when the worker stops during the storage upload" do
+      it_behaves_like "an attachment uploaded before it is attached", :xml_file do
+        let(:record) { invoice }
+        let(:generate_document) { -> { described_class.call(invoice:, context:) } }
+      end
     end
 
     context "when using temp files" do
