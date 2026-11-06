@@ -25,8 +25,8 @@ RSpec.describe CursorPagination::Token do
       expect(token).to match(/\A[A-Za-z0-9_-]+\z/)
     end
 
-    context "with a sort on a column the cursor key cannot hold" do
-      subject(:token) { described_class.encode(table: "products", record:, sort: {created_at: :asc, name: :asc, id: :asc}) }
+    context "with a sort without a date or time column" do
+      subject(:token) { described_class.encode(table: "products", record:, sort: {name: :asc, id: :asc}) }
 
       it "raises an argument error, since the cursor could not be resumed" do
         expect { token }.to raise_error(ArgumentError, /date or time columns/)
@@ -79,6 +79,32 @@ RSpec.describe CursorPagination::Token do
       expect(time).to eq(logged_at)
       expect(time.usec).to eq(123_000)
       expect(tiebreak).to eq("evt_not-a-uuid_42")
+    end
+  end
+
+  describe "a sort with compound event identifiers" do
+    let(:sort) { {timestamp: :desc, external_contract_id: :desc, code: :desc, transaction_id: :desc} }
+    let(:time) { Time.zone.parse("2026-09-28T10:11:12.123Z") }
+    let(:contract_id) { "contract-" + "a" * 1024 }
+    let(:event) { Struct.new(:timestamp, :external_contract_id, :code, :transaction_id).new(time, contract_id, "requests", "b" * 1024) }
+
+    it "round-trips timestamps and all identifiers without the two-column token limit" do
+      token = described_class.encode(table: "product_events_enriched", record: event, sort:)
+
+      expect(token.bytesize).to be > 512
+      expect(described_class.decode(token, table: "product_events_enriched", sort:, param: :after))
+        .to eq([time, contract_id, "requests", "b" * 1024])
+    end
+
+    context "when an older event has no contract id" do
+      let(:contract_id) { "" }
+
+      it "keeps the empty component of the compound key" do
+        token = described_class.encode(table: "product_events_enriched", record: event, sort:)
+
+        expect(described_class.decode(token, table: "product_events_enriched", sort:, param: :after))
+          .to eq([time, "", "requests", "b" * 1024])
+      end
     end
   end
 
@@ -211,8 +237,8 @@ RSpec.describe CursorPagination::Token do
       end
     end
 
-    context "when decoded under a sort on a column the cursor key cannot hold" do
-      subject(:decode) { described_class.decode(value, table: "products", param: :after, sort: {created_at: :asc, name: :asc, id: :asc}) }
+    context "when decoded under a sort without a date or time column" do
+      subject(:decode) { described_class.decode(value, table: "products", param: :after, sort: {name: :asc, id: :asc}) }
 
       it "raises an argument error" do
         expect { decode }.to raise_error(ArgumentError, /date or time columns/)

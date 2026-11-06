@@ -6,9 +6,10 @@ module Events
 
     EVENT_SOURCE = "http_ruby"
 
-    def initialize(events:, organization:)
+    def initialize(events:, organization:, catalog_events: false)
       @events = Array.wrap(events)
       @organization = organization
+      @catalog_events = catalog_events
       super
     end
 
@@ -24,14 +25,15 @@ module Events
 
     private
 
-    attr_reader :events, :organization
+    attr_reader :events, :organization, :catalog_events
 
-    # Product catalog organizations get their own pipeline, falling back to the
-    # legacy topic until the catalog topic is configured.
+    # Native v2 requests never fall back to the subscription pipeline.
+    # Other callers keep the existing topic selection.
     def catalog_pipeline?
       return @catalog_pipeline if defined?(@catalog_pipeline)
 
-      @catalog_pipeline = organization.product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?
+      @catalog_pipeline = catalog_events ||
+        (organization.product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?)
     end
 
     def topic

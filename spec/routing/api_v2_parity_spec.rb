@@ -12,11 +12,39 @@ RSpec.describe "API v2 routing parity" do
     end
   end
 
-  it "exposes every v1 endpoint under v2" do
+  it "exposes v1 endpoints under v2 except retired paths" do
     missing = api_routes("v1") - api_routes("v2")
     missing.reject! { |_, path| path.match?(%r{\A/credit_notes/[^/]+/download\z}) }
+    missing.reject! do |_, path|
+      %w[/events/:id /events_enriched /events/estimate_fees /events/estimate_instant_fees /events/batch_estimate_instant_fees].include?(path)
+    end
 
     expect(missing).to be_empty
+  end
+
+  it "keeps event ingestion and lists on their version-specific controllers" do
+    {get: %w[/events], post: %w[/events /events/batch]}.each do |method, paths|
+      paths.each do |path|
+        %w[v1 v2].each do |version|
+          expect(Rails.application.routes.recognize_path("/api/#{version}#{path}", method:)[:controller]).to eq("api/#{version}/events")
+        end
+      end
+    end
+  end
+
+  it "keeps legacy event actions on v1 only" do
+    [
+      [:get, "/events/transaction.eu", "show"],
+      [:get, "/events_enriched", "index_enriched"],
+      [:post, "/events/estimate_fees", "estimate_fees"],
+      [:post, "/events/estimate_instant_fees", "estimate_instant_fees"],
+      [:post, "/events/batch_estimate_instant_fees", "batch_estimate_instant_fees"]
+    ].each do |method, path, action|
+      expect(Rails.application.routes.recognize_path("/api/v1#{path}", method:).slice(:controller, :action))
+        .to eq(controller: "api/v1/events", action:)
+      expect(Rails.application.routes.recognize_path("/api/v2#{path}", method:).slice(:controller, :action))
+        .to eq(controller: "application", action: "not_found")
+    end
   end
 
   it "routes plan-nested legacy paths to v1 controllers despite the greedy v2 plan code" do

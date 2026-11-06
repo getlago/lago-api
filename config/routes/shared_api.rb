@@ -91,12 +91,6 @@ resources :credit_notes, only: %i[create update show index] do
     end
   end
 end
-get :events_enriched, to: "events#index_enriched"
-resources :events, only: %i[create show index], constraints: {id: /[^\/]+/} do
-  post :estimate_fees, on: :collection
-  post :estimate_instant_fees, on: :collection
-  post :batch_estimate_instant_fees, on: :collection
-end
 resources :applied_coupons, only: %i[create index]
 resources :fees, only: %i[show update index destroy]
 resources :invoices, only: %i[create update show index destroy] do
@@ -156,7 +150,6 @@ resources :wallets, only: %i[create update show index] do
   end
 end
 delete "/wallets/:id", to: "wallets#terminate"
-post "/events/batch", to: "events#batch"
 
 get "/organizations", to: "organizations#show"
 put "/organizations", to: "organizations#update"
