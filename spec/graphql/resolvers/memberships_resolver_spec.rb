@@ -212,6 +212,19 @@ RSpec.describe Resolvers::MembershipsResolver do
       end
     end
 
+    context "with the sandbox of a pair the viewer does not belong to" do
+      let(:organization_field) { "sandboxOrganization { id }" }
+
+      before do
+        sandbox = create(:organization, :sandbox, production_organization: other_org)
+        create(:membership, user: other_user, organization: sandbox)
+      end
+
+      it "hides the link" do
+        expect(other_org_result_data).to eq("id" => other_org.id, "sandboxOrganization" => nil)
+      end
+    end
+
     context "with sensitive field" do
       let(:organization_field) { "apiKey" }
 

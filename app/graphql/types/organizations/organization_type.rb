@@ -28,6 +28,11 @@ module Types
 
       field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
 
+      field :environment, Types::Organizations::EnvironmentEnum, null: false
+      field :production_organization, Types::Organizations::LinkedOrganizationType
+      field :sandbox_organization, Types::Organizations::LinkedOrganizationType
+      field :self_serve, Boolean, null: false
+
       def accessible_by_current_session
         return false if context[:current_user].nil?
 

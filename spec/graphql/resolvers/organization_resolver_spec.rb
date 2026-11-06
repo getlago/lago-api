@@ -37,6 +37,50 @@ RSpec.describe Resolvers::OrganizationResolver do
     expect(data["city"]).to eq(organization.city)
   end
 
+  context "with a production organization and its sandbox" do
+    let(:query) do
+      <<~GQL
+        query {
+          organization {
+            selfServe environment
+            productionOrganization { id name slug }
+            sandboxOrganization { id name slug }
+          }
+        }
+      GQL
+    end
+
+    let(:user) { create(:user) }
+    let(:production) { create(:organization, :self_serve) }
+    let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: production) }
+
+    def fetch(current_organization)
+      current_membership = user.memberships.active.find_by!(organization: current_organization)
+      execute_graphql(current_user: user, current_organization:, current_membership:, query:)["data"]["organization"]
+    end
+
+    before { create(:membership, user:, organization: production) }
+
+    it "links each organization to the other one for a member of both" do
+      create(:membership, user:, organization: sandbox)
+
+      expect(fetch(production)).to eq(
+        "selfServe" => true, "environment" => "production", "productionOrganization" => nil,
+        "sandboxOrganization" => {"id" => sandbox.id, "name" => sandbox.name, "slug" => sandbox.slug}
+      )
+      expect(fetch(sandbox)).to eq(
+        "selfServe" => true, "environment" => "sandbox", "sandboxOrganization" => nil,
+        "productionOrganization" => {"id" => production.id, "name" => production.name, "slug" => production.slug}
+      )
+    end
+
+    it "hides the sandbox from a user who is not an active member of it" do
+      create(:membership, :revoked, user:, organization: sandbox)
+
+      expect(fetch(production)["sandboxOrganization"]).to be_nil
+    end
+  end
+
   context "when the default billing entity's term differs from the organization column" do
     let(:query) do
       <<~GQL

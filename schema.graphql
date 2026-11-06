@@ -789,10 +789,14 @@ enum AdminFeatureTypeEnum {
 type AdminOrganization {
   createdAt: ISO8601DateTime!
   email: String
+  environment: OrganizationEnvironmentEnum!
   featureFlags: [String!]!
   id: ID!
   name: String!
   premiumIntegrations: [String!]!
+  productionOrganization: LinkedOrganization
+  sandboxOrganization: LinkedOrganization
+  selfServe: Boolean!
 }
 
 """
@@ -5340,6 +5344,7 @@ type CurrentOrganization {
   documentUrlExpirationDays: Int!
   email: String
   emailSettings: [EmailSettingsEnum!]
+  environment: OrganizationEnvironmentEnum!
   euTaxManagement: Boolean!
   eventsStore: EventsStoreEnum!
   featureFlags: [FeatureFlagEnum!]!
@@ -5353,11 +5358,14 @@ type CurrentOrganization {
   name: String!
   netPaymentTerm: Int
   premiumIntegrations: [PremiumIntegrationTypeEnum!]!
+  productionOrganization: LinkedOrganization
 
   """
   True when usage reports can be served from the real-time usage buckets
   """
   realtimeUsageEnabled: Boolean!
+  sandboxOrganization: LinkedOrganization
+  selfServe: Boolean!
   slug: String!
   state: String
   stripePaymentProviders: [StripeProvider!]
@@ -8419,6 +8427,15 @@ input LimitationInput {
 }
 
 """
+Production organization of a sandbox, or sandbox of a production organization
+"""
+type LinkedOrganization {
+  id: ID!
+  name: String!
+  slug: String!
+}
+
+"""
 Security Log event
 """
 enum LogEventEnum {
@@ -11475,9 +11492,13 @@ type Organization {
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!
+  environment: OrganizationEnvironmentEnum!
   id: ID!
   logoUrl: String
   name: String!
+  productionOrganization: LinkedOrganization
+  sandboxOrganization: LinkedOrganization
+  selfServe: Boolean!
   slug: String!
   timezone: TimezoneEnum
 }
@@ -11493,6 +11514,21 @@ input OrganizationBillingConfigurationInput {
   documentLocale: String
   invoiceFooter: String
   invoiceGracePeriod: Int
+}
+
+"""
+Whether an organization is a production organization or the sandbox of one
+"""
+enum OrganizationEnvironmentEnum {
+  """
+  Production organization
+  """
+  production
+
+  """
+  Sandbox organization
+  """
+  sandbox
 }
 
 type OverdueBalance {
