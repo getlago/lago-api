@@ -90,7 +90,7 @@ module RealtimeUsage
           {
             charge_id:,
             charge_filter_id:,
-            groups: parse_groups(grouped_by),
+            groups: expected_groups(charge_id, charge_filter_id, parse_groups(grouped_by)),
             aggregation_type:,
             units: units.to_d,
             last_event_at: last_event_at.to_time,
@@ -102,6 +102,26 @@ module RealtimeUsage
 
     def charge_ids
       @charge_ids ||= charges.map(&:id)
+    end
+
+    # Regrouped on the charge's current keys, as the events store groups: buckets written before a
+    # key was added count under nil rather than being dropped, and a removed key's groups merge.
+    def expected_groups(charge_id, charge_filter_id, groups)
+      expected_group_keys(charge_id, charge_filter_id).index_with { groups[it] }
+    end
+
+    def expected_group_keys(charge_id, charge_filter_id)
+      @expected_group_keys ||= {}
+      @expected_group_keys[[charge_id, charge_filter_id]] ||= begin
+        charge = charges_by_id.fetch(charge_id)
+        charge_filter = charge.filters.find { it.id == charge_filter_id }
+
+        Fees::ChargeService::Sources::Charge.new(charge:, boundaries: nil, charge_filter:).pricing_group_keys
+      end
+    end
+
+    def charges_by_id
+      @charges_by_id ||= charges.index_by(&:id)
     end
 
     # The stream writes an absent group value as "", where the events store returns nil.

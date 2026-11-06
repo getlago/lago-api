@@ -14,7 +14,7 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:, started_at: 2.months.ago) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
-  let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "1", pricing_group_keys: ["region"]}) }
   let(:charges) { [charge] }
 
   let(:from_datetime) { Time.current.beginning_of_day - 1.day }
@@ -126,10 +126,88 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
 
         expect(grouped.map(&:groups)).to eq([{"region" => nil}])
       end
+
+      it "counts the buckets written before a key was added under nil, as the events store does" do
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: "{}")
+        create_bucket(bucket: from_datetime + 15.minutes, units: "4.0", events_count: 1, grouped_by: {"region" => "eu"}.to_json)
+
+        grouped = fetch.usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect(grouped.map { [it.groups, it.value, it.events_count] }).to match_array(
+          [
+            [{"region" => nil}, BigDecimal("10.0"), 2],
+            [{"region" => "eu"}, BigDecimal("4.0"), 1]
+          ]
+        )
+      end
+
+      it "drops a key the charge no longer groups on, combining the rows it split" do
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: {"region" => "eu", "country" => "fr"}.to_json)
+        create_bucket(bucket: from_datetime, units: "4.0", events_count: 1, grouped_by: {"region" => "eu", "country" => "de"}.to_json)
+        create_bucket(bucket: from_datetime + 15.minutes, units: "1.0", events_count: 1, grouped_by: {"region" => "eu"}.to_json)
+
+        grouped = fetch.usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect(grouped.map { [it.groups, it.value, it.events_count] }).to eq([[{"region" => "eu"}, BigDecimal("15.0"), 4]])
+      end
+
+      it "groups a charge filter's buckets on the filter's keys, and the default bucket on the charge's" do
+        charge_filter = create(:charge_filter, charge:, properties: {amount: "1", pricing_group_keys: ["country"]})
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, charge_filter_id: charge_filter.id, grouped_by: {"region" => "eu", "country" => "fr"}.to_json)
+        create_bucket(bucket: from_datetime, units: "3.0", events_count: 1, grouped_by: {"region" => "us", "country" => "fr"}.to_json)
+
+        usage_buckets = fetch.usage_buckets
+
+        expect(usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: charge_filter.id).map { [it.groups, it.value] })
+          .to eq([[{"country" => "fr"}, BigDecimal("10.0")]])
+        expect(usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "").map { [it.groups, it.value] })
+          .to eq([[{"region" => "us"}, BigDecimal("3.0")]])
+      end
+
+      context "when the charge groups on no key" do
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "1"}) }
+
+        it "keeps no group, and the total across them" do
+          create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: {"region" => "eu"}.to_json)
+          create_bucket(bucket: from_datetime, units: "4.0", events_count: 1, grouped_by: {"region" => "us"}.to_json)
+
+          usage_buckets = fetch.usage_buckets
+
+          expect(usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "")).to eq([])
+          expect(usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "").value).to eq(BigDecimal("14.0"))
+        end
+      end
+
+      context "when the charge accepts a target wallet and groups on no other key", :premium do
+        let(:organization) do
+          create(
+            :organization,
+            clickhouse_events_store: true,
+            feature_flags: ["realtime_usage"],
+            premium_integrations: ["events_targeting_wallets"]
+          )
+        end
+        let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true, properties: {amount: "1"}) }
+
+        it "groups on the wallet code, the buckets without one under nil" do
+          create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: {"target_wallet_code" => "W"}.to_json)
+          create_bucket(bucket: from_datetime, units: "4.0", events_count: 1, grouped_by: {"target_wallet_code" => ""}.to_json)
+          create_bucket(bucket: from_datetime + 15.minutes, units: "1.0", events_count: 1, grouped_by: "{}")
+
+          grouped = fetch.usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "")
+
+          expect(grouped.map { [it.groups, it.value, it.events_count] }).to match_array(
+            [
+              [{"target_wallet_code" => "W"}, BigDecimal("10.0"), 2],
+              [{"target_wallet_code" => nil}, BigDecimal("5.0"), 2]
+            ]
+          )
+        end
+      end
     end
 
     context "with a dynamic charge" do
-      let(:charge) { create(:dynamic_charge, plan:, billable_metric:) }
+      let(:charge) { create(:dynamic_charge, plan:, billable_metric:, properties: {pricing_group_keys: ["region"]}) }
 
       it "sums the precise amounts of the window, per charge and per group" do
         create_bucket(bucket: from_datetime, precise_total_amount_cents: "1000.000000000000001", grouped_by: {"region" => "eu"}.to_json)
