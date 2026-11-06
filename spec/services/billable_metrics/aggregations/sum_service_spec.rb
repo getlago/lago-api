@@ -473,6 +473,20 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
               [{"region" => "apac"}, 4, 1, 0, 0]
             ])
           end
+
+          context "when the incremental read takes over from a late ingestion" do
+            let(:history_last_ingested_at) { watermark(periods.first) + 1.minute }
+            let(:incremental) { true }
+
+            it "groups every event of the subscription on the charge keys" do
+              result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
+
+              expect(result.aggregations.map { [it.grouped_by, it.aggregation, it.count] }).to match_array([
+                [{"region" => "us"}, 3, 1],
+                [{"region" => "eu"}, 10 + 7 + 20, 3]
+              ])
+            end
+          end
         end
       end
 

@@ -97,7 +97,9 @@ module Events
       end
 
       def grouped_sum(columns = nil, with_count: true)
-        return super if columns || recurring
+        return super if columns
+        # Without columns, so the wrapped store groups on its own keys rather than on nil.
+        return __getobj__.grouped_sum(with_count:) if recurring
 
         grouped_aggregation_results
       end

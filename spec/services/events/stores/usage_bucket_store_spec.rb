@@ -232,6 +232,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
       it "delegates them, as the window alone is not the recurring total" do
         expect(store.sum).to eq(:events_sum)
         expect(store.grouped_sum).to eq(:events_grouped_sum)
+        expect(delegated_store).to have_received(:grouped_sum).with(with_count: true)
         expect(store.sum_precise_total_amount_cents).to eq(:events_amount)
         expect(store.grouped_sum_precise_total_amount_cents).to eq(:events_grouped_amount)
       end
