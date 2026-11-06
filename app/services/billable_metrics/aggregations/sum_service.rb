@@ -137,9 +137,9 @@ module BillableMetrics
       end
 
       # Without snapshots, the period still bounds the delta: the bucket starts from zero.
-      # Current usage served by the incremental scan keeps its own read.
+      # Current usage served by the incremental scan keeps its own read, unless the buckets serve it.
       def delta_period(options)
-        initial_period unless options[:is_current_usage] && event_store.incremental_sum?
+        initial_period if precomputed? || !(options[:is_current_usage] && event_store.incremental_sum?)
       end
 
       # Current usage persists no snapshot: its delta needs no watermark of its own.
