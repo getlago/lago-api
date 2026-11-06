@@ -81,8 +81,9 @@ module Types
         object.default_billing_entity.net_payment_term
       end
 
+      # Id order, so this is the endpoint that `Organizations::UpdateService` writes.
       def webhook_url
-        object.webhook_endpoints.map(&:webhook_url).first
+        object.webhook_endpoints.min_by(&:id)&.webhook_url
       end
 
       def api_key

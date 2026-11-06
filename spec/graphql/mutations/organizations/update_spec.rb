@@ -201,7 +201,7 @@ RSpec.describe Mutations::Organizations::Update do
       end
 
       it "updates only the endpoint with the lowest id" do
-        expect(result["data"]["updateOrganization"]).to be_present
+        expect(result["data"]["updateOrganization"]["webhookUrl"]).to eq(webhook_url)
         expect(target_endpoint.reload.webhook_url).to eq(webhook_url)
         expect(untouched_endpoint.reload.webhook_url).to eq(untouched_url)
       end
