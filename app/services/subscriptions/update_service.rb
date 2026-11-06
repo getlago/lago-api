@@ -55,7 +55,7 @@ module Subscriptions
         })
       end
 
-      return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
+      return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides) && !units_only_plan_overrides_change?
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
 
       if params.key?(:plan_overrides) && subscription.plan.organization.product_catalog_enabled?
