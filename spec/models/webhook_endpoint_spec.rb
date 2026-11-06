@@ -182,6 +182,42 @@ RSpec.describe WebhookEndpoint do
     end
   end
 
+  describe "#exposed_signing_keys" do
+    subject(:exposed_signing_keys) { webhook_endpoint.exposed_signing_keys }
+
+    let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
+
+    context "when the endpoint has no signing key" do
+      it { is_expected.to be_empty }
+    end
+
+    context "when the endpoint has several signing keys" do
+      let(:older_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:, created_at: 2.hours.ago) }
+      let(:newer_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:, created_at: 1.hour.ago) }
+
+      before do
+        newer_key
+        older_key
+        # A key of another endpoint must not be returned.
+        create(:webhook_endpoint_signing_key, created_at: 3.hours.ago)
+      end
+
+      it "returns the keys of the endpoint oldest first" do
+        expect(exposed_signing_keys.to_a).to eq([older_key, newer_key])
+      end
+    end
+
+    %w[jwt hmac].each do |signature_algo|
+      context "when a #{signature_algo} endpoint kept a signing key" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo:) }
+
+        before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+        it { is_expected.to be_empty }
+      end
+    end
+  end
+
   describe "callbacks" do
     describe "#normalize_event_types" do
       subject(:webhook_endpoint) { build(:webhook_endpoint, event_types:) }
