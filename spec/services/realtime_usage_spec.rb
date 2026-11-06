@@ -106,9 +106,9 @@ RSpec.describe RealtimeUsage do
 
       it { expect(enabled).to be(false) }
 
-      it "opens with a forced gate, so the parity task compares recurring charges too" do
+      it "stays closed under a forced gate, as the bucket store cannot answer the recurring delta yet" do
         described_class.with_forced_gate do
-          expect(described_class.recurring_sum_enabled?(organization)).to be(true)
+          expect(described_class.recurring_sum_enabled?(organization)).to be(false)
         end
       end
     end
@@ -230,9 +230,9 @@ RSpec.describe RealtimeUsage do
       end
 
       context "with a forced gate" do
-        it "is served, so the parity task compares it" do
+        it "is not served, so the parity task never compares the events with themselves" do
           described_class.with_forced_gate do
-            expect(described_class.supported_charge?(charge)).to be(true)
+            expect(described_class.supported_charge?(charge)).to be(false)
           end
         end
       end

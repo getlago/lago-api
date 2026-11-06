@@ -42,6 +42,7 @@ namespace :recipes do
       kill_switch = ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ENABLED"])
       puts "  LAGO_REALTIME_USAGE_ENABLED: #{kill_switch ? "on" : "off"}"
       puts "  realtime_usage feature flag:  #{organization.feature_flag_enabled?(:realtime_usage) ? "on" : "off"}"
+      puts "  realtime_usage_recurring_sum: #{RealtimeUsage.recurring_sum_enabled?(organization) ? "on" : "off"}"
 
       subscriptions = organization.subscriptions.active.includes(plan: {charges: :billable_metric}).to_a
       if subscriptions.empty?

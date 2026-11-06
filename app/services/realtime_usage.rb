@@ -54,10 +54,9 @@ module RealtimeUsage
     end
 
     # On top of enabled?, so recurring sums roll back on their own without turning off the buckets
-    # for the organization's other charges.
+    # for the organization's other charges. The forced gate leaves it closed: the bucket store does
+    # not answer the recurring delta yet, so the parity task would compare the events with themselves.
     def recurring_sum_enabled?(organization)
-      return true if forced_gate?
-
       organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
     end
 
@@ -84,8 +83,9 @@ module RealtimeUsage
       return "unsupported_aggregation_type" unless SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type)
       return "pay_in_advance" if charge.pay_in_advance?
       return "prorated" if charge.prorated?
-      # Within the supported aggregation types, only sum_agg can be recurring.
-      return "recurring_metric" if billable_metric.recurring? && !recurring_sum_enabled?(charge.organization)
+      # Within the supported aggregation types, only sum_agg can be recurring. The metric's
+      # organization is the one usage callers preload.
+      return "recurring_metric" if billable_metric.recurring? && !recurring_sum_enabled?(billable_metric.organization)
 
       # `target_wallet_code` will be handled later.
       return "target_wallet" if charge.accepts_target_wallet
