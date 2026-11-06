@@ -133,6 +133,9 @@ class UsersService < BaseService
     result
   rescue BaseLockService::FailedToAcquireLock
     result.lock_acquisition_failure!(message: "email lock not acquired")
+  rescue BaseService::FailedResult => e
+    # Raised inside the transaction, so a refused acceptance creates no user.
+    result.fail_with_error!(e)
   end
 
   def generate_token

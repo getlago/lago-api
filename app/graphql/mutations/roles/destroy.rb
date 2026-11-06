@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(id:)
         role = Role.with_organization(current_organization.id).find_by(id:)
-        result = ::Roles::DestroyService.call(role:)
+        result = ::Roles::DestroyService.call(role:, actor: context[:current_user])
 
         result.success? ? result.role : result_error(result)
       end

@@ -18,11 +18,31 @@ RSpec.describe Roles::CreateService do
     # Create the acting member and its roles outside the Role.count expectations
     before { acting_membership }
 
+    context "when the organization is a sandbox", :premium do
+      let(:organization) { create(:organization, :sandbox, premium_integrations: ["custom_roles"]) }
+
+      it "refuses it" do
+        expect { result }.not_to change(Role, :count)
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+      end
+    end
+
     context "with premium license and custom_roles integration", :premium do
       before { organization.update!(premium_integrations: ["custom_roles"]) }
 
       it "creates a new role" do
         expect { result }.to change(Role, :count).by(1)
+      end
+
+      context "when the organization has a sandbox" do
+        let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+        before { sandbox }
+
+        it "creates the sandbox copy" do
+          expect(result).to be_success
+          expect(sandbox.roles.sole).to have_attributes(code:, name:, description:, permissions:)
+        end
       end
 
       it "returns success" do

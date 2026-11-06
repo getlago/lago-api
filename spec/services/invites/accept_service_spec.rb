@@ -47,6 +47,20 @@ RSpec.describe Invites::AcceptService do
       expect(result.token).to be_present
     end
 
+    context "when the organization became a sandbox after the invite was sent" do
+      let(:invite) { create(:invite, organization: create(:organization), email: "new@example.com") }
+
+      before { invite.organization.update!(environment: "sandbox", production_organization: create(:organization)) }
+
+      it "refuses the acceptance and creates no user" do
+        result = accept_service.call(**accept_args)
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(User.where(email: "new@example.com")).to be_empty
+        expect(invite.reload).to be_pending
+      end
+    end
+
     context "when an account is created before invitation registration" do
       subject(:accept_result) { accept_service.call(**accept_args) }
 
@@ -67,6 +81,14 @@ RSpec.describe Invites::AcceptService do
       end
 
       it "rejects the wrong password without granting access" do
+        # Committed by another request after the first lookup: the refused acceptance rolls back only its own writes.
+        lookups = 0
+        allow_any_instance_of(Invite).to receive(:existing_user).and_wrap_original do |original| # rubocop:disable RSpec/AnyInstance
+          found = original.call
+          registered_membership if (lookups += 1) == 1
+          found
+        end
+
         expect(accept_result).not_to be_success
         expect(accept_result.error.messages[:base]).to eq(["incorrect_login_or_password"])
         expect(accept_result.token).to be_nil

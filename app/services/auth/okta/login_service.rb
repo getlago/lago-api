@@ -34,6 +34,8 @@ module Auth
         result
       rescue BaseLockService::FailedToAcquireLock
         result.lock_acquisition_failure!(message: "email lock not acquired")
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
       end
 
       private
@@ -76,8 +78,18 @@ module Auth
         end.value
       end
 
+      # A membership of any status is kept as is, so a revoked member is not added back.
       def find_or_create_membership
-        result.user.memberships.find_or_create_by(organization_id: result.okta_integration.organization_id)
+        organization = result.okta_integration.organization
+        return if result.user.memberships.exists?(organization_id: organization.id)
+
+        ActiveRecord::Base.transaction do
+          Organizations::SandboxLockService.call!(organization:)
+          membership = result.user.memberships.find_or_create_by!(organization_id: organization.id)
+          next unless membership.previously_new_record?
+
+          Memberships::SyncSandboxService.call!(organization:, user: result.user, actor: result.user)
+        end
       end
     end
   end

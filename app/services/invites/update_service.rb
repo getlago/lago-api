@@ -14,6 +14,7 @@ module Invites
 
     def call
       return result.not_found_failure!(resource: "invite") unless invite
+      return result.not_allowed_failure!(code: "sandbox_managed_by_production") if invite.organization.sandbox?
       return result.forbidden_failure!(code: "cannot_update_accepted_invite") if invite.accepted?
       return result.forbidden_failure!(code: "cannot_update_revoked_invite") if invite.revoked?
       return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?

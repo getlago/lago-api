@@ -31,7 +31,8 @@ module Invites
           args[:password],
           login_method: args[:login_method]
         )
-        return result.fail_with_error!(registration_result.error) unless registration_result.success?
+        # Raising rolls back the user written in this transaction.
+        registration_result.raise_if_error!
 
         result.user = registration_result.user
         result.organization = registration_result.organization
@@ -45,6 +46,8 @@ module Invites
       # Skip log for new users: invite acceptance covers this event
       UserDevices::RegisterService.call!(user: result.user, skip_log: result.user&.previously_new_record?)
       result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     def join_as_existing_user(invite, user, args)

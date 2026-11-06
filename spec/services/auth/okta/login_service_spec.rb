@@ -58,6 +58,33 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       expect(decoded["sso_issuer"]).to eq("foo.okta.com")
     end
 
+    context "when the integration organization has a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: okta_integration.organization) }
+
+      before { sandbox }
+
+      it "adds the new member to the sandbox too" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(sandbox.memberships.active.where(user: result.user)).to exist
+      end
+    end
+
+    context "when the integration organization is a sandbox" do
+      before do
+        organization = okta_integration.organization
+        organization.update!(environment: "sandbox", production_organization: create(:organization))
+      end
+
+      it "refuses the new membership" do
+        result = service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(Membership.where(organization: okta_integration.organization)).to be_empty
+      end
+    end
+
     context "when code is not provided" do
       let(:code) { nil }
 
