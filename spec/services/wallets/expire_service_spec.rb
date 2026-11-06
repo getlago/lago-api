@@ -5,8 +5,9 @@ require "rails_helper"
 RSpec.describe Wallets::ExpireService, transaction: false do
   subject(:result) { described_class.call(wallet:) }
 
-  let(:plan) { create(:plan) }
-  let(:organization) { plan.organization }
+  let(:organization) { create(:organization, feature_flags:) }
+  let(:feature_flags) { ["invoice_usage_on_wallet_expiration"] }
+  let(:plan) { create(:plan, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, customer:, started_at: 1.week.ago) }
   let(:invoice_usage_on_expiration) { true }
@@ -53,6 +54,17 @@ RSpec.describe Wallets::ExpireService, transaction: false do
 
   context "when the wallet does not invoice its usage on expiration" do
     let(:invoice_usage_on_expiration) { false }
+
+    it "terminates the wallet without invoicing" do
+      expect(result).to be_success
+
+      expect(customer.invoices).to be_empty
+      expect(wallet.reload).to have_attributes(status: "terminated", balance_cents: 1000)
+    end
+  end
+
+  context "when the feature flag is disabled" do
+    let(:feature_flags) { [] }
 
     it "terminates the wallet without invoicing" do
       expect(result).to be_success
