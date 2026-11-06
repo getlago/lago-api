@@ -22,6 +22,7 @@ RSpec.describe AiConversations::StreamService do
     allow(mcp_client_mock).to receive(:setup!)
     allow(mistral_agent_mock).to receive(:setup!)
     allow(mistral_agent_mock).to receive(:conversation_id).and_return(nil)
+    allow(mistral_agent_mock).to receive(:pending_tool_calls).and_return(nil)
     allow(LagoApiSchema.subscriptions).to receive(:trigger)
   end
 
@@ -97,7 +98,8 @@ RSpec.describe AiConversations::StreamService do
 
         expect(LagoMcpClient::Mistral::Agent).to have_received(:new).with(
           client: mcp_client_mock,
-          conversation_id: ai_conversation.mistral_conversation_id
+          conversation_id: ai_conversation.mistral_conversation_id,
+          tool_guard: an_instance_of(AiConversations::ToolGuard)
         )
       end
 
@@ -131,6 +133,56 @@ RSpec.describe AiConversations::StreamService do
 
           expect(ai_conversation).not_to have_received(:update!)
         end
+      end
+    end
+
+    context "when the agent stops on writes to confirm" do
+      before do
+        allow(mistral_agent_mock).to receive(:chat)
+        allow(mistral_agent_mock).to receive(:pending_tool_calls).and_return(
+          results: [{tool_call_id: "call_read", name: "get_coupon", content: "Coupon SPRING"}],
+          pending: [{tool_call_id: "call_write", name: "create_coupon", arguments: {"code" => "SPRING"}}]
+        )
+      end
+
+      it "keeps every call of the batch for the member who owns the conversation" do
+        expect { service.call }.to change(AiConversationToolCall, :count).by(2)
+
+        completed = ai_conversation.tool_calls.find_by!(tool_call_id: "call_read")
+        expect(completed).to have_attributes(
+          name: "get_coupon",
+          status: "completed",
+          result: "Coupon SPRING",
+          requires_confirmation: false,
+          membership_id: ai_conversation.membership_id,
+          organization_id: ai_conversation.organization_id,
+          submitted_at: nil
+        )
+
+        pending = ai_conversation.tool_calls.find_by!(tool_call_id: "call_write")
+        expect(pending).to have_attributes(
+          name: "create_coupon",
+          arguments: {"code" => "SPRING"},
+          status: "pending",
+          requires_confirmation: true,
+          membership_id: ai_conversation.membership_id,
+          position: 1
+        )
+      end
+
+      it "sends the pending calls with the completion" do
+        service.call
+
+        pending = ai_conversation.tool_calls.pending.sole
+        expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(
+          :ai_conversation_streamed,
+          {id: ai_conversation.id},
+          {
+            chunk: nil,
+            done: true,
+            pending_tool_calls: [{id: pending.id, name: "create_coupon", arguments: {"code" => "SPRING"}, status: "pending"}]
+          }
+        )
       end
     end
 

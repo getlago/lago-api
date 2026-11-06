@@ -5,6 +5,7 @@ require "json"
 
 require "lago_mcp_client/config"
 require "lago_mcp_client/tool"
+require "lago_mcp_client/tool_decision"
 require "lago_mcp_client/sse_parser"
 require "lago_mcp_client/sse_client"
 require "lago_mcp_client/client"

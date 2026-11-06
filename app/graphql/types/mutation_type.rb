@@ -313,6 +313,8 @@ module Types
     field :remove_subscription_entitlement, mutation: Mutations::Entitlement::RemoveSubscriptionEntitlement
 
     field :ask_finance_assistant, mutation: Mutations::FinanceAssistant::Ask
+    field :cancel_ai_conversation_tool_call, mutation: Mutations::AiConversations::CancelToolCall
+    field :confirm_ai_conversation_tool_call, mutation: Mutations::AiConversations::ConfirmToolCall
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
 
     field :create_superset_guest_token, mutation: Mutations::Superset::CreateGuestToken

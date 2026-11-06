@@ -7,6 +7,7 @@ module Types
 
       field :chunk, String
       field :done, Boolean, null: false
+      field :pending_tool_calls, [Types::AiConversations::ToolCall], null: true
     end
   end
 end

@@ -30,6 +30,13 @@ module Mutations
         end
         return not_found_error(resource: "ai_conversation") unless ai_conversation
 
+        # The model expects the results of its last tool calls before any new message: refused while
+        # a write waits for the member, and while the resume sends the results. A resume that gave up
+        # after its retries no longer closes the conversation once RESUME_TIMEOUT has passed.
+        if ai_conversation.resuming? || ai_conversation.tool_calls.unsubmitted.pending.exists?
+          raise not_allowed_error(code: "ai_conversation_tool_calls_pending")
+        end
+
         ::AiConversations::StreamJob.perform_later(ai_conversation:, message:)
 
         ai_conversation

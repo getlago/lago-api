@@ -21,7 +21,8 @@ module Resolvers
       result = ::AiConversations::FetchMessagesService.call(ai_conversation:).raise_if_error!
 
       ai_conversation.attributes.symbolize_keys.merge(
-        messages: result.messages
+        messages: result.messages,
+        pending_tool_calls: ai_conversation.tool_calls.unsubmitted.pending.order(:position)
       )
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "ai_conversation")

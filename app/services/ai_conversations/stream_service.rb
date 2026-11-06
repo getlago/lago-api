@@ -8,6 +8,7 @@ module AiConversations
     def initialize(ai_conversation:, message:)
       @ai_conversation = ai_conversation
       @message = message
+      @pending_tool_calls_saved = []
 
       super
     end
@@ -18,6 +19,7 @@ module AiConversations
       setup_clients!
       stream_response
       save_conversation_id!
+      save_pending_tool_calls!
       notify_completion
       result.ai_conversation = ai_conversation
       result
@@ -35,12 +37,14 @@ module AiConversations
     end
 
     def stream_response
-      mistral_agent.chat(message) do |chunk|
-        next if chunk.nil?
+      mistral_agent.chat(message) { |chunk| stream_chunk(chunk) }
+    end
 
-        trigger_subscription(chunk:, done: false)
-        sleep CHUNK_DELAY
-      end
+    def stream_chunk(chunk)
+      return if chunk.nil?
+
+      trigger_subscription(chunk:, done: false)
+      sleep CHUNK_DELAY
     end
 
     def save_conversation_id!
@@ -50,15 +54,56 @@ module AiConversations
       ai_conversation.update!(mistral_conversation_id: mistral_agent.conversation_id)
     end
 
-    def notify_completion
-      trigger_subscription(chunk: nil, done: true)
+    # The agent stopped on writes that need the member's confirmation. Every call of the
+    # batch is kept, with the results of the calls that already ran, until the member decides.
+    def save_pending_tool_calls!
+      batch = mistral_agent.pending_tool_calls
+      return if batch.blank?
+
+      ActiveRecord::Base.transaction do
+        batch[:results].each.with_index do |tool_result, position|
+          ai_conversation.tool_calls.create!(
+            organization_id: ai_conversation.organization_id,
+            membership_id: ai_conversation.membership_id,
+            tool_call_id: tool_result[:tool_call_id],
+            name: tool_result[:name],
+            status: "completed",
+            result: tool_result[:content],
+            position:
+          )
+        end
+
+        batch[:pending].each.with_index(batch[:results].size) do |tool_call, position|
+          @pending_tool_calls_saved << ai_conversation.tool_calls.create!(
+            organization_id: ai_conversation.organization_id,
+            membership_id: ai_conversation.membership_id,
+            tool_call_id: tool_call[:tool_call_id],
+            name: tool_call[:name],
+            arguments: tool_call[:arguments],
+            status: "pending",
+            requires_confirmation: true,
+            position:
+          )
+        end
+      end
     end
 
-    def trigger_subscription(chunk:, done:)
+    def notify_completion
+      pending_tool_calls = @pending_tool_calls_saved.map do |tool_call|
+        {id: tool_call.id, name: tool_call.name, arguments: tool_call.arguments, status: tool_call.status}
+      end
+
+      trigger_subscription(chunk: nil, done: true, pending_tool_calls:)
+    end
+
+    def trigger_subscription(chunk:, done:, pending_tool_calls: [])
+      payload = {chunk:, done:}
+      payload[:pending_tool_calls] = pending_tool_calls if pending_tool_calls.any?
+
       LagoApiSchema.subscriptions.trigger(
         :ai_conversation_streamed,
         {id: ai_conversation.id},
-        {chunk:, done:}
+        payload
       )
     rescue => e
       Rails.logger.error("Failed to trigger subscription: #{e.message}")
@@ -87,8 +132,13 @@ module AiConversations
     def mistral_agent
       @mistral_agent ||= LagoMcpClient::Mistral::Agent.new(
         client: mcp_client,
-        conversation_id: ai_conversation.mistral_conversation_id
+        conversation_id: ai_conversation.mistral_conversation_id,
+        tool_guard:
       )
+    end
+
+    def tool_guard
+      @tool_guard ||= ToolGuard.new(membership: ai_conversation.membership)
     end
 
     def lago_api_key
