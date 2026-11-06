@@ -4,7 +4,8 @@ module Signups
   # What the tab that started a signup polls with its signup secret. A closed attempt (the address had an account,
   # or got one another way) answers pending until it expires, so the secret never reveals how the address signed up.
   class StatusService < BaseService
-    Result = BaseResult[:status]
+    # pending_signup is set only while pending, for the resend countdown the type computes when it is asked for.
+    Result = BaseResult[:status, :pending_signup]
 
     def initialize(signup_secret:)
       @signup_secret = signup_secret
@@ -24,6 +25,7 @@ module Signups
         :pending
       end
 
+      result.pending_signup = pending_signup if result.status == :pending
       result
     end
 
