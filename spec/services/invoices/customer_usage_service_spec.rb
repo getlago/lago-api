@@ -1881,6 +1881,119 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
   end
 
+  describe "the buckets and the events store agree on a charge accepting a target wallet", :premium, clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:pricing_group_keys) { [] }
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:, billable_metric:, accepts_target_wallet: true,
+        properties: {amount: "2", pricing_group_keys:}.compact_blank
+      )
+    end
+    let(:window_start) { Time.current.beginning_of_month }
+
+    let(:events) do
+      [
+        {at: window_start, value: "5.5", properties: {"target_wallet_code" => "W"}},
+        {at: window_start + 20.minutes, value: "4.25", properties: {}},
+        {at: window_start + 23.minutes, value: "1.25", properties: {"target_wallet_code" => "W"}},
+        {at: window_start + 3.hours, value: "10.0", properties: {}},
+        {at: window_start + 5.hours, value: "0.5", properties: {"target_wallet_code" => "  "}}
+      ]
+    end
+
+    let(:served) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+    end
+    let(:delegated) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true, premium_integrations: ["events_targeting_wallets"])
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      events.each do |event|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: event[:at],
+          properties: event[:properties],
+          value: event[:value],
+          decimal_value: event[:value].to_f
+        )
+      end
+
+      events.group_by { [Time.zone.at(it[:at].to_i - (it[:at].to_i % 15.minutes.to_i)), pipeline_grouped_by(it[:properties])] }
+        .each do |(bucket, grouped_by), rows|
+          create(
+            :clickhouse_usage_bucket,
+            organization:, customer:, subscription:, charge:, billable_metric:,
+            bucket:,
+            grouped_by: grouped_by.to_json,
+            target_wallet_code: grouped_by["target_wallet_code"],
+            units: rows.sum { it[:value].to_d }.to_s,
+            events_count: rows.size,
+            aggregation_type: "sum"
+          )
+        end
+    end
+
+    # The pipeline writes every pricing key, "" when absent, and the wallet key only for an event
+    # carrying one, whitespace included.
+    def pipeline_grouped_by(properties)
+      pricing_group_keys.index_with { properties[it].to_s }.merge(properties.slice("target_wallet_code"))
+    end
+
+    def fee_values(usage)
+      usage.fees.map { [it.grouped_by, it.units, it.events_count, it.amount_cents] }
+    end
+
+    it "returns the same fee per wallet either way" do
+      expect(fee_values(served)).to match_array(fee_values(delegated))
+    end
+
+    it "prices the targeted wallet apart from the usage without one" do
+      expect(fee_values(served)).to match_array(
+        [
+          [{"target_wallet_code" => "W"}, 6.75, 2, 1350], # 5.5 + 1.25 units at 2
+          [{"target_wallet_code" => nil}, 14.75, 3, 2950] # 4.25 + 10.0 + 0.5 (blank code) units at 2
+        ]
+      )
+    end
+
+    it "reads the buckets for it" do
+      allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original
+
+      served
+
+      expect(RealtimeUsage::FetchBucketsService).to have_received(:call).with(hash_including(charges: [charge]))
+    end
+
+    context "when the charge also groups on a pricing key" do
+      let(:pricing_group_keys) { ["region"] }
+      let(:events) do
+        [
+          {at: window_start, value: "5.5", properties: {"region" => "eu", "target_wallet_code" => "W"}},
+          {at: window_start + 20.minutes, value: "4.25", properties: {"region" => "eu"}},
+          {at: window_start + 23.minutes, value: "1.25", properties: {"target_wallet_code" => "W"}},
+          {at: window_start + 3.hours, value: "10.0", properties: {"region" => "us"}}
+        ]
+      end
+
+      it "returns the same fee per region and wallet either way" do
+        expect(fee_values(served)).to match_array(fee_values(delegated))
+        expect(fee_values(served).size).to eq(4)
+      end
+    end
+  end
+
   describe "the buckets and the events store agree when the caller skips grouping", clickhouse: {clean_before: true} do
     include_context "with realtime usage availability"
 
