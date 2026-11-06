@@ -36,26 +36,26 @@ module Invoices
 
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
 
-        payment ||= Payment.create_with(
+        payment = Payment.find_or_initialize_by(payable: invoice, payable_payment_status: "pending")
+        payment.status = "pending" if payment.new_record?
+
+        # A reused pending payment takes the values of a new one: its provider customer may have been
+        # discarded, the customer may have moved to another provider, or the due amount may have changed.
+        payment.assign_attributes(
           organization_id: invoice.organization_id,
-          payment_provider_id: current_payment_provider.id,
-          payment_provider_customer_id: current_payment_provider_customer.id,
+          customer_id: invoice.customer_id,
+          payment_provider: current_payment_provider,
+          payment_provider_customer: current_payment_provider_customer,
           amount_cents: invoice.total_due_amount_cents,
           amount_currency: invoice.currency,
-          status: "pending",
-          customer_id: invoice.customer_id
-        ).find_or_create_by!(
-          payable: invoice,
-          payable_payment_status: "pending"
+          payment_method_id: determine_payment_method&.id
         )
-
-        payment.payment_method_id = determine_payment_method&.id
         payment.save!
 
         result.payment = payment
 
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
-          provider:,
+          provider: current_provider_type,
           payment:,
           reference: payment_reference,
           metadata: {
@@ -182,6 +182,12 @@ module Invoices
 
       def current_payment_provider
         @current_payment_provider ||= payment_provider(customer)
+      end
+
+      # Unlike `provider`, which can be the type named by the job when it was enqueued, this is the type
+      # of the provider the payment is charged through, set even when `customer.payment_provider` is nil.
+      def current_provider_type
+        current_payment_provider.payment_type.to_sym
       end
 
       def current_payment_provider_customer
