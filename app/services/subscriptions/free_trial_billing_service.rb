@@ -12,7 +12,7 @@ module Subscriptions
 
     def call
       ending_trial_subscriptions.each do |subscription|
-        if !subscription.was_already_billed_today &&
+        if !subscription.was_billed_since_trial_end &&
             !already_billed_on_day_one?(subscription)
 
           if subscription.plan.pay_in_advance?
@@ -58,11 +58,10 @@ module Subscriptions
     def ending_trial_subscriptions
       sql = <<-SQL
         WITH
-          initial_started_at AS (#{initial_started_at}),
-          already_billed_today AS (#{already_billed_today})
+          initial_started_at AS (#{initial_started_at})
         SELECT DISTINCT
           plans.pay_in_advance AS plan_pay_in_advance,
-          already_billed_today.invoiced_count > 0 AS was_already_billed_today,
+          #{billed_since_trial_end} AS was_billed_since_trial_end,
           #{trial_end_date} as trial_end_utc_date_from_query,
           subscriptions.*
         FROM
@@ -71,7 +70,6 @@ module Subscriptions
           INNER JOIN initial_started_at ON initial_started_at.external_id = subscriptions.external_id
           INNER JOIN customers ON subscriptions.customer_id = customers.id
           INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id
-          LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
         WHERE
           subscriptions.status = 1
           AND plans.trial_period > 0
@@ -98,21 +96,23 @@ module Subscriptions
       SQL
     end
 
-    def already_billed_today
+    # NOTE: Matches a recurring invoice issued from the trial end day through the run day.
+    #       - Run day: the renewal issued just before this run, after the trial ended.
+    #       - Trial end day: the job runs hourly, so a trial ending late in the day is processed
+    #         after midnight, when the renewal issued on the trial end day is no longer "today".
+    #       Both renewals already include the in-advance subscription fee.
+    def billed_since_trial_end
       <<-SQL
-        SELECT
-          invoice_subscriptions.subscription_id,
-          COUNT(invoice_subscriptions.id) AS invoiced_count
-        FROM invoice_subscriptions
-          INNER JOIN subscriptions AS sub ON invoice_subscriptions.subscription_id = sub.id
-          INNER JOIN customers AS cus ON sub.customer_id = cus.id
-          INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id
-        WHERE invoice_subscriptions.recurring = 't'
-          AND invoice_subscriptions.timestamp IS NOT NULL
-          AND DATE(
-            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", billing_entity: "billing_entities")}
-          ) = DATE('#{timestamp}'#{at_time_zone(customer: "cus", billing_entity: "billing_entities")})
-        GROUP BY invoice_subscriptions.subscription_id
+        EXISTS (
+          SELECT 1
+          FROM invoice_subscriptions
+          WHERE invoice_subscriptions.subscription_id = subscriptions.id
+            AND invoice_subscriptions.recurring = 't'
+            AND invoice_subscriptions.timestamp IS NOT NULL
+            AND DATE((invoice_subscriptions.timestamp)#{at_time_zone})
+              BETWEEN DATE(#{trial_end_date + at_time_zone})
+              AND DATE('#{timestamp}'#{at_time_zone})
+        )
       SQL
     end
   end

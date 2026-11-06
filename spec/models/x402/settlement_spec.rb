@@ -87,6 +87,28 @@ describe X402::Settlement do
         expect(described_class.grant_retry_due).to match_array([due, recorded])
       end
     end
+
+    describe ".payment_retry_due" do
+      let(:due) { create(:x402_settlement, :invoice_payment, updated_at: 3.minutes.ago) }
+      let(:due_after_unconfirmed_settle) do
+        create(:x402_settlement, :invoice_payment, error_reason: "settlement_pending", updated_at: 3.minutes.ago)
+      end
+
+      before do
+        due
+        due_after_unconfirmed_settle
+        create(:x402_settlement, :invoice_payment, updated_at: 1.minute.ago)
+        create(:x402_settlement, :invoice_payment, :pending, updated_at: 3.minutes.ago)
+        create(:x402_settlement, :invoice_payment, :failed, updated_at: 3.minutes.ago)
+        create(:x402_settlement, updated_at: 3.minutes.ago)
+        create(:x402_settlement, :invoice_payment, payment: create(:payment), updated_at: 3.minutes.ago)
+        create(:x402_settlement, :invoice_payment, error_reason: "payment_not_recorded", updated_at: 3.minutes.ago)
+      end
+
+      it "returns settled invoice payments left without a payment for two minutes" do
+        expect(described_class.payment_retry_due).to match_array([due, due_after_unconfirmed_settle])
+      end
+    end
   end
 
   describe "validations" do
