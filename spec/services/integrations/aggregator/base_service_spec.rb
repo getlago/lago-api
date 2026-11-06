@@ -30,4 +30,33 @@ RSpec.describe Integrations::Aggregator::BaseService do
       end
     end
   end
+
+  describe "#trigger_action" do
+    let(:service) do
+      Class.new(described_class) do
+        def action_name
+          "netsuite-create-invoice"
+        end
+      end.new(integration:)
+    end
+    let(:lago_client) { instance_double(LagoHttpClient::Client, post_with_response: nil) }
+
+    before do
+      allow(LagoHttpClient::Client).to receive(:new).and_return(lago_client)
+      allow(Sentry).to receive(:set_tags)
+    end
+
+    it "posts the action name and input" do
+      service.send(:trigger_action, {foo: "bar"})
+
+      expect(lago_client).to have_received(:post_with_response)
+        .with({action_name: "netsuite-create-invoice", input: {foo: "bar"}}, anything)
+    end
+
+    it "tags the Nango action for error reporting" do
+      service.send(:trigger_action, {foo: "bar"})
+
+      expect(Sentry).to have_received(:set_tags).with(nango_action: "netsuite-create-invoice")
+    end
+  end
 end

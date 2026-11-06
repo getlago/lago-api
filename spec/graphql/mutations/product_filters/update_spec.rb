@@ -13,7 +13,7 @@ RSpec.describe Mutations::ProductFilters::Update do
     )
   end
 
-  let(:required_permission) { "product_filters:update" }
+  let(:required_permission) { "products:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -47,7 +47,7 @@ RSpec.describe Mutations::ProductFilters::Update do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_filters:update"
+  it_behaves_like "requires permission", "products:update"
 
   it "updates the filter and replaces its values" do
     result_data = execution["data"]["updateProductFilter"]

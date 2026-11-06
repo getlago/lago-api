@@ -101,6 +101,10 @@ RSpec.describe Api::V1::OrganizationsController do
   describe "GET /api/v1/organizations" do
     subject { get_with_token(organization, "/api/v1/organizations") }
 
+    let(:tax) { create(:tax, organization:, applied_to_organization: true) }
+
+    before { tax }
+
     include_examples "requires API permission", "organization", "read"
 
     it "returns the organization" do
@@ -108,6 +112,7 @@ RSpec.describe Api::V1::OrganizationsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:organization][:name]).to eq(organization.name)
+      expect(json[:organization][:taxes].map { it[:code] }).to contain_exactly(tax.code)
     end
   end
 end
