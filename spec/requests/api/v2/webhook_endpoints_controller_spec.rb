@@ -8,6 +8,12 @@ RSpec.describe Api::V2::WebhookEndpointsController do
   # Without the endpoint the organization factory creates, so that each example lists only its own.
   let_it_be(:organization, refind: true) { create_default(:organization, webhook_url: nil) }
 
+  def serialized_signing_keys(webhook_endpoint)
+    webhook_endpoint.exposed_signing_keys.map do
+      {lago_id: it.id, secret_key: it.secret, created_at: it.created_at.iso8601(6)}
+    end
+  end
+
   describe "POST /api/v2/webhook_endpoints" do
     subject(:request) { post_with_token(organization, "/api/v2/webhook_endpoints", {webhook_endpoint: create_params}) }
 
@@ -48,6 +54,63 @@ RSpec.describe Api::V2::WebhookEndpointsController do
         webhook_endpoint = organization.webhook_endpoints.sole
         expect(webhook_endpoint.signature_algo).to eq("standard_webhooks")
         expect(webhook_endpoint.signing_keys.count).to eq(1)
+      end
+    end
+
+    it "leaves the signing keys out without the expansion" do
+      request
+
+      expect(response).to have_http_status(:ok)
+      expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
+      expect(response.body).not_to include("whsec_")
+    end
+
+    context "with expands[]=signing_keys" do
+      subject(:request) do
+        post_with_token(organization, "/api/v2/webhook_endpoints", {webhook_endpoint: create_params, expands: ["signing_keys"]})
+      end
+
+      let(:create_params) { super().except(:signature_algo) }
+
+      it "returns the signing key of the new endpoint, as v1 does" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        signing_key = organization.webhook_endpoints.sole.signing_keys.sole
+        expect(json[:webhook_endpoint][:signing_keys]).to eq(
+          [{lago_id: signing_key.id, secret_key: signing_key.secret, created_at: signing_key.created_at.iso8601(6)}]
+        )
+        expect(json[:webhook_endpoint][:signing_keys]).to eq(serialized_signing_keys(organization.webhook_endpoints.sole))
+        expect(signing_key.secret).to start_with("whsec_")
+      end
+
+      context "when the API log is produced", :capture_kafka_messages do
+        include_context "with API log infrastructure"
+
+        it "masks the secret_key of every signing key" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          webhook_endpoint = organization.webhook_endpoints.sole
+          signing_key = webhook_endpoint.signing_keys.sole
+          logged_endpoint = api_log_payload["request_response"]["webhook_endpoint"]
+          expect(logged_endpoint["signing_keys"]).to eq(
+            [{"lago_id" => signing_key.id, "secret_key" => "[FILTERED]", "created_at" => signing_key.created_at.iso8601(6)}]
+          )
+          expect(logged_endpoint.except("signing_keys")).to eq(json[:webhook_endpoint].except(:signing_keys).deep_stringify_keys)
+          expect(kafka_messages.find { it[:topic] == "api_logs" }[:payload]).not_to include("whsec_")
+        end
+      end
+    end
+
+    context "when the API log is produced" do
+      before { allow(Utils::ApiLog).to receive(:produce) }
+
+      it "filters secret_key from the API log response only" do
+        request
+
+        expect(Utils::ApiLog).to have_received(:produce)
+          .with(anything, anything, organization:, filtered_params: [], filtered_response: [:secret_key])
       end
     end
 
@@ -212,6 +275,102 @@ RSpec.describe Api::V2::WebhookEndpointsController do
 
       it_behaves_like "produces a security log", "webhook_endpoint.updated" do
         before { request }
+      end
+
+      it "leaves the signing keys out without the expansion" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
+      end
+
+      context "when the API log is produced" do
+        before { allow(Utils::ApiLog).to receive(:produce) }
+
+        it "filters secret_key from the API log response only" do
+          request
+
+          expect(Utils::ApiLog).to have_received(:produce)
+            .with(anything, anything, organization:, filtered_params: [], filtered_response: [:secret_key])
+        end
+      end
+
+      context "with expands[]=signing_keys" do
+        subject(:request) do
+          public_send(
+            :"#{http_method}_with_token",
+            organization,
+            "/api/v2/webhook_endpoints/#{webhook_endpoint.id}",
+            {webhook_endpoint: update_params, expands: ["signing_keys"]}
+          )
+        end
+
+        it "returns an empty list for a jwt endpoint" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signing_keys]).to eq([])
+        end
+
+        context "with a standard_webhooks endpoint" do
+          let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :standard_webhooks) }
+          let(:signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+          before { signing_key }
+
+          it "returns its signing keys, as v1 does" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(json[:webhook_endpoint][:signing_keys]).to eq(
+              [{lago_id: signing_key.id, secret_key: signing_key.secret, created_at: signing_key.created_at.iso8601(6)}]
+            )
+            expect(json[:webhook_endpoint][:signing_keys]).to eq(serialized_signing_keys(webhook_endpoint))
+          end
+
+          context "when the API log is produced", :capture_kafka_messages do
+            include_context "with API log infrastructure"
+
+            it "masks the secret_key of every signing key" do
+              request
+
+              expect(response).to have_http_status(:ok)
+              logged_endpoint = api_log_payload["request_response"]["webhook_endpoint"]
+              expect(logged_endpoint["signing_keys"]).to eq(
+                [{"lago_id" => signing_key.id, "secret_key" => "[FILTERED]", "created_at" => signing_key.created_at.iso8601(6)}]
+              )
+              expect(logged_endpoint.except("signing_keys")).to eq(json[:webhook_endpoint].except(:signing_keys).deep_stringify_keys)
+              expect(kafka_messages.find { it[:topic] == "api_logs" }[:payload]).not_to include("whsec_")
+            end
+          end
+        end
+
+        context "when switching a jwt endpoint to standard_webhooks" do
+          let(:update_params) { {signature_algo: "standard_webhooks"} }
+
+          it "returns the new signing key in the same response" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            signing_key = webhook_endpoint.signing_keys.sole
+            expect(json[:webhook_endpoint][:signing_keys]).to eq(
+              [{lago_id: signing_key.id, secret_key: signing_key.secret, created_at: signing_key.created_at.iso8601(6)}]
+            )
+          end
+        end
+
+        context "when the webhook endpoint belongs to another organization" do
+          let(:webhook_endpoint) { create(:webhook_endpoint, organization: create(:organization), signature_algo: :standard_webhooks) }
+
+          before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+          it "returns a not found error without any signing key" do
+            expect { request }.not_to change { webhook_endpoint.reload.attributes }
+
+            expect(response).to be_v2_not_found_error("webhook_endpoint")
+            expect(response.body).not_to include("whsec_")
+          end
+        end
       end
 
       context "with only a webhook_url" do
@@ -394,17 +553,163 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       end
     end
 
-    context "with an expansion" do
+    context "with an unknown expansion" do
       subject(:request) { get_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}", {expands: ["webhooks"]}) }
 
-      it "rejects it, as a webhook endpoint has no expandable relationship" do
+      it "rejects it with the allowed expansions" do
         request
 
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
-          code: "expand_not_supported",
-          details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["webhooks"]}}]
+          code: "invalid_expand",
+          details: [{code: "invalid_expand", field: "expands", meta: {invalid_values: ["webhooks"], allowed_values: ["signing_keys"]}}]
         )
+      end
+    end
+
+    context "with expands[]=signing_keys" do
+      subject(:request) { get_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}", {expands: ["signing_keys"]}) }
+
+      context "with an hmac endpoint that still has a signing key" do
+        before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+        it "returns an empty list" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signing_keys]).to eq([])
+          expect(response.body).not_to include("whsec_")
+        end
+      end
+
+      context "with a jwt endpoint" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :jwt) }
+
+        it "returns an empty list" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signing_keys]).to eq([])
+        end
+      end
+
+      context "with a standard_webhooks endpoint with two signing keys" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :standard_webhooks) }
+        let(:newest_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:, created_at: 1.day.ago) }
+        let(:oldest_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:, created_at: 2.days.ago) }
+
+        before do
+          newest_key
+          oldest_key
+        end
+
+        it "returns the signing keys oldest first, as v1 does" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signing_keys]).to eq(
+            [oldest_key, newest_key].map { {lago_id: it.id, secret_key: it.secret, created_at: it.created_at.iso8601(6)} }
+          )
+          expect(json[:webhook_endpoint][:signing_keys]).to eq(serialized_signing_keys(webhook_endpoint))
+        end
+
+        context "when the organization has the api_permissions premium integration", :premium do
+          let(:api_key) { organization.api_keys.first }
+
+          before do
+            organization.update!(premium_integrations: organization.premium_integrations.including("api_permissions"))
+            api_key.update!(permissions: api_key.permissions.merge("webhook_endpoint" => modes))
+          end
+
+          context "when the API key can only read webhook endpoints" do
+            let(:modes) { ["read"] }
+
+            it "refuses the signing keys" do
+              request
+
+              expect(response).to have_http_status(:forbidden)
+              expect(json).to eq(code: "write_action_not_allowed_for_webhook_endpoint", details: [])
+              expect(response.body).not_to include("whsec_")
+            end
+
+            context "without the expansion" do
+              subject(:request) { get_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}") }
+
+              it "returns the endpoint without its signing keys" do
+                request
+
+                expect(response).to have_http_status(:ok)
+                expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
+                expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
+                expect(response.body).not_to include("whsec_")
+              end
+            end
+
+            context "with an unknown expansion as well" do
+              subject(:request) do
+                get_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}", {expands: ["signing_keys", "webhooks"]})
+              end
+
+              it "rejects the unknown expansion first" do
+                request
+
+                expect(response).to have_http_status(:bad_request)
+                expect(json[:code]).to eq("invalid_expand")
+              end
+            end
+
+            [
+              [:post, "/api/v2/webhook_endpoints"],
+              [:put, "/api/v2/webhook_endpoints/:id"],
+              [:delete, "/api/v2/webhook_endpoints/:id"]
+            ].each do |http_method, path|
+              [[], ["signing_keys"]].each do |expands|
+                context "when using #{http_method.upcase} #{path} with expands #{expands.inspect}" do
+                  subject(:request) do
+                    public_send(
+                      :"#{http_method}_with_token",
+                      organization,
+                      path.sub(":id", webhook_endpoint.id),
+                      {webhook_endpoint: {webhook_url: "https://example.com/changed"}, expands:}
+                    )
+                  end
+
+                  it "refuses the write" do
+                    expect { request }.not_to change { organization.webhook_endpoints.reload.map(&:attributes) }
+
+                    expect(response).to have_http_status(:forbidden)
+                    expect(json).to eq(code: "write_action_not_allowed_for_webhook_endpoint", details: [])
+                    expect(response.body).not_to include("whsec_")
+                  end
+                end
+              end
+            end
+          end
+
+          context "when the API key can read and write webhook endpoints" do
+            let(:modes) { ["read", "write"] }
+
+            it "returns the signing keys" do
+              request
+
+              expect(response).to have_http_status(:ok)
+              expect(json[:webhook_endpoint][:signing_keys]).to eq(serialized_signing_keys(webhook_endpoint))
+            end
+          end
+        end
+      end
+
+      context "when the webhook endpoint belongs to another organization" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, organization: create(:organization), signature_algo: :standard_webhooks) }
+
+        before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+        it "returns a not found error without any signing key" do
+          request
+
+          expect(response).to be_v2_not_found_error("webhook_endpoint")
+          expect(response.body).not_to include("whsec_")
+        end
       end
     end
   end
@@ -430,6 +735,20 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       expect(json[:webhook_endpoints].first.keys).to match_array(%i[lago_id name webhook_url signature_algo event_types created_at updated_at])
       expect(json[:meta][:next_cursor]).to be_present
       expect(json[:meta][:prev_cursor]).to be_nil
+    end
+
+    context "with expands[]=signing_keys" do
+      subject(:request) { get_with_token(organization, "/api/v2/webhook_endpoints", {expands: ["signing_keys"]}) }
+
+      it "rejects the expansion on a list" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["signing_keys"]}}]
+        )
+      end
     end
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :webhook_endpoints, model: WebhookEndpoint do
@@ -461,6 +780,36 @@ RSpec.describe Api::V2::WebhookEndpointsController do
 
     it_behaves_like "produces a security log", "webhook_endpoint.deleted" do
       before { request }
+    end
+
+    context "when the API log is produced" do
+      before { allow(Utils::ApiLog).to receive(:produce) }
+
+      it "filters secret_key from the API log response only" do
+        request
+
+        expect(Utils::ApiLog).to have_received(:produce)
+          .with(anything, anything, organization:, filtered_params: [], filtered_response: [:secret_key])
+      end
+    end
+
+    context "with expands[]=signing_keys" do
+      subject(:request) { delete_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}", {expands: ["signing_keys"]}) }
+
+      let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :standard_webhooks) }
+
+      before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+      it "rejects the expansion without deleting the endpoint" do
+        expect { request }.not_to change(WebhookEndpoint, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["signing_keys"]}}]
+        )
+        expect(response.body).not_to include("whsec_")
+      end
     end
 
     context "when the webhook endpoint does not exist" do
