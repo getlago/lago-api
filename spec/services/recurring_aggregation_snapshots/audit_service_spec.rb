@@ -434,12 +434,14 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
       let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
       let(:parent_filter) { create(:charge_filter, charge: parent_charge) }
       let(:charge_filter) { create(:charge_filter, charge:) }
+      let(:parent_values) { %w[eu] }
       let(:override_values) { %w[eu] }
+      let(:filter_snapshot) { true }
 
       before do
-        create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter:, values: %w[eu])
+        create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter:, values: parent_values)
         create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: override_values)
-        create_snapshot(charge_filter:, units: 2, events_count: 1)
+        create_snapshot(charge_filter:, units: 2, events_count: 1) if filter_snapshot
         create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, charge_filter: parent_filter, total_aggregated_units: 2, events_count: 1)
       end
 
@@ -449,13 +451,21 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
       end
 
       context "when the override lists the values in another order" do
-        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:parent_values) { %w[eu us] }
         let(:override_values) { %w[us eu] }
-
-        before { ChargeFilterValue.where(charge_filter: parent_filter).update_all(values: %w[eu us]) } # rubocop:disable Rails/SkipsModelValidations
 
         it "matches the filters" do
           expect(result.differences).to be_empty
+        end
+      end
+
+      context "when the override filter has no snapshot" do
+        let(:filter_snapshot) { false }
+
+        it "reports the fee on the override filter" do
+          expect(result.differences).to eq(
+            [row(charge_filter_id: charge_filter.id, snapshot_units: 0, fee_units: 2, snapshot_events_count: 0, fee_events_count: 1)]
+          )
         end
       end
 

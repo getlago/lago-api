@@ -217,7 +217,7 @@ module RecurringAggregationSnapshots
       fee&.adjusted_fee.present? && !fee.adjusted_fee.adjusted_display_name?
     end
 
-    # Maps the parent charge's filters billed by the fees to the filters of the period's snapshots
+    # Maps the parent charge's filters billed by the fees to the live filters of the snapshots' charge
     # with the same values, which the override copied. Many filters have no code to match on. Values
     # shared by several filters on either side are left unmapped, so no fee hides another. A removed
     # filter lost its values with it: it stays unmapped and reported.
@@ -225,7 +225,7 @@ module RecurringAggregationSnapshots
       parent_filter_ids = fees.filter_map { it.charge_filter_id if it.charge_id == snapshots.first.charge.parent_id }
       return {} if parent_filter_ids.empty?
 
-      own_ids = ids_by_values(snapshots.filter_map(&:charge_filter_id))
+      own_ids = ids_by_values(snapshots.first.charge.filters.ids)
       ids_by_values(parent_filter_ids).each_with_object({}) do |(values, parent_id), ids|
         ids[parent_id] = own_ids[values] if own_ids.key?(values)
       end
