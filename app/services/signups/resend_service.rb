@@ -20,18 +20,21 @@ module Signups
       token_record = PendingSignupToken.for_token(token) if signup_secret.blank?
       pending_signup = signup_secret.present? ? PendingSignup.for_signup_secret(signup_secret) : token_record&.pending_signup
       return result.not_found_failure!(resource: "pending_signup") unless pending_signup
-      return result if refused?(pending_signup, token_record, Time.current) || mailbox_throttled?(pending_signup, Time.current)
+      # The database history decides, here and under the lock: it holds when the throttling Redis is down, and a
+      # Redis counter only knows a worst-case wait.
+      return result if refused?(pending_signup, token_record, Time.current)
 
       sent = Users::EmailLockService.call(email: pending_signup.normalized_email) do
         now = Time.current
         pending_signup.lock!
         token_record&.reload
-        # Authoritative: the database history holds when the throttling Redis is down.
         next false if refused?(pending_signup, token_record, now)
 
         pending_signup.record_email_send(now)
         pending_signup.save!
         DeliverVerificationJob.perform_after_commit(pending_signup.id)
+        # Counted once the send is committed, so Step 1's Redis check sees it and a refused or failed resend uses none.
+        after_commit { count_mailbox_send(pending_signup.mailbox_key) }
         true
       end.value
       return result unless sent
@@ -64,18 +67,9 @@ module Signups
       result.failure?
     end
 
-    # The retry delays are upper bounds: the throttle exposes no TTL. They only show when Redis and the database
-    # disagree.
-    def mailbox_throttled?(pending_signup, now)
-      mailbox_key = pending_signup.mailbox_key
-
-      if Auth::AttemptsThrottle.hit!(:signup_email_per_minute, mailbox_key)
-        retry_later(pending_signup, now, PendingSignup::MIN_EMAIL_INTERVAL.to_i, "resend_too_soon")
-      elsif Auth::AttemptsThrottle.hit!(:signup_email_per_hour, mailbox_key)
-        retry_later(pending_signup, now, PendingSignup::EMAIL_WINDOW.to_i, "resend_limit_reached")
-      end
-
-      result.failure?
+    def count_mailbox_send(mailbox_key)
+      Auth::AttemptsThrottle.hit!(:signup_email_per_minute, mailbox_key)
+      Auth::AttemptsThrottle.hit!(:signup_email_per_hour, mailbox_key)
     end
 
     # A wait that ends after the attempt's window is never followed by a send, as resendAvailableInSeconds says.

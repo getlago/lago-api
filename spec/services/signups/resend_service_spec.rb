@@ -130,16 +130,37 @@ RSpec.describe Signups::ResendService do
       end
     end
 
-    context "when only Redis has counted" do
-      let(:pending_signup) { create(:pending_signup, email: "jane@getlago.com", signup_secret:, emails_sent_at: [10.minutes.ago]) }
+    context "when only Redis has counted, as for an attempt that failed before sending" do
+      let(:pending_signup) do
+        create(:pending_signup, email: "jane@getlago.com", signup_secret:, emails_sent_at: [10.minutes.ago], expires_at: 30.minutes.from_now)
+      end
 
       before do
         Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new
-        Auth::AttemptsThrottle.hit!(:signup_email_per_minute, "jane@getlago.com")
+        3.times { Auth::AttemptsThrottle.hit!(:signup_email_per_hour, "jane@getlago.com") }
       end
 
-      it "refuses with the minute as the delay" do
-        expect([result.error.code, result.retry_after_seconds]).to eq(["resend_too_soon", 60])
+      it "sends, as the database history allows it" do
+        expect(result).to be_success
+        expect(pending_signup.reload.emails_sent_at.size).to eq(2)
+      end
+    end
+
+    context "with the throttling Redis" do
+      before { Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new }
+
+      it "counts the send once it is committed, for Step 1" do
+        result
+
+        expect(Auth::AttemptsThrottle.at_limit?(:signup_email_per_minute, "jane@getlago.com")).to be(true)
+      end
+
+      it "counts nothing for a refused resend" do
+        pending_signup.update!(emails_sent_at: [20.seconds.ago])
+
+        result
+
+        expect(Auth::AttemptsThrottle.at_limit?(:signup_email_per_minute, "jane@getlago.com")).to be(false)
       end
     end
   end
