@@ -4,7 +4,7 @@ module RecurringAggregationSnapshots
   class PersistService < BaseService
     Result = BaseResult
 
-    # Reads take the latest period and a regenerated invoice the one before it. The third is left to the audit.
+    # Reads take the latest period, and a draft refreshed during its grace period the one before it. The third is left to the audit.
     KEPT_PERIODS = 3
 
     # buckets: one {charge_filter:, values:} per pricing bucket of the charge
@@ -52,7 +52,7 @@ module RecurringAggregationSnapshots
       charge_snapshots.where(to_datetime:)
     end
 
-    # Counted from the latest markers rather than the period written, as a regenerated invoice rewrites an older one
+    # Counted from the latest markers rather than the period written, as a draft refresh rewrites an older one
     def older_periods_snapshots
       oldest_kept_period = charge_snapshots.where(charge_filter_id: nil).distinct
         .order(to_datetime: :desc).offset(KEPT_PERIODS - 1).limit(1).select(:to_datetime)

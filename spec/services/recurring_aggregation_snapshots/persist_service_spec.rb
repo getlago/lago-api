@@ -215,6 +215,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
     context "with more periods than kept" do
       let(:other_filter) { create(:charge_filter, charge:) }
       let(:other_subscription) { create(:subscription, organization:, plan: charge.plan) }
+      let(:other_charge) { create(:standard_charge, organization:, plan: charge.plan) }
 
       before do
         [1, 2, 3].each do |months|
@@ -224,6 +225,8 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
           create(:recurring_aggregation_snapshot, **period, charge_filter: other_filter, units: 5)
         end
         create(:recurring_aggregation_snapshot, organization:, subscription: other_subscription, charge:,
+          to_datetime: to_datetime - 3.months)
+        create(:recurring_aggregation_snapshot, organization:, subscription:, charge: other_charge,
           to_datetime: to_datetime - 3.months)
       end
 
@@ -235,6 +238,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
         )
         expect(snapshots.where(to_datetime: to_datetime - 1.month).count).to eq(3)
         expect(RecurringAggregationSnapshot.where(subscription: other_subscription).count).to eq(1)
+        expect(RecurringAggregationSnapshot.where(charge: other_charge).count).to eq(1)
       end
 
       context "when the run of the period has a later watermark" do
@@ -251,7 +255,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
       end
     end
 
-    context "when a regenerated invoice rewrites an older period" do
+    context "when a draft refresh rewrites an older period" do
       let(:later_periods) { [1, 2] }
 
       before do
