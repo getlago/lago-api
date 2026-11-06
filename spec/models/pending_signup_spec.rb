@@ -147,9 +147,15 @@ RSpec.describe PendingSignup do
     before { freeze_time }
 
     it "counts down from the attempt's last send" do
-      record = build(:pending_signup, emails_sent_at: [20.seconds.ago])
+      record = create(:pending_signup, emails_sent_at: [20.seconds.ago])
 
       expect([record.resend_available_in_seconds(Time.current), record.resend_limit_reached?]).to eq([40, false])
+    end
+
+    it "is 0 before the attempt's first email is recorded" do
+      record = create(:pending_signup, emails_sent_at: [])
+
+      expect(record.resend_available_in_seconds(Time.current)).to eq(0)
     end
 
     it "also waits for the other emails to its mailbox" do

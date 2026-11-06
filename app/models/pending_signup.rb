@@ -111,11 +111,10 @@ class PendingSignup < ApplicationRecord
   end
 
   # Counts the other emails to the mailbox too, so a 0 means a resend goes out now; nil once it cannot send more,
-  # including when the wait would end after the attempt's window.
+  # including when the wait would end after the attempt's window. The attempt's own sends are among its mailbox's.
   def resend_available_in_seconds(now)
     if sending_open?(now)
-      own_delay = (emails_sent_at.max + MIN_EMAIL_INTERVAL - now).ceil
-      delay = [own_delay, self.class.seconds_until_mailbox_send(mailbox_key, now), 0].max
+      delay = self.class.seconds_until_mailbox_send(mailbox_key, now)
       delay if now + delay < expires_at
     end
   end
