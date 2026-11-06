@@ -66,6 +66,11 @@ module Types
       field :authenticated_method, Types::Organizations::AuthenticationMethodsEnum, null: false
       field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
 
+      field :environment, Types::Organizations::EnvironmentEnum, null: false
+      field :production_organization, Types::Organizations::LinkedOrganizationType
+      field :sandbox_organization, Types::Organizations::LinkedOrganizationType
+      field :self_serve, Boolean, null: false
+
       def feature_flags
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }
       end

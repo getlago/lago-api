@@ -17,11 +17,11 @@ module Types
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
     def memberships
-      object.memberships.active.includes(organization: :integrations)
+      ordered_active_memberships
     end
 
     def organizations
-      memberships.map(&:organization)
+      ordered_active_memberships.map(&:organization)
     end
 
     def premium
@@ -32,6 +32,23 @@ module Types
     def needs_organization
       dataloader.with(Sources::ActiveRecordAssociation, :memberships).load(object) if object.self_serve_verified_at?
       object.needs_organization?
+    end
+
+    private
+
+    # Oldest membership first, each sandbox right after its production organization. The front falls back to the
+    # first membership when no organization is selected yet.
+    def ordered_active_memberships
+      @ordered_active_memberships ||= begin
+        rows = object.memberships.active.includes(organization: :integrations).order(:created_at, :id).to_a
+        position = rows.each_with_index.to_h { |membership, index| [membership.organization_id, index] }
+
+        rows.sort_by.with_index do |membership, index|
+          organization = membership.organization
+          anchor = organization.sandbox? ? position.fetch(organization.production_organization_id, index) : index
+          [anchor, organization.sandbox? ? 1 : 0, index]
+        end
+      end
     end
   end
 end
