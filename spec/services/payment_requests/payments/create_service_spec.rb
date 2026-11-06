@@ -677,6 +677,17 @@ RSpec.describe PaymentRequests::Payments::CreateService do
         end
       end
 
+      context "when the reused pending payment has a provider status" do
+        before { payment.update!(status: "requires_payment_method") }
+
+        it "keeps the provider status of the payment" do
+          create_service.call
+
+          expect(payment.reload.status).to eq("requires_payment_method")
+          expect(payment.payable_payment_status).to eq("pending")
+        end
+      end
+
       context "when the customer moved to another payment provider" do
         let(:gocardless_provider) { create(:gocardless_provider, code: "gocardless_1", organization:) }
         let(:gocardless_customer) { create(:gocardless_customer, payment_provider: gocardless_provider, customer:) }

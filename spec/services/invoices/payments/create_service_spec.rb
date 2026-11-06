@@ -463,7 +463,7 @@ RSpec.describe Invoices::Payments::CreateService do
     end
 
     context "when the customer has no payment provider type and the organization has a single provider" do
-      subject(:create_service) { described_class.new(invoice:, payment_provider: :stripe, payment_method_params:) }
+      subject(:create_service) { described_class.new(invoice:, payment_method_params:) }
 
       let(:customer) { create(:customer, organization:, payment_provider: nil, payment_provider_code: nil) }
 
