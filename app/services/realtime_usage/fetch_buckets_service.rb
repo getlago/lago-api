@@ -26,7 +26,7 @@ module RealtimeUsage
       return result unless RealtimeUsage.enabled?(organization)
       return result if charges.empty?
 
-      result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:)
+      result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:, history_last_ingested_at:)
       result
     rescue *READ_ERRORS => e
       Sentry.capture_exception(e)
@@ -42,18 +42,26 @@ module RealtimeUsage
     end
 
     def totals
-      rows.each_with_object({}) do |row, acc|
+      window_rows.each_with_object({}) do |row, acc|
         key = [row[:charge_id], row[:charge_filter_id]]
         acc[key] = combine_totals(acc[key], row)
       end
     end
 
     def grouped_totals
-      rows.each_with_object({}) do |row, acc|
+      window_rows.each_with_object({}) do |row, acc|
         next if row[:groups].empty?
 
         groups = (acc[[row[:charge_id], row[:charge_filter_id]]] ||= {})
         groups[row[:groups]] = combine_totals(groups[row[:groups]], row)
+      end
+    end
+
+    # A recurring charge sums every period since the subscription started, so a bucket of a closed
+    # period ingested after the snapshot of that period has to send the charge back to the events.
+    def history_last_ingested_at
+      history_rows.each_with_object({}) do |row, acc|
+        acc[row[:charge_id]] = [acc[row[:charge_id]], row[:last_ingested_at]].compact.max
       end
     end
 
@@ -69,21 +77,28 @@ module RealtimeUsage
       totals ? totals.combine(row_totals) : row_totals
     end
 
+    def window_rows
+      rows.select { it[:in_window] }
+    end
+
+    def history_rows
+      rows.reject { it[:in_window] }
+    end
+
     def rows
       @rows ||= Events::Stores::Utils::ClickhouseConnection.with_retry { fetch_rows }
     end
 
     def fetch_rows
-      Clickhouse::UsageBucket
-        .where(organization_id: organization.id, subscription_id: subscription.id, charge_id: charge_ids)
-        .where(bucket: window, is_deleted: 0)
-        .group(:charge_id, :charge_filter_id, :grouped_by, :aggregation_type)
+      scope
+        .group(:charge_id, :charge_filter_id, :grouped_by, :aggregation_type, Arel.sql("in_window"))
         .pluck(Arel.sql(<<~SQL.squish))
           charge_id, charge_filter_id, grouped_by, aggregation_type,
           sum(units), max(units), argMax(units, last_event_at), max(last_event_at), sum(events_count),
-          sum(precise_total_amount_cents)
+          sum(precise_total_amount_cents), max(last_ingested_at),
+          #{Clickhouse::UsageBucket.sanitize_sql_array(["bucket >= ?", window.begin])} AS in_window
         SQL
-        .map do |charge_id, charge_filter_id, grouped_by, aggregation_type, sum_units, max_units, latest_units, last_event_at, events_count, precise_total_amount_cents|
+        .map do |charge_id, charge_filter_id, grouped_by, aggregation_type, sum_units, max_units, latest_units, last_event_at, events_count, precise_total_amount_cents, last_ingested_at, in_window|
           units = {sum_units:, max_units:, latest_units:}
             .fetch(UNITS_BY_AGGREGATION_TYPE.fetch(aggregation_type, :sum_units))
 
@@ -95,13 +110,31 @@ module RealtimeUsage
             units: units.to_d,
             last_event_at: last_event_at.to_time,
             events_count: events_count.to_i,
-            precise_total_amount_cents: precise_total_amount_cents.to_d
+            precise_total_amount_cents: precise_total_amount_cents.to_d,
+            last_ingested_at: last_ingested_at.to_time,
+            in_window: ActiveModel::Type::Boolean.new.cast(in_window)
           }
         end
     end
 
+    # One read for both: the window of every charge, and the buckets before it of the recurring
+    # charges, which only feed the late ingestion check.
+    def scope
+      buckets = Clickhouse::UsageBucket
+        .where(organization_id: organization.id, subscription_id: subscription.id, charge_id: charge_ids)
+        .where(bucket: ...window.end, is_deleted: 0)
+      in_window = buckets.where(bucket: window.begin..)
+      return in_window if recurring_charge_ids.empty?
+
+      in_window.or(buckets.where(charge_id: recurring_charge_ids))
+    end
+
     def charge_ids
       @charge_ids ||= charges.map(&:id)
+    end
+
+    def recurring_charge_ids
+      @recurring_charge_ids ||= charges.select { it.billable_metric.recurring? }.map(&:id)
     end
 
     # The stream writes an absent group value as "", where the events store returns nil.

@@ -36,9 +36,10 @@ module Events
 
       # Copied before freezing: the caller usually builds these hashes as accumulators, and
       # freezing its own object would raise on the next write, far from here.
-      def initialize(totals: {}, grouped_totals: {})
+      def initialize(totals: {}, grouped_totals: {}, history_last_ingested_at: {})
         @totals = totals.dup.freeze
         @grouped_totals = grouped_totals.dup.freeze
+        @history_last_ingested_at = history_last_ingested_at.dup.freeze
         freeze
       end
 
@@ -75,6 +76,12 @@ module Events
         totals_for(charge_id:, charge_filter_id:)&.precise_total_amount_cents || BigDecimal(0)
       end
 
+      # The latest ingestion into a bucket before the window, read for recurring charges only. nil
+      # when the charge has no bucket before the window.
+      def history_last_ingested_at_for(charge_id:)
+        history_last_ingested_at[charge_id]
+      end
+
       # Hashes rather than a result object: the shape the events store returns for this read.
       def grouped_precise_total_amount_cents_for(charge_id:, charge_filter_id:)
         grouped_totals_for(charge_id:, charge_filter_id:).map do |groups, bucket_totals|
@@ -84,7 +91,7 @@ module Events
 
       private
 
-      attr_reader :totals, :grouped_totals
+      attr_reader :totals, :grouped_totals, :history_last_ingested_at
 
       def totals_for(charge_id:, charge_filter_id:)
         totals[[charge_id, charge_filter_id]]

@@ -135,6 +135,25 @@ RSpec.describe Events::Stores::UsageBucketSet do
     end
   end
 
+  describe "#history_last_ingested_at_for" do
+    subject(:bucket_set) { described_class.new(totals:, grouped_totals:, history_last_ingested_at:) }
+
+    let(:ingested_at) { Time.zone.parse("2026-10-01 12:00:00") }
+    let(:history_last_ingested_at) { {"charge_1" => ingested_at} }
+
+    it "reports the latest ingestion before the window of the charge" do
+      expect(bucket_set.history_last_ingested_at_for(charge_id: "charge_1")).to eq(ingested_at)
+    end
+
+    it "is nil for a charge without buckets before the window" do
+      expect(bucket_set.history_last_ingested_at_for(charge_id: "charge_2")).to be_nil
+    end
+
+    it "leaves the set empty when only the history carries the charge" do
+      expect(described_class.new(history_last_ingested_at:)).to be_empty
+    end
+  end
+
   describe "Totals" do
     it "defaults the precise amount to zero, as the pipeline writes on every type but sum" do
       expect(described_class::Totals.new(aggregation_type: "max", units: 1, events_count: 1, last_event_at: Time.current).precise_total_amount_cents)
