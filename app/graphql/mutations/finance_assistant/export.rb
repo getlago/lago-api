@@ -5,6 +5,7 @@ module Mutations
     class Export < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
+      include DataPermissions
 
       REQUIRED_PERMISSION = "ai_conversations:view"
 
@@ -17,6 +18,7 @@ module Mutations
 
       def resolve(message_id:)
         raise unauthorized_error unless License.premium?
+        ensure_data_permissions!
 
         result = ::FinanceAssistant::ExportService.call(
           organization: current_organization,

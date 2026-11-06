@@ -259,6 +259,30 @@ RSpec.describe ApiKey do
           expect(subject).to be true
         end
       end
+
+      context "when the key is minted for a member" do
+        let(:api_key) do
+          create(:api_key, organization:, membership: create(:membership, organization:), permissions:)
+        end
+        let(:organization) { create(:organization) }
+        let(:permissions) { {resource => allowed_modes} }
+
+        context "when corresponding resource allows provided mode" do
+          let(:allowed_modes) { [mode] }
+
+          it "returns true" do
+            expect(subject).to be true
+          end
+        end
+
+        context "when corresponding resource does not allow provided mode" do
+          let(:allowed_modes) { described_class::MODES.excluding(mode) }
+
+          it "returns false" do
+            expect(subject).to be false
+          end
+        end
+      end
     end
   end
 

@@ -5,6 +5,7 @@ module Mutations
     class Ask < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
+      include DataPermissions
 
       REQUIRED_PERMISSION = "ai_conversations:create"
 
@@ -18,6 +19,7 @@ module Mutations
 
       def resolve(question:, session_id: nil)
         raise unauthorized_error unless License.premium?
+        ensure_data_permissions!
 
         result = ::FinanceAssistant::AskService.call(
           organization: current_organization,

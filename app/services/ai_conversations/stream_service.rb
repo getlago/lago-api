@@ -23,6 +23,8 @@ module AiConversations
       result
     rescue => e
       handle_error(e)
+    ensure
+      destroy_member_key
     end
 
     private
@@ -92,7 +94,20 @@ module AiConversations
     end
 
     def lago_api_key
-      @lago_api_key ||= ai_conversation.organization.api_keys.with_most_permissions.value
+      member_key.value
+    end
+
+    # The agent calls the API with a key carrying the member's permissions, so the API refuses
+    # what the member cannot do and the agent explains the refusal.
+    def member_key
+      @member_key ||= ApiKeys::CreateMemberKeyService.call!(membership: ai_conversation.membership).api_key
+    end
+
+    def destroy_member_key
+      return unless @member_key
+
+      ApiKeys::CacheService.expire_cache(@member_key.value)
+      @member_key.destroy
     end
   end
 end
