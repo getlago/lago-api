@@ -57,6 +57,7 @@ module Invoices
           subscription_at: current_subscription.subscription_at,
           billing_time: current_subscription.billing_time,
           ending_at: current_subscription.ending_at,
+          payment_term: current_subscription.payment_term,
           status: :active,
           started_at: new_subscription_started_at,
           created_at: Time.current
