@@ -228,7 +228,7 @@ module DailyUsages
       rows.each_with_index { |row, i| row.each { |c| columns[c] << i } }
       column_caps = column_ids.map { |id| caps[id] }
 
-      flows = rows.map { |row| row.to_h { |c| [c, Rational(0)] } }
+      flows = rows.map { |row| row.index_with { Rational(0) } }
       row_flows = Array.new(rows.size, Rational(0))
       column_flows = Array.new(column_ids.size, Rational(0))
 
