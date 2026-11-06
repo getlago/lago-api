@@ -21,8 +21,7 @@ env:
 jobs:
   run-migrations:
     name: Run migrations
-    # Both jobs: tj-actions/install-postgresql runs apt-key, which ubuntu-26.04 no longer ships
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     services: &services
       postgres:
         image: getlago/postgres-partman:15.0-alpine
@@ -64,9 +63,14 @@ jobs:
           bundler-cache: true
       - &install-pg
         name: Install pg 15
-        uses: tj-actions/install-postgresql@v3
-        with:
-          postgresql-version: "15"
+        # pg_dump 15 first in PATH, so the dump compares with db/structure.sql whatever client the image ships
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-15
+          echo /usr/lib/postgresql/15/bin >> "$GITHUB_PATH"
       - name: Start Clickhouse database
         run: |
           docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server:26.4-alpine
@@ -93,7 +97,7 @@ jobs:
 
   run-migrations-custom-schema:
     name: Run migrations in a custom schema
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     services: *services
     env:
       # A fresh self-hosted install with `POSTGRES_SCHEMA`, which only the

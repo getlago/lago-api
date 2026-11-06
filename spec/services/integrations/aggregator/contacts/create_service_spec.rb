@@ -7,7 +7,8 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
 
   let(:service) { described_class.new(integration:, customer:, subsidiary_id:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/#{integration_type}/contacts" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "#{integration_type}-create-contact" }
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -36,7 +37,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
@@ -227,7 +228,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
       let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(http_error)
       end
 
       context "when it is a server error" do
@@ -478,6 +479,34 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
           code: "Validation error",
           message: "An unexpected error occurred"
         )
+      end
+    end
+  end
+
+  describe "Nango action" do
+    let(:response) { instance_double(Net::HTTPOK, body: '"1"') }
+
+    before { allow(lago_client).to receive(:post_with_response).and_return(response) }
+
+    context "with a HubSpot integration" do
+      let(:integration) { create(:hubspot_integration, organization:) }
+
+      it "triggers the create-contact action" do
+        service_call
+
+        expect(lago_client).to have_received(:post_with_response)
+          .with(hash_including(action_name: "create-contact"), anything)
+      end
+    end
+
+    context "with an Avalara integration" do
+      let(:integration) { create(:avalara_integration, organization:) }
+
+      it "triggers the create-customer action" do
+        service_call
+
+        expect(lago_client).to have_received(:post_with_response)
+          .with(hash_including(action_name: "create-customer"), anything)
       end
     end
   end

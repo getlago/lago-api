@@ -8,7 +8,7 @@ describe "Wallet ongoing balance with a draft invoice awaiting provider taxes", 
   let(:tax_integration) { create(:anrok_integration, organization:) }
   let(:tax_integration_customer) { create(:anrok_customer, integration: tax_integration, customer:) }
   let(:anrok_client) { instance_double(LagoHttpClient::Client) }
-  let(:anrok_draft_endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+  let(:nango_action_endpoint) { "https://api.nango.dev/action/trigger" }
   let(:success_body_template) { JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json"))) }
   let(:plan_code) { "monthly_in_arrears" }
   let(:external_subscription_id) { "sub-#{SecureRandom.hex(4)}" }
@@ -16,8 +16,9 @@ describe "Wallet ongoing balance with a draft invoice awaiting provider taxes", 
   before do
     tax_integration_customer
     allow(LagoHttpClient::Client).to receive(:new).and_call_original
-    allow(LagoHttpClient::Client).to receive(:new).with(anrok_draft_endpoint, anything).and_return(anrok_client)
-    allow(anrok_client).to receive(:post_with_response) do
+    allow(LagoHttpClient::Client).to receive(:new).with(nango_action_endpoint, anything).and_return(anrok_client)
+    allow(anrok_client).to receive(:post_with_response)
+      .with(hash_including(action_name: "anrok-create-ephemeral-transaction"), anything) do
       response = instance_double(Net::HTTPOK)
       allow(response).to receive(:body).and_return(success_body_for(customer.invoices.draft.sole))
       response

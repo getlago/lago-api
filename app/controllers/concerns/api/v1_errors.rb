@@ -59,6 +59,28 @@ module Api
       )
     end
 
+    def gone_error(code:)
+      render(
+        json: {
+          status: 410,
+          error: "Gone",
+          code:
+        },
+        status: :gone
+      )
+    end
+
+    def conflict_error(code:)
+      render(
+        json: {
+          status: 409,
+          error: "Conflict",
+          code:
+        },
+        status: :conflict
+      )
+    end
+
     def provider_error(provider, error)
       response = {
         status: 422,
@@ -120,6 +142,10 @@ module Api
         not_found_error(resource: error_result.error.resource)
       when BaseService::MethodNotAllowedFailure
         method_not_allowed_error(code: error_result.error.code)
+      when BaseService::GoneFailure
+        gone_error(code: error_result.error.code)
+      when BaseService::ConflictFailure
+        conflict_error(code: error_result.error.code)
       when BaseService::ValidationFailure
         validation_errors(errors: error_result.error.messages)
       when BaseService::ForbiddenFailure

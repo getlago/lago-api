@@ -9,7 +9,6 @@ module Invoices
       @billing_at = billing_at
 
       @customer = billing_contexts&.first&.customer
-      @currency = billing_contexts&.first&.currency
 
       super
     end
@@ -33,7 +32,7 @@ module Invoices
 
     private
 
-    attr_reader :billing_contexts, :billing_at, :customer, :currency
+    attr_reader :billing_contexts, :billing_at, :customer
 
     def pending_billing_contexts_with_fees
       return [] unless customer
@@ -52,12 +51,14 @@ module Invoices
       )
     end
 
-    # NOTE: The re-expanded subscription set (matched by external_id) can span several
-    #       purchase order numbers — e.g. a terminated and an active subscription sharing
-    #       an external_id after an upgrade. Each PO must produce its own invoice.
+    # NOTE: The re-expanded subscription set (matched by external_id) can mix subscriptions that
+    #       periodic billing invoices apart — e.g. a terminated and an active subscription sharing
+    #       an external_id after an upgrade. Group them the same way.
     def create_group_invoices
-      pending_billing_contexts_with_fees.group_by(&:purchase_order_number).values.filter_map do |billing_contexts_group|
-        create_group_invoice(billing_contexts_group)
+      subscriptions = pending_billing_contexts_with_fees.map(&:subscription)
+
+      Subscriptions::InvoiceGroupingService.call!(subscriptions:).subscription_groups.filter_map do |subscriptions_group|
+        create_group_invoice(subscriptions_group.map { |subscription| Billing::Context.from(subscription:) })
       end
     end
 
@@ -95,10 +96,10 @@ module Invoices
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :advance_charges,
-        currency:,
+        currency: billing_contexts_group.first.currency,
         datetime: billing_at, # this is an int we need to convert it
-        billing_entity: billing_contexts.first&.applicable_billing_entity,
-        purchase_order_number: billing_contexts_group.first&.purchase_order_number
+        billing_entity: billing_contexts_group.first.applicable_billing_entity,
+        purchase_order_number: billing_contexts_group.first.purchase_order_number
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceService.call!(
           invoice:,

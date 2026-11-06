@@ -9,7 +9,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
   let(:fee) { create(:fee, invoice:, amount_cents: 1000) }
   let(:customer) { create(:customer, organization:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "anrok-void-transaction" }
   let(:current_time) { Time.current }
   let(:integration_collection_mapping1) do
     create(
@@ -79,7 +80,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       before do
         create(:integration_resource, syncable: invoice, integration:, resource_type: :invoice)
 
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
@@ -87,7 +88,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         result = service_call
 
         expect(result).to be_success
-        expect(lago_client).to have_received(:post_with_response).with(params, headers)
+        expect(lago_client).to have_received(:post_with_response).with({action_name:, input: params}, headers)
       end
     end
 
@@ -100,7 +101,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       end
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
@@ -108,7 +109,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         result = service_call
 
         expect(result).to be_success
-        expect(lago_client).to have_received(:post_with_response).with(params, headers)
+        expect(lago_client).to have_received(:post_with_response).with({action_name:, input: params}, headers)
       end
     end
 
@@ -116,7 +117,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
@@ -137,7 +138,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       context "when void invoice sync is successful for avalara integration" do
         let(:integration) { create(:avalara_integration, organization:) }
         let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
-        let(:endpoint) { "https://api.nango.dev/v1/avalara/void_invoices" }
+        let(:action_name) { "void-invoice" }
         let(:body) do
           path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
           File.read(path)
@@ -159,7 +160,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         end
 
         before do
-          allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+          allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
           allow(response).to receive(:body).and_return(body)
         end
 
@@ -230,7 +231,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(http_error)
       end
 
       context "when it is a server error" do
@@ -286,7 +287,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         let(:error_code) { 500 }
 
         before do
-          allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(Net::ReadTimeout)
+          allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(Net::ReadTimeout)
         end
 
         it "raises TimeoutError" do

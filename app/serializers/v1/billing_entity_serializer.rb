@@ -23,6 +23,7 @@ module V1
         legal_number: model.legal_number,
         timezone: model.timezone,
         net_payment_term: model.net_payment_term,
+        payment_term: model.payment_term,
         email_settings: model.email_settings,
         document_numbering: model.document_numbering,
         document_number_prefix: model.document_number_prefix,

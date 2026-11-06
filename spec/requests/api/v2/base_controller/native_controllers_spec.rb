@@ -20,7 +20,7 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
   shared_renderers = %i[unauthorized_error forbidden_error validation_errors render_error_response]
   v1_only_renderers = %i[
     bad_request_error method_not_allowed_error provider_error thirdpary_error too_many_provider_requests_error
-    lock_acquisition_error
+    lock_acquisition_error gone_error conflict_error
   ]
   v2_renderers = shared_renderers + %i[not_found_error not_found invalid_request_error]
 

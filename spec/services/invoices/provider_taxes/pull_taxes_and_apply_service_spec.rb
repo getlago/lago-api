@@ -66,8 +66,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
     let(:integration_customer_tax) { create(:anrok_customer, integration: integration_tax, customer:) }
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
-    let(:endpoint_draft) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
     let(:body) do
       path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json")
       json = File.read(path)
@@ -98,7 +97,6 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       allow(LagoHttpClient::Client).to receive(:new)
         .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(lago_client)
-      allow(LagoHttpClient::Client).to receive(:new).with(endpoint_draft, retries_on: [OpenSSL::SSL::SSLError]).and_return(lago_client)
       allow(lago_client).to receive(:post_with_response).and_return(response)
       allow(response).to receive(:body).and_return(body)
     end
@@ -177,6 +175,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
             expect { pull_taxes_service.call }
               .to change { invoice.reload.issuing_date }.to(current_date)
               .and change { invoice.reload.payment_due_date }.to(current_date)
+          end
+        end
+      end
+
+      context "with a snapshotted payment term" do
+        it "computes the due date from the snapshot, ignoring a later customer term change" do
+          invoice.update!(payment_term: {term_type: "net", days: 10}, net_payment_term: 10)
+          invoice.customer.update!(payment_term: {term_type: "net", days: 3}, net_payment_term: 3)
+
+          freeze_time do
+            expect { pull_taxes_service.call }
+              .to change { invoice.reload.payment_due_date }.to(Time.current.to_date + 10.days)
           end
         end
       end
@@ -569,7 +579,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         pull_taxes_service.call
 
         expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-          expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
+          expect(payload[:input].first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
         end
       end
 
@@ -619,7 +629,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         pull_taxes_service.call
 
         expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-          expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
+          expect(payload[:input].first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
         end
       end
 
@@ -702,7 +712,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           expect(fee_subscription.reload.applied_taxes).to be_empty
           expect(fee_charge.reload.applied_taxes).to be_empty
           expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-            expect(payload.first["fees"]).to contain_exactly(
+            expect(payload[:input].first["fees"]).to contain_exactly(
               hash_including("item_id" => fee_subscription.id, "item_code" => "mapped-product"),
               hash_including("item_id" => fee_charge.id, "item_code" => nil)
             )
@@ -786,7 +796,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
 
         before do
           allow(lago_client).to receive(:post_with_response)
-            .and_raise(::LagoHttpClient::HttpError.new(500, body, endpoint_draft, response_headers: {}))
+            .and_raise(::LagoHttpClient::HttpError.new(500, body, endpoint, response_headers: {}))
         end
 
         it "puts invoice in failed status" do

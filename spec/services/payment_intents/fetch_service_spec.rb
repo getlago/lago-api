@@ -67,6 +67,16 @@ RSpec.describe PaymentIntents::FetchService do
 
           expect(result.payment_intent.provider_session_id).to eq("cs_123")
         end
+
+        context "with a provider that returns no checkout session" do
+          let(:payment_provider_service) { class_double(Invoices::Payments::AdyenService) }
+          let(:generate_payment_url_result) { Invoices::Payments::AdyenService::RESULTS.fetch(:generate_payment_url).new }
+
+          it "saves the payment URL without a session id" do
+            expect(result).to be_success
+            expect(result.payment_intent).to have_attributes(payment_url:, provider_session_id: nil)
+          end
+        end
       end
 
       context "when payment provider fails to generate URL" do

@@ -7,7 +7,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "product_filters:create"
+      REQUIRED_PERMISSION = "products:create"
 
       graphql_name "CreateProductFilter"
       description "Creates a new product filter"

@@ -139,6 +139,40 @@ RSpec.describe Customers::UpsertFromApiService do
     end
   end
 
+  context "when payment_term is provided" do
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        external_id:,
+        net_payment_term: 30,
+        payment_term: {"term_type" => "net", "days" => 30}
+      )
+    end
+
+    before do
+      customer
+      create_args[:payment_term] = {term_type: "day_of_month", day_of_month: 15}
+    end
+
+    it "writes the structured term with a null alias" do
+      expect(result.customer).to have_attributes(
+        net_payment_term: nil,
+        payment_term: {"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1}
+      )
+    end
+  end
+
+  context "when payment_term has an invalid shape" do
+    before { create_args[:payment_term] = {term_type: "fortnightly"} }
+
+    it "returns a validation failure" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages[:payment_term]).to eq(["invalid_term_type"])
+    end
+  end
+
   it "calls SendWebhookJob with customer.created" do
     customer = result.customer
 

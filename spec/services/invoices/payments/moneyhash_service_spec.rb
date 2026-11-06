@@ -139,5 +139,20 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       expect(result).to be_success
       expect(result.payment_url).to eq("#{payment_url_response.dig("data", "embed_url")}?lago_request=generate_payment_url")
     end
+
+    context "when Moneyhash refuses the payment" do
+      let(:http_error) { LagoHttpClient::HttpError.new(422, {status: {code: 422}}.to_json, endpoint) }
+
+      before { allow(lago_client).to receive(:post_with_response).and_raise(http_error) }
+
+      it "returns a third-party failure, whose webhook the caller delivers" do
+        result = nil
+
+        expect { result = described_class.call(:generate_payment_url, invoice, payment_intent) }
+          .not_to have_enqueued_job(SendWebhookJob)
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "Moneyhash", error_code: 422, error_message: http_error.message)
+      end
+    end
   end
 end

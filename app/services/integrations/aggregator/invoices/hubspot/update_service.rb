@@ -7,6 +7,10 @@ module Integrations
         class UpdateService < BaseService
           Result = BaseResult[:invoice_id, :external_id]
 
+          def action_name
+            "update-record"
+          end
+
           def call
             return result unless integration
             return result unless integration.sync_invoices
@@ -16,7 +20,7 @@ module Integrations
 
             throttle!(:hubspot)
 
-            response = http_client.put_with_response(payload.update_body, headers)
+            response = trigger_action(payload.update_body)
             body = JSON.parse(response.body)
 
             result.external_id = body["id"]
