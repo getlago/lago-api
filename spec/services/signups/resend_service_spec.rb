@@ -91,6 +91,20 @@ RSpec.describe Signups::ResendService do
     end
   end
 
+  context "when the email lock is not acquired" do
+    before do
+      Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new
+      allow(Users::EmailLockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
+    end
+
+    it "answers lock_acquisition_failed, with nothing sent or counted" do
+      expect(result.error.code).to eq("lock_acquisition_failed")
+      expect(pending_signup.reload.emails_sent_at.size).to eq(1)
+      expect(Auth::AttemptsThrottle.at_limit?(:signup_email_per_minute, "jane@getlago.com")).to be(false)
+      expect(Signups::DeliverVerificationJob).not_to have_been_enqueued
+    end
+  end
+
   describe "mailbox limits" do
     let(:pending_signup) { create(:pending_signup, email: "jane@getlago.com", signup_secret:, emails_sent_at: [20.seconds.ago]) }
 
