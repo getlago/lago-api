@@ -446,6 +446,16 @@ RSpec.describe Organization do
         expect { subject }.to change(organization, :hmac_key).to unique_hmac_key
       end
 
+      context "with a name that upcasing lengthens" do
+        let(:organization) { build(:organization, name: "\u00DF\u00DF\u00DF Corp") }
+
+        it "keeps the prefix within its limit" do
+          subject
+
+          expect(organization.document_number_prefix).to eq("SSS-#{organization.id.last(4).upcase}")
+        end
+      end
+
       it "auto-generates slug from name when not provided" do
         org = build(:organization, name: "Acme Corporation", slug: nil)
         org.save!

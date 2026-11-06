@@ -163,7 +163,7 @@ class BillingEntity < ApplicationRecord
   private
 
   def generate_document_number_prefix
-    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}") if document_number_prefix.nil?
+    update!(document_number_prefix: "#{name.first(3).upcase.first(3)}-#{id.last(4).upcase}") if document_number_prefix.nil?
   end
 
   def validate_email_settings

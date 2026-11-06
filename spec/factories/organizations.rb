@@ -47,6 +47,13 @@ FactoryBot.define do
       self_serve { true }
     end
 
+    trait :with_sandbox do
+      after(:create) do |organization|
+        create(:organization, :sandbox, production_organization: organization, name: "#{organization.name} Sandbox",
+          self_serve: organization.self_serve)
+      end
+    end
+
     # Pass production_organization: explicitly when create_default(:organization) is in play, or it links to it.
     trait :sandbox do
       environment { "sandbox" }

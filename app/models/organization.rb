@@ -383,9 +383,9 @@ class Organization < ApplicationRecord
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
-  # Example of expected format is ORG-4321
+  # Example of expected format is ORG-4321. Upcasing can lengthen a name ("ß" gives "SS"), hence the second cut.
   def generate_document_number_prefix
-    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
+    update!(document_number_prefix: "#{name.first(3).upcase.first(3)}-#{id.last(4).upcase}")
   end
 
   def validate_email_settings

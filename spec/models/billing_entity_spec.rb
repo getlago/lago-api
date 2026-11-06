@@ -283,6 +283,16 @@ RSpec.describe BillingEntity do
           .to eq "#{billing_entity.name.first(3).upcase}-#{billing_entity.id.last(4).upcase}"
       end
 
+      context "with a name that upcasing lengthens" do
+        let(:billing_entity) { build(:billing_entity, name: "\u00DF\u00DF\u00DF Corp") }
+
+        it "keeps the prefix within its limit" do
+          subject
+
+          expect(billing_entity.document_number_prefix).to eq("SSS-#{billing_entity.id.last(4).upcase}")
+        end
+      end
+
       context "when document number prefix is already set" do
         it "does not change existing document number prefix of billing_entity" do
           billing_entity.document_number_prefix = "ABC-1234"
