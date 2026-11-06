@@ -7361,6 +7361,21 @@ type FeeAppliedTax implements AppliedTax {
 }
 
 """
+FeeCollection type
+"""
+type FeeCollection {
+  """
+  A collection of paginated FeeCollection
+  """
+  collection: [Fee!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
 Fee input for creating invoice
 """
 input FeeInput {
@@ -13024,6 +13039,11 @@ type Query {
   Query invoice_custom_sections
   """
   invoiceCustomSections(limit: Int, page: Int): InvoiceCustomSectionCollection
+
+  """
+  Query the product fees of an invoice, in the order of the invoice PDF
+  """
+  invoiceProductFees(contractId: ID, invoiceId: ID!, limit: Int, page: Int, productCategoryId: ID, productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, standaloneProducts: Boolean, withoutProductFilter: Boolean): FeeCollection!
 
   """
   Query invoiced usage of an organization
