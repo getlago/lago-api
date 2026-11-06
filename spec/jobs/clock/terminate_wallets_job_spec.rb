@@ -39,4 +39,37 @@ describe Clock::TerminateWalletsJob, job: true do
     expect(to_expire_wallet.reload.status).to eq("terminated")
     expect(to_keep_active_wallet.reload.status).to eq("active")
   end
+
+  context "when the wallet invoices its usage on expiration" do
+    let(:to_expire_wallet) do
+      create(
+        :wallet,
+        status: "active",
+        expiration_at: Time.zone.now - 40.days,
+        invoice_usage_on_expiration: true
+      )
+    end
+
+    let(:feature_flags) { ["invoice_usage_on_wallet_expiration"] }
+
+    before { to_expire_wallet.organization.update!(feature_flags:) }
+
+    it "enqueues its expiration instead of terminating it inline" do
+      described_class.perform_now
+
+      expect(Wallets::ExpireJob).to have_been_enqueued.with(to_expire_wallet)
+      expect(to_expire_wallet.reload.status).to eq("active")
+    end
+
+    context "when the feature flag is disabled" do
+      let(:feature_flags) { [] }
+
+      it "terminates it inline" do
+        described_class.perform_now
+
+        expect(Wallets::ExpireJob).not_to have_been_enqueued
+        expect(to_expire_wallet.reload.status).to eq("terminated")
+      end
+    end
+  end
 end
