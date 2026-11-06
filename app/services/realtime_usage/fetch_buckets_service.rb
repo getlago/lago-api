@@ -124,7 +124,7 @@ module RealtimeUsage
     end
 
     def recurring_charge_ids
-      @recurring_charge_ids ||= charges.select { it.billable_metric.recurring? }.map(&:id)
+      @recurring_charge_ids ||= charges.select { RealtimeUsage.recurring_charge?(it) }.map(&:id)
     end
 
     # The stream writes an absent group value as "", where the events store returns nil.

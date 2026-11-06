@@ -106,11 +106,27 @@ RSpec.describe RealtimeUsage do
 
       it { expect(enabled).to be(false) }
 
-      it "stays closed under a forced gate, as the bucket store cannot answer the recurring delta yet" do
+      it "stays closed under a forced gate, until the parity task reads the snapshots on both sides" do
         described_class.with_forced_gate do
           expect(described_class.recurring_sum_enabled?(organization)).to be(false)
         end
       end
+    end
+  end
+
+  describe ".recurring_charge?" do
+    let(:charge) { build(:standard_charge, billable_metric:) }
+
+    context "with a recurring metric" do
+      let(:billable_metric) { build(:sum_billable_metric, :recurring) }
+
+      it { expect(described_class.recurring_charge?(charge)).to be(true) }
+    end
+
+    context "with a metric that restarts every period" do
+      let(:billable_metric) { build(:sum_billable_metric) }
+
+      it { expect(described_class.recurring_charge?(charge)).to be(false) }
     end
   end
 

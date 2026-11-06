@@ -76,6 +76,15 @@ module BillableMetrics
         fail_aggregation!(e)
       end
 
+      # A recurring charge the buckets fall back on reads events like any other, charge cache included.
+      def precomputed?
+        if billable_metric.recurring? && event_store.precomputed?
+          event_store.recurring_fallback_reason(initial_period).nil?
+        else
+          event_store.precomputed?
+        end
+      end
+
       # With a snapshot period: stored units plus the events they missed. Otherwise invoicing scans
       # the whole history to persist a first snapshot, and other reads fall back to the plain sum (nil).
       def recurring_sum(options)
@@ -128,9 +137,9 @@ module BillableMetrics
       end
 
       # Without snapshots, the period still bounds the delta: the bucket starts from zero.
-      # Current usage served by the incremental scan keeps its own read.
+      # Current usage served by the incremental scan keeps its own read, unless the buckets serve it.
       def delta_period(options)
-        initial_period unless options[:is_current_usage] && event_store.incremental_sum?
+        initial_period if precomputed? || !(options[:is_current_usage] && event_store.incremental_sum?)
       end
 
       # Current usage persists no snapshot: its delta needs no watermark of its own.

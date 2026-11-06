@@ -191,6 +191,22 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
     end
   end
 
+  context "with a recurring charge the organization serves from the buckets" do
+    let(:organization) do
+      create(
+        :organization,
+        clickhouse_events_store: true,
+        feature_flags: %w[realtime_usage realtime_usage_recurring_sum persisted_recurring_values]
+      )
+    end
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+
+    it "reports the charge as not served, as the runs would not read the same snapshots" do
+      expect(comparison.served_charges_count).to eq(0)
+      expect(comparison.rows).to be_empty
+    end
+  end
+
   context "when an absent group value is empty on one side and nil on the other" do
     let(:bucket_usage_result) { usage_result(fee(units: bucket_units, amount_cents: bucket_amount_cents, events_count: bucket_events_count, grouped_by: {"region" => ""})) }
     let(:events_usage_result) { usage_result(fee(units: events_units, amount_cents: events_amount_cents, events_count: events_events_count, grouped_by: {"region" => nil})) }

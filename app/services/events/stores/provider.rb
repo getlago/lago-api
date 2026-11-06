@@ -29,11 +29,19 @@ module Events
           filters:
         )
         if served_from_buckets?(metered_item:, boundaries:, filters:)
+          recurring = RealtimeUsage.recurring_charge?(metered_item.charge)
+          # A recurring charge falls back to events per snapshot period, through the same scan as today.
+          if recurring && (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
+            store = ChargeFiltersScanStore.new(store, scan:)
+          end
+
           UsageBucketStore.new(
             store,
             usage_buckets:,
             charge_id: metered_item.charge.id,
-            charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
+            charge_filter_id: filters[:charge_filter]&.id || "", # clickhouse stores an empty string instead of nil
+            recurring:,
+            charges_from_datetime: boundaries[:from_datetime]
           )
         elsif (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
           ChargeFiltersScanStore.new(store, scan:)
@@ -63,8 +71,9 @@ module Events
         return false if charge.nil?
         return false if boundaries[:max_timestamp].present?
         return false unless same_window_as_prefetch?(boundaries)
+        return false unless RealtimeUsage.supported_charge?(charge)
 
-        RealtimeUsage.supported_charge?(charge)
+        !RealtimeUsage.recurring_charge?(charge) || recurring_snapshot_completable?(metered_item)
       end
 
       # Charge-wide counterpart of `served_from_buckets?`: true only when every pricing bucket of
@@ -105,7 +114,20 @@ module Events
         # Asked last so the ClickHouse read is skipped when no charge of the plan could use it.
         # An empty set is no proof the pipeline wrote this window, so it falls back to the events
         # store rather than serving a zero a lagging pipeline cannot be told apart from.
-        usage_buckets.present?
+        # A recurring charge takes it as zero: most are polled without a new event.
+        if RealtimeUsage.recurring_charge?(metered_item.charge)
+          !usage_buckets.nil?
+        else
+          usage_buckets.present?
+        end
+      end
+
+      # The buckets only add the window to a snapshot of this subscription. A dynamic charge also
+      # reads its precise amounts over the whole history, which the buckets cannot answer.
+      def recurring_snapshot_completable?(metered_item)
+        !metered_item.charge.dynamic? &&
+          RecurringAggregationSnapshot.readable?(metered_item:, billing_context:) &&
+          !billing_context.previous_subscription_id?
       end
 
       # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A
