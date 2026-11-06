@@ -81,7 +81,8 @@ module RecurringAggregationSnapshots
         snapshot_events_count = snapshot&.events_count || 0
 
         row = Row.new(
-          charge_id: snapshot&.charge_id || fee.charge_id,
+          # A fee-only row on a parent filter the override has no copy of stays on the parent charge
+          charge_id: (snapshot.nil? && fee.charge_filter_id == charge_filter_id) ? fee.charge_id : period.charge_id,
           charge_filter_id:,
           grouped_by:,
           to_datetime: period.to_datetime,
@@ -217,26 +218,37 @@ module RecurringAggregationSnapshots
     end
 
     # Maps the parent charge's filters billed by the fees to the filters of the period's snapshots
-    # with the same values, which the override copied. Many filters have no code to match on.
+    # with the same values, which the override copied. Many filters have no code to match on. Values
+    # shared by several filters on either side are left unmapped, so no fee hides another.
     def override_filter_ids(snapshots, fees)
       parent_filter_ids = fees.filter_map { it.charge_filter_id if it.charge_id == snapshots.first.charge.parent_id }
       return {} if parent_filter_ids.empty?
 
-      own_ids = charge_filters(snapshots.filter_map(&:charge_filter_id)).index_by { filter_values(it) }.except({}).transform_values(&:id)
-      charge_filters(parent_filter_ids).each_with_object({}) do |filter, ids|
-        own_id = own_ids[filter_values(filter)]
-        ids[filter.id] = own_id if own_id
+      own_ids = ids_by_values(snapshots.filter_map(&:charge_filter_id))
+      ids_by_values(parent_filter_ids).each_with_object({}) do |(values, parent_id), ids|
+        ids[parent_id] = own_ids[values] if own_ids.key?(values)
       end
     end
 
-    def charge_filters(ids)
-      ChargeFilter.with_discarded.where(id: ids).includes(values: :billable_metric_filter)
+    def ids_by_values(charge_filter_ids)
+      ChargeFilter.with_discarded.where(id: charge_filter_ids.uniq).includes(values: :billable_metric_filter)
+        .group_by { filter_values(it) }
+        .filter_map { |values, filters| [values, filters.sole.id] if values.present? && filters.one? }
+        .to_h
     end
 
-    # A removed filter has its values discarded with it
+    # A removed filter has its values discarded with it in one update; values discarded before
+    # had already left the filter
     def filter_values(charge_filter)
-      values = charge_filter.discarded? ? charge_filter.to_h_with_discarded : charge_filter.to_h
-      values.transform_values(&:sort)
+      values = if charge_filter.discarded?
+        with_discarded = charge_filter.values.with_discarded.includes(:billable_metric_filter).to_a
+        removed_at = with_discarded.filter_map(&:deleted_at).max
+        with_discarded.select { it.deleted_at.nil? || it.deleted_at == removed_at }
+      else
+        charge_filter.values
+      end
+
+      values.to_h { [it.billable_metric_filter.key, it.values.sort] }
     end
 
     # Group values come back from JSON on both sides, the zero-unit marker with nil values

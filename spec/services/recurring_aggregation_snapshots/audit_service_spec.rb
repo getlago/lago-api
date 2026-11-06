@@ -436,24 +436,54 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
         expect(result.rows.map(&:charge_filter_id)).to match_array([nil, charge_filter.id])
       end
 
-      context "when a discarded filter of the override has the same values" do
+      context "when the override lists the values in another order" do
+        let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:override_values) { %w[us eu] }
+
+        before { ChargeFilterValue.where(charge_filter: parent_filter).update_all(values: %w[eu us]) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "matches the filters" do
+          expect(result.differences).to be_empty
+        end
+      end
+
+      context "when two parent filters have the same values" do
         before do
-          discarded_filter = create(:charge_filter, charge:, deleted_at: 1.day.ago)
-          create(:charge_filter_value, charge_filter: discarded_filter, billable_metric_filter:, values: %w[eu])
+          twin_filter = create(:charge_filter, charge: parent_charge)
+          create(:charge_filter_value, charge_filter: twin_filter, billable_metric_filter:, values: %w[eu])
+          create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, charge_filter: twin_filter, total_aggregated_units: 1, events_count: 1)
         end
 
-        it "maps the fee to the filter of the snapshot" do
-          expect(result.differences).to be_empty
+        it "maps neither, so both fees are reported" do
+          expect(result.differences.map(&:fee_units)).to match_array([0, 2, 1])
+        end
+      end
+
+      context "with pricing groups" do
+        before do
+          create(
+            :charge_fee,
+            organization:, invoice:, subscription:, charge: parent_charge, charge_filter: parent_filter,
+            grouped_by: {"zone" => "a"}, total_aggregated_units: 3, events_count: 1
+          )
+        end
+
+        it "reports a group billed without a snapshot on the override charge" do
+          expect(result.differences).to eq(
+            [row(charge_filter_id: charge_filter.id, grouped_by: {"zone" => "a"}, snapshot_units: 0, fee_units: 3, snapshot_events_count: 0, fee_events_count: 1)]
+          )
         end
       end
 
       context "when the parent filter was removed after the invoice" do
         before do
-          ChargeFilterValue.where(charge_filter: parent_filter).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          trimmed_metric_filter = create(:billable_metric_filter, billable_metric:, key: "tier", values: %w[gold])
+          create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter: trimmed_metric_filter, values: %w[gold], deleted_at: 2.days.ago)
+          ChargeFilterValue.where(charge_filter: parent_filter, deleted_at: nil).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
           parent_filter.discard!
         end
 
-        it "matches it on its discarded values" do
+        it "matches it on the values discarded with it" do
           expect(result.differences).to be_empty
         end
       end
