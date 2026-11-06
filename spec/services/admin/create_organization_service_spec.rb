@@ -11,9 +11,12 @@ RSpec.describe Admin::CreateOrganizationService do
       timezone: timezone,
       premium_integrations: premium_integrations,
       feature_flags: feature_flags,
-      reason: reason
+      reason: reason,
+      self_serve:
     )
   end
+
+  let(:self_serve) { false }
 
   let(:actor) { create(:user, email: "cs@getlago.com", cs_admin: true) }
   let(:name) { "Hooli Inc" }
@@ -28,6 +31,47 @@ RSpec.describe Admin::CreateOrganizationService do
   end
 
   describe "#call" do
+    context "with self_serve" do
+      include_context "with self-serve enabled"
+
+      let(:self_serve) { true }
+
+      it "creates the organization and its sandbox, with the same settings" do
+        result = service.call
+
+        production = result.organization
+        sandbox = result.sandbox_organization
+        expect(production).to have_attributes(name: "Hooli Inc", self_serve: true, environment: "production")
+        expect(sandbox).to have_attributes(name: "Hooli Inc Sandbox", environment: "sandbox",
+          production_organization_id: production.id, premium_integrations: match_array(%w[okta netsuite]),
+          feature_flags: ["order_forms"])
+      end
+
+      it "invites the owner to the production organization only" do
+        result = service.call
+
+        expect(Invite.where(organization: result.organization).sole.email).to eq("owner@hooli.com")
+        expect(Invite.where(organization: result.sandbox_organization)).to be_empty
+      end
+
+      it "audits the sandbox with its creation row only, in the same batch" do
+        result = service.call
+
+        sandbox_rows = CsAdminAuditLog.where(organization: result.sandbox_organization)
+        expect(sandbox_rows.pluck(:action, :feature_type, :feature_key)).to eq([%w[org_created organization organization]])
+        expect(sandbox_rows.sole.batch_id).to eq(CsAdminAuditLog.where(organization: result.organization).first.batch_id)
+      end
+
+      context "when self-serve is off" do
+        let(:self_serve_env) { {"LAGO_SELF_SERVE_ENABLED" => "false"} }
+
+        it "refuses it and creates nothing" do
+          expect { service.call }.not_to change(Organization, :count)
+          expect(service.call.error.code).to eq("self_serve_disabled")
+        end
+      end
+    end
+
     it "creates an organization using Organizations::CreateService" do
       result = service.call
 

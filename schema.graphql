@@ -767,12 +767,18 @@ input AdminCreateOrganizationInput {
   ownerEmail: String!
   premiumIntegrations: [String!]
   reason: String!
+
+  """
+  Also create the organization's sandbox
+  """
+  selfServe: Boolean
   timezone: TimezoneEnum
 }
 
 type AdminCreateOrganizationPayload {
   inviteUrl: String!
   organization: AdminOrganization!
+  sandboxOrganization: AdminOrganization
 }
 
 enum AdminFeatureTypeEnum {
