@@ -34,6 +34,32 @@ RSpec.describe Mutations::Admin::CreateOrganization do
     )
   end
 
+  context "with selfServe" do
+    include_context "with self-serve enabled"
+
+    let(:query) do
+      <<~GQL
+        mutation($input: AdminCreateOrganizationInput!) {
+          adminCreateOrganization(input: $input) {
+            organization { id environment sandboxOrganization { id } }
+            sandboxOrganization { id environment productionOrganization { id } }
+          }
+        }
+      GQL
+    end
+
+    it "returns the sandbox too", :premium do
+      input = {name: "Hooli Inc", ownerEmail: "owner@hooli.test", reason: "New enterprise customer onboarding", selfServe: true}
+      result = execute_graphql(current_user: admin_user, query:, variables: {input:})
+
+      payload = result["data"]["adminCreateOrganization"]
+      sandbox_id = payload["sandboxOrganization"]["id"]
+      expect(payload["organization"]).to include("environment" => "production", "sandboxOrganization" => {"id" => sandbox_id})
+      expect(payload["sandboxOrganization"]).to include("environment" => "sandbox",
+        "productionOrganization" => {"id" => payload["organization"]["id"]})
+    end
+  end
+
   it "creates the organization with its features and returns the invite url", :premium do
     result = create_organization
 
