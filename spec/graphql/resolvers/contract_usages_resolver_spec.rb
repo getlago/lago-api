@@ -206,6 +206,57 @@ RSpec.describe Resolvers::ContractUsagesResolver do
     end
   end
 
+  context "with a product's filter card chronologically split from its own unfiltered card by another product" do
+    let(:eu_filter) { create(:product_filter, organization:, product:) }
+    let(:filtered_rate_card) { create(:rate_card, organization:, product:, product_filter: eu_filter, currency: "EUR") }
+
+    let(:query) do
+      <<~GQL
+        query($contractId: ID!) {
+          contractUsages(contractId: $contractId) {
+            collection { rateCardCode }
+          }
+        }
+      GQL
+    end
+
+    before do
+      region = create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us])
+      create(:product_filter_value, organization:, product_filter: eu_filter, billable_metric_filter: region, value: "eu")
+
+      # Windows chronologically interleave B between A's two cards (Feb1, Feb5, Feb8) so a plain
+      # chronological sort would place B between them - proving grouping, not luck, keeps them adjacent.
+      contract_rate_card
+      rate
+
+      create(:contract_rate_card, organization:, contract:, rate_card: filtered_rate_card,
+        effective_date: Date.new(2027, 2, 1), billing_anchor_date: Date.new(2027, 2, 1))
+      create(:rate_card_rate, organization:, rate_card: filtered_rate_card, billing_interval_unit: "week",
+        effective_from: Time.zone.parse("2027-02-01"), rate_properties: {"amount" => "9"})
+
+      create(:contract_rate_card, organization:, contract:, rate_card: categorized_rate_card,
+        effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+      create(:rate_card_rate, organization:, rate_card: categorized_rate_card, billing_interval_unit: "week",
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "5"})
+    end
+
+    it "keeps the unfiltered card and its filter card adjacent, unfiltered first" do
+      result = execute_graphql(
+        current_user: membership.user, current_organization: organization,
+        permissions: required_permission, query:,
+        variables: {contractId: contract.id}
+      )
+
+      codes = result["data"]["contractUsages"]["collection"].map { |row| row["rateCardCode"] }
+      expect(codes.size).to eq(3)
+
+      unfiltered_index = codes.index(rate_card.code)
+      filtered_index = codes.index(filtered_rate_card.code)
+
+      expect(filtered_index).to eq(unfiltered_index + 1)
+    end
+  end
+
   context "with a contract that has no usage" do
     it "returns an empty collection, not an error" do
       result = execute_graphql(
