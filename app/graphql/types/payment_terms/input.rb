@@ -10,6 +10,11 @@ module Types
       argument :days, Integer, required: false
       argument :month_offset, Integer, required: false
       argument :term_type, Types::PaymentTerms::TermTypeEnum, required: true
+
+      # Clients echoing a PaymentTerm back send the non-applicable fields as null.
+      def prepare
+        to_h.compact
+      end
     end
   end
 end
