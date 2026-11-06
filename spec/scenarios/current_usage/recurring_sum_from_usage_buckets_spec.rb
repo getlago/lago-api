@@ -8,6 +8,8 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
   let(:organization) do
     create(:organization, webhook_url: nil, clickhouse_events_store: true, feature_flags:, premium_integrations:)
   end
+  # The reads where the events count an event the buckets do not have yet
+  let(:events_only_reads) { {} }
   let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values realtime_usage realtime_usage_recurring_sum] }
   let(:premium_integrations) { [] }
   let(:customer) { create(:customer, organization:, timezone: "UTC") }
@@ -40,7 +42,8 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
     end
   end
 
-  def send_event(amount, at:, timestamp: at, **properties)
+  # `bucketed: false` is an event the pipeline has not written yet, so the buckets and the events differ
+  def send_event(amount, at:, timestamp: at, bucketed: true, **properties)
     travel_to(at) do
       create_clickhouse_event(
         code: billable_metric.code,
@@ -51,13 +54,15 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
         decimal_value: amount.to_d,
         enriched_at: Time.current
       )
-      write_bucket(amount, timestamp:, properties: properties.stringify_keys)
+      write_bucket(amount, timestamp:, properties: properties.stringify_keys) if bucketed
     end
   end
 
-  # As the pipeline does: every pricing key, "" when absent, the wallet key only for an event carrying
-  # one, and the whole bucket written again on each event, the latest version replacing the others.
+  # As the pipeline does: under the subscription the event is dated in, with every pricing key, "" when
+  # absent, the wallet key only for an event carrying one, and the whole bucket written again on each
+  # event. Inserts run one after another, so the latest gets the highest `ver` and replaces the others.
   def write_bucket(amount, timestamp:, properties:)
+    subscription = customer.subscriptions.where(started_at: ..timestamp).order(:started_at).last
     subscription_charge = subscription.plan.charges.find_by!(billable_metric:)
     grouped_by = Array(subscription_charge.pricing_group_keys).index_with { properties[it].to_s }
       .merge(properties.slice("target_wallet_code"))
@@ -105,15 +110,15 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
   end
 
   shared_examples "the same usage with the recurring flag off" do
-    it "serves the current period from the buckets when they complete the snapshot" do
+    it "computes the current usage" do
       expect(usage_reads).to eq(expected_reads)
     end
 
     context "with the recurring sum flag off" do
       let(:feature_flags) { super() - %w[realtime_usage_recurring_sum] }
 
-      it "reads every usage from the events" do
-        expect(usage_reads).to eq(expected_reads.transform_values { it.merge(buckets: []) })
+      it "computes the current usage from the events" do
+        expect(usage_reads).to eq(expected_reads.to_h { |read, usage| [read, usage.merge(events_only_reads.fetch(read, {}), buckets: [])] })
       end
     end
   end
@@ -128,11 +133,16 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
 
       april_without_event = usage_at(Time.utc(2026, 4, 5))
       send_event(5, at: Time.utc(2026, 4, 15))
+      send_event(2, at: Time.utc(2026, 4, 15, 0, 5))
+      send_event(1, at: Time.utc(2026, 4, 18), bucketed: false)
       april = usage_at(Time.utc(2026, 4, 20))
 
       # Dated in March, ingested after the snapshot of March
       send_event(7, at: Time.utc(2026, 4, 22), timestamp: Time.utc(2026, 3, 20))
       april_after_late_event = usage_at(Time.utc(2026, 4, 25))
+      # In the last bucket before the May window and the first one of it
+      send_event(1, at: Time.utc(2026, 4, 30, 23, 55))
+      send_event(1, at: Time.utc(2026, 5, 1, 0, 5))
       bill_at(Time.utc(2026, 5, 1, 1))
 
       send_event(4, at: Time.utc(2026, 5, 10))
@@ -147,13 +157,15 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
         march: {amount_cents: 1300, units: 13, events_count: 2, buckets: ["no_period"]},
         # An empty window adds nothing to the March snapshot
         april_without_event: {amount_cents: 1300, units: 13, events_count: 2, buckets: ["served"]},
-        april: {amount_cents: 1800, units: 13 + 5, events_count: 3, buckets: ["served"]},
-        # The March snapshot misses the late 7, which only the events have
-        april_after_late_event: {amount_cents: 2500, units: 13 + 7 + 5, events_count: 4, buckets: ["late_ingestion"]},
-        # The April snapshot counts the late 7, so the buckets complete it again
-        may: {amount_cents: 2900, units: 25 + 4, events_count: 5, buckets: ["served"]}
+        # The 5 and the 2 share a bucket; the 1 of 18 April is not in the buckets yet
+        april: {amount_cents: 2000, units: 13 + 5 + 2, events_count: 4, buckets: ["served"]},
+        # The March snapshot misses the late 7, so the events answer, with the unbucketed 1
+        april_after_late_event: {amount_cents: 2800, units: 13 + 7 + 5 + 2 + 1, events_count: 6, buckets: ["late_ingestion"]},
+        # The April snapshot counts the late 7, the unbucketed 1 and the 1 of 30 April, so the buckets complete it again
+        may: {amount_cents: 3400, units: 29 + 1 + 4, events_count: 9, buckets: ["served"]}
       }
     end
+    let(:events_only_reads) { {april: {amount_cents: 2100, units: 13 + 5 + 2 + 1, events_count: 5}} }
 
     include_examples "the same usage with the recurring flag off"
   end
@@ -187,6 +199,40 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
     include_examples "the same usage with the recurring flag off"
   end
 
+  describe "with a downgrade at the end of the period" do
+    let(:plan) { create(:plan, organization:, amount_cents: 1000, interval: "monthly") }
+    let(:downgraded_plan) { create(:plan, organization:, amount_cents: 0, interval: "monthly") }
+    let(:downgraded_charge) { create(:standard_charge, plan: downgraded_plan, billable_metric:, properties: {amount: "2"}) }
+    let(:expected_reads) do
+      {
+        # The March snapshot of the previous subscription is adjacent to the April window, but the late 7
+        # is in a bucket of the previous subscription, which the history of the new one never reads.
+        april: {amount_cents: 5000, units: 13 + 7 + 5, events_count: 4, buckets: []}
+      }
+    end
+
+    def usage_reads
+      start_subscription
+      travel_to(Time.utc(2026, 3, 1)) { downgraded_charge }
+      send_event(10, at: Time.utc(2026, 3, 5))
+      send_event(3, at: Time.utc(2026, 3, 10))
+      travel_to(Time.utc(2026, 3, 15)) do
+        create_subscription({external_customer_id: customer.external_id, external_id: customer.external_id, plan_code: downgraded_plan.code})
+      end
+      # The downgrade starts when the billing run activates it: on the period boundary, the March
+      # snapshot is adjacent to the window of the new subscription
+      bill_at(Time.utc(2026, 4, 1))
+
+      send_event(5, at: Time.utc(2026, 4, 15))
+      # Dated in March, ingested after the snapshot of March
+      send_event(7, at: Time.utc(2026, 4, 22), timestamp: Time.utc(2026, 3, 20))
+
+      {april: usage_at(Time.utc(2026, 4, 25))}
+    end
+
+    include_examples "the same usage with the recurring flag off"
+  end
+
   describe "with a grouped charge targeting wallets" do
     let(:premium_integrations) { %w[events_targeting_wallets] }
     let(:charge) do
@@ -206,15 +252,30 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
           buckets: ["served"]
         },
         april_after_late_event: {
-          amount_cents: 2700,
-          units: 13 + 7 + 5 + 2,
-          events_count: 5,
+          amount_cents: 2800,
+          units: 13 + 7 + 5 + 2 + 1,
+          events_count: 6,
           groups: {
-            {"workspace" => "a", "target_wallet_code" => "W"} => [10 + 5, 2],
+            {"workspace" => "a", "target_wallet_code" => "W"} => [10 + 5 + 1, 3],
             {"workspace" => "b", "target_wallet_code" => nil} => [3 + 7, 2],
             {"workspace" => nil, "target_wallet_code" => "W"} => [2, 1]
           },
           buckets: ["late_ingestion"]
+        }
+      }
+    end
+    # The unbucketed 1 of 17 April
+    let(:events_only_reads) do
+      {
+        april: {
+          amount_cents: 2100,
+          units: 13 + 5 + 2 + 1,
+          events_count: 5,
+          groups: {
+            {"workspace" => "a", "target_wallet_code" => "W"} => [10 + 5 + 1, 3],
+            {"workspace" => "b", "target_wallet_code" => nil} => [3, 1],
+            {"workspace" => nil, "target_wallet_code" => "W"} => [2, 1]
+          }
         }
       }
     end
@@ -227,6 +288,7 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
 
       send_event(5, at: Time.utc(2026, 4, 15), workspace: "a", target_wallet_code: "W")
       send_event(2, at: Time.utc(2026, 4, 16), target_wallet_code: "W")
+      send_event(1, at: Time.utc(2026, 4, 17), workspace: "a", target_wallet_code: "W", bucketed: false)
       april = usage_at(Time.utc(2026, 4, 20))
 
       send_event(7, at: Time.utc(2026, 4, 22), timestamp: Time.utc(2026, 3, 20), workspace: "b")
