@@ -13,7 +13,7 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployPropertiesService do
 
   describe ".call" do
     let(:http_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { "https://api.nango.dev/v1/hubspot/properties" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
     let(:response) { instance_double("Response", success?: true) }
 
     before do
@@ -31,7 +31,8 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployPropertiesService do
 
       expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
       expect(http_client).to have_received(:post_with_response) do |payload, headers|
-        expect(payload[:objectType]).to eq(integration.subscriptions_object_type_id)
+        expect(payload[:action_name]).to eq("create-properties")
+        expect(payload[:input][:objectType]).to eq(integration.subscriptions_object_type_id)
         expect(headers["Authorization"]).to include("Bearer")
       end
       expect(integration.reload.subscriptions_properties_version).to eq(described_class::VERSION)

@@ -424,6 +424,7 @@ DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_organization_address_nonce;
 DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_created_at;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_unpaid_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
@@ -2562,7 +2563,7 @@ CREATE TABLE public.billing_entities (
     finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
     invoice_footer text,
     invoice_grace_period integer DEFAULT 0 NOT NULL,
-    net_payment_term integer DEFAULT 0 NOT NULL,
+    net_payment_term integer DEFAULT 0,
     email character varying,
     email_settings character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     eu_tax_management boolean DEFAULT false,
@@ -4033,7 +4034,7 @@ CREATE TABLE public.invoices (
     sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
     sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
     payment_due_date date,
-    net_payment_term integer DEFAULT 0 NOT NULL,
+    net_payment_term integer DEFAULT 0,
     voided_at timestamp(6) without time zone,
     organization_sequential_id integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
@@ -12734,6 +12735,13 @@ CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements U
 
 
 --
+-- Name: index_x402_settlements_on_unpaid_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_unpaid_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'invoice_payment'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (payment_id IS NULL) AND ((error_reason)::text IS DISTINCT FROM 'payment_not_recorded'::text));
+
+
+--
 -- Name: index_x402_settlements_on_x402_connection_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16007,6 +16015,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261103084714'),
 ('20261103084708'),
 ('20261102160958'),
+('20261101111004'),
 ('20261029112805'),
 ('20261029111437'),
 ('20261028184732'),
@@ -16023,6 +16032,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261016163945'),
 ('20261016163943'),
 ('20261016153657'),
+('20261016024339'),
 ('20261014180403'),
 ('20261014123350'),
 ('20261014123349'),
@@ -16107,6 +16117,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260826235313'),
 ('20260826235312'),
 ('20260824115446'),
+('20260819134550'),
+('20260819134021'),
 ('20260819111435'),
 ('20260819111434'),
 ('20260819000710'),
@@ -17220,3 +17232,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+

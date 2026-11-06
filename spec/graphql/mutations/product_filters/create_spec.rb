@@ -13,7 +13,7 @@ RSpec.describe Mutations::ProductFilters::Create do
     )
   end
 
-  let(:required_permission) { "product_filters:create" }
+  let(:required_permission) { "products:create" }
   let(:product) { create(:product, organization:, billable_metric:) }
   let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
   let(:scheme_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "scheme", values: %w[visa]) }
@@ -46,7 +46,7 @@ RSpec.describe Mutations::ProductFilters::Create do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_filters:create"
+  it_behaves_like "requires permission", "products:create"
 
   it "creates a product filter with its values" do
     result_data = execution["data"]["createProductFilter"]

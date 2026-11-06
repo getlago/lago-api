@@ -75,4 +75,20 @@ RSpec.describe BaseResult do
       it { expect(result).not_to eq(other_result) }
     end
   end
+
+  describe "#gone_failure!" do
+    it "fails with a gone failure carrying the code" do
+      result.gone_failure!(code: "invoice_closed")
+
+      expect(result.error).to be_a(BaseService::GoneFailure).and have_attributes(code: "invoice_closed")
+    end
+  end
+
+  describe "#conflict_failure!" do
+    it "fails with a conflict failure carrying the code" do
+      result.conflict_failure!(code: "payment_pending")
+
+      expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "payment_pending")
+    end
+  end
 end

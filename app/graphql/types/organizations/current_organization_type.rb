@@ -22,7 +22,7 @@ module Types
       field :address_line2, String
       field :city, String
       field :country, Types::CountryCodeEnum
-      field :net_payment_term, Integer, null: false
+      field :net_payment_term, Integer
       field :state, String
       field :zipcode, String
 
@@ -72,6 +72,13 @@ module Types
 
       def realtime_usage_enabled
         ::RealtimeUsage.enabled?(object)
+      end
+
+      # The organization column is no longer written when the default billing entity's term changes.
+      def net_payment_term
+        return object.net_payment_term unless object.default_billing_entity
+
+        object.default_billing_entity.net_payment_term
       end
 
       def webhook_url

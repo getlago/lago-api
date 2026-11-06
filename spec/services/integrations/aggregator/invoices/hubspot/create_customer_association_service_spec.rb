@@ -7,7 +7,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
 
   let(:service) { described_class.new(invoice:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/hubspot/association" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "set-association" }
   let(:invoice_file_url) { invoice.file_url }
   let(:due_date) { invoice.payment_due_date.strftime("%Y-%m-%d") }
   let(:invoice) do
@@ -46,7 +47,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
     allow(LagoHttpClient::Client).to receive(:new)
       .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
       .and_return(lago_client)
-    allow(lago_client).to receive(:put_with_response).with(params, headers)
+    allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers)
   end
 
   describe "#call" do
@@ -84,7 +85,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
 
         before do
           allow(Integrations::Hubspot::Invoices::DeployObjectService).to receive(:call)
-          allow(lago_client).to receive(:put_with_response).with(params, headers).and_raise(http_error)
+          allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(http_error)
         end
 
         it "raises RequestLimitError" do

@@ -7,7 +7,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
 
   let(:service) { described_class.new(invoice:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/netsuite/invoices" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "netsuite-create-invoice" }
   let(:charge) { create(:standard_charge, billable_metric:) }
   let(:current_time) { Time.current }
   let(:integration_collection_mapping1) do
@@ -359,7 +360,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         integration_invoice
       end
 
@@ -376,7 +377,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
@@ -465,7 +466,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(http_error)
       end
 
       context "when it is a server error" do
@@ -514,7 +515,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       let(:integration) { create(:xero_integration, organization:) }
       let(:integration_customer) { create(:xero_customer, integration:, customer:) }
       let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { "https://api.nango.dev/v1/xero/invoices" }
+      let(:action_name) { "xero-create-invoice" }
       let(:integration_collection_mapping1) { nil }
       let(:integration_collection_mapping2) { nil }
       let(:integration_collection_mapping3) { nil }
@@ -537,7 +538,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       end
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
