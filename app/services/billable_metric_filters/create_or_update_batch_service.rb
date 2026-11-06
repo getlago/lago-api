@@ -25,6 +25,7 @@ module BillableMetricFilters
       end
 
       return result.validation_failure!(errors: {values: ["value_is_mandatory"]}) if any_filter_params_values_blank?
+      return result.validation_failure!(errors: {values: ["value_is_invalid"]}) if any_new_filter_value_has_surrounding_whitespace?
       # Reject duplicate keys: `call` applies every entry (last write wins per
       # key), so the orphaning guard — which reads one entry per key — could
       # otherwise miss a value removed by a later duplicate entry.
@@ -99,6 +100,19 @@ module BillableMetricFilters
       filters_params.any? do |filter_param|
         filter_param[:values].blank?
       end
+    end
+
+    def any_new_filter_value_has_surrounding_whitespace?
+      filters_params.any? do |filter_param|
+        existing_values = existing_filters_by_key[filter_param[:key]]&.values || []
+        new_values = Array(filter_param[:values]) - existing_values
+
+        new_values.any? { |value| value.is_a?(String) && value != value.strip }
+      end
+    end
+
+    def existing_filters_by_key
+      @existing_filters_by_key ||= billable_metric.filters.index_by(&:key)
     end
 
     def duplicated_keys?
