@@ -83,6 +83,11 @@ class WebhookEndpoint < ApplicationRecord
     signing_keys.order(created_at: :desc, id: :desc).first
   end
 
+  # A jwt or hmac endpoint keeps the key of a former switch without using it, so it exposes none.
+  def exposed_signing_keys
+    standard_webhooks? ? signing_keys.order(:created_at, :id) : signing_keys.none
+  end
+
   private
 
   def max_webhook_endpoints
