@@ -6,7 +6,9 @@ RSpec.describe Mutations::Signups::Resend do
   subject(:result) { resend(signupSecret: signup_secret) }
 
   let(:signup_secret) { PendingSignup.generate_signup_secret }
-  let(:pending_signup) { create(:pending_signup, email: "jane@getlago.com", signup_secret:, emails_sent_at: [2.minutes.ago]) }
+  let(:emails_sent_at) { [2.minutes.ago] }
+  let(:expires_at) { 22.hours.from_now }
+  let(:pending_signup) { create(:pending_signup, email: "jane@getlago.com", signup_secret:, emails_sent_at:, expires_at:) }
   let(:token) { PendingSignupToken.generate }
   let(:siteverify) { stub_recaptcha_siteverify(action: Signups::VerifyCaptchaService::SIGNUP_RESEND) }
   let(:mutation) do
@@ -62,28 +64,47 @@ RSpec.describe Mutations::Signups::Resend do
     expect(Signups::DeliverVerificationJob).not_to have_been_enqueued
   end
 
-  it "answers the third email with the limit reached" do
-    pending_signup.update!(emails_sent_at: [10.minutes.ago, 5.minutes.ago])
+  context "with the attempt's second email sent" do
+    let(:emails_sent_at) { [10.minutes.ago, 5.minutes.ago] }
 
-    expect(result["data"]["resendSignupEmail"]).to eq("resendAvailableInSeconds" => nil, "resendLimitReached" => true)
+    it "answers the third email with the limit reached" do
+      expect(result["data"]["resendSignupEmail"]).to eq("resendAvailableInSeconds" => nil, "resendLimitReached" => true)
+    end
   end
 
-  it "answers 429 with the seconds left within a minute, and after 3 emails to the mailbox" do
-    pending_signup.update!(emails_sent_at: [20.seconds.ago])
-    expect(extensions(result)).to eq("status" => 429, "code" => "resend_too_soon", "details" => {"retryAfterSeconds" => 40})
+  context "when the last email is under a minute old" do
+    let(:emails_sent_at) { [20.seconds.ago] }
 
-    pending_signup.update!(emails_sent_at: [50.minutes.ago])
-    create(:pending_signup, email: "jane+x@getlago.com", emails_sent_at: [40.minutes.ago, 30.minutes.ago])
-    expect(extensions(resend(signupSecret: signup_secret)))
-      .to eq("status" => 429, "code" => "resend_limit_reached", "details" => {"retryAfterSeconds" => 600})
+    it "answers 429 with the seconds left" do
+      expect(extensions(result)).to eq("status" => 429, "code" => "resend_too_soon", "details" => {"retryAfterSeconds" => 40})
+    end
   end
 
-  it "answers 405 once the signup is exhausted or expired" do
-    pending_signup.update!(emails_sent_at: [3.hours.ago] * 3)
-    expect(extensions(result)).to eq("status" => 405, "code" => "signup_resend_exhausted")
+  context "with 3 emails to the mailbox in the hour" do
+    let(:emails_sent_at) { [50.minutes.ago] }
 
-    pending_signup.update!(emails_sent_at: [3.hours.ago], expires_at: Time.current)
-    expect(extensions(resend(signupSecret: signup_secret))).to eq("status" => 405, "code" => "signup_expired")
+    before { create(:pending_signup, email: "jane+x@getlago.com", emails_sent_at: [40.minutes.ago, 30.minutes.ago]) }
+
+    it "answers 429 until the oldest leaves the hour" do
+      expect(extensions(result)).to eq("status" => 429, "code" => "resend_limit_reached", "details" => {"retryAfterSeconds" => 600})
+    end
+  end
+
+  context "with the attempt's 3 emails sent" do
+    let(:emails_sent_at) { [3.hours.ago] * 3 }
+
+    it "answers 405 signup_resend_exhausted" do
+      expect(extensions(result)).to eq("status" => 405, "code" => "signup_resend_exhausted")
+    end
+  end
+
+  context "when 24 hours have passed since Step 1" do
+    let(:emails_sent_at) { [3.hours.ago] }
+    let(:expires_at) { Time.current }
+
+    it "answers 405 signup_expired" do
+      expect(extensions(result)).to eq("status" => 405, "code" => "signup_expired")
+    end
   end
 
   it "stops the previous link" do
