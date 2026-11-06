@@ -22,7 +22,7 @@ RSpec.describe Resolvers::Signups::EmailCheckResolver do
     execute_graphql(query:, request: instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10"), variables: {email:})
   end
 
-  it_behaves_like "a self-serve entry point"
+  it_behaves_like "a self-serve signup step"
 
   it "answers with the server's checks, without creating anything" do
     answers = ["jane@getlago.com", "", "jane@", "jane@gmail.com"].index_with { check(it)["data"]["signupEmailCheck"] }

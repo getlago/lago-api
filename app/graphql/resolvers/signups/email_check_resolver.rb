@@ -3,9 +3,9 @@
 module Resolvers
   module Signups
     # Lets the signup form check an address when the field loses focus, with the server's lists. It never looks
-    # users up, so it reveals nothing about accounts.
+    # users up, so it reveals nothing about accounts. Refused while signups are paused, as the submit would be.
     class EmailCheckResolver < Resolvers::BaseResolver
-      include RequiresSelfServe
+      include RequiresSelfServeSignup
       include GuardsSignupAttempts
 
       description "Checks the format and the company domain of a self-serve signup email"
