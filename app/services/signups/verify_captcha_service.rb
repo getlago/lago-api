@@ -34,6 +34,8 @@ module Signups
 
     def call
       raise ArgumentError, "unknown reCAPTCHA action #{action.inspect}" unless ACTIONS.include?(action)
+      # Local development without a key signs up without a captcha. Production and test stay closed without one.
+      return result if Rails.env.development? && secret_key.blank?
       return refuse!("missing_token") unless self.class.sendable?(token)
       return unavailable!("missing_secret") if secret_key.blank?
       return unavailable!("invalid_min_score") unless min_score

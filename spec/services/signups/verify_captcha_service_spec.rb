@@ -214,6 +214,25 @@ RSpec.describe Signups::VerifyCaptchaService do
     end
   end
 
+  context "when running in development" do
+    before { allow(Rails.env).to receive(:development?).and_return(true) }
+
+    context "without LAGO_RECAPTCHA_SECRET_KEY" do
+      before { stub_const("ENV", ENV.to_h.except("LAGO_RECAPTCHA_SECRET_KEY")) }
+
+      it "passes without a token and without calling Google" do
+        expect(described_class.call(token: nil, action:)).to be_success
+        expect(siteverify).not_to have_been_requested
+      end
+    end
+
+    context "with LAGO_RECAPTCHA_SECRET_KEY set" do
+      it "still checks the token" do
+        expect(described_class.call(token: nil, action:).error.code).to eq("captcha_failed")
+      end
+    end
+  end
+
   context "when Google fails" do
     it "is unavailable for an error status, a timeout, a refused connection, a garbled reply or an unexpected body" do
       [
