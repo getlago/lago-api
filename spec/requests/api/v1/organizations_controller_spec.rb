@@ -137,7 +137,8 @@ RSpec.describe Api::V1::OrganizationsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:organization][:webhook_urls]).to match_array([webhook_url, untouched_url])
+        expect(json[:organization][:webhook_url]).to eq(webhook_url)
+        expect(json[:organization][:webhook_urls]).to eq([webhook_url, untouched_url])
         expect(target_webhook_endpoint.reload.webhook_url).to eq(webhook_url)
         expect(untouched_webhook_endpoint.reload.webhook_url).to eq(untouched_url)
       end
