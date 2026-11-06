@@ -4,6 +4,9 @@ module RecurringAggregationSnapshots
   class PersistService < BaseService
     Result = BaseResult
 
+    # Reads take the latest period and a regenerated invoice the one before it. The third is left to the audit.
+    KEPT_PERIODS = 3
+
     # buckets: one {charge_filter:, values:} per pricing bucket of the charge
     # values: one {grouped_by:, units:, events_count:, presentation_breakdowns:} per group of the bucket
     def initialize(subscription:, charge:, to_datetime:, watermark:, buckets:)
@@ -27,6 +30,7 @@ module RecurringAggregationSnapshots
         # A group or filter missing from a later run of the period dropped to zero units
         period_snapshots.delete_all
         RecurringAggregationSnapshot.insert_all(rows, returning: false) if rows.any? # rubocop:disable Rails/SkipsModelValidations
+        older_periods_snapshots.delete_all
       end
 
       result
@@ -36,12 +40,25 @@ module RecurringAggregationSnapshots
 
     attr_reader :subscription, :charge, :to_datetime, :watermark, :buckets
 
-    def period_snapshots
+    def charge_snapshots
       RecurringAggregationSnapshot.where(
         organization_id: subscription.organization_id,
         subscription_id: subscription.id,
-        charge_id: charge.id,
-        to_datetime:
+        charge_id: charge.id
+      )
+    end
+
+    def period_snapshots
+      charge_snapshots.where(to_datetime:)
+    end
+
+    # Counted from the latest markers rather than the period written, as a regenerated invoice rewrites an older one
+    def older_periods_snapshots
+      oldest_kept_period = charge_snapshots.where(charge_filter_id: nil).distinct
+        .order(to_datetime: :desc).offset(KEPT_PERIODS - 1).limit(1).select(:to_datetime)
+
+      charge_snapshots.where(
+        RecurringAggregationSnapshot.arel_table[:to_datetime].lt(Arel::Nodes::Grouping.new(oldest_kept_period.arel))
       )
     end
 
