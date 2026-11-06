@@ -216,6 +216,8 @@ module Types
     field :create_password_reset, mutation: Mutations::PasswordResets::Create
     field :reset_password, mutation: Mutations::PasswordResets::Reset
 
+    field :sign_up, mutation: Mutations::Signups::Create
+
     field :create_tax, mutation: Mutations::Taxes::Create
     field :destroy_tax, mutation: Mutations::Taxes::Destroy
     field :update_tax, mutation: Mutations::Taxes::Update
