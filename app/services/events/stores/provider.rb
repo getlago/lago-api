@@ -33,7 +33,9 @@ module Events
             store,
             usage_buckets:,
             charge_id: metered_item.charge.id,
-            charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
+            charge_filter_id: filters[:charge_filter]&.id || "", # clickhouse stores an empty string instead of nil
+            recurring: RealtimeUsage.recurring_charge?(metered_item.charge),
+            charges_from_datetime: boundaries[:from_datetime]
           )
         elsif (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
           ChargeFiltersScanStore.new(store, scan:)
@@ -106,7 +108,12 @@ module Events
         # Asked last so the ClickHouse read is skipped when no charge of the plan could use it.
         # An empty set is no proof the pipeline wrote this window, so it falls back to the events
         # store rather than serving a zero a lagging pipeline cannot be told apart from.
-        usage_buckets.present?
+        # A recurring charge takes it as zero: most are polled without a new event.
+        if RealtimeUsage.recurring_charge?(metered_item.charge)
+          !usage_buckets.nil?
+        else
+          usage_buckets.present?
+        end
       end
 
       # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A

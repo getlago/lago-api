@@ -242,6 +242,47 @@ RSpec.describe Events::Stores::Provider do
       it "reads events, because the units carry over from before this window" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
+
+      context "when recurring sums are served from the buckets" do
+        let(:organization) do
+          create(
+            :organization,
+            clickhouse_events_store: true,
+            feature_flags: %w[realtime_usage realtime_usage_recurring_sum]
+          )
+        end
+
+        it "wraps the store in a bucket-backed one answering the delta from the window" do
+          allow(store.__getobj__).to receive(:sum).and_return(:events_sum)
+          period = RecurringAggregationSnapshots::FetchService::Period.new(
+            to_datetime: billing_boundaries.charges_from_datetime - 1.second,
+            watermark: billing_boundaries.charges_from_datetime + 1.hour
+          )
+
+          expect(store).to be_a(Events::Stores::UsageBucketStore)
+          expect(store.recurring_fallback_reason(period)).to be_nil
+          expect(store.sum).to eq(:events_sum)
+        end
+
+        context "when the window holds no bucket at all" do
+          let(:bucket_set) { Events::Stores::UsageBucketSet.new }
+
+          it "serves it, as most recurring charges are polled without a new event" do
+            expect(store).to be_a(Events::Stores::UsageBucketStore)
+          end
+        end
+
+        context "when the prefetch refused the window" do
+          before do
+            allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+              .and_return(RealtimeUsage::FetchBucketsService::Result.new)
+          end
+
+          it "reads events, as nothing was fetched to serve from" do
+            expect(store).to be_a(Events::Stores::ClickhouseStore)
+          end
+        end
+      end
     end
 
     context "with an aggregation the buckets cannot reconstruct" do

@@ -54,10 +54,16 @@ module RealtimeUsage
     end
 
     # On top of enabled?, so recurring sums roll back on their own without turning off the buckets
-    # for the organization's other charges. The forced gate leaves it closed: the bucket store does
-    # not answer the recurring delta yet, so the parity task would compare the events with themselves.
+    # for the organization's other charges. The forced gate leaves it closed until the parity task
+    # reads the snapshots on both sides, which it needs to compare recurring charges.
     def recurring_sum_enabled?(organization)
       organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
+    end
+
+    # Served from the snapshot of the previous period plus the buckets of the window, rather than
+    # from the window alone.
+    def recurring_charge?(charge)
+      charge.billable_metric.recurring?
     end
 
     def floor_to_bucket(time)
