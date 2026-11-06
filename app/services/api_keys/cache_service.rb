@@ -5,11 +5,12 @@ module ApiKeys
     CACHE_KEY_VERSION = "1"
 
     # Written in place of the cached key when it is invalidated. It only needs to outlive a request
-    # that read the key from the database just before the change, see `write_to_cache`.
+    # that read the key from the database just before the change, see `write_to_cache`. Keep it short:
+    # while it is there, every request on the cached endpoints reads the key from the database.
     # It keeps the shape of a cached key, expired, so an instance still running the previous code
     # during a deploy parses it and falls back to the database instead of failing.
     INVALIDATED_MARKER = {invalidated: true, api_key: {expires_at: Time.at(0).utc.iso8601}, organization: {}}.to_json.freeze
-    INVALIDATED_MARKER_TTL = 1.minute
+    INVALIDATED_MARKER_TTL = 5.seconds
 
     def initialize(auth_token, with_cache: false)
       @auth_token = auth_token
