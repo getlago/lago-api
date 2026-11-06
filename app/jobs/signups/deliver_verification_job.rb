@@ -6,7 +6,8 @@ module Signups
 
     # Transport errors can pass on a retry. An SMTP 5xx (auth, syntax, fatal) cannot: it goes to the dead set and Sentry.
     retry_on Net::OpenTimeout, Net::ReadTimeout, EOFError, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH,
-      LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 6
+      Errno::ETIMEDOUT, Errno::ENETUNREACH, SocketError, OpenSSL::SSL::SSLError, LagoHttpClient::HttpError,
+      wait: :polynomially_longer, attempts: 6
     # About 4 to 5 h of retries, well inside the 24 h or more a link still has: a relay that stays busy reaches the dead
     # set and Sentry instead of retrying for weeks past the point where the link may no longer be sent.
     retry_on Net::SMTPServerBusy, wait: :polynomially_longer, attempts: 10

@@ -33,6 +33,10 @@ RSpec.describe Signups::DeliverVerificationJob do
     "a refused connection" => Errno::ECONNREFUSED,
     "a reset connection" => Errno::ECONNRESET,
     "an unreachable host" => Errno::EHOSTUNREACH,
+    "a connect timeout" => Errno::ETIMEDOUT,
+    "an unreachable network" => Errno::ENETUNREACH,
+    "a DNS failure" => SocketError,
+    "a failed STARTTLS handshake" => OpenSSL::SSL::SSLError,
     "a busy relay" => Net::SMTPServerBusy.new("busy")
   }.each do |reason, error|
     context "when delivery fails on #{reason}" do
