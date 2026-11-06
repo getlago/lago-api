@@ -160,6 +160,63 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
+      context "with a customer payment term" do
+        let(:customer) { build(:customer, organization:, billing_entity:, payment_term: {term_type: "net", days: 5}, net_payment_term: 5) }
+
+        it "stamps the resolved term and computes the due date from it" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 5)
+            expect(result.invoice.payment_term_source).to eq("customer")
+            expect(result.invoice.net_payment_term).to eq(5)
+            expect(result.invoice.payment_due_date).to eq(result.invoice.issuing_date + 5.days)
+          end
+        end
+      end
+
+      context "with a subscription issued by another billing entity" do
+        let(:billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "net", days: 30}) }
+        let(:other_billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}) }
+        let(:subscription) do
+          build(
+            :subscription,
+            customer:,
+            plan:,
+            billing_entity: other_billing_entity,
+            billing_time:,
+            subscription_at: timestamp,
+            started_at: timestamp,
+            created_at: timestamp
+          )
+        end
+
+        it "stamps the term of the subscription's billing entity" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result.invoice.billing_entity).to eq(other_billing_entity)
+            expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+            expect(result.invoice.payment_term_source).to eq("billing_entity")
+          end
+        end
+      end
+
+      context "with a billing entity non-net payment term" do
+        let(:billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}, net_payment_term: nil) }
+
+        it "stamps the entity term with a null alias and an end-of-month due date" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+            expect(result.invoice.payment_term_source).to eq("billing_entity")
+            expect(result.invoice.net_payment_term).to be_nil
+            expect(result.invoice.payment_due_date).to eq(result.invoice.issuing_date.end_of_month)
+          end
+        end
+      end
+
       context "with calendar billing" do
         it "creates preview invoice for 2 days" do
           # Two days should be billed, Mar 30 and Mar 31
@@ -487,7 +544,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
 
             context "with provider taxes on a charge split by grouped_by" do
               let(:integration) { create(:anrok_integration, organization:) }
-              let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+              let(:endpoint) { "https://api.nango.dev/action/trigger" }
               let(:requested_line_items) { [] }
               let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
               let(:charge) do
@@ -523,7 +580,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 customer.reload
 
                 stub_request(:post, endpoint).to_return do |request|
-                  line_items = JSON.parse(request.body).first["fees"]
+                  line_items = JSON.parse(request.body)["input"].first["fees"]
                   requested_line_items.concat(line_items)
 
                   taxed = line_items.map do |item|
@@ -1772,7 +1829,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         context "with provider taxes" do
           let(:integration) { create(:anrok_integration, organization:) }
           let(:integration_customer) { build(:anrok_customer, integration:, customer:) }
-          let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+          let(:endpoint) { "https://api.nango.dev/action/trigger" }
           let(:integration_collection_mapping) do
             create(
               :netsuite_collection_mapping,
@@ -1795,7 +1852,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 ))
 
                 # setting item_id based on the test example
-                key = JSON.parse(request.body).first["fees"].last["item_key"]
+                key = JSON.parse(request.body)["input"].first["fees"].last["item_key"]
                 response["succeededInvoices"].first["fees"].last["item_key"] = key
                 response["succeededInvoices"].first["fees"].last["amount_cents"] = 6
                 response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 1

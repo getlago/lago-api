@@ -12,14 +12,14 @@ module Integrations
         super(integration:)
       end
 
-      def action_path
-        "v1/#{provider}/custom-object"
+      def action_name
+        "fetch-custom-object"
       end
 
       def call
         throttle!(:hubspot)
 
-        response = http_client.get(headers:, body:)
+        response = JSON.parse(trigger_action(body).body)
 
         result.custom_object = CustomObject.new(id: response["id"], object_type_id: response["objectTypeId"])
         result
@@ -30,14 +30,6 @@ module Integrations
       private
 
       attr_reader :name
-
-      def headers
-        {
-          "Connection-Id" => integration.connection_id,
-          "Authorization" => "Bearer #{secret_key}",
-          "Provider-Config-Key" => provider_key
-        }
-      end
 
       def body
         {

@@ -29,14 +29,6 @@ module Integrations
           end
         end
 
-        def headers
-          {
-            "Connection-Id" => integration.connection_id,
-            "Authorization" => "Bearer #{secret_key}",
-            "Provider-Config-Key" => provider_key
-          }
-        end
-
         def assign_external_customer_id
           return unless result.success?
           return if integration_customer.external_customer_id

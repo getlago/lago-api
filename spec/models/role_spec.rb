@@ -332,6 +332,91 @@ RSpec.describe Role do
       it "resolves the permissions from the role code" do
         expect(permissions_hash["addons:view"]).to be(true)
       end
+
+      it "grants read access to products, rate cards, and contracts without write access" do
+        expect(permissions_hash.slice("products:view", "rate_cards:view", "contracts:view")).to eq(
+          "products:view" => true,
+          "rate_cards:view" => true,
+          "contracts:view" => true
+        )
+        expect(permissions_hash.slice("contracts:create", "contracts:update", "contracts:terminate")).to eq(
+          "contracts:create" => false,
+          "contracts:update" => false,
+          "contracts:terminate" => false
+        )
+      end
+
+      it "grants read access to plans while keeping writes admin-only" do
+        expect(permissions_hash.slice("plans:view")).to eq("plans:view" => true)
+
+        permissions = permissions_hash.slice(
+          "products:create", "products:update", "products:delete",
+          "rate_cards:create", "rate_cards:update", "rate_cards:delete",
+          "plans:create", "plans:update", "plans:delete"
+        )
+
+        expect(permissions).to eq(
+          "products:create" => false,
+          "products:update" => false,
+          "products:delete" => false,
+          "rate_cards:create" => false,
+          "rate_cards:update" => false,
+          "rate_cards:delete" => false,
+          "plans:create" => false,
+          "plans:update" => false,
+          "plans:delete" => false
+        )
+      end
+
+      it "keeps unrelated finance permissions" do
+        expect(permissions_hash.slice("billing_entities:create", "analytics:view")).to eq(
+          "billing_entities:create" => true,
+          "analytics:view" => true
+        )
+      end
+    end
+
+    context "with the predefined manager role" do
+      let(:role) { create(:role, :manager) }
+
+      it "grants product, rate card, contract, and plan read access with contract writes" do
+        expect(permissions_hash.slice("products:view", "rate_cards:view", "contracts:view", "contracts:create", "contracts:update", "contracts:terminate", "plans:view")).to eq(
+          "products:view" => true,
+          "rate_cards:view" => true,
+          "contracts:view" => true,
+          "contracts:create" => true,
+          "contracts:update" => true,
+          "contracts:terminate" => true,
+          "plans:view" => true
+        )
+      end
+
+      it "keeps product catalog writes and plan writes admin-only" do
+        permissions = permissions_hash.slice(
+          "products:create", "products:update", "products:delete",
+          "rate_cards:create", "rate_cards:update", "rate_cards:delete",
+          "plans:create", "plans:update", "plans:delete"
+        )
+
+        expect(permissions).to eq(
+          "products:create" => false,
+          "products:update" => false,
+          "products:delete" => false,
+          "rate_cards:create" => false,
+          "rate_cards:update" => false,
+          "rate_cards:delete" => false,
+          "plans:create" => false,
+          "plans:update" => false,
+          "plans:delete" => false
+        )
+      end
+
+      it "keeps unrelated manager permissions" do
+        expect(permissions_hash.slice("payment_receipts:send", "subscriptions:create")).to eq(
+          "payment_receipts:send" => true,
+          "subscriptions:create" => true
+        )
+      end
     end
   end
 end

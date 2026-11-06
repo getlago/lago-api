@@ -287,6 +287,19 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService do
           )
         end
       end
+
+      context "when Moneyhash refuses the checkout" do
+        let(:http_error) { LagoHttpClient::HttpError.new(422, {status: {code: 422}}.to_json, "https://moneyhash.test") }
+
+        before { allow(lago_client).to receive(:post_with_response).and_raise(http_error) }
+
+        it "returns a third-party failure" do
+          result = described_class.call(:generate_checkout_url, moneyhash_customer, send_webhook: false)
+
+          expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+          expect(result.error).to have_attributes(third_party: "Moneyhash", error_code: 422, error_message: http_error.message)
+        end
+      end
     end
 
     describe ".call(:delete_payment_method)" do

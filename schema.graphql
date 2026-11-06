@@ -1394,7 +1394,7 @@ type BillingEntity {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   organization: Organization!
   phone: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
@@ -5293,7 +5293,7 @@ type CurrentOrganization {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   premiumIntegrations: [PremiumIntegrationTypeEnum!]!
 
   """
@@ -11646,14 +11646,6 @@ enum PermissionEnum {
   pricing_units_create
   pricing_units_update
   pricing_units_view
-  product_categories_create
-  product_categories_delete
-  product_categories_update
-  product_categories_view
-  product_filters_create
-  product_filters_delete
-  product_filters_update
-  product_filters_view
   products_create
   products_delete
   products_update
@@ -11791,14 +11783,14 @@ type Permissions {
   pricingUnitsCreate: Boolean!
   pricingUnitsUpdate: Boolean!
   pricingUnitsView: Boolean!
-  productCategoriesCreate: Boolean!
-  productCategoriesDelete: Boolean!
-  productCategoriesUpdate: Boolean!
-  productCategoriesView: Boolean!
-  productFiltersCreate: Boolean!
-  productFiltersDelete: Boolean!
-  productFiltersUpdate: Boolean!
-  productFiltersView: Boolean!
+  productCategoriesCreate: Boolean! @deprecated(reason: "Use productsCreate instead.")
+  productCategoriesDelete: Boolean! @deprecated(reason: "Use productsDelete instead.")
+  productCategoriesUpdate: Boolean! @deprecated(reason: "Use productsUpdate instead.")
+  productCategoriesView: Boolean! @deprecated(reason: "Use productsView instead.")
+  productFiltersCreate: Boolean! @deprecated(reason: "Use productsCreate instead.")
+  productFiltersDelete: Boolean! @deprecated(reason: "Use productsDelete instead.")
+  productFiltersUpdate: Boolean! @deprecated(reason: "Use productsUpdate instead.")
+  productFiltersView: Boolean! @deprecated(reason: "Use productsView instead.")
   productsCreate: Boolean!
   productsDelete: Boolean!
   productsUpdate: Boolean!
@@ -13667,6 +13659,12 @@ type RateCard {
   displayOnInvoice: Boolean!
   id: ID!
   name: String!
+  nextPendingRate(
+    """
+    Perspective to resolve the soonest pending rate from. Defaults to now.
+    """
+    effectiveFrom: ISO8601DateTime
+  ): RateCardRate
   organization: Organization
   product: Product!
   productFilter: ProductFilter

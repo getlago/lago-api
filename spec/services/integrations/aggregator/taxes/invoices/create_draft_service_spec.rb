@@ -7,7 +7,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
   let(:integration) { create(:anrok_integration, organization:) }
   let(:customer) { create(:customer, :with_shipping_address, organization:) }
-  let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "anrok-create-ephemeral-transaction" }
   let(:current_time) { Time.current }
   let(:integration_collection_mapping1) do
     create(
@@ -108,7 +109,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
     fee_add_on
     fee_add_on_two
 
-    stub_request(:post, endpoint).with(body: params.to_json, headers:)
+    stub_request(:post, endpoint).with(body: {action_name:, input: params}.to_json, headers:)
       .and_return(status: response_status, body:)
   end
 
@@ -147,7 +148,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           it "excludes it from the request" do
             service_call
 
-            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+            expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name:, input: params}.to_json)
           end
         end
 
@@ -176,7 +177,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           it "still reports the invoice, standing it on a single fee" do
             service_call
 
-            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+            expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name:, input: params}.to_json)
           end
         end
 
@@ -324,7 +325,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
           before do
             params.first["fees"].each { |fee| fee["item_code"] = nil }
-            stub_request(:post, endpoint).with(body: params.to_json, headers:)
+            stub_request(:post, endpoint).with(body: {action_name:, input: params}.to_json, headers:)
               .and_return(status: response_status, body:)
           end
 
@@ -470,6 +471,26 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
         it "raises TimeoutError" do
           expect { service_call }.to raise_error(Integrations::Aggregator::TimeoutError)
         end
+      end
+    end
+  end
+
+  describe "Nango action" do
+    context "with an Avalara integration" do
+      let(:integration) { create(:avalara_integration, organization:) }
+      let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+      let(:body) { File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")) }
+
+      before do
+        stub_request(:post, endpoint)
+          .with(body: hash_including(action_name: "request-tax-draft-invoice"))
+          .and_return(status: 200, body:)
+      end
+
+      it "triggers the request-tax-draft-invoice action" do
+        expect(service_call).to be_success
+        expect(WebMock).to have_requested(:post, endpoint)
+          .with(body: hash_including(action_name: "request-tax-draft-invoice"))
       end
     end
   end
