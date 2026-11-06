@@ -9,6 +9,11 @@ class UsersService < BaseService
     register_from_invite: BaseResult[:user, :organization, :membership, :token]
   }.freeze
 
+  # Compared when no user matches and self-serve is on, so an unknown email costs one bcrypt like a known one.
+  DUMMY_PASSWORD = Concurrent::Delay.new do
+    BCrypt::Password.create(SecureRandom.hex(32), cost: ActiveModel::SecurePassword.min_cost ? BCrypt::Engine::MIN_COST : BCrypt::Engine.cost)
+  end
+
   private
 
   def login(email, password)
@@ -17,24 +22,28 @@ class UsersService < BaseService
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
-    result.user = find_user_by_email(email)&.authenticate(password)
+    user = find_user_by_email(email)
+    DUMMY_PASSWORD.value.is_password?(password) if user.nil? && Lago::SelfServe.enabled?
+    result.user = user&.authenticate(password)
 
-    unless result.user.present? && result.user.memberships.active.any?
-      return result.single_validation_failure!(error_code: "incorrect_login_or_password")
-    end
+    # The account state is read only after a correct password, and every refusal gives the same answer.
+    needs_organization = result.user.present? && result.user.needs_organization?
+    can_log_in = result.user.present? && (needs_organization || result.user.memberships.active.any?)
+    return result.single_validation_failure!(error_code: "incorrect_login_or_password") unless can_log_in
 
-    unless result.user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+    # A user without an organization has no organization login policy yet.
+    unless needs_organization || result.user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
       return result.single_validation_failure!(
         error_code: "login_method_not_authorized",
         field: Organizations::AuthenticationMethods::EMAIL_PASSWORD
       )
     end
 
-    result.token = generate_token if result.user
+    result.token = generate_token
 
-    # NOTE: We're tracking the first membership linked to the user.
-    membership = result.user.memberships.active.first
-    SegmentIdentifyJob.perform_later(membership_id: "membership/#{membership.id}")
+    # NOTE: We're tracking the oldest membership linked to the user. A user without one has no Segment identity yet.
+    membership = result.user.memberships.active.order(:created_at).first
+    SegmentIdentifyJob.perform_later(membership_id: "membership/#{membership.id}") if membership
 
     UserDevices::RegisterService.call!(user: result.user)
 
@@ -133,8 +142,7 @@ class UsersService < BaseService
   end
 
   def find_user_by_email(email)
-    User.find_by(email:) ||
-      User.where("LOWER(email) = ?", email.to_s.downcase).order(:created_at).first
+    User.lookup_by_email(email)
   end
 
   def track_organization_registered(organization, membership)

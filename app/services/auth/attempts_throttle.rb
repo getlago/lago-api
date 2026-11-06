@@ -11,6 +11,9 @@ module Auth
 
     RULES = {
       login_per_ip: Rule.new(limit: 30, period: 1.minute, identifier: :ip),
+      # Self-serve: per IPv4 address or IPv6 /64, then per /48, so rotating IPv6 addresses does not reset the count.
+      login_per_ip_network: Rule.new(limit: 30, period: 1.minute, identifier: :ip_network),
+      login_per_ip_block: Rule.new(limit: 150, period: 1.minute, identifier: :ip_block),
       # Keyed on the pair, so that requests from other IPs cannot lock a user out of password login.
       login_per_email_and_ip: Rule.new(limit: 10, period: 15.minutes, identifier: %i[email ip]),
       # Password guessing spread over many IPs.
@@ -96,11 +99,11 @@ module Auth
       "auth_attempts:#{rule_name}:#{Digest::SHA256.hexdigest(value)}"
     end
 
-    # Emails go through the same normalization as the User lookup (invisible characters removed,
-    # dash lookalikes replaced), so spelling variants of one address share a counter.
+    # Emails go through the normalization of the User lookup (invisible characters removed, dash lookalikes replaced,
+    # case and Unicode spelling ignored), so spelling variants of one address share a counter.
     def normalize(type, identifier)
       case type
-      when :email then User.normalize_value_for(:email, identifier.to_s).to_s.strip.downcase
+      when :email then PendingSignup.normalize_email(identifier)
       when :ip_network then ip_prefix(identifier, ipv6_prefix: 64)
       when :ip_block then ip_prefix(identifier, ipv6_prefix: 48)
       else identifier.to_s.strip.downcase
