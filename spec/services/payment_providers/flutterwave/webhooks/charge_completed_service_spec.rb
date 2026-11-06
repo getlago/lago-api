@@ -11,8 +11,8 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
     create_default(:customer)
   end
 
-  let(:invoice) { create(:invoice, organization:, currency: "NGN") }
-  let(:payment_request) { create(:payment_request, organization:, amount_currency: "NGN") }
+  let(:invoice) { create(:invoice, organization:, currency: "NGN", total_due_amount_cents: 1_000_000) }
+  let(:payment_request) { create(:payment_request, organization:, amount_currency: "NGN", amount_cents: 1_000_000) }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization:) }
   let(:event_json) { payload.to_json }
   let(:update_payment_status_result) { Invoices::Payments::FlutterwaveService::RESULTS.fetch(:update_payment_status).new }
@@ -67,7 +67,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         "id" => 285959875,
         "tx_ref" => verified_transaction_reference,
         "flw_ref" => "LAGO/FLW270177170",
-        "amount" => 10000,
+        "amount" => verified_transaction_amount,
         "currency" => verified_transaction_currency,
         "charged_amount" => 10000,
         "status" => "successful",
@@ -90,6 +90,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
 
   let(:verified_transaction_reference) { invoice.id }
   let(:verified_transaction_currency) { "NGN" }
+  let(:verified_transaction_amount) { 10_000 }
 
   before do
     allow(PaymentProviders::FindService)
@@ -182,6 +183,17 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
 
         it "does not update the payment status" do
           charge_completed_service.call
+
+          expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
+
+      context "when the verified transaction amount is less than the invoice total due" do
+        let(:verified_transaction_amount) { 9_999 }
+
+        it "does not create a payment or change the invoice payment status" do
+          expect { charge_completed_service.call }
+            .not_to change { [Payment.count, invoice.reload.payment_status] }
 
           expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
         end
@@ -469,6 +481,17 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         end
       end
 
+      context "when the verified transaction amount is less than the payment request total" do
+        let(:verified_transaction_amount) { 9_999 }
+
+        it "does not create a payment or change the payment request status" do
+          expect { charge_completed_service.call }
+            .not_to change { [Payment.count, payment_request.reload.payment_status] }
+
+          expect(PaymentRequests::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
+
       context "when the verified transaction was already used" do
         let(:existing_payment) do
           create(
@@ -530,7 +553,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
     end
 
     context "when transaction has different currency precision" do
-      let(:invoice) { create(:invoice, organization:, currency: "USD") }
+      let(:invoice) { create(:invoice, organization:, currency: "USD", total_due_amount_cents: 10_050) }
       let(:payload) do
         {
           event: "charge.completed",

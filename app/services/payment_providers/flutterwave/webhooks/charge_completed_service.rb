@@ -145,8 +145,16 @@ module PaymentProviders
         end
 
         def transaction_matches_payable?(verified_transaction, payable)
+          verified_amount_cents = verified_amount_cents(verified_transaction)
+          return false unless verified_amount_cents
+
           verified_transaction[:reference] == transaction_reference(payable) &&
-            verified_transaction[:currency].to_s.casecmp?(payable.currency)
+            verified_transaction[:currency].to_s.casecmp?(payable.currency) &&
+            verified_amount_cents >= payable_amount_cents(payable)
+        end
+
+        def payable_amount_cents(payable)
+          (payable_type == "Invoice") ? payable.total_due_amount_cents : payable.total_amount_cents
         end
 
         def transaction_reference(payable)
