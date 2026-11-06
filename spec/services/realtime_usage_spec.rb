@@ -94,6 +94,26 @@ RSpec.describe RealtimeUsage do
     end
   end
 
+  describe ".recurring_sum_enabled?" do
+    subject(:enabled) { described_class.recurring_sum_enabled?(organization) }
+
+    let(:organization) { create(:organization, feature_flags: ["realtime_usage_recurring_sum"]) }
+
+    it { expect(enabled).to be(true) }
+
+    context "when the organization flag is off" do
+      let(:organization) { create(:organization) }
+
+      it { expect(enabled).to be(false) }
+
+      it "opens with a forced gate, so the parity task compares recurring charges too" do
+        described_class.with_forced_gate do
+          expect(described_class.recurring_sum_enabled?(organization)).to be(true)
+        end
+      end
+    end
+  end
+
   describe ".with_forced_gate" do
     it "opens the gate for the duration of the block only" do
       described_class.with_forced_gate do
@@ -190,6 +210,32 @@ RSpec.describe RealtimeUsage do
       let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
 
       it { expect(supported).to be(false) }
+
+      context "when the recurring sum flag is on" do
+        let(:organization) { create(:organization, feature_flags: ["realtime_usage_recurring_sum"]) }
+
+        it { expect(supported).to be(true) }
+
+        context "when prorated" do
+          let(:charge) { build(:standard_charge, billable_metric:, prorated: true) }
+
+          it { expect(supported).to be(false) }
+        end
+
+        context "when pay_in_advance" do
+          let(:charge) { build(:standard_charge, billable_metric:, pay_in_advance: true) }
+
+          it { expect(supported).to be(false) }
+        end
+      end
+
+      context "with a forced gate" do
+        it "is served, so the parity task compares it" do
+          described_class.with_forced_gate do
+            expect(described_class.supported_charge?(charge)).to be(true)
+          end
+        end
+      end
     end
 
     context "with an expression metric" do
