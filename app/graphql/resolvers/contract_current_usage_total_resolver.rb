@@ -14,7 +14,10 @@ module Resolvers
 
     type Types::Contracts::CurrentUsageTotal, null: false
 
-    Totals = Struct.new(:amount_cents, :taxes_amount_cents, :total_amount_cents, :taxes_unavailable, keyword_init: true)
+    Totals = Struct.new(
+      :amount_cents, :taxes_amount_cents, :total_amount_cents, :taxes_unavailable,
+      :from_datetime, :to_datetime, keyword_init: true
+    )
 
     def resolve(contract_id:)
       contract = current_organization.contracts.find_by(id: contract_id)
@@ -40,9 +43,13 @@ module Resolvers
     end
 
     def totals(result, taxes_unavailable:)
+      billing_segments = result.rate_card_usages.map(&:billing_segment)
+
       Totals.new(
         amount_cents: result.amount_cents, taxes_amount_cents: result.taxes_amount_cents,
-        total_amount_cents: result.total_amount_cents, taxes_unavailable:
+        total_amount_cents: result.total_amount_cents, taxes_unavailable:,
+        from_datetime: billing_segments.map(&:started_at).min,
+        to_datetime: billing_segments.map(&:ended_at).max
       )
     end
   end

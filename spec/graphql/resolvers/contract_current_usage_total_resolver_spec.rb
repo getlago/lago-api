@@ -18,6 +18,8 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
           taxesAmountCents
           totalAmountCents
           taxesUnavailable
+          fromDatetime
+          toDatetime
         }
       }
     GQL
@@ -34,7 +36,10 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
     )
 
     totals = result["data"]["contractCurrentUsageTotal"]
-    expect(totals).to eq("amountCents" => "0", "taxesAmountCents" => "0", "totalAmountCents" => "0", "taxesUnavailable" => false)
+    expect(totals).to eq(
+      "amountCents" => "0", "taxesAmountCents" => "0", "totalAmountCents" => "0", "taxesUnavailable" => false,
+      "fromDatetime" => nil, "toDatetime" => nil
+    )
   end
 
   context "with a priced rate card" do
@@ -68,7 +73,10 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
       )
 
       totals = result["data"]["contractCurrentUsageTotal"]
-      expect(totals).to eq("amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200", "taxesUnavailable" => false)
+      expect(totals).to eq(
+        "amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200", "taxesUnavailable" => false,
+        "fromDatetime" => "2027-02-01T00:00:00Z", "toDatetime" => "2027-02-28T23:59:59Z"
+      )
     end
 
     context "when the tax provider fails" do
@@ -90,7 +98,10 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
         )
 
         totals = result["data"]["contractCurrentUsageTotal"]
-        expect(totals).to eq("amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200", "taxesUnavailable" => true)
+        expect(totals).to eq(
+          "amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200", "taxesUnavailable" => true,
+          "fromDatetime" => "2027-02-01T00:00:00Z", "toDatetime" => "2027-02-28T23:59:59Z"
+        )
       end
     end
   end
