@@ -83,6 +83,7 @@ module Subscriptions
     def update_pending_subscription
       current_subscription.plan = plan
       current_subscription.name = name if name.present?
+      current_subscription.payment_term = carried_over_payment_term if params.key?(:payment_term)
       if params[:billing_entity_id].present? || params[:billing_entity_code].present?
         override_entity = resolve_billing_entity(organization: current_subscription.organization, params:)
         current_subscription.billing_entity = override_entity if override_entity

@@ -237,6 +237,34 @@ RSpec.describe Subscriptions::PlanUpgradeService do
         expect(result.subscription.name).to eq(subscription_name)
       end
 
+      context "with a payment_term in params" do
+        let(:params) { {name: subscription_name, payment_term: {term_type: "net", days: 45}} }
+
+        it "writes the normalized payment_term on the pending subscription" do
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
+          expect(subscription.reload.payment_term).to eq({"term_type" => "net", "days" => 45})
+        end
+      end
+
+      context "when the pending subscription has a payment_term" do
+        before { subscription.update!(payment_term: {term_type: "net", days: 60}) }
+
+        it "keeps it when params omit payment_term" do
+          expect(result).to be_success
+          expect(subscription.reload.payment_term).to eq({"term_type" => "net", "days" => 60})
+        end
+
+        context "with an explicit nil payment_term in params" do
+          let(:params) { {name: subscription_name, payment_term: nil} }
+
+          it "clears it" do
+            expect(result).to be_success
+            expect(subscription.reload.payment_term).to be_nil
+          end
+        end
+      end
+
       context "with activation_rules in params" do
         let(:params) do
           {
