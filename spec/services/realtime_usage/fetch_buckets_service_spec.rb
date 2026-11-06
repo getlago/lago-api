@@ -127,7 +127,7 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
         expect(grouped.map(&:groups)).to eq([{"region" => nil}])
       end
 
-      it "counts the buckets written before a key was added under nil, as the events store does" do
+      it "counts the buckets written before a key was added under nil, as they never recorded its value" do
         create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, grouped_by: "{}")
         create_bucket(bucket: from_datetime + 15.minutes, units: "4.0", events_count: 1, grouped_by: {"region" => "eu"}.to_json)
 
@@ -162,6 +162,16 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
           .to eq([[{"country" => "fr"}, BigDecimal("10.0")]])
         expect(usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "").map { [it.groups, it.value] })
           .to eq([[{"region" => "us"}, BigDecimal("3.0")]])
+      end
+
+      it "keeps no group for a charge filter without keys of its own" do
+        charge_filter = create(:charge_filter, charge:, properties: {amount: "1"})
+        create_bucket(bucket: from_datetime, units: "10.0", events_count: 2, charge_filter_id: charge_filter.id, grouped_by: {"region" => "eu"}.to_json)
+
+        usage_buckets = fetch.usage_buckets
+
+        expect(usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: charge_filter.id)).to eq([])
+        expect(usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: charge_filter.id).value).to eq(BigDecimal("10.0"))
       end
 
       context "when the charge groups on no key" do

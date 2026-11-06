@@ -105,7 +105,7 @@ module RealtimeUsage
     end
 
     # Regrouped on the charge's current keys, as the events store groups: buckets written before a
-    # key was added count under nil rather than being dropped, and a removed key's groups merge.
+    # key was added never recorded its value, so they count under nil rather than being dropped.
     def expected_groups(charge_id, charge_filter_id, groups)
       expected_group_keys(charge_id, charge_filter_id).index_with { groups[it] }
     end
