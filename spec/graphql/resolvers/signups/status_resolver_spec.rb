@@ -51,6 +51,21 @@ RSpec.describe Resolvers::Signups::StatusResolver do
     expect(poll(signup_secret)["data"]["signupStatus"]).to eq("status" => "pending", "resendAvailableInSeconds" => nil, "resendLimitReached" => true)
   end
 
+  context "when the poll asks for the status alone" do
+    let(:query) do
+      <<~GQL
+        query($signupSecret: String!) { signupStatus(signupSecret: $signupSecret) { status } }
+      GQL
+    end
+
+    before { allow(PendingSignup).to receive(:seconds_until_mailbox_send).and_call_original }
+
+    it "runs no mailbox query" do
+      expect(result["data"]["signupStatus"]).to eq("status" => "pending")
+      expect(PendingSignup).not_to have_received(:seconds_until_mailbox_send)
+    end
+  end
+
   it "limits polling per network" do
     60.times { poll(signup_secret) }
 
