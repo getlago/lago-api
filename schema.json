@@ -56433,30 +56433,6 @@
               "deprecationReason": null
             },
             {
-              "name": "product_filters_view",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_filters_create",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_filters_update",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_filters_delete",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "products_view",
               "description": null,
               "isDeprecated": false,
@@ -56476,30 +56452,6 @@
             },
             {
               "name": "products_delete",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_categories_view",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_categories_create",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_categories_update",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_categories_delete",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -58261,8 +58213,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use productsCreate instead."
             },
             {
               "name": "productCategoriesDelete",
@@ -58277,8 +58229,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use productsDelete instead."
             },
             {
               "name": "productCategoriesUpdate",
@@ -58293,8 +58245,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use productsUpdate instead."
             },
             {
               "name": "productCategoriesView",
@@ -58309,8 +58261,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use productsView instead."
             },
             {
               "name": "productFiltersCreate",
@@ -58325,8 +58277,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use productsCreate instead."
             },
             {
               "name": "productFiltersDelete",
@@ -58341,8 +58293,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use productsDelete instead."
             },
             {
               "name": "productFiltersUpdate",
@@ -58357,8 +58309,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use productsUpdate instead."
             },
             {
               "name": "productFiltersView",
@@ -58373,8 +58325,8 @@
                   "ofType": null
                 }
               },
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "Use productsView instead."
             },
             {
               "name": "productsCreate",

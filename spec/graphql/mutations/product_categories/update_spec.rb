@@ -13,7 +13,7 @@ RSpec.describe Mutations::ProductCategories::Update do
     )
   end
 
-  let(:required_permission) { "product_categories:update" }
+  let(:required_permission) { "products:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:product_category) { create(:product_category, organization:, name: "Before") }
@@ -32,7 +32,7 @@ RSpec.describe Mutations::ProductCategories::Update do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_categories:update"
+  it_behaves_like "requires permission", "products:update"
 
   it "updates the product_category" do
     result_data = execution["data"]["updateProductCategory"]
