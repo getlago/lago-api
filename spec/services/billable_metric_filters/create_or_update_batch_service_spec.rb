@@ -126,7 +126,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         expect { result = service }.not_to change(BillableMetricFilter, :count)
 
         expect(result).not_to be_success
-        expect(result.error.messages[:values]).to eq(["value_is_invalid"])
+        expect(result.error.messages[:"filters[0].values[0]"]).to eq(["value_is_invalid"])
       end
     end
 
@@ -209,7 +209,7 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         result = service
 
         expect(result).not_to be_success
-        expect(result.error.messages[:values]).to eq(["value_is_invalid"])
+        expect(result.error.messages[:"filters[0].values[1]"]).to eq(["value_is_invalid"])
         expect(filter.reload.values).to eq(%w[Europe US Asia])
       end
     end
