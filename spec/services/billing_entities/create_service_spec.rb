@@ -53,6 +53,22 @@ RSpec.describe BillingEntities::CreateService do
         expect(result.billing_entity.reload.payment_term).to eq("term_type" => "net", "days" => 0)
       end
 
+      it "writes a provided payment_term with a null alias" do
+        params[:payment_term] = {term_type: "end_of_month"}
+
+        expect(result).to be_success
+        expect(result.billing_entity.reload.payment_term).to eq("term_type" => "end_of_month")
+        expect(result.billing_entity.reload.net_payment_term).to be_nil
+      end
+
+      it "returns a validation failure on an invalid payment_term shape" do
+        params[:payment_term] = "not-an-object"
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:payment_term]).to eq(["invalid_format"])
+      end
+
       it "does not set eu_tax_management when not provided" do
         expect(result).to be_success
         expect(result.billing_entity.eu_tax_management).to be false

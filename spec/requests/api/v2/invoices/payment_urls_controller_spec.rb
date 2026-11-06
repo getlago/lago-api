@@ -35,6 +35,75 @@ RSpec.describe Api::V2::Invoices::PaymentUrlsController do
       )
     end
 
+    context "with Adyen" do
+      let(:customer) { create(:customer, organization:, payment_provider: "adyen", payment_provider_code: adyen_provider.code) }
+      let(:adyen_provider) { create(:adyen_provider, organization:) }
+      let(:adyen_customer) { create(:adyen_customer, customer:, payment_provider: adyen_provider) }
+      let(:adyen_client) { instance_double(Adyen::Client) }
+      let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+      let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
+      let(:payment_links_response) { generate(:adyen_payment_links_response) }
+
+      before do
+        adyen_customer
+
+        allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+        allow(adyen_client).to receive(:checkout).and_return(checkout)
+        allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+        allow(payment_links_api).to receive(:payment_links).and_return(payment_links_response)
+      end
+
+      it "returns the generated payment url" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:payment_url]).to eq(
+          lago_customer_id: customer.id,
+          external_customer_id: customer.external_id,
+          payment_provider: "adyen",
+          lago_invoice_id: invoice.id,
+          payment_url: "https://test.adyen.link/test"
+        )
+      end
+
+      context "when Adyen refuses the payment link" do
+        let(:payment_links_response) { generate(:adyen_payment_links_error_response) }
+
+        it "returns a provider error naming the provider, with a single error webhook" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(
+            code: "provider_error",
+            details: [{code: "provider_error", field: "base", meta: {provider_name: "adyen", provider_error_code: "validation"}}]
+          )
+          expect(SendWebhookJob).to have_been_enqueued.once.with(
+            "invoice.payment_failure",
+            invoice,
+            provider_customer_id: adyen_customer.provider_customer_id,
+            provider_error: {message: "There are no payment methods available for the given parameters.", error_code: "validation"}
+          )
+        end
+      end
+    end
+
+    context "when Stripe rate limits the request" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create).and_raise(::Stripe::RateLimitError.new("Too many requests"))
+      end
+
+      it "returns a too many provider requests error without a payment failure webhook" do
+        subject
+
+        expect(response).to have_http_status(:too_many_requests)
+        expect(json).to eq(
+          code: "too_many_provider_requests",
+          details: [{code: "too_many_provider_requests", field: "base", meta: {provider_name: "stripe"}}]
+        )
+        expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.payment_failure", any_args)
+      end
+    end
+
     context "when the invoice is a draft" do
       let(:status) { :draft }
 

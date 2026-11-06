@@ -1717,16 +1717,14 @@ describe "Payment Gated Subscription Activation Scenarios" do
     let(:tax_integration) { create(:anrok_integration, organization:) }
     let(:tax_integration_customer) { create(:anrok_customer, integration: tax_integration, customer:) }
     let(:anrok_client) { instance_double(LagoHttpClient::Client) }
-    let(:anrok_finalized_endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
-    let(:anrok_draft_endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+    let(:nango_action_endpoint) { "https://api.nango.dev/action/trigger" }
     let(:failure_body) { File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")) }
     let(:success_body_template) { JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json"))) }
 
     before do
       tax_integration_customer
       allow(LagoHttpClient::Client).to receive(:new).and_call_original
-      allow(LagoHttpClient::Client).to receive(:new).with(anrok_finalized_endpoint, anything).and_return(anrok_client)
-      allow(LagoHttpClient::Client).to receive(:new).with(anrok_draft_endpoint, anything).and_return(anrok_client)
+      allow(LagoHttpClient::Client).to receive(:new).with(nango_action_endpoint, anything).and_return(anrok_client)
       stub_anrok_response(failure_body)
     end
 

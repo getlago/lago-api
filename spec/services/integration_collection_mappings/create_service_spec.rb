@@ -10,7 +10,7 @@ RSpec.describe IntegrationCollectionMappings::CreateService do
   let_it_be(:membership) { create(:membership) }
 
   describe "#call" do
-    subject(:service_call) { described_class.call(params: create_args) }
+    subject(:service_call) { described_class.call(organization:, params: create_args) }
 
     let(:create_args) do
       {
@@ -64,6 +64,17 @@ RSpec.describe IntegrationCollectionMappings::CreateService do
           IntegrationCollectionMappings::NetsuiteCollectionMapping.order(:created_at).last
 
         expect(integration_collection_mapping.billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when the integration belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+      let(:integration) { create(:netsuite_integration, organization: other_organization) }
+
+      it "returns a not found error" do
+        expect(service_call).not_to be_success
+        expect(service_call.error).to be_a(BaseService::NotFoundFailure)
+        expect(service_call.error.message).to eq("integration_not_found")
       end
     end
 

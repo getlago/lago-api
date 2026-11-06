@@ -33,6 +33,61 @@ RSpec.describe Customers::GenerateCheckoutUrlService do
       end
     end
 
+    context "when Adyen raises what the checkout URL job retries on" do
+      let(:adyen_provider) { create(:adyen_provider, organization:) }
+
+      before do
+        create(:adyen_customer, customer:, payment_provider: adyen_provider)
+        customer.update!(payment_provider: "adyen", payment_provider_code: adyen_provider.code)
+
+        allow(PaymentProviderCustomers::AdyenService).to receive(:call)
+          .and_raise(Adyen::AuthenticationError.new("Unauthorized", nil))
+      end
+
+      it "returns a third-party failure" do
+        result = generate_checkout_url_service.call
+
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "Adyen", error_code: 401, error_message: "Unauthorized")
+      end
+    end
+
+    context "when GoCardless refuses the billing request" do
+      let(:gocardless_provider) { create(:gocardless_provider, organization:) }
+
+      before do
+        create(:gocardless_customer, customer:, payment_provider: gocardless_provider)
+        customer.update!(payment_provider: "gocardless", payment_provider_code: gocardless_provider.code)
+
+        allow(PaymentProviderCustomers::GocardlessService).to receive(:call)
+          .and_raise(GoCardlessPro::InvalidApiUsageError.new("message" => "Customer not found", "code" => 422))
+      end
+
+      it "returns a third-party failure" do
+        result = generate_checkout_url_service.call
+
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "GoCardless", error_code: 422, error_message: "Customer not found")
+      end
+    end
+
+    context "when Stripe cannot be reached" do
+      before do
+        create(:stripe_customer, customer:, payment_provider: stripe_provider)
+        customer.update!(payment_provider: "stripe", payment_provider_code: stripe_provider.code)
+
+        allow(PaymentProviderCustomers::StripeService).to receive(:call)
+          .and_raise(Stripe::APIConnectionError.new("Connection refused"))
+      end
+
+      it "returns a third-party failure" do
+        result = generate_checkout_url_service.call
+
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "Stripe", error_code: nil, error_message: "Connection refused")
+      end
+    end
+
     context "when customer is blank" do
       it "returns an error" do
         result = described_class.new(customer: nil).call

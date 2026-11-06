@@ -54,6 +54,48 @@ RSpec.describe Api::V2::CustomersController do
         expect(PaymentProviderCustomers::StripeCreateJob).to have_been_enqueued
       end
     end
+
+    context "when GoCardless refuses the customer" do
+      let(:provider) { create(:gocardless_provider, organization:) }
+      let(:attributes) { super().merge(payment_provider: "gocardless") }
+
+      before do
+        allow(GoCardlessPro::Client).to receive(:new)
+          .and_raise(GoCardlessPro::ValidationError.new("message" => "Validation failed", "code" => 422))
+      end
+
+      it "returns a provider error naming the provider" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "gocardless"}}])
+      end
+    end
+
+    context "when Adyen refuses the payment link of the customer" do
+      let(:provider) { create(:adyen_provider, organization:) }
+      let(:attributes) { super().merge(payment_provider: "adyen") }
+      let(:adyen_client) { instance_double(Adyen::Client) }
+      let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+      let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
+
+      before do
+        allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+        allow(adyen_client).to receive(:checkout).and_return(checkout)
+        allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+        allow(payment_links_api).to receive(:payment_links).and_return(generate(:adyen_payment_links_error_response))
+      end
+
+      it "returns a provider error naming the provider" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "provider_error",
+          details: [{code: "provider_error", field: "base", meta: {provider_name: "adyen", provider_error_code: "validation"}}]
+        )
+      end
+    end
   end
 
   describe "POST /api/v2/customers" do

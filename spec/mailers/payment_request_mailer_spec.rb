@@ -49,6 +49,14 @@ RSpec.describe PaymentRequestMailer do
       expect(mailer.body.encoded).to include(CGI.escapeHTML(MoneyHelper.format(second_invoice.total_due_amount)))
     end
 
+    context "when the customer has a payment term" do
+      let(:customer) { create(:customer, organization:, net_payment_term: 30) }
+
+      it "does not restate it, since the requested invoices may carry different terms" do
+        expect(mailer.body.encoded).not_to include("contractually agreed payment terms")
+      end
+    end
+
     it "calls the generate payment url service" do
       parsed_body = Nokogiri::HTML(mailer.body.encoded)
 

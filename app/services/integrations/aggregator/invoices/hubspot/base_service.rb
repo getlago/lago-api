@@ -5,10 +5,6 @@ module Integrations
     module Invoices
       module Hubspot
         class BaseService < Integrations::Aggregator::Invoices::BaseService
-          def action_path
-            "v1/#{provider}/records"
-          end
-
           private
 
           def integration_customer
