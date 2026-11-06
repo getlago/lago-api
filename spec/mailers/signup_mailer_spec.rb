@@ -17,7 +17,7 @@ RSpec.describe SignupMailer do
       expect(mail.from).to eq([ENV["LAGO_FROM_EMAIL"]])
       expect(mail.subject).to eq("Verify your email to finish creating your Lago account")
       expect(PendingSignupToken.for_token(token)).to eq(pending_signup.tokens.pending.sole)
-      expect(body).to include("This link expires in 24 hours and can be used only once.")
+      expect(body).to include("This link expires within 24 hours and can be used only once.")
       expect(body).to include("Didn't sign up for Lago? Ignore this email. Nothing is created until this link is clicked.")
     end
 

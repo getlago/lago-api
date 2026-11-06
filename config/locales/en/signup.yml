@@ -13,7 +13,7 @@ en:
       thanks: Thanks,
     verification:
       email_info: 'You''re receiving this email because you signed up for Lago. Check out our '
-      expiry: This link expires in 24 hours and can be used only once.
+      expiry: This link expires within 24 hours and can be used only once.
       fallback_text: 'Button not working? Copy this link into your browser: '
       greetings: Hello,
       intro: Thanks for signing up for Lago. Please confirm that this is your email to create your organization.
