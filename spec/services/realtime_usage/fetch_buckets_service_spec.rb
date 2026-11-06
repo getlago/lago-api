@@ -245,6 +245,102 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       end
     end
 
+    context "with a recurring charge" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+      let(:other_metric) { create(:sum_billable_metric, organization:) }
+      let(:other_charge) { create(:standard_charge, plan:, billable_metric: other_metric) }
+      let(:charges) { [charge, other_charge] }
+
+      def create_other_bucket(bucket:, last_ingested_at:)
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge: other_charge, billable_metric: other_metric,
+          bucket:, units: "50.0", events_count: 5, aggregation_type: "sum", last_event_at: bucket, last_ingested_at:
+        )
+      end
+
+      it "reads the latest ingestion into its buckets before the window" do
+        create_bucket(bucket: from_datetime - 2.months, last_ingested_at: from_datetime - 1.month)
+        create_bucket(bucket: from_datetime - 1.month, last_ingested_at: from_datetime + 2.hours, grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: from_datetime - 15.minutes, last_ingested_at: from_datetime - 10.minutes)
+        create_bucket(bucket: from_datetime, units: "3.0", events_count: 1, last_ingested_at: from_datetime + 5.hours)
+
+        expect(fetch.usage_buckets.history_last_ingested_at_for(charge_id: charge.id)).to eq(from_datetime + 2.hours)
+      end
+
+      it "keeps the buckets before the window out of the totals" do
+        create_bucket(bucket: from_datetime - 1.month, units: "99.0", events_count: 9, grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: from_datetime, units: "3.0", events_count: 1, grouped_by: {"region" => "eu"}.to_json)
+
+        usage_buckets = fetch.usage_buckets
+        totals = usage_buckets.aggregation_result_for(charge_id: charge.id, charge_filter_id: "")
+        grouped = usage_buckets.grouped_aggregation_results_for(charge_id: charge.id, charge_filter_id: "")
+
+        expect([totals.value, totals.events_count]).to eq([BigDecimal("3.0"), 1])
+        expect(grouped.map { [it.groups, it.value, it.events_count] }).to eq([[{"region" => "eu"}, BigDecimal("3.0"), 1]])
+      end
+
+      it "keeps the latest ingestion per charge, across its charge filters" do
+        charge_filter = create(:charge_filter, charge:)
+        second_charge = create(:standard_charge, plan:, billable_metric:)
+        create_bucket(bucket: from_datetime - 1.month, last_ingested_at: from_datetime - 1.month)
+        create_bucket(bucket: from_datetime - 1.month, last_ingested_at: from_datetime + 1.hour, charge_filter_id: charge_filter.id)
+        create_bucket(bucket: from_datetime - 2.months, last_ingested_at: from_datetime - 2.months, billed_charge: second_charge)
+
+        usage_buckets = described_class.call(subscription:, boundaries:, charges: [charge, second_charge]).usage_buckets
+
+        expect(usage_buckets.history_last_ingested_at_for(charge_id: charge.id)).to eq(from_datetime + 1.hour)
+        expect(usage_buckets.history_last_ingested_at_for(charge_id: second_charge.id)).to eq(from_datetime - 2.months)
+      end
+
+      # A replaced version or a tombstone can only raise the max, which sends the charge back to
+      # the events store: the safe direction.
+      it "counts the buckets the sink marked as deleted, and ignores the ones of the window" do
+        create_bucket(bucket: from_datetime - 1.month, last_ingested_at: from_datetime - 1.month)
+        create_bucket(bucket: from_datetime - 15.minutes, last_ingested_at: from_datetime + 1.hour, is_deleted: 1)
+        create_bucket(bucket: from_datetime, last_ingested_at: from_datetime + 3.hours)
+
+        expect(fetch.usage_buckets.history_last_ingested_at_for(charge_id: charge.id)).to eq(from_datetime + 1.hour)
+      end
+
+      it "leaves the window empty when only buckets before it exist" do
+        create_bucket(bucket: from_datetime - 1.month, last_ingested_at: from_datetime - 1.month)
+
+        usage_buckets = fetch.usage_buckets
+
+        expect(usage_buckets).to be_empty
+        expect(usage_buckets.history_last_ingested_at_for(charge_id: charge.id)).to eq(from_datetime - 1.month)
+      end
+
+      it "is nil without a bucket before the window" do
+        create_bucket(bucket: from_datetime, last_ingested_at: from_datetime + 1.hour)
+
+        expect(fetch.usage_buckets.history_last_ingested_at_for(charge_id: charge.id)).to be_nil
+      end
+
+      it "reads no history for the charges that are not recurring" do
+        create_other_bucket(bucket: from_datetime - 1.month, last_ingested_at: from_datetime + 1.hour)
+        create_other_bucket(bucket: from_datetime, last_ingested_at: from_datetime + 2.hours)
+
+        usage_buckets = fetch.usage_buckets
+
+        expect(usage_buckets.history_last_ingested_at_for(charge_id: other_charge.id)).to be_nil
+        expect(usage_buckets.aggregation_result_for(charge_id: other_charge.id, charge_filter_id: "").value).to eq(BigDecimal("50.0"))
+      end
+
+      it "reads the history in its own query, scoped to the recurring charges and bounded by the window start" do
+        create_bucket(bucket: from_datetime)
+
+        queries = capture_queries { fetch }
+        bucket_queries = queries.select { it.include?("usage_buckets_15m") }.map { it.delete('"') }
+        history_sql = bucket_queries.find { it.include?("max(last_ingested_at)") }
+
+        expect(bucket_queries.size).to eq(2)
+        expect(history_sql).to include("organization_id", "subscription_id", "charge_id = '#{charge.id}'", "bucket <")
+        expect(history_sql).not_to include(other_charge.id, "FINAL", "is_deleted")
+      end
+    end
+
     context "when the window holds no bucket" do
       it "returns an empty set rather than raising" do
         create_bucket(bucket: from_datetime - 1.day)
@@ -326,6 +422,14 @@ RSpec.describe RealtimeUsage::FetchBucketsService, clickhouse: {clean_before: tr
       sql = queries.find { |query| query.include?("sum(units)") }.delete('"')
 
       expect(sql).to include("organization_id", "subscription_id", "charge_id IN", "FINAL", "is_deleted")
+    end
+
+    it "reads no history when no charge is recurring" do
+      create_bucket(bucket: from_datetime)
+
+      queries = capture_queries { fetch }
+
+      expect(queries.count { it.include?("usage_buckets_15m") }).to eq(1)
     end
 
     it "leaves out the charges the computation is not about" do

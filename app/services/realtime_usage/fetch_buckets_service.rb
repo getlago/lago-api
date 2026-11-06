@@ -26,7 +26,7 @@ module RealtimeUsage
       return result unless RealtimeUsage.enabled?(organization)
       return result if charges.empty?
 
-      result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:)
+      result.usage_buckets = Events::Stores::UsageBucketSet.new(totals:, grouped_totals:, history_last_ingested_at:)
       result
     rescue *READ_ERRORS => e
       Sentry.capture_exception(e)
@@ -55,6 +55,25 @@ module RealtimeUsage
         groups = (acc[[row[:charge_id], row[:charge_filter_id]]] ||= {})
         groups[row[:groups]] = combine_totals(groups[row[:groups]], row)
       end
+    end
+
+    # A recurring charge sums every period since the subscription started, so a bucket of a closed
+    # period ingested after the snapshot of that period has to send the charge back to the events.
+    def history_last_ingested_at
+      return {} if recurring_charge_ids.empty?
+
+      Events::Stores::Utils::ClickhouseConnection.with_retry { fetch_history_last_ingested_at }
+    end
+
+    # Its own query, so the window read keeps pruning on `bucket`. Without FINAL or the delete
+    # marker: replaced versions and tombstones can only raise the max, which falls back to events.
+    def fetch_history_last_ingested_at
+      Clickhouse::UsageBucket.unscoped
+        .where(organization_id: organization.id, subscription_id: subscription.id, charge_id: recurring_charge_ids)
+        .where(bucket: ...window.begin)
+        .group(:charge_id)
+        .pluck(:charge_id, Arel.sql("max(last_ingested_at)"))
+        .to_h { |charge_id, last_ingested_at| [charge_id, last_ingested_at.to_time] }
     end
 
     def combine_totals(totals, row)
@@ -102,6 +121,10 @@ module RealtimeUsage
 
     def charge_ids
       @charge_ids ||= charges.map(&:id)
+    end
+
+    def recurring_charge_ids
+      @recurring_charge_ids ||= charges.select { it.billable_metric.recurring? }.map(&:id)
     end
 
     # The stream writes an absent group value as "", where the events store returns nil.
