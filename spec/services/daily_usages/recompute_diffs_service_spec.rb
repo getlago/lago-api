@@ -122,6 +122,16 @@ RSpec.describe DailyUsages::RecomputeDiffsService do
     end
   end
 
+  context "when a filter is removed and all its usage falls back into the default bucket" do
+    let(:filters_after_edit) { [filter_usage(nil, 1100)] }
+    let(:buggy_usage_diff) { usage_payload([filter_usage(nil, 1100)], 100) }
+
+    it "recomputes the row" do
+      expect(recompute_service.call.daily_usages).to eq([edited_day])
+      expect(filter_diff(edited_day)).to include("values" => nil, "amount_cents" => 100, "units" => "1.0", "events_count" => 1)
+    end
+  end
+
   context "when a charge without filters gets its first filters" do
     let(:filters_before_edit) { [] }
 
