@@ -242,6 +242,28 @@ RSpec.describe Wallet do
     end
   end
 
+  describe "#expiration_invoicing_enabled?" do
+    subject(:wallet) { build(:wallet, organization:, invoice_usage_on_expiration:) }
+
+    let(:organization) { build(:organization, feature_flags:) }
+    let(:feature_flags) { ["invoice_usage_on_wallet_expiration"] }
+    let(:invoice_usage_on_expiration) { true }
+
+    it { expect(wallet.expiration_invoicing_enabled?).to be(true) }
+
+    context "when the wallet does not invoice its usage on expiration" do
+      let(:invoice_usage_on_expiration) { false }
+
+      it { expect(wallet.expiration_invoicing_enabled?).to be(false) }
+    end
+
+    context "when the feature flag is disabled" do
+      let(:feature_flags) { [] }
+
+      it { expect(wallet.expiration_invoicing_enabled?).to be(false) }
+    end
+  end
+
   describe "#paid_top_up_min_credits" do
     it "converts min amount cents to credits using the wallet rate" do
       wallet.rate_amount = 25
