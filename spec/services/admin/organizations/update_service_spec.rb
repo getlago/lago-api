@@ -27,6 +27,28 @@ RSpec.describe Admin::Organizations::UpdateService do
       expect(organization.premium_integrations).to include("okta")
     end
 
+    context "when the organization has a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+      before { sandbox }
+
+      it "gives the sandbox the same premium integrations" do
+        update_service.call
+
+        expect(sandbox.reload.premium_integrations).to eq(["okta"])
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:organization) { create(:organization, :sandbox) }
+
+      it "refuses premium integrations but accepts a rename" do
+        expect(update_service.call.error.code).to eq("sandbox_managed_by_production")
+        expect(described_class.call(organization: organization.reload, params: {name: "Renamed"})).to be_success
+        expect(organization.reload).to have_attributes(name: "Renamed", premium_integrations: [])
+      end
+    end
+
     context "when organization is nil" do
       let(:organization) { nil }
 

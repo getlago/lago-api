@@ -48,6 +48,28 @@ RSpec.describe Admin::SlackNotificationService do
         }).to have_been_made.once
       end
 
+      context "when the change was mirrored to a sandbox" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :toggle_on, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Enabling for customer onboarding POC", batch_id:)
+        end
+
+        before do
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME <Sandbox>")
+          create(:cs_admin_audit_log, organization: sandbox, action: :toggle_on, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Enabling for customer onboarding POC", batch_id:)
+        end
+
+        it "names the sandbox, escaped" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("(mirrored to *ACME &lt;Sandbox&gt;*)")
+          }).to have_been_made.once
+        end
+      end
+
       context "when action is toggle_off" do
         let(:audit_log) do
           create(:cs_admin_audit_log,

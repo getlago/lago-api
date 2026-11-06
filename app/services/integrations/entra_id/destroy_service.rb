@@ -13,6 +13,7 @@ module Integrations
           if result.success?
             organization = result.integration.organization
             organization.disable_entra_id_authentication! if organization.entra_id_authentication_enabled?
+            ::Organizations::SyncSandboxSettingsService.call!(organization:)
           end
 
           result
