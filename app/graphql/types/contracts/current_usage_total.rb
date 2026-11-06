@@ -11,6 +11,10 @@ module Types
       field :taxes_unavailable, Boolean, null: false,
         description: "True when the tax provider failed and amount/total above are the untaxed fallback"
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
+      field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true,
+        description: "Earliest billing window start across the contract's rate cards, null with no usage"
+      field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true,
+        description: "Latest billing window end across the contract's rate cards, null with no usage"
     end
   end
 end

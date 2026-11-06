@@ -11482,6 +11482,18 @@
               "deprecationReason": null
             },
             {
+              "name": "fromDatetime",
+              "description": "Earliest billing window start across the contract's rate cards, null with no usage",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "taxesAmountCents",
               "description": null,
               "args": [],
@@ -11509,6 +11521,18 @@
                   "name": "Boolean",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "toDatetime",
+              "description": "Latest billing window end across the contract's rate cards, null with no usage",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
