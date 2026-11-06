@@ -168,11 +168,17 @@ RSpec.describe Subscription do
       let(:expirable_subscription) do
         create(:subscription, :incomplete).tap do |sub|
           create(:subscription_activation_rule, subscription: sub, status: :pending, expires_at: 1.hour.ago)
+          create(:invoice, :open, :with_subscriptions, subscriptions: [sub], customer: sub.customer, tax_status: :succeeded)
         end
       end
 
       before do
         expirable_subscription
+
+        # expired rule, but the gating invoice still waits for taxes — not expirable
+        tax_pending_sub = create(:subscription, :incomplete)
+        create(:subscription_activation_rule, subscription: tax_pending_sub, status: :pending, expires_at: 1.hour.ago)
+        create(:invoice, :open, :with_subscriptions, subscriptions: [tax_pending_sub], customer: tax_pending_sub.customer, tax_status: :pending)
 
         # incomplete with future expiry — not expirable yet
         sub = create(:subscription, :incomplete)

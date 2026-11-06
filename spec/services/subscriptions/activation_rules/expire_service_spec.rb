@@ -103,6 +103,41 @@ RSpec.describe Subscriptions::ActivationRules::ExpireService do
     end
   end
 
+  context "when the gating invoice still waits for VIES taxes" do
+    let(:invoice) do
+      create(:invoice, :open, customer:, organization:, invoice_type: :subscription, tax_status: :pending)
+    end
+    let(:payment_rule) do
+      create(:subscription_activation_rule, subscription:, organization:,
+        status: "pending", timeout_hours: 1, expires_at: 1.hour.ago)
+    end
+
+    before { payment_rule }
+
+    it "keeps the subscription incomplete and the invoice open" do
+      expect(result).to be_success
+      expect(payment_rule.reload).to be_pending
+      expect(subscription.reload).to be_incomplete
+      expect(invoice.reload).to be_open
+    end
+  end
+
+  context "when the timeout was restarted after the job was enqueued" do
+    let(:payment_rule) do
+      create(:subscription_activation_rule, subscription:, organization:,
+        status: "pending", timeout_hours: 1, expires_at: 1.hour.from_now)
+    end
+
+    before { payment_rule }
+
+    it "keeps the subscription incomplete and the invoice open" do
+      expect(result).to be_success
+      expect(payment_rule.reload).to be_pending
+      expect(subscription.reload).to be_incomplete
+      expect(invoice.reload).to be_open
+    end
+  end
+
   context "when the subscription is no longer incomplete (resolved concurrently)" do
     let(:payment_rule) do
       create(:subscription_activation_rule, subscription:, organization:,
