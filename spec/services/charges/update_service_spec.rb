@@ -434,6 +434,56 @@ RSpec.describe Charges::UpdateService do
             expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
           end
         end
+
+        context "when the cascaded attributes are unchanged" do
+          let(:params) do
+            {
+              id: charge.id,
+              billable_metric_id: sum_billable_metric.id,
+              charge_model: "standard",
+              invoice_display_name: "Renamed charge",
+              properties: {amount: "300"},
+              applied_pricing_unit: {conversion_rate: 1.1}
+            }
+          end
+
+          it "does not trigger cascade update" do
+            subject
+
+            expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
+          end
+
+          context "when only the conversion rate changes" do
+            let(:params) { super().merge(applied_pricing_unit: {conversion_rate: 2.5}) }
+
+            it "triggers cascade update" do
+              subject
+
+              expect(Charges::UpdateChildrenJob).to have_been_enqueued
+            end
+          end
+
+          context "when only the filters change" do
+            let(:params) do
+              super().merge(
+                filters: [
+                  {
+                    invoice_display_name: "Card filter",
+                    properties: {amount: "90"},
+                    values: {billable_metric_filter.key => ["card"]}
+                  }
+                ]
+              )
+            end
+
+            it "triggers the filter cascade only" do
+              subject
+
+              expect(ChargeFilters::CascadeJob).to have_been_enqueued
+              expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
+            end
+          end
+        end
       end
 
       context "without cascade_updates when charge has children" do
