@@ -35,9 +35,23 @@ module Resolvers
       result = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: false, search_term:, filters:)
       return result_error(result) unless result.success?
 
-      usages = result.rate_card_usages
+      usages = group_by_product(result.rate_card_usages)
       offset = (page - 1) * limit
       Kaminari.paginate_array(usages[offset, limit] || [], limit:, offset:, total_count: usages.size)
+    end
+
+    private
+
+    # The service orders usages chronologically - a contract it shares with the public REST API,
+    # so that order stays untouched there. Re-grouped here, after it, so a product's rate cards
+    # (and its filter variants) land contiguous before the page slice: a page boundary splitting
+    # them would otherwise repeat the product's name on more than one page. Stable (keyed with the
+    # original index) so ties keep the service's chronological order.
+    def group_by_product(usages)
+      usages.each_with_index.sort_by do |usage, index|
+        rate_card = usage.contract_rate_card.rate_card
+        [rate_card.product.code, rate_card.product_filter_id.nil? ? 0 : 1, index]
+      end.map(&:first)
     end
   end
 end
