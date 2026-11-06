@@ -69,7 +69,7 @@ module RecurringAggregationSnapshots
       # A weighted sum snapshot has no events count: its read never counts the events of a closed period
       with_events_count = !billable_metric.weighted_sum_agg?
 
-      override_filter_ids = override_filter_ids(snapshots.first.charge)
+      override_filter_ids = override_filter_ids(snapshots, fees)
       stored = snapshots.index_by { key(it) }
       billed = fees.index_by { key(it, override_filter_ids) }
       ingested_late = {}
@@ -81,7 +81,7 @@ module RecurringAggregationSnapshots
         snapshot_events_count = snapshot&.events_count || 0
 
         row = Row.new(
-          charge_id: period.charge_id,
+          charge_id: snapshot&.charge_id || fee.charge_id,
           charge_filter_id:,
           grouped_by:,
           to_datetime: period.to_datetime,
@@ -216,13 +216,25 @@ module RecurringAggregationSnapshots
       fee&.adjusted_fee.present? && !fee.adjusted_fee.adjusted_display_name?
     end
 
-    # The override copied the parent charge's filters with their codes
-    def override_filter_ids(charge)
-      return {} unless charge.parent_id
+    # Maps the parent charge's filters billed by the fees to the filters of the period's snapshots
+    # with the same values, which the override copied. Many filters have no code to match on.
+    def override_filter_ids(snapshots, fees)
+      parent_filter_ids = fees.filter_map { it.charge_filter_id if it.charge_id == snapshots.first.charge.parent_id }
+      return {} if parent_filter_ids.empty?
 
-      ids_by_code = ChargeFilter.with_discarded.where(charge_id: charge.id).where.not(code: nil).pluck(:code, :id).to_h
-      ChargeFilter.with_discarded.where(charge_id: charge.parent_id, code: ids_by_code.keys).pluck(:id, :code)
-        .to_h { |id, code| [id, ids_by_code[code]] }
+      own_ids = charge_filters(snapshots.filter_map(&:charge_filter_id)).index_by { filter_values(it) }.except({}).transform_values(&:id)
+      charge_filters(parent_filter_ids).each_with_object({}) do |filter, ids|
+        own_id = own_ids[filter_values(filter)]
+        ids[filter.id] = own_id if own_id
+      end
+    end
+
+    def charge_filters(ids)
+      ChargeFilter.with_discarded.where(id: ids).includes(values: :billable_metric_filter)
+    end
+
+    def filter_values(charge_filter)
+      charge_filter.to_h.transform_values(&:sort)
     end
 
     # Group values come back from JSON on both sides, the zero-unit marker with nil values

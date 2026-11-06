@@ -419,27 +419,42 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     end
 
     context "with a charge filter" do
-      let(:parent_filter) { create(:charge_filter, charge: parent_charge, code: "region_eu") }
-      let(:charge_filter) { create(:charge_filter, charge:, code: parent_filter.code) }
+      let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:parent_filter) { create(:charge_filter, charge: parent_charge) }
+      let(:charge_filter) { create(:charge_filter, charge:) }
+      let(:override_values) { %w[eu] }
 
       before do
+        create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter:, values: %w[eu])
+        create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: override_values)
         create_snapshot(charge_filter:, units: 2, events_count: 1)
         create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, charge_filter: parent_filter, total_aggregated_units: 2, events_count: 1)
       end
 
-      it "compares the bucket with the fee of the parent filter of the same code" do
+      it "compares the bucket with the fee of the parent filter of the same values" do
         expect(result.differences).to be_empty
         expect(result.rows.map(&:charge_filter_id)).to match_array([nil, charge_filter.id])
       end
 
-      context "when the parent filter has another code" do
-        let(:charge_filter) { create(:charge_filter, charge:, code: "region_us") }
+      context "when a discarded filter of the override has the same values" do
+        before do
+          discarded_filter = create(:charge_filter, charge:, deleted_at: 1.day.ago)
+          create(:charge_filter_value, charge_filter: discarded_filter, billable_metric_filter:, values: %w[eu])
+        end
 
-        it "reports both buckets" do
+        it "maps the fee to the filter of the snapshot" do
+          expect(result.differences).to be_empty
+        end
+      end
+
+      context "when the parent filter has other values" do
+        let(:override_values) { %w[us] }
+
+        it "reports both buckets, each on its own charge" do
           expect(result.differences).to match_array(
             [
               row(charge_filter_id: charge_filter.id, snapshot_units: 2, fee_units: 0, snapshot_events_count: 1, fee_events_count: 0),
-              row(charge_filter_id: parent_filter.id, snapshot_units: 0, fee_units: 2, snapshot_events_count: 0, fee_events_count: 1)
+              row(charge_id: parent_charge.id, charge_filter_id: parent_filter.id, snapshot_units: 0, fee_units: 2, snapshot_events_count: 0, fee_events_count: 1)
             ]
           )
         end
