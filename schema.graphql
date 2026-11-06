@@ -1971,6 +1971,30 @@ type ContractCollection {
   metadata: CollectionMetadata!
 }
 
+"""
+The contract's total computed usage for the current billing period, unfiltered
+"""
+type ContractCurrentUsageTotal {
+  amountCents: BigInt!
+
+  """
+  Earliest billing window start across the contract's rate cards, null with no usage
+  """
+  fromDatetime: ISO8601DateTime
+  taxesAmountCents: BigInt!
+
+  """
+  True when the tax provider failed and amount/total above are the untaxed fallback
+  """
+  taxesUnavailable: Boolean!
+
+  """
+  Latest billing window end across the contract's rate cards, null with no usage
+  """
+  toDatetime: ISO8601DateTime
+  totalAmountCents: BigInt!
+}
+
 enum ContractStatusEnum {
   active
   canceled
@@ -12602,6 +12626,16 @@ type Query {
   contractAppliedRateCards(contractId: ID, hasRateOverrides: Boolean, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): ContractAppliedRateCardCollection!
 
   """
+  Query a contract's total computed usage for the current billing period, unfiltered
+  """
+  contractCurrentUsageTotal(contractId: ID!): ContractCurrentUsageTotal!
+
+  """
+  Query a contract's computed usage for the current billing period, paginated
+  """
+  contractUsages(contractId: ID!, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): RateCardUsageCollection!
+
+  """
   Query contracts of an organization
   """
   contracts(billingEntityIds: [ID!], externalCustomerId: String, externalId: String, hasRateOverrides: Boolean, limit: Int, page: Int, planCode: String, searchTerm: String, status: [ContractStatusEnum!]): ContractCollection!
@@ -13761,6 +13795,52 @@ enum RateCardRateStatusEnum {
 
 enum RateCardRegroupPaidFeesEnum {
   invoice
+}
+
+"""
+One rate card's computed usage on a contract's current billing window
+"""
+type RateCardUsage {
+  amountCents: BigInt!
+  billableMetricCode: String
+  billingTiming: RateCardBillingTimingEnum!
+  eventsCount: Int!
+  fromDatetime: ISO8601DateTime!
+  invoiceDisplayName: String!
+  productCategoryCode: String
+  productCategoryName: String
+  productCode: String!
+  productFilterCode: String
+  productFilterName: String
+  productName: String!
+  productType: ProductTypeEnum!
+  rateCardCode: String!
+  rateCardName: String!
+  ratePhaseCode: String
+  ratePhaseName: String
+  rateSource: RateCardUsageRateSourceEnum!
+  toDatetime: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+RateCardUsageCollection type
+"""
+type RateCardUsageCollection {
+  """
+  A collection of paginated RateCardUsageCollection
+  """
+  collection: [RateCardUsage!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum RateCardUsageRateSourceEnum {
+  phase_override
+  rate
 }
 
 """
