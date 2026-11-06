@@ -56,9 +56,14 @@ module QuoteVersions
       }
     end
 
-    # Resolved like the invoices the quote creates: customer, then the issuing entity.
+    # Resolved like the invoices the quote creates: the amended subscription's own term carries over
+    # to its replacement, then the customer, then the issuing entity.
     def payment_terms
-      PaymentTerms::ResolveService.call!(customer:, billing_entity:).payment_term.to_h
+      PaymentTerms::ResolveService.call!(
+        customer:,
+        subscription: amended_subscription,
+        billing_entity:
+      ).payment_term.to_h
     end
 
     # The calendar date is frozen as a fact: the datetime is resolved in the customer
@@ -101,9 +106,14 @@ module QuoteVersions
     end
 
     def amended_subscription_date
+      amended_subscription&.subscription_at&.in_time_zone(customer.applicable_timezone)&.to_date
+    end
+
+    # Any other order type may still carry a subscription, but its execution ignores it.
+    def amended_subscription
       return unless quote.order_type == "subscription_amendment"
 
-      quote.subscription&.subscription_at&.in_time_zone(customer.applicable_timezone)&.to_date
+      quote.subscription
     end
 
     def term_end_date

@@ -154,6 +154,17 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       end
     end
 
+    context "when a non-amendment quote carries a subscription with its own payment term" do
+      let(:subscription) do
+        create(:subscription, organization:, customer:, payment_term: {"term_type" => "net", "days" => 60})
+      end
+      let(:quote) { create(:quote, organization:, customer:, subscription:) }
+
+      it "ignores the subscription term" do
+        expect(variables["commercial_terms_payment_terms"]).to eq("term_type" => "net", "days" => 30)
+      end
+    end
+
     context "when the customer document locale is French" do
       let(:customer_document_locale) { "fr" }
 
@@ -280,6 +291,24 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
           "commercial_terms_start_date" => "2026-02-01",
           "commercial_terms_term_duration" => {"unit" => "years", "count" => 1}
         )
+      end
+
+      # The replacement subscription inherits the target's term, so its invoices resolve it first.
+      context "when the target subscription has its own payment term" do
+        let(:customer_payment_term) { {"term_type" => "net", "days" => 45} }
+        let(:subscription) do
+          create(
+            :subscription,
+            organization:,
+            customer:,
+            subscription_at: Date.new(2026, 2, 1),
+            payment_term: {"term_type" => "net", "days" => 60}
+          )
+        end
+
+        it "renders the subscription term over the customer's" do
+          expect(variables["commercial_terms_payment_terms"]).to eq("term_type" => "net", "days" => 60)
+        end
       end
 
       # The plan change bills under the target's entity, so the signed document has to name it too.
