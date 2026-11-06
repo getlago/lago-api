@@ -2549,6 +2549,18 @@
               "deprecationReason": null
             },
             {
+              "name": "selfServe",
+              "description": "Also create the organization's sandbox",
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "timezone",
               "description": null,
               "type": {
@@ -2598,6 +2610,18 @@
                   "name": "AdminOrganization",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "sandboxOrganization",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "AdminOrganization",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
