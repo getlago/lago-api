@@ -47,6 +47,33 @@ RSpec.describe Resolvers::WebhookResolver do
     expect(JSON.parse(webhook_response["payload"])).to be_a Hash
   end
 
+  context "when the endpoint signs with Standard Webhooks and the user can manage keys" do
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          webhook(id: $id) { id webhookEndpoint { id signingKeys { id secretKey } } }
+        }
+      GQL
+    end
+    let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
+
+    before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+    it "returns null signing keys on the endpoint of the webhook" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: ["developers:manage", "developers:keys:manage"],
+        query:,
+        variables: {id: webhook.id}
+      )
+
+      expect(result["data"]["webhook"]["webhookEndpoint"]).to eq(
+        {"id" => webhook_endpoint.id, "signingKeys" => nil}
+      )
+    end
+  end
+
   context "when webhook is not found" do
     it "returns an error" do
       result = execute_graphql(

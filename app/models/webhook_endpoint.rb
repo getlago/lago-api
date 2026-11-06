@@ -83,6 +83,15 @@ class WebhookEndpoint < ApplicationRecord
     signing_keys.order(created_at: :desc, id: :desc).first
   end
 
+  # The keys that APIs show, oldest first; none unless the endpoint signs with Standard Webhooks.
+  def listed_signing_keys
+    if standard_webhooks?
+      signing_keys.order(created_at: :asc, id: :asc).to_a
+    else
+      []
+    end
+  end
+
   private
 
   def max_webhook_endpoints
