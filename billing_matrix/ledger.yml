@@ -1,0 +1,34 @@
+# The ledger of pinned findings for the six MVP areas (interactions, identity_churn, mid_flight,
+# invoicing_settings, wallets, surface_parity).
+#
+# status
+#   failed — the pinned row still reproduces the finding; carry it forward.
+#   fixed  — the underlying code changed and the pinned row now passes; kept for exactly one more
+#            pass as a regression check, then deleted automatically the second consecutive time the
+#            row is seen passing.
+#
+# Every date below is a quoted ISO string. An unquoted YAML date round-trips as a Date object, which
+# makes Psych emit `&`/`*` anchors for repeated dates and turns every diff unreadable — never remove
+# the quotes.
+---
+- id: interactions/commitment-true-up/progressive-billing
+  status: failed
+  first_seen: "2026-08-26"
+  note: >-
+    Minimum-commitment true-up selects fees with no invoice scoping, so a threshold invoice's fee
+    counts toward the floor alongside the period invoice's fee for the same usage.
+
+- id: identity_churn/plan-override/commitment
+  status: failed
+  first_seen: "2026-08-26"
+  note: >-
+    Plans::OverrideService drops the minimum commitment entirely unless plan_overrides explicitly
+    restates it, silently zeroing the floor after any override.
+
+- id: interactions/credit-note/void
+  status: failed
+  first_seen: "2026-08-26"
+  note: >-
+    Invoices::VoidService recredits applied coupons and outbound wallet transactions but never the
+    consumed credit note; CreditNotes::RecreditService exists and does the right job but is
+    reachable only from subscriptions/activation_rules/*.
