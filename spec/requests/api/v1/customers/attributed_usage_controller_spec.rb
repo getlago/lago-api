@@ -452,6 +452,17 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
+    context "with a blank charge code" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", charge_codes: [""]} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(charges: ["must_not_be_empty"])
+      end
+    end
+
     context "with an unknown split charge code" do
       let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", split_charge_code: "unknown"} }
 
