@@ -116,6 +116,8 @@ Rails.application.routes.draw do
       # Credit-note paths are native v2 only when explicitly routed above. Do not
       # let unsupported actions fall through to their v1 beta equivalents.
       match "credit_notes(/*path)", to: "/application#not_found", via: :all
+      # The RSA public key only verifies jwt webhooks, which native v2 endpoints do not use.
+      match "webhooks(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do
