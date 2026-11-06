@@ -782,6 +782,22 @@ RSpec.describe Subscriptions::ActivateService do
             .with([previous_subscription, subscription], anything, invoicing_reason: :upgrading)
         end
       end
+
+      context "when the previous and new subscriptions carry different payment terms" do
+        before do
+          previous_subscription.update!(payment_term: {"term_type" => "net", "days" => 30})
+          subscription.update!(payment_term: {"term_type" => "end_of_month"})
+        end
+
+        it "splits the upgrade bill into one job per payment term" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([previous_subscription], anything, invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], anything, invoicing_reason: :upgrading)
+        end
+      end
     end
 
     context "when activation_rules gate the new subscription" do

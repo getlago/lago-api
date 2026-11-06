@@ -441,6 +441,18 @@ RSpec.describe Invoices::AdvanceChargesService do
         expect(invoices.find_by!(purchase_order_number: "PO-1").fees.pluck(:subscription_id)).to eq([subscription.id])
         expect(invoices.find_by!(purchase_order_number: "PO-2").fees.pluck(:subscription_id)).to eq([subscription_2.id])
       end
+
+      context "when the subscriptions carry different payment terms instead" do
+        before do
+          subscription.update!(purchase_order_number: nil, payment_term: {"term_type" => "net", "days" => 30})
+          subscription_2.update!(purchase_order_number: nil, payment_term: {"term_type" => "end_of_month"})
+        end
+
+        it "creates a separate advance-charges invoice per payment term" do
+          expect { invoice_service.call }
+            .to change { Invoice.where(invoice_type: :advance_charges).count }.by(2)
+        end
+      end
     end
 
     context "when re-expanded subscriptions belong to different billing entities" do
