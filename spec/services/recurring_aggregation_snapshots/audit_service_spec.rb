@@ -404,6 +404,49 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     end
   end
 
+  context "when the subscription moved to a plan override after the invoice" do
+    let(:parent_charge) { create(:standard_charge, plan: create(:plan, organization:), billable_metric:) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, parent: parent_charge) }
+
+    before do
+      Fee.delete_all
+      create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, total_aggregated_units: 5, events_count: 2)
+    end
+
+    it "compares the snapshot with the fee billed on the parent charge" do
+      expect(result.rows).to eq([row])
+      expect(result.differences).to be_empty
+    end
+
+    context "with a charge filter" do
+      let(:parent_filter) { create(:charge_filter, charge: parent_charge, code: "region_eu") }
+      let(:charge_filter) { create(:charge_filter, charge:, code: parent_filter.code) }
+
+      before do
+        create_snapshot(charge_filter:, units: 2, events_count: 1)
+        create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, charge_filter: parent_filter, total_aggregated_units: 2, events_count: 1)
+      end
+
+      it "compares the bucket with the fee of the parent filter of the same code" do
+        expect(result.differences).to be_empty
+        expect(result.rows.map(&:charge_filter_id)).to match_array([nil, charge_filter.id])
+      end
+
+      context "when the parent filter has another code" do
+        let(:charge_filter) { create(:charge_filter, charge:, code: "region_us") }
+
+        it "reports both buckets" do
+          expect(result.differences).to match_array(
+            [
+              row(charge_filter_id: charge_filter.id, snapshot_units: 2, fee_units: 0, snapshot_events_count: 1, fee_events_count: 0),
+              row(charge_filter_id: parent_filter.id, snapshot_units: 0, fee_units: 2, snapshot_events_count: 0, fee_events_count: 1)
+            ]
+          )
+        end
+      end
+    end
+  end
+
   context "without an invoice for the period" do
     before { InvoiceSubscription.delete_all }
 

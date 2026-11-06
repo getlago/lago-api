@@ -7,7 +7,8 @@ module RecurringAggregationSnapshots
   # aggregated values, so its rows are reported apart and never as a difference. A sum snapshot
   # stops at its watermark while its fee counts the events ingested up to the invoice run: a leaf
   # that these events explain is reported apart too. A period without the default bucket marker
-  # reads as a full scan, so it is reported even when its rows match.
+  # reads as a full scan, so it is reported even when its rows match. A subscription moved to a plan
+  # override after its invoice was billed on the parent charge, so its fees are matched there too.
   class AuditService < BaseService
     Result = BaseResult[:rows, :differences, :adjusted_rows, :watermark_gap_rows, :periods_without_invoice, :periods_without_marker]
 
@@ -68,8 +69,9 @@ module RecurringAggregationSnapshots
       # A weighted sum snapshot has no events count: its read never counts the events of a closed period
       with_events_count = !billable_metric.weighted_sum_agg?
 
+      override_filter_ids = override_filter_ids(snapshots.first.charge)
       stored = snapshots.index_by { key(it) }
-      billed = fees.index_by { key(it) }
+      billed = fees.index_by { key(it, override_filter_ids) }
       ingested_late = {}
 
       (stored.keys | billed.keys).each do |charge_filter_id, grouped_by|
@@ -185,7 +187,7 @@ module RecurringAggregationSnapshots
         .where(
           organization_id: subscription.organization_id,
           subscription_id: subscription.id,
-          charge_id: charge.id,
+          charge_id: [charge.id, charge.parent_id].compact,
           pay_in_advance_event_id: nil,
           true_up_parent_fee_id: nil
         )
@@ -214,9 +216,19 @@ module RecurringAggregationSnapshots
       fee&.adjusted_fee.present? && !fee.adjusted_fee.adjusted_display_name?
     end
 
+    # The override copied the parent charge's filters with their codes
+    def override_filter_ids(charge)
+      return {} unless charge.parent_id
+
+      ids_by_code = ChargeFilter.with_discarded.where(charge_id: charge.id).where.not(code: nil).pluck(:code, :id).to_h
+      ChargeFilter.with_discarded.where(charge_id: charge.parent_id, code: ids_by_code.keys).pluck(:id, :code)
+        .to_h { |id, code| [id, ids_by_code[code]] }
+    end
+
     # Group values come back from JSON on both sides, the zero-unit marker with nil values
-    def key(record)
-      [record.charge_filter_id, record.grouped_by.compact.transform_values(&:to_s)]
+    def key(record, override_filter_ids = {})
+      charge_filter_id = override_filter_ids.fetch(record.charge_filter_id, record.charge_filter_id)
+      [charge_filter_id, record.grouped_by.compact.transform_values(&:to_s)]
     end
   end
 end
