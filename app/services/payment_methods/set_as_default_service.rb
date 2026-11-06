@@ -12,6 +12,7 @@ module PaymentMethods
 
     def call
       return result.not_found_failure!(resource: "payment_method") unless payment_method
+      return result.not_allowed_failure!(code: "single_use_payment_method") if payment_method.shared_payment_token?
       if payment_method.is_default?
         result.payment_method = payment_method
         return result
