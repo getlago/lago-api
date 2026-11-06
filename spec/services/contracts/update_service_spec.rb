@@ -312,7 +312,8 @@ RSpec.describe Contracts::UpdateService do
       expect(result).to be_success
       expect(contract.reload.catalog_plan).to eq(other_plan)
       card = contract.applied_rate_cards.sole
-      expect(card).to have_attributes(rate_card: new_rate_card, units: 3)
+      expect(card.rate_card).to eq(new_rate_card)
+      expect(card.terms.sole.units).to eq(3)
       expect(card.rate_phases.map(&:code)).to eq(["intro"])
     end
 

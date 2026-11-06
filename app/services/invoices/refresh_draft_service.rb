@@ -149,7 +149,7 @@ module Invoices
         :pricing_unit,
         :rate_override,
         :contract,
-        contract_rate_card: {rate_card: :product},
+        contract_rate_card: [:terms, {rate_card: :product}],
         rate_card_rate: :rate_card
       )
     end

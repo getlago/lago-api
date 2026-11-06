@@ -34,6 +34,7 @@ ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_ef
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_eeb6a32be1;
 ALTER TABLE IF EXISTS ONLY public.plan_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_ee8d423cf4;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_ee2b6f04d9;
+ALTER TABLE IF EXISTS ONLY public.contract_rate_cards_terms DROP CONSTRAINT IF EXISTS fk_rails_ed8b9ac9d3;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_ed387e0992;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_ecb466254b;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_eaca9421be;
@@ -382,6 +383,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_0f762162b0;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_rails_0f69bb4d01;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_0e464363cb;
+ALTER TABLE IF EXISTS ONLY public.contract_rate_cards_terms DROP CONSTRAINT IF EXISTS fk_rails_0dd0a7f663;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS fk_rails_0da056ac92;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_0d349e632f;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_0d2be3d72c;
@@ -942,6 +944,8 @@ DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_section_i
 DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_by_status_cursor;
 DROP INDEX IF EXISTS public.index_contracts_by_cursor;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_terms_on_organization_id;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_terms_on_card_and_effective_date;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
@@ -1260,6 +1264,7 @@ ALTER TABLE IF EXISTS ONLY public.coupons DROP CONSTRAINT IF EXISTS coupons_pkey
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS coupon_targets_pkey;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS contracts_pkey;
 ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS contracts_invoice_custom_sections_pkey;
+ALTER TABLE IF EXISTS ONLY public.contract_rate_cards_terms DROP CONSTRAINT IF EXISTS contract_rate_cards_terms_pkey;
 ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS contract_rate_cards_pkey;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS commitments_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS commitments_pkey;
@@ -1450,6 +1455,7 @@ DROP TABLE IF EXISTS public.coupons;
 DROP TABLE IF EXISTS public.coupon_targets;
 DROP TABLE IF EXISTS public.contracts_invoice_custom_sections;
 DROP TABLE IF EXISTS public.contracts;
+DROP TABLE IF EXISTS public.contract_rate_cards_terms;
 DROP TABLE IF EXISTS public.contract_rate_cards;
 DROP TABLE IF EXISTS public.commitments_taxes;
 DROP TABLE IF EXISTS public.commitments;
@@ -1529,6 +1535,7 @@ DROP TYPE IF EXISTS public.entitlement_privilege_value_types;
 DROP TYPE IF EXISTS public.customer_type;
 DROP TYPE IF EXISTS public.customer_account_type;
 DROP TYPE IF EXISTS public.contract_status;
+DROP TYPE IF EXISTS public.contract_rate_cards_terms_application_timing;
 DROP TYPE IF EXISTS public.contract_payment_method_type;
 DROP TYPE IF EXISTS public.contract_billing_time;
 DROP TYPE IF EXISTS public.connection_category;
@@ -1663,6 +1670,16 @@ CREATE TYPE public.contract_billing_time AS ENUM (
 CREATE TYPE public.contract_payment_method_type AS ENUM (
     'provider',
     'manual'
+);
+
+
+--
+-- Name: contract_rate_cards_terms_application_timing; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.contract_rate_cards_terms_application_timing AS ENUM (
+    'current_billing_cycle',
+    'next_billing_cycle'
 );
 
 
@@ -2830,6 +2847,22 @@ CREATE TABLE public.contract_rate_cards (
     deleted_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: contract_rate_cards_terms; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contract_rate_cards_terms (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    contract_rate_card_id uuid NOT NULL,
+    units numeric NOT NULL,
+    effective_date date NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    application_timing public.contract_rate_cards_terms_application_timing DEFAULT 'current_billing_cycle'::public.contract_rate_cards_terms_application_timing NOT NULL
 );
 
 
@@ -6740,6 +6773,14 @@ ALTER TABLE ONLY public.contract_rate_cards
 
 
 --
+-- Name: contract_rate_cards_terms contract_rate_cards_terms_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_rate_cards_terms
+    ADD CONSTRAINT contract_rate_cards_terms_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: contracts_invoice_custom_sections contracts_invoice_custom_sections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9113,6 +9154,20 @@ CREATE INDEX index_contract_rate_cards_on_organization_id ON public.contract_rat
 --
 
 CREATE INDEX index_contract_rate_cards_on_rate_card_id ON public.contract_rate_cards USING btree (rate_card_id);
+
+
+--
+-- Name: index_contract_rate_cards_terms_on_card_and_effective_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contract_rate_cards_terms_on_card_and_effective_date ON public.contract_rate_cards_terms USING btree (contract_rate_card_id, effective_date);
+
+
+--
+-- Name: index_contract_rate_cards_terms_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contract_rate_cards_terms_on_organization_id ON public.contract_rate_cards_terms USING btree (organization_id);
 
 
 --
@@ -13022,6 +13077,14 @@ ALTER TABLE ONLY public.ai_conversations
 
 
 --
+-- Name: contract_rate_cards_terms fk_rails_0dd0a7f663; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_rate_cards_terms
+    ADD CONSTRAINT fk_rails_0dd0a7f663 FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
+
+
+--
 -- Name: integration_customers fk_rails_0e464363cb; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15806,6 +15869,14 @@ ALTER TABLE ONLY public.invoices_payment_requests
 
 
 --
+-- Name: contract_rate_cards_terms fk_rails_ed8b9ac9d3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_rate_cards_terms
+    ADD CONSTRAINT fk_rails_ed8b9ac9d3 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_monitoring_triggered_alerts fk_rails_ee2b6f04d9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16012,6 +16083,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261105094449'),
+('20261104144002'),
 ('20261103084714'),
 ('20261103084708'),
 ('20261102160958'),

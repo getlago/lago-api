@@ -65,7 +65,7 @@ module Api
         )
 
         if result.success?
-          render_applied_rate_cards(result.contract_rate_cards.includes(:contract, :rate_card))
+          render_applied_rate_cards(result.contract_rate_cards.includes(:contract, :rate_card, :terms))
         else
           render_error_response(result)
         end
