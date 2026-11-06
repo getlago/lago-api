@@ -177,6 +177,31 @@ RSpec.describe Mutations::Customers::Update do
     end
   end
 
+  context "when the legacy provider customer is sent for a customer without a payment provider" do
+    let(:provider_customer) do
+      create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_customer_id: "cus_123")
+    end
+
+    before { provider_customer }
+
+    it "updates the customer without pushing it to the provider" do
+      result = execute_query(
+        query: mutation,
+        input: {
+          id: customer.id,
+          externalId: customer.external_id,
+          paymentProvider: nil,
+          providerCustomer: {providerCustomerId: "cus_123"}
+        }
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result.dig("data", "updateCustomer", "id")).to eq(customer.id)
+      expect(result.dig("data", "updateCustomer", "paymentProvider")).to be_nil
+      expect(Stripe::Customer).not_to have_received(:update)
+    end
+  end
+
   context "with premium feature", :premium do
     it "updates a customer" do
       result = execute_query(
@@ -282,6 +307,44 @@ RSpec.describe Mutations::Customers::Update do
 
       expect(result_data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["lago_manual"])
       expect(existing_connection.reload).to be_discarded
+    end
+
+    context "when the customer has no default payment provider" do
+      let(:existing_connection) do
+        create(
+          :stripe_customer,
+          customer:,
+          payment_provider: stripe_provider,
+          provider_customer_id: "cus_123",
+          provider_payment_methods: %w[card]
+        )
+      end
+
+      it "saves the connection without pushing the customer to the provider" do
+        result = execute_query(
+          query: array_mutation,
+          input: {
+            id: customer.id,
+            externalId: customer.external_id,
+            paymentProvider: nil,
+            paymentProviderCustomers: [
+              {
+                id: existing_connection.id,
+                paymentProviderCode: stripe_provider.code,
+                providerCustomerId: "cus_123",
+                providerPaymentMethods: %w[card sepa_debit],
+                syncWithProvider: false
+              }
+            ]
+          }
+        )
+
+        expect(result["errors"]).to be_nil
+        expect(result.dig("data", "updateCustomer", "id")).to eq(customer.id)
+        expect(customer.reload.payment_provider).to be_nil
+        expect(existing_connection.reload.provider_payment_methods).to eq(%w[card sepa_debit])
+        expect(Stripe::Customer).not_to have_received(:update)
+      end
     end
   end
 end

@@ -115,6 +115,24 @@ RSpec.describe PaymentProviderCustomers::UpdateConnectionService do
         end
       end
 
+      context "when a provider customer id is provided and the customer has no default payment provider" do
+        let(:payment_provider_customer) do
+          create(:stripe_customer, organization:, customer:, provider_customer_id: "cus_123", provider_payment_methods: %w[card])
+        end
+        let(:params) { {provider_customer_id: "cus_123", provider_payment_methods: %w[card sepa_debit]} }
+
+        before { allow(::Stripe::Customer).to receive(:update) }
+
+        it "saves the connection without pushing the customer to the provider" do
+          expect(customer.payment_provider).to be_nil
+
+          expect(result).to be_success
+          expect(result.payment_provider_customer).to eq(payment_provider_customer)
+          expect(payment_provider_customer.reload.provider_payment_methods).to eq(%w[card sepa_debit])
+          expect(::Stripe::Customer).not_to have_received(:update)
+        end
+      end
+
       context "when the connection has no provider_customer_id and none is provided" do
         let(:payment_provider_customer) do
           create(:stripe_customer, organization:, customer:, provider_customer_id: nil, provider_payment_methods: %w[card])

@@ -14,7 +14,13 @@ module PaymentProviderCustomers
 
     def call
       provider_customer = customer.provider_customer
-      PaymentProviderCustomers::Factory.for(provider_customer).call!(:update, provider_customer)
+
+      # A customer without a default payment provider has no account to push its details to.
+      if provider_customer.nil?
+        result
+      else
+        PaymentProviderCustomers::Factory.for(provider_customer).call!(:update, provider_customer)
+      end
     end
   end
 end
