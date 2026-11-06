@@ -3,7 +3,9 @@
 require "rails_helper"
 
 describe "Invoice usage when a wallet expires", transaction: false do
-  let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
+  let(:organization) do
+    create(:organization, webhook_url: nil, email_settings: [], feature_flags: ["invoice_usage_on_wallet_expiration"])
+  end
   let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 0) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
   let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
@@ -37,6 +39,7 @@ describe "Invoice usage when a wallet expires", transaction: false do
     subscription, wallet = travel_to(DateTime.new(2026, 3, 1)) { subscribe_with_expiring_wallet }
 
     travel_to(DateTime.new(2026, 3, 5)) { ingest_event(subscription, billable_metric, 4) }
+    travel_to(DateTime.new(2026, 3, 15, 0, 30)) { ingest_event(subscription, billable_metric, 2) }
 
     travel_to(DateTime.new(2026, 3, 15, 1)) do
       clock_job { Clock::TerminateWalletsJob.perform_later }
@@ -45,7 +48,7 @@ describe "Invoice usage when a wallet expires", transaction: false do
       expect(progressive_invoice).to have_attributes(
         status: "finalized",
         progressive_billing_trigger: "wallet_expiration",
-        fees_amount_cents: 4_00,
+        fees_amount_cents: 4_00, # the 2 units ingested after the expiration are left out
         prepaid_credit_amount_cents: 4_00,
         total_amount_cents: 0
       )
@@ -60,10 +63,10 @@ describe "Invoice usage when a wallet expires", transaction: false do
 
       expect(customer.invoices.subscription.sole).to have_attributes(
         status: "finalized",
-        fees_amount_cents: 7_00,
+        fees_amount_cents: 9_00, # 4 units before the expiration + 2 after it, before the clock run + 3 on 20 Mar
         progressive_billing_credit_amount_cents: 4_00,
         prepaid_credit_amount_cents: 0,
-        total_amount_cents: 3_00
+        total_amount_cents: 5_00
       )
     end
   end
