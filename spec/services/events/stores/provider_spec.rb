@@ -248,20 +248,27 @@ RSpec.describe Events::Stores::Provider do
           create(
             :organization,
             clickhouse_events_store: true,
-            feature_flags: %w[realtime_usage realtime_usage_recurring_sum]
+            feature_flags: %w[realtime_usage realtime_usage_recurring_sum persisted_recurring_values]
+          )
+        end
+        let(:period) do
+          RecurringAggregationSnapshots::FetchService::Period.new(
+            to_datetime: billing_boundaries.charges_from_datetime - 1.second,
+            watermark: billing_boundaries.charges_from_datetime + 1.hour
           )
         end
 
         it "wraps the store in a bucket-backed one answering the delta from the window" do
-          allow(store.__getobj__).to receive(:sum).and_return(:events_sum)
-          period = RecurringAggregationSnapshots::FetchService::Period.new(
-            to_datetime: billing_boundaries.charges_from_datetime - 1.second,
-            watermark: billing_boundaries.charges_from_datetime + 1.hour
-          )
-
           expect(store).to be_a(Events::Stores::UsageBucketStore)
           expect(store.recurring_fallback_reason(period)).to be_nil
-          expect(store.sum).to eq(:events_sum)
+        end
+
+        context "when the aggregator reads the sum without a snapshot" do
+          before { allow(store.__getobj__).to receive(:sum).and_return(:events_sum) }
+
+          it "reads it from the events, as the window alone is not the recurring total" do
+            expect(store.sum).to eq(:events_sum)
+          end
         end
 
         context "when the window holds no bucket at all" do
@@ -279,6 +286,24 @@ RSpec.describe Events::Stores::Provider do
           end
 
           it "reads events, as nothing was fetched to serve from" do
+            expect(store).to be_a(Events::Stores::ClickhouseStore)
+          end
+        end
+
+        context "when the organization does not read the snapshots" do
+          let(:organization) do
+            create(:organization, clickhouse_events_store: true, feature_flags: %w[realtime_usage realtime_usage_recurring_sum])
+          end
+
+          it "reads events, as the buckets have no snapshot to add the window to" do
+            expect(store).to be_a(Events::Stores::ClickhouseStore)
+          end
+        end
+
+        context "when the subscription is the upgrade of another" do
+          let(:subscription) { create(:subscription, :with_previous_subscription, organization:) }
+
+          it "reads events, as the snapshots hold usage bucketed under the previous subscription" do
             expect(store).to be_a(Events::Stores::ClickhouseStore)
           end
         end

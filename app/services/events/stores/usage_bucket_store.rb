@@ -68,12 +68,11 @@ module Events
         end
       end
 
-      # Why the delta from `period` must come from the events: a predecessor's snapshot holds usage
-      # bucketed under another subscription, and a late ingestion is an event the snapshot missed.
+      # Why the delta from `period` must come from the events: a late ingestion is an event the
+      # snapshot missed. Snapshots the buckets can never complete are refused by the Provider.
       def recurring_fallback_reason(period)
         return "no_period" if period.nil?
         return "not_adjacent" unless adjacent?(period)
-        return "has_predecessor" if billing_context.previous_subscription_id
 
         history_last_ingested_at = usage_buckets.history_last_ingested_at_for(charge_id:)
         "late_ingestion" if history_last_ingested_at && history_last_ingested_at > period.watermark

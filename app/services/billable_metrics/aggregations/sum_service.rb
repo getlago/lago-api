@@ -76,6 +76,15 @@ module BillableMetrics
         fail_aggregation!(e)
       end
 
+      # A recurring charge the buckets fall back on reads events like any other, charge cache included.
+      def precomputed?
+        if billable_metric.recurring? && event_store.precomputed?
+          event_store.recurring_fallback_reason(initial_period).nil?
+        else
+          event_store.precomputed?
+        end
+      end
+
       # With a snapshot period: stored units plus the events they missed. Otherwise invoicing scans
       # the whole history to persist a first snapshot, and other reads fall back to the plain sum (nil).
       def recurring_sum(options)

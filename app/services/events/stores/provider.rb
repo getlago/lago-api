@@ -66,8 +66,9 @@ module Events
         return false if boundaries[:max_timestamp].present?
         return false unless same_window_as_prefetch?(boundaries)
         return false if wallet_charge_changed_in_window?(charge)
+        return false unless RealtimeUsage.supported_charge?(charge)
 
-        RealtimeUsage.supported_charge?(charge)
+        !RealtimeUsage.recurring_charge?(charge) || recurring_snapshot_completable?(metered_item)
       end
 
       # Charge-wide counterpart of `served_from_buckets?`: true only when every pricing bucket of
@@ -114,6 +115,13 @@ module Events
         else
           usage_buckets.present?
         end
+      end
+
+      # The buckets only add the window to a snapshot of this subscription. Refused here, the charge
+      # keeps the charge cache and the scan store a fallback from the bucket store would lose.
+      def recurring_snapshot_completable?(metered_item)
+        RecurringAggregationSnapshot.readable?(metered_item:, billing_context:) &&
+          !billing_context.previous_subscription_id?
       end
 
       # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A

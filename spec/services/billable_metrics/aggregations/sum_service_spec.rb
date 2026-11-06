@@ -414,15 +414,17 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
           # snapshot units + window buckets, over the 2 events of the snapshot and the 2 of the buckets
           expect(totals(result)).to eq([nil, 1000 + 25, 2 + 2, 1000, 2])
+          expect(aggregator(periods.second, initial_value:, initial_period: closed(periods.first)).precomputed?).to be(true)
         end
 
         context "when a bucket before the window was ingested after the snapshot" do
           let(:history_last_ingested_at) { watermark(periods.first) + 1.minute }
 
-          it "adds the events the snapshot did not count instead" do
+          it "adds the events the snapshot did not count instead, through the charge cache" do
             result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
 
             expect(result.aggregation).to eq(1000 + 7 + 20)
+            expect(aggregator(periods.second, initial_value:, initial_period: closed(periods.first)).precomputed?).to be(false)
           end
         end
 
@@ -431,6 +433,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
             result = aggregate(periods.second, initial_value: nil, options:)
 
             expect(result.aggregation).to eq(3 + 10 + 7 + 20)
+            expect(aggregator(periods.second, initial_value: nil).precomputed?).to be(false)
           end
         end
 
