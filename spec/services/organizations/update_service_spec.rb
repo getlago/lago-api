@@ -457,6 +457,41 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when authentication_methods change on an organization with a sandbox" do
+      let(:params) { {authentication_methods: ["email_password"]} }
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+      before { sandbox }
+
+      it "gives the sandbox the same login methods" do
+        expect(update_service.call).to be_success
+        expect(sandbox.reload.authentication_methods).to eq(["email_password"])
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:organization) { create(:organization, :sandbox, authentication_methods: %w[email_password google_oauth]) }
+
+      context "with other login methods" do
+        let(:params) { {authentication_methods: ["email_password"], legal_name: "Foobar"} }
+
+        it "refuses the update" do
+          expect(update_service.call.error.code).to eq("sandbox_managed_by_production")
+          expect(organization.reload).to have_attributes(authentication_methods: %w[email_password google_oauth],
+            legal_name: nil)
+        end
+      end
+
+      context "with the same login methods" do
+        let(:params) { {authentication_methods: %w[google_oauth email_password], legal_name: "Foobar"} }
+
+        it "updates the other fields" do
+          expect(update_service.call).to be_success
+          expect(organization.reload.legal_name).to eq("Foobar")
+        end
+      end
+    end
+
     context "when authentication_methods change but the update fails" do
       subject { described_class.new(organization:, params:, user:) }
 

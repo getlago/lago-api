@@ -13,6 +13,7 @@ module Integrations
           if result.success?
             organization = result.integration.organization
             organization.disable_okta_authentication! if organization.okta_authentication_enabled?
+            ::Organizations::SyncSandboxSettingsService.call!(organization:)
           end
 
           result

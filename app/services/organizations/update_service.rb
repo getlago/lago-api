@@ -13,6 +13,68 @@ module Organizations
     end
 
     def call
+      ActiveRecord::Base.transaction do
+        lock_for_authentication_methods if params.key?(:authentication_methods)
+        assign_attributes
+
+        handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
+
+        handle_webhook_url if params.key?(:webhook_url)
+
+        # TODO: only updates the organization grace period,
+        #       it does not update related invoices payment due date, etc
+        #       this is handled at the billing_entity level.
+        #       Remove it when fully migrated to billing_entity.
+        if License.premium? && billing.key?(:invoice_grace_period)
+          organization.invoice_grace_period = billing[:invoice_grace_period]
+        end
+
+        assign_premium_attributes
+        handle_base64_logo if params.key?(:logo)
+
+        organization.save!
+        update_billing_entity_result =
+          BillingEntities::UpdateService.call(billing_entity: organization.default_billing_entity, params: params)
+        update_billing_entity_result.raise_if_error!
+
+        if @authentication_methods_diff
+          notify_authentication_methods_change
+          SyncSandboxSettingsService.call!(organization:, actor: user)
+        end
+      end
+
+      ApiKeys::CacheService.expire_all_cache(organization)
+
+      result.organization = organization
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
+    end
+
+    private
+
+    attr_reader :organization, :params, :user
+
+    def handle_webhook_url
+      webhook_url = params[:webhook_url]
+      # Read from the database: `WebhookEndpoint#max_webhook_endpoints` loads the association
+      # before an endpoint is inserted, so a loaded one can miss the last endpoint.
+      organization.webhook_endpoints.reset
+      webhook_endpoint = organization.default_webhook_endpoint
+
+      if webhook_endpoint.nil?
+        WebhookEndpoints::CreateService.call!(organization:, params: {webhook_url:})
+      elsif webhook_endpoint.webhook_url != webhook_url
+        WebhookEndpoints::UpdateService.call!(id: webhook_endpoint.id, organization:, params: {webhook_url:})
+      end
+
+      # The endpoint services save their own instances: drop the cached association so responses render the new url.
+      organization.webhook_endpoints.reset
+    end
+
+    def assign_attributes
       organization.email = params[:email] if params.key?(:email)
       organization.legal_name = params[:legal_name] if params.key?(:legal_name)
       organization.legal_number = params[:legal_number] if params.key?(:legal_number)
@@ -45,63 +107,22 @@ module Organizations
         end
       end
 
-      billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
       organization.document_locale = billing[:document_locale] if billing.key?(:document_locale)
-
-      ActiveRecord::Base.transaction do
-        handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
-
-        handle_webhook_url if params.key?(:webhook_url)
-
-        # TODO: only updates the organization grace period,
-        #       it does not update related invoices payment due date, etc
-        #       this is handled at the billing_entity level.
-        #       Remove it when fully migrated to billing_entity.
-        if License.premium? && billing.key?(:invoice_grace_period)
-          organization.invoice_grace_period = billing[:invoice_grace_period]
-        end
-
-        assign_premium_attributes
-        handle_base64_logo if params.key?(:logo)
-
-        organization.save!
-        update_billing_entity_result =
-          BillingEntities::UpdateService.call(billing_entity: organization.default_billing_entity, params: params)
-        update_billing_entity_result.raise_if_error!
-
-        notify_authentication_methods_change if @authentication_methods_diff
-      end
-
-      ApiKeys::CacheService.expire_all_cache(organization)
-
-      result.organization = organization
-      result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
-    rescue BaseService::FailedResult => e
-      result.fail_with_error!(e)
     end
 
-    private
+    # Locks the row before anything is assigned (the lock reloads it), so a sandbox linked meanwhile is seen. A sandbox
+    # keeps the methods of its production: resubmitting the same set is accepted, another one is refused.
+    def lock_for_authentication_methods
+      SandboxLockService.call!(organization:, allow_sandbox: true)
+      return unless organization.sandbox?
+      return if params[:authentication_methods].to_a.sort == organization.authentication_methods.sort
 
-    attr_reader :organization, :params, :user
+      result.not_allowed_failure!(code: "sandbox_managed_by_production").raise_if_error!
+    end
 
-    def handle_webhook_url
-      webhook_url = params[:webhook_url]
-      # Read from the database: `WebhookEndpoint#max_webhook_endpoints` loads the association
-      # before an endpoint is inserted, so a loaded one can miss the last endpoint.
-      organization.webhook_endpoints.reset
-      webhook_endpoint = organization.default_webhook_endpoint
-
-      if webhook_endpoint.nil?
-        WebhookEndpoints::CreateService.call!(organization:, params: {webhook_url:})
-      elsif webhook_endpoint.webhook_url != webhook_url
-        WebhookEndpoints::UpdateService.call!(id: webhook_endpoint.id, organization:, params: {webhook_url:})
-      end
-
-      # The endpoint services save their own instances: drop the cached association so responses render the new url.
-      organization.webhook_endpoints.reset
+    def billing
+      @billing ||= params[:billing_configuration]&.to_h || {}
     end
 
     def assign_premium_attributes
