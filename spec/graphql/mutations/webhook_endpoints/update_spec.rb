@@ -31,7 +31,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
     GQL
   end
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
 
   before { webhook_endpoint }
@@ -62,5 +62,52 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
     end
 
     it_behaves_like "produces a security log", "webhook_endpoint.updated"
+  end
+
+  context "when signatureAlgo changes to standard_webhooks" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: {id: webhook_endpoint.id, webhookUrl: webhook_endpoint.webhook_url, signatureAlgo: "standard_webhooks"}}
+      )
+    end
+
+    it "refuses it without the standard_webhooks_signature flag" do
+      expect { result }.not_to change { webhook_endpoint.reload.signature_algo }
+
+      expect_unprocessable_entity(result, details: {signatureAlgo: ["value_is_invalid"]})
+    end
+
+    context "with the standard_webhooks_signature flag" do
+      before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+
+      it "switches the endpoint to standard_webhooks with one signing key" do
+        expect(result["data"]["updateWebhookEndpoint"]).to include("signatureAlgo" => "standard_webhooks")
+        expect(webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
+        expect(webhook_endpoint.signing_keys.count).to eq(1)
+      end
+    end
+  end
+
+  context "when a standard_webhooks endpoint of an organization without the flag is renamed" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: {id: webhook_endpoint.id, webhookUrl: webhook_url, name: "Renamed"}}
+      )
+    end
+
+    let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :standard_webhooks) }
+
+    it "updates the name" do
+      expect(result["data"]["updateWebhookEndpoint"]).to include("name" => "Renamed", "signatureAlgo" => "standard_webhooks")
+      expect(webhook_endpoint.reload.name).to eq("Renamed")
+    end
   end
 end

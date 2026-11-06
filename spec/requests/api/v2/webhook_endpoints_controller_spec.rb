@@ -14,7 +14,7 @@ RSpec.describe Api::V2::WebhookEndpointsController do
     let(:create_params) do
       {
         webhook_url: "https://example.com/webhooks",
-        signature_algo: "hmac",
+        signature_algo: "standard_webhooks",
         name: "Billing events",
         event_types: ["customer.created", "invoice.created"]
       }
@@ -28,6 +28,7 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       expect(response).to have_http_status(:ok)
       webhook_endpoint = organization.webhook_endpoints.sole
       expect(webhook_endpoint).to have_attributes(**create_params)
+      expect(webhook_endpoint.signing_keys.count).to eq(1)
       expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
       expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
     end
@@ -39,11 +40,14 @@ RSpec.describe Api::V2::WebhookEndpointsController do
     context "without a signature_algo" do
       let(:create_params) { super().except(:signature_algo) }
 
-      it "signs with JWT" do
+      it "signs with Standard Webhooks and creates one signing key" do
         request
 
         expect(response).to have_http_status(:ok)
-        expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+        webhook_endpoint = organization.webhook_endpoints.sole
+        expect(webhook_endpoint.signature_algo).to eq("standard_webhooks")
+        expect(webhook_endpoint.signing_keys.count).to eq(1)
       end
     end
 
@@ -58,28 +62,31 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       end
     end
 
-    context "with an unknown signature_algo" do
-      let(:create_params) { super().merge(signature_algo: "md5") }
+    %w[jwt hmac md5].each do |signature_algo|
+      context "with the #{signature_algo} signature_algo" do
+        let(:create_params) { super().merge(signature_algo:) }
 
-      it "returns a validation error with the allowed values, without creating the endpoint" do
-        expect { request }.not_to change(WebhookEndpoint, :count)
+        it "returns a validation error with the allowed values, without creating the endpoint" do
+          expect { request }.not_to change(WebhookEndpoint, :count)
 
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(
-          code: "validation_errors",
-          details: [{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: %w[jwt hmac]}}]
-        )
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(
+            code: "validation_errors",
+            details: [{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: ["standard_webhooks"]}}]
+          )
+          expect(WebhookEndpointSigningKey.count).to eq(0)
+        end
       end
     end
 
     context "with a false signature_algo" do
       let(:create_params) { super().merge(signature_algo: false) }
 
-      it "returns a validation error rather than defaulting to JWT" do
+      it "returns a validation error rather than defaulting to Standard Webhooks" do
         expect { request }.not_to change(WebhookEndpoint, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:details]).to eq([{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: %w[jwt hmac]}}])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: ["standard_webhooks"]}}])
       end
     end
 
@@ -186,7 +193,6 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       let(:update_params) do
         {
           webhook_url: "https://example.com/updated",
-          signature_algo: "hmac",
           name: "Renamed",
           event_types: ["invoice.created"]
         }
@@ -198,8 +204,10 @@ RSpec.describe Api::V2::WebhookEndpointsController do
         request
 
         expect(response).to have_http_status(:ok)
-        expect(webhook_endpoint.reload).to have_attributes(**update_params)
+        expect(webhook_endpoint.reload).to have_attributes(**update_params, signature_algo: "jwt")
+        expect(webhook_endpoint.signing_keys.count).to eq(0)
         expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
       end
 
       it_behaves_like "produces a security log", "webhook_endpoint.updated" do
@@ -221,6 +229,61 @@ RSpec.describe Api::V2::WebhookEndpointsController do
         end
       end
 
+      context "with the unchanged jwt signature_algo of an endpoint the API no longer offers" do
+        let(:update_params) { {name: "Renamed", signature_algo: "jwt"} }
+
+        it "updates the endpoint and keeps its algorithm" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(webhook_endpoint.reload).to have_attributes(name: "Renamed", signature_algo: "jwt")
+        end
+      end
+
+      %w[jwt hmac].each do |signature_algo|
+        context "when switching a standard_webhooks endpoint to #{signature_algo}" do
+          let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :standard_webhooks) }
+          let(:update_params) { {signature_algo:} }
+
+          it "returns a validation error with the allowed values, without changing the endpoint" do
+            expect { request }.not_to change { webhook_endpoint.reload.attributes }
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(
+              code: "validation_errors",
+              details: [{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: ["standard_webhooks"]}}]
+            )
+          end
+        end
+      end
+
+      context "when switching a jwt endpoint to hmac" do
+        let(:update_params) { {signature_algo: "hmac"} }
+
+        it "returns a validation error with the allowed values, without changing the endpoint" do
+          expect { request }.not_to change { webhook_endpoint.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(
+            code: "validation_errors",
+            details: [{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: ["standard_webhooks"]}}]
+          )
+        end
+      end
+
+      context "when switching a jwt endpoint to standard_webhooks" do
+        let(:update_params) { {signature_algo: "standard_webhooks"} }
+
+        it "updates the endpoint and creates one signing key" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+          expect(webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
+          expect(webhook_endpoint.signing_keys.count).to eq(1)
+        end
+      end
+
       context "with event_types null" do
         let(:update_params) { {event_types: nil} }
 
@@ -239,7 +302,7 @@ RSpec.describe Api::V2::WebhookEndpointsController do
           expect { request }.not_to change { webhook_endpoint.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:details]).to eq([{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: %w[jwt hmac]}}])
+          expect(json[:details]).to eq([{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: ["standard_webhooks"]}}])
         end
       end
 

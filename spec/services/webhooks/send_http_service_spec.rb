@@ -43,6 +43,84 @@ RSpec.describe Webhooks::SendHttpService do
     end
   end
 
+  context "with a standard_webhooks endpoint" do
+    let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url: "https://wh.test.com", signature_algo: :standard_webhooks) }
+    let(:webhook) do
+      create(
+        :webhook,
+        webhook_endpoint:,
+        id: "8b2f6a1e-3c4d-4e5f-9a6b-7c8d9e0f1a2b",
+        payload: {"webhook_type" => "invoice.created", "amount_cents" => 100}
+      )
+    end
+
+    around { |example| travel_to(Time.zone.at(1_762_300_800)) { example.run } }
+
+    context "when the endpoint has a signing key" do
+      before do
+        # Secret: whsec_ + base64 of the 32 bytes 0x00..0x1f.
+        create(:webhook_endpoint_signing_key, webhook_endpoint:, secret: "whsec_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")
+        WebMock.stub_request(:post, "https://wh.test.com").to_return(status: 200, body: "ok")
+      end
+
+      it "sends the body with the Standard Webhooks headers only" do
+        service.call
+
+        # printf '%s' '8b2f6a1e-3c4d-4e5f-9a6b-7c8d9e0f1a2b.1762300800.{"webhook_type":"invoice.created","amount_cents":100}' \
+        #   | openssl dgst -sha256 -mac HMAC -macopt hexkey:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f -binary | base64
+        expect(WebMock).to have_requested(:post, "https://wh.test.com").with { |request|
+          request.body == '{"webhook_type":"invoice.created","amount_cents":100}' &&
+            request.headers["Webhook-Id"] == "8b2f6a1e-3c4d-4e5f-9a6b-7c8d9e0f1a2b" &&
+            request.headers["Webhook-Timestamp"] == "1762300800" &&
+            request.headers["Webhook-Signature"] == "v1,Kb+qawXvtjgaYfg4mZ5Nwx56fhXVFDUa+V+BmUirSEY=" &&
+            request.headers.keys.none? { |key| key.start_with?("X-Lago") }
+        }.once
+        expect(webhook).to be_succeeded
+      end
+
+      context "when the endpoint answers with an error" do
+        before do
+          WebMock.stub_request(:post, "https://wh.test.com").to_return(status: 500, body: "error")
+        end
+
+        it "schedules a retry that keeps the id and signs with a new timestamp" do
+          service.call
+
+          expect(webhook).to be_retrying
+          expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
+
+          travel_to(Time.zone.at(1_762_304_400))
+          described_class.call(webhook: Webhook.find(webhook.id))
+
+          # Same derivation as above with the timestamp 1762304400.
+          expect(WebMock).to have_requested(:post, "https://wh.test.com").with(
+            headers: {
+              "Webhook-Id" => "8b2f6a1e-3c4d-4e5f-9a6b-7c8d9e0f1a2b",
+              "Webhook-Timestamp" => "1762304400",
+              "Webhook-Signature" => "v1,mUzwJIALxpDnPZ/2ZjpQp3aqBCSK3/sKsse6S6wfoEM="
+            }
+          ).once
+        end
+      end
+    end
+
+    context "when the endpoint has no signing key" do
+      before do
+        WebMock.stub_request(:post, "https://wh.test.com")
+      end
+
+      it "fails the webhook without sending it or retrying" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(WebMock).not_to have_requested(:post, "https://wh.test.com")
+        expect(SendHttpWebhookJob).not_to have_been_enqueued
+        expect(webhook.reload).to be_failed
+        expect(webhook.response).to eq "Webhook endpoint has no signing key"
+      end
+    end
+  end
+
   context "when client returns an error" do
     let(:error_body) do
       {

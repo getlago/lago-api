@@ -28,7 +28,11 @@ module Api
       end
 
       def create
-        result = ::WebhookEndpoints::CreateService.call(organization: current_organization, params: input_params)
+        result = ::WebhookEndpoints::CreateService.call(
+          organization: current_organization,
+          params: input_params,
+          signature_algo_rule: WebhookEndpoint::V2_SIGNATURE_ALGO_RULE
+        )
 
         if result.success?
           render_webhook_endpoint(result.webhook_endpoint)
@@ -38,7 +42,12 @@ module Api
       end
 
       def update
-        result = ::WebhookEndpoints::UpdateService.call(id: params[:id], organization: current_organization, params: input_params)
+        result = ::WebhookEndpoints::UpdateService.call(
+          id: params[:id],
+          organization: current_organization,
+          params: input_params,
+          signature_algo_rule: WebhookEndpoint::V2_SIGNATURE_ALGO_RULE
+        )
 
         if result.success?
           render_webhook_endpoint(result.webhook_endpoint)

@@ -55,6 +55,8 @@ class Webhook < ApplicationRecord
   end
 
   def generate_headers
+    return standard_webhooks_headers if webhook_endpoint.standard_webhooks?
+
     signature = case webhook_endpoint.signature_algo&.to_sym
     when :jwt
       jwt_signature
@@ -89,7 +91,28 @@ class Webhook < ApplicationRecord
     ENV["LAGO_API_URL"]
   end
 
+  def signing_key
+    webhook_endpoint.current_signing_key
+  end
+
+  # Signs the same JSON string that LagoHttpClient sends as the request body.
+  def standard_webhooks_signature(timestamp)
+    content = "#{id}.#{timestamp}.#{payload.to_json}"
+    Base64.strict_encode64(OpenSSL::HMAC.digest("sha256", signing_key.signing_secret, content))
+  end
+
   private
+
+  # Computed on each call, so a retry carries its own send time.
+  def standard_webhooks_headers
+    timestamp = Time.current.to_i
+
+    {
+      "webhook-id" => id,
+      "webhook-timestamp" => timestamp.to_s,
+      "webhook-signature" => "v1,#{standard_webhooks_signature(timestamp)}"
+    }
+  end
 
   def stored_payload
     @stored_payload ||= download_json(payload_key)

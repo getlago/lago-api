@@ -3,11 +3,12 @@
 require "rails_helper"
 
 RSpec.describe WebhookEndpoints::CreateService do
-  subject(:create_service) { described_class.new(organization:, params: create_params) }
+  subject(:create_service) { described_class.new(organization:, params: create_params, signature_algo_rule:) }
 
   include_context "with mocked security logger"
 
   let_it_be(:organization, refind: true) { create(:organization) }
+  let(:signature_algo_rule) { nil }
   let(:create_params) do
     {
       webhook_url: "http://foo.bar",
@@ -26,6 +27,7 @@ RSpec.describe WebhookEndpoints::CreateService do
       expect(result.webhook_endpoint.signature_algo).to eq("hmac")
       expect(result.webhook_endpoint.name).to eq("Test Webhook")
       expect(result.webhook_endpoint.event_types).to eq(["customer.created"])
+      expect(result.webhook_endpoint.signing_keys).to be_empty
     end
 
     it "produces the webhook_endpoint.created security log" do
@@ -123,6 +125,7 @@ RSpec.describe WebhookEndpoints::CreateService do
 
         expect(result).to be_success
         expect(result.webhook_endpoint.signature_algo).to eq("jwt")
+        expect(result.webhook_endpoint.signing_keys).to be_empty
       end
     end
 
@@ -160,6 +163,89 @@ RSpec.describe WebhookEndpoints::CreateService do
         expect(result).not_to be_success
         expect(result.error.messages).to eq(signature_algo: ["value_is_invalid"])
         expect(result.error.meta).to eq(signature_algo: {allowed_values: %w[jwt hmac]})
+      end
+    end
+
+    context "when signature_algo is standard_webhooks" do
+      let(:create_params) { {webhook_url: "http://foo.bar", signature_algo: "standard_webhooks"} }
+
+      it "returns a validation failure with the allowed values, without creating the endpoint" do
+        result = nil
+        expect { result = create_service.call }.not_to change(WebhookEndpoint, :count)
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(signature_algo: ["value_is_invalid"])
+        expect(result.error.meta).to eq(signature_algo: {allowed_values: %w[jwt hmac]})
+      end
+
+      context "with the standard_webhooks_signature flag" do
+        before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+
+        it "creates a standard_webhooks endpoint with one signing key" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
+          expect(result.webhook_endpoint.signing_keys.pluck(:organization_id)).to eq([organization.id])
+        end
+
+        context "when the signing key cannot be created" do
+          let(:key_failure) { BaseService::FailedResult.new(BaseService::Result.new, "key failure") }
+
+          before { allow(WebhookEndpoints::SigningKeys::CreateService).to receive(:call!).and_raise(key_failure) }
+
+          it "raises and leaves no endpoint, security log or Segment job" do
+            expect { create_service.call }.to raise_error(BaseService::FailedResult, "key failure")
+              .and not_change(WebhookEndpoint, :count)
+              .and not_change(WebhookEndpointSigningKey, :count)
+
+            expect(security_logger).not_to have_received(:produce)
+            expect(SegmentTrackJob).not_to have_been_enqueued
+          end
+        end
+      end
+    end
+
+    context "with the native v2 rule" do
+      let(:signature_algo_rule) { WebhookEndpoint::V2_SIGNATURE_ALGO_RULE }
+
+      context "without a signature_algo" do
+        let(:create_params) { {webhook_url: "http://foo.bar"} }
+
+        it "creates a standard_webhooks endpoint with one signing key" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
+          expect(result.webhook_endpoint.signing_keys.count).to eq(1)
+        end
+      end
+
+      context "when signature_algo is standard_webhooks" do
+        let(:create_params) { {webhook_url: "http://foo.bar", signature_algo: "standard_webhooks"} }
+
+        it "creates a standard_webhooks endpoint with one signing key, even without the flag" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
+          expect(result.webhook_endpoint.signing_keys.count).to eq(1)
+        end
+      end
+
+      %w[jwt hmac md5].each do |signature_algo|
+        context "when signature_algo is #{signature_algo}" do
+          let(:create_params) { {webhook_url: "http://foo.bar", signature_algo:} }
+
+          it "returns a validation failure with the v2 allowed values, without creating the endpoint" do
+            result = nil
+            expect { result = create_service.call }.not_to change(WebhookEndpoint, :count)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(signature_algo: ["value_is_invalid"])
+            expect(result.error.meta).to eq(signature_algo: {allowed_values: ["standard_webhooks"]})
+          end
+        end
       end
     end
 
