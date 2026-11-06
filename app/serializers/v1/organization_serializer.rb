@@ -64,8 +64,9 @@ module V1
       ).serialize
     end
 
+    # Id order, so `webhook_url` is the endpoint that `Organizations::UpdateService` writes.
     def webhook_urls
-      model.webhook_endpoints.map(&:webhook_url)
+      model.webhook_endpoints.sort_by(&:id).map(&:webhook_url)
     end
   end
 end

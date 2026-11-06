@@ -52,10 +52,7 @@ module Organizations
       ActiveRecord::Base.transaction do
         handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
-        if params.key?(:webhook_url)
-          webhook_endpoint = organization.webhook_endpoints.first_or_initialize
-          webhook_endpoint.update!(webhook_url: params[:webhook_url])
-        end
+        handle_webhook_url if params.key?(:webhook_url)
 
         # TODO: only updates the organization grace period,
         #       it does not update related invoices payment due date, etc
@@ -89,6 +86,20 @@ module Organizations
     private
 
     attr_reader :organization, :params, :user
+
+    def handle_webhook_url
+      webhook_url = params[:webhook_url]
+      webhook_endpoint = organization.webhook_endpoints.order(:id).first
+
+      if webhook_endpoint.nil?
+        WebhookEndpoints::CreateService.call!(organization:, params: {webhook_url:})
+      elsif webhook_endpoint.webhook_url != webhook_url
+        WebhookEndpoints::UpdateService.call!(id: webhook_endpoint.id, organization:, params: {webhook_url:})
+      end
+
+      # The endpoint services save their own instances: drop the cached association so responses render the new url.
+      organization.webhook_endpoints.reset
+    end
 
     def assign_premium_attributes
       return unless License.premium?
