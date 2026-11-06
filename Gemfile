@@ -122,6 +122,10 @@ gem "valvat"
 # Data Export
 gem "csv", "~> 3.0"
 
+# Signup
+gem "email_data", require: false
+gem "public_suffix"
+
 gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "0b4fe83"
 
 group :development, :test, :staging do
