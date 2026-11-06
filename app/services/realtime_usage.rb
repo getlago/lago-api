@@ -93,9 +93,6 @@ module RealtimeUsage
       # organization is the one usage callers preload.
       return "recurring_metric" if billable_metric.recurring? && !recurring_sum_enabled?(billable_metric.organization)
 
-      # `target_wallet_code` will be handled later.
-      return "target_wallet" if charge.accepts_target_wallet
-
       nil
     end
   end
