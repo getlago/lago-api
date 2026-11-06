@@ -109,6 +109,10 @@ class Wallet < ApplicationRecord
     billable_metrics.any?
   end
 
+  def expiration_invoicing_enabled?
+    invoice_usage_on_expiration? && organization.feature_flag_enabled?(:invoice_usage_on_wallet_expiration)
+  end
+
   private
 
   def paid_top_up_max_greater_than_or_equal_min

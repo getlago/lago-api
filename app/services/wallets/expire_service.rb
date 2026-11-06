@@ -11,7 +11,7 @@ module Wallets
     end
 
     def call
-      if wallet.active? && wallet.invoice_usage_on_expiration?
+      if wallet.active? && wallet.expiration_invoicing_enabled?
         subscriptions.find_each { |subscription| invoice_usage(subscription) }
       end
 
