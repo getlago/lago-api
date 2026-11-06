@@ -218,35 +218,37 @@ module DailyUsages
     end
 
     # The fit only reaches a zero share slowly, so the edges no valid split can use are removed first. With an
-    # exact max flow, an unused edge can carry usage only if the residual graph leads back from its receiver to its
-    # filter.
+    # exact max flow, an edge without flow can carry usage only if its receiver and its filter are in the same
+    # strongly connected component of the residual graph.
     def usable_edges(totals, edges, caps)
-      flows = edges.map { |row| Array.new(row.size, Rational(0)) }
-      row_flow = ->(i) { flows[i].sum }
-      column_flow = ->(id) { edges.each_with_index.sum { |row, i| row.each_with_index.sum { |rid, j| (rid == id) ? flows[i][j] : 0 } } }
+      column_ids = caps.keys
+      column_index = column_ids.each_with_index.to_h
+      rows = edges.map { |row| row.map { |id| column_index[id] } }
+      columns = Array.new(column_ids.size) { [] }
+      rows.each_with_index { |row, i| row.each { |c| columns[c] << i } }
+      column_caps = column_ids.map { |id| caps[id] }
 
-      neighbors = lambda do |node|
-        kind, index = node
+      flows = rows.map { |row| row.to_h { |c| [c, Rational(0)] } }
+      row_flows = Array.new(rows.size, Rational(0))
+      column_flows = Array.new(column_ids.size, Rational(0))
+
+      # Nodes: [:source], [:sink], [:row, i], [:column, c]
+      neighbors = lambda do |(kind, index)|
         case kind
-        when :source
-          totals.each_index.filter_map { |i| [:row, i] if row_flow.call(i) < totals[i] }
-        when :row
-          edges[index].uniq.map { |id| [:column, id] } + (row_flow.call(index).positive? ? [[:source]] : [])
+        when :source then rows.each_index.filter_map { |i| [:row, i] if row_flows[i] < totals[i] }
+        when :row then rows[index].map { |c| [:column, c] } + (row_flows[index].positive? ? [[:source]] : [])
         when :column
-          backward = edges.each_with_index.flat_map { |row, i| row.each_index.select { |j| row[j] == index && flows[i][j].positive? }.map { [:row, i] } }
-          backward + ((column_flow.call(index) < caps[index]) ? [[:sink]] : [])
-        when :sink
-          caps.keys.select { |id| column_flow.call(id).positive? }.map { |id| [:column, id] }
+          columns[index].filter_map { |i| [:row, i] if flows[i][index].positive? } +
+            ((column_flows[index] < column_caps[index]) ? [[:sink]] : [])
+        when :sink then column_flows.each_index.filter_map { |c| [:column, c] if column_flows[c].positive? }
         end
       end
 
-      path_to = lambda do |from, to|
-        parents = {from => nil}
-        queue = [from]
-        until queue.empty?
+      loop do
+        parents = {[:source] => nil}
+        queue = [[:source]]
+        until queue.empty? || parents.key?([:sink])
           node = queue.shift
-          return parents if node == to
-
           neighbors.call(node).each do |neighbor|
             next if parents.key?(neighbor)
 
@@ -254,39 +256,85 @@ module DailyUsages
             queue << neighbor
           end
         end
-        nil
-      end
+        break unless parents.key?([:sink])
 
-      while (parents = path_to.call([:source], [:sink]))
         path = [[:sink]]
         path.unshift(parents[path.first]) while parents[path.first]
         steps = path.each_cons(2).to_a
 
-        room = steps.map do |(kind, index), (next_kind, next_index)|
-          if kind == :source then totals[next_index] - row_flow.call(next_index)
-          elsif next_kind == :sink then caps[index] - column_flow.call(index)
-          elsif kind == :row then nil
-          else edges[next_index].each_index.select { |j| edges[next_index][j] == index }.sum { |j| flows[next_index][j] }
+        room = steps.filter_map do |(kind, index), (next_kind, next_index)|
+          if kind == :source then totals[next_index] - row_flows[next_index]
+          elsif next_kind == :sink then column_caps[index] - column_flows[index]
+          elsif kind == :column then flows[next_index][index]
           end
-        end.compact.min
+        end.min
 
         steps.each do |(kind, index), (next_kind, next_index)|
-          if kind == :row && next_kind == :column
-            flows[index][edges[index].index(next_index)] += room
-          elsif kind == :column && next_kind == :row
-            left = room
-            edges[next_index].each_index.select { |j| edges[next_index][j] == index }.each do |j|
-              taken = [left, flows[next_index][j]].min
-              flows[next_index][j] -= taken
-              left -= taken
+          if kind == :source then row_flows[next_index] += room
+          elsif next_kind == :sink then column_flows[index] += room
+          elsif kind == :row then flows[index][next_index] += room
+          else flows[next_index][index] -= room
+          end
+        end
+      end
+
+      component = strongly_connected_components(
+        [[:source], [:sink], *rows.each_index.map { |i| [:row, i] }, *column_ids.each_index.map { |c| [:column, c] }],
+        neighbors
+      )
+
+      rows.each_with_index.map do |row, i|
+        row.map { |c| flows[i][c].positive? || component[[:column, c]] == component[[:row, i]] }
+      end
+    end
+
+    # Tarjan's algorithm, without recursion
+    def strongly_connected_components(nodes, neighbors)
+      index = {}
+      low = {}
+      component = {}
+      stack = []
+      counter = 0
+
+      nodes.each do |root|
+        next if index.key?(root)
+
+        work = [[root, neighbors.call(root), 0]]
+        index[root] = low[root] = counter
+        counter += 1
+        stack << root
+
+        until work.empty?
+          node, adjacent, position = work.last
+
+          if position < adjacent.size
+            work.last[2] += 1
+            neighbor = adjacent[position]
+
+            if !index.key?(neighbor)
+              index[neighbor] = low[neighbor] = counter
+              counter += 1
+              stack << neighbor
+              work << [neighbor, neighbors.call(neighbor), 0]
+            elsif !component.key?(neighbor)
+              low[node] = [low[node], index[neighbor]].min
+            end
+          else
+            work.pop
+            low[work.last[0]] = [low[work.last[0]], low[node]].min if work.any?
+
+            if low[node] == index[node]
+              loop do
+                member = stack.pop
+                component[member] = index[node]
+                break if member == node
+              end
             end
           end
         end
       end
 
-      edges.each_with_index.map do |row, i|
-        row.each_with_index.map { |id, j| flows[i][j].positive? || path_to.call([:column, id], [:row, i]).present? }
-      end
+      component
     end
 
     def deduction_plan(filter, receivers, claims)

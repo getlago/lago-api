@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "timeout"
 
 RSpec.describe DailyUsages::ComputeDiffService do
   subject(:diff_service) { described_class.new(daily_usage:, previous_daily_usage:) }
@@ -2192,6 +2193,25 @@ RSpec.describe DailyUsages::ComputeDiffService do
           expect(f.slice("amount_cents", "units", "events_count")).to eq(usage_values(0, "0.0", 0))
           expect(f["presentation_breakdowns"].map { |pb| BigDecimal(pb["units"]) }).to all(be_zero)
         end
+      end
+    end
+
+    context "when a filter is narrowed above MAX_VALUE_CELLS next to many filters" do
+      let(:wide) { {"k1" => (1..23).map { "v#{it}" }, "k2" => (1..22).map { "w#{it}" }, "k3" => (1..22).map { "x#{it}" }} }
+      let(:narrowed) { wide.merge("k3" => (1..21).map { "x#{it}" }) }
+      let(:others) { (1..39).map { |i| {"k2" => ["w#{i}"]} } }
+
+      let(:previous_usage) do
+        usage_payload([filter_usage(wide, 1000, "10.0", 10), *others.map { filter_usage(it, 500, "5.0", 5) }], 20_500, "205.0", 205)
+      end
+
+      let(:usage) do
+        usage_payload([filter_usage(narrowed, 1000, "10.0", 10), *others.map { filter_usage(it, 600, "6.0", 6) }], 24_400, "244.0", 244)
+      end
+
+      it "diffs the 40 filters quickly" do
+        expect { Timeout.timeout(5) { diff_charge } }.not_to raise_error
+        expect(diff_filters.sum { |f| f["amount_cents"] }).to eq(3900)
       end
     end
 
