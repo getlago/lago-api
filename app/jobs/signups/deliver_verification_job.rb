@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 module Signups
+  # Delivers itself rather than through SendEmailJob: the service picks the email and issues its link under the email
+  # lock, and SendEmailJob would add nothing (it logs only loggable mailers, which need an organization). Its retries
+  # differ on purpose: busy relays stop while the link is still valid, and an id argument cannot fail to deserialize.
   class DeliverVerificationJob < ApplicationJob
     queue_as "mailers"
 
