@@ -182,6 +182,49 @@ RSpec.describe WebhookEndpoint do
     end
   end
 
+  describe "#listed_signing_keys" do
+    subject { webhook_endpoint.listed_signing_keys }
+
+    let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo:) }
+    let(:signature_algo) { :standard_webhooks }
+
+    context "when the endpoint has no signing key" do
+      it { is_expected.to eq([]) }
+    end
+
+    context "when the endpoint signs with Standard Webhooks and has several keys" do
+      let(:newer_key) { travel_to(1.hour.ago) { create(:webhook_endpoint_signing_key, webhook_endpoint:) } }
+      let(:older_key) { travel_to(2.hours.ago) { create(:webhook_endpoint_signing_key, webhook_endpoint:) } }
+
+      before do
+        newer_key
+        older_key
+        # A key of another endpoint must not be listed.
+        create(:webhook_endpoint_signing_key)
+      end
+
+      it "returns the keys of the endpoint, oldest first" do
+        expect(subject).to eq([older_key, newer_key])
+      end
+    end
+
+    context "when the endpoint signs with JWT and kept a key" do
+      let(:signature_algo) { :jwt }
+
+      before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+      it { is_expected.to eq([]) }
+    end
+
+    context "when the endpoint signs with HMAC and kept a key" do
+      let(:signature_algo) { :hmac }
+
+      before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+      it { is_expected.to eq([]) }
+    end
+  end
+
   describe "callbacks" do
     describe "#normalize_event_types" do
       subject(:webhook_endpoint) { build(:webhook_endpoint, event_types:) }
