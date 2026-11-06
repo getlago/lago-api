@@ -24,6 +24,19 @@ module Billing
         end
       end
 
+      # Every segment whose window touches the range, due or not — what a preview answers.
+      #
+      # Unlike segments_due_by it does not resume from the stored high-water mark: a preview
+      # must answer for the window it was asked about, not for whatever part of it nothing
+      # has billed yet. Starting the walk at the range's own beginning keeps that bounded.
+      def segments_overlapping(range)
+        cycles = walker.walk_to(range.end, from: range.begin)
+
+        billable_segments_of(cycles).select do |segment|
+          segment.started_at < range.end && segment.ended_at > range.begin
+        end
+      end
+
       # Next billing instant strictly after the given time, or nil when billing has ended.
       def next_billing_at(after:)
         cycle = walker.resume(after)
