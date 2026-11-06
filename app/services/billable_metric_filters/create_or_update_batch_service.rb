@@ -25,7 +25,9 @@ module BillableMetricFilters
       end
 
       return result.validation_failure!(errors: {values: ["value_is_mandatory"]}) if any_filter_params_values_blank?
-      return result.validation_failure!(errors: {values: ["value_is_invalid"]}) if any_new_filter_value_has_surrounding_whitespace?
+      if (field = new_filter_value_with_surrounding_whitespace_field)
+        return result.single_validation_failure!(field:, error_code: "value_is_invalid")
+      end
       # Reject duplicate keys: `call` applies every entry (last write wins per
       # key), so the orphaning guard — which reads one entry per key — could
       # otherwise miss a value removed by a later duplicate entry.
@@ -102,12 +104,17 @@ module BillableMetricFilters
       end
     end
 
-    def any_new_filter_value_has_surrounding_whitespace?
-      filters_params.any? do |filter_param|
+    def new_filter_value_with_surrounding_whitespace_field
+      filters_params.each_with_index do |filter_param, filter_index|
         existing_values = existing_filters_by_key[filter_param[:key]]&.values || []
-        new_values = Array(filter_param[:values]) - existing_values
+        value_index = Array(filter_param[:values]).find_index do |value|
+          !existing_values.include?(value) && value.is_a?(String) && value != value.strip
+        end
 
-        new_values.any? { |value| value.is_a?(String) && value != value.strip }
+        next unless value_index
+
+        values_field = ValidationFailure.item_field(:filters, filter_index, :values)
+        return :"#{values_field}[#{value_index}]"
       end
     end
 

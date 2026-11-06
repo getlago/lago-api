@@ -84,6 +84,21 @@ RSpec.describe Api::V2::BillableMetricsController do
     end
   end
 
+  shared_examples "rejects filter values with surrounding whitespace" do
+    context "when the second value of the second filter has surrounding whitespace" do
+      let(:attributes) do
+        super().merge(filters: [{key: "region", values: ["eu"]}, {key: "cloud", values: ["aws", " azure "]}])
+      end
+
+      it "identifies the invalid value without writing a metric" do
+        expect { request }.not_to change { organization.billable_metrics.pluck(:id, :name, :updated_at) }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "filters[1].values[1]", meta: {}}])
+      end
+    end
+  end
+
   shared_examples "rejects malformed filter input" do
     {
       "a scalar filters value" => ["invalid", "filters"],
@@ -244,6 +259,7 @@ RSpec.describe Api::V2::BillableMetricsController do
     include_examples "requires API permission", "billable_metric", "write"
     include_examples "validates billable metric input"
     include_examples "reports indexed filter errors"
+    include_examples "rejects filter values with surrounding whitespace"
     include_examples "rejects malformed filter input"
 
     it "creates the metric and its filters but returns a flat payload" do
@@ -325,6 +341,7 @@ RSpec.describe Api::V2::BillableMetricsController do
       include_examples "requires API permission", "billable_metric", "write"
       include_examples "validates billable metric input"
       include_examples "reports indexed filter errors"
+      include_examples "rejects filter values with surrounding whitespace"
 
       it "updates supplied fields and leaves other fields unchanged" do
         request
