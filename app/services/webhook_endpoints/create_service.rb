@@ -26,7 +26,8 @@ module WebhookEndpoints
 
       result.webhook_endpoint = webhook_endpoint
       track_webhook_webdpoint_created(result.webhook_endpoint)
-      register_security_log(webhook_endpoint)
+      # Deferred so nothing is sent when an outer transaction rolls back.
+      after_commit { register_security_log(webhook_endpoint) }
       result
     rescue ActiveRecord::RecordInvalid => e
       failure = BaseService::ValidationFailure.from_errors(result, e.record.errors)
@@ -55,7 +56,7 @@ module WebhookEndpoints
     end
 
     def track_webhook_webdpoint_created(webhook_endpoint)
-      SegmentTrackJob.perform_later(
+      SegmentTrackJob.perform_after_commit(
         membership_id: CurrentContext.membership,
         event: "webhook_endpoint_created",
         properties: {
