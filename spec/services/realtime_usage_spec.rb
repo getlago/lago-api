@@ -265,8 +265,8 @@ RSpec.describe RealtimeUsage do
     context "with a charge accepting a target wallet" do
       let(:charge) { build(:standard_charge, billable_metric:, accepts_target_wallet: true) }
 
-      it "is not served, because the absent wallet code is not the nil rails emits" do
-        expect(supported).to be(false)
+      it "is served, because the buckets are grouped on the wallet code as the events store groups" do
+        expect(supported).to be(true)
       end
     end
 
