@@ -120,9 +120,11 @@ module Invoices
     # The invoice is the billing object: a given term wins, otherwise CreateGeneratingService
     # resolves the customer and billing entity levels.
     def invoice_payment_term
-      return {} if payment_term.nil?
-
-      {payment_term: PaymentTerm.from_h(payment_term), payment_term_source: "invoice"}
+      if payment_term.nil?
+        {}
+      else
+        {payment_term: PaymentTerm.from_h(payment_term), payment_term_source: "invoice"}
+      end
     end
 
     def resolve_billing_entity
