@@ -4,6 +4,11 @@ module ApiKeys
   class CacheService < ::CacheService
     CACHE_KEY_VERSION = "1"
 
+    # Written in place of the cached key when it is invalidated. It only needs to outlive a request
+    # that read the key from the database just before the change, see `write_to_cache`.
+    INVALIDATED_MARKER = "invalidated"
+    INVALIDATED_MARKER_TTL = 1.minute
+
     def initialize(auth_token, with_cache: false)
       @auth_token = auth_token
       @with_cache = with_cache
@@ -14,13 +19,17 @@ module ApiKeys
       organization.api_keys.each { expire_cache(it.value) }
     end
 
+    def expire_cache
+      Rails.cache.write(cache_key, INVALIDATED_MARKER, expires_in: INVALIDATED_MARKER_TTL)
+    end
+
     def call
       # When no cache, just return the values from the database
       return fetch_from_database unless with_cache
 
       # Fetch API key and organization from the cache
       cache = Rails.cache.read(cache_key)
-      if cache
+      if cache && cache != INVALIDATED_MARKER
         cache_json = JSON.parse(cache)
         api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
 
@@ -64,13 +73,16 @@ module ApiKeys
         cache_duration
       end
 
+      # A request can read the key from the database just before it is revoked or updated. Writing only when
+      # the cache is empty keeps that stale copy from replacing the marker left by `expire_cache`.
       Rails.cache.write(
         cache_key,
         {
           organization: api_key.organization.attributes,
           api_key: api_key.attributes
         }.to_json,
-        expires_in: expiration
+        expires_in: expiration,
+        unless_exist: true
       )
     end
   end
