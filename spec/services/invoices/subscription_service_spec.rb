@@ -176,6 +176,22 @@ RSpec.describe Invoices::SubscriptionService do
         expect(result.invoice.fees.subscription.first.billing_entity_id).to eq(subscription_billing_entity.id)
       end
 
+      context "when only the billing entities carry a payment term" do
+        let(:billing_entity) { create(:billing_entity, organization:, payment_term: {"term_type" => "net", "days" => 15}) }
+        let(:subscription_billing_entity) do
+          create(:billing_entity, organization:, payment_term: {"term_type" => "end_of_month"})
+        end
+
+        it "uses the term of the subscription's entity" do
+          result = invoice_service.call
+
+          expect(result.invoice).to have_attributes(
+            payment_term: {"term_type" => "end_of_month"},
+            payment_term_source: "billing_entity"
+          )
+        end
+      end
+
       context "when the billing entity has an invoice grace period" do
         let(:subscription_billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
 

@@ -62,9 +62,17 @@ module Subscriptions
     #       BillSubscriptionJob re-resolves and splits mixed groups itself, covering term
     #       changes racing with this grouping.
     def group_by_resolved_payment_term(subscription_groups)
+      ActiveRecord::Associations::Preloader.new(
+        records: subscription_groups.flatten,
+        associations: [:billing_entity, {customer: :billing_entity}]
+      ).call
+
       subscription_groups.flat_map do |subscriptions|
         groups = subscriptions.group_by do |subscription|
-          PaymentTerms::ResolveService.call!(customer: subscription.customer).payment_term.grouping_key
+          PaymentTerms::ResolveService.call!(
+            customer: subscription.customer,
+            billing_entity: subscription.billing_entity
+          ).payment_term.grouping_key
         end.values
 
         if groups.many?

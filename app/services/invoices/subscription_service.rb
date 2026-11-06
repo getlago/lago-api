@@ -238,7 +238,9 @@ module Invoices
     end
 
     def resolved_payment_terms
-      @resolved_payment_terms ||= subscriptions.map { PaymentTerms::ResolveService.call!(customer:) }
+      @resolved_payment_terms ||= subscriptions.map do
+        PaymentTerms::ResolveService.call!(customer:, billing_entity: invoice_billing_entity)
+      end
     end
 
     def resolved_payment_term_source

@@ -55,6 +55,8 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
 
   # Terms giving the same due date for every issuing date share a key, so they bill on one invoice.
   def grouping_key
+    # Day 31 of the issuing month is clamped to its last day, never earlier than the issuing date
+    return {"term_type" => "end_of_month"} if term_type == "day_of_month" && day_of_month == 31 && month_offset.zero?
     return to_h unless days&.zero?
 
     case term_type

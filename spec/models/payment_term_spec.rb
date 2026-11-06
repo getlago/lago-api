@@ -194,6 +194,12 @@ RSpec.describe PaymentTerm do
       expect(described_class.from_h(term_type: "days_end_of_month", days: 0).grouping_key).to eq("term_type" => "end_of_month")
     end
 
+    it "groups day 31 of the issuing month with end of month" do
+      term = described_class.from_h(term_type: "day_of_month", day_of_month: 31, month_offset: 0)
+
+      expect(term.grouping_key).to eq("term_type" => "end_of_month")
+    end
+
     it "keeps every other term as it is" do
       [
         {"term_type" => "due_on_receipt"},
@@ -201,7 +207,8 @@ RSpec.describe PaymentTerm do
         {"term_type" => "net", "days" => 30},
         {"term_type" => "net_end_of_month", "days" => 2},
         {"term_type" => "days_end_of_month", "days" => 10},
-        {"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 0}
+        {"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 0},
+        {"term_type" => "day_of_month", "day_of_month" => 31, "month_offset" => 1}
       ].each do |term|
         expect(described_class.from_h(term).grouping_key).to eq(term)
       end
