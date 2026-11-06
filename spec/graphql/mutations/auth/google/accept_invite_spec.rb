@@ -29,7 +29,7 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
   end
 
   before do
-    allow(Auth::GoogleService).to receive(:call).with(:accept_invite, "code", invite.token).and_return(accept_invite_result)
+    allow(Auth::GoogleService).to receive(:call).with(:accept_invite, "code", invite.token, state: nil, state_secret: nil).and_return(accept_invite_result)
   end
 
   it "returns token and user" do
@@ -100,6 +100,39 @@ RSpec.describe Mutations::Auth::Google::AcceptInvite do
 
       expect(response["status"]).to eq(404)
       expect(response["details"]["invite"]).to include("not_found")
+    end
+  end
+
+  context "with a state" do
+    before do
+      allow(Auth::GoogleService).to receive(:call)
+        .with(:accept_invite, "code", invite.token, state: "state", state_secret: "secret").and_return(accept_invite_result)
+    end
+
+    it "passes the state and its secret to the service" do
+      result = execute_graphql(
+        query: mutation,
+        request: Rack::Request.new(Rack::MockRequest.env_for("http://example.com")),
+        variables: {input: {code: "code", inviteToken: invite.token, state: "state", stateSecret: "secret"}}
+      )
+
+      expect(result["data"]["googleAcceptInvite"]["token"]).to eq("token")
+    end
+  end
+
+  context "when the state is invalid" do
+    let(:accept_invite_result) do
+      Auth::GoogleService::RESULTS.fetch(:accept_invite).new.single_validation_failure!(error_code: "invalid_google_state")
+    end
+
+    it "returns an error" do
+      result = execute_graphql(
+        query: mutation,
+        request: Rack::Request.new(Rack::MockRequest.env_for("http://example.com")),
+        variables: {input: {code: "code", inviteToken: invite.token}}
+      )
+
+      expect(result["errors"].first["extensions"]).to include("code" => "unprocessable_entity", "details" => {"base" => ["invalid_google_state"]})
     end
   end
 end
