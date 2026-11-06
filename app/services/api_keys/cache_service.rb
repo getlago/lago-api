@@ -2,7 +2,7 @@
 
 module ApiKeys
   class CacheService < ::CacheService
-    CACHE_KEY_VERSION = "1"
+    CACHE_KEY_VERSION = "2"
 
     # Written in place of the cached key when it is invalidated. It only needs to outlive a request
     # that read the key from the database just before the change, see `write_to_cache`. Keep it short:
