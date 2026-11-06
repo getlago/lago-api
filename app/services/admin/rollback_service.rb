@@ -13,6 +13,9 @@ module Admin
 
     def call
       return result.not_found_failure!(resource: "audit_log") unless audit_log
+      if audit_log.sandbox_linked?
+        return result.single_validation_failure!(error_code: "cannot_rollback_sandbox_link", field: :feature_type)
+      end
 
       unless CsAdminAuditLog::TOGGLEABLE_FEATURE_TYPES.include?(audit_log.feature_type)
         return result.single_validation_failure!(

@@ -150,7 +150,9 @@ Rails.application.routes.draw do
   if Rails.env.local?
     namespace :admin do
       resources :memberships, only: %i[create]
-      resources :organizations, only: %i[update create]
+      resources :organizations, only: %i[update create] do
+        post :link_sandbox, on: :member
+      end
       resources :invoices do
         post :regenerate, on: :member
       end
