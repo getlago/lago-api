@@ -512,6 +512,48 @@ RSpec.describe Organizations::UpdateService do
 
           expect(security_logger).to have_received(:produce).with(hash_including(log_event: "webhook_endpoint.created"))
         end
+
+        context "with the standard_webhooks_signature flag" do
+          before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+
+          it "creates a jwt endpoint with no signing key" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(organization.webhook_endpoints.reload.map(&:signature_algo)).to eq(["jwt"])
+            expect(WebhookEndpointSigningKey.where(organization:)).to be_empty
+          end
+        end
+      end
+
+      context "when the lowest id endpoint signs with standard_webhooks" do
+        let(:organization) { create(:organization, webhook_url: nil) }
+        let(:target_webhook_endpoint) do
+          create(:webhook_endpoint, id: "00000000-0000-4000-8000-000000000001", organization:, signature_algo: :standard_webhooks)
+        end
+        let(:other_webhook_endpoint) do
+          create(:webhook_endpoint, id: "ffffffff-ffff-4fff-bfff-ffffffffffff", organization:, signature_algo: :standard_webhooks)
+        end
+        let(:signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint: target_webhook_endpoint) }
+        let(:other_signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint: other_webhook_endpoint) }
+
+        before do
+          organization.enable_feature_flag!(:standard_webhooks_signature)
+          signing_key
+          other_signing_key
+        end
+
+        it "changes only its url and keeps its algorithm and signing key" do
+          other_attributes = other_webhook_endpoint.reload.attributes
+
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(target_webhook_endpoint.reload).to have_attributes(webhook_url: new_webhook_url, signature_algo: "standard_webhooks")
+          expect(target_webhook_endpoint.signing_keys.pluck(:id)).to eq([signing_key.id])
+          expect(other_webhook_endpoint.reload.attributes).to eq(other_attributes)
+          expect(other_webhook_endpoint.signing_keys.pluck(:id)).to eq([other_signing_key.id])
+        end
       end
 
       context "when the organization has several webhook endpoints" do

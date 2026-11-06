@@ -5,8 +5,23 @@ class WebhookEndpoint < ApplicationRecord
 
   SIGNATURE_ALGOS = [
     :jwt,
-    :hmac
+    :hmac,
+    :standard_webhooks
   ].freeze
+
+  # The signature algorithms an API accepts on create and on a change of algorithm, and its default.
+  SignatureAlgoRule = Data.define(:allowed_values, :default) do
+    def allow?(value) = allowed_values.include?(value.to_s)
+  end
+
+  STANDARD_WEBHOOKS_SIGNATURE_ALGO = "standard_webhooks"
+
+  V2_SIGNATURE_ALGO_RULE = SignatureAlgoRule.new(
+    allowed_values: [STANDARD_WEBHOOKS_SIGNATURE_ALGO].freeze,
+    default: STANDARD_WEBHOOKS_SIGNATURE_ALGO
+  )
+
+  V1_SIGNATURE_ALGOS = (SIGNATURE_ALGOS.map(&:to_s) - [STANDARD_WEBHOOKS_SIGNATURE_ALGO]).freeze
 
   WEBHOOK_EVENT_TYPE_CONFIG = YAML.safe_load_file(
     Rails.root.join("config/webhook_event_types.yml"),
@@ -30,6 +45,7 @@ class WebhookEndpoint < ApplicationRecord
 
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
+  has_many :signing_keys, class_name: "WebhookEndpointSigningKey", dependent: :delete_all
 
   validates :webhook_url, presence: true, url: {block_private_addresses: true}
   validates :webhook_url, uniqueness: {scope: :organization_id}
@@ -40,6 +56,17 @@ class WebhookEndpoint < ApplicationRecord
 
   enum :signature_algo, SIGNATURE_ALGOS
 
+  # v1 REST, GraphQL and the app offer standard_webhooks only behind its rollout flag.
+  def self.v1_signature_algo_rule(organization)
+    allowed_values = if organization.feature_flag_enabled?(:standard_webhooks_signature)
+      SIGNATURE_ALGOS.map(&:to_s)
+    else
+      V1_SIGNATURE_ALGOS
+    end
+
+    SignatureAlgoRule.new(allowed_values: allowed_values.freeze, default: "jwt")
+  end
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[webhook_url]
   end
@@ -49,6 +76,11 @@ class WebhookEndpoint < ApplicationRecord
     errors.group_by_attribute.transform_values do |attribute_errors|
       attribute_errors.map { V2_ERROR_CODES.fetch(it.type, it.message) }
     end
+  end
+
+  # The key that signs deliveries; earlier keys stay until rotation removes them.
+  def current_signing_key
+    signing_keys.order(created_at: :desc, id: :desc).first
   end
 
   private

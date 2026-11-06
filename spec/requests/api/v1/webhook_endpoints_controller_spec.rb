@@ -39,6 +39,29 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       end
     end
 
+    context "without a signature_algo" do
+      let(:create_params) { super().except(:signature_algo) }
+
+      it "signs with JWT" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+        expect(organization.webhook_endpoints.find(json[:webhook_endpoint][:lago_id]).signing_keys.count).to eq(0)
+      end
+    end
+
+    context "with the hmac signature_algo" do
+      let(:create_params) { super().merge(signature_algo: "hmac") }
+
+      it "creates an HMAC endpoint" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("hmac")
+      end
+    end
+
     context "with an unknown signature_algo" do
       let(:create_params) { super().merge(signature_algo: "md5") }
 
@@ -47,6 +70,59 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
+      end
+    end
+
+    context "with the standard_webhooks signature_algo" do
+      let(:create_params) { super().merge(signature_algo: "standard_webhooks") }
+
+      it "returns a validation error without the standard_webhooks_signature flag" do
+        expect { subject }.not_to change(WebhookEndpoint, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
+      end
+
+      context "with the standard_webhooks_signature flag" do
+        let(:organization) { create(:organization, feature_flags: ["standard_webhooks_signature"]) }
+
+        it "creates the endpoint with exactly one signing key" do
+          expect { subject }.to change(WebhookEndpointSigningKey, :count).by(1)
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+          webhook_endpoint = organization.webhook_endpoints.find(json[:webhook_endpoint][:lago_id])
+          expect(webhook_endpoint.signature_algo).to eq("standard_webhooks")
+          expect(webhook_endpoint.signing_keys.count).to eq(1)
+        end
+      end
+    end
+
+    context "when the organization uses the product catalog" do
+      let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+
+      %w[jwt hmac].each do |signature_algo|
+        context "with the #{signature_algo} signature_algo" do
+          let(:create_params) { super().merge(signature_algo:) }
+
+          it "creates the endpoint" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:webhook_endpoint][:signature_algo]).to eq(signature_algo)
+          end
+        end
+      end
+
+      context "without a signature_algo" do
+        let(:create_params) { super().except(:signature_algo) }
+
+        it "signs with JWT" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+        end
       end
     end
 
@@ -304,6 +380,43 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
       it_behaves_like "produces a security log", "webhook_endpoint.updated" do
         before { subject }
+      end
+
+      context "when switching to standard_webhooks" do
+        let(:update_params) { {signature_algo: "standard_webhooks"} }
+
+        it "returns a validation error without the standard_webhooks_signature flag" do
+          expect { subject }.not_to change { webhook_endpoint.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
+        end
+
+        context "with the standard_webhooks_signature flag" do
+          before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+
+          it "updates the endpoint and creates exactly one signing key" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+            expect(webhook_endpoint.reload.signing_keys.count).to eq(1)
+          end
+        end
+      end
+
+      context "when renaming a standard_webhooks endpoint of an organization without the flag" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
+        let(:update_params) { {name: "Renamed", signature_algo: "standard_webhooks"} }
+
+        it "updates the endpoint and keeps its algorithm" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:name]).to eq("Renamed")
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+          expect(webhook_endpoint.reload).to have_attributes(name: "Renamed", signature_algo: "standard_webhooks")
+        end
       end
 
       context "when only webhook_url is provided" do

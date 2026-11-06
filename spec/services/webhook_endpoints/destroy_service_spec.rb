@@ -20,6 +20,20 @@ RSpec.describe WebhookEndpoints::DestroyService do
       expect { destroy_service.call }.to change(WebhookEndpoint, :count).by(-1)
     end
 
+    context "with signing keys" do
+      let(:other_key) { create(:webhook_endpoint_signing_key) }
+
+      before do
+        create_list(:webhook_endpoint_signing_key, 2, webhook_endpoint:)
+        other_key
+      end
+
+      it "deletes the keys of the endpoint only" do
+        expect { destroy_service.call }.to change(WebhookEndpointSigningKey, :count).from(3).to(1)
+        expect(WebhookEndpointSigningKey.all).to eq([other_key])
+      end
+    end
+
     it_behaves_like "produces a security log", "webhook_endpoint.deleted" do
       before { destroy_service.call }
     end

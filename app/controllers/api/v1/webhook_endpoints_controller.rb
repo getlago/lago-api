@@ -4,30 +4,23 @@ module Api
   module V1
     class WebhookEndpointsController < Api::V1::BaseController
       def create
-        service = ::WebhookEndpoints::CreateService.new(
-          organization: current_organization,
-          params: create_params
-        )
+        result = ::WebhookEndpoints::CreateService.call(organization: current_organization, params: create_params)
 
-        result = service.call
-
-        return render_webhook_endpoint(result.webhook_endpoint) if result.success?
-
-        render_error_response(result)
+        if result.success?
+          render_webhook_endpoint(result.webhook_endpoint)
+        else
+          render_error_response(result)
+        end
       end
 
       def update
-        service = ::WebhookEndpoints::UpdateService.new(
-          id: params[:id],
-          organization: current_organization,
-          params: update_params
-        )
+        result = ::WebhookEndpoints::UpdateService.call(id: params[:id], organization: current_organization, params: update_params)
 
-        result = service.call
-
-        return render_webhook_endpoint(result.webhook_endpoint) if result.success?
-
-        render_error_response(result)
+        if result.success?
+          render_webhook_endpoint(result.webhook_endpoint)
+        else
+          render_error_response(result)
+        end
       end
 
       def index

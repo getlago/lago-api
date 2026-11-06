@@ -3,8 +3,11 @@
 require "rails_helper"
 
 RSpec.describe WebhookEndpoint do
+  it { is_expected.to define_enum_for(:signature_algo).with_values(jwt: 0, hmac: 1, standard_webhooks: 2) }
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:webhooks).dependent(:delete_all) }
+  it { is_expected.to have_many(:signing_keys).class_name("WebhookEndpointSigningKey").dependent(:delete_all) }
 
   it { is_expected.to validate_presence_of(:webhook_url) }
 
@@ -116,6 +119,66 @@ RSpec.describe WebhookEndpoint do
         event_types: ["contains invalid types: [\"wrong.type\"]"]
       )
       expect(codes).to eq(webhook_url: ["url_is_invalid"], event_types: ["value_is_invalid"])
+    end
+  end
+
+  describe ".v1_signature_algo_rule" do
+    subject(:rule) { described_class.v1_signature_algo_rule(organization) }
+
+    let(:organization) { create(:organization) }
+
+    it "allows jwt and hmac, with jwt as the default" do
+      expect(rule.allowed_values).to eq(%w[jwt hmac])
+      expect(rule.default).to eq("jwt")
+      expect(rule.allow?(:hmac)).to be(true)
+      expect(rule.allow?("standard_webhooks")).to be(false)
+    end
+
+    context "with the standard_webhooks_signature flag" do
+      before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+
+      it "also allows standard_webhooks, with jwt as the default" do
+        expect(rule.allowed_values).to eq(%w[jwt hmac standard_webhooks])
+        expect(rule.default).to eq("jwt")
+        expect(rule.allow?("standard_webhooks")).to be(true)
+      end
+    end
+  end
+
+  describe "V2_SIGNATURE_ALGO_RULE" do
+    subject(:rule) { described_class::V2_SIGNATURE_ALGO_RULE }
+
+    it "only allows standard_webhooks, its default" do
+      expect(rule.allowed_values).to eq(%w[standard_webhooks])
+      expect(rule.default).to eq("standard_webhooks")
+      expect(rule.allow?(:standard_webhooks)).to be(true)
+      expect(rule.allow?("jwt")).to be(false)
+      expect(rule.allow?(nil)).to be(false)
+    end
+  end
+
+  describe "#current_signing_key" do
+    subject { webhook_endpoint.current_signing_key }
+
+    let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
+
+    context "when the endpoint has no signing key" do
+      it { is_expected.to be_nil }
+    end
+
+    context "when the endpoint has several signing keys" do
+      let(:latest_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:, created_at: 1.hour.ago) }
+
+      before do
+        create(:webhook_endpoint_signing_key, webhook_endpoint:, created_at: 2.hours.ago)
+        latest_key
+        # A newer key of another endpoint must not be picked.
+        create(:webhook_endpoint_signing_key, created_at: Time.current)
+      end
+
+      it "returns the most recent key of the endpoint" do
+        expect(subject).to eq(latest_key)
+      end
     end
   end
 
