@@ -29,12 +29,18 @@ module Events
           filters:
         )
         if served_from_buckets?(metered_item:, boundaries:, filters:)
+          recurring = RealtimeUsage.recurring_charge?(metered_item.charge)
+          # A recurring charge falls back to events per snapshot period, through the same scan as today.
+          if recurring && (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
+            store = ChargeFiltersScanStore.new(store, scan:)
+          end
+
           UsageBucketStore.new(
             store,
             usage_buckets:,
             charge_id: metered_item.charge.id,
             charge_filter_id: filters[:charge_filter]&.id || "", # clickhouse stores an empty string instead of nil
-            recurring: RealtimeUsage.recurring_charge?(metered_item.charge),
+            recurring:,
             charges_from_datetime: boundaries[:from_datetime]
           )
         elsif (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
@@ -116,10 +122,11 @@ module Events
         end
       end
 
-      # The buckets only add the window to a snapshot of this subscription. Refused here, the charge
-      # keeps the charge cache and the scan store a fallback from the bucket store would lose.
+      # The buckets only add the window to a snapshot of this subscription. A dynamic charge also
+      # reads its precise amounts over the whole history, which the buckets cannot answer.
       def recurring_snapshot_completable?(metered_item)
-        RecurringAggregationSnapshot.readable?(metered_item:, billing_context:) &&
+        !metered_item.charge.dynamic? &&
+          RecurringAggregationSnapshot.readable?(metered_item:, billing_context:) &&
           !billing_context.previous_subscription_id?
       end
 

@@ -396,10 +396,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
           )
         end
 
+        let(:incremental) { false }
+
         before do
           allow(event_store_class).to receive(:new).and_wrap_original do |original, **args|
             Events::Stores::UsageBucketStore.new(
-              original.call(**args),
+              original.call(**args).tap { allow(it).to receive(:incremental_sum?).and_return(incremental) },
               usage_buckets:,
               charge_id: charge.id,
               charge_filter_id: "",
@@ -417,6 +419,16 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
           expect(aggregator(periods.second, initial_value:, initial_period: closed(periods.first)).precomputed?).to be(true)
         end
 
+        context "when the store it wraps answers the sum incrementally" do
+          let(:incremental) { true }
+
+          it "still adds the buckets of the window to the snapshot" do
+            result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
+
+            expect(result.aggregation).to eq(1000 + 25)
+          end
+        end
+
         context "when a bucket before the window was ingested after the snapshot" do
           let(:history_last_ingested_at) { watermark(periods.first) + 1.minute }
 
@@ -425,6 +437,16 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
             expect(result.aggregation).to eq(1000 + 7 + 20)
             expect(aggregator(periods.second, initial_value:, initial_period: closed(periods.first)).precomputed?).to be(false)
+          end
+
+          context "when the store it wraps answers the sum incrementally" do
+            let(:incremental) { true }
+
+            it "keeps the incremental read, ignoring the snapshot as without the buckets" do
+              result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
+
+              expect(result.aggregation).to eq(3 + 10 + 7 + 20)
+            end
           end
         end
 

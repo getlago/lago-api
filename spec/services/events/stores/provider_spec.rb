@@ -300,6 +300,32 @@ RSpec.describe Events::Stores::Provider do
           end
         end
 
+        context "with a dynamic charge" do
+          let(:charge) { create(:dynamic_charge, plan: subscription.plan, billable_metric:) }
+
+          it "reads events, as its precise amounts span the whole history" do
+            expect(store).to be_a(Events::Stores::ClickhouseStore)
+          end
+        end
+
+        context "with the incremental charge cache" do
+          subject(:provider) do
+            described_class.new(
+              organization:,
+              billing_context:,
+              serve_current_usage_from_buckets: true,
+              boundaries: billing_boundaries,
+              charges: [charge],
+              incremental_charge_cache: true
+            )
+          end
+
+          it "wraps the scan store, which a fallback to events reads through" do
+            expect(store).to be_a(Events::Stores::UsageBucketStore)
+            expect(store.__getobj__).to be_a(Events::Stores::ChargeFiltersScanStore)
+          end
+        end
+
         context "when the subscription is the upgrade of another" do
           let(:subscription) { create(:subscription, :with_previous_subscription, organization:) }
 
