@@ -91,6 +91,163 @@ RSpec.describe Events::Stores::UsageBucketStore do
     end
   end
 
+  describe "#recurring_sum" do
+    subject(:store) do
+      described_class.new(
+        delegated_store, usage_buckets:, charge_id: charge.id, charge_filter_id:, recurring: true, charges_from_datetime:
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+    let(:charges_from_datetime) { Time.current.beginning_of_month }
+    let(:watermark) { Time.current }
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(
+        to_datetime: charges_from_datetime - 1.second, watermark: charges_from_datetime + 1.hour
+      )
+    end
+    let(:history_last_ingested_at) { charges_from_datetime }
+    let(:usage_buckets) do
+      Events::Stores::UsageBucketSet.new(
+        totals: {[charge.id, ""] => totals},
+        history_last_ingested_at: {charge.id => history_last_ingested_at}
+      )
+    end
+    let(:delegated_result) do
+      Events::Stores::BaseStore::RecurringAggregationResult.new(
+        value: BigDecimal(3), snapshot_value: BigDecimal(3), events_count: 1, snapshot_events_count: 1
+      )
+    end
+
+    before { allow(delegated_store).to receive(:recurring_sum).and_return(delegated_result) }
+
+    it "answers the units of the window, persisting no snapshot units" do
+      expect(store.recurring_sum(watermark:, period:)).to eq(
+        Events::Stores::BaseStore::RecurringAggregationResult.new(
+          value: BigDecimal("42.5"), snapshot_value: 0, events_count: 7, snapshot_events_count: 0
+        )
+      )
+      expect(store.recurring_fallback_reason(period)).to be_nil
+      expect(delegated_store).not_to have_received(:recurring_sum)
+    end
+
+    context "when the buckets hold no row before the window" do
+      let(:history_last_ingested_at) { nil }
+
+      it "answers the units of the window" do
+        expect(store.recurring_sum(watermark:, period:).value).to eq(BigDecimal("42.5"))
+      end
+    end
+
+    context "when the buckets hold no row in the window either" do
+      let(:usage_buckets) { Events::Stores::UsageBucketSet.new }
+
+      it "answers zero" do
+        expect(store.recurring_sum(watermark:, period:)).to eq(
+          Events::Stores::BaseStore::RecurringAggregationResult.new(
+            value: 0, snapshot_value: 0, events_count: 0, snapshot_events_count: 0
+          )
+        )
+      end
+    end
+
+    shared_examples "a delta read from the events" do |reason|
+      it "delegates it to the store it wraps" do
+        expect(store.recurring_sum(watermark:, period:)).to eq(delegated_result)
+        expect(store.recurring_fallback_reason(period)).to eq(reason)
+        expect(delegated_store).to have_received(:recurring_sum).with(watermark:, period:)
+      end
+    end
+
+    context "without a snapshot period" do
+      let(:period) { nil }
+
+      it_behaves_like "a delta read from the events", "no_period"
+    end
+
+    context "when the snapshot period ends before the previous period" do
+      let(:period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(
+          to_datetime: charges_from_datetime - 1.month - 1.second, watermark: charges_from_datetime - 1.month + 1.hour
+        )
+      end
+
+      it_behaves_like "a delta read from the events", "not_adjacent"
+    end
+
+    context "when the snapshot period ends inside the window" do
+      let(:period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(
+          to_datetime: charges_from_datetime, watermark: charges_from_datetime + 1.hour
+        )
+      end
+
+      it_behaves_like "a delta read from the events", "not_adjacent"
+    end
+
+    context "when the subscription is the upgrade of another" do
+      let(:subscription) { create(:subscription, :with_previous_subscription, organization:) }
+
+      it_behaves_like "a delta read from the events", "has_predecessor"
+    end
+
+    context "when a bucket before the window was ingested after the snapshot" do
+      let(:history_last_ingested_at) { period.watermark + 1.second }
+
+      it_behaves_like "a delta read from the events", "late_ingestion"
+    end
+
+    describe "#grouped_recurring_sum" do
+      let(:usage_buckets) do
+        Events::Stores::UsageBucketSet.new(
+          totals: {[charge.id, ""] => totals},
+          grouped_totals: {[charge.id, ""] => {{"region" => "us"} => totals}},
+          history_last_ingested_at: {charge.id => history_last_ingested_at}
+        )
+      end
+
+      before { allow(delegated_store).to receive(:grouped_recurring_sum).and_return([]) }
+
+      it "answers one result per group of the window, persisting no snapshot units" do
+        expect(store.grouped_recurring_sum(watermark:, period:)).to eq(
+          [
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(
+              groups: {"region" => "us"}, value: BigDecimal("42.5"), snapshot_value: 0, events_count: 7,
+              snapshot_events_count: 0
+            )
+          ]
+        )
+      end
+
+      context "when a bucket before the window was ingested after the snapshot" do
+        let(:history_last_ingested_at) { period.watermark + 1.second }
+
+        it "delegates it to the store it wraps" do
+          expect(store.grouped_recurring_sum(watermark:, period:)).to eq([])
+          expect(delegated_store).to have_received(:grouped_recurring_sum).with(watermark:, period:)
+        end
+      end
+    end
+
+    describe "the reads without a snapshot" do
+      before do
+        allow(delegated_store).to receive_messages(
+          sum: :events_sum,
+          grouped_sum: :events_grouped_sum,
+          sum_precise_total_amount_cents: :events_amount,
+          grouped_sum_precise_total_amount_cents: :events_grouped_amount
+        )
+      end
+
+      it "delegates them, as the window alone is not the recurring total" do
+        expect(store.sum).to eq(:events_sum)
+        expect(store.grouped_sum).to eq(:events_grouped_sum)
+        expect(store.sum_precise_total_amount_cents).to eq(:events_amount)
+        expect(store.grouped_sum_precise_total_amount_cents).to eq(:events_grouped_amount)
+      end
+    end
+  end
+
   describe "#max" do
     let(:aggregation_type) { "max" }
 

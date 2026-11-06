@@ -379,6 +379,78 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         expect(result.aggregation).to eq(1000 + 7 + 20)
       end
 
+      context "when the buckets serve the window" do
+        # Unlike the 20 of the events in the second period, so the source of the delta shows.
+        let(:bucket_totals) do
+          Events::Stores::UsageBucketSet::Totals.new(
+            aggregation_type: "sum", units: BigDecimal(25), events_count: 2, last_event_at: periods.second.begin + 1.day
+          )
+        end
+        let(:apac_totals) { bucket_totals.with(units: BigDecimal(4), events_count: 1) }
+        let(:history_last_ingested_at) { watermark(periods.first) }
+        let(:usage_buckets) do
+          Events::Stores::UsageBucketSet.new(
+            totals: {[charge.id, ""] => bucket_totals},
+            grouped_totals: {[charge.id, ""] => {{"region" => "eu"} => bucket_totals, {"region" => "apac"} => apac_totals}},
+            history_last_ingested_at: {charge.id => history_last_ingested_at}
+          )
+        end
+
+        before do
+          allow(event_store_class).to receive(:new).and_wrap_original do |original, **args|
+            Events::Stores::UsageBucketStore.new(
+              original.call(**args),
+              usage_buckets:,
+              charge_id: charge.id,
+              charge_filter_id: "",
+              recurring: true,
+              charges_from_datetime: args[:boundaries][:from_datetime]
+            )
+          end
+        end
+
+        it "adds the buckets of the window to the snapshot" do
+          result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
+
+          # snapshot units + window buckets, over the 2 events of the snapshot and the 2 of the buckets
+          expect(totals(result)).to eq([nil, 1000 + 25, 2 + 2, 1000, 2])
+        end
+
+        context "when a bucket before the window was ingested after the snapshot" do
+          let(:history_last_ingested_at) { watermark(periods.first) + 1.minute }
+
+          it "adds the events the snapshot did not count instead" do
+            result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
+
+            expect(result.aggregation).to eq(1000 + 7 + 20)
+          end
+        end
+
+        context "without a snapshot period" do
+          it "sums every event of the subscription rather than the window alone" do
+            result = aggregate(periods.second, initial_value: nil, options:)
+
+            expect(result.aggregation).to eq(3 + 10 + 7 + 20)
+          end
+        end
+
+        context "with pricing group keys" do
+          let(:grouped_by) { %w[region] }
+          let(:initial_value) { snapshots(periods.first, aggregate(periods.first, initial_value: nil).aggregations) }
+
+          it "joins the groups of the snapshot and of the buckets" do
+            result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
+
+            # The late eu event is in neither: ingested after the snapshot, dated before the window
+            expect(result.aggregations.map { totals(it) }).to match_array([
+              [{"region" => "us"}, 3, 1, 3, 1],
+              [{"region" => "eu"}, 10 + 25, 1 + 2, 10, 1],
+              [{"region" => "apac"}, 4, 1, 0, 0]
+            ])
+          end
+        end
+      end
+
       context "when the store answers the sum incrementally" do
         before do
           allow(event_store_class).to receive(:new).and_wrap_original do |original, **args|
