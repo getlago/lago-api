@@ -418,6 +418,18 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
       expect(result.differences).to be_empty
     end
 
+    context "when the parent charge billed a group without a snapshot" do
+      before do
+        create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, grouped_by: {"zone" => "a"}, total_aggregated_units: 3, events_count: 1)
+      end
+
+      it "reports it on the override charge" do
+        expect(result.differences).to eq(
+          [row(grouped_by: {"zone" => "a"}, snapshot_units: 0, fee_units: 3, snapshot_events_count: 0, fee_events_count: 1)]
+        )
+      end
+    end
+
     context "with a charge filter" do
       let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
       let(:parent_filter) { create(:charge_filter, charge: parent_charge) }
@@ -477,14 +489,12 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
 
       context "when the parent filter was removed after the invoice" do
         before do
-          trimmed_metric_filter = create(:billable_metric_filter, billable_metric:, key: "tier", values: %w[gold])
-          create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter: trimmed_metric_filter, values: %w[gold], deleted_at: 2.days.ago)
-          ChargeFilterValue.where(charge_filter: parent_filter, deleted_at: nil).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          ChargeFilterValue.where(charge_filter: parent_filter).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
           parent_filter.discard!
         end
 
-        it "matches it on the values discarded with it" do
-          expect(result.differences).to be_empty
+        it "reports both buckets" do
+          expect(result.differences.map(&:charge_filter_id)).to match_array([charge_filter.id, parent_filter.id])
         end
       end
 
