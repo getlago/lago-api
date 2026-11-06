@@ -78,9 +78,6 @@ module RealtimeUsage
       return "prorated" if charge.prorated?
       return "recurring_metric" if billable_metric.recurring?
 
-      # `target_wallet_code` will be handled later.
-      return "target_wallet" if charge.accepts_target_wallet
-
       nil
     end
   end

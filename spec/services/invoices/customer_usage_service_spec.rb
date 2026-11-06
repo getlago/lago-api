@@ -1881,6 +1881,88 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
   end
 
+  describe "the buckets and the events store agree on a charge accepting a target wallet", :premium, clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true, properties: {amount: "2"}) }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    let(:events) do
+      [
+        {at: window_start, value: "5.5", wallet: "W"},
+        {at: window_start + 20.minutes, value: "4.25", wallet: nil},
+        {at: window_start + 23.minutes, value: "1.25", wallet: "W"},
+        {at: window_start + 3.hours, value: "10.0", wallet: nil}
+      ]
+    end
+
+    let(:served) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+    end
+    let(:delegated) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true, premium_integrations: ["events_targeting_wallets"])
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      events.each do |event|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: event[:at],
+          properties: event[:wallet] ? {"target_wallet_code" => event[:wallet]} : {},
+          value: event[:value],
+          decimal_value: event[:value].to_f
+        )
+      end
+
+      # The pipeline only writes the wallet key for an event that carries one.
+      events.group_by { [Time.zone.at(it[:at].to_i - (it[:at].to_i % 15.minutes.to_i)), it[:wallet]] }.each do |(bucket, wallet), rows|
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket:,
+          grouped_by: wallet ? {"target_wallet_code" => wallet}.to_json : "{}",
+          target_wallet_code: wallet,
+          units: rows.sum { it[:value].to_d }.to_s,
+          events_count: rows.size,
+          aggregation_type: "sum"
+        )
+      end
+    end
+
+    def fee_values(usage)
+      usage.fees.map { [it.grouped_by, it.units, it.events_count, it.amount_cents] }
+    end
+
+    it "returns the same fee per wallet either way" do
+      expect(fee_values(served)).to match_array(fee_values(delegated))
+    end
+
+    it "reads the buckets for it" do
+      allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original
+
+      served
+
+      expect(RealtimeUsage::FetchBucketsService).to have_received(:call).with(hash_including(charges: [charge]))
+    end
+
+    it "prices the targeted wallet apart from the usage without one" do
+      expect(fee_values(served)).to match_array(
+        [
+          [{"target_wallet_code" => "W"}, 6.75, 2, 1350], # 5.5 + 1.25 units at 2
+          [{"target_wallet_code" => nil}, 14.25, 2, 2850] # 4.25 + 10.0 units at 2
+        ]
+      )
+    end
+  end
+
   describe "the buckets and the events store agree when the caller skips grouping", clickhouse: {clean_before: true} do
     include_context "with realtime usage availability"
 
