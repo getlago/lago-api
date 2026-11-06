@@ -11,7 +11,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
     create_default(:customer)
   end
 
-  let(:invoice) { create(:invoice, organization:, currency: "NGN", total_due_amount_cents: 1_000_000) }
+  let(:invoice) { create(:invoice, organization:, currency: "NGN", total_amount_cents: 1_000_000) }
   let(:payment_request) { create(:payment_request, organization:, amount_currency: "NGN", amount_cents: 1_000_000) }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization:) }
   let(:event_json) { payload.to_json }
@@ -553,7 +553,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
     end
 
     context "when transaction has different currency precision" do
-      let(:invoice) { create(:invoice, organization:, currency: "USD", total_due_amount_cents: 10_050) }
+      let(:invoice) { create(:invoice, organization:, currency: "USD", total_amount_cents: 10_050) }
       let(:payload) do
         {
           event: "charge.completed",
