@@ -26,6 +26,15 @@ RSpec.describe Invites::UpdateService do
       end
     end
 
+    context "when the invite belongs to a sandbox" do
+      let(:invite) { create(:invite, organization: create(:organization, :sandbox), roles: %w[admin]) }
+
+      it "refuses it" do
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(invite.reload.roles).to eq(%w[admin])
+      end
+    end
+
     context "when non-admin sets admin role on invite" do
       let(:invite) { create(:invite, organization:, status: "pending", roles: %w[manager]) }
       let(:params) { {roles: %w[admin]} }

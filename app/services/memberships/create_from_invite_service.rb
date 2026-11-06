@@ -11,9 +11,15 @@ module Memberships
       super
     end
 
-    # NOTE: Callers rescue ActiveRecord::RecordInvalid. They run this service in their own
-    #       transaction.
+    # NOTE: Callers rescue ActiveRecord::RecordInvalid and BaseService::FailedResult. They run this service in their
+    #       own transaction, which the locks below hold until it ends.
     def call
+      # Refuses a sandbox, including one linked while this acceptance waited for the lock.
+      Organizations::SandboxLockService.call!(organization: invite.organization)
+      # A revoke or another acceptance committed while it waited leaves the invite no longer pending.
+      invite.lock!
+      return result.not_found_failure!(resource: "invite") unless invite.pending?
+
       result.membership = Membership.create!(user:, organization: invite.organization)
 
       invite.roles.each do |role_code|
@@ -26,6 +32,7 @@ module Memberships
         )
       end
 
+      Memberships::SyncSandboxService.call!(organization: invite.organization, user:, actor: user)
       result
     end
 

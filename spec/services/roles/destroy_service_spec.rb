@@ -26,6 +26,31 @@ RSpec.describe Roles::DestroyService do
       end
     end
 
+    context "when the organization has a sandbox" do
+      subject(:result) { described_class.call(role:, actor:) }
+
+      let(:actor) { create(:user) }
+      let(:production) { create(:organization, :with_sandbox) }
+      let(:role) { create(:role, organization: production, code: "auditor") }
+      let!(:copy) { create(:role, organization: production.sandbox_organization, code: "auditor") }
+
+      it "discards the sandbox copy, logged with the actor" do
+        expect(result).to be_success
+        expect(copy.reload).to be_discarded
+        expect(security_logger).to have_received(:produce).with(organization: production.sandbox_organization,
+          log_type: "role", log_event: "role.deleted", user: actor, resources: {role_code: "auditor"})
+      end
+    end
+
+    context "when the role belongs to a sandbox" do
+      let(:role) { create(:role, organization: create(:organization, :sandbox)) }
+
+      it "refuses it" do
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(role.reload).not_to be_discarded
+      end
+    end
+
     context "when role is nil" do
       let(:role) { nil }
 
