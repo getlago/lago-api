@@ -58,7 +58,6 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:backfill" do # rubocop:d
   it "enqueues a job per subscription of the organization and follows them until they ran" do
     expect { perform_enqueued_jobs { task.invoke } }.to output(
       a_string_including(
-        "Warning: recurring_aggregation_snapshots is off",
         "1 active subscription(s) with a recurring sum charge and an invoiced period.",
         "Enqueued 1 job(s). Stopping this task leaves them running.",
         "  1/1 job(s) ran, 0 pending",
@@ -85,14 +84,6 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:backfill" do # rubocop:d
       ).to_stdout
 
       expect(RecurringAggregationSnapshot.distinct.pluck(:subscription_id)).to eq([subscription.id])
-    end
-  end
-
-  context "with the snapshot writes on" do
-    let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
-
-    it "does not warn" do
-      expect { perform_enqueued_jobs { task.invoke } }.not_to output(/Warning/).to_stdout
     end
   end
 
