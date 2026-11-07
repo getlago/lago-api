@@ -676,6 +676,63 @@ RSpec.describe Invoices::Payments::StripeService do
       end
     end
 
+    context "when the payment was never linked to the payment intent" do
+      let(:payment) do
+        create(
+          :payment,
+          payable: invoice,
+          provider_payment_id: nil,
+          status: "failed",
+          payable_payment_status: "failed"
+        )
+      end
+
+      let(:stripe_payment) do
+        PaymentProviders::StripeProvider::StripePayment.new(
+          id: "pi_123456",
+          status: "succeeded",
+          metadata: {lago_invoice_id: invoice.id, lago_payment_id: payment.id},
+          error_code: nil
+        )
+      end
+
+      before { invoice.update!(payment_status: :failed) }
+
+      it "links the payment and updates the invoice payment status" do
+        result = described_class.call(
+          :update_payment_status,
+          organization_id: organization.id,
+          status: "succeeded",
+          stripe_payment:
+        )
+
+        expect(result).to be_success
+        expect(result.payment).to eq(payment)
+        expect(payment.reload).to have_attributes(
+          provider_payment_id: "pi_123456",
+          status: "succeeded",
+          payable_payment_status: "succeeded"
+        )
+        expect(invoice.reload.payment_status).to eq("succeeded")
+        expect(invoice.payments.count).to eq(1)
+      end
+
+      context "when the payment belongs to another organization" do
+        it "does not link the payment" do
+          result = described_class.call(
+            :update_payment_status,
+            organization_id: create(:organization).id,
+            status: "succeeded",
+            stripe_payment:
+          )
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(payment.reload.provider_payment_id).to be_nil
+        end
+      end
+    end
+
     context "when payment's payable belongs to another organization" do
       let(:invoice) { create(:invoice) }
 
