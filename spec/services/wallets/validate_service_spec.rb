@@ -334,6 +334,17 @@ RSpec.describe Wallets::ValidateService do
         }
       end
 
+      context "when the payment method is a shared payment token row" do
+        let(:payment_method) { create(:payment_method, customer:, organization:, is_default: false, provider_method_type: "shared_payment_token", provider_method_id: "spt_123", details: {}) }
+
+        before { result.payment_method = payment_method }
+
+        it "adds an error" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
       context "when provider payment method is valid" do
         before do
           result.payment_method = payment_method
