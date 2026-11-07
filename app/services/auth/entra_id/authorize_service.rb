@@ -17,7 +17,7 @@ module Auth
 
       def call
         check_invite(email) if invite_token.present?
-        check_entra_id_integration(email)
+        check_entra_id_integration(email, organization_id: result.invite&.organization_id)
 
         params = {
           client_id: result.entra_id_integration.client_id,
