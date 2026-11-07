@@ -26,8 +26,10 @@ module PaymentMethods
         payment_method.payment_provider_id = payment_provider_id
         payment_method.details = details if details.present?
       end
-      payment_method.save!
-      PaymentMethods::SetAsDefaultService.call(payment_method:).raise_if_error!
+      ActiveRecord::Base.transaction do
+        payment_method.save!
+        PaymentMethods::SetAsDefaultService.call(payment_method:).raise_if_error!
+      end
 
       result.payment_method = payment_method
       result
