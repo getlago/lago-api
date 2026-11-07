@@ -69,7 +69,7 @@ module PaymentProviders
           PaymentProviders::Adyen::Webhooks::ChargebackService.call(
             organization_id: organization.id,
             event_json:
-          )
+          ).raise_if_error!
         when "REFUND_FAILED"
           return result if event["success"] != "true"
 
