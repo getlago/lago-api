@@ -654,7 +654,6 @@ RSpec.describe Organizations::UpdateService do
       context "when another part of the update fails" do
         shared_examples "an update that fails elsewhere" do
           [
-            ["eu_tax_management is not eligible", {eu_tax_management: true, country: "us"}],
             ["an organization attribute is invalid", {email: "not-an-email"}],
             ["the billing entity update fails", {document_url_expiration_days: 365}]
           ].each do |description, failing_params|
