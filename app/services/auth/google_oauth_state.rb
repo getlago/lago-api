@@ -8,7 +8,13 @@ module Auth
     CLOCK_SKEW = 1.minute
     MAX_LENGTH = 128
 
-    Issued = Data.define(:state, :secret, :code_verifier)
+    Issued = Data.define(:state, :secret, :code_verifier) do
+      # The secret and the verifier redeem the flow: keep them out of logs and error reports.
+      def inspect
+        "#<data #{self.class.name} state=#{state.inspect} secret=[FILTERED] code_verifier=[FILTERED]>"
+      end
+      alias_method :to_s, :inspect
+    end
 
     module_function
 

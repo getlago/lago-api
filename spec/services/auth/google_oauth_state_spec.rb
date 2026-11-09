@@ -14,6 +14,13 @@ RSpec.describe Auth::GoogleOauthState do
     end
   end
 
+  describe "Issued#inspect" do
+    it "shows the state and hides the secret and the code verifier" do
+      expect([issued.inspect, issued.to_s]).to all(include(issued.state))
+      expect([issued.inspect, issued.to_s]).to all(satisfy { |text| text.exclude?(issued.secret) && text.exclude?(issued.code_verifier) })
+    end
+  end
+
   describe ".verify" do
     it "returns the code verifier of the flow for its own secret" do
       expect(described_class.verify(state: issued.state, secret: issued.secret)).to eq(issued.code_verifier)
