@@ -1902,6 +1902,19 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(subscription.reload.payment_term).to be_nil
         end
       end
+
+      context "when payment_term is omitted" do
+        let(:subscription) { create(:subscription, customer:, plan:, payment_term: {term_type: "net", days: 30}) }
+        let(:update_params) { {name: "subscription name new"} }
+
+        it "keeps the stored payment_term" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:payment_term]).to eq({term_type: "net", days: 30})
+          expect(subscription.reload.payment_term).to eq({"term_type" => "net", "days" => 30})
+        end
+      end
     end
 
     context "when updating purchase_order_number" do
