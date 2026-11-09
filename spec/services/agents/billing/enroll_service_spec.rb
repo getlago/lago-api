@@ -50,17 +50,49 @@ RSpec.describe Agents::Billing::EnrollService, :premium do
     end
   end
 
-  context "when the registration is enrolled in another plan" do
+  context "when the registration is enrolled in another plan of the same currency" do
     let(:other_plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
+    let(:first) { described_class.call(storefront:, registration:, plan_code: other_plan.code) }
 
     before do
-      storefront.update!(plans: storefront.plans + [{plan_code: other_plan.code}])
-      described_class.call(storefront:, registration:, plan_code: other_plan.code)
+      storefront.update!(plans: storefront.plans + [{plan_code: other_plan.code, minimum_topup_cents: 100, maximum_topup_cents: 1_000}])
+      first.wallet.update!(balance_cents: 1_200, credits_balance: 12)
     end
 
-    it "refuses" do
-      expect(result).to be_failure
-      expect(result.error.code).to eq("already_enrolled")
+    it "moves it to the plan, keeps its wallet and applies the plan's top-up limits" do
+      expect(result).to be_success
+      expect(result.subscription).to have_attributes(plan:, external_id: first.subscription.external_id, status: "active")
+      expect(first.subscription.reload).to be_terminated
+      expect(result.wallet).to eq(first.wallet)
+      expect(result.wallet).to have_attributes(balance_cents: 1_200, paid_top_up_min_amount_cents: 500, paid_top_up_max_amount_cents: 10_000)
+    end
+  end
+
+  context "when the registration is enrolled in a plan of another currency" do
+    let(:eur_plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "EUR") }
+    let(:first) { described_class.call(storefront:, registration:, plan_code: eur_plan.code) }
+
+    before do
+      storefront.update!(plans: storefront.plans + [{plan_code: eur_plan.code}])
+      first
+    end
+
+    it "refuses and keeps the subscription" do
+      expect(result.error.messages).to eq(plan_code: ["currencies_does_not_match"])
+      expect(first.subscription.reload).to be_active
+    end
+  end
+
+  context "when the merchant terminated the agent's subscription" do
+    let(:first) { described_class.call(storefront:, registration:, plan_code:) }
+
+    before { first.subscription.mark_as_terminated! }
+
+    it "enrolls it again on the same wallet" do
+      expect(result).to be_success
+      expect(result.subscription).not_to eq(first.subscription)
+      expect(result.subscription).to have_attributes(plan:, status: "active")
+      expect(result.wallet).to eq(first.wallet)
     end
   end
 
