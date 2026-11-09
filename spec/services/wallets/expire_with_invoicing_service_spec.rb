@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::ExpireService, :premium, transaction: false do
+RSpec.describe Wallets::ExpireWithInvoicingService, :premium, transaction: false do
   subject(:result) { described_class.call(wallet:) }
 
   let(:organization) { create(:organization, feature_flags:) }
@@ -151,6 +151,24 @@ RSpec.describe Wallets::ExpireService, :premium, transaction: false do
       expect(result).to be_success
 
       expect(wallet.reload.status).to eq("active")
+    end
+  end
+
+  context "when the failed expiration invoice of the wallet was retried and finalized" do
+    let(:retried_invoice) do
+      create(:invoice, organization:, customer:, invoice_type: :progressive_billing, status: :finalized)
+    end
+
+    before do
+      create(:applied_wallet_expiration, wallet:, invoice: retried_invoice)
+      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call)
+        .and_return(BaseService::Result.new.fail_with_error!(Idempotency::IdempotencyError.new("already invoiced")))
+    end
+
+    it "terminates the wallet" do
+      expect(result).to be_success
+
+      expect(wallet.reload.status).to eq("terminated")
     end
   end
 

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Wallets
-  class ExpireService < BaseService
+  class ExpireWithInvoicingService < BaseService
     Result = BaseResult[:wallet]
 
     def initialize(wallet:)
