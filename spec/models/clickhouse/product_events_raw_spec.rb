@@ -39,6 +39,16 @@ RSpec.describe Clickhouse::ProductEventsRaw, clickhouse: true do
       end
     end
 
+    context "with a contract started in the same millisecond as the event" do
+      let(:active_contract) do
+        create(:contract, customer:, external_id: "contract_1", started_at: timestamp + 0.000456)
+      end
+
+      it "returns the contract" do
+        expect(product_event.contract).to eq(active_contract)
+      end
+    end
+
     context "with a contract that starts after the event" do
       before do
         create(:contract, :pending, customer:, external_id: "contract_1", started_at: timestamp + 1.day)

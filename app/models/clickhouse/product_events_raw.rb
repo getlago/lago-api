@@ -20,7 +20,9 @@ module Clickhouse
     end
 
     def billable_metric
-      BillableMetric.find_by(code:, organization_id:)
+      return @billable_metric if defined?(@billable_metric)
+
+      @billable_metric = BillableMetric.find_by(code:, organization_id:)
     end
 
     def api_client
@@ -29,11 +31,15 @@ module Clickhouse
     def ip_address
     end
 
+    # started_at holds microseconds and the event timestamp milliseconds, so the event of a
+    # contract created at Time.current would sort before its start without the truncation.
     def contract
-      Contract
+      return @contract if defined?(@contract)
+
+      @contract = Contract
         .where(organization_id:, external_id: external_contract_id)
         .where.not(status: :canceled)
-        .where(started_at: ..timestamp)
+        .where("date_trunc('millisecond', started_at::timestamp) <= ?::timestamp", timestamp)
         .order(started_at: :desc)
         .first
     end
