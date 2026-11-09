@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Invoice usage when a wallet expires", transaction: false do
+describe "Invoice usage when a wallet expires", :premium, transaction: false do
   let(:organization) do
     create(:organization, webhook_url: nil, email_settings: [], feature_flags: ["invoice_usage_on_wallet_expiration"])
   end
