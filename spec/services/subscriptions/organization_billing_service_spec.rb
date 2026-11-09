@@ -1080,6 +1080,52 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
     end
 
+    context "when grouping subscriptions by resolved payment term" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      let(:first_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+      let(:second_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+
+      before do
+        subscription.destroy
+        first_subscription
+        second_subscription
+      end
+
+      it "groups subscriptions resolving to the same payment term into a single billing job" do
+        billing_service.call
+
+        expect(BillSubscriptionJob).to have_been_enqueued
+          .with(
+            contain_exactly(first_subscription, second_subscription),
+            current_date.to_i,
+            invoicing_reason: :subscription_periodic
+          )
+      end
+    end
+
     context "when a subscription opts out of invoice consolidation" do
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }

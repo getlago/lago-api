@@ -18,6 +18,7 @@ module Subscriptions
       subscription_groups = group_by_billing_entity(subscription_groups)
       subscription_groups = split_consolidation_opted_out(subscription_groups)
       subscription_groups = group_by_purchase_order_number(subscription_groups)
+      subscription_groups = group_by_resolved_payment_term(subscription_groups)
 
       result.subscription_groups = subscription_groups
       result
@@ -54,6 +55,38 @@ module Subscriptions
     def group_by_purchase_order_number(subscription_groups)
       subscription_groups.flat_map do |subscriptions|
         subscriptions.group_by(&:purchase_order_number).values
+      end
+    end
+
+    # NOTE: Subscriptions resolving to different payment terms cannot share an invoice.
+    #       BillSubscriptionJob re-resolves and splits mixed groups itself, covering term
+    #       changes racing with this grouping.
+    def group_by_resolved_payment_term(subscription_groups)
+      shared_groups = subscription_groups.reject(&:one?)
+      return subscription_groups if shared_groups.empty?
+
+      ActiveRecord::Associations::Preloader.new(
+        records: shared_groups.flatten,
+        associations: [:billing_entity, {customer: :billing_entity}]
+      ).call
+
+      subscription_groups.flat_map do |subscriptions|
+        next [subscriptions] if subscriptions.one?
+
+        groups = subscriptions.group_by do |subscription|
+          PaymentTerms::ResolveService.call!(
+            customer: subscription.customer,
+            billing_entity: subscription.billing_entity
+          ).payment_term.grouping_key
+        end.values
+
+        if groups.many?
+          Rails.logger.info(
+            "InvoiceGroupingService - Customer #{subscriptions.first.customer_id} split into #{groups.size} payment term groups"
+          )
+        end
+
+        groups
       end
     end
 
