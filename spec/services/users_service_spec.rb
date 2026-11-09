@@ -300,6 +300,7 @@ RSpec.describe UsersService do
             expect(result).to be_a(BaseResult)
             expect(result).to be_success
             expect(result.user).to eq user
+            expect(result.needs_organization).to be(false)
             expect(result.token).to be_present
           end
 
@@ -455,7 +456,7 @@ RSpec.describe UsersService do
 
         it "opens a password session that needs an organization" do
           expect(result).to be_success
-          expect(result.user.needs_organization?).to be(true)
+          expect(result.needs_organization).to be(true)
           expect(Utils::AuthToken.decode(token: result.token)["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
           expect(SegmentIdentifyJob).not_to have_been_enqueued
           expect(UserDevices::RegisterService).to have_received(:call!).with(user: orgless_user)

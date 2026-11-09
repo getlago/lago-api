@@ -4,7 +4,7 @@ class UsersService < BaseService
   include TypedResults
 
   RESULTS = {
-    login: BaseResult[:user, :token],
+    login: BaseResult[:user, :token, :needs_organization],
     register: BaseResult[:user, :organization, :membership, :token],
     register_from_invite: BaseResult[:user, :organization, :membership, :token]
   }.freeze
@@ -40,6 +40,7 @@ class UsersService < BaseService
     end
 
     result.token = generate_token
+    result.needs_organization = needs_organization
 
     # NOTE: We're tracking the oldest membership linked to the user. A user without one has no Segment identity yet.
     membership = result.user.memberships.active.order(:created_at).first
