@@ -57,7 +57,7 @@ module Plans
 
       ActiveRecord::Base.transaction do
         plan.save!
-        rename_in_agent_storefronts if plan.saved_change_to_code?
+        rename_in_agent_storefronts if plan.parent_id.nil? && plan.saved_change_to_code?
         update_metadata!
 
         if params[:tax_codes]
