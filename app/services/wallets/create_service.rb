@@ -182,7 +182,7 @@ module Wallets
 
     def invoice_usage_on_expiration_forbidden?
       ActiveModel::Type::Boolean.new.cast(params[:invoice_usage_on_expiration]) &&
-        organization_flag_disabled?(:invoice_usage_on_wallet_expiration)
+        (!License.premium? || organization_flag_disabled?(:invoice_usage_on_wallet_expiration))
     end
 
     def connections_requested?

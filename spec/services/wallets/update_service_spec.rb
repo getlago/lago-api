@@ -262,7 +262,7 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
-    context "with invoice_usage_on_expiration" do
+    context "with invoice_usage_on_expiration", :premium do
       let(:params) { {id: wallet.id, invoice_usage_on_expiration: true} }
       let(:feature_flag_enabled) { true }
 
@@ -276,6 +276,13 @@ RSpec.describe Wallets::UpdateService do
       context "when the feature flag is disabled" do
         let(:feature_flag_enabled) { false }
 
+        it "returns a forbidden failure" do
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(wallet.reload.invoice_usage_on_expiration).to eq(false)
+        end
+      end
+
+      context "without a premium license", premium: false do
         it "returns a forbidden failure" do
           expect(result.error).to be_a(BaseService::ForbiddenFailure)
           expect(wallet.reload.invoice_usage_on_expiration).to eq(false)
