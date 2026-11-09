@@ -210,6 +210,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.day, "schedule:clean_pending_signups", at: "01:40") do
+    Clock::PendingSignupsCleanupJob
+      .set(sentry: {"slug" => "lago_clean_pending_signups", "cron" => "40 1 * * *"})
+      .perform_later
+  end
+
   unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_EVENTS_VALIDATION"])
     every(1.hour, "schedule:post_validate_events", at: "*:05") do
       Clock::EventsValidationJob

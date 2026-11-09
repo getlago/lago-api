@@ -13,6 +13,8 @@ Rspec.describe "All tables must have an organization_id" do
     ]
   end
 
+  # Authentication data written before any organization exists (users, password resets, devices, pending
+  # self-serve signups) and tables older than the rule.
   let(:tables_to_skip) do
     %w[
       organizations
@@ -23,6 +25,8 @@ Rspec.describe "All tables must have an organization_id" do
       password_resets
       user_devices
       versions
+      pending_signups
+      pending_signup_tokens
     ]
   end
 
