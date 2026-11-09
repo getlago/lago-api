@@ -113,6 +113,12 @@ RSpec.describe User do
       expect(described_class.lookup_by_email("mari\u0301a@getlago.com")).to eq(decomposed)
     end
 
+    it "matches a row stored decomposed when the email is typed composed" do
+      decomposed = create(:user, email: "rené-qa@getlago.com")
+
+      expect(described_class.lookup_by_email("René-qa@getlago.com")).to eq(decomposed)
+    end
+
     it "finds the exact spelling even where PostgreSQL lowercases it otherwise than Ruby" do
       user = create(:user, email: "\u0130lker@getlago.com")
 
