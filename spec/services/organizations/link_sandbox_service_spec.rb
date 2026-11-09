@@ -23,6 +23,10 @@ RSpec.describe Organizations::LinkSandboxService do
     expect(target.memberships.active.sole).to have_attributes(user: member, roles: [Role.find_by(code: "admin")])
   end
 
+  it "returns the sandbox with the settings it mirrored" do
+    expect(result.sandbox_organization).to have_attributes(environment: "sandbox", premium_integrations: %w[okta])
+  end
+
   it "keeps the target's members that production also has, with production's roles" do
     create(:membership, user: member, organization: target, roles: %i[finance])
 
