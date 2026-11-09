@@ -9,7 +9,6 @@
 # lands upstream when Ruby ships a patch release with updated bundled gems;
 # picked up automatically by the daily Wolfi base rebuild once ruby-4.0 is
 # bumped past 4.0.7.
-CVE-2026-33210  # json (default 2.18.0; app uses bundler-managed 2.21.2)
 CVE-2026-80212  # resolv (default 0.7.0)
 
 # --- Go modules bundled inside the pdfcpu binary from the Wolfi base ---

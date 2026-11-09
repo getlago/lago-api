@@ -38,6 +38,10 @@ RUN --mount=type=secret,id=BUNDLE_GEMS__CONTRIBSYS__COM,env=BUNDLE_GEMS__CONTRIB
     bundle config set --local build.nokogiri --use-system-libraries && \
     bundle install --jobs=3 --retry=3
 
+# Some gems ship their own dev Gemfile.lock. Ruby never reads it, but
+# scanners report every gem it lists as installed.
+RUN find /usr/local/bundle -path '*/gems/*' \( -name Gemfile.lock -o -name gems.locked \) -type f -delete
+
 FROM ${RUNTIME_IMAGE}
 
 ARG BUNDLE_WITH
