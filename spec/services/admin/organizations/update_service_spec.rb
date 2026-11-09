@@ -47,6 +47,16 @@ RSpec.describe Admin::Organizations::UpdateService do
         expect(described_class.call(organization: organization.reload, params: {name: "Renamed"})).to be_success
         expect(organization.reload).to have_attributes(name: "Renamed", premium_integrations: [])
       end
+
+      context "when the same premium integrations are resubmitted with a rename" do
+        let(:organization) { create(:organization, :sandbox, premium_integrations: %w[okta netsuite]) }
+        let(:params) { {name: "Renamed", premium_integrations: %w[netsuite okta]} }
+
+        it "renames the sandbox" do
+          expect(update_service.call).to be_success
+          expect(organization.reload).to have_attributes(name: "Renamed", premium_integrations: contain_exactly("okta", "netsuite"))
+        end
+      end
     end
 
     context "when organization is nil" do
