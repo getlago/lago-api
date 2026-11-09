@@ -30,6 +30,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_f375d3
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_f32b205d44;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_f18cd04d51;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS fk_rails_f03eebb28a;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_efe167855e;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_eeb6a32be1;
 ALTER TABLE IF EXISTS ONLY public.plan_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_ee8d423cf4;
@@ -85,6 +86,7 @@ ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS fk_rails_c9ca4c1b68;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_c92e315584;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_c9183c59d9;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c8606f586b;
@@ -176,6 +178,7 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_8e0c3d0c5b;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_8da4c18005;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS fk_rails_8c4afe61a8;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_8c09ee2428;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
@@ -261,6 +264,7 @@ ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_5a4b906a16;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_rails_59357d1f82;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS fk_rails_58899a476f;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_56b3626631;
@@ -1050,6 +1054,10 @@ DROP INDEX IF EXISTS public.index_ai_conversations_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_membership_id;
 DROP INDEX IF EXISTS public.index_agent_registrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_agent_registrations_on_integration_id_and_key_id;
+DROP INDEX IF EXISTS public.index_agent_free_credit_grants_on_wallet_transaction_id;
+DROP INDEX IF EXISTS public.index_agent_free_credit_grants_on_registration_id;
+DROP INDEX IF EXISTS public.index_agent_free_credit_grants_on_organization_id;
+DROP INDEX IF EXISTS public.index_agent_free_credit_grants_on_integration_and_email_hash;
 DROP INDEX IF EXISTS public.index_agent_claims_on_registration_id;
 DROP INDEX IF EXISTS public.index_agent_claims_on_organization_id;
 DROP INDEX IF EXISTS public.index_agent_claims_on_code_hash;
@@ -1309,6 +1317,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS appl
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS api_keys_pkey;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS ai_conversations_pkey;
 ALTER TABLE IF EXISTS ONLY public.agent_registrations DROP CONSTRAINT IF EXISTS agent_registrations_pkey;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS agent_free_credit_grants_pkey;
 ALTER TABLE IF EXISTS ONLY public.agent_claims DROP CONSTRAINT IF EXISTS agent_claims_pkey;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS adjusted_fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS add_ons_taxes_pkey;
@@ -1503,6 +1512,7 @@ DROP TABLE IF EXISTS public.applied_add_ons;
 DROP TABLE IF EXISTS public.api_keys;
 DROP TABLE IF EXISTS public.ai_conversations;
 DROP TABLE IF EXISTS public.agent_registrations;
+DROP TABLE IF EXISTS public.agent_free_credit_grants;
 DROP TABLE IF EXISTS public.agent_claims;
 DROP TABLE IF EXISTS public.adjusted_fees;
 DROP TABLE IF EXISTS public.add_ons_taxes;
@@ -2433,7 +2443,25 @@ CREATE TABLE public.agent_claims (
     verified_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    email_hash character varying,
     CONSTRAINT check_agent_claims_verified_at CHECK (((status <> 'verified'::public.agent_claim_status) OR (verified_at IS NOT NULL)))
+);
+
+
+--
+-- Name: agent_free_credit_grants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.agent_free_credit_grants (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    integration_id uuid NOT NULL,
+    registration_id uuid NOT NULL,
+    wallet_transaction_id uuid,
+    email_hash character varying NOT NULL,
+    amount_cents bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -6691,6 +6719,14 @@ ALTER TABLE ONLY public.agent_claims
 
 
 --
+-- Name: agent_free_credit_grants agent_free_credit_grants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT agent_free_credit_grants_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: agent_registrations agent_registrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8679,6 +8715,34 @@ CREATE INDEX index_agent_claims_on_organization_id ON public.agent_claims USING 
 --
 
 CREATE INDEX index_agent_claims_on_registration_id ON public.agent_claims USING btree (registration_id);
+
+
+--
+-- Name: index_agent_free_credit_grants_on_integration_and_email_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_agent_free_credit_grants_on_integration_and_email_hash ON public.agent_free_credit_grants USING btree (integration_id, email_hash);
+
+
+--
+-- Name: index_agent_free_credit_grants_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_free_credit_grants_on_organization_id ON public.agent_free_credit_grants USING btree (organization_id);
+
+
+--
+-- Name: index_agent_free_credit_grants_on_registration_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_free_credit_grants_on_registration_id ON public.agent_free_credit_grants USING btree (registration_id);
+
+
+--
+-- Name: index_agent_free_credit_grants_on_wallet_transaction_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_free_credit_grants_on_wallet_transaction_id ON public.agent_free_credit_grants USING btree (wallet_transaction_id);
 
 
 --
@@ -14318,6 +14382,14 @@ ALTER TABLE ONLY public.customers
 
 
 --
+-- Name: agent_free_credit_grants fk_rails_58899a476f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT fk_rails_58899a476f FOREIGN KEY (wallet_transaction_id) REFERENCES public.wallet_transactions(id);
+
+
+--
 -- Name: billing_segments fk_rails_59357d1f82; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14995,6 +15067,14 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 
 ALTER TABLE ONLY public.usage_monitoring_alerts
     ADD CONSTRAINT fk_rails_8c18828b53 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
+-- Name: agent_free_credit_grants fk_rails_8c4afe61a8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT fk_rails_8c4afe61a8 FOREIGN KEY (registration_id) REFERENCES public.agent_registrations(id) ON DELETE CASCADE;
 
 
 --
@@ -15726,6 +15806,14 @@ ALTER TABLE ONLY public.contracts
 
 
 --
+-- Name: agent_free_credit_grants fk_rails_c9ca4c1b68; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT fk_rails_c9ca4c1b68 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_thresholds fk_rails_caeb5a3949; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16166,6 +16254,14 @@ ALTER TABLE ONLY public.products
 
 
 --
+-- Name: agent_free_credit_grants fk_rails_f03eebb28a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT fk_rails_f03eebb28a FOREIGN KEY (integration_id) REFERENCES public.integrations(id);
+
+
+--
 -- Name: usage_monitoring_alert_thresholds fk_rails_f18cd04d51; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16340,6 +16436,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261109150927'),
+('20261109150926'),
 ('20261109115317'),
 ('20261104133620'),
 ('20261103084714'),

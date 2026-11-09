@@ -86,8 +86,11 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
   describe "plans validation" do
     let(:plan) { create(:plan, organization:) }
 
-    it "accepts plans of the organization with optional top-up limits" do
-      integration.plans = [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}]
+    it "accepts plans of the organization with optional top-up limits and free credits" do
+      integration.plans = [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000, free_credits_cents: 1000}]
+      expect(integration).to be_valid
+
+      integration.plans = [{plan_code: plan.code, free_credits_cents: 0}]
       expect(integration).to be_valid
     end
 
@@ -97,12 +100,15 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
       expect(integration.errors.messages[:plans]).to eq(["plan_not_found"])
     end
 
-    it "refuses a plan listed twice or limits that are not ordered positive integers" do
+    it "refuses a plan listed twice, limits that are not ordered positive integers, or free credits that are not a whole number of cents" do
       [
         [{plan_code: plan.code}, {plan_code: plan.code}],
         [{plan_code: plan.code, minimum_topup_cents: 900, maximum_topup_cents: 100}],
         [{plan_code: plan.code, minimum_topup_cents: "500"}],
-        [{plan_code: plan.code, maximum_topup_cents: 2**63}]
+        [{plan_code: plan.code, maximum_topup_cents: 2**63}],
+        [{plan_code: plan.code, free_credits_cents: -1}],
+        [{plan_code: plan.code, free_credits_cents: "1000"}],
+        [{plan_code: plan.code, free_credits_cents: 2**63}]
       ].each do |plans|
         integration.plans = plans
         expect(integration).not_to be_valid

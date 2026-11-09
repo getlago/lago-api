@@ -65,6 +65,17 @@ RSpec.describe Agents::Claim do
     end
   end
 
+  describe ".mailbox_digest" do
+    it "gives one digest per inbox: case, a +tag, Gmail dots and the googlemail domain do not count" do
+      digest = described_class.mailbox_digest("j.doe@gmail.com")
+
+      expect(["J.Doe@Gmail.com", "jdoe+agent@gmail.com", "jdoe@googlemail.com"].map { described_class.mailbox_digest(it) }).to all(eq(digest))
+      expect(described_class.mailbox_digest("jdoe@example.com")).not_to eq(digest)
+      expect(described_class.mailbox_digest("j.doe@example.com")).not_to eq(described_class.mailbox_digest("jdoe@example.com"))
+      expect(digest).not_to eq(OpenSSL::Digest::SHA256.hexdigest("jdoe@gmail.com"))
+    end
+  end
+
   describe "#public_status" do
     it "names the three statuses the way the agent reads them" do
       expect(build(:agent_claim).public_status).to eq("unclaimed")

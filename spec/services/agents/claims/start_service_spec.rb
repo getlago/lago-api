@@ -18,7 +18,15 @@ RSpec.describe Agents::Claims::StartService, :premium do
 
     expect(result).to be_success
     expect(result.claim).to eq(claim)
-    expect(claim.reload).to have_attributes(status: "started", email: "Owner@Example.com", verification_code_hash: nil)
+    expect(claim.reload).to have_attributes(
+      status: "started", email: "Owner@Example.com", email_hash: Agents::Claim.mailbox_digest("owner@example.com"), verification_code_hash: nil
+    )
+  end
+
+  it "digests the mailbox, so a +tag alias has the digest of the base address" do
+    described_class.call(storefront:, params: {claim_code: "ABCD2345", email: "owner+agent2@example.com"})
+
+    expect(claim.reload.email_hash).to eq(Agents::Claim.mailbox_digest("owner@example.com"))
   end
 
   it "takes the latest address when the owner starts again, and drops the code mailed to the previous one" do
