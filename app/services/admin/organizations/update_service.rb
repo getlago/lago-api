@@ -17,7 +17,9 @@ module Admin
 
         ActiveRecord::Base.transaction do
           ::Organizations::SandboxLockService.call!(organization:, allow_sandbox: true)
-          if organization.sandbox? && params.key?(:premium_integrations)
+          # A sandbox keeps its production's integrations: resubmitting the same set is accepted, another one is refused.
+          if organization.sandbox? && params.key?(:premium_integrations) &&
+              params[:premium_integrations].to_a.sort != organization.premium_integrations.sort
             result.not_allowed_failure!(code: "sandbox_managed_by_production").raise_if_error!
           end
 
