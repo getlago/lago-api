@@ -173,5 +173,19 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService do
         end
       end
     end
+
+    context "when the current subscription has its own payment term" do
+      let(:organization) { create(:organization) }
+      let(:current_plan) { create(:plan, organization:) }
+      let(:target_plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: current_plan.amount_cents) }
+      let(:target_plan_code) { target_plan.code }
+      let(:current_subscription) do
+        create(:subscription, plan: current_plan, organization:, payment_term: {"term_type" => "net", "days" => 30})
+      end
+
+      it "carries it over to the new subscription" do
+        expect(result.subscriptions.second.payment_term).to eq({"term_type" => "net", "days" => 30})
+      end
+    end
   end
 end
