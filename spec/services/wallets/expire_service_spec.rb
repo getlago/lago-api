@@ -11,14 +11,15 @@ RSpec.describe Wallets::ExpireService, transaction: false do
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, customer:, started_at: 1.week.ago) }
   let(:invoice_usage_on_expiration) { true }
+  let(:balance_cents) { 1000 }
 
   let(:wallet) do
     create(
       :wallet,
       :with_inbound_transaction,
       customer:,
-      balance_cents: 1000,
-      credits_balance: 10.0,
+      balance_cents:,
+      credits_balance: balance_cents / 100.0,
       expiration_at: 1.hour.ago,
       invoice_usage_on_expiration:
     )
@@ -71,6 +72,17 @@ RSpec.describe Wallets::ExpireService, transaction: false do
 
       expect(customer.invoices).to be_empty
       expect(wallet.reload).to have_attributes(status: "terminated", balance_cents: 1000)
+    end
+  end
+
+  context "when the wallet has no balance left" do
+    let(:balance_cents) { 0 }
+
+    it "terminates the wallet without invoicing" do
+      expect(result).to be_success
+
+      expect(customer.invoices).to be_empty
+      expect(wallet.reload.status).to eq("terminated")
     end
   end
 
