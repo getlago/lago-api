@@ -21,7 +21,7 @@ module Signups
       return result.fail_with_error!(claims_result.error) unless claims_result.success?
 
       claims = claims_result.claims
-      return company_account_required unless email_verified?(claims)
+      return company_account_required unless ::Auth::GoogleLoginRules.email_verified?(claims)
 
       email = claims["email"].to_s
       user = Users::EmailLockService.call(email:) { find_or_create_user(claims, email) }.value
@@ -46,7 +46,7 @@ module Signups
       user = User.lookup_by_email(email)
 
       if user
-        user unless login_refused?(user)
+        user unless login_refused?(user, claims)
       else
         create_user(claims, email)
       end
@@ -67,28 +67,15 @@ module Signups
       user
     end
 
-    def login_refused?(user)
-      needs_organization = user.needs_organization?
-
-      if !needs_organization && !user.memberships.active.exists?
-        result.single_validation_failure!(error_code: "user_does_not_exist")
-      elsif !needs_organization && !user.login_method_allowed?(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
-        result.single_validation_failure!(
-          error_code: "login_method_not_authorized",
-          field: Organizations::AuthenticationMethods::GOOGLE_OAUTH
-        )
-      end
-
+    def login_refused?(user, claims)
+      refusal = ::Auth::GoogleLoginRules.refusal(user, claims)
+      result.single_validation_failure!(**refusal) if refusal
       result.failure?
     end
 
     # A Workspace account (hd) on a company domain: a consumer Google account on a work address can outlive the job.
     def workspace_account?(claims, validation)
       validation.success? && claims["hd"].is_a?(String) && claims["hd"].casecmp?(validation.domain)
-    end
-
-    def email_verified?(claims)
-      ActiveModel::Type::Boolean.new.cast(claims["email_verified"]) == true
     end
 
     def company_account_required

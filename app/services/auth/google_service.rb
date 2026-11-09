@@ -48,19 +48,8 @@ module Auth
 
       google_oidc = oidc_verifier(code:, code_verifier:)
       user = find_user_by_email(google_oidc["email"])
-      # verify_oidc checks the signature, audience, issuer and expiry, not that Google verified the email.
-      needs_organization = user.present? && user.needs_organization? && email_verified?(google_oidc)
-
-      can_log_in = user.present? && (needs_organization || user.memberships.active.any?)
-      return result.single_validation_failure!(error_code: "user_does_not_exist") unless can_log_in
-
-      # A user without an organization has no organization login policy yet.
-      unless needs_organization || user.login_method_allowed?(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
-        return result.single_validation_failure!(
-          error_code: "login_method_not_authorized",
-          field: Organizations::AuthenticationMethods::GOOGLE_OAUTH
-        )
-      end
+      refusal = GoogleLoginRules.refusal(user, google_oidc)
+      return result.single_validation_failure!(**refusal) if refusal
 
       result.user = user
       UserDevices::RegisterService.call!(user:)
@@ -202,10 +191,6 @@ module Auth
 
     def find_user_by_email(email)
       User.lookup_by_email(email)
-    end
-
-    def email_verified?(claims)
-      ActiveModel::Type::Boolean.new.cast(claims["email_verified"]) == true
     end
 
     def client_id
