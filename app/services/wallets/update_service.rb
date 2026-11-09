@@ -22,6 +22,7 @@ module Wallets
       return result.forbidden_failure! if x402_enable_forbidden?
       return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
+      return result.forbidden_failure! if invoice_usage_on_expiration_forbidden?
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
@@ -249,6 +250,11 @@ module Wallets
 
     def organization_flag_disabled?(flag)
       !organization_flag_enabled?(flag)
+    end
+
+    def invoice_usage_on_expiration_forbidden?
+      ActiveModel::Type::Boolean.new.cast(params[:invoice_usage_on_expiration]) &&
+        organization_flag_disabled?(:invoice_usage_on_wallet_expiration)
     end
 
     def connections_requested?
