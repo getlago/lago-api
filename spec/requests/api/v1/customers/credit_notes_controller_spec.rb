@@ -8,6 +8,7 @@ RSpec.describe Api::V1::Customers::CreditNotesController do
       subject { get_with_token(organization, "/api/v1/customers/#{external_id}/credit_notes", params) }
 
       let(:external_id) { customer.external_id }
+      let(:listed_customers) { [customer] }
 
       context "with invalid customer id" do
         let(:external_id) { SecureRandom.uuid }

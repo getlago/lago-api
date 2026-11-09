@@ -8,6 +8,7 @@ RSpec.describe Api::V1::Customers::PaymentRequestsController do
       subject { get_with_token(organization, "/api/v1/customers/#{external_id}/payment_requests", params) }
 
       let(:external_id) { customer.external_id }
+      let(:listed_customers) { [customer] }
 
       context "with unknown customer" do
         let(:external_id) { SecureRandom.uuid }
