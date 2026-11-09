@@ -144,14 +144,17 @@ RSpec.describe PendingSignup do
       it { is_expected.to eq([nil, 0]) }
     end
 
-    it "reads the sends once" do
-      create(:pending_signup, email: "jane@acme.com", emails_sent_at: [20.seconds.ago])
-      queries = 0
-      counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+    context "with a send to the mailbox" do
+      before { create(:pending_signup, email: "jane@acme.com", emails_sent_at: [20.seconds.ago]) }
 
-      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { state }
+      it "reads the sends once" do
+        queries = 0
+        counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
 
-      expect(queries).to eq(1)
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { state }
+
+        expect(queries).to eq(1)
+      end
     end
   end
 
