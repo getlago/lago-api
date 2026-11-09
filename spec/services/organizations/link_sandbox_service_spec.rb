@@ -144,4 +144,35 @@ RSpec.describe Organizations::LinkSandboxService do
       expect(target.reload).to have_attributes(environment: "production", production_organization_id: nil)
     end
   end
+
+  context "when the link holds its locks", transaction: false do
+    it "lets production keep writing its own records" do
+      syncing = Queue.new
+      release = Queue.new
+      allow(Memberships::SyncSandboxService).to receive(:call!) do
+        syncing << true
+        release.pop
+      end
+
+      link = Thread.new do
+        ApplicationRecord.connection_pool.with_connection do
+          described_class.call(production_organization: production, sandbox_organization: target, actor:)
+        end
+      end
+
+      begin
+        Timeout.timeout(10) { syncing.pop }
+        # A child insert takes FOR KEY SHARE on its organization, which FOR UPDATE would block.
+        customer = ApplicationRecord.transaction do
+          ApplicationRecord.connection.execute("SET LOCAL lock_timeout = '2s'")
+          create(:customer, organization: production)
+        end
+      ensure
+        release << true
+      end
+
+      expect(customer).to be_persisted
+      expect(Timeout.timeout(10) { link.value }).to be_success
+    end
+  end
 end
