@@ -6,6 +6,8 @@ RSpec.describe Resolvers::Signups::StatusResolver do
   subject(:result) { poll(signup_secret) }
 
   let(:signup_secret) { PendingSignup.generate_signup_secret }
+  let(:signup_traits) { [] }
+  let(:signup_attributes) { {} }
   let(:query) do
     <<~GQL
       query($signupSecret: String!) {
@@ -16,9 +18,11 @@ RSpec.describe Resolvers::Signups::StatusResolver do
 
   include_context "with self-serve enabled"
 
+  # Frozen before the attempt is created, so its send times have no sub-seconds.
   before do
+    freeze_time
     Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new
-    create(:pending_signup, signup_secret:)
+    create(:pending_signup, *signup_traits, signup_secret:, **signup_attributes)
   end
 
   def poll(signup_secret)
@@ -27,12 +31,16 @@ RSpec.describe Resolvers::Signups::StatusResolver do
 
   it_behaves_like "a self-serve entry point"
 
-  it "answers pending, then verified once confirmed" do
+  it "answers pending" do
     expect(result["data"]["signupStatus"]["status"]).to eq("pending")
+  end
 
-    PendingSignup.sole.update!(verified_at: Time.current, user: create(:user), password_digest: nil)
+  context "with a confirmed signup" do
+    let(:signup_traits) { [:verified] }
 
-    expect(poll(signup_secret)["data"]["signupStatus"]).to eq("status" => "verified", "resendAvailableInSeconds" => nil, "resendLimitReached" => false)
+    it "answers verified, with no resend" do
+      expect(result["data"]["signupStatus"]).to eq("status" => "verified", "resendAvailableInSeconds" => nil, "resendLimitReached" => false)
+    end
   end
 
   it "answers expired after 48 hours, and invalid for an unknown secret" do
@@ -42,13 +50,20 @@ RSpec.describe Resolvers::Signups::StatusResolver do
     travel_to(50.hours.from_now) { expect(result["data"]["signupStatus"]["status"]).to eq("expired") }
   end
 
-  it "restores the resend countdown and limit of a pending signup" do
-    freeze_time
-    PendingSignup.sole.update!(emails_sent_at: [20.seconds.ago])
-    expect(result["data"]["signupStatus"]).to eq("status" => "pending", "resendAvailableInSeconds" => 40, "resendLimitReached" => false)
+  context "with a send 20 seconds ago" do
+    let(:signup_attributes) { {emails_sent_at: [20.seconds.ago]} }
 
-    PendingSignup.sole.update!(emails_sent_at: [3.minutes.ago] * 3)
-    expect(poll(signup_secret)["data"]["signupStatus"]).to eq("status" => "pending", "resendAvailableInSeconds" => nil, "resendLimitReached" => true)
+    it "restores the resend countdown" do
+      expect(result["data"]["signupStatus"]).to eq("status" => "pending", "resendAvailableInSeconds" => 40, "resendLimitReached" => false)
+    end
+  end
+
+  context "with the attempt's 3 emails sent" do
+    let(:signup_attributes) { {emails_sent_at: [3.minutes.ago] * 3} }
+
+    it "restores the resend limit" do
+      expect(result["data"]["signupStatus"]).to eq("status" => "pending", "resendAvailableInSeconds" => nil, "resendLimitReached" => true)
+    end
   end
 
   context "when the poll asks for the status alone" do
