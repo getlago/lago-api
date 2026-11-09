@@ -25,6 +25,25 @@ RSpec.describe Signups::ExchangeSecretService do
       expect(described_class.call(signup_secret:).error.code).to eq("signup_secret_expired")
     end
 
+    context "when the session cannot be opened" do
+      before do
+        calls = 0
+        allow(UserDevices::RegisterService).to receive(:call!).and_wrap_original do |original, **kwargs|
+          calls += 1
+          raise ActiveRecord::ConnectionFailed, "connection lost" if calls == 1
+
+          original.call(**kwargs)
+        end
+      end
+
+      it "keeps the secret exchangeable, so a retry opens the session" do
+        expect { result }.to raise_error(ActiveRecord::ConnectionFailed)
+        expect(pending_signup.reload.signup_secret_exchanged_at).to be_nil
+
+        expect(described_class.call(signup_secret:)).to be_success
+      end
+    end
+
     it "refuses after an hour" do
       travel(1.hour + 1.second)
 

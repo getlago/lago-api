@@ -34,16 +34,12 @@ module Signups
         return result unless result.success?
       end
 
-      # bcrypt ran above, outside the lock: a public call never holds an address's lock for long.
-      user = Users::EmailLockService.call(email: pending_signup.normalized_email) do
-        create_user(token_record, pending_signup, by_password:)
-      end.value
-      return result unless user
-
-      result.user = user
-      result.token = Utils::AuthToken.encode(user:, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
-      # No security log: it needs an organization, which Step 3 creates.
-      UserDevices::RegisterService.call!(user:, skip_log: true)
+      # bcrypt ran above, outside the lock: a public call never holds an address's lock for long. The session opens in
+      # the same transaction, so a failure there leaves the link unconsumed and a retry works.
+      Users::EmailLockService.call(email: pending_signup.normalized_email) do
+        user = create_user(token_record, pending_signup, by_password:)
+        open_session(user) if user
+      end
       result
     rescue BaseLockService::FailedToAcquireLock
       result.lock_acquisition_failure!(message: "email lock not acquired")
@@ -92,6 +88,13 @@ module Signups
       CloseAttemptsService.call!(normalized_email: pending_signup.normalized_email, except: pending_signup)
 
       user
+    end
+
+    def open_session(user)
+      result.user = user
+      result.token = Utils::AuthToken.encode(user:, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+      # No security log: it needs an organization, which Step 3 creates.
+      UserDevices::RegisterService.call!(user:, skip_log: true)
     end
 
     def refuse(token_record, status: token_record.verification_status)

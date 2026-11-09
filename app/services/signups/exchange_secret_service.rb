@@ -15,12 +15,16 @@ module Signups
       pending_signup = PendingSignup.for_signup_secret(signup_secret)
       return result.not_found_failure!(resource: "signup_secret") unless pending_signup
       return result.not_allowed_failure!(code: "email_not_verified") unless pending_signup.verified?
-      return result.not_allowed_failure!(code: "signup_secret_expired") unless claim_exchange(pending_signup)
 
-      # The user this attempt's confirm created, never a user found by email.
-      result.user = pending_signup.user
-      result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
-      UserDevices::RegisterService.call!(user: result.user, skip_log: true)
+      # The session opens in the claim's transaction, so a failure there leaves the secret exchangeable for a retry.
+      ApplicationRecord.transaction do
+        next result.not_allowed_failure!(code: "signup_secret_expired") unless claim_exchange(pending_signup)
+
+        # The user this attempt's confirm created, never a user found by email.
+        result.user = pending_signup.user
+        result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+        UserDevices::RegisterService.call!(user: result.user, skip_log: true)
+      end
       result
     end
 

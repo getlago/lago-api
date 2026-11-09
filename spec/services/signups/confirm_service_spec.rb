@@ -183,6 +183,27 @@ RSpec.describe Signups::ConfirmService do
     expect(result.error.code).to eq("email_already_verified")
   end
 
+  context "when the session cannot be opened" do
+    before do
+      calls = 0
+      allow(UserDevices::RegisterService).to receive(:call!).and_wrap_original do |original, **kwargs|
+        calls += 1
+        raise ActiveRecord::ConnectionFailed, "connection lost" if calls == 1
+
+        original.call(**kwargs)
+      end
+    end
+
+    it "consumes nothing, so a retry confirms the signup" do
+      expect { result }.to raise_error(ActiveRecord::ConnectionFailed)
+      expect(User.where(email: "Jane@GetLago.com")).not_to exist
+      expect(token_record.reload).to be_pending
+      expect(pending_signup.reload).to have_attributes(verified_at: nil, user_id: nil)
+
+      expect(described_class.call(token:, signup_secret:)).to be_success
+    end
+  end
+
   context "when a user was created for the address meanwhile, whatever its case" do
     before { create(:user, email: "jane@getlago.com") }
 
