@@ -52,6 +52,17 @@ RSpec.describe ApiKeys::MemberPermissions do
 
       it "leaves resources without a rule to admins" do
         expect(permissions["x402_connection"]).to eq([])
+        expect(permissions["organization"]).to eq([])
+      end
+    end
+
+    context "when the member can edit plans but not their charges" do
+      let(:role) do
+        create(:role, organization:, permissions: %w[plans:view plans:create plans:update plans:delete])
+      end
+
+      it "grants no write on plans" do
+        expect(permissions["plan"]).to eq(["read"])
       end
 
       it "lists every resource, so that the key is valid" do

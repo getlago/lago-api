@@ -106,12 +106,6 @@ module Clockwork
       .perform_later
   end
 
-  every(1.day, "schedule:api_keys_cleanup_member_keys", at: "01:50") do
-    Clock::ApiKeys::CleanupMemberKeysJob
-      .set(sentry: {"slug" => "lago_api_keys_cleanup_member_keys", "cron" => "50 1 * * *"})
-      .perform_later
-  end
-
   # Five minutes behind the producer, so a card that comes due is invoiced in the same hour.
   # A fan-out that runs long only defers its stragglers to the next tick; nothing is lost.
   every(1.hour, "schedule:process_billing_segments", at: "*:17") do

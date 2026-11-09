@@ -13,6 +13,10 @@ module ApiKeys
       {read: ["#{group}:view"], write: %W[#{group}:create #{group}:update #{group}:delete]}
     end
 
+    CHARGES_WRITE = %w[charges:create charges:update charges:delete].freeze
+
+    # The organization is left to admins: the API changes its webhook URL, emails and invoice
+    # settings, each behind its own permission in the dashboard.
     RULES = {
       "activity_log" => {read: %w[audit_logs:view]},
       "add_on" => crud("addons"),
@@ -42,12 +46,15 @@ module ApiKeys
       "lifetime_usage" => {read: %w[subscriptions:view], write: %w[subscriptions:update]},
       "order" => {read: %w[orders:view], write: %w[orders:update orders:execute]},
       "order_form" => {read: %w[order_forms:view], write: %w[order_forms:sign order_forms:void]},
-      "organization" => {read: %w[organization:view], write: %w[organization:update]},
       "payment" => {read: %w[payments:view], write: %w[payments:create]},
       "payment_method" => crud("payment_methods"),
       "payment_request" => {read: %w[invoices:view payments:view]},
-      "plan" => crud("plans"),
-      "plan_rate_card" => {read: %w[plans:view rate_cards:view], write: crud("plans")[:write] + crud("rate_cards")[:write]},
+      # The API edits a plan's charges along with the plan, which the dashboard gates apart.
+      "plan" => {read: %w[plans:view], write: crud("plans")[:write] + CHARGES_WRITE},
+      "plan_rate_card" => {
+        read: %w[plans:view rate_cards:view],
+        write: crud("plans")[:write] + crud("rate_cards")[:write] + CHARGES_WRITE
+      },
       "product" => crud("products"),
       "product_category" => crud("products"),
       "quote" => {
