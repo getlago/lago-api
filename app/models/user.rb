@@ -25,11 +25,12 @@ class User < ApplicationRecord
 
   # One query whether or not the email exists, so login timing does not reveal accounts. The exact spelling wins, then
   # the typed one ignoring case, then another Unicode spelling (signups store emails composed); the oldest first.
+  # Every term compares LOWER(email), which index_users_on_lower_email serves; LOWER(?) keeps the exact spelling.
   def self.lookup_by_email(email)
     normalized = normalize_value_for(:email, email.to_s).to_s
     typed = [normalized.downcase, email.to_s.downcase].uniq
 
-    where("email = ? OR LOWER(email) IN (?)", normalized, (typed + [PendingSignup.normalize_email(normalized)]).uniq)
+    where("LOWER(email) IN (LOWER(?), ?)", normalized, (typed + [PendingSignup.normalize_email(normalized)]).uniq)
       .order(Arel.sql(sanitize_sql_array(["email = ? DESC, LOWER(email) IN (?) DESC", normalized, typed])), :created_at)
       .first
   end
