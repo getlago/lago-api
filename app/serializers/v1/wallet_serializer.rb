@@ -27,13 +27,13 @@ module V1
         last_consumed_credit_at: model.last_consumed_credit_at&.iso8601,
         terminated_at: model.terminated_at,
         invoice_requires_successful_payment: model.invoice_requires_successful_payment?,
-        invoice_usage_on_expiration: model.invoice_usage_on_expiration?,
         paid_top_up_min_amount_cents: model.paid_top_up_min_amount_cents,
         paid_top_up_max_amount_cents: model.paid_top_up_max_amount_cents,
         priority: model.priority
       }
 
       payload[:x402_enabled] = model.x402_enabled if model.organization.x402_payments_enabled?
+      payload[:invoice_usage_on_expiration] = true if model.invoice_usage_on_expiration?
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
       payload.merge!(limitations) if include?(:limitations)
       payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
