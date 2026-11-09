@@ -20,13 +20,15 @@ module Agents
         return result.single_validation_failure!(error_code: "enrollment_required") unless wallet
         return result.single_validation_failure!(error_code: "payments_not_accepted") if storefront.stripe_provider&.seller_profile.blank?
 
+        # Committed on its own: Stripe keeps the customer whatever the top-up below answers.
+        attach_stripe_customer
+
         # One lock for the replay check and the top-up, so the same token sent twice at once pays once.
         registration.with_lock do
           result.wallet_transaction = paid_with_token
           if result.wallet_transaction
             result.replayed = true
           else
-            attach_stripe_customer
             create_topup
           end
         end
@@ -69,16 +71,18 @@ module Agents
 
       # The token is charged on the storefront's Stripe account, through a Stripe customer that only pays with tokens.
       def attach_stripe_customer
-        return if customer.reload.stripe_customer&.provider_customer_id.present?
+        registration.with_lock do
+          next if customer.reload.stripe_customer&.provider_customer_id.present?
 
-        customer.update!(payment_provider: "stripe", payment_provider_code: storefront.payment_provider_code)
-        PaymentProviders::Stripe::Customers::CreateService.call!(
-          customer:,
-          payment_provider_id: storefront.stripe_provider.id,
-          params: {sync_with_provider: true, provider_payment_methods: PAYMENT_METHODS},
-          async: false,
-          allow_shared_payment_token: true
-        )
+          customer.update!(payment_provider: "stripe", payment_provider_code: storefront.payment_provider_code)
+          PaymentProviders::Stripe::Customers::CreateService.call!(
+            customer:,
+            payment_provider_id: storefront.stripe_provider.id,
+            params: {sync_with_provider: true, provider_payment_methods: PAYMENT_METHODS},
+            async: false,
+            allow_shared_payment_token: true
+          )
+        end
       end
 
       def create_topup
