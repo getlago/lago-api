@@ -10,7 +10,7 @@ module ThrottlesAuthAttempts
     context[:request]&.remote_ip
   end
 
-  def too_many_attempts_error
-    execution_error(error: "Too Many Requests", status: 429, code: "too_many_requests")
+  def too_many_attempts_error(code: "too_many_requests", details: nil)
+    execution_error(error: "Too Many Requests", status: 429, code:, details:)
   end
 end
