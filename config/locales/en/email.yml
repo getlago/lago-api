@@ -79,3 +79,8 @@ en:
         total_amount_due: The total amount due is %{amount}.
     powered_by: Powered by
     questions: Questions? Contact us at
+    signup:
+      account_exists:
+        subject: You already have a Lago account
+      verification:
+        subject: Verify your email to finish creating your Lago account

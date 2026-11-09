@@ -7,7 +7,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "product_filters:delete"
+      REQUIRED_PERMISSION = "products:delete"
 
       graphql_name "DestroyProductFilter"
       description "Deletes a product filter"

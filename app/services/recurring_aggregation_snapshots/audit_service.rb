@@ -7,7 +7,8 @@ module RecurringAggregationSnapshots
   # aggregated values, so its rows are reported apart and never as a difference. A sum snapshot
   # stops at its watermark while its fee counts the events ingested up to the invoice run: a leaf
   # that these events explain is reported apart too. A period without the default bucket marker
-  # reads as a full scan, so it is reported even when its rows match.
+  # reads as a full scan, so it is reported even when its rows match. A subscription moved to a plan
+  # override after its invoice was billed on the parent charge, so its fees are matched there too.
   class AuditService < BaseService
     Result = BaseResult[:rows, :differences, :adjusted_rows, :watermark_gap_rows, :periods_without_invoice, :periods_without_marker]
 
@@ -68,8 +69,9 @@ module RecurringAggregationSnapshots
       # A weighted sum snapshot has no events count: its read never counts the events of a closed period
       with_events_count = !billable_metric.weighted_sum_agg?
 
+      override_filter_ids = override_filter_ids(snapshots, fees)
       stored = snapshots.index_by { key(it) }
-      billed = fees.index_by { key(it) }
+      billed = fees.index_by { key(it, override_filter_ids) }
       ingested_late = {}
 
       (stored.keys | billed.keys).each do |charge_filter_id, grouped_by|
@@ -79,7 +81,8 @@ module RecurringAggregationSnapshots
         snapshot_events_count = snapshot&.events_count || 0
 
         row = Row.new(
-          charge_id: period.charge_id,
+          # A fee-only row on a parent filter the override has no copy of stays on the parent charge
+          charge_id: (snapshot.nil? && fee.charge_filter_id && fee.charge_filter_id == charge_filter_id) ? fee.charge_id : period.charge_id,
           charge_filter_id:,
           grouped_by:,
           to_datetime: period.to_datetime,
@@ -185,7 +188,7 @@ module RecurringAggregationSnapshots
         .where(
           organization_id: subscription.organization_id,
           subscription_id: subscription.id,
-          charge_id: charge.id,
+          charge_id: [charge.id, charge.parent_id].compact,
           pay_in_advance_event_id: nil,
           true_up_parent_fee_id: nil
         )
@@ -214,9 +217,31 @@ module RecurringAggregationSnapshots
       fee&.adjusted_fee.present? && !fee.adjusted_fee.adjusted_display_name?
     end
 
+    # Maps the parent charge's filters billed by the fees to the live filters of the snapshots' charge
+    # with the same values, which the override copied. Many filters have no code to match on. Values
+    # shared by several filters on either side are left unmapped, so no fee hides another. A removed
+    # filter lost its values with it: it stays unmapped and reported.
+    def override_filter_ids(snapshots, fees)
+      parent_filter_ids = fees.filter_map { it.charge_filter_id if it.charge_id == snapshots.first.charge.parent_id }
+      return {} if parent_filter_ids.empty?
+
+      own_ids = ids_by_values(snapshots.first.charge.filters.ids)
+      ids_by_values(parent_filter_ids).each_with_object({}) do |(values, parent_id), ids|
+        ids[parent_id] = own_ids[values] if own_ids.key?(values)
+      end
+    end
+
+    def ids_by_values(charge_filter_ids)
+      ChargeFilter.where(id: charge_filter_ids.uniq).includes(values: :billable_metric_filter)
+        .group_by { it.to_h.transform_values(&:sort) }
+        .filter_map { |values, filters| [values, filters.sole.id] if values.present? && filters.one? }
+        .to_h
+    end
+
     # Group values come back from JSON on both sides, the zero-unit marker with nil values
-    def key(record)
-      [record.charge_filter_id, record.grouped_by.compact.transform_values(&:to_s)]
+    def key(record, override_filter_ids = {})
+      charge_filter_id = override_filter_ids.fetch(record.charge_filter_id, record.charge_filter_id)
+      [charge_filter_id, record.grouped_by.compact.transform_values(&:to_s)]
     end
   end
 end

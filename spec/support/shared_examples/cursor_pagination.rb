@@ -10,8 +10,10 @@
 #
 # Rows already listed by the including group are tolerated: the walks are compared with
 # the whole list, read in a single page.
-RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, sort: CursorPagination::DEFAULT_SORT|
+# `response_id` and `model_id` select the response key and model column used to compare rows.
+RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, sort: CursorPagination::DEFAULT_SORT, response_id: :lago_id, model_id: :id|
   let(:paginated_collection) { collection }
+  let(:paginated_response_id) { response_id }
   let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
   let(:other_table_record) do
     (model == ProductCategory) ? create(:product, organization:) : create(:product_category, organization:)
@@ -28,14 +30,14 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, 
   end
 
   def listed_ids(params = {})
-    fetch_page(params.merge(limit: 100))[paginated_collection].map { it[:lago_id] }
+    fetch_page(params.merge(limit: 100))[paginated_collection].map { it[paginated_response_id] }
   end
 
   it "lists the rows in the sort of the endpoint" do
     ids = listed_ids
 
     expect(ids.size).to be >= 6
-    expect(model.unscoped.where(id: ids).order(sort).ids).to eq(ids)
+    expect(model.unscoped.where(model_id => ids).order(sort).pluck(model_id)).to eq(ids)
   end
 
   it "returns every row exactly once, walking forward then backward" do
@@ -45,7 +47,7 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, 
     page = fetch_page(limit: 2)
     expect(page[:meta][:prev_cursor]).to be_nil
     loop do
-      forward.concat(page[paginated_collection].map { it[:lago_id] })
+      forward.concat(page[paginated_collection].map { it[paginated_response_id] })
       break unless page[:meta][:next_cursor]
 
       page = fetch_page(limit: 2, after: page[:meta][:next_cursor])
@@ -53,7 +55,7 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, 
 
     backward = []
     loop do
-      backward.unshift(*page[paginated_collection].map { it[:lago_id] })
+      backward.unshift(*page[paginated_collection].map { it[paginated_response_id] })
       break unless page[:meta][:prev_cursor]
 
       page = fetch_page(limit: 2, before: page[:meta][:prev_cursor])

@@ -4,11 +4,12 @@ module Events
   class CreateService < BaseService
     Result = BaseResult[:event]
 
-    def initialize(organization:, params:, timestamp:, metadata:)
+    def initialize(organization:, params:, timestamp:, metadata:, catalog_events: false)
       @organization = organization
       @params = params
       @timestamp = timestamp
       @metadata = metadata
+      @catalog_events = catalog_events
       super
     end
 
@@ -32,7 +33,9 @@ module Events
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
       expression_result = CalculateExpressionService.call(organization:, event:)
-      return result.validation_failure!(errors: expression_result.error.message) unless expression_result.success?
+      unless expression_result.success?
+        return result.validation_failure!(errors: expression_result.error.message, codes: {base: [expression_result.error.code.to_s]})
+      end
 
       event.save! unless organization.clickhouse_events_store?
 
@@ -52,14 +55,14 @@ module Events
 
     private
 
-    attr_reader :organization, :params, :timestamp, :metadata
+    attr_reader :organization, :params, :timestamp, :metadata, :catalog_events
 
     def parse_timestamp
       TimestampWindow.parse(params[:timestamp], default: timestamp)
     end
 
     def produce_kafka_event(event)
-      Events::KafkaProducerService.call!(events: event, organization:)
+      Events::KafkaProducerService.call!(events: event, organization:, catalog_events:)
     end
 
     def enqueue_post_process(event)

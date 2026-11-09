@@ -86,7 +86,7 @@ module Api
         end
 
         def charge_codes
-          Array(params[:charge_codes]).map(&:to_s).uniq if params.key?(:charge_codes)
+          Array(params[:charge_codes]).map(&:to_s).compact_blank.uniq if params.key?(:charge_codes)
         end
 
         def selected_charges

@@ -68,8 +68,9 @@ module Invoices
     end
 
     def attach_pdf_to_invoice(pdf_file)
-      invoice.file.attach(
-        io: File.open(pdf_file.path),
+      Utils::DocumentAttachment.attach(
+        invoice.file,
+        path: pdf_file.path,
         filename: "#{invoice.number}.pdf",
         content_type: "application/pdf"
       )
