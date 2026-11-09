@@ -74,7 +74,8 @@ module Organizations
 
       after_commit { ApiKeys::CacheService.expire_all_cache(sandbox_organization) }
       result.organization = production_organization
-      result.sandbox_organization = sandbox_organization
+      # The mirrors wrote the settings through another instance of the sandbox.
+      result.sandbox_organization = sandbox_organization.reload
     end
 
     def refusal_code
