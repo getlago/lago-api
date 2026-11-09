@@ -96,6 +96,16 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
               expect(messages.map { JSON.parse(it[:payload])["external_subscription_id"] }).to eq(events.map(&:external_subscription_id))
             end
           end
+
+          context "when catalog events are explicitly requested" do
+            subject(:result) { described_class.call(events:, organization:, catalog_events: true) }
+
+            it "does not publish to the legacy topic" do
+              expect(result).to be_success
+
+              expect(karafka_producer).not_to have_received(:produce_many_async)
+            end
+          end
         end
       end
 

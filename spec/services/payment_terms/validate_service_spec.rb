@@ -7,6 +7,12 @@ RSpec.describe PaymentTerms::ValidateService do
 
   let(:result) { BaseResult.new }
 
+  it "accepts a payment_term sent with a different net_payment_term" do
+    validator = described_class.new(result, payment_term: {term_type: "end_of_month"}, net_payment_term: 30)
+
+    expect(validator.valid?).to be(true)
+  end
+
   describe "payment_term validation" do
     shared_examples "a term type carrying days" do |term_type|
       context "when days is valid" do

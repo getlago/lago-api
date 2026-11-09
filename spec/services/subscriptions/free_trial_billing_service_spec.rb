@@ -129,6 +129,74 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
           end
         end
       end
+
+      context "with a recurring invoice issued around the trial end" do
+        # NOTE: The trial ends on 2024-11-01 at 23:40 UTC, the job runs the next day
+        let(:timestamp) { Time.zone.parse("2024-11-02T00:35:00") }
+        let(:timezone) { nil }
+        let(:customer) { create(:customer, timezone:) }
+        let(:subscription) { create(:subscription, plan:, customer:, started_at: Time.zone.parse("2024-10-22T23:40:00")) }
+        let(:recurring) { true }
+
+        before do
+          create(:invoice_subscription, subscription:, invoice: create(:invoice, customer:), recurring:, timestamp: invoice_timestamp)
+        end
+
+        context "when it was issued on the trial end day" do
+          let(:invoice_timestamp) { Time.zone.parse("2024-11-01T00:10:00") }
+
+          it "does not bill the subscription again" do
+            expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+            expect(subscription.reload.trial_ended_at).to match_datetime(subscription.trial_end_datetime)
+          end
+        end
+
+        context "when it was issued on the run day" do
+          let(:invoice_timestamp) { Time.zone.parse("2024-11-02T00:10:00") }
+
+          it "does not bill the subscription again" do
+            expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          end
+        end
+
+        context "when it was issued before the trial end day" do
+          let(:invoice_timestamp) { Time.zone.parse("2024-10-31T00:10:00") }
+
+          it "bills the subscription" do
+            expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
+          end
+        end
+
+        context "when it is not recurring" do
+          let(:invoice_timestamp) { Time.zone.parse("2024-11-01T00:10:00") }
+          let(:recurring) { false }
+
+          it "bills the subscription" do
+            expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
+          end
+        end
+
+        context "with a customer timezone" do
+          # NOTE: 2024-11-01T23:40 UTC is 2024-11-02T00:40 in Paris, so the trial ends on Nov 2 locally
+          let(:timezone) { "Europe/Paris" }
+
+          context "when it was issued on the trial end day in the customer timezone" do
+            let(:invoice_timestamp) { Time.zone.parse("2024-11-01T23:10:00") } # 2024-11-02T00:10 Paris
+
+            it "does not bill the subscription again" do
+              expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+            end
+          end
+
+          context "when it was issued the day before in the customer timezone" do
+            let(:invoice_timestamp) { Time.zone.parse("2024-11-01T00:10:00") } # 2024-11-01T01:10 Paris
+
+            it "bills the subscription" do
+              expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
+            end
+          end
+        end
+      end
     end
   end
 end

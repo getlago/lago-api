@@ -36,6 +36,17 @@ RSpec.describe Api::V1::EventsController do
       expect(json[:event][:external_subscription_id]).to eq(subscription.external_id)
     end
 
+    context "with a transaction id longer than the v2 limit" do
+      let(:create_params) { super().merge(transaction_id: "a" * 1_001) }
+
+      it "keeps accepting the event without truncating its transaction id" do
+        expect { subject }.to change(Event, :count).by(1)
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:event][:transaction_id]).to eq(create_params[:transaction_id])
+      end
+    end
+
     context "when a property key contains a null byte" do
       let(:create_params) { super().merge(properties: {"bad\u0000key" => "x"}) }
 

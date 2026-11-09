@@ -25,6 +25,8 @@ RSpec.describe Invoices::GeneratePdfService do
       result = described_class.call(invoice:, context:)
 
       expect(result.invoice.file).to be_present
+      expect(result.invoice.file.filename.to_s).to eq("#{invoice.number}.pdf")
+      expect(ActiveStorage::Blob.service.exist?(result.invoice.file.key)).to be(true)
     end
 
     it "calls the SendWebhook job" do
@@ -159,6 +161,25 @@ RSpec.describe Invoices::GeneratePdfService do
       end
     end
 
+    context "when the PDF renderer returns a PDF" do
+      before { stub_pdf_generation(pdf: File.binread(blank_pdf_path)) }
+
+      it "attaches it as an application/pdf file named after the invoice number" do
+        result = described_class.call(invoice:, context:)
+
+        expect(result.invoice.file.filename.to_s).to eq("#{invoice.number}.pdf")
+        expect(result.invoice.file.content_type).to eq("application/pdf")
+        expect(ActiveStorage::Blob.service.download(result.invoice.file.key)).to eq(File.binread(blank_pdf_path))
+      end
+    end
+
+    context "when the worker stops during the storage upload" do
+      it_behaves_like "an attachment uploaded before it is attached", :file, webhook: "invoice.generated" do
+        let(:record) { invoice }
+        let(:generate_document) { -> { described_class.call(invoice:, context:) } }
+      end
+    end
+
     context "when in API context" do
       let(:context) { "api" }
 
@@ -181,7 +202,8 @@ RSpec.describe Invoices::GeneratePdfService do
       it "generates the invoice synchronously" do
         result = described_class.call(invoice:, context:)
 
-        expect(result.invoice.file.filename.to_s).not_to eq("invoice.pdf")
+        expect(result.invoice.file.filename.to_s).to eq("#{invoice.number}.pdf")
+        expect(invoice.reload.file.filename.to_s).to eq("#{invoice.number}.pdf")
       end
     end
 
@@ -225,7 +247,7 @@ RSpec.describe Invoices::GeneratePdfService do
             attachment_name: "factur-x.xml"
           )
           expect(EInvoices::Invoices::Cii::CreateService).to have_received(:call)
-          expect(result.invoice.file).to be_present
+          expect(result.invoice.file.filename.to_s).to eq("#{invoice.number}.pdf")
         end
 
         context "when the invoice is a contract invoice" do

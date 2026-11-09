@@ -23,6 +23,7 @@ module Invoices
       return result unless currencies_aligned?
       return result unless billing_times_aligned?
       return result unless billing_entities_aligned?
+      return result unless payment_terms_aligned?
 
       @invoice = Invoice.new(
         organization:,
@@ -33,7 +34,9 @@ module Invoices
         timezone: customer.applicable_timezone,
         issuing_date:,
         payment_due_date:,
-        net_payment_term: customer.applicable_net_payment_term,
+        payment_term: payment_term.to_h,
+        payment_term_source: resolved_payment_term.source,
+        net_payment_term: payment_term.net_payment_term_alias,
         created_at: Time.current,
         updated_at: Time.current
       )
@@ -60,6 +63,7 @@ module Invoices
 
     attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions, :subscription_context
     delegate :organization, to: :customer
+    delegate :payment_term, to: :resolved_payment_term
 
     def billing_entity
       @billing_entity ||= first_subscription.billing_entity || customer.billing_entity
@@ -72,6 +76,23 @@ module Invoices
 
       if effective_entity_ids.size > 1
         result.single_validation_failure!(error_code: "subscription_billing_entities_do_not_match")
+        return false
+      end
+
+      true
+    end
+
+    # Real billing splits subscriptions resolving to different terms into separate invoices
+    # (Subscriptions::InvoiceGroupingService), so a single preview cannot represent them.
+    def payment_terms_aligned?
+      return true if subscriptions.size <= 1
+
+      grouping_keys = subscriptions.map do |subscription|
+        PaymentTerms::ResolveService.call!(customer:, subscription:, billing_entity:).payment_term.grouping_key
+      end
+
+      if grouping_keys.uniq.size > 1
+        result.single_validation_failure!(error_code: "subscription_payment_terms_do_not_match")
         return false
       end
 
@@ -164,7 +185,11 @@ module Invoices
     end
 
     def payment_due_date
-      (issuing_date + customer.applicable_net_payment_term.days).to_date
+      payment_term.due_date_for(issuing_date)
+    end
+
+    def resolved_payment_term
+      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:, subscription: first_subscription, billing_entity:)
     end
 
     def add_subscription_fee(subscription, boundaries)

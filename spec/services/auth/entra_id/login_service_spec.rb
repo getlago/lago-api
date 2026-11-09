@@ -231,6 +231,29 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
       end
     end
 
+    context "with an open self-serve signup for the address" do
+      let(:pending_signup) { create(:pending_signup, email: "foo@bar.com") }
+
+      before { pending_signup }
+
+      it "closes it and drops its password digest" do
+        expect(service.call).to be_success
+        expect(pending_signup.reload).to have_attributes(closed_at: be_present, password_digest: nil)
+      end
+    end
+
+    context "when another request holds the address", transaction: false do
+      before { stub_const("BaseLockService::ACQUIRE_LOCK_TIMEOUT", 0.seconds) }
+
+      it "creates no user" do
+        with_email_lock("foo@bar.com") do
+          expect(service.call.error.code).to eq("lock_acquisition_failed")
+        end
+
+        expect(User.where(email: "foo@bar.com")).not_to exist
+      end
+    end
+
     context "when an existing user is not a member of the integration organization" do
       let(:user) { create(:user, email: "foo@bar.com") }
 

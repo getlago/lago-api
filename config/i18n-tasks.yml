@@ -118,8 +118,9 @@ search:
 ignore_missing:
   - 'date.{abbr_day_names,abbr_month_names,day_names,month_names,order}'
   - 'activerecord.errors.*'
-  - 'email.{api_key,data_export,organization,password_reset}.*'
+  - 'email.{api_key,data_export,organization,password_reset,signup}.*'
   - 'password_reset.*'
+  - 'signup.*'
 
 ## Consider these keys used:
 # ignore_unused:

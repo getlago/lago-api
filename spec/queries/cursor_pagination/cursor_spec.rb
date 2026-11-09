@@ -47,8 +47,8 @@ RSpec.describe CursorPagination::Cursor do
     end
   end
 
-  context "with a sort on a column the cursor key cannot hold" do
-    subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc, name: :desc, id: :desc}) }
+  context "with a sort without a date or time column" do
+    subject(:cursor) { described_class.new(table: "products", sort: {name: :desc, id: :desc}) }
 
     it "raises an argument error" do
       expect { cursor }.to raise_error(ArgumentError, /date or time columns/)

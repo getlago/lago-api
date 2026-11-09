@@ -76,4 +76,22 @@ RSpec.describe Mutations::Auth::Google::RegisterUser do
       expect(response["details"]["base"]).to include("user_already_exists")
     end
   end
+
+  context "with self-serve enabled" do
+    subject(:result) do
+      execute_graphql(
+        query: mutation,
+        request: Rack::Request.new(Rack::MockRequest.env_for("http://example.com")),
+        variables: {input: {code: "code", organizationName: "FooBar"}}
+      )
+    end
+
+    include_context "with self-serve enabled"
+
+    it "refuses with legacy_signup_disabled before exchanging the code with Google" do
+      expect(result["errors"].first["extensions"]).to eq("status" => 403, "code" => "legacy_signup_disabled")
+      expect(result["data"]["googleRegisterUser"]).to be_nil
+      expect(Auth::GoogleService).not_to have_received(:call)
+    end
+  end
 end

@@ -610,15 +610,71 @@ RSpec.describe Customers::UpdateService do
         end
       end
 
-      it "updates the net payment term of all draft invoices" do
-        create(:invoice, :draft, customer:, net_payment_term: 30)
-        create(:invoice, customer:, net_payment_term: 30)
-        create(:invoice, :draft, customer:, net_payment_term: 30)
+      it "does not rewrite open draft invoices (snapshot-freeze)" do
+        draft = create(:invoice, :draft, customer:, payment_term: {term_type: "net", days: 30}, net_payment_term: 30, issuing_date: Time.current.to_date, payment_due_date: Time.current.to_date + 30.days)
 
         result = customers_service.call
 
         expect(result).to be_success
-        expect(result.customer.invoices.draft.pluck(:net_payment_term)).to eq([8, 8])
+        expect(draft.reload).to have_attributes(
+          payment_term: {"term_type" => "net", "days" => 30},
+          net_payment_term: 30,
+          payment_due_date: Time.current.to_date + 30.days
+        )
+      end
+    end
+
+    context "when updating payment_term" do
+      before do
+        customer.update!(net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
+      end
+
+      context "with a structured term" do
+        let(:update_args) { {id: customer.id, payment_term: {term_type: "net_end_of_month", days: 10}} }
+
+        it "writes the term and mirrors a null alias" do
+          result = customers_service.call
+
+          expect(result.customer).to have_attributes(
+            payment_term: {"term_type" => "net_end_of_month", "days" => 10},
+            net_payment_term: nil
+          )
+        end
+      end
+
+      context "with null" do
+        let(:update_args) { {id: customer.id, payment_term: nil} }
+
+        it "clears both columns" do
+          result = customers_service.call
+
+          expect(result.customer).to have_attributes(payment_term: nil, net_payment_term: nil)
+        end
+      end
+
+      context "with both fields sent" do
+        let(:update_args) { {id: customer.id, net_payment_term: 45, payment_term: {term_type: "end_of_month"}} }
+
+        it "lets payment_term win" do
+          result = customers_service.call
+
+          expect(result.customer).to have_attributes(
+            payment_term: {"term_type" => "end_of_month"},
+            net_payment_term: nil
+          )
+        end
+      end
+
+      context "with an invalid shape" do
+        let(:update_args) { {id: customer.id, payment_term: {term_type: "end_of_month", days: 3}} }
+
+        it "returns a validation failure and changes nothing" do
+          result = customers_service.call
+
+          expect(result).to be_failure
+          expect(result.error.messages[:payment_term]).to eq(["unexpected_fields"])
+          expect(customer.reload.payment_term).to eq("term_type" => "net", "days" => 30)
+        end
       end
     end
 

@@ -112,6 +112,38 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       end
     end
 
+    context "when the subscription has its own payment term" do
+      let(:customer) { create(:customer, organization:, payment_term: {"term_type" => "net", "days" => 30}) }
+      let(:subscription) do
+        create(:subscription, plan:, customer:, started_at: timestamp - 1.week, payment_term: {"term_type" => "net", "days" => 45})
+      end
+
+      it "snapshots the subscription term instead of the customer's" do
+        invoice = create_service.call.invoice
+
+        expect(invoice.payment_term).to eq("term_type" => "net", "days" => 45)
+        expect(invoice.payment_term_source).to eq("subscription")
+      end
+    end
+
+    context "when only the billing entities have a payment term" do
+      let(:other_billing_entity) do
+        create(:billing_entity, organization:, payment_term: {"term_type" => "end_of_month"})
+      end
+
+      before do
+        customer.billing_entity.update!(payment_term: {"term_type" => "net", "days" => 30})
+        subscription.update!(billing_entity: other_billing_entity)
+      end
+
+      it "snapshots the term of the billing entity issuing the invoice" do
+        invoice = create_service.call.invoice
+
+        expect(invoice.payment_term).to eq("term_type" => "end_of_month")
+        expect(invoice.payment_term_source).to eq("billing_entity")
+      end
+    end
+
     context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }

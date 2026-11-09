@@ -23,12 +23,22 @@ Rails.application.routes.draw do
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
       resources :security_logs, param: :log_id, only: %i[index show]
+      get :events_enriched, to: "events#index_enriched"
+      resources :events, only: %i[create show index], constraints: {id: /[^\/]+/} do
+        post :batch, on: :collection
+        post :estimate_fees, on: :collection
+        post :estimate_instant_fees, on: :collection
+        post :batch_estimate_instant_fees, on: :collection
+      end
       draw(:shared_api)
     end
 
     # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
+      resources :events, only: %i[index create] do
+        post :batch, on: :collection
+      end
       resources :billable_metrics, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :billing_entities, param: :code, constraints: {code: /[^\/]+/}, only: %i[index show create update]
       resources :payments, only: %i[index show create]
@@ -130,6 +140,11 @@ Rails.application.routes.draw do
     post "gocardless/:organization_id", to: "webhooks#gocardless", on: :collection, as: :gocardless
     post "adyen/:organization_id", to: "webhooks#adyen", on: :collection, as: :adyen
     post "moneyhash/:organization_id", to: "webhooks#moneyhash", on: :collection, as: :moneyhash
+  end
+
+  namespace :x402 do
+    get "invoice_payments/:token", to: "invoice_payments#show", as: :invoice_payment
+    post "invoice_payments/:token", to: "invoice_payments#create"
   end
 
   if Rails.env.local?

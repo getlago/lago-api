@@ -95,6 +95,8 @@ RSpec.configure do |config|
   config.include QueuesHelper
   config.include XMLHelper
   config.include AdvisoryLockHelper
+  config.include EmailLockHelper
+  config.include RecaptchaHelper
   config.include SqlCaptureHelper
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers

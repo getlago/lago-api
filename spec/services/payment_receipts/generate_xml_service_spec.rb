@@ -50,6 +50,15 @@ RSpec.describe PaymentReceipts::GenerateXmlService do
       result = described_class.call(payment_receipt:, context:)
 
       expect(result.payment_receipt.xml_file).to be_present
+      expect(result.payment_receipt.xml_file.filename.to_s).to eq("#{payment_receipt.number}.xml")
+      expect(result.payment_receipt.xml_file.content_type).to eq("application/xml")
+    end
+
+    context "when the worker stops during the storage upload" do
+      it_behaves_like "an attachment uploaded before it is attached", :xml_file do
+        let(:record) { payment_receipt }
+        let(:generate_document) { -> { described_class.call(payment_receipt:, context:) } }
+      end
     end
 
     context "when using temp files" do

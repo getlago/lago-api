@@ -1536,6 +1536,28 @@ RSpec.describe Api::V1::InvoicesController do
       )
     end
 
+    context "with a payment_term for the new subscription" do
+      before { preview_params[:payment_term] = {term_type: "net_end_of_month", days: 2} }
+
+      it "previews the invoice with that term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:payment_term]).to eq(term_type: "net_end_of_month", days: 2)
+      end
+
+      context "when the payment_term is invalid" do
+        before { preview_params[:payment_term] = {term_type: "net"} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:payment_term]).to eq(["invalid_days"])
+        end
+      end
+    end
+
     context "with exact time" do
       let(:timestamp) { Time.zone.parse("15 Mar 2024") }
 
@@ -2125,6 +2147,63 @@ RSpec.describe Api::V1::InvoicesController do
           expect(pending_plan[:current_billing_period_ending_at]).to eq("2026-08-02T23:59:59Z")
           expect(pending_plan[:current_billing_period_started_at])
             .not_to eq(pending_plan[:current_billing_period_ending_at])
+        end
+      end
+    end
+
+    context "with a plan upgrade carrying a payment_term" do
+      let(:customer) { create(:customer, organization:) }
+      let(:current_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 500)
+      end
+      let(:target_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1000)
+      end
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: current_plan,
+          status: :active,
+          billing_time: "anniversary",
+          subscription_at: Time.zone.parse("2026-03-03"),
+          started_at: Time.zone.parse("2026-03-03"),
+          payment_term: {"term_type" => "net", "days" => 30}
+        )
+      end
+      let(:preview_params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {external_ids: [subscription.external_id], plan_code: target_plan.code},
+          payment_term:
+        }
+      end
+
+      before { subscription }
+
+      context "when the term matches the current subscription's" do
+        let(:payment_term) { {term_type: "net", days: 30} }
+
+        it "previews the terminated and the new subscription on one invoice" do
+          travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:invoice][:payment_term]).to eq(term_type: "net", days: 30)
+          end
+        end
+      end
+
+      context "when the term differs from the current subscription's" do
+        let(:payment_term) { {term_type: "end_of_month"} }
+
+        it "rejects the preview, as the upgrade would bill them on separate invoices" do
+          travel_to(Time.zone.parse("2026-06-04T10:00:00Z")) do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:error_details]).to eq(base: ["subscription_payment_terms_do_not_match"])
+          end
         end
       end
     end

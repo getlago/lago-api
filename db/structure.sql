@@ -286,6 +286,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_4cadfc
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_4aa58496c3;
 ALTER TABLE IF EXISTS ONLY public.recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_4a79e22898;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_49fcc221b0;
+ALTER TABLE IF EXISTS ONLY public.pending_signup_tokens DROP CONSTRAINT IF EXISTS fk_rails_49e3a9c4eb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49212d501e;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_47d8081062;
@@ -356,6 +357,7 @@ ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.plan_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_21cbfc2122;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS fk_rails_21808fa528;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_216ac8a975;
+ALTER TABLE IF EXISTS ONLY public.pending_signups DROP CONSTRAINT IF EXISTS fk_rails_216678edf6;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_20f157fa49;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_20cc0de4c7;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db0057d9b;
@@ -426,6 +428,7 @@ DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_organization_address_nonce;
 DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_created_at;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_unpaid_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
@@ -469,6 +472,8 @@ DROP INDEX IF EXISTS public.index_wallet_targets_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
+DROP INDEX IF EXISTS public.index_users_on_lower_email;
+DROP INDEX IF EXISTS public.index_users_on_email;
 DROP INDEX IF EXISTS public.index_user_devices_on_user_id_and_fingerprint;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
@@ -643,6 +648,16 @@ DROP INDEX IF EXISTS public.index_plan_rate_cards_by_cursor;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_pending_signups_on_user_id;
+DROP INDEX IF EXISTS public.index_pending_signups_on_signup_secret_digest;
+DROP INDEX IF EXISTS public.index_pending_signups_on_open_expires_at;
+DROP INDEX IF EXISTS public.index_pending_signups_on_normalized_email;
+DROP INDEX IF EXISTS public.index_pending_signups_on_mailbox_key_and_created_at;
+DROP INDEX IF EXISTS public.index_pending_signups_on_created_at;
+DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_token_digest;
+DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_pending_signup_id;
+DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_live_pending_signup_id;
+DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_expires_at;
 DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
@@ -1199,6 +1214,8 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_ta
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.plan_rate_cards DROP CONSTRAINT IF EXISTS plan_rate_cards_pkey;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS pending_vies_checks_pkey;
+ALTER TABLE IF EXISTS ONLY public.pending_signups DROP CONSTRAINT IF EXISTS pending_signups_pkey;
+ALTER TABLE IF EXISTS ONLY public.pending_signup_tokens DROP CONSTRAINT IF EXISTS pending_signup_tokens_pkey;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS payment_requests_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_pkey;
@@ -1344,6 +1361,8 @@ DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.presentation_breakdowns;
 DROP TABLE IF EXISTS public.plan_rate_cards;
 DROP TABLE IF EXISTS public.pending_vies_checks;
+DROP TABLE IF EXISTS public.pending_signups;
+DROP TABLE IF EXISTS public.pending_signup_tokens;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
 DROP TABLE IF EXISTS public.payment_methods;
@@ -1518,6 +1537,7 @@ DROP TYPE IF EXISTS public.quote_void_reason;
 DROP TYPE IF EXISTS public.quote_status;
 DROP TYPE IF EXISTS public.quote_order_type;
 DROP TYPE IF EXISTS public.product_type;
+DROP TYPE IF EXISTS public.pending_signup_token_status;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
@@ -1853,6 +1873,17 @@ CREATE TYPE public.payment_type AS ENUM (
     'provider',
     'manual',
     'x402'
+);
+
+
+--
+-- Name: pending_signup_token_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.pending_signup_token_status AS ENUM (
+    'pending',
+    'consumed',
+    'replaced'
 );
 
 
@@ -2579,7 +2610,7 @@ CREATE TABLE public.billing_entities (
     finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
     invoice_footer text,
     invoice_grace_period integer DEFAULT 0 NOT NULL,
-    net_payment_term integer DEFAULT 0 NOT NULL,
+    net_payment_term integer DEFAULT 0,
     email character varying,
     email_settings character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     eu_tax_management boolean DEFAULT false,
@@ -4066,7 +4097,7 @@ CREATE TABLE public.invoices (
     sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
     sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
     payment_due_date date,
-    net_payment_term integer DEFAULT 0 NOT NULL,
+    net_payment_term integer DEFAULT 0,
     voided_at timestamp(6) without time zone,
     organization_sequential_id integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
@@ -4162,7 +4193,8 @@ CREATE TABLE public.subscriptions (
     skip_daily_usage boolean DEFAULT false NOT NULL,
     cancellation_reason public.subscription_cancellation_reasons,
     purchase_order_number character varying,
-    billing_anchor_date date
+    billing_anchor_date date,
+    payment_term jsonb
 );
 
 
@@ -5137,7 +5169,8 @@ CREATE TABLE public.wallets (
     billing_entity_id uuid,
     purchase_order_number character varying,
     x402_enabled boolean DEFAULT false NOT NULL,
-    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
+    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    payment_term jsonb
 );
 
 
@@ -5618,6 +5651,47 @@ CREATE TABLE public.payment_receipts (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     billing_entity_id uuid NOT NULL
+);
+
+
+--
+-- Name: pending_signup_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pending_signup_tokens (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    pending_signup_id uuid NOT NULL,
+    token_digest character varying NOT NULL,
+    status public.pending_signup_token_status DEFAULT 'pending'::public.pending_signup_token_status NOT NULL,
+    expires_at timestamp(6) without time zone NOT NULL,
+    consumed_at timestamp(6) without time zone,
+    failed_password_attempts integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT check_pending_signup_tokens_consumed_at CHECK (((status <> 'consumed'::public.pending_signup_token_status) OR (consumed_at IS NOT NULL)))
+);
+
+
+--
+-- Name: pending_signups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pending_signups (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email character varying NOT NULL,
+    normalized_email character varying NOT NULL,
+    mailbox_key character varying NOT NULL,
+    password_digest character varying,
+    signup_secret_digest character varying NOT NULL,
+    expires_at timestamp(6) without time zone NOT NULL,
+    emails_sent_at timestamp(6) without time zone[] DEFAULT '{}'::timestamp without time zone[] NOT NULL,
+    closed_at timestamp(6) without time zone,
+    verified_at timestamp(6) without time zone,
+    user_id uuid,
+    signup_secret_exchanged_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT check_pending_signups_password_digest CHECK (((password_digest IS NOT NULL) OR (verified_at IS NOT NULL) OR (closed_at IS NOT NULL)))
 );
 
 
@@ -6293,7 +6367,8 @@ CREATE TABLE public.users (
     password_digest character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    cs_admin boolean DEFAULT false NOT NULL
+    cs_admin boolean DEFAULT false NOT NULL,
+    self_serve_verified_at timestamp(6) without time zone
 );
 
 
@@ -7289,6 +7364,22 @@ ALTER TABLE ONLY public.payment_requests
 
 ALTER TABLE ONLY public.payments
     ADD CONSTRAINT payments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pending_signup_tokens pending_signup_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_signup_tokens
+    ADD CONSTRAINT pending_signup_tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pending_signups pending_signups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_signups
+    ADD CONSTRAINT pending_signups_pkey PRIMARY KEY (id);
 
 
 --
@@ -11270,6 +11361,76 @@ CREATE INDEX index_pending_active_subscriptions_on_plan_id_and_status ON public.
 
 
 --
+-- Name: index_pending_signup_tokens_on_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_signup_tokens_on_expires_at ON public.pending_signup_tokens USING btree (expires_at);
+
+
+--
+-- Name: index_pending_signup_tokens_on_live_pending_signup_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_pending_signup_tokens_on_live_pending_signup_id ON public.pending_signup_tokens USING btree (pending_signup_id) WHERE (status = 'pending'::public.pending_signup_token_status);
+
+
+--
+-- Name: index_pending_signup_tokens_on_pending_signup_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_signup_tokens_on_pending_signup_id ON public.pending_signup_tokens USING btree (pending_signup_id);
+
+
+--
+-- Name: index_pending_signup_tokens_on_token_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_pending_signup_tokens_on_token_digest ON public.pending_signup_tokens USING btree (token_digest);
+
+
+--
+-- Name: index_pending_signups_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_signups_on_created_at ON public.pending_signups USING btree (created_at);
+
+
+--
+-- Name: index_pending_signups_on_mailbox_key_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_signups_on_mailbox_key_and_created_at ON public.pending_signups USING btree (mailbox_key, created_at);
+
+
+--
+-- Name: index_pending_signups_on_normalized_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_signups_on_normalized_email ON public.pending_signups USING btree (normalized_email);
+
+
+--
+-- Name: index_pending_signups_on_open_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_signups_on_open_expires_at ON public.pending_signups USING btree (expires_at) WHERE ((verified_at IS NULL) AND (closed_at IS NULL));
+
+
+--
+-- Name: index_pending_signups_on_signup_secret_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_pending_signups_on_signup_secret_digest ON public.pending_signups USING btree (signup_secret_digest);
+
+
+--
+-- Name: index_pending_signups_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_signups_on_user_id ON public.pending_signups USING btree (user_id);
+
+
+--
 -- Name: index_pending_vies_checks_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12488,6 +12649,20 @@ CREATE UNIQUE INDEX index_user_devices_on_user_id_and_fingerprint ON public.user
 
 
 --
+-- Name: index_users_on_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_users_on_email ON public.users USING btree (email);
+
+
+--
+-- Name: index_users_on_lower_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_users_on_lower_email ON public.users USING btree (lower((email)::text));
+
+
+--
 -- Name: index_versions_on_item_type_and_item_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12786,6 +12961,13 @@ CREATE INDEX index_x402_settlements_on_pending_reconcile_after ON public.x402_se
 --
 
 CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (wallet_transaction_id IS NULL));
+
+
+--
+-- Name: index_x402_settlements_on_unpaid_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_unpaid_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'invoice_payment'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (payment_id IS NULL) AND ((error_reason)::text IS DISTINCT FROM 'payment_not_recorded'::text));
 
 
 --
@@ -13290,6 +13472,14 @@ ALTER TABLE ONLY public.webhooks
 
 ALTER TABLE ONLY public.customers_invoice_custom_sections
     ADD CONSTRAINT fk_rails_20f157fa49 FOREIGN KEY (invoice_custom_section_id) REFERENCES public.invoice_custom_sections(id);
+
+
+--
+-- Name: pending_signups fk_rails_216678edf6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_signups
+    ADD CONSTRAINT fk_rails_216678edf6 FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -13850,6 +14040,14 @@ ALTER TABLE ONLY public.webhooks
 
 ALTER TABLE ONLY public.charges
     ADD CONSTRAINT fk_rails_4934f27a06 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: pending_signup_tokens fk_rails_49e3a9c4eb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_signup_tokens
+    ADD CONSTRAINT fk_rails_49e3a9c4eb FOREIGN KEY (pending_signup_id) REFERENCES public.pending_signups(id) ON DELETE CASCADE;
 
 
 --
@@ -16075,11 +16273,16 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261109122133'),
+('20261109082523'),
 ('20261105094449'),
 ('20261104144002'),
+('20261104134700'),
+('20261104133620'),
 ('20261103084714'),
 ('20261103084708'),
 ('20261102160958'),
+('20261101111004'),
 ('20261029112805'),
 ('20261029111437'),
 ('20261028184732'),
@@ -16096,6 +16299,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261016163945'),
 ('20261016163943'),
 ('20261016153657'),
+('20261016024339'),
 ('20261014180403'),
 ('20261014123350'),
 ('20261014123349'),
@@ -16179,7 +16383,10 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260826235314'),
 ('20260826235313'),
 ('20260826235312'),
+('20260826191346'),
 ('20260824115446'),
+('20260819134550'),
+('20260819134021'),
 ('20260819111435'),
 ('20260819111434'),
 ('20260819000710'),
@@ -17293,3 +17500,4 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
+
