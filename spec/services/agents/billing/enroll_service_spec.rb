@@ -80,4 +80,53 @@ RSpec.describe Agents::Billing::EnrollService, :premium do
       expect(organization.customers).to be_empty
     end
   end
+
+  context "when the storefront was deleted after the agent signed in" do
+    before do
+      registration
+      storefront.class.find(storefront.id).destroy!
+    end
+
+    it "fails with not found" do
+      expect(result.error.error_code).to eq("agent_storefront_not_found")
+      expect(organization.customers).to be_empty
+    end
+  end
+
+  context "when the merchant deletes the storefront during the enrollment", transaction: false do
+    include_context "with mocked security logger"
+
+    it "refuses the deletion once the enrollment commits" do
+      registration
+
+      # The enrollment pauses after creating the wallet, before its transaction commits, while the
+      # deletion starts.
+      paused = Queue.new
+      resume = Queue.new
+      allow_any_instance_of(described_class).to receive(:create_wallet).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+        wallet = original.call(*args)
+        paused << true
+        resume.pop
+        wallet
+      end
+
+      in_thread = lambda do |&block|
+        Thread.new { ActiveRecord::Base.connection_pool.with_connection(&block) }
+      end
+
+      enrollment = in_thread.call do
+        described_class.call(storefront: storefront.class.find(storefront.id), registration: registration.class.find(registration.id), plan_code:)
+      end
+      paused.pop
+      deletion = in_thread.call { Integrations::DestroyService.call(integration: storefront.class.find(storefront.id)) }
+      sleep 0.5
+      resume << true
+
+      expect(enrollment.value).to be_success
+      expect(deletion.value.error.code).to eq("agent_storefront_has_enrolled_agents")
+      expect(Agents::Registration.exists?(registration.id)).to be(true)
+      expect(Integrations::AgentStorefrontIntegration.exists?(storefront.id)).to be(true)
+      expect(enrollment.value.wallet.reload).to be_active
+    end
+  end
 end
