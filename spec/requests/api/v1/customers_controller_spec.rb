@@ -125,7 +125,23 @@ RSpec.describe Api::V1::CustomersController do
 
       before { create_params.merge!(external_id: customer.external_id, net_payment_term: 20, payment_term: nil) }
 
-      it "lets the null payment_term win and clears both" do
+      it "ignores the null and derives the term from the net_payment_term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to eq(term_type: "net", days: 20)
+        expect(json[:customer][:net_payment_term]).to eq(20)
+      end
+    end
+
+    context "with a null payment_term alongside a null net_payment_term" do
+      let(:customer) do
+        create(:customer, organization:, payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, net_payment_term: nil, payment_term: nil) }
+
+      it "clears both" do
         subject
 
         expect(response).to have_http_status(:success)

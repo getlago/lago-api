@@ -139,6 +139,26 @@ RSpec.describe Customers::UpsertFromApiService do
     end
   end
 
+  context "when net_payment_term is null on a term the alias cannot express" do
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        external_id:,
+        net_payment_term: nil,
+        payment_term: {"term_type" => "end_of_month"}
+      )
+    end
+
+    let(:create_args) { {external_id:, net_payment_term: nil} }
+
+    before { customer }
+
+    it "keeps the structured payment term" do
+      expect(result.customer).to have_attributes(net_payment_term: nil, payment_term: {"term_type" => "end_of_month"})
+    end
+  end
+
   context "when payment_term is provided" do
     let(:customer) do
       create(

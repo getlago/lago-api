@@ -44,6 +44,54 @@ RSpec.describe PaymentTerms::AssignService do
         end
       end
 
+      context "with net_payment_term equal to the stored alias" do
+        let(:params) { {net_payment_term: 30} }
+
+        it "makes no change" do
+          result
+
+          expect(record.net_payment_term).to eq(30)
+          expect(record.payment_term).to eq(existing_term)
+          expect(record).not_to be_changed
+        end
+      end
+
+      context "with net_payment_term equal to the stored alias as a digit string" do
+        let(:params) { {net_payment_term: "30"} }
+
+        it "casts it and makes no change" do
+          result
+
+          expect(record.net_payment_term).to eq(30)
+          expect(record).not_to be_changed
+        end
+      end
+
+      context "with net_payment_term null on a term the alias cannot express" do
+        let(:existing_term) { {"term_type" => "end_of_month"} }
+        let(:record) { create(:customer, net_payment_term: nil, payment_term: existing_term) }
+        let(:params) { {net_payment_term: nil} }
+
+        it "keeps the structured term" do
+          result
+
+          expect(record.net_payment_term).to be_nil
+          expect(record.payment_term).to eq(existing_term)
+        end
+      end
+
+      context "with net_payment_term equal to the stored alias on a record without a structured term" do
+        let(:record) { create(:customer, net_payment_term: 30, payment_term: nil) }
+        let(:params) { {net_payment_term: 30} }
+
+        it "derives the missing structured term" do
+          result
+
+          expect(record.net_payment_term).to eq(30)
+          expect(record.payment_term).to eq("term_type" => "net", "days" => 30)
+        end
+      end
+
       context "with net_payment_term as an empty string" do
         let(:params) { {net_payment_term: ""} }
 
@@ -147,11 +195,11 @@ RSpec.describe PaymentTerms::AssignService do
       context "with net_payment_term N, payment_term null" do
         let(:params) { {net_payment_term: 45, payment_term: nil} }
 
-        it "lets payment_term win and clears both columns" do
+        it "ignores the null and assigns the equivalent net term from the alias" do
           result
 
-          expect(record.payment_term).to be_nil
-          expect(record.net_payment_term).to be_nil
+          expect(record.payment_term).to eq("term_type" => "net", "days" => 45)
+          expect(record.net_payment_term).to eq(45)
         end
       end
 
@@ -188,6 +236,32 @@ RSpec.describe PaymentTerms::AssignService do
 
       expect(record.payment_term).to eq("term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1)
       expect(record.net_payment_term).to be_nil
+    end
+  end
+
+  context "when the record is new" do
+    context "with a customer and net_payment_term N" do
+      let(:record) { build(:customer) }
+      let(:params) { {net_payment_term: 30} }
+
+      it "derives the structured term" do
+        result
+
+        expect(record.net_payment_term).to eq(30)
+        expect(record.payment_term).to eq("term_type" => "net", "days" => 30)
+      end
+    end
+
+    context "with a billing entity and net_payment_term equal to the column default" do
+      let(:record) { create(:organization).billing_entities.new }
+      let(:params) { {net_payment_term: 0} }
+
+      it "derives the structured term although the alias did not change" do
+        result
+
+        expect(record.net_payment_term).to eq(0)
+        expect(record.payment_term).to eq("term_type" => "net", "days" => 0)
+      end
     end
   end
 end
