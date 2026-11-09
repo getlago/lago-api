@@ -59,6 +59,87 @@ RSpec.describe User do
     end
   end
 
+  describe "#needs_organization?" do
+    let(:user) { create(:user, :self_serve) }
+
+    context "when self-serve is on" do
+      include_context "with self-serve enabled"
+
+      it "is true only for a self-serve user, not a CS admin, who never had a membership" do
+        expect(user.needs_organization?).to be(true)
+        expect(create(:user).needs_organization?).to be(false)
+        expect(create(:user, :self_serve, cs_admin: true).needs_organization?).to be(false)
+      end
+
+      it "is false once the user had a membership, even revoked" do
+        create(:membership, :revoked, user:)
+
+        expect(user.reload.needs_organization?).to be(false)
+      end
+
+      it "is false with an active membership" do
+        create(:membership, user:)
+
+        expect(user.reload.needs_organization?).to be(false)
+      end
+    end
+
+    it "is false when self-serve is off" do
+      expect(user.needs_organization?).to be(false)
+    end
+  end
+
+  describe ".email_lookup_key" do
+    it "gives the case and Unicode spelling variants of an address one key" do
+      expect(described_class.email_lookup_key(" Joa\u0303o@GetLago.com ")).to eq("jo\u00E3o@getlago.com")
+      expect(described_class.email_lookup_key("jo\u00E3o@getlago.com")).to eq("jo\u00E3o@getlago.com")
+    end
+  end
+
+  describe ".lookup_by_email" do
+    it "prefers the exact match, then the oldest case-insensitive one" do
+      older = create(:user, email: "Jane@GetLago.com", created_at: 2.days.ago)
+      exact = create(:user, email: "jane@getlago.com", created_at: 1.day.ago)
+
+      expect(described_class.lookup_by_email("jane@getlago.com")).to eq(exact)
+      expect(described_class.lookup_by_email("JANE@getlago.com")).to eq(older)
+    end
+
+    it "matches spelling variants and returns nil for an unknown email" do
+      user = create(:user, email: "jane-doe@getlago.com")
+
+      expect(described_class.lookup_by_email(" JANE\u2013doe@get\u200Blago.com ")).to eq(user)
+      expect(described_class.lookup_by_email("nobody@getlago.com")).to be_nil
+    end
+
+    it "matches either Unicode spelling, and a row stored decomposed by its own" do
+      composed = create(:user, email: "jo\u00E3o@getlago.com")
+      decomposed = create(:user, email: "Mari\u0301a@getlago.com")
+
+      expect(described_class.lookup_by_email("Joa\u0303o@getlago.com")).to eq(composed)
+      expect(described_class.lookup_by_email("mari\u0301a@getlago.com")).to eq(decomposed)
+    end
+
+    it "matches a row stored decomposed when the email is typed composed" do
+      decomposed = create(:user, email: "rené-qa@getlago.com")
+
+      expect(described_class.lookup_by_email("René-qa@getlago.com")).to eq(decomposed)
+    end
+
+    it "finds the exact spelling even where PostgreSQL lowercases it otherwise than Ruby" do
+      user = create(:user, email: "\u0130lker@getlago.com")
+
+      expect(described_class.lookup_by_email("\u0130lker@getlago.com")).to eq(user)
+    end
+
+    it "prefers the typed spelling ignoring case to an older row in another Unicode spelling" do
+      create(:user, email: "jo\u00E3o@getlago.com", created_at: 2.days.ago)
+      typed = create(:user, email: "Joa\u0303o@getlago.com", created_at: 1.day.ago)
+
+      expect(described_class.lookup_by_email("joa\u0303o@getlago.com")).to eq(typed)
+    end
+  end
+
   describe "Validations" do
     it "is valid with valid attributes" do
       expect(subject).to be_valid

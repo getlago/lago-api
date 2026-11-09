@@ -8503,6 +8503,10 @@ enum LogTypeEnum {
 }
 
 type LoginUser {
+  """
+  True for a self-serve user who must create an organization (signup Step 3)
+  """
+  needsOrganization: Boolean!
   token: String!
   user: User!
 }
@@ -17243,6 +17247,11 @@ type User {
   email: String
   id: ID!
   memberships: [Membership!]!
+
+  """
+  True for a self-serve user who must create an organization (signup Step 3)
+  """
+  needsOrganization: Boolean!
   organizations: [Organization!]!
   premium: Boolean!
   updatedAt: ISO8601DateTime!
