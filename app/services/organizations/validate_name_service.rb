@@ -13,6 +13,9 @@ module Organizations
     DOTTED_TOKEN = /[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+/
     # Ideographic and full-width full stops read as dots.
     DOT_LOOKALIKES = "。．｡"
+    # Zero-width non-joiner and joiner: invisible, but part of Persian, Urdu and Indic spellings.
+    JOINERS = /[\u200C\u200D]/
+    INVISIBLE = /(?![\u200C\u200D])\p{Default_Ignorable_Code_Point}/
 
     def initialize(name:)
       @name = name
@@ -22,7 +25,7 @@ module Organizations
     def call
       normalized = normalize(name)
 
-      if normalized.empty?
+      if normalized.gsub(JOINERS, "").strip.empty?
         result.single_validation_failure!(field: :name, error_code: "value_is_mandatory")
       elsif normalized.length > NAME_MAX_LENGTH
         result.single_validation_failure!(field: :name, error_code: "value_is_too_long",
@@ -39,17 +42,19 @@ module Organizations
 
     attr_reader :name
 
-    # Kept as typed (no NFKC), without invisible and control characters, with spaces collapsed.
+    # Kept as typed (no NFKC), without invisible characters other than the joiners, without control characters, with
+    # spaces collapsed.
     def normalize(value)
       value.to_s.scrub("")
-        .gsub(/\p{Default_Ignorable_Code_Point}/, "")
+        .gsub(INVISIBLE, "")
         .gsub(/[[:space:]]+/, " ")
         .gsub(/\p{Cc}/, "")
         .strip
     end
 
+    # Every invisible character is dropped here, so a joiner cannot hide a link.
     def contains_link?(value)
-      text = value.unicode_normalize(:nfkc).downcase.tr(DOT_LOOKALIKES, "...")
+      text = value.gsub(JOINERS, "").unicode_normalize(:nfkc).downcase.tr(DOT_LOOKALIKES, "...")
       return true if URL_SCHEME.match?(text) || WWW.match?(text) || IPV4.match?(text)
 
       text.scan(DOTTED_TOKEN).any? { PublicSuffix.valid?(it.delete_prefix("-"), default_rule: nil) }
