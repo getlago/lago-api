@@ -50,6 +50,11 @@ module Types
         (object.timestamp.to_r * 1000).round
       end
 
+      # The ClickHouse store saves 0.0 when an event has no amount, so zero is shown as no amount on both stores.
+      def precise_total_amount_cents
+        object.precise_total_amount_cents&.nonzero?&.to_s
+      end
+
       def match_billable_metric
         object.billable_metric.present?
       end

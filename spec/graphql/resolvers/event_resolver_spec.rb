@@ -114,6 +114,22 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
     end
   end
 
+  context "when the event has a zero precise total amount" do
+    let(:precise_total_amount_cents) { "0" }
+
+    it "returns nil" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: "developers:manage",
+        query:,
+        variables: {eventTransactionId: event.transaction_id}
+      )
+
+      expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+    end
+  end
+
   context "with clickhouse", clickhouse: true do
     let(:event) do
       create(:clickhouse_events_raw, organization_id: organization.id, precise_total_amount_cents:)
@@ -147,6 +163,22 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
 
     context "when the event has no precise total amount" do
       let(:precise_total_amount_cents) { nil }
+
+      it "returns nil" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: "developers:manage",
+          query:,
+          variables: {eventTransactionId: event.transaction_id}
+        )
+
+        expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+      end
+    end
+
+    context "when the event has a zero precise total amount" do
+      let(:precise_total_amount_cents) { 0.0 }
 
       it "returns nil" do
         result = execute_graphql(
