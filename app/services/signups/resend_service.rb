@@ -23,13 +23,13 @@ module Signups
       return result.not_found_failure!(resource: "pending_signup") unless pending_signup
       # The database history decides, here and under the lock: it holds when the throttling Redis is down, and a
       # Redis counter only knows a worst-case wait.
-      return result if refused?(pending_signup, token_record, Time.current)
+      return result if check_refusal!(pending_signup, token_record, Time.current)
 
       sent = Users::EmailLockService.call(email: pending_signup.normalized_email) do
         now = Time.current
         pending_signup.lock!
         token_record&.reload
-        next false if refused?(pending_signup, token_record, now)
+        next false if check_refusal!(pending_signup, token_record, now)
 
         pending_signup.record_email_send(now)
         pending_signup.save!
@@ -53,7 +53,7 @@ module Signups
 
     # A user that exists for the address another way is not checked: the job then sends "you already have an
     # account", so the answer reveals nothing.
-    def refused?(pending_signup, token_record, now)
+    def check_refusal!(pending_signup, token_record, now)
       if pending_signup.verified? || token_record&.consumed?
         result.not_allowed_failure!(code: "email_already_verified")
       elsif now >= pending_signup.expires_at || (pending_signup.closed? && !pending_signup.email_registered?)
