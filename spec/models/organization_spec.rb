@@ -625,6 +625,29 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#product_events_pipeline?" do
+    subject { organization.product_events_pipeline? }
+
+    let(:organization) { build_stubbed(:organization, feature_flags: ["product_catalog"]) }
+
+    before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+    after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+    it { is_expected.to be(true) }
+
+    context "without the product events topic" do
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "without the product catalog" do
+      let(:organization) { build_stubbed(:organization) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "#organization" do
     it "returns the organization" do
       expect(organization.organization).to eq(organization)

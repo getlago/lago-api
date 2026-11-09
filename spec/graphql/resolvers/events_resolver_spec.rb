@@ -186,6 +186,48 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
       expect(events_response["collection"].first["matchCustomField"]).to be_truthy
     end
 
+    context "with the product catalog" do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["product_catalog"]) }
+      let(:customer) { create(:customer, organization:, timezone: "Europe/Paris") }
+      let(:contract) { create(:contract, customer:, started_at: 1.week.ago) }
+
+      let(:product_event) do
+        create(
+          :clickhouse_product_events_raw,
+          organization:,
+          external_contract_id: contract.external_id,
+          code: billable_metric.code,
+          timestamp: 2.days.ago.change(usec: 0)
+        )
+      end
+
+      before do
+        ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw"
+        product_event
+      end
+
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "returns the product events instead of the subscription ones" do
+        result = execute_graphql(
+          current_user: user,
+          current_organization: organization,
+          permissions: "developers:manage",
+          query:
+        )
+
+        collection = result["data"]["events"]["collection"]
+
+        expect(collection.map { it["transactionId"] }).to eq([product_event.transaction_id])
+        expect(collection.first["id"]).to eq(product_event.id)
+        expect(collection.first["externalSubscriptionId"]).to eq(contract.external_id)
+        expect(collection.first["customerTimezone"]).to eq("TZ_EUROPE_PARIS")
+        expect(collection.first["billableMetricName"]).to eq(billable_metric.name)
+        expect(collection.first["payload"].deep_stringify_keys.dig("event", "external_subscription_id"))
+          .to eq(contract.external_id)
+      end
+    end
+
     context "when querying an empty page" do
       it "returns an empty list of events" do
         result = execute_graphql(
