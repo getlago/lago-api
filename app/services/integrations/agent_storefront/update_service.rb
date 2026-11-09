@@ -29,6 +29,8 @@ module Integrations
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
+      rescue ActiveRecord::RecordNotUnique => e
+        unique_index_failure!(e, "index_integrations_on_code_and_organization_id" => :code)
       end
 
       private

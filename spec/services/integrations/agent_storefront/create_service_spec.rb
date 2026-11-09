@@ -151,6 +151,32 @@ RSpec.describe Integrations::AgentStorefront::CreateService do
             expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
           end
         end
+
+        context "with a database uniqueness conflict" do
+          let(:integration) { build(:agent_storefront_integration, organization:) }
+          let(:constraint) { "index_integrations_on_code_and_organization_id" }
+          let(:database_result) { instance_double(PG::Result, error_field: constraint) }
+          let(:database_error) { PG::UniqueViolation.new("duplicate value") }
+          let(:write_error) { ActiveRecord::RecordNotUnique.new("duplicate value") }
+
+          before do
+            allow(database_error).to receive(:result).and_return(database_result)
+            allow(integration).to receive(:save!) { raise write_error, cause: database_error }
+            allow(Integrations::AgentStorefrontIntegration).to receive(:new).and_return(integration)
+          end
+
+          it "returns a validation error for a code collision" do
+            expect(service_call.error.messages).to eq(code: ["value_already_exist"])
+          end
+
+          context "with another constraint" do
+            let(:constraint) { "integrations_pkey" }
+
+            it "does not hide the database error" do
+              expect { service_call }.to raise_error(ActiveRecord::RecordNotUnique)
+            end
+          end
+        end
       end
     end
   end
