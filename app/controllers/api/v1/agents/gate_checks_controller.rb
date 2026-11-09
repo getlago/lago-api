@@ -28,7 +28,7 @@ module Api
         end
 
         def create_params
-          params.require(:gate_check).permit(:storefront_code, :token, :billable_metric_code, :estimated_call_cost_cents)
+          params.expect(gate_check: [:storefront_code, :token, :billable_metric_code, :estimated_call_cost_cents])
         end
 
         def resource_name
