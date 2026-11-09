@@ -27,10 +27,16 @@ class User < ApplicationRecord
   # the typed one ignoring case, then either Unicode spelling (signups store emails composed, older rows may be
   # decomposed); the oldest first. Every term compares LOWER(email), which index_users_on_lower_email serves; LOWER(?)
   # keeps the exact spelling.
+  # The key of the user lookups and the per-email throttles: sanitized, lowercased and composed, so the case and Unicode
+  # spelling variants of one address share it.
+  def self.email_lookup_key(email)
+    normalize_value_for(:email, email.to_s).to_s.downcase.unicode_normalize(:nfc)
+  end
+
   def self.lookup_by_email(email)
     normalized = normalize_value_for(:email, email.to_s).to_s
     typed = [normalized.downcase, email.to_s.downcase].uniq
-    composed = PendingSignup.normalize_email(normalized)
+    composed = email_lookup_key(normalized)
 
     where("LOWER(email) IN (LOWER(?), ?)", normalized, (typed + [composed, composed.unicode_normalize(:nfd)]).uniq)
       .order(Arel.sql(sanitize_sql_array(["email = ? DESC, LOWER(email) IN (?) DESC", normalized, typed])), :created_at)

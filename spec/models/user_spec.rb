@@ -89,6 +89,13 @@ RSpec.describe User do
     end
   end
 
+  describe ".email_lookup_key" do
+    it "gives the case and Unicode spelling variants of an address one key" do
+      expect(described_class.email_lookup_key(" Joa\u0303o@GetLago.com ")).to eq("jo\u00E3o@getlago.com")
+      expect(described_class.email_lookup_key("jo\u00E3o@getlago.com")).to eq("jo\u00E3o@getlago.com")
+    end
+  end
+
   describe ".lookup_by_email" do
     it "prefers the exact match, then the oldest case-insensitive one" do
       older = create(:user, email: "Jane@GetLago.com", created_at: 2.days.ago)

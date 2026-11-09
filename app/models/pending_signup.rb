@@ -24,7 +24,7 @@ class PendingSignup < ApplicationRecord
   # The normalization of the user lookups (LOWER(email)), composed after downcasing as the mailbox key is, so both
   # Unicode spellings of an address share it.
   def self.normalize_email(email)
-    User.normalize_value_for(:email, email.to_s).to_s.downcase.unicode_normalize(:nfc)
+    User.email_lookup_key(email)
   end
 
   def self.mailbox_key(email)

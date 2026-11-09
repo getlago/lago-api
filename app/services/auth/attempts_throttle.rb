@@ -104,7 +104,7 @@ module Auth
     # case and Unicode spelling ignored), so spelling variants of one address share a counter.
     def normalize(type, identifier)
       case type
-      when :email then PendingSignup.normalize_email(identifier)
+      when :email then User.email_lookup_key(identifier)
       when :ip_network then ip_prefix(identifier, ipv6_prefix: 64)
       when :ip_block then ip_prefix(identifier, ipv6_prefix: 48)
       else identifier.to_s.strip.downcase
