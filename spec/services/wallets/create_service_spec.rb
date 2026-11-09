@@ -343,7 +343,7 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
-    context "when invoice_usage_on_expiration is set" do
+    context "when invoice_usage_on_expiration is set", :premium do
       let(:params) do
         {
           name: "New Wallet",
@@ -368,6 +368,14 @@ RSpec.describe Wallets::CreateService do
       context "when the feature flag is disabled" do
         let(:feature_flag_enabled) { false }
 
+        it "returns a forbidden failure" do
+          expect { service_result }.not_to change(Wallet, :count)
+
+          expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+
+      context "without a premium license", premium: false do
         it "returns a forbidden failure" do
           expect { service_result }.not_to change(Wallet, :count)
 
