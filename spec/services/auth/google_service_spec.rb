@@ -32,6 +32,78 @@ RSpec.describe Auth::GoogleService do
         expect(result.error.code).to eq("google_auth_missing_setup")
       end
     end
+
+    it "returns no state secret when self-serve is off" do
+      result = described_class.call(:authorize_url, Rack::Request.new(Rack::MockRequest.env_for("http://example.com")))
+
+      expect(result.state_secret).to be_nil
+    end
+
+    context "when self-serve is enabled" do
+      include_context "with self-serve enabled"
+
+      it "binds the URL to the tab's secret and a PKCE challenge, with this region's callback" do
+        allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
+
+        result = described_class.call(:authorize_url, nil)
+        query = Rack::Utils.parse_query(URI(result.url).query)
+        code_verifier = Auth::GoogleOauthState.verify(state: query["state"], secret: result.state_secret)
+
+        expect(code_verifier).to be_present
+        expect(query).to include(
+          "code_challenge" => Base64.urlsafe_encode64(Digest::SHA256.digest(code_verifier), padding: false),
+          "code_challenge_method" => "S256",
+          "redirect_uri" => "https://app.eu.getlago.com/auth/google/callback"
+        )
+      end
+    end
+  end
+
+  describe ".call(:claims)" do
+    let(:authorizer) { instance_double(Google::Auth::UserAuthorizer) }
+    let(:authorizer_response) { instance_double(Google::Auth::UserRefreshCredentials, id_token: "id_token") }
+    let(:claims) { {"email" => "jane@getlago.com", "email_verified" => true, "hd" => "getlago.com"} }
+    let(:issued) { Auth::GoogleOauthState.issue }
+
+    before do
+      allow(Google::Auth::UserAuthorizer).to receive(:new).and_return(authorizer)
+      allow(authorizer).to receive(:get_credentials_from_code).and_return(authorizer_response)
+      allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(claims)
+    end
+
+    def claims_for(state: issued.state, state_secret: issued.secret)
+      described_class.call(:claims, "code", state:, state_secret:)
+    end
+
+    it "redeems the code with the flow's code verifier and returns the claims" do
+      expect(claims_for.claims).to eq(claims)
+      expect(Google::Auth::UserAuthorizer).to have_received(:new).with(anything, anything, nil, anything, code_verifier: issued.code_verifier)
+    end
+
+    it "refuses an invalid state before any exchange" do
+      expect(claims_for(state_secret: Auth::GoogleOauthState.issue.secret).error.messages).to eq(base: ["invalid_google_state"])
+      expect(authorizer).not_to have_received(:get_credentials_from_code)
+    end
+
+    it "answers invalid_google_token for an ID token that fails verification" do
+      [Google::Auth::IDTokens::ExpiredTokenError, Google::Auth::IDTokens::AudienceMismatchError].each do |error|
+        allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_raise(error)
+
+        expect(claims_for.error.messages).to eq(base: ["invalid_google_token"])
+      end
+    end
+
+    it "answers invalid_google_code for a code Google refuses" do
+      allow(authorizer).to receive(:get_credentials_from_code).and_raise(Signet::AuthorizationError.new("bad code"))
+
+      expect(claims_for.error.messages).to eq(base: ["invalid_google_code"])
+    end
+
+    it "answers google_auth_missing_setup without a client" do
+      ENV["GOOGLE_AUTH_CLIENT_ID"] = nil
+
+      expect(claims_for.error.code).to eq("google_auth_missing_setup")
+    end
   end
 
   describe ".call(:login)" do
@@ -46,6 +118,14 @@ RSpec.describe Auth::GoogleService do
       allow(Google::Auth::UserAuthorizer).to receive(:new).and_return(authorizer)
       allow(authorizer).to receive(:get_credentials_from_code).and_return(authorizer_response)
       allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(oidc_response)
+    end
+
+    it "answers invalid_google_token for an ID token that fails verification" do
+      [Google::Auth::IDTokens::ExpiredTokenError, Google::Auth::IDTokens::AudienceMismatchError].each do |error|
+        allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_raise(error)
+
+        expect(described_class.call(:login, "code").error.messages).to eq(base: ["invalid_google_token"])
+      end
     end
 
     context "when user exists" do
@@ -87,6 +167,33 @@ RSpec.describe Auth::GoogleService do
 
         expect(result).to be_success
         expect(result.user).to eq(user)
+      end
+    end
+
+    context "when self-serve is enabled" do
+      include_context "with self-serve enabled"
+
+      let(:issued) { Auth::GoogleOauthState.issue }
+
+      before do
+        user = create(:user, email: "foo@bar.com")
+        create(:membership, :active, user:)
+        allow(UserDevices::RegisterService).to receive(:call!)
+      end
+
+      it "refuses a missing or invalid state before any exchange" do
+        [{}, {state: issued.state, state_secret: Auth::GoogleOauthState.issue.secret}].each do |state_args|
+          expect(described_class.call(:login, "code", **state_args).error.messages).to eq(base: ["invalid_google_state"])
+        end
+
+        expect(authorizer).not_to have_received(:get_credentials_from_code)
+      end
+
+      it "redeems the code with the flow's code verifier" do
+        result = described_class.call(:login, "code", state: issued.state, state_secret: issued.secret)
+
+        expect(result).to be_success
+        expect(Google::Auth::UserAuthorizer).to have_received(:new).with(anything, anything, nil, anything, code_verifier: issued.code_verifier)
       end
     end
 
@@ -153,8 +260,14 @@ RSpec.describe Auth::GoogleService do
       context "when self-serve is on" do
         include_context "with self-serve enabled"
 
+        let(:issued) { Auth::GoogleOauthState.issue }
+
+        def login
+          described_class.call(:login, "code", state: issued.state, state_secret: issued.secret)
+        end
+
         it "opens a Google session that needs an organization" do
-          result = described_class.call(:login, "code")
+          result = login
 
           expect(result).to be_success
           expect(result.user.needs_organization?).to be(true)
@@ -165,7 +278,7 @@ RSpec.describe Auth::GoogleService do
           [{"email" => "foo@bar.com", "email_verified" => false}, {"email" => "foo@bar.com"}].each do |claims|
             allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(claims)
 
-            expect(described_class.call(:login, "code").error.messages).to eq(base: ["user_does_not_exist"])
+            expect(login.error.messages).to eq(base: ["user_does_not_exist"])
           end
         end
       end
@@ -210,6 +323,14 @@ RSpec.describe Auth::GoogleService do
 
       decoded = Utils::AuthToken.decode(token: result.token)
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+    end
+
+    it "answers invalid_google_token for an ID token that fails verification" do
+      [Google::Auth::IDTokens::ExpiredTokenError, Google::Auth::IDTokens::AudienceMismatchError].each do |error|
+        allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_raise(error)
+
+        expect(described_class.call(:register_user, "code", "Foobar").error.messages).to eq(base: ["invalid_google_token"])
+      end
     end
 
     context "when user already exists" do
@@ -285,6 +406,14 @@ RSpec.describe Auth::GoogleService do
       allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(oidc_response)
     end
 
+    it "answers invalid_google_token for an ID token that fails verification" do
+      [Google::Auth::IDTokens::ExpiredTokenError, Google::Auth::IDTokens::AudienceMismatchError].each do |error|
+        allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_raise(error)
+
+        expect(described_class.call(:accept_invite, "code", invite.token).error.messages).to eq(base: ["invalid_google_token"])
+      end
+    end
+
     it "accepts the invite" do
       result = described_class.call(:accept_invite, "code", invite.token)
 
@@ -296,6 +425,22 @@ RSpec.describe Auth::GoogleService do
 
       decoded = Utils::AuthToken.decode(token: result.token)
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+    end
+
+    context "when self-serve is enabled" do
+      include_context "with self-serve enabled"
+
+      let(:issued) { Auth::GoogleOauthState.issue }
+
+      it "refuses a missing state, then accepts with the flow's code verifier" do
+        expect(described_class.call(:accept_invite, "code", invite.token).error.messages).to eq(base: ["invalid_google_state"])
+        expect(authorizer).not_to have_received(:get_credentials_from_code)
+
+        result = described_class.call(:accept_invite, "code", invite.token, state: issued.state, state_secret: issued.secret)
+
+        expect(result).to be_success
+        expect(Google::Auth::UserAuthorizer).to have_received(:new).with(anything, anything, nil, anything, code_verifier: issued.code_verifier)
+      end
     end
 
     context "when invite does not exists" do

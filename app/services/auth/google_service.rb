@@ -7,7 +7,8 @@ module Auth
     BASE_SCOPE = %w[profile email openid].freeze
 
     RESULTS = {
-      authorize_url: BaseResult[:url],
+      authorize_url: BaseResult[:url, :state_secret],
+      claims: BaseResult[:claims],
       login: BaseResult[:user, :token],
       register_user: BaseResult[:user, :organization, :membership, :token],
       accept_invite: Invites::AcceptService::Result
@@ -19,42 +20,41 @@ module Auth
       ensure_google_auth_setup
       return result unless result.success?
 
-      authorizer = Google::Auth::WebUserAuthorizer.new(
-        client_id,
-        BASE_SCOPE,
-        nil, # token_store is nil because we don't need to store the token
-        "#{Rails.application.config.lago_front_url}/auth/google/callback"
-      )
-
-      result.url = authorizer.get_authorization_url(request:)
+      if Lago::SelfServe.enabled?
+        # Bound to the tab that keeps state_secret, and to the code through PKCE.
+        issued = GoogleOauthState.issue
+        authorizer = Google::Auth::UserAuthorizer.new(client_id, BASE_SCOPE, nil, callback_url, code_verifier: issued.code_verifier)
+        result.url = authorizer.get_authorization_url(state: issued.state)
+        result.state_secret = issued.secret
+      else
+        authorizer = Google::Auth::WebUserAuthorizer.new(
+          client_id,
+          BASE_SCOPE,
+          nil, # token_store is nil because we don't need to store the token
+          callback_url
+        )
+        result.url = authorizer.get_authorization_url(request:)
+      end
 
       result
     end
 
-    def login(code)
+    def login(code, state: nil, state_secret: nil)
       ensure_google_auth_setup
       return result unless result.success?
 
-      google_oidc = oidc_verifier(code:)
+      code_verifier = verified_code_verifier(state, state_secret) if Lago::SelfServe.enabled?
+      return result unless result.success?
+
+      google_oidc = oidc_verifier(code:, code_verifier:)
       user = find_user_by_email(google_oidc["email"])
-      # verify_oidc checks the signature, audience, issuer and expiry, not that Google verified the email.
-      needs_organization = user.present? && user.needs_organization? && email_verified?(google_oidc)
-
-      can_log_in = user.present? && (needs_organization || user.memberships.active.any?)
-      return result.single_validation_failure!(error_code: "user_does_not_exist") unless can_log_in
-
-      # A user without an organization has no organization login policy yet.
-      unless needs_organization || user.login_method_allowed?(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
-        return result.single_validation_failure!(
-          error_code: "login_method_not_authorized",
-          field: Organizations::AuthenticationMethods::GOOGLE_OAUTH
-        )
-      end
+      refusal = GoogleLoginRules.refusal(user, google_oidc)
+      return result.single_validation_failure!(**refusal) if refusal
 
       result.user = user
       UserDevices::RegisterService.call!(user:)
       generate_token
-    rescue Google::Auth::IDTokens::SignatureError
+    rescue Google::Auth::IDTokens::VerificationError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
       result.single_validation_failure!(error_code: "invalid_google_code")
@@ -67,17 +67,22 @@ module Auth
       google_oidc = oidc_verifier(code:)
 
       register(google_oidc["email"], organization_name)
-    rescue Google::Auth::IDTokens::SignatureError
+    rescue Google::Auth::IDTokens::VerificationError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
       result.single_validation_failure!(error_code: "invalid_google_code")
     end
 
-    def accept_invite(code, invite_token)
+    # With self-serve on, googleAuthUrl always sends a PKCE challenge, so the code can only be redeemed with the
+    # verifier of its flow.
+    def accept_invite(code, invite_token, state: nil, state_secret: nil)
       ensure_google_auth_setup
       return result unless result.success?
 
-      google_oidc = oidc_verifier(code:)
+      code_verifier = verified_code_verifier(state, state_secret) if Lago::SelfServe.enabled?
+      return result unless result.success?
+
+      google_oidc = oidc_verifier(code:, code_verifier:)
       invite = Invite.find_by(token: invite_token, status: :pending)
 
       return result.not_found_failure!(resource: "invite") unless invite
@@ -93,10 +98,36 @@ module Auth
         password: SecureRandom.hex,
         login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH
       )
-    rescue Google::Auth::IDTokens::SignatureError
+    rescue Google::Auth::IDTokens::VerificationError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
       result.single_validation_failure!(error_code: "invalid_google_code")
+    end
+
+    # The verified ID token claims of a self-serve signup. The state is always required.
+    def claims(code, state:, state_secret:)
+      ensure_google_auth_setup
+      return result unless result.success?
+
+      code_verifier = verified_code_verifier(state, state_secret)
+      return result unless result.success?
+
+      result.claims = oidc_verifier(code:, code_verifier:)
+      result
+    rescue Google::Auth::IDTokens::VerificationError
+      result.single_validation_failure!(error_code: "invalid_google_token")
+    rescue Signet::AuthorizationError
+      result.single_validation_failure!(error_code: "invalid_google_code")
+    end
+
+    def verified_code_verifier(state, state_secret)
+      code_verifier = GoogleOauthState.verify(state:, secret: state_secret)
+      result.single_validation_failure!(error_code: "invalid_google_state") unless code_verifier
+      code_verifier
+    end
+
+    def callback_url
+      "#{Rails.application.config.lago_front_url}/auth/google/callback"
     end
 
     def generate_token
@@ -162,10 +193,6 @@ module Auth
       User.lookup_by_email(email)
     end
 
-    def email_verified?(claims)
-      ActiveModel::Type::Boolean.new.cast(claims["email_verified"]) == true
-    end
-
     def client_id
       @client_id ||= Google::Auth::ClientId.new(ENV["GOOGLE_AUTH_CLIENT_ID"], ENV["GOOGLE_AUTH_CLIENT_SECRET"])
     end
@@ -176,12 +203,13 @@ module Auth
       result.service_failure!(code: "google_auth_missing_setup", message: "Google auth is not set up")
     end
 
-    def oidc_verifier(code:)
+    def oidc_verifier(code:, code_verifier: nil)
       authorizer = Google::Auth::UserAuthorizer.new(
         client_id,
         BASE_SCOPE,
         nil, # token_store is nil because we don't need to store the token
-        "#{Rails.application.config.lago_front_url}/auth/google/callback"
+        callback_url,
+        code_verifier:
       )
 
       credentials = authorizer.get_credentials_from_code(code:)
