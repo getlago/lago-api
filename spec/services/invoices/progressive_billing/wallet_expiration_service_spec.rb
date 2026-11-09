@@ -12,9 +12,10 @@ RSpec.describe Invoices::ProgressiveBilling::WalletExpirationService, transactio
   let(:timestamp) { Time.zone.parse(Date.current.strftime("%Y-%m-%d 10:00:00")) }
 
   let(:expiration_at) { nil }
+  let(:balance_cents) { 1000 }
 
   let(:wallet) do
-    create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0, expiration_at:)
+    create(:wallet, :with_inbound_transaction, customer:, balance_cents:, credits_balance: balance_cents / 100.0, expiration_at:)
   end
 
   let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
@@ -78,6 +79,17 @@ RSpec.describe Invoices::ProgressiveBilling::WalletExpirationService, transactio
     expect(result).to be_success
     expect(result.invoice).to be_nil
     expect(customer.invoices.progressive_billing.count).to eq(1)
+  end
+
+  context "when the wallet has no credits left" do
+    let(:balance_cents) { 0 }
+
+    it "does not create an invoice" do
+      expect { result }.not_to change(Invoice, :count)
+
+      expect(result).to be_success
+      expect(result.invoice).to be_nil
+    end
   end
 
   context "without usage" do
