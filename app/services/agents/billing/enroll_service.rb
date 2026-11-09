@@ -18,6 +18,8 @@ module Agents
         return result.single_validation_failure!(field: :plan_code, error_code: "plan_not_usage_only") unless X402::PlanEligibility.usage_only?(plan)
 
         ActiveRecord::Base.transaction do
+          # A deletion of the storefront locks it for update, so it waits for the enrollments in progress.
+          storefront.lock!("FOR SHARE")
           registration.lock!
 
           customer = registration.customer || create_customer
@@ -32,6 +34,8 @@ module Agents
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
+      rescue ActiveRecord::RecordNotFound
+        result.not_found_failure!(resource: "agent_storefront")
       end
 
       private
