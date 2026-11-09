@@ -1,0 +1,8 @@
+---
+en:
+  agent_claim:
+    verification:
+      expiry: This code is valid for %{minutes} minutes and works once.
+      intro: Enter this code on the claim page to confirm that you own the agent %{agent_id} on %{storefront_name}.
+      preview: Your code to claim an agent on %{storefront_name}.
+      safety: Didn't ask to claim an agent? Ignore this email. Nothing changes until the code is entered.

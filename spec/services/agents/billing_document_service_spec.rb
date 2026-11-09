@@ -54,6 +54,13 @@ RSpec.describe Agents::BillingDocumentService do
     end
   end
 
+  it "tells the agent how its owner can claim it" do
+    expect(document).to include("## Claim")
+    expect(document).to include("POST `#{storefront.agent_url}/claims/codes`")
+    expect(document).to include(storefront.claim_url)
+    expect(document).to include("GET `#{storefront.agent_url}/claims`")
+  end
+
   context "when the Stripe connection has no seller profile" do
     it "says payments are not accepted yet" do
       expect(document).to include("#{storefront.name} does not accept payments from agents yet.")
