@@ -201,8 +201,13 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
         )
       end
 
+      let(:subscription_event) do
+        create(:clickhouse_events_raw, organization:, billable_metric:, subscription:, ingested_at: 1.day.ago)
+      end
+
       before do
         ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw"
+        subscription_event
         product_event
       end
 
