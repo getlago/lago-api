@@ -102,6 +102,23 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
           "amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200", "taxesUnavailable" => true,
           "fromDatetime" => "2027-02-01T00:00:00Z", "toDatetime" => "2027-02-28T23:59:59Z"
         )
+        expect(WebMock).to have_requested(:post, endpoint).once
+      end
+
+      context "when the provider throttles the request" do
+        before do
+          allow(Throttling).to receive(:for).with(:anrok).and_return(instance_double(Throttling::Base, check: false))
+        end
+
+        it "falls back to the untaxed total" do
+          result = execute_graphql(
+            current_user: membership.user, current_organization: organization,
+            permissions: required_permission, query:, variables: {contractId: contract.id}
+          )
+
+          totals = result["data"]["contractCurrentUsageTotal"]
+          expect(totals).to include("amountCents" => "200", "totalAmountCents" => "200", "taxesUnavailable" => true)
+        end
       end
     end
   end

@@ -23,31 +23,23 @@ module Resolvers
       contract = current_organization.contracts.find_by(id: contract_id)
       return not_found_error(resource: "contract") unless contract
 
-      result = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: true)
-      return totals(result, taxes_unavailable: false) if result.success?
-      return result_error(result) unless provider_failure?(result)
+      result = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: true, untaxed_on_provider_failure: true)
 
-      # The provider being down shouldn't hide the summary line entirely - fall back to the
-      # untaxed total rather than failing the whole query, but flag it so the client can tell
-      # this isn't a genuine zero-tax result.
-      fallback = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: false)
-      return result_error(fallback) unless fallback.success?
-
-      totals(fallback, taxes_unavailable: true)
+      if result.success?
+        totals(result)
+      else
+        result_error(result)
+      end
     end
 
     private
 
-    def provider_failure?(result)
-      result.error.is_a?(BaseService::ThirdPartyFailure) || result.error.is_a?(BaseService::TooManyProviderRequestsFailure)
-    end
-
-    def totals(result, taxes_unavailable:)
+    def totals(result)
       billing_segments = result.rate_card_usages.map(&:billing_segment)
 
       Totals.new(
         amount_cents: result.amount_cents, taxes_amount_cents: result.taxes_amount_cents,
-        total_amount_cents: result.total_amount_cents, taxes_unavailable:,
+        total_amount_cents: result.total_amount_cents, taxes_unavailable: result.taxes_unavailable,
         from_datetime: billing_segments.map(&:started_at).min,
         to_datetime: billing_segments.map(&:ended_at).max
       )

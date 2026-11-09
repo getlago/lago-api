@@ -357,7 +357,7 @@ RSpec.describe Contracts::CurrentUsageService do
 
     it "takes the taxes from the provider instead of the local ones" do
       expect(result.rate_card_usages.sole.fees.sole).to have_attributes(taxes_amount_cents: 17)
-      expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 17, total_amount_cents: 217)
+      expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 17, total_amount_cents: 217, taxes_unavailable: false)
     end
 
     context "when the provider cannot resolve the taxes" do
@@ -422,6 +422,39 @@ RSpec.describe Contracts::CurrentUsageService do
       it "returns a failure of the provider instead of usage" do
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
         expect(result.error).to have_attributes(third_party: "anrok", error_code: nil, error_message: start_with("Net::ReadTimeout"))
+      end
+    end
+
+    context "when untaxed usage is accepted on a provider failure" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, untaxed_on_provider_failure: true, filters:) }
+
+      before { stub_request(:post, endpoint).to_raise(Net::ReadTimeout) }
+
+      it "returns the untaxed usage flagged as such" do
+        expect(result).to be_success
+        expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, total_amount_cents: 200, taxes_unavailable: true)
+        expect(WebMock).to have_requested(:post, endpoint).once
+      end
+
+      context "when the provider throttles the request" do
+        before do
+          allow(Throttling).to receive(:for).with(:anrok).and_return(instance_double(Throttling::Base, check: false))
+        end
+
+        it "returns the untaxed usage flagged as such" do
+          expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, taxes_unavailable: true)
+        end
+      end
+
+      context "when the provider cannot resolve the taxes" do
+        before do
+          stub_request(:post, endpoint)
+            .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
+        end
+
+        it "returns the untaxed usage flagged as such" do
+          expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, taxes_unavailable: true)
+        end
       end
     end
 
