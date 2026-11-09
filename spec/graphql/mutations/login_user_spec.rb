@@ -211,8 +211,9 @@ RSpec.describe Mutations::LoginUser do
       end
 
       it "limits attempts per IPv6 /48 across networks" do
-        150.times do |i|
-          login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:#{i / 25 + 1}::#{i + 1}"))
+        # 600 attempts, 25 from each of 24 networks, all under their own limit of 30
+        600.times do |i|
+          login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:#{(i / 25 + 1).to_s(16)}::#{i + 1}"))
         end
 
         result = login("ILoveLago", request: request_from("2001:db8:1:ff::1"))
@@ -220,8 +221,18 @@ RSpec.describe Mutations::LoginUser do
         expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
       end
 
+      it "lets a neighbour log in while a few networks of its /48 sit at their own limit" do
+        5.times do |network|
+          30.times { |i| login("badpassword", email: "unknown-#{network}-#{i}@example.com", request: request_from("2001:db8:1:#{network + 1}::#{i + 1}")) }
+        end
+
+        result = login("ILoveLago", request: request_from("2001:db8:1:ff::1"))
+
+        expect(result["data"]["loginUser"]["token"]).to be_present
+      end
+
       it "keeps attempts refused by a /64's own limit out of its /48's budget" do
-        151.times { |i| login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:2::#{i + 1}")) }
+        601.times { |i| login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:2::#{(i + 1).to_s(16)}")) }
 
         result = login("ILoveLago", request: request_from("2001:db8:1:ff::1"))
 
