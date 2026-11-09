@@ -157,7 +157,7 @@ RSpec.describe AiConversations::StreamService do
       let(:membership) { create(:membership, role: create(:role, :finance)) }
       let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:) }
 
-      it "calls the MCP server with a key minted for the member, then destroys it" do
+      it "calls the MCP server with a key minted for the member, then expires it" do
         api_key = nil
         allow(LagoMcpClient::Config).to receive(:new) do |lago_api_key:, **|
           api_key = ApiKey.find_by(value: lago_api_key)
@@ -169,15 +169,16 @@ RSpec.describe AiConversations::StreamService do
 
         expect(api_key.membership).to eq(membership)
         expect(api_key.permissions).to eq(ApiKeys::MemberPermissions.for(membership))
-        expect(ApiKey.unscoped.where(id: api_key.id)).not_to exist
+        expect(ApiKey.unscoped.find(api_key.id)).to be_expired
       end
 
-      it "destroys the key when the turn fails" do
+      it "expires the key when the turn fails" do
         allow(mistral_agent_mock).to receive(:chat).and_raise(StandardError.new("Connection timeout"))
 
         service.call
 
-        expect(ApiKey.unscoped.where(membership:)).not_to exist
+        expect(ApiKey.unscoped.where(membership:)).to all(be_expired)
+        expect(ApiKey.unscoped.where(membership:)).to exist
       end
     end
 

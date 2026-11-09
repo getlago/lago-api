@@ -2,7 +2,7 @@
 
 module ApiKeys
   # Mints the key the AI agent calls the API with, carrying the permissions of the member it acts
-  # for. It lives for one turn of the conversation: the caller destroys it once the turn ends, and
+  # for. It lives for one turn of the conversation: the caller expires it once the turn ends, and
   # it expires on its own if that never happens.
   class CreateMemberKeyService < BaseService
     Result = BaseResult[:api_key]

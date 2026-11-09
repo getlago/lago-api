@@ -24,7 +24,7 @@ module AiConversations
     rescue => e
       handle_error(e)
     ensure
-      destroy_member_key
+      expire_member_key
     end
 
     private
@@ -103,11 +103,12 @@ module AiConversations
       @member_key ||= ApiKeys::CreateMemberKeyService.call!(membership: ai_conversation.membership).api_key
     end
 
-    def destroy_member_key
+    # The key is expired rather than destroyed, so the API and activity logs of the turn keep
+    # pointing to the member.
+    def expire_member_key
       return unless @member_key
 
-      ApiKeys::CacheService.expire_cache(@member_key.value)
-      @member_key.destroy
+      ApiKeys::ExpireMemberKeyService.call(api_key: @member_key)
     end
   end
 end
