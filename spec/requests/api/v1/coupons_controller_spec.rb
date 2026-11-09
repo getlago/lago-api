@@ -144,6 +144,32 @@ RSpec.describe Api::V1::CouponsController do
       expect(json[:coupon][:code]).to eq(coupon.code)
     end
 
+    context "when an applied coupon belongs to a deleted customer and activity logs are available" do
+      let(:deleted_customer) { create(:customer, organization:) }
+      let(:kept_customer) { create(:customer, organization:) }
+      let(:deleted_customer_applied_coupon) { create(:applied_coupon, coupon:, customer: deleted_customer) }
+      let(:kept_customer_applied_coupon) { create(:applied_coupon, coupon:, customer: kept_customer) }
+
+      before do
+        deleted_customer_applied_coupon
+        kept_customer_applied_coupon
+        deleted_customer.discard!
+        allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      end
+
+      %w[v1 v2].each do |version|
+        it "deletes the coupon and terminates its applied coupons through #{version}" do
+          delete_with_token(organization, "/api/#{version}/coupons/#{coupon.code}")
+
+          expect(response).to have_http_status(:success)
+          expect(json[:coupon][:lago_id]).to eq(coupon.id)
+          expect(Coupon.with_discarded.find(coupon.id).deleted_at).to be_present
+          expect(deleted_customer_applied_coupon.reload).to be_terminated
+          expect(kept_customer_applied_coupon.reload).to be_terminated
+        end
+      end
+    end
+
     context "when coupon does not exist" do
       let(:coupon_code) { SecureRandom.uuid }
 
