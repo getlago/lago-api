@@ -17,8 +17,8 @@ module Integrations
           return result.not_allowed_failure!(code: "premium_integration_missing")
         end
 
-        # The enrolled agents' Stripe customers live on the connection they paid through.
-        if params.key?(:payment_provider_code) && params[:payment_provider_code] != integration.payment_provider_code && integration.enrolled_agents?
+        # The agents' Stripe customers live on the connection they first paid through, and outlive their subscriptions.
+        if params.key?(:payment_provider_code) && params[:payment_provider_code] != integration.payment_provider_code && integration.agents_with_stripe_customer?
           return result.single_validation_failure!(field: :payment_provider_code, error_code: "agent_storefront_has_enrolled_agents")
         end
 
