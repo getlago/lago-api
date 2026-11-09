@@ -29,8 +29,6 @@ module Signups
       result.token = Utils::AuthToken.encode(user:, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
       UserDevices::RegisterService.call!(user:, skip_log: created)
       result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
     rescue BaseLockService::FailedToAcquireLock
       result.lock_acquisition_failure!(message: "email lock not acquired")
     end
