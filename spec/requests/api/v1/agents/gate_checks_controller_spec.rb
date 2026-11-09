@@ -91,6 +91,15 @@ describe Api::V1::Agents::GateChecksController, :premium do
     end
   end
 
+  context "with a scalar root" do
+    let(:params) { "x" }
+
+    it "answers 400" do
+      subject
+      expect(response).to have_http_status(:bad_request)
+    end
+  end
+
   context "without the agent storefront integration" do
     let(:organization) { create(:organization, premium_integrations: %w[events_targeting_wallets]) }
 
