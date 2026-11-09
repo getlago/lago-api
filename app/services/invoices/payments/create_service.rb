@@ -7,7 +7,7 @@ module Invoices
 
       include Customers::PaymentProviderFinder
 
-      # Delay the first auto-payment for hosted-checkout customers so their manual payment settles first.
+      # Delay the first auto-payment for invoices with hosted checkout so their manual payment settles first.
       CHECKOUT_AUTO_PAYMENT_DELAY = ENV.fetch("LAGO_CHECKOUT_AUTO_PAYMENT_DELAY_SECONDS", 10.minutes.to_i).to_i.seconds
 
       def initialize(invoice:, payment_provider: nil, payment_method_params: {})
@@ -105,7 +105,7 @@ module Invoices
         return result unless provider
 
         forced_delay = nil
-        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_organization?
+        forced_delay = CHECKOUT_AUTO_PAYMENT_DELAY if defer_for_checkout_invoice?
 
         AfterCommitEverywhere.after_commit do
           Invoices::Payments::CreateJob
@@ -127,15 +127,15 @@ module Invoices
         @provider ||= invoice.customer.payment_provider&.to_sym
       end
 
-      # Delay the first auto-payment for orgs using hosted checkout so it can't race a manual checkout
+      # Delay the first auto-payment for an invoice using hosted checkout so it can't race a manual checkout
       # and double-charge; skip flows that pay synchronously (gated subs, auto wallet top-ups).
-      def defer_for_checkout_organization?
+      def defer_for_checkout_invoice?
         return false unless invoice.payment_attempts.zero?
         return false if invoice.credit? && skip_credit_invoice_delay?
         return false if invoice.subscription? && invoice.subscription_payment_gated?
         return false if non_manual_wallet_topup?
 
-        PaymentIntent.where(organization_id: invoice.organization_id).exists?
+        PaymentIntent.active.non_expired.exists?(invoice:)
       end
 
       def skip_credit_invoice_delay?
