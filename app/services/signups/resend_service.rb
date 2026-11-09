@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Signups
-  # Sends a new link for a signup attempt, which replaces its previous one. The attempt is found by its signup secret
-  # or one of its links (a replaced or locked one too, within the attempt's 24 h), never by an email address.
+  # Sends a new link for a signup attempt, which replaces its previous one. The attempt is found by one of its links (a
+  # replaced or locked one too, within the attempt's 24 h) or else by its signup secret, never by an email address.
   class ResendService < BaseService
     Result = BaseResult[:resend_available_in_seconds, :resend_limit_reached, :retry_after_seconds]
 
@@ -17,8 +17,9 @@ module Signups
         return result.single_validation_failure!(field: :signup_secret, error_code: "value_is_mandatory")
       end
 
-      token_record = PendingSignupToken.for_token(token) if signup_secret.blank?
-      pending_signup = signup_secret.present? ? PendingSignup.for_signup_secret(signup_secret) : token_record&.pending_signup
+      # A link names the attempt its page shows, so it wins over a secret the browser holds for another attempt.
+      token_record = PendingSignupToken.for_token(token) if token.present?
+      pending_signup = token.present? ? token_record&.pending_signup : PendingSignup.for_signup_secret(signup_secret)
       return result.not_found_failure!(resource: "pending_signup") unless pending_signup
       # The database history decides, here and under the lock: it holds when the throttling Redis is down, and a
       # Redis counter only knows a worst-case wait.

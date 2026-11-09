@@ -59,6 +59,31 @@ RSpec.describe Signups::ResendService do
     end
   end
 
+  context "with a link and the secret of another attempt, as from a tab of another signup" do
+    subject(:result) { described_class.call(signup_secret: other_secret, token:) }
+
+    let(:other_secret) { PendingSignup.generate_signup_secret }
+    let(:other_signup) { create(:pending_signup, email: "jane@getlago.com", signup_secret: other_secret, emails_sent_at: [10.minutes.ago]) }
+
+    before { other_signup }
+
+    it "resends the link's attempt" do
+      expect(result).to be_success
+      expect(pending_signup.reload.emails_sent_at.size).to eq(2)
+      expect(other_signup.reload.emails_sent_at.size).to eq(1)
+    end
+
+    context "when the secret matches no attempt" do
+      let(:other_secret) { "garbage" }
+      let(:other_signup) { nil }
+
+      it "resends the link's attempt" do
+        expect(result).to be_success
+        expect(pending_signup.reload.emails_sent_at.size).to eq(2)
+      end
+    end
+  end
+
   context "with an expired link, whose attempt is past its window too" do
     subject(:result) { described_class.call(token:) }
 
