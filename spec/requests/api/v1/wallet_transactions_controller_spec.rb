@@ -34,6 +34,18 @@ RSpec.describe Api::V1::WalletTransactionsController do
       }
     end
 
+    context "with the id of a shared payment token row" do
+      let(:token_row) { create(:payment_method, customer:, provider_method_type: "shared_payment_token", provider_method_id: "spt_used") }
+      let(:params) { {wallet_id:, paid_credits: "10", payment_method: {payment_method_type: "provider", payment_method_id: token_row.id}} }
+
+      it "returns an unprocessable entity error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq({payment_method: ["invalid_payment_method"]})
+      end
+    end
+
     include_examples "requires API permission", "wallet_transaction", "write"
 
     it "creates a wallet transactions" do
