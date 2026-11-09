@@ -32,6 +32,10 @@ RSpec.describe Agents::Claims::VerifyService, :premium do
     end
   end
 
+  it "refreshes the invoice search terms, as every e-mail change does" do
+    expect { result }.to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+  end
+
   it "refuses a second verification: the code is spent" do
     described_class.call(storefront:, params:)
 
