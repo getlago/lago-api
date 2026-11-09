@@ -62,6 +62,15 @@ RSpec.describe Agents::Billing::PayService, :premium do
       expect(result.error.messages).to eq(paid_credits: ["amount_below_minimum"])
       expect(registration.wallet.wallet_transactions).to be_empty
     end
+
+    it "keeps the Stripe customer for the next attempt" do
+      result
+
+      retried = described_class.call(storefront:, registration:, params: {amount_cents: 500, shared_payment_token: "spt_agent_1"})
+
+      expect(retried).to be_success
+      expect(::Stripe::Customer).to have_received(:create).once
+    end
   end
 
   context "when the input is invalid" do
