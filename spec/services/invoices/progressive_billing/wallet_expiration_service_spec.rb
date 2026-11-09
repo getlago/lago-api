@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::ProgressiveBilling::WalletTerminationService, transaction: false do
+RSpec.describe Invoices::ProgressiveBilling::WalletExpirationService, transaction: false do
   subject(:result) { described_class.call(wallet:, subscription:, timestamp:) }
 
   let(:plan) { create(:plan) }
