@@ -25,7 +25,8 @@ module Agents
           # Verified since it was loaded: the claim is spent.
           next invalid_claim_code if claim.verified?
 
-          claim.update!(email:, status: :started)
+          # A code mailed to the previous address must not verify this one.
+          claim.update!(email:, status: :started, verification_code_hash: nil, verification_expires_at: nil)
         end
         return result unless result.success?
 

@@ -21,11 +21,15 @@ RSpec.describe Agents::Claims::StartService, :premium do
     expect(claim.reload).to have_attributes(status: "started", email: "Owner@Example.com", verification_code_hash: nil)
   end
 
-  it "takes the latest address when the owner starts again" do
+  it "takes the latest address when the owner starts again, and drops the code mailed to the previous one" do
     described_class.call(storefront:, params: {claim_code: "ABCD2345", email: "first@example.com"})
+    first_code = Agents::Claims::IssueVerificationCodeService.call!(claim:).code
 
     expect(result).to be_success
-    expect(claim.reload.email).to eq("Owner@Example.com")
+    expect(claim.reload).to have_attributes(email: "Owner@Example.com", verification_code_hash: nil, verification_expires_at: nil)
+
+    verification = Agents::Claims::VerifyService.call(storefront:, params: {claim_code: "ABCD2345", verification_code: first_code})
+    expect(verification.error.messages).to eq(verification_code: ["invalid_verification_code"])
   end
 
   context "when the code is unknown" do
