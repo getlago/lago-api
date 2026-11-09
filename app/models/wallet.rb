@@ -110,7 +110,9 @@ class Wallet < ApplicationRecord
   end
 
   def expiration_invoicing_enabled?
-    invoice_usage_on_expiration? && organization.feature_flag_enabled?(:invoice_usage_on_wallet_expiration)
+    License.premium? &&
+      invoice_usage_on_expiration? &&
+      organization.feature_flag_enabled?(:invoice_usage_on_wallet_expiration)
   end
 
   private

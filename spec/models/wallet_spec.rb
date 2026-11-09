@@ -242,7 +242,7 @@ RSpec.describe Wallet do
     end
   end
 
-  describe "#expiration_invoicing_enabled?" do
+  describe "#expiration_invoicing_enabled?", :premium do
     subject(:wallet) { build(:wallet, organization:, invoice_usage_on_expiration:) }
 
     let(:organization) { build(:organization, feature_flags:) }
@@ -260,6 +260,10 @@ RSpec.describe Wallet do
     context "when the feature flag is disabled" do
       let(:feature_flags) { [] }
 
+      it { expect(wallet.expiration_invoicing_enabled?).to be(false) }
+    end
+
+    context "without a premium license", premium: false do
       it { expect(wallet.expiration_invoicing_enabled?).to be(false) }
     end
   end
