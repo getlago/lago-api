@@ -175,6 +175,8 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService do
     end
 
     context "when the current subscription has its own payment term" do
+      subject(:result) { described_class.call(current_subscription:, target_plan_code:, params:) }
+
       let(:organization) { create(:organization) }
       let(:current_plan) { create(:plan, organization:) }
       let(:target_plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: current_plan.amount_cents) }
@@ -182,9 +184,35 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService do
       let(:current_subscription) do
         create(:subscription, plan: current_plan, organization:, payment_term: {"term_type" => "net", "days" => 30})
       end
+      let(:params) { {} }
 
       it "carries it over to the new subscription" do
         expect(result.subscriptions.second.payment_term).to eq({"term_type" => "net", "days" => 30})
+      end
+
+      context "when a payment term is sent" do
+        let(:params) { {payment_term: {term_type: "end_of_month"}} }
+
+        it "applies it to the new subscription" do
+          expect(result.subscriptions.second.payment_term).to eq({"term_type" => "end_of_month"})
+        end
+      end
+
+      context "when null is sent" do
+        let(:params) { {payment_term: nil} }
+
+        it "clears the term of the new subscription" do
+          expect(result.subscriptions.second.payment_term).to be_nil
+        end
+      end
+
+      context "when the sent term is invalid" do
+        let(:params) { {payment_term: {term_type: "unknown"}} }
+
+        it "fails with a validation error" do
+          expect(result).to be_failure
+          expect(result.error.messages[:payment_term]).to eq(["invalid_term_type"])
+        end
       end
     end
   end

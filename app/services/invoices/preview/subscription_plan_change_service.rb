@@ -5,15 +5,17 @@ module Invoices
     class SubscriptionPlanChangeService < BaseService
       Result = BaseResult[:subscriptions]
 
-      def initialize(current_subscription:, target_plan_code:)
+      def initialize(current_subscription:, target_plan_code:, params: {})
         @current_subscription = current_subscription
         @target_plan_code = target_plan_code
+        @params = params
         super
       end
 
       def call
         return result.not_found_failure!(resource: "subscription") unless current_subscription
         return result.not_found_failure!(resource: "plan") unless target_plan
+        return result unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
 
         if target_plan.id == current_subscription.plan_id
           return result.single_validation_failure!(
@@ -31,7 +33,7 @@ module Invoices
 
       private
 
-      attr_reader :current_subscription, :target_plan_code
+      attr_reader :current_subscription, :target_plan_code, :params
 
       delegate :organization, :customer, to: :current_subscription
 
@@ -57,11 +59,20 @@ module Invoices
           subscription_at: current_subscription.subscription_at,
           billing_time: current_subscription.billing_time,
           ending_at: current_subscription.ending_at,
-          payment_term: current_subscription.payment_term,
+          payment_term: carried_over_payment_term,
           status: :active,
           started_at: new_subscription_started_at,
           created_at: Time.current
         )
+      end
+
+      # NOTE: Same carry-over as Subscriptions::PlanUpgradeService, so the preview matches the upgrade.
+      def carried_over_payment_term
+        if params.key?(:payment_term)
+          params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h
+        else
+          current_subscription.payment_term
+        end
       end
 
       def new_subscription_started_at

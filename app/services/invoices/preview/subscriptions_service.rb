@@ -42,7 +42,8 @@ module Invoices
         when :plan_change
           SubscriptionPlanChangeService.call(
             current_subscription:,
-            target_plan_code:
+            target_plan_code:,
+            params: params.slice(:payment_term)
           )
         when :proposal
           BuildSubscriptionService.call(
