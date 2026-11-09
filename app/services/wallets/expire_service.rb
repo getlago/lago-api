@@ -41,7 +41,7 @@ module Wallets
     end
 
     def invoice_usage(subscription)
-      invoice_result = Invoices::ProgressiveBilling::WalletTerminationService.call(wallet:, subscription:)
+      invoice_result = Invoices::ProgressiveBilling::WalletExpirationService.call(wallet:, subscription:)
 
       # An idempotency error means a previous run already invoiced this subscription for this wallet.
       if invoice_result.failure? && !invoice_result.error.is_a?(Idempotency::IdempotencyError)
