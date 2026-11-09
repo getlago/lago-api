@@ -18,28 +18,19 @@ module Agents
       def call
         return result.validation_failure!(errors: input_errors) if input_errors.any?
         return result.single_validation_failure!(error_code: "enrollment_required") unless wallet
+        return result.single_validation_failure!(error_code: "payments_not_accepted") if storefront.stripe_provider&.seller_profile.blank?
 
-        result.wallet_transaction = paid_with_token
-        if result.wallet_transaction
-          result.replayed = true
-          return result
+        # One lock for the replay check and the top-up, so the same token sent twice at once pays once.
+        registration.with_lock do
+          result.wallet_transaction = paid_with_token
+          if result.wallet_transaction
+            result.replayed = true
+          else
+            attach_stripe_customer
+            create_topup
+          end
         end
 
-        attach_stripe_customer
-
-        topup = WalletTransactions::CreateFromParamsService.call(
-          organization: storefront.organization,
-          params: {
-            wallet_id: wallet.id,
-            paid_credits: credits.to_s("F"),
-            invoice_requires_successful_payment: true,
-            payment_method: {payment_method_type: "provider", shared_payment_token: params[:shared_payment_token]}
-          }
-        )
-        return result.fail_with_error!(topup.error) unless topup.success?
-
-        result.wallet_transaction = topup.wallet_transactions.first
-        result.replayed = false
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
@@ -78,18 +69,32 @@ module Agents
 
       # The token is charged on the storefront's Stripe account, through a Stripe customer that only pays with tokens.
       def attach_stripe_customer
-        registration.with_lock do
-          next if customer.reload.stripe_customer&.provider_customer_id.present?
+        return if customer.reload.stripe_customer&.provider_customer_id.present?
 
-          customer.update!(payment_provider: "stripe", payment_provider_code: storefront.payment_provider_code)
-          PaymentProviders::Stripe::Customers::CreateService.call!(
-            customer:,
-            payment_provider_id: storefront.stripe_provider.id,
-            params: {sync_with_provider: true, provider_payment_methods: PAYMENT_METHODS},
-            async: false,
-            allow_shared_payment_token: true
-          )
-        end
+        customer.update!(payment_provider: "stripe", payment_provider_code: storefront.payment_provider_code)
+        PaymentProviders::Stripe::Customers::CreateService.call!(
+          customer:,
+          payment_provider_id: storefront.stripe_provider.id,
+          params: {sync_with_provider: true, provider_payment_methods: PAYMENT_METHODS},
+          async: false,
+          allow_shared_payment_token: true
+        )
+      end
+
+      def create_topup
+        topup = WalletTransactions::CreateFromParamsService.call(
+          organization: storefront.organization,
+          params: {
+            wallet_id: wallet.id,
+            paid_credits: credits.to_s("F"),
+            invoice_requires_successful_payment: true,
+            payment_method: {payment_method_type: "provider", shared_payment_token: params[:shared_payment_token]}
+          }
+        )
+        topup.raise_if_error!
+
+        result.wallet_transaction = topup.wallet_transactions.first
+        result.replayed = false
       end
     end
   end
