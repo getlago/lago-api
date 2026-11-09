@@ -30,6 +30,7 @@ RSpec.describe Agents::BillingDocumentService do
 
     it "lists each plan with its top-up limits and actions, then how to enroll" do
       expect(document).to include("### Basic (`agent_basic`)")
+      expect(document).to include("Top-up limits and amounts are in cents of the plan's currency; the charge properties of each action are in the currency itself, not in cents.")
       expect(document).to include("Billed monthly, in EUR. Top-ups: at least 500, no maximum.")
       expect(document).to include("- `api_call`: API call. One call. Charge model `standard`, properties `{\"amount\":\"0.01\"}`.")
       expect(document).to include("`purpose: \"authenticate\"` and `scope: \"billing\"`")
@@ -52,6 +53,13 @@ RSpec.describe Agents::BillingDocumentService do
       expect(document).to include("POST `#{storefront.agent_url}/billing/payments` with JSON `amount_cents` and `shared_payment_token`")
       expect(document).to include("GET `#{storefront.agent_url}/billing/payments/<id>`")
     end
+  end
+
+  it "tells the agent how its owner can claim it" do
+    expect(document).to include("## Claim")
+    expect(document).to include("POST `#{storefront.agent_url}/claims/codes`")
+    expect(document).to include(storefront.claim_url)
+    expect(document).to include("GET `#{storefront.agent_url}/claims`")
   end
 
   context "when the Stripe connection has no seller profile" do

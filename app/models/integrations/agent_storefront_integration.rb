@@ -26,6 +26,11 @@ module Integrations
       "#{ENV["LAGO_API_URL"]}/agents/v1/#{id}"
     end
 
+    # The lago-front page where a person claims one of this storefront's agents.
+    def claim_url
+      "#{Rails.application.config.lago_front_url}/agent-claim/#{id}"
+    end
+
     def plans=(value)
       entries = Array.wrap(value).map { it.respond_to?(:to_h) ? it.to_h.stringify_keys.slice(*PLAN_KEYS) : {} }
       push_to_settings(key: "plans", value: entries)

@@ -43,17 +43,6 @@ module Agents
 
     private
 
-    attr_reader :registration
-
-    def authenticate_billing_token
-      result = Agents::Auth::VerifyTokenService.call(storefront:, token: bearer_token, scope: Agents::Auth::ChallengeService::BILLING_SCOPE)
-      if result.success?
-        @registration = result.registration
-      else
-        render_error_response(result)
-      end
-    end
-
     def billing_json(subscription, wallet)
       {
         registration_id: registration.id,

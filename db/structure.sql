@@ -163,6 +163,7 @@ ALTER TABLE IF EXISTS ONLY public.x402_sign_in_nonces DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_9457f0d2da;
+ALTER TABLE IF EXISTS ONLY public.agent_claims DROP CONSTRAINT IF EXISTS fk_rails_931d804c32;
 ALTER TABLE IF EXISTS ONLY public.usage_attribution_values DROP CONSTRAINT IF EXISTS fk_rails_92e94c6810;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_91802dc891;
@@ -377,6 +378,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_133ae613c4;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_123667657c;
+ALTER TABLE IF EXISTS ONLY public.agent_claims DROP CONSTRAINT IF EXISTS fk_rails_112acc402f;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_1124f79783;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_10ee148d0d;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
@@ -1048,6 +1050,9 @@ DROP INDEX IF EXISTS public.index_ai_conversations_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_membership_id;
 DROP INDEX IF EXISTS public.index_agent_registrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_agent_registrations_on_integration_id_and_key_id;
+DROP INDEX IF EXISTS public.index_agent_claims_on_registration_id;
+DROP INDEX IF EXISTS public.index_agent_claims_on_organization_id;
+DROP INDEX IF EXISTS public.index_agent_claims_on_code_hash;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_invoice_id;
@@ -1304,6 +1309,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS appl
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS api_keys_pkey;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS ai_conversations_pkey;
 ALTER TABLE IF EXISTS ONLY public.agent_registrations DROP CONSTRAINT IF EXISTS agent_registrations_pkey;
+ALTER TABLE IF EXISTS ONLY public.agent_claims DROP CONSTRAINT IF EXISTS agent_claims_pkey;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS adjusted_fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS add_ons_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS add_ons_pkey;
@@ -1497,6 +1503,7 @@ DROP TABLE IF EXISTS public.applied_add_ons;
 DROP TABLE IF EXISTS public.api_keys;
 DROP TABLE IF EXISTS public.ai_conversations;
 DROP TABLE IF EXISTS public.agent_registrations;
+DROP TABLE IF EXISTS public.agent_claims;
 DROP TABLE IF EXISTS public.adjusted_fees;
 DROP TABLE IF EXISTS public.add_ons_taxes;
 DROP TABLE IF EXISTS public.add_ons;
@@ -1560,6 +1567,7 @@ DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP TYPE IF EXISTS public.agent_registration_status;
+DROP TYPE IF EXISTS public.agent_claim_status;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
 DROP EXTENSION IF EXISTS pg_trgm;
@@ -1614,6 +1622,17 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 --
 
 CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: agent_claim_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.agent_claim_status AS ENUM (
+    'issued',
+    'started',
+    'verified'
+);
 
 
 --
@@ -2395,6 +2414,26 @@ CREATE TABLE public.adjusted_fees (
     unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
     fixed_charge_id uuid
+);
+
+
+--
+-- Name: agent_claims; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.agent_claims (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    registration_id uuid NOT NULL,
+    status public.agent_claim_status DEFAULT 'issued'::public.agent_claim_status NOT NULL,
+    code_hash character varying NOT NULL,
+    email character varying,
+    verification_code_hash character varying,
+    verification_expires_at timestamp(6) without time zone,
+    verified_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT check_agent_claims_verified_at CHECK (((status <> 'verified'::public.agent_claim_status) OR (verified_at IS NOT NULL)))
 );
 
 
@@ -6644,6 +6683,14 @@ ALTER TABLE ONLY public.adjusted_fees
 
 
 --
+-- Name: agent_claims agent_claims_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_claims
+    ADD CONSTRAINT agent_claims_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: agent_registrations agent_registrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8611,6 +8658,27 @@ CREATE INDEX index_adjusted_fees_on_organization_id ON public.adjusted_fees USIN
 --
 
 CREATE INDEX index_adjusted_fees_on_subscription_id ON public.adjusted_fees USING btree (subscription_id);
+
+
+--
+-- Name: index_agent_claims_on_code_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_agent_claims_on_code_hash ON public.agent_claims USING btree (code_hash);
+
+
+--
+-- Name: index_agent_claims_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_claims_on_organization_id ON public.agent_claims USING btree (organization_id);
+
+
+--
+-- Name: index_agent_claims_on_registration_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_claims_on_registration_id ON public.agent_claims USING btree (registration_id);
 
 
 --
@@ -13306,6 +13374,14 @@ ALTER TABLE ONLY public.x402_settlements
 
 
 --
+-- Name: agent_claims fk_rails_112acc402f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_claims
+    ADD CONSTRAINT fk_rails_112acc402f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: entitlement_subscription_feature_removals fk_rails_123667657c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15018,6 +15094,14 @@ ALTER TABLE ONLY public.usage_attribution_values
 
 
 --
+-- Name: agent_claims fk_rails_931d804c32; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_claims
+    ADD CONSTRAINT fk_rails_931d804c32 FOREIGN KEY (registration_id) REFERENCES public.agent_registrations(id) ON DELETE CASCADE;
+
+
+--
 -- Name: rate_cards_taxes fk_rails_9457f0d2da; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16256,6 +16340,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261109115317'),
 ('20261104133620'),
 ('20261103084714'),
 ('20261103084708'),

@@ -1,0 +1,10 @@
+div style="display: none;max-height: 0;overflow: hidden;"
+  = I18n.t('agent_claim.verification.preview', storefront_name: @storefront.name)
+div style='margin-bottom: 24px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
+  = I18n.t('agent_claim.verification.intro', storefront_name: @storefront.name, agent_id: @claim.registration_id)
+div style='margin-bottom: 32px;font-style: normal;font-weight: 700;font-size: 32px;line-height: 40px;letter-spacing: 8px;text-align: center;color: #19212E;'
+  = @code
+div style='margin-bottom: 32px;font-style: normal;font-weight: 400;font-size: 16px;line-height: 24px;color: #19212E;'
+  = I18n.t('agent_claim.verification.expiry', minutes: Agents::Claim::VERIFICATION_TTL.in_minutes.to_i)
+div style='font-style: normal;font-weight: 400;font-size: 14px;line-height: 20px;color: #66758F;'
+  = I18n.t('agent_claim.verification.safety')

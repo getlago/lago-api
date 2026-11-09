@@ -15,7 +15,7 @@ module Agents
       result.document = <<~MARKDOWN
         # Billing: #{storefront.name}
 
-        #{storefront.name} is paid from a prepaid wallet. Enroll in one of the plans below, and each call you make is charged to your wallet. Amounts are in cents of the plan's currency.
+        #{storefront.name} is paid from a prepaid wallet. Enroll in one of the plans below, and each call you make is charged to your wallet. Top-up limits and amounts are in cents of the plan's currency; the charge properties of each action are in the currency itself, not in cents.
 
         ## Plans
 
@@ -31,6 +31,9 @@ module Agents
         ## Add credits
 
         #{seller_profile ? add_credits(base) : "#{storefront.name} does not accept payments from agents yet.\n"}
+        ## Claim
+
+        Optional. The person who runs you can claim you, which attaches their verified e-mail to your account at #{storefront.name}. Once enrolled, POST `#{base}/claims/codes` with the billing token: it returns a claim code and the claim page URL, `#{storefront.claim_url}`. Show both to that one person, then continue: nothing waits for the claim. The code stays valid until it is used; asking again replaces it. On the page, the person enters the code and an e-mail, then types the code mailed to them. GET `#{base}/claims` with the billing token tells whether you are claimed.
       MARKDOWN
 
       result
