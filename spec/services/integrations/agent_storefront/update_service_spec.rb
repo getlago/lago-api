@@ -79,6 +79,26 @@ RSpec.describe Integrations::AgentStorefront::UpdateService do
           end
         end
 
+        context "when the stripe connection changes with enrolled agents" do
+          let(:other_provider) { create(:stripe_provider, organization:) }
+          let(:update_args) { {payment_provider_code: other_provider.code} }
+          let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
+
+          before do
+            organization.update!(premium_integrations: %w[agent_storefront events_targeting_wallets])
+            integration.update!(plans: [{plan_code: plan.code}])
+            Agents::Billing::EnrollService.call!(storefront: integration, registration: create(:agent_registration, storefront: integration), plan_code: plan.code)
+          end
+
+          it "refuses and keeps the connection" do
+            result = service_call
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(payment_provider_code: ["agent_storefront_has_enrolled_agents"])
+            expect(integration.reload.payment_provider_code).not_to eq(other_provider.code)
+          end
+        end
+
         context "with an unknown stripe connection" do
           let(:update_args) { {payment_provider_code: "unknown"} }
 
