@@ -204,6 +204,17 @@ RSpec.describe Plans::UpdateService do
 
         expect(storefront.reload.plans).to eq([{"plan_code" => "renamed_plan", "minimum_topup_cents" => 500}])
       end
+
+      context "with an override of the plan" do
+        subject(:plans_service) { described_class.new(plan: child, params: update_args) }
+
+        let(:child) { create(:plan, organization:, parent: plan, code: plan.code) }
+
+        it "leaves the storefront on the parent plan" do
+          expect(plans_service.call.plan.code).to eq("renamed_plan")
+          expect(storefront.reload.plans).to eq([{"plan_code" => plan.code, "minimum_topup_cents" => 500}])
+        end
+      end
     end
 
     context "when marking draft invoices for refresh" do

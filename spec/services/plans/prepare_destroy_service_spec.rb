@@ -36,6 +36,17 @@ RSpec.describe Plans::PrepareDestroyService do
         expect(plan.reload.pending_deletion).to be(false)
         expect(Plans::DestroyJob).not_to have_been_enqueued
       end
+
+      context "with an override of the plan" do
+        subject(:prepare_destroy_service) { described_class.new(plan: child) }
+
+        let(:child) { create(:plan, organization:, parent: plan, code: plan.code) }
+
+        it "deletes the override" do
+          expect(prepare_destroy_service.call).to be_success
+          expect(child.reload.pending_deletion).to be(true)
+        end
+      end
     end
 
     context "when plan is not found" do
