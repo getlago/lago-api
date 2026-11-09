@@ -14,6 +14,11 @@ module Auth
         "#<data #{self.class.name} state=#{state.inspect} secret=[FILTERED] code_verifier=[FILTERED]>"
       end
       alias_method :to_s, :inspect
+
+      # Data prints its members itself under pp, so it goes through inspect too.
+      def pretty_print(printer)
+        printer.text(inspect)
+      end
     end
 
     module_function
