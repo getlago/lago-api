@@ -157,6 +157,29 @@ RSpec.describe Subscriptions::InvoiceGroupingService do
       it "returns one group per payment term" do
         expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
       end
+
+      context "when another group holds a single subscription" do
+        let(:usd_plan) { create(:plan, organization:, amount_currency: "USD") }
+        let(:subscription3) { create(:subscription, customer:, plan: usd_plan) }
+        let(:subscriptions) { [subscription1, subscription2, subscription3] }
+
+        it "splits the mixed group and resolves no term for the single one" do
+          expect(result.subscription_groups).to eq([[subscription1], [subscription2], [subscription3]])
+          expect(PaymentTerms::ResolveService).to have_received(:call!).twice
+        end
+      end
+    end
+
+    context "when every group holds a single subscription" do
+      let(:usd_plan) { create(:plan, organization:, amount_currency: "USD") }
+      let(:subscription2) { create(:subscription, customer:, plan: usd_plan) }
+
+      before { allow(PaymentTerms::ResolveService).to receive(:call!) }
+
+      it "resolves no payment term" do
+        expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
+        expect(PaymentTerms::ResolveService).not_to have_received(:call!)
+      end
     end
 
     context "when subscriptions resolve to payment terms with the same grouping key" do
