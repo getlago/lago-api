@@ -15,7 +15,7 @@ module Agents
       result.document = <<~MARKDOWN
         # Billing: #{storefront.name}
 
-        #{storefront.name} is paid from a prepaid wallet. Enroll in one of the plans below, and each call you make is charged to your wallet. Amounts are in cents of the plan's currency.
+        #{storefront.name} is paid from a prepaid wallet. Enroll in one of the plans below, and each call you make is charged to your wallet. Top-up limits and amounts are in cents of the plan's currency; the charge properties of each action are in the currency itself, not in cents.
 
         ## Plans
 
