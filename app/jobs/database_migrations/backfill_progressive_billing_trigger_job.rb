@@ -16,7 +16,7 @@ module DatabaseMigrations
     def perform(cursor = nil)
       invoice_ids = next_invoice_ids(cursor)
 
-      Invoice.where(id: invoice_ids, progressive_billing_trigger: nil)
+      Invoice.progressive_billing.where(id: invoice_ids, progressive_billing_trigger: nil)
         .update_all(progressive_billing_trigger: "usage_threshold", updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
       if invoice_ids.size == BATCH_SIZE

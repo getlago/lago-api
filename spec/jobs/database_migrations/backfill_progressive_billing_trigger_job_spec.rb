@@ -23,6 +23,16 @@ RSpec.describe DatabaseMigrations::BackfillProgressiveBillingTriggerJob do
     expect(subscription_invoice.reload.progressive_billing_trigger).to be_nil
   end
 
+  context "when an invoice that is not a progressive billing invoice has applied usage thresholds" do
+    before { create(:applied_usage_threshold, invoice: subscription_invoice) }
+
+    it "leaves its trigger empty" do
+      perform_job
+
+      expect(subscription_invoice.reload.progressive_billing_trigger).to be_nil
+    end
+  end
+
   it "does not enqueue another batch when the walk is over" do
     expect { perform_job }.not_to have_enqueued_job(described_class)
   end
