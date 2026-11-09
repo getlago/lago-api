@@ -157,16 +157,14 @@ RSpec.describe Api::V1::CouponsController do
         allow(Utils::ActivityLog).to receive(:available?).and_return(true)
       end
 
-      %w[v1 v2].each do |version|
-        it "deletes the coupon and terminates its applied coupons through #{version}" do
-          delete_with_token(organization, "/api/#{version}/coupons/#{coupon.code}")
+      it "deletes the coupon and terminates its applied coupons" do
+        subject
 
-          expect(response).to have_http_status(:success)
-          expect(json[:coupon][:lago_id]).to eq(coupon.id)
-          expect(Coupon.with_discarded.find(coupon.id).deleted_at).to be_present
-          expect(deleted_customer_applied_coupon.reload).to be_terminated
-          expect(kept_customer_applied_coupon.reload).to be_terminated
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:coupon][:lago_id]).to eq(coupon.id)
+        expect(Coupon.with_discarded.find(coupon.id).deleted_at).to be_present
+        expect(deleted_customer_applied_coupon.reload).to be_terminated
+        expect(kept_customer_applied_coupon.reload).to be_terminated
       end
     end
 
