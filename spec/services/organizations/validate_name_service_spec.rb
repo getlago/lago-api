@@ -20,6 +20,14 @@ RSpec.describe Organizations::ValidateNameService do
     end
   end
 
+  context "with a control character between two spaces" do
+    let(:name) { "Acme \u0001 Corp" }
+
+    it "leaves a single space" do
+      expect(result.name).to eq("Acme Corp")
+    end
+  end
+
   context "with the zero-width joiners of a Persian name" do
     let(:name) { "Rang\u200Cava" }
 
