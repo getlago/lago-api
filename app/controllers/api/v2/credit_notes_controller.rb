@@ -95,7 +95,8 @@ module Api
         return render_credit_note(record) if record.public_send(file).present?
 
         job.perform_later(record)
-        head(:ok)
+        # The file is not ready yet, so there is no credit note to return.
+        head(:accepted)
       end
 
       def input_params
