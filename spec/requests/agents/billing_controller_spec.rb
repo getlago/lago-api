@@ -73,6 +73,14 @@ RSpec.describe Agents::BillingController, :premium, cache: :memory do
       expect(json[:id]).to eq(payment_id)
     end
 
+    it "does not show granted credits as a payment" do
+      post("#{base}/billing/enroll", params: {plan_code: plan.code}, headers:, as: :json)
+      granted = create(:wallet_transaction, wallet: Wallet.find_by!(code: json[:wallet_code]), transaction_status: :granted)
+
+      get("#{base}/billing/payments/#{granted.id}", headers:)
+      expect(response).to be_not_found_error("payment")
+    end
+
     it "does not show a payment to another agent" do
       post("#{base}/billing/enroll", params: {plan_code: plan.code}, headers:, as: :json)
       post("#{base}/billing/payments", params: {amount_cents: 500, shared_payment_token: "spt_agent_1"}, headers:, as: :json)
