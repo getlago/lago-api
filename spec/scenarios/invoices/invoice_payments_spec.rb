@@ -66,25 +66,11 @@ describe "Invoice Payments Scenarios" do
       create(:gocardless_customer, customer:, payment_provider: gocardless_provider, provider_customer_id: "CU123")
     end
 
-    let(:gocardless_validation_error_body) do
-      {
-        error: {
-          type: "validation_failed",
-          code: 422,
-          message: "Validation failed",
-          errors: [{field: "amount", message: "is invalid"}],
-          documentation_url: "https://developer.gocardless.com/api-reference#validation_failed",
-          request_id: "req_123"
-        }
-      }.to_json
-    end
-
     before do
       customer.update!(payment_provider: :gocardless, payment_provider_code: gocardless_provider.code)
       create(:payment_method, payment_provider_customer: gocardless_customer, provider_method_id: "MD123", is_default: true)
 
-      stub_request(:post, "https://api-sandbox.gocardless.com/payments")
-        .and_return(status: 422, body: gocardless_validation_error_body, headers: {"Content-Type" => "application/json"})
+      stub_gocardless_error(:post, "/payments", status: 422, type: "validation_failed", message: "Validation failed")
     end
 
     it "marks the invoice as failed and sends one payment failure webhook" do

@@ -163,21 +163,9 @@ RSpec.describe Invoices::Payments::CreateService do
       end
 
       context "when gocardless refuses the payment with a validation error" do
-        let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
-        let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
-        let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
-        let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
-
         before do
           allow(provider_class).to receive(:new).and_call_original
-
-          allow(GoCardlessPro::Client).to receive(:new).and_return(gocardless_client)
-          allow(gocardless_client).to receive_messages(mandates: gocardless_mandates_service, payments: gocardless_payments_service)
-          allow(gocardless_mandates_service).to receive(:list).and_return(gocardless_list_response)
-          allow(gocardless_list_response).to receive(:records)
-            .and_return([GoCardlessPro::Resources::Mandate.new("id" => "mandate_id")])
-          allow(gocardless_payments_service).to receive(:create)
-            .and_raise(GoCardlessPro::ValidationError.new("message" => "Validation failed", "code" => 422))
+          stub_gocardless_error(:post, "/payments", status: 422, type: "validation_failed")
         end
 
         it "marks the invoice payment as failed without raising" do
@@ -193,21 +181,9 @@ RSpec.describe Invoices::Payments::CreateService do
       end
 
       context "when gocardless refuses the payment with an error to investigate" do
-        let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
-        let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
-        let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
-        let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
-
         before do
           allow(provider_class).to receive(:new).and_call_original
-
-          allow(GoCardlessPro::Client).to receive(:new).and_return(gocardless_client)
-          allow(gocardless_client).to receive_messages(mandates: gocardless_mandates_service, payments: gocardless_payments_service)
-          allow(gocardless_mandates_service).to receive(:list).and_return(gocardless_list_response)
-          allow(gocardless_list_response).to receive(:records)
-            .and_return([GoCardlessPro::Resources::Mandate.new("id" => "mandate_id")])
-          allow(gocardless_payments_service).to receive(:create)
-            .and_raise(GoCardlessPro::AuthenticationError.new("message" => "Invalid token", "code" => 401))
+          stub_gocardless_error(:post, "/payments", status: 401, type: "invalid_api_usage")
         end
 
         it "re-raises the provider failure and marks the invoice payment as failed" do
@@ -233,23 +209,14 @@ RSpec.describe Invoices::Payments::CreateService do
       end
 
       context "when adyen refuses the payment" do
-        let(:adyen_client) { instance_double(Adyen::Client) }
-        let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
-        let(:payments_api) { Adyen::PaymentsApi.new(adyen_client, 70) }
-
         before do
           allow(provider_class).to receive(:new).and_call_original
-
-          allow(::Adyen::Client).to receive(:new).and_return(adyen_client)
-          allow(adyen_client).to receive(:checkout).and_return(checkout)
-          allow(checkout).to receive(:payments_api).and_return(payments_api)
-          allow(payments_api).to receive(:payment_methods).and_return(generate(:adyen_payment_methods_response))
+          stub_adyen_checkout("paymentMethods", body: {storedPaymentMethods: []})
         end
 
         context "with a validation error" do
           before do
-            allow(payments_api).to receive(:payments)
-              .and_raise(Adyen::ValidationError.new("Invalid card number", nil))
+            stub_adyen_checkout("payments", status: 422, body: {errorType: "validation", message: "Invalid card number"})
           end
 
           it "marks the invoice payment as failed without raising" do
@@ -265,10 +232,7 @@ RSpec.describe Invoices::Payments::CreateService do
         end
 
         context "with an error to investigate" do
-          before do
-            allow(payments_api).to receive(:payments)
-              .and_raise(Adyen::AdyenError.new(nil, nil, "error", "code"))
-          end
+          before { stub_adyen_checkout("payments", status: 403) }
 
           it "re-raises the provider failure and marks the invoice payment as failed" do
             expect { create_service.call }.to raise_error(BaseService::ServiceFailure)
