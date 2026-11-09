@@ -31,6 +31,7 @@ module Agents
           claim.update!(status: :verified, verified_at: Time.current, email: nil)
           SendWebhookJob.perform_after_commit("customer.updated", customer)
           Utils::ActivityLog.produce_after_commit(customer, "customer.updated")
+          Customers::RefreshInvoicesSearchTermsJob.perform_after_commit(customer.id)
         end
         return result unless result.success?
 
