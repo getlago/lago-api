@@ -45,7 +45,13 @@ module Auth
       agent_proof_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
       # Each change is a Lago plan change on the merchant's organization: a subscription, a termination invoice
       # and webhooks. Enrolling again in the same plan is free and not counted.
-      agent_plan_change_per_registration: Rule.new(limit: 3, period: 1.hour, identifier: :registration)
+      agent_plan_change_per_registration: Rule.new(limit: 3, period: 1.hour, identifier: :registration),
+      # The claim page, a browser flow without a token. Keyed on the claim code the owner typed, to bound the mails one
+      # code can trigger and the guesses at its six-digit verification code, and on the mailbox, as the signup mails are.
+      agent_claim_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip_network),
+      agent_claim_mail_per_code: Rule.new(limit: 3, period: 10.minutes, identifier: :code),
+      agent_claim_mail_per_email: Rule.new(limit: 3, period: 1.hour, identifier: :email),
+      agent_claim_verify_per_code: Rule.new(limit: 5, period: 10.minutes, identifier: :code)
     }.freeze
 
     # Built on first use only, and once per process.
