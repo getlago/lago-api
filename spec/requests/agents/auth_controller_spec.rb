@@ -48,6 +48,12 @@ RSpec.describe Agents::AuthController, :premium, cache: :memory do
     expect(json[:error]).to eq("invalid_proof")
   end
 
+  it "filters the proof from the logged parameters" do
+    prove("signup", "signup")
+
+    expect(request.filtered_parameters["signature"]).to eq("[FILTERED]")
+  end
+
   context "when one key asks for more challenges than allowed" do
     before { Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new }
 
