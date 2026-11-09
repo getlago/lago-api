@@ -41,12 +41,15 @@ describe Clock::TerminateWalletsJob, job: true do
   end
 
   context "when the wallet invoices its usage on expiration", :premium do
+    let(:balance_cents) { 1000 }
     let(:to_expire_wallet) do
       create(
         :wallet,
         status: "active",
         expiration_at: Time.zone.now - 40.days,
-        invoice_usage_on_expiration: true
+        invoice_usage_on_expiration: true,
+        balance_cents:,
+        credits_balance: balance_cents / 100.0
       )
     end
 
@@ -63,6 +66,17 @@ describe Clock::TerminateWalletsJob, job: true do
 
     context "when the feature flag is disabled" do
       let(:feature_flags) { [] }
+
+      it "terminates it inline" do
+        described_class.perform_now
+
+        expect(Wallets::ExpireWithInvoicingJob).not_to have_been_enqueued
+        expect(to_expire_wallet.reload.status).to eq("terminated")
+      end
+    end
+
+    context "when the wallet has no credits left" do
+      let(:balance_cents) { 0 }
 
       it "terminates it inline" do
         described_class.perform_now
