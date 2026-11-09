@@ -47,7 +47,6 @@ RSpec.describe ::V1::WalletSerializer do
       "ongoing_usage_balance_cents" => wallet.ongoing_usage_balance_cents,
       "consumed_credits" => wallet.consumed_credits.to_s,
       "invoice_requires_successful_payment" => wallet.invoice_requires_successful_payment,
-      "invoice_usage_on_expiration" => wallet.invoice_usage_on_expiration,
       "paid_top_up_min_amount_cents" => wallet.paid_top_up_min_amount_cents,
       "paid_top_up_max_amount_cents" => wallet.paid_top_up_max_amount_cents
     )
@@ -78,6 +77,22 @@ RSpec.describe ::V1::WalletSerializer do
       ids = result["wallet"]["recurring_transaction_rules"].map { |r| r["lago_id"] }
 
       expect(ids).to match_array([recurring_transaction_rule.id, active_rule.id, active_future_expiration_rule.id])
+    end
+  end
+
+  context "when the wallet invoices its usage on expiration" do
+    let(:wallet) { create(:wallet, customer:, invoice_usage_on_expiration: true) }
+
+    it "serializes invoice_usage_on_expiration" do
+      expect(JSON.parse(serializer.to_json)["wallet"]["invoice_usage_on_expiration"]).to eq(true)
+    end
+  end
+
+  context "when the wallet does not invoice its usage on expiration" do
+    let(:wallet) { create(:wallet, customer:) }
+
+    it "omits invoice_usage_on_expiration" do
+      expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("invoice_usage_on_expiration")
     end
   end
 
