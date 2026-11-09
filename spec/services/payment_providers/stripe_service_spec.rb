@@ -149,6 +149,15 @@ RSpec.describe PaymentProviders::StripeService do
         expect(PaymentProviders::Stripe::RegisterWebhookJob).not_to have_been_enqueued
       end
 
+      it "clears a blank seller profile" do
+        stripe_provider.update!(seller_profile: "profile_test_123")
+
+        result = stripe_service.create_or_update(organization_id: organization.id, code:, name:, seller_profile: "")
+
+        expect(result).to be_success
+        expect(result.stripe_provider.seller_profile).to be_nil
+      end
+
       it_behaves_like "produces a security log", "integration.updated" do
         before do
           stripe_service.create_or_update(
