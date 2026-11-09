@@ -37,7 +37,7 @@ module Agents
     end
 
     def payment
-      wallet_transaction = registration.wallet&.wallet_transactions&.inbound&.find_by(id: params[:id])
+      wallet_transaction = registration.wallet&.wallet_transactions&.inbound&.purchased&.find_by(id: params[:id])
       return not_found_error(resource: "payment") unless wallet_transaction
 
       render(json: payment_json(wallet_transaction))
@@ -79,7 +79,7 @@ module Agents
       {
         id: wallet_transaction.id,
         status: wallet_transaction.status,
-        amount_cents: wallet_transaction.amount.to_money(wallet_transaction.wallet.currency).cents,
+        amount_cents: wallet_transaction.amount_cents.to_i,
         currency: wallet_transaction.wallet.currency,
         created_at: wallet_transaction.created_at.iso8601,
         settled_at: wallet_transaction.settled_at&.iso8601,
