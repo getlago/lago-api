@@ -138,6 +138,19 @@ RSpec.describe Signups::ResendService do
       expect(described_class.call.error.messages).to eq(signup_secret: ["value_is_mandatory"])
     end
 
+    context "with a closed attempt whose address has no user" do
+      let(:pending_signup) do
+        create(:pending_signup, :closed, email: "jane@getlago.com", signup_secret:, emails_sent_at:, expires_at:)
+      end
+
+      it "answers signup_expired, with nothing sent or counted" do
+        expect { result }.not_to have_enqueued_job(Signups::DeliverVerificationJob)
+
+        expect(result.error.code).to eq("signup_expired")
+        expect(pending_signup.reload.emails_sent_at.size).to eq(1)
+      end
+    end
+
     context "with the attempt's 3 emails sent, the mailbox window free again" do
       let(:emails_sent_at) { [3.hours.ago] * 3 }
 

@@ -56,7 +56,8 @@ module Signups
     def refused?(pending_signup, token_record, now)
       if pending_signup.verified? || token_record&.consumed?
         result.not_allowed_failure!(code: "email_already_verified")
-      elsif now >= pending_signup.expires_at
+      elsif now >= pending_signup.expires_at || (pending_signup.closed? && !pending_signup.email_registered?)
+        # A closed attempt with no user (deleted since) would be sent nothing: the job only mails open attempts.
         result.not_allowed_failure!(code: "signup_expired")
       elsif pending_signup.resend_limit_reached?
         result.not_allowed_failure!(code: "signup_resend_exhausted")
