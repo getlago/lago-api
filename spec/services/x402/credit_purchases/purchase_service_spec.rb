@@ -1018,6 +1018,29 @@ describe X402::CreditPurchases::PurchaseService do
         end
       end
 
+      context "without plan and wallet codes" do
+        let(:params) { super().except(:plan_code, :wallet_code) }
+
+        it "logs one line per refusal" do
+          result
+          expect(Rails.logger).to have_received(:warn)
+            .with("X402::CreditPurchases::PurchaseService call failed mode=record field=plan_code reason=value_is_mandatory network=eip155:84532").once
+          expect(Rails.logger).to have_received(:warn)
+            .with("X402::CreditPurchases::PurchaseService call failed mode=record field=wallet_code reason=value_is_mandatory network=eip155:84532").once
+        end
+      end
+
+      context "with a network Lago does not settle on" do
+        let(:payment_requirements) { x402_evm_requirements.merge("network" => "base-sepolia") }
+
+        it_behaves_like "a refused record", {payment: ["unsupported_network"]}
+
+        it "logs the refusal without the network" do
+          result
+          expect(Rails.logger).to have_received(:warn).with("X402::CreditPurchases::PurchaseService call failed mode=record field=payment reason=unsupported_network").once
+        end
+      end
+
       context "with an unknown payer and customer creation off" do
         let(:x402_connection) do
           create(

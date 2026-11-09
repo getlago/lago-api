@@ -197,7 +197,7 @@ module X402
 
       def settled_payer_matches?
         payer = settled["payer"]
-        payer.nil? || (payer.is_a?(String) && X402::Network.normalize_address(payer, family:) == derived_payer)
+        payer.nil? || X402::Network.normalize_address(payer, family:) == derived_payer
       end
 
       def settle_mismatch(reason)
