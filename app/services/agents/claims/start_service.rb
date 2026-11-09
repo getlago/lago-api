@@ -26,7 +26,7 @@ module Agents
           next invalid_claim_code if claim.verified?
 
           # A code mailed to the previous address must not verify this one.
-          claim.update!(email:, status: :started, verification_code_hash: nil, verification_expires_at: nil)
+          claim.update!(email:, email_hash: Agents::Claim.mailbox_digest(email), status: :started, verification_code_hash: nil, verification_expires_at: nil)
         end
         return result unless result.success?
 

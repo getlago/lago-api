@@ -34,6 +34,8 @@ module Agents
         ## Claim
 
         Optional. The person who runs you can claim you, which attaches their verified e-mail to your account at #{storefront.name}. Once enrolled, POST `#{base}/claims/codes` with the billing token: it returns a claim code and the claim page URL, `#{storefront.claim_url}`. Show both to that one person, then continue: nothing waits for the claim. The code stays valid until it is used; asking again replaces it. On the page, the person enters the code and an e-mail, then types the code mailed to them. GET `#{base}/claims` with the billing token tells whether you are claimed.
+
+        Once you are claimed, if your plan offers free credits, POST `#{base}/billing/free_credits` with the billing token adds them to your wallet. One person gets them once at #{storefront.name}, whatever the number of agents they claim.
       MARKDOWN
 
       result
@@ -69,7 +71,7 @@ module Agents
       <<~MARKDOWN
         ### #{plan.name} (`#{plan.code}`)
 
-        #{[plan.description.presence, "Billed #{plan.interval}, in #{plan.amount_currency}. #{topup_limits(sold_plan)}"].compact.join("\n\n")}
+        #{[plan.description.presence, "Billed #{plan.interval}, in #{plan.amount_currency}. #{topup_limits(sold_plan)}#{free_credits(sold_plan)}"].compact.join("\n\n")}
 
         Actions:
         #{plan.charges.sort_by { [it.created_at, it.id] }.map { action_line(it) }.join("\n")}
@@ -87,6 +89,12 @@ module Agents
       minimum, maximum = sold_plan.values_at("minimum_topup_cents", "maximum_topup_cents")
 
       "Top-ups: #{minimum ? "at least #{minimum}" : "no minimum"}, #{maximum ? "at most #{maximum}" : "no maximum"}."
+    end
+
+    def free_credits(sold_plan)
+      amount = sold_plan["free_credits_cents"].to_i
+
+      amount.positive? ? " Free credits: #{amount} once you are claimed." : ""
     end
   end
 end

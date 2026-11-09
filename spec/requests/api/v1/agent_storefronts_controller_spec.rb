@@ -59,13 +59,13 @@ RSpec.describe Api::V1::AgentStorefrontsController, :premium do
 
     context "with plans" do
       let(:plan) { create(:plan, organization:) }
-      let(:params) { super().merge(plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}]) }
+      let(:params) { super().merge(plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000, free_credits_cents: 1000}]) }
 
       it "creates the storefront with the plans it sells" do
         subject
 
         expect(response).to have_http_status(:ok)
-        expect(json[:agent_storefront][:plans]).to eq([{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}])
+        expect(json[:agent_storefront][:plans]).to eq([{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000, free_credits_cents: 1000}])
       end
     end
 

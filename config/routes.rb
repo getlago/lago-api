@@ -159,6 +159,7 @@ Rails.application.routes.draw do
     get "billing", to: "billing#show"
     post "billing/payments", to: "billing#pay"
     get "billing/payments/:id", to: "billing#payment"
+    post "billing/free_credits", to: "billing#free_credits"
     post "claims/codes", to: "claims#create_code"
     get "claims", to: "claims#show"
     post "claims/start", to: "claims#start"
