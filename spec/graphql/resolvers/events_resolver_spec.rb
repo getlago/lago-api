@@ -86,6 +86,7 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
         external_subscription_id: event.external_subscription_id,
         code: event.code,
         timestamp: event.timestamp.to_i,
+        precise_total_amount_cents: "1234.567",
         properties: event.properties
       }
     )
@@ -213,6 +214,7 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
           external_subscription_id: event.external_subscription_id,
           code: event.code,
           timestamp: event.timestamp.to_i,
+          precise_total_amount_cents: "1234.567",
           properties: event.properties
         }
       )

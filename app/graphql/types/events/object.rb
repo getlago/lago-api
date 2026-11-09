@@ -36,6 +36,7 @@ module Types
             external_subscription_id: object.external_subscription_id,
             code: object.code,
             timestamp: object.timestamp.to_i,
+            precise_total_amount_cents:,
             properties: object.properties || {}
           }
         }

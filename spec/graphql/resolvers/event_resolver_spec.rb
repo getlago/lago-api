@@ -93,6 +93,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
         external_subscription_id: event.external_subscription_id,
         code: event.code,
         timestamp: event.timestamp.to_i,
+        precise_total_amount_cents: "1234.567",
         properties: event.properties
       }
     )
@@ -111,6 +112,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       )
 
       expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+      expect(result["data"]["event"]["payload"][:event]).to include(precise_total_amount_cents: nil)
     end
   end
 
@@ -127,6 +129,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       )
 
       expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+      expect(result["data"]["event"]["payload"][:event]).to include(precise_total_amount_cents: nil)
     end
   end
 
@@ -156,6 +159,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
           external_subscription_id: event.external_subscription_id,
           code: event.code,
           timestamp: event.timestamp.to_i,
+          precise_total_amount_cents: "1234.567",
           properties: event.properties
         }
       )
@@ -174,6 +178,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
         )
 
         expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+        expect(result["data"]["event"]["payload"][:event]).to include(precise_total_amount_cents: nil)
       end
     end
 
@@ -190,6 +195,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
         )
 
         expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+        expect(result["data"]["event"]["payload"][:event]).to include(precise_total_amount_cents: nil)
       end
     end
   end
