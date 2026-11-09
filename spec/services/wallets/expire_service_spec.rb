@@ -127,6 +127,24 @@ RSpec.describe Wallets::ExpireService, transaction: false do
     end
   end
 
+  context "when the expiration invoice of the wallet failed" do
+    let(:failed_invoice) do
+      create(:invoice, organization:, customer:, invoice_type: :progressive_billing, status: :failed)
+    end
+
+    before do
+      create(:applied_wallet_expiration, wallet:, invoice: failed_invoice)
+      allow(Invoices::ProgressiveBilling::WalletTerminationService).to receive(:call)
+        .and_return(BaseService::Result.new.fail_with_error!(Idempotency::IdempotencyError.new("already invoiced")))
+    end
+
+    it "keeps the wallet active so the retried invoice can spend it" do
+      expect(result).to be_success
+
+      expect(wallet.reload.status).to eq("active")
+    end
+  end
+
   context "when invoicing the usage fails" do
     before do
       allow(Invoices::ProgressiveBilling::WalletTerminationService).to receive(:call)
