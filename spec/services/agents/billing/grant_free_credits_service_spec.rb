@@ -114,6 +114,36 @@ RSpec.describe Agents::Billing::GrantFreeCreditsService, :premium do
     end
   end
 
+  context "when the wallet is written while the credits are granted", transaction: false do
+    it "holds the wallet until the grant is committed, so the balance increase never has to retry" do
+      wallet_id = wallet.id
+      writer = nil
+      writer_waited = nil
+      allow(WalletTransactions::CreateFromParamsService).to receive(:call).and_wrap_original do |original, **args|
+        # An ongoing-balance refresh, say, writing the wallet while the grant is in progress.
+        writer = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            Wallet.find(wallet_id).update!(name: "refreshed")
+          rescue ActiveRecord::StaleObjectError
+            # The grant committed first and bumped the version: the writer reloads and writes again, as a refresh job does.
+            retry
+          end
+        end
+        sleep 0.5
+        writer_waited = writer.alive?
+
+        original.call(**args)
+      end
+
+      expect(result).to be_success
+      writer.join
+
+      expect(writer_waited).to be(true)
+      expect(wallet.reload).to have_attributes(name: "refreshed", balance_cents: 1000)
+      expect(wallet.wallet_transactions.count).to eq(1)
+    end
+  end
+
   context "when the same agent asks twice at once", transaction: false do
     it "grants once and answers the second request with the same grant" do
       # The first request pauses before creating the transaction, so the second runs while the first

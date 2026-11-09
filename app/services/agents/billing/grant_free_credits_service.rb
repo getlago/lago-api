@@ -69,6 +69,10 @@ module Agents
       def create_grant
         grant = Agents::FreeCreditGrant.create!(organization: storefront.organization, storefront:, registration:, email_hash:, amount_cents:)
 
+        # The balance increase retries on a stale wallet by running its whole body again, which in our transaction
+        # would keep the first attempt's granted row: the wallet is held until the commit, so nothing makes it stale.
+        wallet.lock!
+
         granted = WalletTransactions::CreateFromParamsService.call(
           organization: storefront.organization,
           params: {wallet_id: wallet.id, granted_credits: credits.to_s("F")}
