@@ -65,7 +65,7 @@ module Auth
       result.user = user
       UserDevices::RegisterService.call!(user:)
       generate_token
-    rescue Google::Auth::IDTokens::SignatureError
+    rescue Google::Auth::IDTokens::VerificationError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
       result.single_validation_failure!(error_code: "invalid_google_code")
@@ -78,7 +78,7 @@ module Auth
       google_oidc = oidc_verifier(code:)
 
       register(google_oidc["email"], organization_name)
-    rescue Google::Auth::IDTokens::SignatureError
+    rescue Google::Auth::IDTokens::VerificationError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
       result.single_validation_failure!(error_code: "invalid_google_code")
@@ -109,7 +109,7 @@ module Auth
         password: SecureRandom.hex,
         login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH
       )
-    rescue Google::Auth::IDTokens::SignatureError
+    rescue Google::Auth::IDTokens::VerificationError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
       result.single_validation_failure!(error_code: "invalid_google_code")

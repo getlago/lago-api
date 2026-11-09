@@ -120,6 +120,14 @@ RSpec.describe Auth::GoogleService do
       allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(oidc_response)
     end
 
+    it "answers invalid_google_token for an ID token that fails verification" do
+      [Google::Auth::IDTokens::ExpiredTokenError, Google::Auth::IDTokens::AudienceMismatchError].each do |error|
+        allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_raise(error)
+
+        expect(described_class.call(:login, "code").error.messages).to eq(base: ["invalid_google_token"])
+      end
+    end
+
     context "when user exists" do
       before do
         user = create(:user, email: "foo@bar.com", password: "foobar")
@@ -317,6 +325,14 @@ RSpec.describe Auth::GoogleService do
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
     end
 
+    it "answers invalid_google_token for an ID token that fails verification" do
+      [Google::Auth::IDTokens::ExpiredTokenError, Google::Auth::IDTokens::AudienceMismatchError].each do |error|
+        allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_raise(error)
+
+        expect(described_class.call(:register_user, "code", "Foobar").error.messages).to eq(base: ["invalid_google_token"])
+      end
+    end
+
     context "when user already exists" do
       before { create(:user, email: "foo@bar.com") }
 
@@ -388,6 +404,14 @@ RSpec.describe Auth::GoogleService do
       allow(Google::Auth::UserAuthorizer).to receive(:new).and_return(authorizer)
       allow(authorizer).to receive(:get_credentials_from_code).and_return(authorizer_response)
       allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(oidc_response)
+    end
+
+    it "answers invalid_google_token for an ID token that fails verification" do
+      [Google::Auth::IDTokens::ExpiredTokenError, Google::Auth::IDTokens::AudienceMismatchError].each do |error|
+        allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_raise(error)
+
+        expect(described_class.call(:accept_invite, "code", invite.token).error.messages).to eq(base: ["invalid_google_token"])
+      end
     end
 
     it "accepts the invite" do
