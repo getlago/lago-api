@@ -82,6 +82,8 @@ module Agents
         result.single_validation_failure!(error_code: "charge_not_targeted")
       elsif charges.any? { it.pay_in_advance? && !it.invoiceable? }
         result.single_validation_failure!(error_code: "charge_not_invoiceable")
+      elsif plan.amount_currency != wallet.currency
+        result.single_validation_failure!(error_code: "currencies_does_not_match")
       end
     end
 

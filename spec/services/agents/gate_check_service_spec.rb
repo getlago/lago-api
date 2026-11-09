@@ -204,6 +204,19 @@ RSpec.describe Agents::GateCheckService, :premium, cache: :redis do
     end
   end
 
+  context "when the agent's subscription moved to a plan in another currency" do
+    let(:usd_plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
+
+    before do
+      create(:standard_charge, plan: usd_plan, billable_metric:, accepts_target_wallet: true)
+      enrollment.subscription.update!(plan: usd_plan)
+    end
+
+    it "refuses with currencies_does_not_match, as the euro wallet cannot pay its fees" do
+      expect(result.error.messages).to eq(base: ["currencies_does_not_match"])
+    end
+  end
+
   context "when the customer has a tax error" do
     before { create(:error_detail, owner: wallet.customer, organization:, error_code: :tax_error) }
 
