@@ -103,20 +103,20 @@ RSpec.describe Wallets::ExpireService, transaction: false do
 
     before do
       other_subscription
-      allow(Invoices::ProgressiveBilling::WalletTerminationService).to receive(:call).and_call_original
+      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call).and_call_original
     end
 
     it "only invoices the subscriptions in the wallet currency" do
       result
 
-      expect(Invoices::ProgressiveBilling::WalletTerminationService).to have_received(:call).once
-      expect(Invoices::ProgressiveBilling::WalletTerminationService).to have_received(:call).with(wallet:, subscription:)
+      expect(Invoices::ProgressiveBilling::WalletExpirationService).to have_received(:call).once
+      expect(Invoices::ProgressiveBilling::WalletExpirationService).to have_received(:call).with(wallet:, subscription:)
     end
   end
 
   context "when the usage was already invoiced for this wallet" do
     before do
-      allow(Invoices::ProgressiveBilling::WalletTerminationService).to receive(:call)
+      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call)
         .and_return(BaseService::Result.new.fail_with_error!(Idempotency::IdempotencyError.new("already invoiced")))
     end
 
@@ -134,7 +134,7 @@ RSpec.describe Wallets::ExpireService, transaction: false do
 
     before do
       create(:applied_wallet_expiration, wallet:, invoice: failed_invoice)
-      allow(Invoices::ProgressiveBilling::WalletTerminationService).to receive(:call)
+      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call)
         .and_return(BaseService::Result.new.fail_with_error!(Idempotency::IdempotencyError.new("already invoiced")))
     end
 
@@ -147,7 +147,7 @@ RSpec.describe Wallets::ExpireService, transaction: false do
 
   context "when invoicing the usage fails" do
     before do
-      allow(Invoices::ProgressiveBilling::WalletTerminationService).to receive(:call)
+      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call)
         .and_return(BaseService::Result.new.service_failure!(code: "error", message: "error"))
     end
 
