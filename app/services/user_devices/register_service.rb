@@ -44,7 +44,9 @@ module UserDevices
 
       # Another sign-in from the same browser (a second tab) inserted the device first.
       @skip_log = true
-      user.user_devices.find_by!(fingerprint:).update!(attributes)
+      # The request's query cache holds the lookup above, from before that insert. The savepoint rollback clears it
+      # today; reading uncached does not depend on that.
+      UserDevice.uncached { user.user_devices.find_by!(fingerprint:) }.update!(attributes)
     end
 
     # The other insert either committed before this one's uniqueness check, or after it.

@@ -101,25 +101,34 @@ RSpec.describe UserDevices::RegisterService do
   end
 
   context "when another sign-in from the same browser inserts the device first" do
+    # Run as in a request, whose executor caches reads until a write through Active Record.
+    subject(:result) { ActiveRecord::Base.cache { described_class.call(user:, skip_log:) } }
+
     let(:fingerprint) { Digest::SHA256.hexdigest(device_info[:user_agent]) }
-    let(:devices) { user.user_devices }
-    let(:device) { UserDevice.new(user:, fingerprint:) }
-    let(:concurrent_device) { create(:user_device, user:, fingerprint:, last_logged_at: 1.day.ago) }
+    let(:passes_validation) { false }
+    let(:concurrent_device) { UserDevice.uncached { UserDevice.find_by!(user:, fingerprint:) } }
 
     before do
       freeze_time
-      # The lookup runs before the other request commits, so it builds a device that is refused.
-      allow(user).to receive(:user_devices).and_return(devices)
-      allow(devices).to receive(:find_or_initialize_by).and_return(device)
-      concurrent_device
+      # The other request commits right after this one's lookup: inserted over the raw connection, as another
+      # connection would, so the cached lookup still answers that there is no device.
+      allow(user.user_devices).to receive(:find_or_initialize_by).and_wrap_original do |original, *args|
+        original.call(*args).tap do |device|
+          ApplicationRecord.connection.raw_connection.exec_params(
+            "INSERT INTO user_devices (id, user_id, fingerprint, last_logged_at, created_at, updated_at) " \
+            "VALUES (gen_random_uuid(), $1, $2, $3, $3, $3)",
+            [user.id, fingerprint, 1.day.ago.iso8601(6)]
+          )
+          allow(device).to receive(:valid?).and_return(true) if passes_validation
+        end
+      end
     end
 
     shared_examples "a device registered by the other sign-in" do
       it "updates the device the other sign-in created" do
-        expect { result }.not_to change(UserDevice, :count)
-
         expect(result).to be_success
-        expect(concurrent_device.reload).to have_attributes(last_logged_at: Time.current, browser: "Chrome 120", last_ip_address: "192.168.1.1")
+        expect(UserDevice.where(user:).count).to eq(1)
+        expect(concurrent_device).to have_attributes(last_logged_at: Time.current, browser: "Chrome 120", last_ip_address: "192.168.1.1")
       end
 
       it "does not log a new device" do
@@ -141,7 +150,7 @@ RSpec.describe UserDevices::RegisterService do
     end
 
     context "when both requests pass the uniqueness validation" do
-      before { allow(device).to receive(:valid?).and_return(true) }
+      let(:passes_validation) { true }
 
       it_behaves_like "a device registered by the other sign-in"
     end
