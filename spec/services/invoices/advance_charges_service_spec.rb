@@ -453,6 +453,35 @@ RSpec.describe Invoices::AdvanceChargesService do
             .to change { Invoice.where(invoice_type: :advance_charges).count }.by(2)
         end
       end
+
+      context "when the subscriptions carry the same payment term instead" do
+        before do
+          subscription.update!(purchase_order_number: nil, payment_term: {"term_type" => "net", "days" => 30})
+          subscription_2.update!(purchase_order_number: nil, payment_term: {"term_type" => "net", "days" => 30})
+        end
+
+        it "creates a single advance-charges invoice with that payment term" do
+          expect { invoice_service.call }
+            .to change { Invoice.where(invoice_type: :advance_charges).count }.by(1)
+
+          invoice = Invoice.find_by!(invoice_type: :advance_charges)
+          expect(invoice.payment_term).to eq({"term_type" => "net", "days" => 30})
+          expect(invoice.payment_term_source).to eq("subscription")
+          expect(invoice.fees.pluck(:subscription_id)).to match_array([subscription.id, subscription_2.id])
+        end
+
+        context "when the customer has another payment term" do
+          before { customer.update!(payment_term: {"term_type" => "end_of_month"}) }
+
+          it "snapshots the subscriptions' term instead of the customer's" do
+            invoice_service.call
+
+            invoice = Invoice.find_by!(invoice_type: :advance_charges)
+            expect(invoice.payment_term).to eq({"term_type" => "net", "days" => 30})
+            expect(invoice.payment_term_source).to eq("subscription")
+          end
+        end
+      end
     end
 
     context "when re-expanded subscriptions belong to different billing entities" do
@@ -509,6 +538,27 @@ RSpec.describe Invoices::AdvanceChargesService do
 
         invoices = Invoice.where(invoice_type: :advance_charges)
         expect(invoices.map(&:billing_entity)).to match_array([customer.billing_entity, other_billing_entity])
+      end
+
+      context "when only the billing entities have a payment term" do
+        before do
+          customer.billing_entity.update!(payment_term: {"term_type" => "net", "days" => 30})
+          other_billing_entity.update!(payment_term: {"term_type" => "end_of_month"})
+        end
+
+        it "snapshots the term of the billing entity issuing each invoice" do
+          invoice_service.call
+
+          invoices = Invoice.where(invoice_type: :advance_charges)
+          expect(invoices.find_by!(billing_entity: customer.billing_entity)).to have_attributes(
+            payment_term: {"term_type" => "net", "days" => 30},
+            payment_term_source: "billing_entity"
+          )
+          expect(invoices.find_by!(billing_entity: other_billing_entity)).to have_attributes(
+            payment_term: {"term_type" => "end_of_month"},
+            payment_term_source: "billing_entity"
+          )
+        end
       end
     end
 
