@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Wallets::UpdateService do
   subject(:result) { described_class.call(wallet:, params:) }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
   let(:customer) { create_default(:customer, organization:) }
   let(:subscription) { create_default(:subscription, customer:) }
@@ -30,7 +30,6 @@ RSpec.describe Wallets::UpdateService do
         priority:,
         expiration_at:,
         invoice_requires_successful_payment: true,
-        invoice_usage_on_expiration: true,
         paid_top_up_min_amount_cents: 1_00,
         paid_top_up_max_amount_cents: 1_000_00
       }
@@ -42,7 +41,6 @@ RSpec.describe Wallets::UpdateService do
       expect(result.wallet.name).to eq("new name")
       expect(result.wallet.expiration_at.iso8601).to eq(expiration_at)
       expect(result.wallet.invoice_requires_successful_payment).to eq(true)
-      expect(result.wallet.invoice_usage_on_expiration).to eq(true)
       expect(result.wallet.priority).to eq(priority)
       expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
       expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
@@ -261,6 +259,27 @@ RSpec.describe Wallets::UpdateService do
 
         expect(wallet.reload.name).not_to eq("new name")
         expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
+    context "with invoice_usage_on_expiration" do
+      let(:params) { {id: wallet.id, invoice_usage_on_expiration: true} }
+      let(:feature_flag_enabled) { true }
+
+      before { organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration) if feature_flag_enabled }
+
+      it "follows the value" do
+        expect(result).to be_success
+        expect(result.wallet.invoice_usage_on_expiration).to eq(true)
+      end
+
+      context "when the feature flag is disabled" do
+        let(:feature_flag_enabled) { false }
+
+        it "returns a forbidden failure" do
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(wallet.reload.invoice_usage_on_expiration).to eq(false)
+        end
       end
     end
 

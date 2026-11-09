@@ -356,9 +356,23 @@ RSpec.describe Wallets::CreateService do
         }
       end
 
+      let(:feature_flag_enabled) { true }
+
+      before { organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration) if feature_flag_enabled }
+
       it "follows the value" do
         expect(service_result).to be_success
         expect(service_result.wallet.invoice_usage_on_expiration).to eq(true)
+      end
+
+      context "when the feature flag is disabled" do
+        let(:feature_flag_enabled) { false }
+
+        it "returns a forbidden failure" do
+          expect { service_result }.not_to change(Wallet, :count)
+
+          expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
+        end
       end
     end
 
