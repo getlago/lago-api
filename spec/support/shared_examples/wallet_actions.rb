@@ -24,6 +24,8 @@ RSpec.shared_examples "a wallet create endpoint" do
     }
   end
 
+  before { organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration) }
+
   include_examples "requires API permission", "wallet", "write"
 
   it "creates a wallet" do
@@ -936,7 +938,10 @@ RSpec.shared_examples "a wallet update endpoint" do
     }
   end
 
-  before { wallet }
+  before do
+    wallet
+    organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration)
+  end
 
   include_examples "requires API permission", "wallet", "write"
 
