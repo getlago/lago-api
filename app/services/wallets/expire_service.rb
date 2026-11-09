@@ -15,8 +15,11 @@ module Wallets
         subscriptions.find_each { |subscription| invoice_usage(subscription) }
       end
 
-      # Applying the wallet credits updates its row, which bumps lock_version.
-      Wallets::TerminateService.call!(wallet: wallet.reload)
+      # A failed expiration invoice spends the wallet when it is retried, so the wallet stays active until then.
+      unless expiration_invoice_failed?
+        # Applying the wallet credits updates its row, which bumps lock_version.
+        Wallets::TerminateService.call!(wallet: wallet.reload)
+      end
 
       result.wallet = wallet
       result
@@ -25,6 +28,13 @@ module Wallets
     private
 
     attr_reader :wallet
+
+    def expiration_invoice_failed?
+      wallet.organization.invoices.failed
+        .joins(:applied_wallet_expiration)
+        .where(applied_wallet_expirations: {wallet_id: wallet.id})
+        .exists?
+    end
 
     def subscriptions
       wallet.customer.subscriptions.active.joins(:plan).where(plans: {amount_currency: wallet.currency})
