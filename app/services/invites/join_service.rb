@@ -18,8 +18,9 @@ module Invites
       return result.not_found_failure!(resource: "invite") unless invite
       return result.not_found_failure!(resource: "user") unless user
 
-      # NOTE: Emails are saved with the case the user typed, so compare them ignoring case and Unicode spelling.
-      unless User.email_lookup_key(invite.email).casecmp?(User.email_lookup_key(user.email))
+      # NOTE: Emails are saved with the case the user typed, so compare their lookup keys, which ignore case and Unicode
+      # spelling.
+      unless User.email_lookup_key(invite.email) == User.email_lookup_key(user.email)
         return result.single_validation_failure!(field: :email, error_code: "invite_email_mistmatch")
       end
 
