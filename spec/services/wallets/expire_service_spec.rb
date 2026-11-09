@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Wallets::ExpireService, transaction: false do
+RSpec.describe Wallets::ExpireService, :premium, transaction: false do
   subject(:result) { described_class.call(wallet:) }
 
   let(:organization) { create(:organization, feature_flags:) }
@@ -67,6 +67,15 @@ RSpec.describe Wallets::ExpireService, transaction: false do
   context "when the feature flag is disabled" do
     let(:feature_flags) { [] }
 
+    it "terminates the wallet without invoicing" do
+      expect(result).to be_success
+
+      expect(customer.invoices).to be_empty
+      expect(wallet.reload).to have_attributes(status: "terminated", balance_cents: 1000)
+    end
+  end
+
+  context "without a premium license", premium: false do
     it "terminates the wallet without invoicing" do
       expect(result).to be_success
 
