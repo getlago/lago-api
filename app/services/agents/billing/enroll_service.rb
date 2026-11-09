@@ -23,12 +23,21 @@ module Agents
           registration.lock!
 
           customer = registration.customer || create_customer
-          result.subscription = registration.subscription || create_subscription(customer)
-          if (result.subscription.plan.parent_id || result.subscription.plan_id) != plan.id
-            result.not_allowed_failure!(code: "already_enrolled").raise_if_error!
+          result.wallet = registration.wallet
+          if result.wallet && result.wallet.currency != plan.amount_currency
+            result.single_validation_failure!(field: :plan_code, error_code: "currencies_does_not_match").raise_if_error!
           end
 
-          result.wallet = registration.wallet || create_wallet(customer)
+          current = registration.subscription
+          if current && (current.plan.parent_id || current.plan_id) == plan.id
+            result.subscription = current
+          else
+            # A new subscription on the agent's external id, or Lago's plan change when one is active.
+            result.subscription = create_subscription(customer)
+            apply_topup_limits if result.wallet
+          end
+
+          result.wallet ||= create_wallet(customer)
         end
 
         result
@@ -72,6 +81,15 @@ module Agents
         else
           result.single_validation_failure!(error_code: "subscription_not_active").raise_if_error!
         end
+      end
+
+      # The wallet keeps its credits; its top-up limits follow the plan the agent moves to.
+      def apply_topup_limits
+        ::Wallets::UpdateService.call!(
+          wallet: result.wallet,
+          params: {paid_top_up_min_amount_cents: sold_plan["minimum_topup_cents"], paid_top_up_max_amount_cents: sold_plan["maximum_topup_cents"]}
+        )
+        result.wallet.reload
       end
 
       def create_wallet(customer)
