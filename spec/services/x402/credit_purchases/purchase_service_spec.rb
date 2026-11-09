@@ -4,6 +4,7 @@ require "rails_helper"
 
 describe X402::CreditPurchases::PurchaseService do
   include_context "with an x402 payment"
+  include SolanaTransactionBuilder
 
   describe "#call" do
     subject(:result) { described_class.call(organization:, params:) }
@@ -822,6 +823,378 @@ describe X402::CreditPurchases::PurchaseService do
       it "requests /settle once" do
         result
         expect(settle_request).to have_been_made.once
+      end
+    end
+
+    context "with an explicit settle mode" do
+      let(:params) { super().merge(mode: "settle") }
+
+      it "settles the purchase" do
+        expect(result.settlement.reload).to have_attributes(status: "settled", settled_by: "lago", transaction_hash: settled_hash)
+      end
+    end
+
+    context "with a null mode" do
+      let(:params) { super().merge(mode: nil) }
+
+      it "settles the purchase" do
+        expect(result.settlement.reload).to have_attributes(status: "settled", settled_by: "lago")
+      end
+    end
+
+    ["steal", 1, ["record"]].each do |unknown|
+      context "with the mode #{unknown.inspect}" do
+        let(:params) { super().merge(mode: unknown) }
+
+        it_behaves_like "a refusal before settle", {mode: ["invalid_value"]}
+
+        it "does not request /verify" do
+          result
+          expect(verify_request).not_to have_been_made
+        end
+      end
+    end
+
+    context "with a settle response in settle mode" do
+      let(:params) { super().merge(settle_response: {"success" => true}) }
+
+      it_behaves_like "a refusal before settle", {settle_response: ["not_allowed_in_settle_mode"]}
+    end
+
+    context "with a verify response in settle mode" do
+      let(:params) { super().merge(verify_response: {"isValid" => true}) }
+
+      it_behaves_like "a refusal before settle", {verify_response: ["not_allowed_in_settle_mode"]}
+    end
+
+    context "with the record mode" do
+      let(:gate_hash) { "0x#{"ef" * 32}" }
+      let(:settle_response) { {"success" => true, "transaction" => gate_hash, "network" => "eip155:84532", "payer" => payer_address} }
+      let(:params) { super().merge(mode: "record", settle_response:) }
+
+      shared_examples "a refused record" do |messages|
+        it_behaves_like "a refusal before settle", messages
+
+        it "calls no facilitator" do
+          result
+          expect(verify_request).not_to have_been_made
+        end
+      end
+
+      context "with a first purchase" do
+        it "records the gate's settlement" do
+          expect(result.settlement.reload).to have_attributes(status: "settled", settled_by: "merchant", transaction_hash: gate_hash, payer_address:)
+        end
+
+        it "is not a replay" do
+          expect(result.replayed).to be(false)
+        end
+
+        it "grants the credits" do
+          expect(result.settlement.wallet_transaction.wallet.reload).to have_attributes(code: "agent_credits", balance_cents: 1000, credits_balance: BigDecimal("10000"))
+        end
+
+        it "opens the agent's subscription" do
+          expect(result.settlement.subscription).to have_attributes(plan:, external_id: "x402_#{payer_address}_agent_api")
+        end
+
+        it "stores the settings and the key's digest" do
+          expect(result.settlement.reload).to have_attributes(purchase_settings: stored_settings, request_key_digest: OpenSSL::Digest::SHA256.hexdigest(idempotency_key))
+        end
+
+        it "calls no facilitator" do
+          result
+          expect(verify_request).not_to have_been_made
+          expect(settle_request).not_to have_been_made
+        end
+
+        it "logs no refusal" do
+          result
+          expect(Rails.logger).not_to have_received(:warn)
+        end
+      end
+
+      context "when the purchase is billed" do
+        let(:invoice) { result.settlement.wallet_transaction.reload.invoice }
+
+        before do
+          result
+          perform_all_enqueued_jobs(only: [BillPaidCreditJob, X402::CreditPurchases::CreatePaymentJob, Invoices::PrepaidCreditJob])
+        end
+
+        it "pays the credit invoice with one x402 payment" do
+          expect(invoice).to have_attributes(invoice_type: "credit", payment_status: "succeeded", total_paid_amount_cents: 1000)
+          expect(invoice.payments.sole).to have_attributes(payment_type: "x402", amount_cents: 1000)
+          expect(result.settlement.reload.payment).to eq(invoice.payments.sole)
+        end
+
+        it "grants the credits once" do
+          expect(result.settlement.wallet_transaction.wallet.reload).to have_attributes(balance_cents: 1000, credits_balance: BigDecimal("10000"))
+          expect(WalletTransaction.count).to eq(1)
+        end
+      end
+
+      context "with the gate's verify answer" do
+        let(:params) { super().merge(verify_response: {"isValid" => true, "payer" => payer_address}) }
+
+        it "keeps it with the settle response" do
+          expect(result.settlement.reload.payload).to include("verify_response" => {"isValid" => true, "payer" => payer_address}, "settle_response" => settle_response)
+        end
+      end
+
+      context "with a maxTimeoutSeconds of 300" do
+        let(:payment_requirements) { x402_evm_requirements.merge("maxTimeoutSeconds" => 300) }
+
+        it "records the purchase" do
+          expect(result.settlement.reload).to have_attributes(status: "settled", settled_by: "merchant")
+        end
+      end
+
+      context "with another purchase of the payer pending" do
+        before { create(:x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:) }
+
+        it "records the purchase" do
+          expect(result.settlement.reload).to have_attributes(status: "settled", settled_by: "merchant")
+        end
+
+        it "grants the credits" do
+          expect(result.settlement.wallet_transaction).to be_present
+        end
+      end
+
+      context "without a settle response" do
+        let(:params) { super().except(:settle_response) }
+
+        it_behaves_like "a refused record", {settle_response: ["value_is_mandatory"]}
+      end
+
+      context "with a settle response that is not an object" do
+        let(:settle_response) { "settled" }
+
+        it_behaves_like "a refused record", {settle_response: ["invalid_settle_response"]}
+      end
+
+      context "with a verify answer that is not an object" do
+        let(:params) { super().merge(verify_response: "valid") }
+
+        it_behaves_like "a refused record", {verify_response: ["invalid_verify_response"]}
+      end
+
+      context "with an unsuccessful settle" do
+        let(:settle_response) { {"success" => false, "errorReason" => "insufficient_funds", "network" => "eip155:84532", "transaction" => ""} }
+
+        it_behaves_like "a refused record", {settle_response: ["settle_not_successful"]}
+
+        it "logs the refusal" do
+          result
+          expect(Rails.logger).to have_received(:warn)
+            .with("X402::CreditPurchases::PurchaseService call failed mode=record field=settle_response reason=settle_not_successful network=eip155:84532").once
+        end
+      end
+
+      context "with a settle response for another payer" do
+        let(:settle_response) { super().merge("payer" => "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed") }
+
+        it_behaves_like "a refused record", {settle_response: ["does_not_match_payment"]}
+      end
+
+      context "with an authorization value other than the amount" do
+        let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "10000001"}}) }
+
+        it_behaves_like "a refused record", {payment: ["amount_mismatch"]}
+      end
+
+      context "with an unknown connection" do
+        let(:params) { super().merge(connection_code: "unknown") }
+
+        it "fails with not found" do
+          expect(result.error.error_code).to eq("connection_not_found")
+        end
+
+        it "logs the refusal" do
+          result
+          expect(Rails.logger).to have_received(:warn)
+            .with("X402::CreditPurchases::PurchaseService call failed mode=record field=base reason=connection_not_found network=eip155:84532")
+        end
+      end
+
+      context "with an unknown payer and customer creation off" do
+        let(:x402_connection) do
+          create(
+            :x402_connection,
+            organization:,
+            networks: ["eip155:84532"],
+            payout_addresses: {"evm" => "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5"},
+            auto_create_customers: false,
+            cdp_api_key_id:,
+            cdp_api_key_secret:
+          )
+        end
+
+        it_behaves_like "a refused record", {base: ["buyer_not_recognized"]}
+      end
+
+      context "with an amount above the wallet shape's maximum" do
+        let(:wallet_shape) { super().merge("paid_top_up_max_amount_cents" => "500") }
+
+        it_behaves_like "a refused record", {payment_requirements: ["amount_above_maximum"]}
+      end
+
+      context "with a testnet connection on an organization running on mainnet" do
+        let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+        let(:x402_connection) do
+          create(
+            :x402_connection,
+            :saved_before_switch,
+            organization:,
+            networks: ["eip155:84532"],
+            payout_addresses: {"evm" => "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5"},
+            cdp_api_key_id:,
+            cdp_api_key_secret:
+          )
+        end
+
+        it_behaves_like "a refused record", {connection_code: ["environment_not_enabled"]}
+      end
+
+      context "with another payment holding the gate's transaction" do
+        before { create(:x402_settlement, organization:, x402_connection:, payee_address:, transaction_hash: gate_hash) }
+
+        it_behaves_like "a refused record", {settle_response: ["transaction_already_recorded"]}
+      end
+
+      context "with an invoice payment holding the payment" do
+        before { create(:x402_settlement, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest) }
+
+        it_behaves_like "a replay refusal"
+      end
+
+      context "with a pending settlement of this request holding the payment" do
+        let!(:settlement) do
+          create(
+            :x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+            purchase_settings: stored_settings, request_key: idempotency_key
+          )
+        end
+
+        it "answers the pending row" do
+          expect(result.settlement).to have_attributes(id: settlement.id, status: "pending")
+        end
+
+        it "is a replay" do
+          expect(result.replayed).to be(true)
+        end
+      end
+
+      context "when the record is resent" do
+        let!(:recorded) { described_class.call(organization:, params:).settlement }
+
+        it "answers from the row" do
+          expect(result.settlement).to eq(recorded)
+        end
+
+        it "is a replay" do
+          expect(result.replayed).to be(true)
+        end
+
+        it "grants once" do
+          result
+          expect(WalletTransaction.count).to eq(1)
+        end
+
+        context "when resent in settle mode" do
+          subject(:result) { described_class.call(organization:, params: params.except(:mode, :settle_response)) }
+
+          it "answers from the row" do
+            expect(result.settlement).to eq(recorded)
+          end
+
+          it "is a replay" do
+            expect(result.replayed).to be(true)
+          end
+
+          it "calls no facilitator" do
+            result
+            expect(verify_request).not_to have_been_made
+          end
+        end
+
+        context "when resent under another key" do
+          subject(:result) { described_class.call(organization:, params: params.merge(idempotency_key: other_key)) }
+
+          it_behaves_like "a replay refusal"
+        end
+      end
+
+      context "with the same payment recorded while this one is checked" do
+        let(:winner_hash) { gate_hash }
+
+        before do
+          allow(X402::Settlements::VerifyService).to receive(:call).and_wrap_original do |original, **arguments|
+            original.call(**arguments).tap do
+              create(
+                :x402_settlement, :merchant, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+                purchase_settings: stored_settings, request_key: idempotency_key, transaction_hash: winner_hash
+              )
+            end
+          end
+        end
+
+        it "answers the winner's row" do
+          expect(result.settlement).to have_attributes(payment_digest: digest, transaction_hash: winner_hash)
+        end
+
+        it "is a replay" do
+          expect(result.replayed).to be(true)
+        end
+
+        it "writes no second row" do
+          expect { result }.to change(X402::Settlement, :count).by(1)
+        end
+
+        context "with the winner holding another transaction" do
+          let(:winner_hash) { "0x#{"12" * 32}" }
+
+          it "answers the winner's row" do
+            expect(result.settlement).to have_attributes(payment_digest: digest, transaction_hash: winner_hash)
+          end
+
+          it "is a replay" do
+            expect(result.replayed).to be(true)
+          end
+        end
+      end
+
+      context "with a Solana payment" do
+        let(:solana_transaction) do
+          build_solana_transaction(
+            keys: [
+              "D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM", x402_svm_payer, "6TWy94HPrwQxtNBjPAzJUBizBUmmtd1Q6bh9TUwa21S5",
+              "H6KPkFCgvBzk6uCcD3VmQKZdp2BTkcoCctcgziSLeSpL", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", SolanaTransactionBuilder::TOKEN_PROGRAM
+            ],
+            instructions: [{program: 5, accounts: [2, 4, 3, 1], data: transfer_checked_data(10_000_000)}],
+            signatures: ["\x00".b * 64, "\x02".b * 64]
+          )
+        end
+        let(:x402_svm_requirements) { super().merge("amount" => "10000000") }
+        let(:payment) { x402_svm_payment.deep_merge("payload" => {"transaction" => Base64.strict_encode64(solana_transaction)}) }
+        let(:payment_requirements) { x402_svm_requirements }
+        let(:signature) { X402::Base58.encode("\x01".b * 64) }
+        let(:settle_response) { {"success" => true, "transaction" => signature, "network" => x402_svm_requirements["network"]} }
+
+        it "records the gate's settlement" do
+          expect(result.settlement.reload).to have_attributes(status: "settled", settled_by: "merchant", transaction_hash: signature, payer_address: x402_svm_payer)
+        end
+
+        it "grants the payer the transaction carries" do
+          expect(result.settlement.customer).to have_attributes(x402_agent_address: x402_svm_payer)
+        end
+
+        context "with a settle response for another payer" do
+          let(:settle_response) { super().merge("payer" => "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG") }
+
+          it_behaves_like "a refused record", {settle_response: ["does_not_match_payment"]}
+        end
       end
     end
   end

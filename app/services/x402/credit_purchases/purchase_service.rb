@@ -5,8 +5,9 @@ module X402
     class PurchaseService < BaseService
       Result = BaseResult[:settlement, :replayed]
 
-      RACE_CODES = %w[payment_already_recorded credit_purchase_pending].freeze
+      RACE_CODES = %w[payment_already_recorded credit_purchase_pending transaction_already_recorded].freeze
       IDEMPOTENCY_KEY = /\A[\x20-\x7E]{16,128}\z/
+      MODES = %w[settle record].freeze
 
       def initialize(organization:, params:)
         @organization = organization
@@ -16,7 +17,21 @@ module X402
       end
 
       def call
+        purchase
+        log_record_refusals if record? && result.failure?
+        result
+      end
+
+      private
+
+      attr_reader :organization, :params
+
+      def purchase
         return refuse(:idempotency_key, "invalid_value") unless valid_idempotency_key?
+        return refuse(:mode, "invalid_value") unless MODES.include?(mode)
+
+        mode_failure = mode_fields_failure
+        return refuse(*mode_failure) if mode_failure
         return refuse(:payment, "invalid_payment") unless payment.is_a?(Hash)
         return refuse(:payment_requirements, "invalid_payment_requirements") unless payment_requirements.is_a?(Hash)
 
@@ -35,16 +50,14 @@ module X402
         return result unless verified_payment
 
         checks = ValidateService.call(connection:, params:, verified_payment:)
-        if checks.success?
-          settle(verified_payment)
-        else
+        if checks.failure?
           result.fail_with_error!(checks.error)
+        elsif record?
+          record(verified_payment)
+        else
+          settle(verified_payment)
         end
       end
-
-      private
-
-      attr_reader :organization, :params
 
       def connection
         @connection ||= organization.x402_connections.find_by(code: params[:connection_code])
@@ -64,6 +77,36 @@ module X402
 
       def idempotency_key
         params[:idempotency_key]
+      end
+
+      def mode
+        params[:mode].nil? ? "settle" : params[:mode]
+      end
+
+      def record?
+        mode == "record"
+      end
+
+      def settle_response
+        params[:settle_response]
+      end
+
+      def verify_response
+        params[:verify_response]
+      end
+
+      def mode_fields_failure
+        if record? && settle_response.nil?
+          [:settle_response, "value_is_mandatory"]
+        elsif record? && !settle_response.is_a?(Hash)
+          [:settle_response, "invalid_settle_response"]
+        elsif record? && !verify_response.nil? && !verify_response.is_a?(Hash)
+          [:verify_response, "invalid_verify_response"]
+        elsif !record? && !settle_response.nil?
+          [:settle_response, "not_allowed_in_settle_mode"]
+        elsif !record? && !verify_response.nil?
+          [:verify_response, "not_allowed_in_settle_mode"]
+        end
       end
 
       def valid_idempotency_key?
@@ -91,7 +134,7 @@ module X402
       end
 
       def verify
-        verification = X402::Settlements::VerifyService.call(connection:, payment:, payment_requirements:)
+        verification = X402::Settlements::VerifyService.call(connection:, payment:, payment_requirements:, settle_response:, verify_response:)
 
         if verification.success?
           verification.verified_payment
@@ -114,6 +157,16 @@ module X402
           grant(settlement, replayed: false)
         else
           answer(settlement, replayed: false)
+        end
+      end
+
+      def record(verified_payment)
+        record_result = RecordService.call(verified_payment:, settle_response:, purchase_settings:, request_key_digest:)
+
+        if record_result.success?
+          grant(record_result.settlement, replayed: false)
+        else
+          answer_lost_race(record_result.error, verified_payment.payment_digest)
         end
       end
 
@@ -150,7 +203,7 @@ module X402
       end
 
       def lost_race?(error)
-        error.is_a?(BaseService::ValidationFailure) && RACE_CODES.include?(error.messages[:base]&.first)
+        error.is_a?(BaseService::ValidationFailure) && error.messages.values.flatten.intersect?(RACE_CODES)
       end
 
       def flip(settlement, transaction_hash)
@@ -187,6 +240,20 @@ module X402
 
       def refuse(field, code)
         result.single_validation_failure!(error_code: code, field:)
+      end
+
+      def log_record_refusals
+        error = result.error
+        refusals = if error.is_a?(BaseService::ValidationFailure)
+          error.messages.flat_map { |field, codes| codes.map { |code| [field, code] } }
+        else
+          [[:base, error.message]]
+        end
+        network = payment_payload.network if X402::Network::NETWORKS.key?(payment_payload.network)
+
+        refusals.each do |field, code|
+          Rails.logger.warn("#{self.class.name} call failed mode=record field=#{field} reason=#{code}#{" network=#{network}" if network}")
+        end
       end
     end
   end
