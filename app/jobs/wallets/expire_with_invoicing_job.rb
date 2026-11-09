@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Wallets
-  class ExpireJob < ApplicationJob
+  class ExpireWithInvoicingJob < ApplicationJob
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_BILLING"])
         :billing
@@ -15,7 +15,7 @@ module Wallets
     unique :until_executed, on_conflict: :log
 
     def perform(wallet)
-      Wallets::ExpireService.call!(wallet:)
+      Wallets::ExpireWithInvoicingService.call!(wallet:)
     end
   end
 end

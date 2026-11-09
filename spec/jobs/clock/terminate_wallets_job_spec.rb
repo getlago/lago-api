@@ -57,7 +57,7 @@ describe Clock::TerminateWalletsJob, job: true do
     it "enqueues its expiration instead of terminating it inline" do
       described_class.perform_now
 
-      expect(Wallets::ExpireJob).to have_been_enqueued.with(to_expire_wallet)
+      expect(Wallets::ExpireWithInvoicingJob).to have_been_enqueued.with(to_expire_wallet)
       expect(to_expire_wallet.reload.status).to eq("active")
     end
 
@@ -67,7 +67,7 @@ describe Clock::TerminateWalletsJob, job: true do
       it "terminates it inline" do
         described_class.perform_now
 
-        expect(Wallets::ExpireJob).not_to have_been_enqueued
+        expect(Wallets::ExpireWithInvoicingJob).not_to have_been_enqueued
         expect(to_expire_wallet.reload.status).to eq("terminated")
       end
     end
@@ -76,7 +76,7 @@ describe Clock::TerminateWalletsJob, job: true do
       it "terminates it inline" do
         described_class.perform_now
 
-        expect(Wallets::ExpireJob).not_to have_been_enqueued
+        expect(Wallets::ExpireWithInvoicingJob).not_to have_been_enqueued
         expect(to_expire_wallet.reload.status).to eq("terminated")
       end
     end
