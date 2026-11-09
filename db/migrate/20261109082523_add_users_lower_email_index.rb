@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Every lookup of a user by email (password and SSO logins, invites, password resets, signups)
-# compares LOWER(email), which no index served: each public request scanned the users table.
+# The case-insensitive lookups of a user by email (the fallback of password and SSO logins, invites,
+# password resets, signups) compare LOWER(email), which no index served: each scanned the users table.
 class AddUsersLowerEmailIndex < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
