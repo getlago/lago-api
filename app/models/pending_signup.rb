@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# One Step 1 attempt of the self-serve signup, written before any organization exists. Nothing else is created until
-# a link of this attempt is confirmed with this attempt's own proof: its signup secret or its password.
+# One Step 1 attempt of the self-serve signup. Only Signups::ConfirmService, given this attempt's own proof, writes
+# verified_at and user_id, which make its signup secret exchangeable for a session.
 class PendingSignup < ApplicationRecord
   RESEND_WINDOW = 24.hours
   MAX_EMAILS_PER_ATTEMPT = 3
@@ -11,6 +11,7 @@ class PendingSignup < ApplicationRecord
   # 24 h of sends, 24 h for the last link, then a week in which an old link still answers "expired".
   RETENTION = 9.days
   SECRET_FORMAT = /\A[A-Za-z0-9_-]{43}\z/
+  SECRET_EXCHANGE_WINDOW = 1.hour
 
   has_secure_password validations: false
 
@@ -64,6 +65,16 @@ class PendingSignup < ApplicationRecord
     elsif sends.last&.after?(now - MIN_EMAIL_INTERVAL)
       :too_soon
     end
+  end
+
+  def signup_secret_matches?(secret)
+    SECRET_FORMAT.match?(secret.to_s) &&
+      ActiveSupport::SecurityUtils.secure_compare(signup_secret_digest, self.class.digest_signup_secret(secret))
+  end
+
+  # Matches the LOWER(email) user lookups, so a case variant counts as the same account.
+  def email_registered?
+    User.where("LOWER(email) = ?", normalized_email).exists?
   end
 
   def verified?

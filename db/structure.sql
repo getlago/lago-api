@@ -470,6 +470,8 @@ DROP INDEX IF EXISTS public.index_wallet_targets_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
+DROP INDEX IF EXISTS public.index_users_on_lower_email;
+DROP INDEX IF EXISTS public.index_users_on_email;
 DROP INDEX IF EXISTS public.index_user_devices_on_user_id_and_fingerprint;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
@@ -6332,7 +6334,8 @@ CREATE TABLE public.users (
     password_digest character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    cs_admin boolean DEFAULT false NOT NULL
+    cs_admin boolean DEFAULT false NOT NULL,
+    self_serve_verified_at timestamp(6) without time zone
 );
 
 
@@ -12591,6 +12594,20 @@ CREATE UNIQUE INDEX index_user_devices_on_user_id_and_fingerprint ON public.user
 
 
 --
+-- Name: index_users_on_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_users_on_email ON public.users USING btree (email);
+
+
+--
+-- Name: index_users_on_lower_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_users_on_lower_email ON public.users USING btree (lower((email)::text));
+
+
+--
 -- Name: index_versions_on_item_type_and_item_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16185,6 +16202,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261109122133'),
+('20261109082523'),
+('20261104134700'),
 ('20261104133620'),
 ('20261103084714'),
 ('20261103084708'),

@@ -68,6 +68,30 @@ RSpec.describe PendingSignup do
     end
   end
 
+  describe "#signup_secret_matches?" do
+    let(:signup_secret) { described_class.generate_signup_secret }
+    let(:record) { create(:pending_signup, signup_secret:) }
+
+    it "matches only the attempt's own secret" do
+      expect(record.signup_secret_matches?(signup_secret)).to be(true)
+      expect(record.signup_secret_matches?(described_class.generate_signup_secret)).to be(false)
+      expect(record.signup_secret_matches?(nil)).to be(false)
+      expect(record.signup_secret_matches?("not-a-secret")).to be(false)
+    end
+  end
+
+  describe "#email_registered?" do
+    let(:record) { create(:pending_signup, email: "jane@getlago.com") }
+
+    it "is true once a user exists for the address, whatever its case" do
+      expect(record.email_registered?).to be(false)
+
+      create(:user, email: "Jane@GetLago.com")
+
+      expect(record.email_registered?).to be(true)
+    end
+  end
+
   describe ".mailbox_send_refusal" do
     subject(:refusal) { described_class.mailbox_send_refusal("jane@acme.com", Time.current) }
 
