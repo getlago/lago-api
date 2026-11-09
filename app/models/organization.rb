@@ -211,6 +211,8 @@ class Organization < ApplicationRecord
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
+  # Declared, so the model loads in older migrations that run before the column exists.
+  attribute :environment, :string
   enum :environment, ENVIRONMENTS, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
