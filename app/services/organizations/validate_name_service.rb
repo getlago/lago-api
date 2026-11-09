@@ -47,8 +47,8 @@ module Organizations
     def normalize(value)
       value.to_s.scrub("")
         .gsub(INVISIBLE, "")
+        .gsub(/(?![[:space:]])\p{Cc}/, "")
         .gsub(/[[:space:]]+/, " ")
-        .gsub(/\p{Cc}/, "")
         .strip
     end
 
