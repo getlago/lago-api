@@ -119,6 +119,28 @@ RSpec.describe Signups::CreateWithGoogleService do
       expect(result.error.messages).to eq(google_oauth: ["login_method_not_authorized"])
     end
 
+    context "when Google did not verify the email" do
+      let(:claims) { {"email" => "jane@getlago.com", "email_verified" => false, "hd" => "getlago.com"} }
+
+      context "with an active member" do
+        let(:member) { create(:user, email: "jane@getlago.com") }
+
+        before { create(:membership, user: member) }
+
+        it "logs them in, as Google login does" do
+          expect(result.user).to eq(member)
+        end
+      end
+
+      context "with a self-serve user who still needs an organization" do
+        before { create(:user, :self_serve, email: "jane@getlago.com") }
+
+        it "answers user_does_not_exist, as Google login does" do
+          expect(code_for(result)).to eq(["user_does_not_exist"])
+        end
+      end
+    end
+
     it "refuses a revoked-only user and a legacy user without membership" do
       revoked = create(:user, email: "jane@getlago.com")
       create(:membership, :revoked, user: revoked)

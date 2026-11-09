@@ -21,8 +21,6 @@ module Signups
       return result.fail_with_error!(claims_result.error) unless claims_result.success?
 
       claims = claims_result.claims
-      return company_account_required unless ::Auth::GoogleLoginRules.email_verified?(claims)
-
       email = claims["email"].to_s
       user = Users::EmailLockService.call(email:) { find_or_create_user(claims, email) }.value
       return result unless user
@@ -54,7 +52,8 @@ module Signups
 
     def create_user(claims, email)
       validation = ValidateEmailService.call(email:)
-      unless workspace_account?(claims, validation)
+      # Only a new user needs Google's verification here: an existing one logs in under the Google login rules.
+      unless ::Auth::GoogleLoginRules.email_verified?(claims) && workspace_account?(claims, validation)
         company_account_required
         return
       end
