@@ -15,6 +15,7 @@ RSpec.describe Agents::Billing::PayService, :premium do
   before do
     storefront.update!(plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}])
     Agents::Billing::EnrollService.call!(storefront:, registration:, plan_code: plan.code)
+    storefront.stripe_provider.update!(seller_profile: "profile_test_123")
     allow(::Stripe::Customer).to receive(:create).and_return(::Stripe::Customer.construct_from(id: "cus_agent"))
   end
 
@@ -72,6 +73,17 @@ RSpec.describe Agents::Billing::PayService, :premium do
     end
   end
 
+  context "when the storefront's Stripe connection has no seller profile" do
+    before { storefront.stripe_provider.update!(seller_profile: nil) }
+
+    it "refuses before touching Stripe" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(base: ["payments_not_accepted"])
+      expect(::Stripe::Customer).not_to have_received(:create)
+      expect(registration.wallet.wallet_transactions).to be_empty
+    end
+  end
+
   context "when the registration is not enrolled" do
     subject(:result) { described_class.call(storefront:, registration: create(:agent_registration, storefront:), params:) }
 
@@ -84,16 +96,67 @@ RSpec.describe Agents::Billing::PayService, :premium do
   context "when Stripe refuses to create the customer" do
     before { allow(::Stripe::Customer).to receive(:create).and_raise(::Stripe::InvalidRequestError.new("error", nil)) }
 
-    it "creates no top-up and lets the same request be retried" do
+    it "creates no top-up" do
       expect(result).not_to be_success
       expect(result.error.messages).to eq(payment_method: ["stripe_customer_not_created"])
       expect(registration.wallet.wallet_transactions).to be_empty
+    end
 
-      allow(::Stripe::Customer).to receive(:create).and_return(::Stripe::Customer.construct_from(id: "cus_agent"))
+    context "when Stripe accepts the same request again" do
+      let(:refused) { described_class.call(storefront:, registration:, params:) }
 
-      retried = described_class.call(storefront:, registration:, params:)
-      expect(retried).to be_success
-      expect(customer.stripe_customer.provider_customer_id).to eq("cus_agent")
+      before do
+        refused
+        allow(::Stripe::Customer).to receive(:create).and_return(::Stripe::Customer.construct_from(id: "cus_agent"))
+      end
+
+      it "creates the customer and the top-up" do
+        expect(refused).not_to be_success
+        expect(result).to be_success
+        expect(customer.stripe_customer.provider_customer_id).to eq("cus_agent")
+      end
+    end
+  end
+
+  context "when the same token is sent twice at once", transaction: false do
+    it "pays once and answers the second request with the same top-up" do
+      registration
+      storefront.stripe_provider.update!(seller_profile: "profile_test_123")
+
+      # The first request pauses before creating the top-up, so the second runs while the first
+      # has not committed yet.
+      first_call = Queue.new
+      first_call << true
+      paused = Queue.new
+      resume = Queue.new
+      allow(WalletTransactions::CreateFromParamsService).to receive(:call).and_wrap_original do |original, **args|
+        if first_call.pop(timeout: 0)
+          paused << true
+          resume.pop
+        end
+
+        original.call(**args)
+      end
+
+      pay = lambda do
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(storefront: storefront.class.find(storefront.id), registration: registration.class.find(registration.id), params:)
+          end
+        end
+      end
+
+      first = pay.call
+      paused.pop
+      second = pay.call
+      sleep 0.5
+      resume << true
+
+      results = [first.value, second.value]
+
+      expect(results).to all(be_success)
+      expect(results.map(&:replayed)).to eq([false, true])
+      expect(registration.wallet.wallet_transactions.count).to eq(1)
     end
   end
 end
