@@ -27,12 +27,7 @@ module Mutations
         if result.success?
           {resend_available_in_seconds: result.resend_available_in_seconds, resend_limit_reached: result.resend_limit_reached}
         elsif result.error.is_a?(BaseService::MethodNotAllowedFailure) && RETRY_LATER_CODES.include?(result.error.code)
-          execution_error(
-            error: "Too Many Requests",
-            status: 429,
-            code: result.error.code,
-            details: {retry_after_seconds: result.retry_after_seconds}
-          )
+          too_many_attempts_error(code: result.error.code, details: {retry_after_seconds: result.retry_after_seconds})
         else
           result_error(result)
         end
