@@ -22,6 +22,7 @@ module Integrations
         integration.payment_provider_code = params[:payment_provider_code] if params.key?(:payment_provider_code)
         integration.resource_endpoint = params[:resource_endpoint] if params.key?(:resource_endpoint)
         integration.resource_instructions = params[:resource_instructions] if params.key?(:resource_instructions)
+        integration.plans = params[:plans] if params.key?(:plans)
 
         integration.save!
 

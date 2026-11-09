@@ -13,10 +13,22 @@ module Integrations
     def call
       return result.not_found_failure!(resource: "integration") unless integration
 
-      integration.destroy!
+      ActiveRecord::Base.transaction do
+        if integration.is_a?(Integrations::AgentStorefrontIntegration)
+          # Waits for the enrollments in progress, which lock the storefront for share.
+          integration.lock!
+          if integration.enrolled_agents?
+            result.not_allowed_failure!(code: "agent_storefront_has_enrolled_agents").raise_if_error!
+          end
+        end
+
+        integration.destroy!
+      end
 
       result.integration = integration
       register_security_log(integration)
+      result
+    rescue BaseService::FailedResult
       result
     end
 
