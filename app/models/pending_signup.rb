@@ -76,14 +76,6 @@ class PendingSignup < ApplicationRecord
     [refusal, next_send_at ? [(next_send_at - now).ceil, 0].max : 0]
   end
 
-  def self.mailbox_send_refusal(mailbox_key, now)
-    mailbox_send_state(mailbox_key, now).first
-  end
-
-  def self.seconds_until_mailbox_send(mailbox_key, now)
-    mailbox_send_state(mailbox_key, now).last
-  end
-
   def signup_secret_matches?(secret)
     SECRET_FORMAT.match?(secret.to_s) &&
       ActiveSupport::SecurityUtils.secure_compare(signup_secret_digest, self.class.digest_signup_secret(secret))
@@ -114,7 +106,7 @@ class PendingSignup < ApplicationRecord
   # including when the wait would end after the attempt's window. The attempt's own sends are among its mailbox's.
   def resend_available_in_seconds(now)
     if sending_open?(now)
-      delay = self.class.seconds_until_mailbox_send(mailbox_key, now)
+      _refusal, delay = self.class.mailbox_send_state(mailbox_key, now)
       delay if wait_ends_in_window?(now, delay)
     end
   end

@@ -92,25 +92,27 @@ RSpec.describe PendingSignup do
     end
   end
 
-  describe ".mailbox_send_refusal" do
-    subject(:refusal) { described_class.mailbox_send_refusal("jane@acme.com", Time.current) }
+  describe ".mailbox_send_state" do
+    subject(:state) { described_class.mailbox_send_state("jane@acme.com", now) }
+
+    let(:now) { Time.current }
 
     before { freeze_time }
 
-    it "is nil without sends" do
-      expect(refusal).to be_nil
+    it "has no refusal and no wait without sends" do
+      expect(state).to eq([nil, 0])
     end
 
     context "with a send 59 seconds ago" do
       before { create(:pending_signup, email: "jane@acme.com", emails_sent_at: [59.seconds.ago]) }
 
-      it { is_expected.to eq(:too_soon) }
+      it { is_expected.to eq([:too_soon, 1]) }
     end
 
     context "with a send exactly 60 seconds ago" do
       before { create(:pending_signup, email: "jane@acme.com", emails_sent_at: [60.seconds.ago]) }
 
-      it { is_expected.to be_nil }
+      it { is_expected.to eq([nil, 0]) }
     end
 
     context "with 3 sends in the hour, across attempts of +tags of the mailbox" do
@@ -119,27 +121,37 @@ RSpec.describe PendingSignup do
         create(:pending_signup, email: "jane+1@acme.com", emails_sent_at: [30.minutes.ago])
       end
 
-      it { is_expected.to eq(:limit_reached) }
+      # the oldest send, 50 minutes ago, leaves the hour in 10 minutes
+      it { is_expected.to eq([:limit_reached, 10 * 60]) }
 
       context "when the oldest send is exactly one hour old" do
         before { travel 10.minutes }
 
-        it { is_expected.to be_nil }
+        it { is_expected.to eq([nil, 0]) }
       end
     end
 
     context "with 3 sends, the last one within 60 seconds" do
       before { create(:pending_signup, email: "jane@acme.com", emails_sent_at: [20.minutes.ago, 10.minutes.ago, 10.seconds.ago]) }
 
-      it "reports the limit first" do
-        expect(refusal).to eq(:limit_reached)
-      end
+      # the limit comes first; the oldest send, 20 minutes ago, leaves the hour in 40 minutes
+      it { is_expected.to eq([:limit_reached, 40 * 60]) }
     end
 
     context "with sends of an attempt created more than 25 hours ago" do
       before { create(:pending_signup, email: "jane@acme.com", created_at: 26.hours.ago, emails_sent_at: [10.seconds.ago]) }
 
-      it { is_expected.to be_nil }
+      it { is_expected.to eq([nil, 0]) }
+    end
+
+    it "reads the sends once" do
+      create(:pending_signup, email: "jane@acme.com", emails_sent_at: [20.seconds.ago])
+      queries = 0
+      counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { state }
+
+      expect(queries).to eq(1)
     end
   end
 
@@ -180,33 +192,6 @@ RSpec.describe PendingSignup do
 
       expect([exhausted.resend_available_in_seconds(Time.current), exhausted.resend_limit_reached?]).to eq([nil, true])
       expect(expired.resend_available_in_seconds(Time.current)).to be_nil
-    end
-  end
-
-  describe ".mailbox_send_state" do
-    it "answers the refusal and the wait from one read of the sends" do
-      freeze_time
-      create(:pending_signup, email: "jane@acme.com", emails_sent_at: [20.seconds.ago])
-      queries = 0
-      counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
-
-      state = ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
-        described_class.mailbox_send_state("jane@acme.com", Time.current)
-      end
-
-      expect([state, queries]).to eq([[:too_soon, 40], 1])
-    end
-  end
-
-  describe ".seconds_until_mailbox_send" do
-    it "waits until the oldest of 3 sends leaves the hour" do
-      freeze_time
-      start = Time.current
-      create(:pending_signup, email: "jane@acme.com", emails_sent_at: [start, start + 61.seconds])
-      create(:pending_signup, email: "jane+x@acme.com", emails_sent_at: [start + 122.seconds])
-
-      expect(described_class.seconds_until_mailbox_send("jane@acme.com", start + 200.seconds)).to eq(3600 - 200)
-      expect(described_class.seconds_until_mailbox_send("jane@acme.com", start + 3600.seconds)).to eq(0)
     end
   end
 

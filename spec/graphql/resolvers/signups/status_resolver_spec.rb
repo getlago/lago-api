@@ -58,11 +58,14 @@ RSpec.describe Resolvers::Signups::StatusResolver do
       GQL
     end
 
-    before { allow(PendingSignup).to receive(:seconds_until_mailbox_send).and_call_original }
-
     it "runs no mailbox query" do
-      expect(result["data"]["signupStatus"]).to eq("status" => "pending")
-      expect(PendingSignup).not_to have_received(:seconds_until_mailbox_send)
+      statements = []
+      collect = ->(*, payload) { statements << payload[:sql] }
+
+      ActiveSupport::Notifications.subscribed(collect, "sql.active_record") do
+        expect(result["data"]["signupStatus"]).to eq("status" => "pending")
+      end
+      expect(statements.grep(/WHERE .*mailbox_key/)).to be_empty
     end
   end
 
