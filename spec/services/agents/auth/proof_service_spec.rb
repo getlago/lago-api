@@ -101,6 +101,27 @@ RSpec.describe Agents::Auth::ProofService, cache: :memory do
     end
   end
 
+  context "with a small-order key" do
+    # Plain OpenSSL accepts this signature under this key for any message.
+    let(:raw_public_key) { "\x01".b + ("\x00" * 31).b }
+    let(:public_key) { Base64.urlsafe_encode64(raw_public_key, padding: false) }
+    let(:signature) { Base64.urlsafe_encode64(raw_public_key + ("\x00" * 32).b, padding: false) }
+
+    it "refuses the signup" do
+      expect(result.error.message).to eq("invalid_proof")
+    end
+
+    context "with the authenticate purpose" do
+      let(:purpose) { "authenticate" }
+
+      before { registration }
+
+      it "refuses" do
+        expect(result.error.message).to eq("invalid_proof")
+      end
+    end
+  end
+
   context "with a malformed signature" do
     let(:signature) { "abc" }
 

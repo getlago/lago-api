@@ -59,9 +59,7 @@ module Agents
 
       def verified?(challenge, raw_signature)
         raw_public_key = ChallengeService.decode(challenge[:public_key], 32)
-        OpenSSL::PKey.new_raw_public_key("ED25519", raw_public_key).verify(nil, raw_signature, challenge[:message])
-      rescue OpenSSL::PKey::PKeyError
-        false
+        X402::Ed25519.verify?(public_key: raw_public_key, signature: raw_signature, message: challenge[:message])
       end
 
       def create_registration(challenge)
