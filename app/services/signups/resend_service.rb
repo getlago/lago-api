@@ -76,9 +76,8 @@ module Signups
       Auth::AttemptsThrottle.hit!(:signup_email_per_hour, mailbox_key)
     end
 
-    # A wait that ends after the attempt's window is never followed by a send, as resendAvailableInSeconds says.
     def retry_later(pending_signup, now, wait, code)
-      if now + wait < pending_signup.expires_at
+      if pending_signup.wait_ends_in_window?(now, wait)
         result.retry_after_seconds = wait
         result.not_allowed_failure!(code:)
       else

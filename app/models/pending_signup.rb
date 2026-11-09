@@ -115,8 +115,14 @@ class PendingSignup < ApplicationRecord
   def resend_available_in_seconds(now)
     if sending_open?(now)
       delay = self.class.seconds_until_mailbox_send(mailbox_key, now)
-      delay if now + delay < expires_at
+      delay if wait_ends_in_window?(now, delay)
     end
+  end
+
+  # A send allowed only after the attempt's window never happens: the 429's retryAfterSeconds and the status's
+  # resendAvailableInSeconds both read the attempt as exhausted then.
+  def wait_ends_in_window?(now, wait)
+    now + wait < expires_at
   end
 
   def resend_limit_reached?

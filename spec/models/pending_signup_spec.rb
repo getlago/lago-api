@@ -210,6 +210,26 @@ RSpec.describe PendingSignup do
     end
   end
 
+  describe "#wait_ends_in_window?" do
+    subject(:in_window) { pending_signup.wait_ends_in_window?(Time.current, wait) }
+
+    let(:pending_signup) { build(:pending_signup, expires_at: 10.minutes.from_now) }
+
+    before { freeze_time }
+
+    context "with a wait ending before the expiry" do
+      let(:wait) { 10.minutes.to_i - 1 }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with a wait ending at the expiry" do
+      let(:wait) { 10.minutes.to_i }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "#sending_open?" do
     it "closes after 3 emails or at the expiry" do
       freeze_time
