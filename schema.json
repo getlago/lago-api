@@ -2054,6 +2054,18 @@
               "deprecationReason": null
             },
             {
+              "name": "sellerProfile",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "successRedirectUrl",
               "description": null,
               "type": {
@@ -63591,6 +63603,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "shared_payment_token",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -80756,6 +80774,18 @@
               "deprecationReason": null
             },
             {
+              "name": "sellerProfile",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "successRedirectUrl",
               "description": null,
               "args": [],
@@ -84559,6 +84589,18 @@
               "deprecationReason": null
             },
             {
+              "name": "sellerProfile",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "successRedirectUrl",
               "description": null,
               "type": {
@@ -85438,6 +85480,18 @@
             },
             {
               "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "sellerProfile",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -87802,6 +87856,18 @@
               "deprecationReason": null
             },
             {
+              "name": "sellerProfile",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "successRedirectUrl",
               "description": null,
               "type": {
@@ -87902,6 +87968,18 @@
             },
             {
               "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "sellerProfile",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -88781,6 +88859,18 @@
             },
             {
               "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "sellerProfile",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -91456,6 +91546,18 @@
             },
             {
               "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "sellerProfile",
               "description": null,
               "type": {
                 "kind": "SCALAR",

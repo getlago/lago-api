@@ -11,6 +11,7 @@ module PaymentProviders
         def call
           return result if stripe_customer_id.nil?
           return handle_missing_customer unless stripe_customer
+          return result if stripe_customer.shared_payment_token_only?
           return result unless valid_payment_method?
 
           update_stripe_customer_default_payment_method

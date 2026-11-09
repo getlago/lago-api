@@ -84,6 +84,24 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer do
           end
         end
 
+        context "when provider_payment_methods contains 'shared_payment_token'" do
+          context "with other payment methods" do
+            let(:provider_payment_methods) { %w[shared_payment_token card] }
+
+            it "adds an error" do
+              expect(errors[:provider_payment_methods]).to include("shared_payment_token cannot be combined with other payment methods")
+            end
+          end
+
+          context "without other methods" do
+            let(:provider_payment_methods) { %w[shared_payment_token] }
+
+            it "does not add an error" do
+              expect(errors[:provider_payment_methods]).to be_empty
+            end
+          end
+        end
+
         context "when provider_payment_methods contains 'customer_balance'" do
           context "with other payment methods" do
             let(:provider_payment_methods) { %w[customer_balance card] }
