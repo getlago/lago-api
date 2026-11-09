@@ -54,8 +54,11 @@ module Signups
       # bcrypt ignores what follows 72 bytes, so such a password was never a Step 1 password.
       return incorrect_password if password.bytesize > ActiveModel::SecurePassword::MAX_PASSWORD_LENGTH_ALLOWED
       return refuse(token_record.reload) unless claim_password_try(token_record)
+      return incorrect_password unless pending_signup.authenticate(password)
 
-      incorrect_password unless pending_signup.authenticate(password)
+      # The tries limit wrong guesses only: a right password that then fails to open a session leaves the link
+      # retryable, also on its last try.
+      give_back_password_try(token_record)
     end
 
     # Counted before bcrypt and committed on its own, so a refused try stays counted, also when Redis is down.
@@ -66,6 +69,13 @@ module Signups
         .where(id: token_record.id, status: "pending")
         .where("failed_password_attempts < ? AND expires_at > ?", PendingSignupToken::MAX_PASSWORD_ATTEMPTS, now)
         .update_all(["failed_password_attempts = failed_password_attempts + 1, updated_at = ?", now]) == 1 # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    def give_back_password_try(token_record)
+      PendingSignupToken
+        .where(id: token_record.id)
+        .where("failed_password_attempts > 0")
+        .update_all(["failed_password_attempts = failed_password_attempts - 1, updated_at = ?", Time.current]) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def create_user(token_record, pending_signup, by_password:)

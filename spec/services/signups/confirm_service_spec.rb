@@ -93,7 +93,7 @@ RSpec.describe Signups::ConfirmService do
     4.times { described_class.call(token:, password: "Wrong-Passw0rd") }
 
     expect { described_class.call!(token:, password: step_one_password) }.to change(User, :count).by(1)
-    expect(token_record.reload).to have_attributes(status: "consumed", failed_password_attempts: 5)
+    expect(token_record.reload).to have_attributes(status: "consumed", failed_password_attempts: 4)
   end
 
   context "with a locked link" do
@@ -201,6 +201,20 @@ RSpec.describe Signups::ConfirmService do
       expect(pending_signup.reload).to have_attributes(verified_at: nil, user_id: nil)
 
       expect(described_class.call(token:, signup_secret:)).to be_success
+    end
+
+    context "with the right password on the last try" do
+      let(:signup_secret) { nil }
+      let(:password) { step_one_password }
+
+      before { 4.times { described_class.call(token:, password: "Wrong-Passw0rd") } }
+
+      it "keeps that try, so a retry with the password confirms the signup" do
+        expect { result }.to raise_error(ActiveRecord::ConnectionFailed)
+        expect(token_record.reload).to have_attributes(status: "pending", failed_password_attempts: 4)
+
+        expect(described_class.call(token:, password: step_one_password)).to be_success
+      end
     end
   end
 
