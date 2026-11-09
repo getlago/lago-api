@@ -2,7 +2,7 @@
 
 module Invoices
   module ProgressiveBilling
-    class WalletTerminationService < BaseService
+    class WalletExpirationService < BaseService
       def initialize(wallet:, subscription:, timestamp: Time.current)
         @wallet = wallet
         @subscription = subscription
