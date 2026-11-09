@@ -97,6 +97,20 @@ RSpec.describe Invoices::ProgressiveBilling::WalletTerminationService, transacti
     end
   end
 
+  context "when another wallet of the customer has a higher priority" do
+    let(:other_wallet) do
+      create(:wallet, :with_inbound_transaction, customer:, balance_cents: 1000, credits_balance: 10.0, priority: 1)
+    end
+
+    before { other_wallet }
+
+    it "pays with the expiring wallet first" do
+      expect(result.invoice.prepaid_credit_amount_cents).to eq(100)
+      expect(wallet.reload.balance_cents).to eq(900)
+      expect(other_wallet.reload.balance_cents).to eq(1000)
+    end
+  end
+
   context "when usage happened after the wallet expired" do
     let(:expiration_at) { timestamp - 30.minutes }
 
