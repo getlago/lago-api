@@ -73,8 +73,10 @@ module Signups
     end
 
     # A Workspace account (hd) on a company domain: a consumer Google account on a work address can outlive the job.
+    # Google sets hd only for addresses on a domain the Workspace verified, so its subdomains and secondary domains
+    # count too, and the address still has to pass the company domain policy.
     def workspace_account?(claims, validation)
-      validation.success? && claims["hd"].is_a?(String) && claims["hd"].casecmp?(validation.domain)
+      validation.success? && claims["hd"].is_a?(String) && claims["hd"].present?
     end
 
     def company_account_required

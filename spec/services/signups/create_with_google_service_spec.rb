@@ -50,6 +50,22 @@ RSpec.describe Signups::CreateWithGoogleService do
 
       expect(Users::EmailLockService).to have_received(:call).with(email: "jane@getlago.com")
     end
+
+    context "with an address on a subdomain of the Workspace domain" do
+      let(:claims) { {"email" => "jane@eu.getlago.com", "email_verified" => true, "hd" => "getlago.com"} }
+
+      it "creates the user" do
+        expect(result.user.email).to eq("jane@eu.getlago.com")
+      end
+    end
+
+    context "with an address on a secondary domain of the Workspace" do
+      let(:claims) { {"email" => "jane@lago.dev", "email_verified" => true, "hd" => "getlago.com"} }
+
+      it "creates the user" do
+        expect(result.user.email).to eq("jane@lago.dev")
+      end
+    end
   end
 
   describe "refusals" do
@@ -74,7 +90,7 @@ RSpec.describe Signups::CreateWithGoogleService do
         {"email" => "jane@getlago.com", "hd" => "getlago.com"},
         {"email" => "jane@gmail.com", "email_verified" => true},
         {"email" => "jane@getlago.com", "email_verified" => true},
-        {"email" => "jane@getlago.com", "email_verified" => true, "hd" => "other.com"},
+        {"email" => "jane@getlago.com", "email_verified" => true, "hd" => ""},
         {"email" => "jane@mailinator.com", "email_verified" => true, "hd" => "mailinator.com"}
       ].each do |account|
         allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(account)
