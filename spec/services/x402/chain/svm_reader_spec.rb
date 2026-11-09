@@ -84,6 +84,58 @@ describe X402::Chain::SvmReader do
     end
   end
 
+  describe "#transfer_amount" do
+    it "is the TransferChecked amount in atomic units" do
+      expect(reader.transfer_amount).to eq(1000)
+    end
+
+    it "makes no RPC call" do
+      reader.transfer_amount
+
+      expect(rpc_calls).to be_empty
+    end
+
+    context "when the TransferChecked data stops inside the amount" do
+      let(:signed_by_buyer) do
+        build_solana_transaction(
+          keys: ["D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM", buyer, SolanaTransactionBuilder::TOKEN_PROGRAM],
+          instructions: [{program: 2, accounts: [1, 1, 1, 1], data: [12, 1000].pack("CL<")}],
+          signatures: ["\x00".b * 64, "\x02".b * 64]
+        )
+      end
+
+      it "raises" do
+        expect { reader.transfer_amount }.to raise_error(X402::Chain::UnreadablePaymentError, /amount/)
+      end
+    end
+  end
+
+  describe "#mint" do
+    it "is the TransferChecked mint" do
+      expect(reader.mint).to eq("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
+    end
+
+    it "makes no RPC call" do
+      reader.mint
+
+      expect(rpc_calls).to be_empty
+    end
+
+    context "when the mint is outside the transaction's own keys" do
+      let(:signed_by_buyer) do
+        build_solana_transaction(
+          keys: ["D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM", buyer, SolanaTransactionBuilder::TOKEN_PROGRAM],
+          instructions: [{program: 2, accounts: [1, 9, 1, 1], data: transfer_checked_data(1000)}],
+          signatures: ["\x00".b * 64, "\x02".b * 64]
+        )
+      end
+
+      it "is unknown" do
+        expect(reader.mint).to be_nil
+      end
+    end
+  end
+
   context "when the buyer's transaction landed" do
     it "is settled" do
       expect(reader.settled?).to be(true)
