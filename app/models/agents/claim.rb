@@ -30,6 +30,13 @@ module Agents
       OpenSSL::Digest::SHA256.hexdigest(value)
     end
 
+    # The owner's mailbox, as the signup mails see it (a +tag alias is the same mailbox), under a key: an address has
+    # none of the entropy of a code, so a plain digest would give the owners away to anyone holding the table.
+    def self.mailbox_digest(email)
+      key = Rails.application.key_generator.generate_key("agents/claims/mailbox")
+      OpenSSL::HMAC.hexdigest("SHA256", key, Signups::ValidateEmailService.mailbox_key(email))
+    end
+
     # What the owner types: case and separators do not matter.
     def self.normalize_code(input)
       input.to_s.gsub(/[^A-Za-z0-9]/, "").upcase
@@ -71,6 +78,7 @@ end
 #  id                      :uuid             not null, primary key
 #  code_hash               :string           not null
 #  email                   :string
+#  email_hash              :string
 #  status                  :enum             default("issued"), not null
 #  verification_code_hash  :string
 #  verification_expires_at :datetime

@@ -9,7 +9,7 @@ module Integrations
 
     has_many :agent_registrations, class_name: "Agents::Registration", foreign_key: :integration_id, dependent: :delete_all
 
-    PLAN_KEYS = %w[plan_code minimum_topup_cents maximum_topup_cents].freeze
+    PLAN_KEYS = %w[plan_code minimum_topup_cents maximum_topup_cents free_credits_cents].freeze
     MAX_TOPUP_CENTS = 2**63 - 1
 
     settings_accessors :payment_provider_code, :resource_endpoint, :resource_instructions, :scope
@@ -64,7 +64,7 @@ module Integrations
     def validate_plans
       codes = plans.map { it["plan_code"] }
 
-      if codes.uniq.size != codes.size || !plans.all? { valid_topup_bounds?(it) }
+      if codes.uniq.size != codes.size || !plans.all? { valid_topup_bounds?(it) && valid_free_credits?(it) }
         errors.add(:plans, "value_is_invalid")
       elsif !(codes - plans_for_sale.pluck(:code)).empty?
         errors.add(:plans, "plan_not_found")
@@ -76,6 +76,13 @@ module Integrations
 
       [minimum, maximum].compact.all? { it.is_a?(Integer) && it.positive? && it <= MAX_TOPUP_CENTS } &&
         (minimum.nil? || maximum.nil? || maximum >= minimum)
+    end
+
+    # Zero keeps the key while offering nothing.
+    def valid_free_credits?(sold_plan)
+      amount = sold_plan["free_credits_cents"]
+
+      amount.nil? || (amount.is_a?(Integer) && amount.between?(0, MAX_TOPUP_CENTS))
     end
 
     def https_urls
