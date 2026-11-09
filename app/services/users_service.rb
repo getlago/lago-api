@@ -9,10 +9,9 @@ class UsersService < BaseService
     register_from_invite: BaseResult[:user, :organization, :membership, :token]
   }.freeze
 
-  # Compared when no user matches and self-serve is on, so an unknown email costs one bcrypt like a known one.
-  DUMMY_PASSWORD = Concurrent::Delay.new do
-    BCrypt::Password.create(SecureRandom.hex(32), cost: ActiveModel::SecurePassword.min_cost ? BCrypt::Engine::MIN_COST : BCrypt::Engine.cost)
-  end
+  # Compared when no user matches and self-serve is on, so an unknown email costs one bcrypt like a known one. Digested
+  # as user passwords are, so its cost follows theirs.
+  DUMMY_PASSWORD = Concurrent::Delay.new { PendingSignup.digest_password(SecureRandom.hex(32)) }
 
   private
 
