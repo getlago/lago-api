@@ -20,7 +20,15 @@ RSpec.describe Organizations::ValidateNameService do
     end
   end
 
-  ["", nil, "   ", "​­"].each do |blank|
+  context "with the zero-width joiners of a Persian name" do
+    let(:name) { "Rang\u200Cava" }
+
+    it "keeps them" do
+      expect(result.name).to eq("Rang\u200Cava")
+    end
+  end
+
+  ["", nil, "   ", "​­", "\u200C\u200D"].each do |blank|
     context "with #{blank.inspect}" do
       let(:name) { blank }
 
@@ -47,7 +55,7 @@ RSpec.describe Organizations::ValidateNameService do
 
   it "refuses names that carry a link" do
     links = ["https://acme.example", "Acme www.acme", "acme.com", "Visit acme.co.uk", "ａｃｍｅ．ｃｏｍ",
-      "contact@acme.io", "Visit 10.0.0.1", "acme。com"]
+      "contact@acme.io", "Visit 10.0.0.1", "acme。com", "acme\u200D.com"]
 
     expect(links.index_with { described_class.call(name: it).error&.messages })
       .to eq(links.index_with { {name: ["value_contains_link"]} })
