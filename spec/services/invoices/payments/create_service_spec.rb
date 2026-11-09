@@ -25,6 +25,50 @@ RSpec.describe Invoices::Payments::CreateService do
     let(:provider_class) { PaymentProviders::Stripe::Payments::CreateService }
     let(:provider_service) { instance_double(provider_class) }
 
+    shared_examples "a refused payment that runs its follow-up" do
+      it "enqueues one payment failure webhook and the fees payment status update" do
+        create_service.call
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with("invoice.payment_failure", invoice, any_args).exactly(:once)
+        expect(Invoices::UpdateFeesPaymentStatusJob).to have_been_enqueued.with(invoice)
+      end
+
+      context "when the invoice is a credit invoice" do
+        let(:invoice) { create(:invoice, :credit, :open, customer:, organization:, total_amount_cents: 100) }
+        let(:wallet) { create(:wallet, customer:, organization:) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, source: :manual, status: :pending) }
+
+        before { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
+
+        it "fails the prepaid credits" do
+          create_service.call
+
+          expect(invoice.reload).to be_payment_failed
+          expect(Invoices::PrepaidCreditJob).to have_been_enqueued.with(invoice, :failed)
+        end
+      end
+
+      context "when the invoice is payment-gated" do
+        let(:subscription) do
+          create(:subscription, :incomplete, :with_activation_rules,
+            activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+            customer:, organization:)
+        end
+        let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100, status: :open) }
+
+        before { create(:invoice_subscription, invoice:, subscription:) }
+
+        it "resolves the payment activation rule as failed" do
+          create_service.call
+
+          expect(invoice.reload).to be_payment_failed
+          expect(Subscriptions::ActivationRules::Payment::ResolveJob)
+            .to have_been_enqueued.with(subscription, invoice, :failed)
+        end
+      end
+    end
+
     before do
       provider_customer
       default_payment_method
@@ -117,6 +161,62 @@ RSpec.describe Invoices::Payments::CreateService do
         expect(provider_class).to have_received(:new)
         expect(provider_service).to have_received(:call!)
       end
+
+      context "when gocardless refuses the payment with a validation error" do
+        let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
+        let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
+        let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
+        let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
+
+        before do
+          allow(provider_class).to receive(:new).and_call_original
+
+          allow(GoCardlessPro::Client).to receive(:new).and_return(gocardless_client)
+          allow(gocardless_client).to receive_messages(mandates: gocardless_mandates_service, payments: gocardless_payments_service)
+          allow(gocardless_mandates_service).to receive(:list).and_return(gocardless_list_response)
+          allow(gocardless_list_response).to receive(:records)
+            .and_return([GoCardlessPro::Resources::Mandate.new("id" => "mandate_id")])
+          allow(gocardless_payments_service).to receive(:create)
+            .and_raise(GoCardlessPro::ValidationError.new("message" => "Validation failed", "code" => 422))
+        end
+
+        it "marks the invoice payment as failed without raising" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payable_payment_status).to eq("failed")
+          expect(invoice.reload).to be_payment_failed
+          expect(invoice.ready_for_payment_processing).to be(true)
+        end
+
+        it_behaves_like "a refused payment that runs its follow-up"
+      end
+
+      context "when gocardless refuses the payment with an error to investigate" do
+        let(:gocardless_client) { instance_double(GoCardlessPro::Client) }
+        let(:gocardless_payments_service) { instance_double(GoCardlessPro::Services::PaymentsService) }
+        let(:gocardless_mandates_service) { instance_double(GoCardlessPro::Services::MandatesService) }
+        let(:gocardless_list_response) { instance_double(GoCardlessPro::ListResponse) }
+
+        before do
+          allow(provider_class).to receive(:new).and_call_original
+
+          allow(GoCardlessPro::Client).to receive(:new).and_return(gocardless_client)
+          allow(gocardless_client).to receive_messages(mandates: gocardless_mandates_service, payments: gocardless_payments_service)
+          allow(gocardless_mandates_service).to receive(:list).and_return(gocardless_list_response)
+          allow(gocardless_list_response).to receive(:records)
+            .and_return([GoCardlessPro::Resources::Mandate.new("id" => "mandate_id")])
+          allow(gocardless_payments_service).to receive(:create)
+            .and_raise(GoCardlessPro::AuthenticationError.new("message" => "Invalid token", "code" => 401))
+        end
+
+        it "re-raises the provider failure and marks the invoice payment as failed" do
+          expect { create_service.call }.to raise_error(BaseService::ServiceFailure)
+
+          expect(invoice.reload).to be_payment_failed
+          expect(invoice.ready_for_payment_processing).to be(true)
+        end
+      end
     end
 
     context "with adyen payment provider" do
@@ -130,6 +230,53 @@ RSpec.describe Invoices::Payments::CreateService do
 
         expect(provider_class).to have_received(:new)
         expect(provider_service).to have_received(:call!)
+      end
+
+      context "when adyen refuses the payment" do
+        let(:adyen_client) { instance_double(Adyen::Client) }
+        let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+        let(:payments_api) { Adyen::PaymentsApi.new(adyen_client, 70) }
+
+        before do
+          allow(provider_class).to receive(:new).and_call_original
+
+          allow(::Adyen::Client).to receive(:new).and_return(adyen_client)
+          allow(adyen_client).to receive(:checkout).and_return(checkout)
+          allow(checkout).to receive(:payments_api).and_return(payments_api)
+          allow(payments_api).to receive(:payment_methods).and_return(generate(:adyen_payment_methods_response))
+        end
+
+        context "with a validation error" do
+          before do
+            allow(payments_api).to receive(:payments)
+              .and_raise(Adyen::ValidationError.new("Invalid card number", nil))
+          end
+
+          it "marks the invoice payment as failed without raising" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.payment.payable_payment_status).to eq("failed")
+            expect(invoice.reload).to be_payment_failed
+            expect(invoice.ready_for_payment_processing).to be(true)
+          end
+
+          it_behaves_like "a refused payment that runs its follow-up"
+        end
+
+        context "with an error to investigate" do
+          before do
+            allow(payments_api).to receive(:payments)
+              .and_raise(Adyen::AdyenError.new(nil, nil, "error", "code"))
+          end
+
+          it "re-raises the provider failure and marks the invoice payment as failed" do
+            expect { create_service.call }.to raise_error(BaseService::ServiceFailure)
+
+            expect(invoice.reload).to be_payment_failed
+            expect(invoice.ready_for_payment_processing).to be(true)
+          end
+        end
       end
     end
 
@@ -748,6 +895,45 @@ RSpec.describe Invoices::Payments::CreateService do
               },
               error_details: Hash
             )
+        end
+      end
+
+      [
+        PaymentProviders::Adyen::Payments::CreateService,
+        PaymentProviders::Cashfree::Payments::CreateService,
+        PaymentProviders::Gocardless::Payments::CreateService,
+        PaymentProviders::Moneyhash::Payments::CreateService,
+        PaymentProviders::Stripe::Payments::CreateService
+      ].each do |refusing_service|
+        context "when #{refusing_service.module_parent.module_parent.name.demodulize} refuses the payment" do
+          let(:result) do
+            refusing_service::Result.new.tap do |r|
+              r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
+              r.error_message = "error"
+              r.error_code = "code"
+              r.reraise = reraise
+            end
+          end
+
+          context "when the refusal is re-raised" do
+            let(:reraise) { true }
+
+            it "re-raises the provider failure and marks the invoice payment as failed" do
+              expect { create_service.call }.to raise_error(BaseService::ServiceFailure)
+
+              expect(invoice.reload).to be_payment_failed
+            end
+          end
+
+          context "when the refusal is not re-raised" do
+            let(:reraise) { false }
+
+            it "marks the invoice payment as failed without raising" do
+              expect(create_service.call).to be_success
+
+              expect(invoice.reload).to be_payment_failed
+            end
+          end
         end
       end
 
