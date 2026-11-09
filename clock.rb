@@ -106,9 +106,9 @@ module Clockwork
       .perform_later
   end
 
-  every(1.day, "schedule:api_keys_cleanup_member_keys", at: "01:40") do
+  every(1.day, "schedule:api_keys_cleanup_member_keys", at: "01:50") do
     Clock::ApiKeys::CleanupMemberKeysJob
-      .set(sentry: {"slug" => "lago_api_keys_cleanup_member_keys", "cron" => "40 1 * * *"})
+      .set(sentry: {"slug" => "lago_api_keys_cleanup_member_keys", "cron" => "50 1 * * *"})
       .perform_later
   end
 
@@ -213,6 +213,12 @@ module Clockwork
   every(1.day, "schedule:clean_x402_sign_in_nonces", at: "01:30") do
     Clock::X402SignInNoncesCleanupJob
       .set(sentry: {"slug" => "lago_clean_x402_sign_in_nonces", "cron" => "30 1 * * *"})
+      .perform_later
+  end
+
+  every(1.day, "schedule:clean_pending_signups", at: "01:40") do
+    Clock::PendingSignupsCleanupJob
+      .set(sentry: {"slug" => "lago_clean_pending_signups", "cron" => "40 1 * * *"})
       .perform_later
   end
 
