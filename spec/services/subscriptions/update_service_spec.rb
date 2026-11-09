@@ -78,6 +78,18 @@ RSpec.describe Subscriptions::UpdateService do
         end
       end
 
+      context "when payment_term is omitted" do
+        let(:subscription) { create(:subscription, payment_term: {term_type: "net", days: 30}) }
+        let(:params) { {name: "new name"} }
+
+        it "keeps the stored payment_term" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.reload.payment_term).to eq({"term_type" => "net", "days" => 30})
+        end
+      end
+
       context "when payment_term is invalid" do
         let(:params) { {payment_term: {term_type: "net", days: -1}} }
 
