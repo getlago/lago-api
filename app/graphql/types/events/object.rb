@@ -9,6 +9,7 @@ module Types
       field :id, ID, null: false
 
       field :external_subscription_id, String, null: true
+      field :precise_total_amount_cents, String, null: true
       field :transaction_id, String, null: true
 
       field :customer_timezone, Types::TimezoneEnum, null: false
