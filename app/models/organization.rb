@@ -211,8 +211,9 @@ class Organization < ApplicationRecord
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
-  # Declared, so the model loads in older migrations that run before the column exists.
-  attribute :environment, :string
+  # Declared with the column default, so the model loads and saves in older migrations that run before the column
+  # exists.
+  attribute :environment, :string, default: "production"
   enum :environment, ENVIRONMENTS, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
@@ -236,18 +237,19 @@ class Organization < ApplicationRecord
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
   validates :hmac_key, uniqueness: true
   validates :hmac_key, presence: true, on: :update
-  validates :self_serve, inclusion: {in: [true, false]}
-  validates :production_organization_id, presence: true, if: :sandbox?
-  validates :production_organization_id, absence: true, if: :production?
+  # Each skipped until the sandbox columns exist, as when an older migration saves organizations through this model.
+  validates :self_serve, inclusion: {in: [true, false]}, if: :sandbox_columns?
+  validates :production_organization_id, presence: true, if: %i[sandbox_columns? sandbox?]
+  validates :production_organization_id, absence: true, if: %i[sandbox_columns? production?]
   # The unique index is the race guard; this gives the same answer before the write.
   validates :production_organization_id, uniqueness: true, allow_nil: true,
-    if: :will_save_change_to_production_organization_id?
+    if: %i[sandbox_columns? will_save_change_to_production_organization_id?]
+  validate :validate_environment_link,
+    if: [:sandbox_columns?, -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }]
 
   validate :validate_premium_integrations
   validate :validate_email_settings
   validate :validate_customer_portal_locked_fields
-  validate :validate_environment_link,
-    if: -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -404,6 +406,10 @@ class Organization < ApplicationRecord
     return if premium_integrations.all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
 
     errors.add(:premium_integrations, :inclusion, value: premium_integrations)
+  end
+
+  def sandbox_columns?
+    self.class.column_names.include?("production_organization_id")
   end
 
   # A sandbox belongs to a production organization, never to itself or to another sandbox, and owns no sandbox.
