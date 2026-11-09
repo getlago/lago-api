@@ -966,5 +966,38 @@ RSpec.describe Fees::BuildPayInAdvanceFixedChargeService, :premium do
       expect(result.fee.properties["fixed_charges_to_datetime"]).to eq("2027-07-05T23:59:59.999Z")
       expect(result.fee.properties["fixed_charges_duration"]).to eq(365)
     end
+
+    context "when the customer timezone changed after the first fee of the period" do
+      let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+
+      it "deducts the units of the fee stored with the previous timezone" do
+        expect(result).to be_success
+        expect(result.fee.units).to eq(10)
+        expect(result.fee.properties["fixed_charges_to_datetime"]).to eq("2027-07-05T03:59:59.999Z")
+      end
+    end
+
+    context "when a fee belongs to the previous fixed charge period" do
+      let(:existing_fee) do
+        create(
+          :fee,
+          organization:,
+          subscription:,
+          fixed_charge:,
+          fee_type: :fixed_charge,
+          units: 10,
+          amount_cents: 10_000,
+          properties: {
+            "fixed_charges_from_datetime" => "2025-07-06T00:00:00.000Z",
+            "fixed_charges_to_datetime" => "2026-07-05T23:59:59.999Z"
+          }
+        )
+      end
+
+      it "does not deduct its units" do
+        expect(result).to be_success
+        expect(result.fee.units).to eq(20)
+      end
+    end
   end
 end

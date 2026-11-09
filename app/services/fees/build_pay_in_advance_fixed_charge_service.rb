@@ -61,18 +61,21 @@ module Fees
     end
 
     def find_already_paid_units(boundaries)
-      # Find fees for this fixed charge that have already been paid in this billing period
+      # A customer timezone change shifts the computed period by a few hours, so fees stored before it
+      # do not have the same boundaries. Fees are matched on the period that contains the middle of
+      # the current one, which no fee of an adjacent period does.
+      from_datetime = boundaries.fixed_charges_from_datetime
+      period_middle = from_datetime + (boundaries.fixed_charges_to_datetime - from_datetime) / 2
+
       existing_fees = Fee.where(
         organization:,
         subscription:,
         fixed_charge: [fixed_charge, fixed_charge.parent],
         fee_type: :fixed_charge
       ).where(
-        "properties->>'fixed_charges_from_datetime' = ?",
-        boundaries.fixed_charges_from_datetime.iso8601(3)
-      ).where(
-        "properties->>'fixed_charges_to_datetime' = ?",
-        boundaries.fixed_charges_to_datetime.iso8601(3)
+        "(properties->>'fixed_charges_from_datetime')::timestamptz <= :middle " \
+        "AND (properties->>'fixed_charges_to_datetime')::timestamptz >= :middle",
+        middle: period_middle
       )
 
       # Sum up all the units that have been billed for this period
