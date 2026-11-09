@@ -6,7 +6,7 @@ module Clock
 
     def perform
       Wallet.active.expired.includes(:organization).find_each do |wallet|
-        if wallet.expiration_invoicing_enabled?
+        if wallet.expiration_invoicing_enabled? && wallet.balance_cents.positive?
           Wallets::ExpireWithInvoicingJob.perform_later(wallet)
         else
           Wallets::TerminateService.call(wallet:)
