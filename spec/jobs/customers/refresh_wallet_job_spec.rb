@@ -183,7 +183,7 @@ RSpec.describe Customers::RefreshWalletJob do
 
         before { wallet }
 
-        described_class::GIVE_UP_ERRORS.each do |error_class|
+        Integrations::Aggregator::BaseService.retryable_errors.each do |error_class|
           context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
             let(:error) do
               if error_class == Integrations::Aggregator::BadGatewayError
@@ -199,9 +199,9 @@ RSpec.describe Customers::RefreshWalletJob do
               allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, raise_on_server_error: true).and_raise(error)
             end
 
-            it "retries the job then gives up without raising and keeps the customer flagged" do
+            it "retries the job, then raises the error and keeps the customer flagged" do
               assert_performed_jobs(6, only: [described_class]) do
-                expect { described_class.perform_later(customer) }.not_to raise_error
+                expect { described_class.perform_later(customer) }.to raise_error(error_class)
               end
 
               expect(customer.reload.awaiting_wallet_refresh).to be(true)
@@ -210,29 +210,12 @@ RSpec.describe Customers::RefreshWalletJob do
             context "when it is a top-up refresh of a customer not flagged before" do
               let(:customer) { create(:customer, awaiting_wallet_refresh: false) }
 
-              it "flags the customer once the retries are used up" do
+              it "flags the customer once the retries are used up, then raises the error" do
                 assert_performed_jobs(6, only: [described_class]) do
-                  expect { described_class.perform_later(customer, wallet_ids: [wallet.id]) }.not_to raise_error
+                  expect { described_class.perform_later(customer, wallet_ids: [wallet.id]) }.to raise_error(error_class)
                 end
 
                 expect(customer.reload.awaiting_wallet_refresh).to be(true)
-              end
-            end
-
-            context "with the uniqueness lock enforced" do
-              around do |example|
-                ActiveJob::Uniqueness.reset_manager!
-                example.run
-                described_class.unlock!(customer)
-                ActiveJob::Uniqueness.test_mode!
-              end
-
-              it "releases the uniqueness lock when giving up" do
-                assert_performed_jobs(6, only: [described_class]) do
-                  described_class.perform_later(customer)
-                end
-
-                expect { described_class.perform_later(customer) }.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
               end
             end
           end
@@ -247,9 +230,9 @@ RSpec.describe Customers::RefreshWalletJob do
               .and_raise(Integrations::Aggregator::ServerError)
           end
 
-          it "gives up without flagging the customer" do
+          it "raises the error without flagging the customer" do
             assert_performed_jobs(6, only: [described_class]) do
-              expect { described_class.perform_later(customer, wallet_ids: [wallet.id]) }.not_to raise_error
+              expect { described_class.perform_later(customer, wallet_ids: [wallet.id]) }.to raise_error(Integrations::Aggregator::ServerError)
             end
 
             expect(customer.reload.awaiting_wallet_refresh).to be(false)
@@ -284,9 +267,9 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         shared_examples "a temporary tax provider failure" do
-          it "retries the job then gives up without raising, a tax error or a webhook and keeps the customer flagged" do
+          it "retries the job, then raises the provider error without a tax error or a webhook and keeps the customer flagged" do
             assert_performed_jobs(6, only: [described_class]) do
-              expect { described_class.perform_later(customer, wallet_ids:) }.not_to raise_error
+              expect { described_class.perform_later(customer, wallet_ids:) }.to raise_error(error_class)
             end
 
             expect(customer.reload.awaiting_wallet_refresh).to be(true)
@@ -297,6 +280,7 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         context "with an HTTP 500 server_error answer" do
+          let(:error_class) { Integrations::Aggregator::ServerError }
           let(:status) { 500 }
           let(:body) { {error: {code: "server_error"}}.to_json }
 
@@ -304,6 +288,7 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         context "with an HTTP 500 internal_server_error answer" do
+          let(:error_class) { Integrations::Aggregator::ServerError }
           let(:status) { 500 }
           let(:body) { {error: {code: "internal_server_error", message: "Failed to run action"}}.to_json }
 
@@ -311,6 +296,7 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         context "with an HTTP 503 answer" do
+          let(:error_class) { Integrations::Aggregator::ServerError }
           let(:status) { 503 }
           let(:body) { "" }
 
@@ -318,6 +304,7 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         context "with an HTTP 503 answer to a top-up refresh of a customer not flagged before" do
+          let(:error_class) { Integrations::Aggregator::ServerError }
           let(:status) { 503 }
           let(:body) { "" }
           let(:awaiting_wallet_refresh) { false }
@@ -327,6 +314,7 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         context "with an HTTP 504 answer" do
+          let(:error_class) { Integrations::Aggregator::ServerError }
           let(:status) { 504 }
           let(:body) { "" }
 
@@ -334,6 +322,7 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         context "with an HTTP 502 answer" do
+          let(:error_class) { Integrations::Aggregator::BadGatewayError }
           let(:status) { 502 }
           let(:body) { "502 Bad Gateway" }
 

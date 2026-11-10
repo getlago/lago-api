@@ -11,16 +11,6 @@ module Customers
       )
     end
 
-    # Temporary tax provider failures: retried, then given up without a dead job.
-    GIVE_UP_ERRORS = [
-      Integrations::Aggregator::ServerError,
-      Integrations::Aggregator::BadGatewayError,
-      Integrations::Aggregator::RequestLimitError,
-      Integrations::Aggregator::TaskInProgressError,
-      Integrations::Aggregator::TaskExpiredError,
-      Integrations::Aggregator::OrchestratorFailureError
-    ].freeze
-
     unique :until_executed, on_conflict: :log, lock_ttl: 2.hours
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
@@ -38,33 +28,19 @@ module Customers
         "customer_id=#{job.arguments.first&.id} provider=#{error.provider_name}"
       )
 
-      release_lock(job)
-    end
-
-    retry_on(*(Integrations::Aggregator::BaseService.retryable_errors - GIVE_UP_ERRORS), wait: :polynomially_longer, attempts: 6)
-
-    retry_on(*GIVE_UP_ERRORS, wait: :polynomially_longer, attempts: 6) do |job, error|
-      # A temporary tax provider failure is not a failure of the refresh: the customer stays
-      # flagged so the clock job refreshes its wallets once the provider answers again.
-      customer = job.arguments.first
-
-      Rails.logger.warn(
-        "RefreshWalletJob reached max temporary tax provider error retry attempts " \
-        "customer_id=#{customer.id} error=#{error.class.name}"
-      )
-
-      customer.flag_wallets_for_refresh
-      release_lock(job)
-    end
-
-    # The uniqueness lock is only released by the `after_perform` callback, which is skipped
-    # when the job raises. Swallowing the error in a give-up block also bypasses Sidekiq's death
-    # handler, so the lock must be released explicitly: otherwise the customer stays locked for
-    # `lock_ttl` and every re-enqueue from the clock job is silently dropped on conflict.
-    def self.release_lock(job)
+      # The uniqueness lock is only released by the `after_perform` callback, which is skipped
+      # when the job raises. Swallowing the error here also bypasses Sidekiq's death handler, so
+      # the lock must be released explicitly: otherwise the customer stays locked for `lock_ttl`
+      # and every re-enqueue from the clock job is silently dropped on conflict.
       job.lock_strategy.unlock(resource: job.lock_key)
     end
-    private_class_method :release_lock
+
+    retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6) do |job, error|
+      # A top-up refresh can run for a customer that is not flagged: flag it so the next clock run
+      # refreshes its wallets, then raise so the failure ends in the dead set and stays counted.
+      job.arguments.first.flag_wallets_for_refresh
+      raise error
+    end
 
     def perform(customer, wallet_ids: nil)
       # wallet_ids marks an explicitly requested refresh (e.g. balance increase) that must run

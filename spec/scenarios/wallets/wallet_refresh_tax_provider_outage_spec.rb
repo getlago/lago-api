@@ -11,16 +11,6 @@ describe "Wallet refresh during a tax provider outage", :premium do
   let(:plan_code) { "monthly_usage" }
   let(:external_subscription_id) { "sub-#{SecureRandom.hex(4)}" }
 
-  # The next clock run depends on the uniqueness lock the give-up releases, so locks are enforced.
-  around do |example|
-    ActiveJob::Uniqueness.reset_manager!
-    example.run
-  ensure
-    Customers::RefreshWalletJob.unlock!
-    Clock::RefreshWalletsOngoingBalanceJob.unlock!
-    ActiveJob::Uniqueness.test_mode!
-  end
-
   before do
     create(:anrok_customer, integration: tax_integration, customer:)
     create(
@@ -96,11 +86,11 @@ describe "Wallet refresh during a tax provider outage", :premium do
 
       expect(customer.reload.awaiting_wallet_refresh).to be(true)
 
-      # The refresh job retries the 503 then gives up without a dead job.
+      # The refresh job retries the 503, then ends in the dead set with the provider error.
       expect do
         Customers::RefreshWalletJob.perform_later(customer)
         perform_all_enqueued_jobs
-      end.not_to raise_error
+      end.to raise_error(Integrations::Aggregator::ServerError)
 
       expect(a_request(:post, nango_action_endpoint)).to have_been_made.at_least_times(6)
       expect(customer.reload.awaiting_wallet_refresh).to be(true)
@@ -113,7 +103,7 @@ describe "Wallet refresh during a tax provider outage", :premium do
     stub_request(:post, nango_action_endpoint).to_return(->(request) { {status: 200, body: anrok_draft_answer(request)} })
 
     travel_to(Time.zone.parse("2026-03-10T10:05:00")) do
-      # The next clock run can enqueue the refresh only because the give-up released the uniqueness lock.
+      # The customer is still flagged, so the next clock run enqueues the refresh.
       expect { Clock::RefreshWalletsOngoingBalanceJob.perform_now }
         .to have_enqueued_job(Customers::RefreshWalletJob).with(customer)
 
