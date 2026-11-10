@@ -227,9 +227,10 @@ def realtime_usage_eligibility_report(subscriptions)
     end
 
     served = 0
+    charges_from = realtime_usage_charges_from(subscription) if charges.any?(&:accepts_target_wallet)
     charges.each do |charge|
       charge_ids << charge.id
-      reason = realtime_usage_charge_blocker(charge)
+      reason = realtime_usage_charge_blocker(charge, charges_from)
 
       if reason.nil?
         served += 1
@@ -264,11 +265,18 @@ end
 # The presentation breakdown is not in RealtimeUsage.unsupported_reason because it depends on the
 # caller: one that suppresses the breakdown, like the wallet refresh, still serves the charge.
 # Ordinary current usage asks for it, so the rollout decision has to count it as delegated.
-def realtime_usage_charge_blocker(charge)
+def realtime_usage_charge_blocker(charge, charges_from)
   reason = RealtimeUsage.unsupported_reason(charge)
   return reason if reason
+  return "presentation_breakdown" if charge.presentation_group_keys_values.present?
 
-  "presentation_breakdown" if charge.presentation_group_keys_values.present?
+  if charges_from && RealtimeUsage.wallet_charge_changed_since?(charge, charges_from)
+    "wallet_charge_edited_in_period"
+  end
+end
+
+def realtime_usage_charges_from(subscription)
+  Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true).charges_from_datetime
 end
 
 def realtime_usage_charge_label(charge)

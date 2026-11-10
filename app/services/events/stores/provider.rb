@@ -63,6 +63,7 @@ module Events
         return false if charge.nil?
         return false if boundaries[:max_timestamp].present?
         return false unless same_window_as_prefetch?(boundaries)
+        return false if wallet_charge_changed_in_window?(charge)
 
         RealtimeUsage.supported_charge?(charge)
       end
@@ -162,6 +163,10 @@ module Events
         return @charge_filters_single_scan if defined?(@charge_filters_single_scan)
 
         @charge_filters_single_scan = organization.feature_flag_enabled?(:charge_filters_single_scan)
+      end
+
+      def wallet_charge_changed_in_window?(charge)
+        RealtimeUsage.wallet_charge_changed_since?(charge, boundaries.charges_from_datetime)
       end
 
       def same_window_as_prefetch?(window)

@@ -78,10 +78,13 @@ module RealtimeUsage
       return "prorated" if charge.prorated?
       return "recurring_metric" if billable_metric.recurring?
 
-      # `target_wallet_code` will be handled later.
-      return "target_wallet" if charge.accepts_target_wallet
-
       nil
+    end
+
+    # Buckets written before a charge accepted a target wallet hold no wallet code, so their usage
+    # would be debited from the wrong wallet. Nothing records that switch, so any edit counts.
+    def wallet_charge_changed_since?(charge, datetime)
+      charge.accepts_target_wallet && charge.updated_at > datetime
     end
   end
 end
