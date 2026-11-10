@@ -75,7 +75,17 @@ module Events
         return false if wallet_charge_changed_in_window?(charge)
         return false unless RealtimeUsage.supported_charge?(charge)
 
-        !RealtimeUsage.recurring_charge?(charge) || recurring_snapshot_completable?(metered_item)
+        !RealtimeUsage.recurring_charge?(charge) || recurring_refusal_reason(metered_item).nil?
+      end
+
+      # Why the buckets can never complete the snapshot of a recurring charge: they only add the
+      # window to a snapshot of this subscription, and a dynamic charge also reads its precise
+      # amounts over the whole history.
+      def recurring_refusal_reason(metered_item)
+        return "dynamic" if metered_item.charge.dynamic?
+        return "no_snapshot_read" unless RecurringAggregationSnapshot.readable?(metered_item:, billing_context:)
+
+        "has_predecessor" if billing_context.previous_subscription_id?
       end
 
       # Charge-wide counterpart of `served_from_buckets?`: true only when every pricing bucket of
@@ -122,14 +132,6 @@ module Events
         else
           usage_buckets.present?
         end
-      end
-
-      # The buckets only add the window to a snapshot of this subscription. A dynamic charge also
-      # reads its precise amounts over the whole history, which the buckets cannot answer.
-      def recurring_snapshot_completable?(metered_item)
-        !metered_item.charge.dynamic? &&
-          RecurringAggregationSnapshot.readable?(metered_item:, billing_context:) &&
-          !billing_context.previous_subscription_id?
       end
 
       # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A

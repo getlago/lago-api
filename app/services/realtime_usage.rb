@@ -21,6 +21,10 @@ module RealtimeUsage
 
   FORCED_GATE_KEY = :lago_realtime_usage_forced_gate
 
+  # A recurring charge falling back to the events under the forced gate, which the parity
+  # comparison only opens on charges it found served.
+  class RecurringFallbackError < StandardError; end
+
   class << self
     # Opens the flag and the kill switch for the duration of the block. Reserved for the parity
     # comparison, which has to exercise the bucket path on an organization the flag is off for;

@@ -92,6 +92,8 @@ module RealtimeUsage
       result
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e.result.error)
+    rescue RecurringFallbackError => e
+      result.service_failure!(code: "recurring_fallback_during_comparison", message: e.message)
     end
 
     private
@@ -164,13 +166,22 @@ module RealtimeUsage
 
       eligible_charges.select do |charge|
         metered_item = Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:)
+        recurring = RealtimeUsage.recurring_charge?(charge)
+        next false if recurring && recurring_refused?(provider, metered_item)
         next false unless provider.serves_whole_charge_from_buckets?(
           metered_item:,
           boundaries: metered_item.aggregation_boundaries
         )
 
-        !RealtimeUsage.recurring_charge?(charge) || recurring_delta_from_buckets?(provider, metered_item)
+        !recurring || recurring_delta_from_buckets?(provider, metered_item)
       end
+    end
+
+    def recurring_refused?(provider, metered_item)
+      reason = provider.recurring_refusal_reason(metered_item)
+      result.recurring_fallback_reasons[reason] += 1 if reason
+
+      reason.present?
     end
 
     # Both runs read the snapshots, so only the source of the delta differs between them.

@@ -283,6 +283,92 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
         expect(comparison.recurring_fallback_reasons).to eq({"no_period" => 1})
       end
     end
+
+    context "when the subscription is the upgrade of another" do
+      let(:subscription) do
+        create(:subscription, :with_previous_subscription, organization:, customer:, plan:, started_at: 2.months.ago)
+      end
+
+      it "reports the refusal of the provider rather than missing buckets" do
+        expect(comparison.served_charges_count).to eq(0)
+        expect(comparison.recurring_fallback_reasons).to eq({"has_predecessor" => 1})
+        expect(comparison.declined_reason).to eq("recurring_fallback")
+      end
+    end
+
+    context "with a dynamic charge" do
+      let(:charge) { create(:dynamic_charge, plan:, billable_metric:) }
+
+      it "reports the refusal of the provider" do
+        expect(comparison.served_charges_count).to eq(0)
+        expect(comparison.recurring_fallback_reasons).to eq({"dynamic" => 1})
+      end
+    end
+
+    context "with a charge filter" do
+      let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
+      let(:charge_filter) do
+        create(:charge_filter, charge:, created_at: watermark - 1.day, updated_at: filter_updated_at)
+      end
+      let(:filter_updated_at) { watermark - 1.day }
+
+      before do
+        create(
+          :charge_filter_value,
+          charge_filter:,
+          billable_metric_filter:,
+          created_at: watermark - 1.day,
+          updated_at: watermark - 1.day
+        )
+      end
+
+      it "compares it when every bucket starts from the snapshot" do
+        expect(comparison.served_charges_count).to eq(1)
+        expect(comparison.recurring_fallback_reasons).to eq({})
+      end
+
+      context "when only the filter was edited since the snapshot, its bucket being empty" do
+        let(:filter_updated_at) { watermark + 1.minute }
+
+        it "reports the charge as falling back once, the default bucket being served" do
+          expect(comparison.served_charges_count).to eq(0)
+          expect(comparison.recurring_fallback_reasons).to eq({"no_period" => 1})
+        end
+      end
+    end
+
+    context "with pricing group keys" do
+      let(:charge) do
+        create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "5", "pricing_group_keys" => ["region"]})
+      end
+      let(:snapshot) do
+        create(
+          :recurring_aggregation_snapshot,
+          subscription:,
+          charge:,
+          to_datetime: snapshot_to_datetime,
+          watermark:,
+          grouped_by: {"region" => "eu"}
+        )
+      end
+
+      it "reads the snapshots grouped on the same keys and compares it" do
+        expect(comparison.served_charges_count).to eq(1)
+        expect(comparison.recurring_fallback_reasons).to eq({})
+      end
+    end
+
+    context "when the charge falls back during the bucket run" do
+      before do
+        allow(Invoices::CustomerUsageService).to receive(:call!)
+          .and_raise(RealtimeUsage::RecurringFallbackError, "charge #{charge.id} fell back to the events")
+      end
+
+      it "fails rather than reporting a match the buckets never served" do
+        expect(comparison).to be_failure
+        expect(comparison.error.code).to eq("recurring_fallback_during_comparison")
+      end
+    end
   end
 
   context "when an absent group value is empty on one side and nil on the other" do

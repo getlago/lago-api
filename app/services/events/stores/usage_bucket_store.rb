@@ -31,20 +31,20 @@ module Events
 
       # Without a snapshot, the window alone would be served as the recurring total.
       def sum(with_count: true)
-        return super if recurring
+        return events_fallback { super } if recurring
 
         aggregation_result
       end
 
       def sum_precise_total_amount_cents
-        return super if recurring
+        return events_fallback { super } if recurring
 
         usage_buckets.precise_total_amount_cents_for(charge_id:, charge_filter_id:)
       end
 
       # Current usage persists no snapshot, so the result carries no snapshot units.
       def recurring_sum(watermark:, period: nil)
-        return super if recurring_fallback_reason(period)
+        return events_fallback { super } if recurring_fallback_reason(period)
 
         BaseStore::RecurringAggregationResult.new(
           value: aggregation_result.value,
@@ -55,7 +55,7 @@ module Events
       end
 
       def grouped_recurring_sum(watermark:, period: nil)
-        return super if recurring_fallback_reason(period)
+        return events_fallback { super } if recurring_fallback_reason(period)
 
         grouped_aggregation_results.map do |result|
           BaseStore::GroupedRecurringAggregationResult.new(
@@ -105,13 +105,13 @@ module Events
       def grouped_sum(columns = nil, with_count: true)
         return super if columns
         # Without columns, so the wrapped store groups on its own keys rather than on nil.
-        return __getobj__.grouped_sum(with_count:) if recurring
+        return events_fallback { __getobj__.grouped_sum(with_count:) } if recurring
 
         grouped_aggregation_results
       end
 
       def grouped_sum_precise_total_amount_cents
-        return super if recurring
+        return events_fallback { super } if recurring
 
         usage_buckets.grouped_precise_total_amount_cents_for(charge_id:, charge_filter_id:)
       end
@@ -131,6 +131,14 @@ module Events
       private
 
       attr_reader :usage_buckets, :charge_id, :charge_filter_id, :recurring, :charges_from_datetime
+
+      # The parity comparison would otherwise compare the events with themselves and report a match:
+      # its decision and its bucket run read the buckets apart, so a late ingestion can land between.
+      def events_fallback
+        raise RealtimeUsage::RecurringFallbackError, "charge #{charge_id} fell back to the events" if RealtimeUsage.forced_gate?
+
+        yield
+      end
 
       def adjacent?(period)
         gap = charges_from_datetime - period.to_datetime
