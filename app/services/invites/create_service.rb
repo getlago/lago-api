@@ -12,7 +12,7 @@ module Invites
     def call
       # First, so skip_admin_check cannot bypass it. Acceptance checks again under the lock.
       if args[:current_organization].sandbox?
-        return result.not_allowed_failure!(code: "sandbox_managed_by_production")
+        return result.forbidden_failure!(code: "sandbox_managed_by_production")
       end
       return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
       return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
