@@ -86,7 +86,7 @@ RSpec.describe Memberships::RevokeService do
 
       it "keeps both memberships when the sandbox cannot be synced" do
         allow(Memberships::SyncSandboxService).to receive(:call!)
-          .and_raise(BaseResult.new.not_allowed_failure!(code: "sandbox_managed_by_production").error)
+          .and_raise(BaseResult.new.forbidden_failure!(code: "sandbox_managed_by_production").error)
 
         expect(revoke_service.call).to be_failure
         expect(membership.reload).to be_active

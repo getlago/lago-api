@@ -35,7 +35,7 @@ RSpec.describe Memberships::CreateFromInviteService do
       let(:organization) { create(:organization, :sandbox) }
 
       it "refuses the acceptance" do
-        expect { create_service.call }.to raise_error(BaseService::MethodNotAllowedFailure) do |error|
+        expect { create_service.call }.to raise_error(BaseService::ForbiddenFailure) do |error|
           expect(error.code).to eq("sandbox_managed_by_production")
         end
         expect(Membership.where(organization:)).to be_empty
