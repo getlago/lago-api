@@ -167,6 +167,38 @@ RSpec.describe "recipes:realtime_usage:check_eligibility", :premium do # rubocop
     end
   end
 
+  context "with a wallet charge" do
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, premium_integrations: ["events_targeting_wallets"])
+    end
+    let(:updated_at) { Time.zone.parse("2026-11-05") }
+
+    around { |example| travel_to(Time.zone.parse("2026-11-10T12:00:00")) { example.run } }
+
+    before do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric: create(:sum_billable_metric, organization:),
+        accepts_target_wallet: true,
+        updated_at:
+      )
+      create(:subscription, customer:, plan:, organization:, billing_time: :calendar, started_at: Time.zone.parse("2026-09-01"))
+    end
+
+    it "counts it as delegated when it was edited in the current period, as current usage reads it from events" do
+      expect { invoke }.to output(/wallet_charge_edited_in_period: 1 charge\(s\), 1 subscription\(s\)/).to_stdout
+    end
+
+    context "when it was last edited before the current period" do
+      let(:updated_at) { Time.zone.parse("2026-10-20") }
+
+      it "reports it as servable" do
+        expect { invoke }.to output(%r{Candidate: 1/1 charges, 1 fully served subscription}).to_stdout
+      end
+    end
+  end
+
   context "when the charge carries a presentation breakdown" do
     before do
       create(

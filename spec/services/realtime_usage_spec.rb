@@ -219,6 +219,29 @@ RSpec.describe RealtimeUsage do
     end
   end
 
+  describe ".wallet_charge_changed_since?" do
+    subject(:changed) { described_class.wallet_charge_changed_since?(charge, period_start) }
+
+    let(:period_start) { Time.zone.parse("2026-11-01") }
+    let(:accepts_target_wallet) { true }
+    let(:updated_at) { period_start + 1.second }
+    let(:charge) { build_stubbed(:standard_charge, accepts_target_wallet:, updated_at:) }
+
+    it { expect(changed).to be(true) }
+
+    context "when the charge was last edited before the date" do
+      let(:updated_at) { period_start - 1.second }
+
+      it { expect(changed).to be(false) }
+    end
+
+    context "when the charge does not accept a target wallet" do
+      let(:accepts_target_wallet) { false }
+
+      it { expect(changed).to be(false) }
+    end
+  end
+
   describe "the classification" do
     it "serves only known charge models" do
       expect(Charge::CHARGE_MODELS.map(&:to_s)).to include(*described_class::SUPPORTED_CHARGE_MODELS)

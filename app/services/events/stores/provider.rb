@@ -165,10 +165,8 @@ module Events
         @charge_filters_single_scan = organization.feature_flag_enabled?(:charge_filters_single_scan)
       end
 
-      # Buckets written before a charge accepted a target wallet hold no wallet code, so their usage
-      # would be debited from the wrong wallet. Nothing records that switch, so any edit counts.
       def wallet_charge_changed_in_window?(charge)
-        charge.accepts_target_wallet && charge.updated_at > boundaries.charges_from_datetime
+        RealtimeUsage.wallet_charge_changed_since?(charge, boundaries.charges_from_datetime)
       end
 
       def same_window_as_prefetch?(window)
