@@ -32,7 +32,7 @@ module Organizations
           production_organization.reload
           sandbox_organization.reload
           if (code = refusal_code)
-            next result.not_allowed_failure!(code:)
+            next result.forbidden_failure!(code:)
           end
 
           # FOR NO KEY UPDATE, as the mirrors lock: production's own writes (customers, invoices) keep going meanwhile.
@@ -40,7 +40,7 @@ module Organizations
           sandbox_organization.lock!(SandboxLockService::LOCK_MODE)
           # Again on the locked rows, for writers that committed in between.
           if (code = refusal_code)
-            next result.not_allowed_failure!(code:)
+            next result.forbidden_failure!(code:)
           end
 
           link
