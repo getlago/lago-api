@@ -54,6 +54,59 @@ RSpec.describe WebhookEndpoints::UpdateService do
       before { update_service.call }
     end
 
+    it "logs the url and signature_algo changes" do
+      old_url = webhook_endpoint.webhook_url
+      old_algo = webhook_endpoint.signature_algo
+      update_service.call
+
+      expect(security_logger).to have_received(:produce).with(
+        organization:,
+        log_type: "webhook_endpoint",
+        log_event: "webhook_endpoint.updated",
+        resources: {
+          webhook_url: {deleted: old_url, added: "http://foo.bar"},
+          signature_algo: {deleted: old_algo, added: "hmac"}
+        }
+      )
+    end
+
+    context "when an outer transaction rolls back" do
+      it "keeps the endpoint and produces no security log" do
+        expect do
+          ApplicationRecord.transaction do
+            update_service.call
+            raise StandardError, "rollback"
+          end
+        rescue
+          nil
+        end.not_to change { webhook_endpoint.reload.attributes }
+
+        expect(security_logger).not_to have_received(:produce)
+      end
+    end
+
+    context "when an outer transaction changes the endpoint again before committing" do
+      let(:update_params) { {webhook_url: "http://foo.bar"} }
+
+      it "logs the change made by this update" do
+        old_url = webhook_endpoint.webhook_url
+
+        ApplicationRecord.transaction do
+          # Same instance, so its previous_changes no longer hold the url change at commit.
+          update_service.call.webhook_endpoint.update!(name: "Renamed")
+
+          expect(security_logger).not_to have_received(:produce)
+        end
+
+        expect(security_logger).to have_received(:produce).once.with(
+          organization:,
+          log_type: "webhook_endpoint",
+          log_event: "webhook_endpoint.updated",
+          resources: {webhook_url: {deleted: old_url, added: "http://foo.bar"}}
+        )
+      end
+    end
+
     [["md5", "unknown"], [nil, "null"]].each do |signature_algo, label|
       context "when signature_algo is #{label}" do
         let(:update_params) { {name: "Updated Webhook", signature_algo:} }
