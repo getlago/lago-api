@@ -101,6 +101,34 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService do
           .with(invoice:, payment_provider: :stripe)
       end
 
+      context "when the customer has no payment provider type" do
+        let(:invoice) do
+          create(:invoice, customer:, total_amount_cents: 200, status:, ready_for_payment_processing:, invoice_type: :one_off)
+        end
+        let(:stripe_provider) { create(:stripe_provider, organization:) }
+        let(:stripe_customer) do
+          create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_customer_id: "cus_123456")
+        end
+
+        before { allow(PaymentProviders::Stripe::Payments::CreateService).to receive(:new).and_call_original }
+
+        it "enqueues the payment job, which skips the payment" do
+          expect(customer.payment_provider).to be_nil
+
+          update_service.call
+
+          expect(Invoices::Payments::CreateJob).to have_been_enqueued
+            .with(invoice:, payment_provider: :stripe)
+
+          perform_enqueued_jobs(only: Invoices::Payments::CreateJob)
+
+          expect(invoice.reload.payment_status).to eq("pending")
+          expect(invoice.payment_attempts).to eq(0)
+          expect(invoice.payments.count).to eq(0)
+          expect(PaymentProviders::Stripe::Payments::CreateService).not_to have_received(:new)
+        end
+      end
+
       context "when invoices are not finalized" do
         let(:status) { "draft" }
 
