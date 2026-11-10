@@ -29,7 +29,7 @@ module Signups
         # Checked again on the locked user, so two submissions of Step 3 create a single pair.
         user.lock!
         user.memberships.reset
-        next result.not_allowed_failure!(code: "user_not_eligible") unless user.needs_organization?
+        next result.forbidden_failure!(code: "user_not_eligible") unless user.needs_organization?
 
         pair = Organizations::CreateSelfServeService.call!(name:)
         membership = create_admin_membership(pair.organization)

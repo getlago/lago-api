@@ -65,7 +65,7 @@ RSpec.describe Mutations::Signups::CreateOrganization do
     before { create(:membership, user: current_user) }
 
     it "refuses with user_not_eligible" do
-      expect(result["errors"].first["extensions"]).to eq("status" => 405, "code" => "user_not_eligible")
+      expect(result["errors"].first["extensions"]).to eq("status" => 403, "code" => "user_not_eligible")
     end
   end
 end
