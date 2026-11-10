@@ -15,8 +15,9 @@ RSpec.describe Invoices::PaidCreditService do
     let(:customer) { create(:customer, organization:, payment_provider: :stripe) }
     let(:subscription) { create(:subscription, plan:, customer:) }
     let(:plan) { create(:plan, organization:) }
-    let(:wallet) { create(:wallet, customer:, purchase_order_number: wallet_purchase_order_number) }
+    let(:wallet) { create(:wallet, customer:, purchase_order_number: wallet_purchase_order_number, payment_term: wallet_payment_term) }
     let(:wallet_purchase_order_number) { nil }
+    let(:wallet_payment_term) { nil }
     let(:wallet_transaction) do
       create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00", invoice_requires_successful_payment:)
     end
@@ -74,6 +75,30 @@ RSpec.describe Invoices::PaidCreditService do
 
         expect(result).to be_success
         expect(result.invoice.purchase_order_number).to eq("PO-123")
+      end
+    end
+
+    context "when the wallet has a payment term" do
+      let(:customer) { create(:customer, organization:, payment_provider: :stripe, payment_term: {term_type: "net", days: 30}) }
+      let(:wallet_payment_term) { {"term_type" => "net", "days" => 10} }
+
+      it "snapshots the wallet term with source wallet" do
+        result = invoice_service.call
+
+        expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 10)
+        expect(result.invoice.payment_term_source).to eq("wallet")
+        expect(result.invoice.payment_due_date).to eq(result.invoice.issuing_date + 10.days)
+      end
+    end
+
+    context "when the wallet has no payment term" do
+      let(:customer) { create(:customer, organization:, payment_provider: :stripe, payment_term: {term_type: "net", days: 30}) }
+
+      it "falls back to the customer term" do
+        result = invoice_service.call
+
+        expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 30)
+        expect(result.invoice.payment_term_source).to eq("customer")
       end
     end
 
