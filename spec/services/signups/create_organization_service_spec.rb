@@ -48,14 +48,27 @@ RSpec.describe Signups::CreateOrganizationService do
     expect(SegmentTrackJob).to have_been_enqueued.with(
       membership_id: "membership/#{membership.id}",
       event: "organization_registered",
-      properties: {organization_name: "Acme", organization_id: result.organization.id, email: "jane@getlago.com"}
+      properties: {
+        organization_name: "Acme",
+        organization_id: result.organization.id,
+        email: "jane@getlago.com",
+        self_serve: true,
+        sandbox_organization_id: result.sandbox_organization.id,
+        role: "engineering",
+        source: "github",
+        region: URI(Rails.application.config.lago_front_url).host
+      }
     )
   end
 
   context "without a source" do
     let(:source) { nil }
 
-    it { is_expected.to be_success }
+    it "sends a nil source to analytics" do
+      expect(result).to be_success
+      expect(SegmentTrackJob).to have_been_enqueued
+        .with(hash_including(event: "organization_registered", properties: hash_including(source: nil)))
+    end
   end
 
   context "with an invalid name" do
