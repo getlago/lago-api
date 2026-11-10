@@ -61,10 +61,11 @@ module DailyUsages
 
     attr_reader :daily_usage
 
-    delegate :subscription, :usage_date, :from_datetime, :to_datetime, to: :daily_usage
+    delegate :subscription, :usage_date, :from_datetime, to: :daily_usage
 
     # Returns the most recent daily_usage for the same subscription and billing period that is
-    # strictly older than the current usage_date.
+    # strictly older than the current usage_date. Termination can shorten the period's end while
+    # keeping its start unchanged, so from_datetime identifies the period across that transition.
     #
     # We intentionally do NOT restrict the lookup to `usage_date - 1.day`. On days without events,
     # no daily_usage row is saved (see DailyUsages::ComputeAllService `last_received_event_on`
@@ -74,7 +75,7 @@ module DailyUsages
     # `usage_diff` (see lago-data `data_pipeline/models/usage/usage_daily_base.sql`).
     def previous_daily_usage
       @previous_daily_usage ||= subscription.daily_usages
-        .where(from_datetime:, to_datetime:)
+        .where(from_datetime:)
         .where("usage_date < ?", usage_date)
         .order(usage_date: :desc)
         .first
