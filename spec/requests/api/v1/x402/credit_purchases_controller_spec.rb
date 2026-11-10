@@ -222,6 +222,16 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
         expect(X402::Settlement.sole.payload["settle_response"]).to eq(settle_response.deep_stringify_keys)
       end
 
+      context "without an idempotency key" do
+        let(:params) { super().except(:idempotency_key) }
+
+        it "answers 422 on the key" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(idempotency_key: ["value_is_mandatory"])
+        end
+      end
+
       context "with the settle response of a failed settle" do
         let(:settle_response) { {success: false, errorReason: "insufficient_funds", transaction: "", network: "eip155:84532"} }
 

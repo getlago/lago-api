@@ -96,7 +96,9 @@ module X402
       end
 
       def mode_fields_failure
-        if record? && settle_response.nil?
+        if record? && idempotency_key.nil?
+          [:idempotency_key, "value_is_mandatory"]
+        elsif record? && settle_response.nil?
           [:settle_response, "value_is_mandatory"]
         elsif record? && !settle_response.is_a?(Hash)
           [:settle_response, "invalid_settle_response"]

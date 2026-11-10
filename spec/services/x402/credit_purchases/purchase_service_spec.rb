@@ -962,6 +962,18 @@ describe X402::CreditPurchases::PurchaseService do
         end
       end
 
+      context "without an idempotency key" do
+        let(:params) { super().except(:idempotency_key) }
+
+        it_behaves_like "a refused record", {idempotency_key: ["value_is_mandatory"]}
+      end
+
+      context "with a null idempotency key" do
+        let(:params) { super().merge(idempotency_key: nil) }
+
+        it_behaves_like "a refused record", {idempotency_key: ["value_is_mandatory"]}
+      end
+
       context "without a settle response" do
         let(:params) { super().except(:settle_response) }
 
