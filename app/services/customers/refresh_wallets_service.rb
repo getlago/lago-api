@@ -4,9 +4,10 @@ module Customers
   class RefreshWalletsService < BaseService
     Result = BaseResult[:wallets]
 
-    def initialize(customer:, include_generating_invoices: false)
+    def initialize(customer:, include_generating_invoices: false, raise_on_server_error: false)
       @customer = customer
       @include_generating_invoices = include_generating_invoices
+      @raise_on_server_error = raise_on_server_error
 
       super
     end
@@ -53,7 +54,7 @@ module Customers
 
     private
 
-    attr_reader :customer, :include_generating_invoices, :refresh_claim
+    attr_reader :customer, :include_generating_invoices, :raise_on_server_error, :refresh_claim
 
     def capture_reservations
       x402_wallets = all_wallets.select(&:x402_enabled)
@@ -179,7 +180,7 @@ module Customers
     # billed invoice subscriptions used to net already-billed amounts out of ongoing usage.
     def subscription_usages
       @subscription_usages ||= customer.active_subscriptions.map do |subscription|
-        usage_result = ::Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER, use_usage_buckets: true)
+        usage_result = ::Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER, use_usage_buckets: true, raise_on_server_error:)
 
         billed_progressive_invoice_subscriptions = ::Subscriptions::ProgressiveBilledAmount
           .call(subscription:, include_generating_invoices:)

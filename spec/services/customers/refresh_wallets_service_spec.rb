@@ -293,8 +293,27 @@ RSpec.describe Customers::RefreshWalletsService do
             customer:,
             subscription:,
             usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
-            use_usage_buckets: true
+            use_usage_buckets: true,
+            raise_on_server_error: false
           )
+        end
+      end
+
+      context "when raise_on_server_error is true" do
+        subject(:result) { described_class.call(customer:, include_generating_invoices:, raise_on_server_error: true) }
+
+        it "passes raise_on_server_error to CustomerUsageService" do
+          subject
+
+          customer.active_subscriptions.each do |subscription|
+            expect(Invoices::CustomerUsageService).to have_received(:call!).with(
+              customer:,
+              subscription:,
+              usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+              use_usage_buckets: true,
+              raise_on_server_error: true
+            )
+          end
         end
       end
 
