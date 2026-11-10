@@ -408,6 +408,18 @@ describe X402::CreditPurchases::PurchaseService do
       end
     end
 
+    context "with the settled hash recorded by another organization's merchant" do
+      before { create(:x402_settlement, :merchant, transaction_hash: settled_hash) }
+
+      it "settles the purchase" do
+        expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: settled_hash)
+      end
+
+      it "grants the credits" do
+        expect(result.settlement.reload.wallet_transaction).to be_present
+      end
+    end
+
     context "with a grant failing after the settle" do
       before { allow(X402::Subscriptions::ResolveService).to receive(:call!).and_raise(ActiveRecord::LockWaitTimeout) }
 

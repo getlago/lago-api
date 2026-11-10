@@ -106,7 +106,9 @@ describe X402::CreditPurchases::RecordService do
     context "when another organization's row holds the transaction" do
       before { create(:x402_settlement, transaction_hash: stored_hash) }
 
-      it_behaves_like "a refusal", {settle_response: ["transaction_already_recorded"]}
+      it "records the purchase" do
+        expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: stored_hash)
+      end
     end
 
     context "when an invoice payment holds the transaction" do

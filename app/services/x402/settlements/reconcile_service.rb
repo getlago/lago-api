@@ -5,7 +5,7 @@ module X402
     class ReconcileService < BaseService
       Result = BaseResult[:settlement]
       READERS = {evm: X402::Chain::EvmReader, svm: X402::Chain::SvmReader}.freeze
-      TRANSACTION_INDEX = "index_x402_settlements_on_network_and_transaction_hash"
+      TRANSACTION_INDEXES = %w[index_x402_settlements_on_organization_network_and_hash index_x402_settlements_on_lago_network_and_hash].freeze
 
       def initialize(settlement:)
         @settlement = settlement
@@ -82,7 +82,7 @@ module X402
           transition(status: :settled, transaction_hash:)
         end
       rescue ActiveRecord::RecordNotUnique => e
-        raise unless e.message.include?(TRANSACTION_INDEX)
+        raise unless TRANSACTION_INDEXES.include?(violated_unique_index(e))
 
         settlement.restore_attributes
         resolve_conflict(X402::Settlement.find_by(network: settlement.network, transaction_hash:))

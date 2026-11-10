@@ -7,7 +7,7 @@ module X402
 
       UNIQUE_INDEX_FAILURES = {
         "index_x402_settlements_on_payment_digest" => [:base, "payment_already_recorded"],
-        "index_x402_settlements_on_network_and_transaction_hash" => [:settle_response, "transaction_already_recorded"]
+        "index_x402_settlements_on_organization_network_and_hash" => [:settle_response, "transaction_already_recorded"]
       }.freeze
 
       def initialize(verified_payment:, settle_response:, purchase_settings:, request_key_digest:)
