@@ -180,6 +180,18 @@ module Events
         end
       end
 
+      # The events a snapshot missed, for current usage, which persists no snapshot: every event read
+      # counts towards both values.
+      def recurring_delta_sum(store, period:)
+        recurring_delta_result(rows_for(store, period:))
+      end
+
+      def grouped_recurring_delta_sum(store, period:)
+        group_rows(store, rows_for(store, period:)).map do |groups, rows|
+          recurring_delta_result(rows, groups:)
+        end
+      end
+
       # Mirrors ClickhouseStore#max, which answers 0 without a value.
       def max(store, with_count: true)
         row = self.class.combine(aggregation_type, {}, rows_for(store))
@@ -208,6 +220,18 @@ module Events
 
       def aggregation_type
         charge.billable_metric.aggregation_type
+      end
+
+      def recurring_delta_result(rows, groups: nil)
+        value = rows.sum(BigDecimal(0), &:value)
+        events_count = rows.sum(0, &:events_count)
+        attributes = {value:, snapshot_value: value, events_count:, snapshot_events_count: events_count}
+
+        if groups
+          BaseStore::GroupedRecurringAggregationResult.new(groups:, **attributes)
+        else
+          BaseStore::RecurringAggregationResult.new(**attributes)
+        end
       end
 
       def grouped_rows(store, with_count: true)
@@ -284,10 +308,10 @@ module Events
         @group_keys ||= pricing_buckets.values.flat_map(&:pricing_group_keys).uniq
       end
 
-      def rows_for(store)
+      def rows_for(store, period: nil)
         key = filter_key(store.charge_filter_id)
 
-        scan(store, batch_index.fetch(key)).fetch(key, [])
+        scan(store, batch_index.fetch(key), period:).fetch(key, [])
       end
 
       def grouped_rows_for(store)
@@ -315,12 +339,12 @@ module Events
         @rows[[:recurring, batch, to_datetime, watermark]].fetch(key, [])
       end
 
-      # One read per batch and window: the stores of the batch share it, and recurring metrics
-      # read theirs without the lower boundary.
-      def scan(store, batch)
-        from_datetime = (store.from_datetime if store.use_from_boundary)
+      # One read per batch and window: the stores of the batch share it. Recurring metrics read
+      # theirs without the lower boundary, or from the end of their snapshot's `period`.
+      def scan(store, batch, period: nil)
+        from_datetime = period ? period.to_datetime : (store.from_datetime if store.use_from_boundary)
         to_datetime = store.applicable_to_datetime
-        key = [batch, from_datetime, to_datetime]
+        key = [batch, from_datetime, to_datetime, period&.watermark]
 
         @rows[key] ||= if incremental
           incremental.rows(
@@ -328,17 +352,19 @@ module Events
             from_datetime:,
             to_datetime:,
             conditions: batch_conditions(batch),
-            group_keys:
-          ) { |**window| read_rows(store, batch, **window) }
+            group_keys:,
+            period:
+          ) { |**window| read_rows(store, batch, period:, **window) }
         else
-          read_rows(store, batch, from_datetime:, to_datetime:)
+          read_rows(store, batch, from_datetime:, to_datetime:, period:)
         end
       end
 
       # The rows of the batch's filters for the events of `from_datetime` (included) to
-      # `to_datetime` (included) or `before` (excluded).
-      def read_rows(store, batch, from_datetime:, to_datetime:, before: nil)
-        sql = scan_sql(store, batch:, from_datetime:, to_datetime:, before:)
+      # `to_datetime` (included) or `before` (excluded). A window opening on the end of the
+      # snapshot's `period` reads the events it missed, the late ones included.
+      def read_rows(store, batch, from_datetime:, to_datetime:, before: nil, period: nil)
+        sql = scan_sql(store, batch:, from_datetime:, to_datetime:, before:, period:)
 
         select_rows(sql, batch) do |groups, (value, events_count, timestamp)|
           Row.new(groups:, value: row_value(value), events_count: events_count.to_i, timestamp: timestamp&.to_i)
@@ -381,11 +407,15 @@ module Events
       end
 
       # With a `watermark`, the rows are those of a recurring sum (see #recurring_sum).
-      def scan_sql(store, batch:, from_datetime:, to_datetime:, before: nil, watermark: nil)
+      def scan_sql(store, batch:, from_datetime:, to_datetime:, before: nil, watermark: nil, period: nil)
         columns = %w[decimal_value properties]
         columns << "enriched_at" if watermark
 
-        events_sql = store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: columns, before:)
+        events_sql = if period && from_datetime == period.to_datetime
+          store.snapshot_delta_events_sql(period, deduplicated_columns: columns, before:)
+        else
+          store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: columns, before:)
+        end
 
         group_columns = group_keys.map.with_index do |key, index|
           "#{store.sanitized_property_name(key)} AS g_#{index}"

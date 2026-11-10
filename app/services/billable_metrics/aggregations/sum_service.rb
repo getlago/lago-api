@@ -81,7 +81,7 @@ module BillableMetrics
       def recurring_sum(options)
         return unless billable_metric.recurring?
 
-        if (period = delta_period(options))
+        if (period = initial_period)
           delta = event_store.recurring_sum(watermark: delta_watermark(options), period:)
           initial_value.reduce(delta) { |sum, snapshot| with_snapshot(sum, snapshot) }
         elsif options[:recurring_watermark]
@@ -94,7 +94,7 @@ module BillableMetrics
       def grouped_recurring_sum(options)
         return unless billable_metric.recurring?
 
-        if (period = delta_period(options))
+        if (period = initial_period)
           deltas = event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:)
           with_grouped_snapshots(deltas.index_by(&:groups))
         elsif options[:recurring_watermark]
@@ -125,12 +125,6 @@ module BillableMetrics
           end
         end
         result
-      end
-
-      # Without snapshots, the period still bounds the delta: the bucket starts from zero.
-      # Current usage served by the incremental scan keeps its own read.
-      def delta_period(options)
-        initial_period unless options[:is_current_usage] && event_store.incremental_sum?
       end
 
       # Current usage persists no snapshot: its delta needs no watermark of its own.

@@ -248,6 +248,35 @@ describe "Recurring aggregation snapshots", transaction: false do
       let(:clickhouse_events_store) { true }
 
       it_behaves_like "an in-arrears recurring sum"
+
+      context "with the incremental charge cache", cache: :memory do
+        let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values incremental_charge_cache] }
+
+        it "reads the current usage from the snapshots" do
+          expect(bill).to eq(
+            march_invoice: [{amount_cents: 1600, units: 16, events_count: 4}],
+            april_usage: {amount_cents: 2800, units: 28, events_count: 6},
+            april_invoice: [{amount_cents: 2800, units: 28, events_count: 6}],
+            june_usage: {amount_cents: 3200, units: 32, events_count: 7},
+            may_invoice: [{amount_cents: 3200, units: 32, events_count: 7}]
+          )
+          expect(read_periods).to eq(invoice: invoice_reads, usage: usage_reads)
+        end
+
+        context "with a snapshot edited after it was written" do
+          # A usage that ignores the stored values reads 28 and 32, the full history
+          def change_catalog
+            RecurringAggregationSnapshot.where(organization:).sole.update!(units: 115, events_count: 4)
+          end
+
+          it "adds the stored values to the delta" do
+            expect(bill.slice(:april_usage, :june_usage)).to eq(
+              april_usage: {amount_cents: 12800, units: 128, events_count: 7},
+              june_usage: {amount_cents: 13200, units: 132, events_count: 8}
+            )
+          end
+        end
+      end
     end
   end
 

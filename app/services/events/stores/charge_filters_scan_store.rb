@@ -48,10 +48,13 @@ module Events
         end
       end
 
-      # The delta of a closed period keeps the store's own read, pruned by timestamp and enriched_at.
+      # The delta of a closed period keeps the store's own read, pruned by timestamp and enriched_at,
+      # unless the incremental cache keeps it between current usage computations.
       def recurring_sum(watermark:, period: nil)
         if period.nil? && scanned?(operation: :recurring_sum)
           scan.recurring_sum(__getobj__, watermark:)
+        elsif period && incremental_delta?
+          scan.recurring_delta_sum(__getobj__, period:)
         else
           super
         end
@@ -60,13 +63,11 @@ module Events
       def grouped_recurring_sum(watermark:, period: nil)
         if period.nil? && scanned?(operation: :recurring_sum)
           scan.grouped_recurring_sum(__getobj__, watermark:)
+        elsif period && incremental_delta?
+          scan.grouped_recurring_delta_sum(__getobj__, period:)
         else
           super
         end
-      end
-
-      def incremental_sum?
-        scan.incremental? && scanned?(operation: :sum)
       end
 
       def max(with_count: true)
@@ -104,6 +105,10 @@ module Events
       private
 
       attr_reader :scan
+
+      def incremental_delta?
+        scan.incremental? && scanned?(operation: :sum)
+      end
 
       # Asked on each call: a running total narrows the store to one group for the duration of
       # a block (BaseStore#with_grouped_by_values), which the read of the whole charge ignores.

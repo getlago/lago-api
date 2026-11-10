@@ -788,9 +788,9 @@ module Events
       # The events dated after the period and the late ones are read in two branches rather than
       # one OR, so that the first is pruned by the primary key and the second by the enriched_at index.
       # The branches cannot share a deduplication key, as the timestamp is part of it.
-      def snapshot_delta_events_sql(period, deduplicated_columns:)
+      def snapshot_delta_events_sql(period, deduplicated_columns:, before: nil)
         columns = (DEDUP_KEY_COLUMNS + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
-        where_sql = deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)
+        where_sql = deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime, before:)
 
         [
           sql_condition("timestamp > ?", period.to_datetime),

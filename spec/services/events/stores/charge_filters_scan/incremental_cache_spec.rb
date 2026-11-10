@@ -409,4 +409,77 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
       expect(reads).to eq([{from_datetime: boundaries[:from_datetime], to_datetime: boundaries[:to_datetime], before: nil}])
     end
   end
+
+  context "with a recurring sum read from a snapshot" do
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value", recurring: true) }
+
+    # The events were ingested at 11:07: tr_1 is in the snapshot, the others are dated after it.
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: Time.zone.parse("2026-09-05"), watermark: now - 30.minutes)
+    end
+
+    # The delta Fees::ChargeService adds to the snapshot units for current usage, read by each
+    # filter's own store without the cache.
+    def delta_totals(period, incremental: true)
+      loaded_charge = Charge.includes(filters: {values: :billable_metric_filter}).find(charge.id)
+      cache = (described_class.new(subscription:, charge: loaded_charge) if incremental)
+      scan = Events::Stores::ChargeFiltersScan.new(charge: loaded_charge, incremental: cache)
+      pricing_buckets = Fees::ChargeService::Sources::Charge.new(charge: loaded_charge, boundaries: nil).pricing_buckets
+
+      pricing_buckets.to_h do |item|
+        store = filter_store(item).tap { it.use_from_boundary = false }
+        store = Events::Stores::ChargeFiltersScanStore.new(store, scan:) if incremental
+        delta = store.recurring_sum(watermark: Time.current, period:)
+
+        [item.charge_filter&.id, {value: delta.value, events_count: delta.events_count}]
+      end
+    end
+
+    def delta_computation(period)
+      reads.clear
+      delta_totals(period)
+    end
+
+    it "answers the snapshot delta and keeps its base" do
+      expect(delta_computation(period)).to eq(delta_totals(period, incremental: false))
+      expect(delta_computation(period).values.sum { it[:value] }).to eq(2 + 4 + 8 + 16)
+      expect(reads).to eq([{from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}])
+    end
+
+    it "reads the base from the end of the snapshot's period" do
+      delta_computation(period)
+
+      expect(reads).to eq(
+        [
+          {from_datetime: period.to_datetime, to_datetime: nil, before: cut},
+          {from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}
+        ]
+      )
+    end
+
+    context "when an event dated before the snapshot was ingested after the base" do
+      before do
+        delta_computation(period)
+        ingest("tr_late", Time.zone.parse("2026-08-20 10:00"), "us", 64)
+      end
+
+      it "reads the base again and counts the event" do
+        expect(delta_computation(period)).to eq(delta_totals(period, incremental: false))
+        expect(delta_computation(period).values.sum { it[:value] }).to eq(2 + 4 + 8 + 16 + 64)
+      end
+    end
+
+    context "when a new snapshot is written" do
+      let(:next_period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: Time.zone.parse("2026-09-12"), watermark: now - 10.minutes)
+      end
+
+      before { delta_computation(period) }
+
+      it "reads the base again from the new snapshot" do
+        expect(delta_computation(next_period)).to eq(delta_totals(next_period, incremental: false))
+        expect(reads.first).to eq({from_datetime: next_period.to_datetime, to_datetime: nil, before: cut})
+      end
+    end
+  end
 end

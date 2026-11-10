@@ -378,31 +378,6 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
         expect(result.aggregation).to eq(1000 + 7 + 20)
       end
-
-      context "when the store answers the sum incrementally" do
-        before do
-          allow(event_store_class).to receive(:new).and_wrap_original do |original, **args|
-            original.call(**args).tap { allow(it).to receive(:incremental_sum?).and_return(true) }
-          end
-        end
-
-        it "ignores the snapshot" do
-          result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
-
-          expect(result.aggregation).to eq(40)
-        end
-
-        context "with snapshots to fetch" do
-          let(:fetches) { [] }
-
-          it "does not fetch them" do
-            result = aggregator(periods.second, initial_snapshots: -> { fetches << :fetch }).aggregate(options:)
-
-            expect(result.aggregation).to eq(40)
-            expect(fetches).to be_empty
-          end
-        end
-      end
     end
   end
 

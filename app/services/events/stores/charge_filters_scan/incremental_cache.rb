@@ -91,7 +91,12 @@ module Events
         #
         # The clock is read once for all the batches of the computation, so that they share their
         # cut and watermark, and with them a single late event check.
-        def rows(store:, from_datetime:, to_datetime:, conditions:, group_keys:, &)
+        #
+        # A recurring sum with a snapshot `period` opens its window on the period's end. The block
+        # then reads, for a part opening there, the events the snapshot missed, so the base starts
+        # from the snapshot rather than from the subscription start. Its late events are dated
+        # anywhere in the history, which the check covers.
+        def rows(store:, from_datetime:, to_datetime:, conditions:, group_keys:, period: nil, &)
           now = (@now ||= Time.current)
           cut = cut_at(now)
 
@@ -99,10 +104,11 @@ module Events
             return yield(from_datetime:, to_datetime:, before: nil)
           end
 
-          key = cache_key(from_datetime:, to_datetime:)
+          key = cache_key(from_datetime:, to_datetime:, period:)
           batch = Digest::SHA256.hexdigest([conditions, group_keys].to_json)
+          late_from = (from_datetime unless period)
 
-          base = base_rows(store:, key:, batch:, now:, cut:, from_datetime:, &)
+          base = base_rows(store:, key:, batch:, now:, cut:, from_datetime:, late_from:, &)
           tail = yield(from_datetime: cut, to_datetime:, before: nil)
 
           merge(base, tail)
@@ -122,10 +128,10 @@ module Events
           (from_datetime.nil? || cut > from_datetime) && (to_datetime.nil? || cut <= to_datetime)
         end
 
-        def base_rows(store:, key:, batch:, now:, cut:, from_datetime:)
+        def base_rows(store:, key:, batch:, now:, cut:, from_datetime:, late_from:)
           entries = Rails.cache.read(key) || {}
           entry = entries[batch] && load(entries[batch])
-          entry = nil unless entry && reusable?(entry, store:, now:, cut:, from_datetime:)
+          entry = nil unless entry && reusable?(entry, store:, now:, cut:, late_from:)
 
           return entry.rows if entry&.cut == cut
 
@@ -152,17 +158,17 @@ module Events
           entry.rows
         end
 
-        def reusable?(entry, store:, now:, cut:, from_datetime:)
+        def reusable?(entry, store:, now:, cut:, late_from:)
           entry.built_at > now - FULL_REFRESH_INTERVAL &&
             entry.cut <= cut &&
-            !late_events?(store:, from_datetime:, entry:)
+            !late_events?(store:, late_from:, entry:)
         end
 
         # The check depends on the window, the cut and the watermark, not on the filters, and the
         # batches of a charge are kept together: it is run once for all of them.
-        def late_events?(store:, from_datetime:, entry:)
+        def late_events?(store:, late_from:, entry:)
           where = [
-            store.deduplicated_events_where_sql(from_datetime:, to_datetime: nil, before: entry.cut),
+            store.deduplicated_events_where_sql(from_datetime: late_from, to_datetime: nil, before: entry.cut),
             store.sanitize_clickhouse_sql(["enriched_at > ?", entry.watermark])
           ].join(" AND ")
           sql = "SELECT 1 FROM events_enriched WHERE #{where} LIMIT 1"
@@ -187,7 +193,8 @@ module Events
         # The metric decides which value of an event is aggregated and how, so editing it, or the
         # charge or its filters, starts a new base. Which events each filter keeps is not bound to
         # these timestamps: the batch's conditions are compared on every computation (see #rows).
-        def cache_key(from_datetime:, to_datetime:)
+        # A new snapshot, or one rewritten with a later watermark, starts a new base.
+        def cache_key(from_datetime:, to_datetime:, period:)
           [
             "charge-scan-incremental",
             CACHE_KEY_VERSION,
@@ -198,7 +205,8 @@ module Events
             charge.filters.map(&:updated_at).max&.iso8601(6),
             charge.billable_metric.updated_at.iso8601(6),
             from_datetime&.iso8601(6),
-            to_datetime&.iso8601(6)
+            to_datetime&.iso8601(6),
+            period&.watermark&.iso8601(6)
           ].join("/")
         end
 
