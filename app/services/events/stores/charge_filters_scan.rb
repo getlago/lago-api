@@ -156,7 +156,8 @@ module Events
         end
       end
 
-      # The full history only: the delta of a snapshot keeps the read of the filter's own store.
+      # The full history only: a snapshot delta is read by the filter's own store, or by
+      # #recurring_delta_sum with the incremental cache.
       def recurring_sum(store, watermark:)
         rows = recurring_rows_for(store, watermark)
 

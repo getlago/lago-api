@@ -457,6 +457,32 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
       )
     end
 
+    context "when the cut moved forward" do
+      before do
+        delta_computation(period)
+        travel_to(now + 15.minutes)
+        ingest("tr_6", Time.zone.parse("2026-09-15 12:10"), "eu", 32)
+      end
+
+      # A slice reading the snapshot delta again would count the base's events twice
+      it "adds the slice between the two cuts without reading the delta again" do
+        expect(delta_computation(period)).to eq(delta_totals(period, incremental: false))
+        expect(delta_computation(period).values.sum { it[:value] }).to eq(2 + 4 + 8 + 16 + 32)
+        expect(reads).to eq([{from_datetime: cut + 15.minutes, to_datetime: boundaries[:to_datetime], before: nil}])
+      end
+
+      it "reads the slice from the previous cut" do
+        delta_computation(period)
+
+        expect(reads).to eq(
+          [
+            {from_datetime: cut, to_datetime: nil, before: cut + 15.minutes},
+            {from_datetime: cut + 15.minutes, to_datetime: boundaries[:to_datetime], before: nil}
+          ]
+        )
+      end
+    end
+
     context "when an event dated before the snapshot was ingested after the base" do
       before do
         delta_computation(period)
