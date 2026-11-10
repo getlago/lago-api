@@ -7039,6 +7039,7 @@ type Event {
   matchCustomer: Boolean
   matchSubscription: Boolean
   payload: JSON!
+  preciseTotalAmountCents: String
   receivedAt: ISO8601DateTime
   timestamp: ISO8601DateTime
   timestampMs: BigInt
