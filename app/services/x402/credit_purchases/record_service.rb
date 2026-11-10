@@ -26,7 +26,7 @@ module X402
           kind: :credit_purchase,
           status: :settled,
           settled_by: :merchant,
-          transaction_hash: settled["transaction"],
+          transaction_hash:,
           purchase_settings:,
           network: verified_payment.network,
           asset: verified_payment.asset,
@@ -61,6 +61,11 @@ module X402
 
       def settled
         @settled ||= settle_response.deep_stringify_keys
+      end
+
+      def transaction_hash
+        transaction = settled["transaction"]
+        (verified_payment.family == :evm) ? transaction.downcase : transaction
       end
     end
   end

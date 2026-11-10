@@ -23,8 +23,9 @@ describe X402::CreditPurchases::RecordService do
         verify_response:
       )
     end
-    let(:transaction_hash) { "0x#{"CD" * 32}" }
-    let(:settle_response) { {"success" => true, "transaction" => transaction_hash, "network" => "eip155:84532", "payer" => payer_address} }
+    let(:gate_hash) { "0x#{"CD" * 32}" }
+    let(:stored_hash) { "0x#{"cd" * 32}" }
+    let(:settle_response) { {"success" => true, "transaction" => gate_hash, "network" => "eip155:84532", "payer" => payer_address} }
     let(:purchase_settings) { {"plan_code" => "agent_api", "wallet_code" => "agent_credits"} }
     let(:request_key_digest) { X402::Settlement.request_key_digest("agent-request-0001") }
     let(:other_connection) { create(:x402_connection, organization:) }
@@ -47,7 +48,7 @@ describe X402::CreditPurchases::RecordService do
           kind: "credit_purchase",
           status: "settled",
           settled_by: "merchant",
-          transaction_hash:,
+          transaction_hash: stored_hash,
           network: "eip155:84532",
           asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
           payer_address:,
@@ -63,7 +64,7 @@ describe X402::CreditPurchases::RecordService do
         )
       end
 
-      it "keeps the payment and the gate's settle response" do
+      it "keeps the payment and the gate's settle response as sent" do
         expect(result.settlement.reload.payload).to eq("payment" => payment, "payment_requirements" => payment_requirements, "settle_response" => settle_response)
       end
 
@@ -97,21 +98,33 @@ describe X402::CreditPurchases::RecordService do
     end
 
     context "when a row holds the transaction" do
-      before { create(:x402_settlement, organization:, x402_connection: other_connection, transaction_hash:) }
+      before { create(:x402_settlement, organization:, x402_connection: other_connection, transaction_hash: stored_hash) }
 
       it_behaves_like "a refusal", {settle_response: ["transaction_already_recorded"]}
     end
 
     context "when another organization's row holds the transaction" do
-      before { create(:x402_settlement, transaction_hash:) }
+      before { create(:x402_settlement, transaction_hash: stored_hash) }
 
       it_behaves_like "a refusal", {settle_response: ["transaction_already_recorded"]}
     end
 
     context "when an invoice payment holds the transaction" do
-      before { create(:x402_settlement, :invoice_payment, organization:, x402_connection: other_connection, transaction_hash:) }
+      before { create(:x402_settlement, :invoice_payment, organization:, x402_connection: other_connection, transaction_hash: stored_hash) }
 
       it_behaves_like "a refusal", {settle_response: ["transaction_already_recorded"]}
+    end
+
+    context "with a Solana payment" do
+      let(:payment) { x402_svm_payment }
+      let(:payment_requirements) { x402_svm_requirements }
+      let(:payer_address) { x402_svm_payer }
+      let(:signature) { "7scJSNzkdyryaFQcfRX52upVRridoUijgMNaUmLBtJTxB9iCjmEDk2Mk54eEuTYoPqAgdtajPvxDMk9RFimsZ93" }
+      let(:settle_response) { {"success" => true, "transaction" => signature, "network" => x402_svm_requirements["network"]} }
+
+      it "keeps the signature's case" do
+        expect(result.settlement.reload.transaction_hash).to eq(signature)
+      end
     end
 
     context "when the insert hits an unknown unique index" do

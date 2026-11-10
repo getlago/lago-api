@@ -1096,6 +1096,12 @@ describe X402::CreditPurchases::PurchaseService do
         before { create(:x402_settlement, organization:, x402_connection:, payee_address:, transaction_hash: gate_hash) }
 
         it_behaves_like "a refused record", {settle_response: ["transaction_already_recorded"]}
+
+        context "when the gate spells it in upper case" do
+          let(:settle_response) { super().merge("transaction" => "0x#{"EF" * 32}") }
+
+          it_behaves_like "a refused record", {settle_response: ["transaction_already_recorded"]}
+        end
       end
 
       context "with an invoice payment holding the payment" do
