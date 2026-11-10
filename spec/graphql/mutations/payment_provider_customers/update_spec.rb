@@ -102,6 +102,32 @@ RSpec.describe Mutations::PaymentProviderCustomers::Update do
     end
   end
 
+  context "when the customer has no default payment provider" do
+    let(:payment_provider_customer) do
+      create(:stripe_customer, organization:, customer:, provider_customer_id: "cus_123", provider_payment_methods: %w[card])
+    end
+
+    before { allow(Stripe::Customer).to receive(:update) }
+
+    it "saves the connection without pushing the customer to the provider" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: payment_provider_customer.id, providerCustomerId: "cus_123", providerPaymentMethods: %w[card sepa_debit]}
+        }
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(customer.payment_provider).to be_nil
+      expect(result["data"]["updatePaymentProviderCustomer"]["providerPaymentMethods"]).to match_array(%w[card sepa_debit])
+      expect(payment_provider_customer.reload.provider_payment_methods).to eq(%w[card sepa_debit])
+      expect(Stripe::Customer).not_to have_received(:update)
+    end
+  end
+
   context "when payment provider customer is not found" do
     it "returns an error" do
       result = execute_graphql(
