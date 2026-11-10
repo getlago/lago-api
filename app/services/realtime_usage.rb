@@ -54,9 +54,10 @@ module RealtimeUsage
     end
 
     # On top of enabled?, so recurring sums roll back on their own without turning off the buckets
-    # for the organization's other charges. The forced gate leaves it closed until the parity task
-    # reads the snapshots on both sides, which it needs to compare recurring charges.
+    # for the organization's other charges.
     def recurring_sum_enabled?(organization)
+      return true if forced_gate?
+
       organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
     end
 

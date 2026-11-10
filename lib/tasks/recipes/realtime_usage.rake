@@ -80,7 +80,8 @@ namespace :recipes do
       Rails.logger.level = Logger::Severity::ERROR
 
       puts "The realtime usage gate is forced open for the bucket run: the feature flag and the"
-      puts "LAGO_REALTIME_USAGE_ENABLED kill switch are bypassed."
+      puts "LAGO_REALTIME_USAGE_ENABLED kill switch are bypassed. Both runs read the recurring snapshots, whatever"
+      puts "the persisted_recurring_values flag says."
       puts "The stream and the events store collapse duplicates on different keys, so read the"
       puts "duplicate event count of each subscription before concluding on a mismatch."
       puts ""
@@ -109,6 +110,7 @@ namespace :recipes do
       with_cutover_risk = 0
       eligible_charges = 0
       served_charges = 0
+      recurring_fallback_reasons = Hash.new(0)
 
       subscriptions.each do |subscription|
         comparison = RealtimeUsage::CompareUsageService.call(subscription:)
@@ -122,6 +124,7 @@ namespace :recipes do
         compared += 1
         eligible_charges += comparison.eligible_charges_count
         served_charges += comparison.served_charges_count
+        comparison.recurring_fallback_reasons.each { |reason, count| recurring_fallback_reasons[reason] += count }
         declined += 1 if comparison.served_charges_count.zero?
         mismatching += 1 if comparison.differences.any?
         with_cutover_risk += 1 if comparison.cutover_risks.any?
@@ -139,6 +142,7 @@ namespace :recipes do
       puts "Summary"
       puts "  subscriptions compared:      #{compared} (#{failed} failed)"
       puts "  charges served from buckets: #{served_charges}/#{eligible_charges} comparable"
+      puts "  recurring charges falling back to events: #{realtime_usage_format_reasons(recurring_fallback_reasons)}"
       puts "  subscriptions declined:      #{declined} (nothing was served, nothing was compared)"
       puts "  subscriptions mismatching:   #{mismatching}"
       puts "  of which a re-sent transaction id may explain: #{with_cutover_risk}"
@@ -171,6 +175,10 @@ def realtime_usage_print_comparison(subscription, comparison)
        "#{comparison.duplicate_events_count} duplicate event(s), " \
        "#{comparison.differences.size} mismatching leaf/leaves [#{status}]#{recheck}"
 
+  if comparison.recurring_fallback_reasons.any?
+    puts "      recurring charges falling back to events: #{realtime_usage_format_reasons(comparison.recurring_fallback_reasons)}"
+  end
+
   comparison.differences.select(&:mismatch?).group_by(&:charge_id).each do |charge_id, rows|
     puts "      charge #{rows.first.billable_metric_code} (#{charge_id}): #{rows.size} mismatching leaf/leaves, see the CSV"
   end
@@ -202,6 +210,12 @@ def realtime_usage_csv_rows(subscription, comparison)
       comparison.duplicate_events_count
     ]
   end
+end
+
+def realtime_usage_format_reasons(reasons)
+  return "none" if reasons.empty?
+
+  reasons.sort.map { |reason, count| "#{reason} #{count}" }.join(", ")
 end
 
 def realtime_usage_print_gate(label, ok)

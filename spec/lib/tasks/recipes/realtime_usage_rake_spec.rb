@@ -34,13 +34,14 @@ RSpec.describe "recipes:realtime_usage:compare_usage", :premium do # rubocop:dis
     )
   end
 
-  def comparison_result(rows:, served_charges_count: 1, declined_reason: nil)
+  def comparison_result(rows:, served_charges_count: 1, declined_reason: nil, recurring_fallback_reasons: {})
     RealtimeUsage::CompareUsageService::Result.new.tap do
       it.rows = rows
       it.differences = rows.select(&:different?)
       it.cutover_risks = rows.select(&:cutover_risk?)
       it.eligible_charges_count = 1
       it.served_charges_count = served_charges_count
+      it.recurring_fallback_reasons = recurring_fallback_reasons
       it.duplicate_events_count = 0
       it.declined_reason = declined_reason
       it.rechecked = false
@@ -106,6 +107,21 @@ RSpec.describe "recipes:realtime_usage:compare_usage", :premium do # rubocop:dis
 
     it "reports it rather than calling the run clean" do
       expect { task.invoke }.to output(/Mismatches detected, investigate before enabling the organization/).to_stdout
+    end
+  end
+
+  context "when recurring charges fell back to the events" do
+    let(:comparison) do
+      comparison_result(rows: [row], recurring_fallback_reasons: {"not_adjacent" => 1, "late_ingestion" => 2})
+    end
+
+    it "reports the reasons for the subscription and in the summary" do
+      expect { task.invoke }.to output(
+        a_string_including(
+          "      recurring charges falling back to events: late_ingestion 2, not_adjacent 1",
+          "  recurring charges falling back to events: late_ingestion 2, not_adjacent 1"
+        )
+      ).to_stdout
     end
   end
 

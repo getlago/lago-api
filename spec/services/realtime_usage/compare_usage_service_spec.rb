@@ -191,19 +191,97 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
     end
   end
 
-  context "with a recurring charge the organization serves from the buckets" do
-    let(:organization) do
-      create(
-        :organization,
-        clickhouse_events_store: true,
-        feature_flags: %w[realtime_usage realtime_usage_recurring_sum persisted_recurring_values]
+  context "with a recurring charge" do
+    # The flags are off: the comparison opens the recurring charges and reads the snapshots anyway.
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+    let(:charges_from_datetime) { timestamp.beginning_of_month }
+    let(:watermark) { charges_from_datetime + 1.second }
+    let(:snapshot_to_datetime) { charges_from_datetime - 1.second }
+    let(:history_last_ingested_at) { watermark - 1.day }
+    let(:snapshot) { create(:recurring_aggregation_snapshot, subscription:, charge:, to_datetime: snapshot_to_datetime, watermark:) }
+    let(:runs) { [] }
+
+    let(:usage_buckets) do
+      Events::Stores::UsageBucketSet.new(
+        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum", units: bucket_units, events_count: bucket_events_count, last_event_at: Time.current)},
+        history_last_ingested_at: {charge.id => history_last_ingested_at}
       )
     end
-    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
 
-    it "reports the charge as not served, as the runs would not read the same snapshots" do
-      expect(comparison.served_charges_count).to eq(0)
-      expect(comparison.rows).to be_empty
+    before do
+      snapshot
+
+      allow(Invoices::CustomerUsageService).to receive(:call!) do |use_usage_buckets:, usage_filters:, **|
+        runs << {
+          charge_ids: usage_filters.filter_by_charge_id,
+          use_usage_buckets:,
+          forced_gate: RealtimeUsage.forced_gate?,
+          snapshot_read: RecurringAggregationSnapshots.read_enabled?(organization)
+        }
+        use_usage_buckets ? bucket_usage_result : events_usage_result
+      end
+    end
+
+    it "compares it, both runs reading the snapshots and only one the buckets" do
+      expect(comparison.eligible_charges_count).to eq(1)
+      expect(comparison.served_charges_count).to eq(1)
+      expect(comparison.recurring_fallback_reasons).to eq({})
+      expect(comparison.rows.map(&:classification)).to eq(["match"])
+      expect(runs).to eq(
+        [
+          {charge_ids: [charge.id], use_usage_buckets: true, forced_gate: true, snapshot_read: true},
+          {charge_ids: [charge.id], use_usage_buckets: false, forced_gate: false, snapshot_read: true}
+        ]
+      )
+    end
+
+    it "closes the forced snapshot read once the comparison is over" do
+      comparison
+
+      expect(RecurringAggregationSnapshots.read_enabled?(organization)).to be(false)
+    end
+
+    context "when an event was ingested into a closed period after the snapshot" do
+      let(:history_last_ingested_at) { watermark + 1.minute }
+
+      it "reports the charge as falling back rather than comparing the events with themselves" do
+        expect(comparison.served_charges_count).to eq(0)
+        expect(comparison.recurring_fallback_reasons).to eq({"late_ingestion" => 1})
+        expect(comparison.declined_reason).to eq("recurring_fallback")
+        expect(comparison.rows).to be_empty
+        expect(runs).to be_empty
+      end
+
+      context "with a charge served next to it" do
+        let(:other_charge) { create(:standard_charge, plan:, billable_metric: create(:sum_billable_metric, organization:)) }
+
+        before { other_charge }
+
+        it "compares the other charge only" do
+          expect(comparison.served_charges_count).to eq(1)
+          expect(comparison.recurring_fallback_reasons).to eq({"late_ingestion" => 1})
+          expect(comparison.declined_reason).to be_nil
+          expect(runs.map { it[:charge_ids] }).to eq([[other_charge.id], [other_charge.id]])
+        end
+      end
+    end
+
+    context "when the snapshot closes an older period than the previous one" do
+      let(:snapshot_to_datetime) { charges_from_datetime - 1.month }
+
+      it "reports the charge as falling back" do
+        expect(comparison.served_charges_count).to eq(0)
+        expect(comparison.recurring_fallback_reasons).to eq({"not_adjacent" => 1})
+      end
+    end
+
+    context "without a snapshot" do
+      let(:snapshot) { nil }
+
+      it "reports the charge as falling back" do
+        expect(comparison.served_charges_count).to eq(0)
+        expect(comparison.recurring_fallback_reasons).to eq({"no_period" => 1})
+      end
     end
   end
 
