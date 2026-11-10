@@ -360,6 +360,23 @@ RSpec.describe PaymentRequests::Payments::CreateService do
       end
     end
 
+    context "when the customer has no payment provider type and the organization has a single provider" do
+      subject(:create_service) { described_class.new(payable: payment_request, payment_provider: :stripe, payment_method_params:) }
+
+      let(:customer) { create(:customer, organization:, payment_provider: nil, payment_provider_code: nil) }
+      let(:default_payment_method) { create(:payment_method, customer:, payment_provider_customer: provider_customer, is_default: true) }
+
+      it "charges the payment through the provider of the provider customer" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment.payment_provider).to eq(payment_provider)
+        expect(result.payment.payment_provider_customer).to eq(provider_customer)
+        expect(provider_class).to have_received(:new)
+        expect(provider_service).to have_received(:call!)
+      end
+    end
+
     context "with no payment provider" do
       let(:payment_provider) { nil }
 
@@ -636,6 +653,156 @@ RSpec.describe PaymentRequests::Payments::CreateService do
         expect(provider_service).to have_received(:call!)
       end
 
+      context "when the provider customer of the pending payment was discarded" do
+        let(:current_provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
+
+        before do
+          provider_customer.discard!
+          current_provider_customer
+        end
+
+        it "sends the payment to the provider with the current provider customer" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to eq(payment)
+
+          expect(payment.reload.payment_provider_id).to eq(payment_provider.id)
+          expect(payment.payment_provider_customer_id).to eq(current_provider_customer.id)
+          expect(payment.payment_provider_customer).to eq(current_provider_customer)
+
+          expect(provider_class).to have_received(:new)
+            .with(hash_including(payment: having_attributes(payment_provider_customer_id: current_provider_customer.id)))
+          expect(provider_service).to have_received(:call!)
+        end
+      end
+
+      context "when the reused pending payment has a provider status" do
+        before { payment.update!(status: "requires_payment_method") }
+
+        it "keeps the provider status of the payment" do
+          create_service.call
+
+          expect(payment.reload.status).to eq("requires_payment_method")
+          expect(payment.payable_payment_status).to eq("pending")
+        end
+      end
+
+      context "when the customer moved to another payment provider" do
+        let(:gocardless_provider) { create(:gocardless_provider, code: "gocardless_1", organization:) }
+        let(:gocardless_customer) { create(:gocardless_customer, payment_provider: gocardless_provider, customer:) }
+        let(:gocardless_class) { PaymentProviders::Gocardless::Payments::CreateService }
+        let(:gocardless_service) { instance_double(gocardless_class) }
+
+        before do
+          gocardless_customer
+          customer.update!(payment_provider: "gocardless", payment_provider_code: "gocardless_1")
+
+          allow(gocardless_class).to receive(:new).and_return(gocardless_service)
+          allow(gocardless_service).to receive(:call!).and_return(service_result)
+        end
+
+        it "charges the reused payment through the new provider, even when called with the old type" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to eq(payment)
+
+          expect(payment.reload.payment_provider_id).to eq(gocardless_provider.id)
+          expect(payment.payment_provider_customer_id).to eq(gocardless_customer.id)
+
+          expect(gocardless_class).to have_received(:new)
+            .with(hash_including(payment: having_attributes(payment_provider_customer_id: gocardless_customer.id)))
+          expect(gocardless_service).to have_received(:call!)
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+
+      context "when the stored amount of the pending payment is outdated" do
+        let(:payment) do
+          create(
+            :payment,
+            payable: payment_request,
+            payment_provider:,
+            payment_provider_customer: provider_customer,
+            amount_cents: 10_000,
+            amount_currency: "EUR",
+            status: "pending",
+            payable_payment_status: payment_status
+          )
+        end
+
+        it "keeps the stored amount sent under the same idempotency key" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to eq(payment)
+
+          expect(payment.reload.amount_cents).to eq(10_000)
+          expect(payment.amount_currency).to eq("EUR")
+          expect(payment.status).to eq("pending")
+
+          expect(provider_class).to have_received(:new)
+            .with(hash_including(payment: having_attributes(amount_cents: 10_000, amount_currency: "EUR")))
+        end
+
+        context "when the provider customer of the pending payment was discarded" do
+          let(:current_provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
+
+          before do
+            provider_customer.discard!
+            current_provider_customer
+          end
+
+          it "charges the payment request total to the current provider customer" do
+            create_service.call
+
+            # payment request total: 200 (invoice_1) + 599 (invoice_2), not the stored 10_000
+            expect(payment.reload.amount_cents).to eq(799)
+            expect(payment.amount_currency).to eq("USD")
+
+            expect(provider_class).to have_received(:new)
+              .with(hash_including(payment: having_attributes(amount_cents: 799, payment_provider_customer_id: current_provider_customer.id)))
+          end
+        end
+      end
+
+      context "when the stored payment method of the pending payment is outdated" do
+        let(:old_payment_method) { create(:payment_method, customer:, is_default: false) }
+
+        before { payment.update!(payment_method_id: old_payment_method.id) }
+
+        it "charges the payment with the current default payment method" do
+          create_service.call
+
+          expect(payment.reload.payment_method_id).to eq(default_payment_method.id)
+        end
+
+        context "when a payment method is passed in params" do
+          let(:other_payment_method) { create(:payment_method, customer:, is_default: false) }
+          let(:payment_method_params) { {payment_method_id: other_payment_method.id} }
+
+          it "charges the payment with the passed payment method" do
+            create_service.call
+
+            expect(payment.reload.payment_method_id).to eq(other_payment_method.id)
+          end
+        end
+      end
+
+      context "when the customer has no provider customer id" do
+        before { provider_customer.update!(provider_customer_id: nil) }
+
+        it "skips the payment without calling the provider" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(provider_class).not_to have_received(:new)
+          expect(payment.reload.payment_provider_customer_id).to eq(provider_customer.id)
+        end
+      end
+
       context "when payment is already processing" do
         let(:payment_status) { "processing" }
 
@@ -648,6 +815,11 @@ RSpec.describe PaymentRequests::Payments::CreateService do
 
           expect(provider_class).not_to have_received(:new)
           expect(provider_service).not_to have_received(:call!)
+
+          expect(payment.reload.payable_payment_status).to eq("processing")
+          expect(payment.payment_provider_customer_id).to eq(provider_customer.id)
+          expect(payment.amount_cents).to eq(payment_request.total_amount_cents)
+          expect(payment.updated_at).to eq(payment.created_at)
         end
       end
     end
