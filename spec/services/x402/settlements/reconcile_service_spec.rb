@@ -318,6 +318,21 @@ describe X402::Settlements::ReconcileService do
           )
         end
 
+        context "with another organization's merchant recording the transaction first" do
+          let(:holder) do
+            create(:x402_settlement, :merchant, transaction_hash: chain_hash)
+            create(:x402_settlement, :failed, transaction_hash: chain_hash)
+          end
+
+          it "reports the failed row as the holder" do
+            result
+
+            expect(Sentry).to have_received(:capture_message).with(
+              "[x402] transaction held by a failed settlement",
+              extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, holder_id: holder.id, network: "eip155:84532"}
+            )
+          end
+        end
       end
     end
 

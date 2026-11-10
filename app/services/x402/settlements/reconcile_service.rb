@@ -85,7 +85,12 @@ module X402
         raise unless TRANSACTION_INDEXES.include?(violated_unique_index(e))
 
         settlement.restore_attributes
-        resolve_conflict(X402::Settlement.find_by(network: settlement.network, transaction_hash:))
+        resolve_conflict(holder_of(transaction_hash))
+      end
+
+      def holder_of(transaction_hash)
+        holders = X402::Settlement.where(network: settlement.network, transaction_hash:)
+        holders.where(organization_id: settlement.organization_id).or(holders.where(settled_by: :lago)).order(:created_at).first
       end
 
       def resolve_conflict(holder)
