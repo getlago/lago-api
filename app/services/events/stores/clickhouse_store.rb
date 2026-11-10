@@ -14,21 +14,6 @@ module Events
       # ClickHouse escapes quotes and backslashes in strings: 'a\\b''c'
       SQL_STRING_LITERAL = /'(?:[^'\\]|\\.|'')*'/
 
-      # ClickHouse knows the setting from 25.5 and, before 25.6, skips no index under FINAL anyway.
-      SERVER_SETTINGS = Concurrent::Map.new
-
-      def self.inexact_final_skip_indexes_sql
-        SERVER_SETTINGS.compute_if_absent(:inexact_final_skip_indexes) do
-          supported = Utils::ClickhouseConnection.connection_with_retry do |connection|
-            connection.select_value(
-              "SELECT count() FROM system.settings WHERE name = 'use_skip_indexes_if_final_exact_mode'"
-            ).to_i.positive?
-          end
-
-          supported ? " SETTINGS use_skip_indexes_if_final_exact_mode = 0" : ""
-        end
-      end
-
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           events_from = (from_datetime if force_from || use_from_boundary)
@@ -815,8 +800,15 @@ module Events
         [
           "#{select} AND #{sql_condition("timestamp > ?", period.to_datetime)}",
           "#{select} AND #{sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)}" \
-            "#{self.class.inexact_final_skip_indexes_sql}"
+            "#{inexact_final_skip_indexes_sql}"
         ].join(" UNION ALL ")
+      end
+
+      # ClickHouse knows the setting from 25.5: an older server needs it turned off.
+      def inexact_final_skip_indexes_sql
+        return "" if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_CLICKHOUSE_INEXACT_FINAL"])
+
+        " SETTINGS use_skip_indexes_if_final_exact_mode = 0"
       end
 
       def recurring_sum_sql(watermark)

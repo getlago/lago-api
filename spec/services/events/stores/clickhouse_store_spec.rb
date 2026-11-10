@@ -112,30 +112,6 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
-  describe ".inexact_final_skip_indexes_sql" do
-    subject(:sql) { described_class.inexact_final_skip_indexes_sql }
-
-    around do |example|
-      described_class::SERVER_SETTINGS.clear
-      example.run
-      described_class::SERVER_SETTINGS.clear
-    end
-
-    it "turns the exact mode off" do
-      expect(sql).to eq(" SETTINGS use_skip_indexes_if_final_exact_mode = 0")
-    end
-
-    context "when ClickHouse does not know the setting" do
-      before do
-        allow(Clickhouse::BaseRecord).to receive(:with_connection).and_yield(instance_double(ActiveRecord::ConnectionAdapters::AbstractAdapter, select_value: 0))
-      end
-
-      it "adds no setting" do
-        expect(sql).to eq("")
-      end
-    end
-  end
-
   describe "a late event read from a snapshot delta" do
     subject(:result) { event_store.recurring_sum(watermark: Time.current + 1.hour, period:) }
 
@@ -173,6 +149,26 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       event_store.aggregation_property = "value"
       event_store.numeric_property = true
       event_store.use_from_boundary = false
+    end
+
+    def executed_sql
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
+      queries.join("\n")
+    end
+
+    it "turns the exact mode off for the late events" do
+      expect(executed_sql).to include("enriched_at > ").and include("SETTINGS use_skip_indexes_if_final_exact_mode = 0")
+    end
+
+    context "when the inexact mode is disabled" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DISABLE_CLICKHOUSE_INEXACT_FINAL" => "true")) }
+
+      it "keeps the exact mode" do
+        expect(executed_sql).to include("enriched_at > ")
+        expect(executed_sql).not_to include("use_skip_indexes_if_final_exact_mode")
+      end
     end
 
     context "when the event is re-sent after the watermark" do
