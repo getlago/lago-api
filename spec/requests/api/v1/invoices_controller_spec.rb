@@ -71,6 +71,21 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "when the customer has no payment provider code and the organization has several stripe connections" do
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code: nil) }
+
+      before do
+        create(:stripe_provider, organization:, code: "stripe_a")
+        create(:stripe_provider, organization:, code: "stripe_b")
+      end
+
+      it "creates the invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+
     context "when add_on does not exist" do
       let(:create_params) do
         {

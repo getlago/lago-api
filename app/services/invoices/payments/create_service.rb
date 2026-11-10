@@ -134,7 +134,7 @@ module Invoices
         return false if invoice.credit? && skip_credit_invoice_delay?
         return false if invoice.subscription? && invoice.subscription_payment_gated?
         return false if non_manual_wallet_topup?
-        return false if current_payment_provider && stripe_shared_payment_token_only?
+        return false if determine_payment_method&.shared_payment_token?
 
         PaymentIntent.where(organization_id: invoice.organization_id).exists?
       end

@@ -929,6 +929,21 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when the customer has no payment provider code and the organization has several stripe connections" do
+      let(:payment_provider_code) { nil }
+
+      before do
+        create(:stripe_provider, organization:, code: "stripe_a")
+        create(:stripe_provider, organization:, code: "stripe_b")
+      end
+
+      it "enqueues the payment" do
+        expect { ApplicationRecord.transaction { create_service.call_async } }
+          .to have_enqueued_job(Invoices::Payments::CreateJob)
+          .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+      end
+    end
+
     context "when the organization has used a checkout URL" do
       before { create(:payment_intent, invoice: create(:invoice, customer:, organization:)) }
 
