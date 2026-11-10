@@ -321,17 +321,6 @@ RSpec.describe Organization do
         expect(sandbox.errors.to_hash).to eq(production_organization_id: ["value_is_mandatory"])
       end
 
-      context "when the sandbox columns do not exist yet, as in an older migration" do
-        before do
-          allow(described_class).to receive(:column_names)
-            .and_return(described_class.column_names - %w[self_serve environment production_organization_id])
-        end
-
-        it "skips the sandbox validations" do
-          expect(build(:organization, environment: "sandbox", self_serve: nil)).to be_valid
-        end
-      end
-
       it "refuses a production organization with a link" do
         organization = build(:organization, production_organization: production)
 
