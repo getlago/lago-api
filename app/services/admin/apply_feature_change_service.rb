@@ -21,7 +21,7 @@ module Admin
 
       organization.with_lock do
         # After the lock reloaded the row, so a toggle that waited behind a link sees it.
-        next result.not_allowed_failure!(code: "sandbox_managed_by_production") if organization.sandbox?
+        next result.forbidden_failure!(code: "sandbox_managed_by_production") if organization.sandbox?
 
         before_value = current_features.include?(feature_key)
         validator = FeatureChangeValidator.new(

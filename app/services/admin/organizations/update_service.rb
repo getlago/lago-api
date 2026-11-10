@@ -20,7 +20,7 @@ module Admin
           # A sandbox keeps its production's integrations: resubmitting the same set is accepted, another one is refused.
           if organization.sandbox? && params.key?(:premium_integrations) &&
               params[:premium_integrations].to_a.sort != organization.premium_integrations.sort
-            result.not_allowed_failure!(code: "sandbox_managed_by_production").raise_if_error!
+            result.forbidden_failure!(code: "sandbox_managed_by_production").raise_if_error!
           end
 
           organization.name = params[:name] if params.key?(:name)
