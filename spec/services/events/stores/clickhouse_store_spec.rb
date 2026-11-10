@@ -112,6 +112,92 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
+  describe ".inexact_final_skip_indexes_sql" do
+    subject(:sql) { described_class.inexact_final_skip_indexes_sql }
+
+    around do |example|
+      described_class::SERVER_SETTINGS.clear
+      example.run
+      described_class::SERVER_SETTINGS.clear
+    end
+
+    it "turns the exact mode off" do
+      expect(sql).to eq(" SETTINGS use_skip_indexes_if_final_exact_mode = 0")
+    end
+
+    context "when ClickHouse does not know the setting" do
+      before do
+        allow(Clickhouse::BaseRecord).to receive(:with_connection).and_yield(instance_double(ActiveRecord::ConnectionAdapters::AbstractAdapter, select_value: 0))
+      end
+
+      it "adds no setting" do
+        expect(sql).to eq("")
+      end
+    end
+  end
+
+  describe "a late event read from a snapshot delta" do
+    subject(:result) { event_store.recurring_sum(watermark: Time.current + 1.hour, period:) }
+
+    let(:event_store) do
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries:, filters: {})
+    end
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", recurring: true) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {from_datetime: subscription.started_at.beginning_of_day, to_datetime: subscription.started_at.end_of_month.end_of_day, charges_duration: 31}
+    end
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: subscription.started_at + 3.days, watermark: Time.current - 1.hour)
+    end
+    let(:transaction_id) { SecureRandom.uuid }
+
+    def create_copy(value:, enriched_at:)
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: subscription.started_at + 1.day,
+        properties: {"value" => value},
+        value:,
+        decimal_value: value.to_d,
+        precise_total_amount_cents: value,
+        enriched_at:
+      )
+    end
+
+    before do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+      event_store.use_from_boundary = false
+    end
+
+    context "when the event is re-sent after the watermark" do
+      before do
+        create_copy(value: 10, enriched_at: Time.current - 30.minutes)
+        create_copy(value: 15, enriched_at: Time.current - 10.minutes)
+      end
+
+      it "counts the latest copy once" do
+        expect(result).to have_attributes(value: 15, events_count: 1)
+      end
+    end
+
+    context "when the event was read by the snapshot and re-sent after the watermark" do
+      before do
+        create_copy(value: 10, enriched_at: Time.current - 2.hours)
+        create_copy(value: 15, enriched_at: Time.current - 10.minutes)
+      end
+
+      it "counts the latest copy once" do
+        expect(result).to have_attributes(value: 15, events_count: 1)
+      end
+    end
+  end
+
   describe "string values containing a backslash or a quote" do
     subject(:event_store) do
       described_class.new(

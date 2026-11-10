@@ -14,6 +14,21 @@ module Events
       # ClickHouse escapes quotes and backslashes in strings: 'a\\b''c'
       SQL_STRING_LITERAL = /'(?:[^'\\]|\\.|'')*'/
 
+      # ClickHouse knows the setting from 25.5 and, before 25.6, skips no index under FINAL anyway.
+      SERVER_SETTINGS = Concurrent::Map.new
+
+      def self.inexact_final_skip_indexes_sql
+        SERVER_SETTINGS.compute_if_absent(:inexact_final_skip_indexes) do
+          supported = Utils::ClickhouseConnection.connection_with_retry do |connection|
+            connection.select_value(
+              "SELECT count() FROM system.settings WHERE name = 'use_skip_indexes_if_final_exact_mode'"
+            ).to_i.positive?
+          end
+
+          supported ? " SETTINGS use_skip_indexes_if_final_exact_mode = 0" : ""
+        end
+      end
+
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           events_from = (from_datetime if force_from || use_from_boundary)
@@ -788,14 +803,20 @@ module Events
       # The events dated after the period and the late ones are read in two branches rather than
       # one OR, so that the first is pruned by the primary key and the second by the enriched_at index.
       # The branches cannot share a deduplication key, as the timestamp is part of it.
+      #
+      # Under FINAL, the exact mode reads back every granule of the key range that the enriched_at
+      # index pruned. The late branch turns it off: the latest copy of an event is ingested last,
+      # so its granule passes the index and FINAL still picks it over the older ones.
       def snapshot_delta_events_sql(period, deduplicated_columns:)
         columns = (DEDUP_KEY_COLUMNS + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
-        where_sql = deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)
+        select = "SELECT #{columns} FROM events_enriched FINAL " \
+          "WHERE #{deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)}"
 
         [
-          sql_condition("timestamp > ?", period.to_datetime),
-          sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)
-        ].map { "SELECT #{columns} FROM events_enriched FINAL WHERE #{where_sql} AND #{it}" }.join(" UNION ALL ")
+          "#{select} AND #{sql_condition("timestamp > ?", period.to_datetime)}",
+          "#{select} AND #{sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)}" \
+            "#{self.class.inexact_final_skip_indexes_sql}"
+        ].join(" UNION ALL ")
       end
 
       def recurring_sum_sql(watermark)
