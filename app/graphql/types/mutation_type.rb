@@ -217,6 +217,7 @@ module Types
     field :reset_password, mutation: Mutations::PasswordResets::Reset
 
     field :confirm_signup_email, mutation: Mutations::Signups::Confirm
+    field :create_self_serve_organization, mutation: Mutations::Signups::CreateOrganization
     field :exchange_signup_secret, mutation: Mutations::Signups::ExchangeSecret
     field :resend_signup_email, mutation: Mutations::Signups::Resend
     field :sign_up, mutation: Mutations::Signups::Create
