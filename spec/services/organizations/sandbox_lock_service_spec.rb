@@ -41,7 +41,7 @@ RSpec.describe Organizations::SandboxLockService do
     let(:organization) { create(:organization, :sandbox) }
 
     it "refuses it" do
-      expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+      expect(result.error).to be_a(BaseService::ForbiddenFailure)
       expect(result.error.code).to eq("sandbox_managed_by_production")
     end
 

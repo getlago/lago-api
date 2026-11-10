@@ -21,7 +21,7 @@ module Organizations
 
       # Reloads the row, so the checks below see a link committed while it waited.
       organization.lock!(LOCK_MODE)
-      return result.not_allowed_failure!(code: "sandbox_managed_by_production") if organization.sandbox? && !allow_sandbox
+      return result.forbidden_failure!(code: "sandbox_managed_by_production") if organization.sandbox? && !allow_sandbox
 
       if lock_sandbox && organization.production?
         result.sandbox_organization = Organization.lock(LOCK_MODE).find_by(production_organization_id: organization.id)
