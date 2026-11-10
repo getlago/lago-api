@@ -433,6 +433,55 @@ RSpec.describe Events::Stores::Provider do
       end
     end
 
+    context "with wallet targeting enabled", :premium do
+      let(:organization) do
+        create(
+          :organization,
+          clickhouse_events_store: true,
+          feature_flags: ["realtime_usage"],
+          premium_integrations: ["events_targeting_wallets"]
+        )
+      end
+
+      context "with a charge accepting a target wallet, last edited before the window" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan, billable_metric:, accepts_target_wallet: true,
+            updated_at: boundaries[:from_datetime] - 1.second
+          )
+        end
+
+        it "wraps the store in the bucket-backed one" do
+          expect(store).to be_a(Events::Stores::UsageBucketStore)
+        end
+      end
+
+      context "with a charge accepting a target wallet, edited inside the window" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan, billable_metric:, accepts_target_wallet: true,
+            updated_at: boundaries[:from_datetime] + 1.second
+          )
+        end
+
+        it "reads events, because buckets written before it accepted the wallet hold no wallet code" do
+          expect(store).to be_a(Events::Stores::ClickhouseStore)
+        end
+      end
+
+      context "with a charge not accepting a target wallet, edited inside the window" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, updated_at: boundaries[:from_datetime] + 1.second)
+        end
+
+        it "wraps the store in the bucket-backed one" do
+          expect(store).to be_a(Events::Stores::UsageBucketStore)
+        end
+      end
+    end
+
     context "with a billing segment" do
       let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: billing_segment) }
       let(:billing_segment) { create(:billing_segment) }

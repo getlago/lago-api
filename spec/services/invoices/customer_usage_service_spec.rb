@@ -1890,9 +1890,11 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       create(
         :standard_charge,
         plan:, billable_metric:, accepts_target_wallet: true,
-        properties: {amount: "2", pricing_group_keys:}.compact_blank
+        properties: {amount: "2", pricing_group_keys:}.compact_blank,
+        updated_at: charge_updated_at
       )
     end
+    let(:charge_updated_at) { window_start - 1.day }
     let(:window_start) { Time.current.beginning_of_month }
 
     let(:events) do
@@ -1904,6 +1906,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         {at: window_start + 5.hours, value: "0.5", properties: {"target_wallet_code" => "  "}}
       ]
     end
+    let(:bucket_events) { events }
 
     let(:served) do
       described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
@@ -1930,7 +1933,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         )
       end
 
-      events.group_by { [Time.zone.at(it[:at].to_i - (it[:at].to_i % 15.minutes.to_i)), pipeline_grouped_by(it[:properties])] }
+      bucket_events.group_by { [Time.zone.at(it[:at].to_i - (it[:at].to_i % 15.minutes.to_i)), pipeline_grouped_by(it[:properties])] }
         .each do |(bucket, grouped_by), rows|
           create(
             :clickhouse_usage_bucket,
@@ -1968,12 +1971,27 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       )
     end
 
-    it "reads the buckets for it" do
-      allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original
+    context "when the buckets hold less than the events store" do
+      let(:bucket_events) { events.first(4) }
 
-      served
+      it "prices the buckets" do
+        expect(fee_values(served)).to match_array(
+          [
+            [{"target_wallet_code" => "W"}, 6.75, 2, 1350], # 5.5 + 1.25 units at 2
+            [{"target_wallet_code" => nil}, 14.25, 2, 2850] # 4.25 + 10.0 units at 2, the blank-code event left out
+          ]
+        )
+      end
+    end
 
-      expect(RealtimeUsage::FetchBucketsService).to have_received(:call).with(hash_including(charges: [charge]))
+    context "when the charge was edited inside the period, as when it starts accepting a target wallet" do
+      let(:charge_updated_at) { window_start + 1.hour }
+      let(:bucket_events) { events.map { it.merge(properties: it[:properties].except("target_wallet_code")) } }
+
+      it "reads the events store, which knows the wallet of usage the buckets wrote without one" do
+        expect(fee_values(served)).to match_array(fee_values(delegated))
+        expect(fee_values(served)).to include([{"target_wallet_code" => "W"}, 6.75, 2, 1350])
+      end
     end
 
     context "when the charge also groups on a pricing key" do
