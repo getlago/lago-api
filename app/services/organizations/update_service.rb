@@ -118,7 +118,7 @@ module Organizations
       return unless organization.sandbox?
       return if params[:authentication_methods].to_a.sort == organization.authentication_methods.sort
 
-      result.not_allowed_failure!(code: "sandbox_managed_by_production").raise_if_error!
+      result.forbidden_failure!(code: "sandbox_managed_by_production").raise_if_error!
     end
 
     def billing
