@@ -79,6 +79,22 @@ RSpec.describe ::V1::WalletSerializer do
     end
   end
 
+  context "when the wallet invoices its usage on expiration" do
+    let(:wallet) { create(:wallet, customer:, invoice_usage_on_expiration: true) }
+
+    it "serializes invoice_usage_on_expiration" do
+      expect(JSON.parse(serializer.to_json)["wallet"]["invoice_usage_on_expiration"]).to eq(true)
+    end
+  end
+
+  context "when the wallet does not invoice its usage on expiration" do
+    let(:wallet) { create(:wallet, customer:) }
+
+    it "omits invoice_usage_on_expiration" do
+      expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("invoice_usage_on_expiration")
+    end
+  end
+
   context "with an x402 wallet" do
     let(:wallet) { create(:wallet, customer:, x402_enabled: true) }
 

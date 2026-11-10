@@ -33,6 +33,7 @@ module V1
       }
 
       payload[:x402_enabled] = model.x402_enabled if model.organization.x402_payments_enabled?
+      payload[:invoice_usage_on_expiration] = true if model.invoice_usage_on_expiration?
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
       payload.merge!(limitations) if include?(:limitations)
       payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)

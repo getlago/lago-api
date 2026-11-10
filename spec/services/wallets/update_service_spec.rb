@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Wallets::UpdateService do
   subject(:result) { described_class.call(wallet:, params:) }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
   let(:customer) { create_default(:customer, organization:) }
   let(:subscription) { create_default(:subscription, customer:) }
@@ -259,6 +259,34 @@ RSpec.describe Wallets::UpdateService do
 
         expect(wallet.reload.name).not_to eq("new name")
         expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
+    context "with invoice_usage_on_expiration", :premium do
+      let(:params) { {id: wallet.id, invoice_usage_on_expiration: true} }
+      let(:feature_flag_enabled) { true }
+
+      before { organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration) if feature_flag_enabled }
+
+      it "follows the value" do
+        expect(result).to be_success
+        expect(result.wallet.invoice_usage_on_expiration).to eq(true)
+      end
+
+      context "when the feature flag is disabled" do
+        let(:feature_flag_enabled) { false }
+
+        it "returns a forbidden failure" do
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(wallet.reload.invoice_usage_on_expiration).to eq(false)
+        end
+      end
+
+      context "without a premium license", premium: false do
+        it "returns a forbidden failure" do
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(wallet.reload.invoice_usage_on_expiration).to eq(false)
+        end
       end
     end
 
