@@ -122,7 +122,7 @@ module BillableMetrics
           return @latest_value = latest_cached_aggregation.current_aggregation
         end
 
-        if billing_context.previous_subscription_id?
+        if previous_events_counted?
           return @latest_value = latest_value_from_events.first
         end
 
@@ -140,7 +140,7 @@ module BillableMetrics
           return @latest_breakdowns = latest_cached_aggregation.presentation_breakdowns
         end
 
-        if billing_context.previous_subscription_id?
+        if previous_events_counted?
           return @latest_breakdowns = latest_value_from_events.second
         end
 
@@ -165,8 +165,10 @@ module BillableMetrics
           .first
       end
 
+      # Fees::ChargeService only persists this cache where no snapshot is written: billing segments
       def latest_cached_aggregations
         return @latest_cached_aggregations if defined?(@latest_cached_aggregations)
+        return @latest_cached_aggregations = CachedAggregation.none if billing_context.subscription? && !metered_item.billing_segment
 
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
@@ -180,8 +182,12 @@ module BillableMetrics
         @latest_cached_aggregations = query
       end
 
-      # NOTE: In case of upgrade/downgrade, if latest value is not persisted yet,
-      #       we need to fetch latest value from previous events attached to the same external subscription ID
+      # Without a snapshot, the units carried over are read from the events of the previous periods,
+      # attached to the same external subscription ID (upgrades and downgrades included)
+      def previous_events_counted?
+        from_datetime > billing_context.started_at || billing_context.previous_subscription_id?
+      end
+
       def latest_value_from_events
         return @latest_value_from_events if defined?(@latest_value_from_events)
 
@@ -209,7 +215,7 @@ module BillableMetrics
           end
         end
 
-        if billing_context.previous_subscription_id?
+        if previous_events_counted?
           return @grouped_latest_values = grouped_latest_values_from_events.first
         end
 
@@ -231,7 +237,7 @@ module BillableMetrics
           end
         end
 
-        if billing_context.previous_subscription_id?
+        if previous_events_counted?
           return @grouped_latest_breakdowns = grouped_latest_values_from_events.second
         end
 
@@ -269,12 +275,14 @@ module BillableMetrics
       end
 
       def grouped_latest_values_from_events
+        return @grouped_latest_values_from_events if defined?(@grouped_latest_values_from_events)
+
         store = event_store.for_window(to_datetime: previous_period_end)
         store.use_from_boundary = false
 
         breakdowns = presentation_by.present? ? store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
 
-        [store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
+        @grouped_latest_values_from_events = [store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
       end
     end
   end

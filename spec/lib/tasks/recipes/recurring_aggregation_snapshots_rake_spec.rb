@@ -158,7 +158,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
 
       it "reports the mismatch" do
         expect { task.invoke }.to output(
-          a_string_including("1 mismatching event bucket(s)", "Mismatches detected, investigate before enabling the organization")
+          a_string_including("1 mismatching event bucket(s)", "Mismatches detected, investigate them: billing reads the snapshots")
         ).to_stdout
       end
     end
@@ -201,7 +201,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       let(:row) { build_row(snapshot_units: BigDecimal(12)) }
 
       it "reports the mismatch" do
-        expect { task.invoke }.to output(/Mismatches detected, investigate before enabling the organization/).to_stdout
+        expect { task.invoke }.to output(/Mismatches detected, investigate them: billing reads the snapshots/).to_stdout
       end
     end
 
@@ -253,7 +253,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
           "pay in advance: FAILED",
           "subscriptions compared:         1 (0 failed)",
           "pay in advance events replayed: 0 (1 subscription(s) failed)",
-          "No mismatch over the comparisons that ran, but 1 failed: rerun them before enabling the organization."
+          "No mismatch over the comparisons that ran, but 1 failed: rerun them."
         )
       ).to_stdout
       expect(CSV.read(csv_path).size).to eq(2)
@@ -263,7 +263,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       let(:row) { build_row(snapshot_units: BigDecimal(12)) }
 
       it "reports the mismatch" do
-        expect { task.invoke }.to output(/Mismatches detected, investigate before enabling the organization/).to_stdout
+        expect { task.invoke }.to output(/Mismatches detected, investigate them: billing reads the snapshots/).to_stdout
       end
     end
 
@@ -274,7 +274,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
         expect { task.invoke }.to output(
           a_string_including(
             "subscriptions without snapshot: 0",
-            "No mismatch over the comparisons that ran, but 1 failed: rerun them before enabling the organization."
+            "No mismatch over the comparisons that ran, but 1 failed: rerun them."
           )
         ).to_stdout
       end

@@ -51,7 +51,7 @@ describe "Aggregation - Weighted Sum Scenarios", transaction: false do
         travel_to(DateTime.new(2023, 4, 1)) do
           expect { perform_billing }
             .to change { subscription.reload.invoices.count }.from(0).to(1)
-            .and change { organization.reload.cached_aggregations.count }.from(0).to(1)
+            .and change { organization.reload.recurring_aggregation_snapshots.count }.from(0).to(1)
         end
 
         invoice = subscription.invoices.first
@@ -62,8 +62,8 @@ describe "Aggregation - Weighted Sum Scenarios", transaction: false do
         expect(fee.units.round).to eq(2177)
         expect(fee.total_aggregated_units).to eq(2500)
 
-        cached_aggregation = CachedAggregation.order(created_at: :desc).first
-        expect(cached_aggregation.current_aggregation).to eq(2500.0)
+        expect(organization.cached_aggregations).to be_empty
+        expect(organization.recurring_aggregation_snapshots.sole.units).to eq(2500)
 
         travel_to(DateTime.new(2023, 4, 4)) do
           create_event(
@@ -84,6 +84,16 @@ describe "Aggregation - Weighted Sum Scenarios", transaction: false do
             }
           )
 
+          # Dated in the billed period: a weighted sum never counts it
+          create_event(
+            {
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              timestamp: DateTime.new(2023, 3, 20).to_i,
+              properties: {value: "1000"}
+            }
+          )
+
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:total_amount_cents]).to eq(53_333)
 
@@ -95,7 +105,7 @@ describe "Aggregation - Weighted Sum Scenarios", transaction: false do
         travel_to(DateTime.new(2023, 5, 1)) do
           expect { perform_billing }
             .to change { subscription.reload.invoices.count }.from(1).to(2)
-            .and change { organization.reload.cached_aggregations.count }.from(1).to(2)
+            .and change { organization.reload.recurring_aggregation_snapshots.count }.from(1).to(2)
         end
 
         invoice = subscription.invoices.order(:created_at).last
@@ -106,8 +116,7 @@ describe "Aggregation - Weighted Sum Scenarios", transaction: false do
         expect(fee.units.round(5)).to eq(533.33333)
         expect(fee.total_aggregated_units).to eq(300)
 
-        cached_aggregation = CachedAggregation.order(:created_at).last
-        expect(cached_aggregation.current_aggregation).to eq(300.0)
+        expect(organization.recurring_aggregation_snapshots.order(:to_datetime).last.units).to eq(300)
       end
     end
   end
