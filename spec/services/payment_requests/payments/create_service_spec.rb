@@ -366,14 +366,62 @@ RSpec.describe PaymentRequests::Payments::CreateService do
       let(:customer) { create(:customer, organization:, payment_provider: nil, payment_provider_code: nil) }
       let(:default_payment_method) { create(:payment_method, customer:, payment_provider_customer: provider_customer, is_default: true) }
 
-      it "charges the payment through the provider of the provider customer" do
+      it "skips the payment" do
         result = create_service.call
 
         expect(result).to be_success
-        expect(result.payment.payment_provider).to eq(payment_provider)
-        expect(result.payment.payment_provider_customer).to eq(provider_customer)
-        expect(provider_class).to have_received(:new)
-        expect(provider_service).to have_received(:call!)
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_nil
+        expect(payment_request.reload.payment_status).to eq("pending")
+        expect(payment_request.payment_attempts).to eq(0)
+        expect(payment_request.payments.count).to eq(0)
+        expect(payment_request.invoices.map(&:payment_status)).to eq(%w[pending pending])
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "when the customer has no payment provider type and the organization has several providers" do
+      subject(:create_service) { described_class.new(payable: payment_request, payment_provider: :stripe, payment_method_params:) }
+
+      let(:customer) { create(:customer, organization:, payment_provider: nil, payment_provider_code: nil) }
+
+      before { create(:stripe_provider, code: "stripe_2", organization:) }
+
+      it "skips the payment without failing" do
+        result = nil
+
+        expect { result = create_service.call }
+          .to not_have_enqueued_job(SendWebhookJob)
+          .and not_have_enqueued_job(ActionMailer::MailDeliveryJob)
+
+        expect(result).to be_success
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_nil
+        expect(payment_request.reload.payment_status).to eq("pending")
+        expect(payment_request.payment_attempts).to eq(0)
+        expect(payment_request.payments.count).to eq(0)
+        expect(payment_request.invoices.map(&:payment_status)).to eq(%w[pending pending])
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
+    context "when the customer has a payment provider type but no code and the organization has several providers" do
+      let(:payment_provider_code) { nil }
+      let(:payment_provider) { create(:stripe_provider, code: "stripe_1", organization:) }
+
+      before { create(:stripe_provider, code: "stripe_2", organization:) }
+
+      it "raises the provider lookup failure without a payment failure webhook" do
+        expect { create_service.call }
+          .to raise_error(BaseService::ServiceFailure) { |error| expect(error.code).to eq("payment_provider_code_missing") }
+          .and have_enqueued_mail(PaymentRequestMailer, :requested).with(params: {payment_request:}, args: []).once
+          .and not_have_enqueued_job(SendWebhookJob)
+
+        expect(payment_request.reload.payment_status).to eq("pending")
+        expect(payment_request.payment_attempts).to eq(0)
+        expect(payment_request.payments.count).to eq(0)
+        expect(payment_request.invoices.map(&:payment_status)).to eq(%w[pending pending])
+        expect(provider_class).not_to have_received(:new)
       end
     end
 

@@ -90,6 +90,10 @@ module Invoices
         result.payment = nil
         result
       rescue BaseService::ServiceFailure => e
+        # Raised before any Payment was saved (provider lookup, such as payment_provider_code_missing):
+        # not a payment failure, so no webhook and no status change.
+        raise unless result.payment
+
         result.payment = e.result.payment
 
         deliver_error_webhook(e) unless skip_error_webhook?(e)
@@ -152,6 +156,8 @@ module Invoices
       def should_process_payment?
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided? || invoice.closed?
+        # Same rule as call_async: a customer without a provider type is not charged automatically.
+        return false if customer.payment_provider.blank?
         return false if current_payment_provider.blank?
 
         current_payment_provider_customer&.provider_customer_id &&
@@ -188,7 +194,7 @@ module Invoices
       end
 
       # Unlike `provider`, which can be the type named by the job when it was enqueued, this is the type
-      # of the provider the payment is charged through, set even when `customer.payment_provider` is nil.
+      # of the provider the payment is charged through.
       def current_provider_type
         current_payment_provider.payment_type.to_sym
       end
