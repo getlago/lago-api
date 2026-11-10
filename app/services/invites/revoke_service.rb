@@ -11,9 +11,15 @@ module Invites
 
     def call
       return result.not_found_failure!(resource: "invite") unless invite
-      return result.not_found_failure!(resource: "invite") unless invite.pending?
 
-      invite.mark_as_revoked!
+      revoked = ActiveRecord::Base.transaction do
+        # An acceptance that held the lock may have committed since the caller loaded the invite.
+        invite.lock!
+        next false unless invite.pending?
+
+        invite.mark_as_revoked!
+      end
+      return result.not_found_failure!(resource: "invite") unless revoked
 
       result.invite = invite
       result
