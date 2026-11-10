@@ -160,7 +160,7 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
 
       admin_post("/admin/organizations/#{organization.id}/link_sandbox", {sandbox_organization_id: target.id}, admin_headers)
 
-      expect(response).to have_http_status(:method_not_allowed)
+      expect(response).to have_http_status(:forbidden)
       expect(json[:code]).to eq("sandbox_has_other_members")
     end
   end
