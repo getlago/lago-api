@@ -1020,7 +1020,7 @@ RSpec.describe Customers::UpdateService do
           last_dunning_campaign_attempt_at: 2.days.ago
         )
       end
-      let(:dunning_campaign) { create(:dunning_campaign) }
+      let(:dunning_campaign) { create(:dunning_campaign, organization:) }
 
       let(:update_args) do
         {
@@ -1067,6 +1067,22 @@ RSpec.describe Customers::UpdateService do
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
           expect(customers_service.call).to be_success
+        end
+
+        context "when the dunning campaign belongs to another organization" do
+          let(:dunning_campaign) { create(:dunning_campaign, organization: create(:organization)) }
+
+          it "returns a not found failure and does not apply the campaign" do
+            result = nil
+
+            expect { result = customers_service.call }
+              .to not_change { customer.reload.applied_dunning_campaign_id }
+              .and not_change { customer.reload.exclude_from_dunning_campaign }
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq("dunning_campaign_not_found")
+          end
         end
 
         context "with exclude from dunning campaign" do

@@ -113,6 +113,32 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign do
     end
   end
 
+  context "when the dunning campaign belongs to another organization" do
+    # Created before the default billing entity: the organization factory would otherwise move it to the new organization.
+    let!(:dunning_campaign) { create(:dunning_campaign, organization: create(:organization)) }
+
+    it "returns an error and does not apply the campaign" do
+      result = nil
+
+      expect {
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: membership.organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              billingEntityId: billing_entity.id,
+              appliedDunningCampaignId: dunning_campaign.id
+            }
+          }
+        )
+      }.not_to change { billing_entity.reload.applied_dunning_campaign_id }
+
+      expect_graphql_error(result:, message: "Resource not found")
+    end
+  end
+
   context "when the dunning campaign does not exist" do
     it "returns an error" do
       result = execute_graphql(
