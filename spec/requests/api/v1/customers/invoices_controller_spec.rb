@@ -7,6 +7,8 @@ RSpec.describe Api::V1::Customers::InvoicesController do
     it_behaves_like "an invoice index endpoint" do
       subject { get_with_token(organization, "/api/v1/customers/#{customer.external_id}/invoices", params) }
 
+      let(:listed_customers) { [customer] }
+
       context "with invalid customer id" do
         subject { get_with_token(organization, "/api/v1/customers/foo/invoices", {}) }
 

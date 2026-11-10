@@ -71,7 +71,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.customers.includes(:taxes, :integration_customers),
+              result.customers.preload(*::V1::CustomerSerializer::PRELOADS, :taxes, integration_customers: :integration),
               ::V1::CustomerSerializer,
               collection_name: "customers",
               meta: pagination_metadata(result.customers),

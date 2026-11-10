@@ -315,6 +315,11 @@ class Organization < ApplicationRecord
     remaining_billing_entities > 0
   end
 
+  # The endpoint that `webhook_url` reads and writes. Ruby side so a preloaded association is reused.
+  def default_webhook_endpoint
+    webhook_endpoints.min_by(&:id)
+  end
+
   def failed_tax_invoices_count
     invoices.where(status: :failed).joins(:error_details).where(error_details: {error_code: "tax_error"}).count
   end

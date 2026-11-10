@@ -92,25 +92,27 @@ RSpec.describe PendingSignup do
     end
   end
 
-  describe ".mailbox_send_refusal" do
-    subject(:refusal) { described_class.mailbox_send_refusal("jane@acme.com", Time.current) }
+  describe ".mailbox_send_state" do
+    subject(:state) { described_class.mailbox_send_state("jane@acme.com", now) }
+
+    let(:now) { Time.current }
 
     before { freeze_time }
 
-    it "is nil without sends" do
-      expect(refusal).to be_nil
+    it "has no refusal and no wait without sends" do
+      expect(state).to eq([nil, 0])
     end
 
     context "with a send 59 seconds ago" do
       before { create(:pending_signup, email: "jane@acme.com", emails_sent_at: [59.seconds.ago]) }
 
-      it { is_expected.to eq(:too_soon) }
+      it { is_expected.to eq([:too_soon, 1]) }
     end
 
     context "with a send exactly 60 seconds ago" do
       before { create(:pending_signup, email: "jane@acme.com", emails_sent_at: [60.seconds.ago]) }
 
-      it { is_expected.to be_nil }
+      it { is_expected.to eq([nil, 0]) }
     end
 
     context "with 3 sends in the hour, across attempts of +tags of the mailbox" do
@@ -119,37 +121,129 @@ RSpec.describe PendingSignup do
         create(:pending_signup, email: "jane+1@acme.com", emails_sent_at: [30.minutes.ago])
       end
 
-      it { is_expected.to eq(:limit_reached) }
+      # the oldest send, 50 minutes ago, leaves the hour in 10 minutes
+      it { is_expected.to eq([:limit_reached, 10 * 60]) }
 
       context "when the oldest send is exactly one hour old" do
         before { travel 10.minutes }
 
-        it { is_expected.to be_nil }
+        it { is_expected.to eq([nil, 0]) }
       end
     end
 
     context "with 3 sends, the last one within 60 seconds" do
       before { create(:pending_signup, email: "jane@acme.com", emails_sent_at: [20.minutes.ago, 10.minutes.ago, 10.seconds.ago]) }
 
-      it "reports the limit first" do
-        expect(refusal).to eq(:limit_reached)
-      end
+      # the limit comes first; the oldest send, 20 minutes ago, leaves the hour in 40 minutes
+      it { is_expected.to eq([:limit_reached, 40 * 60]) }
     end
 
     context "with sends of an attempt created more than 25 hours ago" do
       before { create(:pending_signup, email: "jane@acme.com", created_at: 26.hours.ago, emails_sent_at: [10.seconds.ago]) }
 
-      it { is_expected.to be_nil }
+      it { is_expected.to eq([nil, 0]) }
+    end
+
+    context "with a send to the mailbox" do
+      before { create(:pending_signup, email: "jane@acme.com", emails_sent_at: [20.seconds.ago]) }
+
+      it "reads the sends once" do
+        queries = 0
+        counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { state }
+
+        expect(queries).to eq(1)
+      end
+    end
+  end
+
+  describe "#resend_available_in_seconds and #resend_limit_reached?" do
+    subject(:countdown) { [record.resend_available_in_seconds(Time.current), record.resend_limit_reached?] }
+
+    let(:emails_sent_at) { [20.seconds.ago] }
+    let(:expires_at) { 22.hours.from_now }
+    let(:record) { create(:pending_signup, email: "jane@getlago.com", emails_sent_at:, expires_at:) }
+
+    before { freeze_time }
+
+    it "counts down from the attempt's last send" do
+      expect(countdown).to eq([40, false])
+    end
+
+    context "without an email of the attempt recorded yet" do
+      let(:emails_sent_at) { [] }
+
+      it { is_expected.to eq([0, false]) }
+    end
+
+    context "with other emails to its mailbox" do
+      let(:emails_sent_at) { [30.minutes.ago] }
+
+      before { create(:pending_signup, email: "jane+a@getlago.com", emails_sent_at: [50.minutes.ago, 40.minutes.ago]) }
+
+      # 3 emails to the mailbox in the hour: the oldest, sent 50 minutes ago, leaves it in 10 minutes
+      it { is_expected.to eq([10 * 60, false]) }
+
+      context "when the wait would end with the attempt's window" do
+        let(:expires_at) { 10.minutes.from_now }
+
+        it { is_expected.to eq([nil, false]) }
+      end
+    end
+
+    context "with the attempt's 3 emails sent" do
+      let(:record) { build(:pending_signup, :exhausted) }
+
+      it { is_expected.to eq([nil, true]) }
+    end
+
+    context "with an expired attempt" do
+      let(:record) { build(:pending_signup, expires_at: Time.current) }
+
+      it { is_expected.to eq([nil, false]) }
+    end
+  end
+
+  describe "#wait_ends_in_window?" do
+    subject(:in_window) { pending_signup.wait_ends_in_window?(Time.current, wait) }
+
+    let(:pending_signup) { build(:pending_signup, expires_at: 10.minutes.from_now) }
+
+    before { freeze_time }
+
+    context "with a wait ending before the expiry" do
+      let(:wait) { 10.minutes.to_i - 1 }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with a wait ending at the expiry" do
+      let(:wait) { 10.minutes.to_i }
+
+      it { is_expected.to be(false) }
     end
   end
 
   describe "#sending_open?" do
-    it "closes after 3 emails or at the expiry" do
-      freeze_time
+    subject(:open) { record.sending_open?(Time.current) }
 
-      expect(build(:pending_signup).sending_open?(Time.current)).to be(true)
-      expect(build(:pending_signup, :exhausted).sending_open?(Time.current)).to be(false)
-      expect(build(:pending_signup, expires_at: Time.current).sending_open?(Time.current)).to be(false)
+    let(:record) { build(:pending_signup) }
+
+    before { freeze_time }
+
+    it { is_expected.to be(true) }
+
+    context "with the attempt's 3 emails sent" do
+      let(:record) { build(:pending_signup, :exhausted) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the attempt has expired" do
+      let(:record) { build(:pending_signup, expires_at: Time.current) }
+
+      it { is_expected.to be(false) }
     end
   end
 end

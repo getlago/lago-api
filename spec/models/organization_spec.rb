@@ -522,6 +522,27 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#default_webhook_endpoint" do
+    # Reloaded: creating an endpoint leaves the association of this instance loaded without it.
+    subject(:default_webhook_endpoint) { organization.reload.default_webhook_endpoint }
+
+    let(:organization) { create(:organization, webhook_url: nil) }
+
+    context "when the organization has no webhook endpoint" do
+      it { is_expected.to be_nil }
+    end
+
+    context "when the organization has several webhook endpoints" do
+      let(:endpoints) { create_list(:webhook_endpoint, 3, organization:) }
+
+      before { endpoints }
+
+      it "returns the endpoint with the lowest id" do
+        expect(default_webhook_endpoint).to eq(WebhookEndpoint.where(organization:).order(:id).first)
+      end
+    end
+  end
+
   describe "#failed_tax_invoices_count" do
     subject(:failed_tax_invoices_count) { organization.failed_tax_invoices_count }
 

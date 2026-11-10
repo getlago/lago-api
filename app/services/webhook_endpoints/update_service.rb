@@ -54,12 +54,18 @@ module WebhookEndpoints
         .transform_keys(&:to_sym)
         .transform_values { |v| {deleted: v[0], added: v[1]}.compact }
 
-      Utils::SecurityLog.produce(
-        organization: webhook_endpoint.organization,
-        log_type: "webhook_endpoint",
-        log_event: "webhook_endpoint.updated",
-        resources: {webhook_url: webhook_endpoint.webhook_url, **diff}
-      )
+      resources = {webhook_url: webhook_endpoint.webhook_url, **diff}
+
+      # Deferred so nothing is sent when an outer transaction rolls back. The diff is read
+      # now: a later save of the same record in that transaction replaces previous_changes.
+      after_commit do
+        Utils::SecurityLog.produce(
+          organization: webhook_endpoint.organization,
+          log_type: "webhook_endpoint",
+          log_event: "webhook_endpoint.updated",
+          resources:
+        )
+      end
     end
   end
 end
