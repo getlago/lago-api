@@ -57,61 +57,38 @@ module Subscriptions
 
     def ending_trial_subscriptions
       sql = <<-SQL
-        WITH
-          initial_started_at AS (#{initial_started_at})
         SELECT
-          #{billed_since_trial_end} AS was_billed_since_trial_end,
-          #{trial_end_date} as trial_end_utc_date_from_query,
-          subscriptions.*
-        FROM
-          subscriptions
-          INNER JOIN plans ON subscriptions.plan_id = plans.id
-          INNER JOIN initial_started_at
-            ON initial_started_at.customer_id = subscriptions.customer_id
-            AND initial_started_at.external_id = subscriptions.external_id
-          INNER JOIN customers ON subscriptions.customer_id = customers.id
-          INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id
-        WHERE
-          #{in_trial}
-          AND #{trial_end_date + at_time_zone} <= '#{timestamp}'#{at_time_zone}
+          subscriptions.*,
+          #{billed_since_trial_end} AS was_billed_since_trial_end
+        FROM (#{subscriptions_in_trial}) AS subscriptions
+          INNER JOIN customers ON customers.id = subscriptions.customer_id
+          INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
+        WHERE subscriptions.trial_end_utc_date_from_query#{at_time_zone} <= '#{timestamp}'#{at_time_zone}
       SQL
 
       Subscription.find_by_sql([sql, {timestamp:}])
     end
 
-    # NOTE: Same lookup as Subscription#initial_started_at, for the customer and external_id pairs that have a
-    #       subscription in trial. It reads every subscription of those pairs, terminated ones included, so an
-    #       upgrade keeps the start of the first subscription.
-    def initial_started_at
+    # NOTE: Active subscriptions without trial_ended_at on a plan with a trial, with the end of their trial.
+    #       The trial starts with the first subscription of the customer with the same external_id, terminated
+    #       ones included, as in Subscription#initial_started_at, so an upgrade keeps it.
+    #       ANY(ARRAY(...)) makes PostgreSQL find them through the index on (plan_id, status) instead of
+    #       scanning every subscription.
+    def subscriptions_in_trial
       <<-SQL
         SELECT
-          subscriptions.customer_id,
-          subscriptions.external_id,
-          MIN(subscriptions.started_at) AS initial_started_at
-        FROM
-          subscriptions
-        WHERE (subscriptions.customer_id, subscriptions.external_id) IN (
-          SELECT subscriptions.customer_id, subscriptions.external_id
-          FROM subscriptions
-          WHERE #{in_trial}
-        )
-        GROUP BY subscriptions.customer_id, subscriptions.external_id
-      SQL
-    end
-
-    # NOTE: Shared by the outer query and the initial_started_at CTE, which must select the same subscriptions.
-    #       Each use has its own FROM subscriptions, so the name always refers to the nearest one.
-    def in_trial
-      <<-SQL
-        subscriptions.status = 1
-        AND subscriptions.trial_ended_at IS NULL
-        AND subscriptions.plan_id IN (SELECT plans.id FROM plans WHERE plans.trial_period > 0)
-      SQL
-    end
-
-    def trial_end_date
-      <<-SQL
-        (initial_started_at + plans.trial_period * INTERVAL '1 day')
+          subscriptions.*,
+          (
+            SELECT MIN(same_subscriptions.started_at)
+            FROM subscriptions AS same_subscriptions
+            WHERE same_subscriptions.customer_id = subscriptions.customer_id
+              AND same_subscriptions.external_id = subscriptions.external_id
+          ) + plans.trial_period * INTERVAL '1 day' AS trial_end_utc_date_from_query
+        FROM subscriptions
+          INNER JOIN plans ON plans.id = subscriptions.plan_id
+        WHERE subscriptions.status = 1
+          AND subscriptions.trial_ended_at IS NULL
+          AND subscriptions.plan_id = ANY(ARRAY(SELECT plans.id FROM plans WHERE plans.trial_period > 0))
       SQL
     end
 
@@ -129,7 +106,7 @@ module Subscriptions
             AND invoice_subscriptions.recurring = 't'
             AND invoice_subscriptions.timestamp IS NOT NULL
             AND DATE((invoice_subscriptions.timestamp)#{at_time_zone})
-              BETWEEN DATE(#{trial_end_date + at_time_zone})
+              BETWEEN DATE(subscriptions.trial_end_utc_date_from_query#{at_time_zone})
               AND DATE('#{timestamp}'#{at_time_zone})
         )
       SQL
