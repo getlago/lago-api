@@ -13,6 +13,7 @@ RSpec.describe CatalogPlan do
     it do
       expect(catalog_plan).to belong_to(:organization)
       expect(catalog_plan).to have_many(:applied_rate_cards).class_name("PlanRateCard")
+      expect(catalog_plan).to have_many(:wallets).class_name("PlanWallet")
       expect(catalog_plan).to have_many(:contracts)
       expect(catalog_plan).to have_many(:coupon_targets)
       expect(catalog_plan).to have_many(:coupons).through(:coupon_targets)
