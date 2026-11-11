@@ -147,6 +147,19 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
         end
       end
 
+      context "with several previous subscriptions sharing the external_id" do
+        it "bills the subscription and announces the trial end once" do
+          attributes = {customer: create(:customer), plan:, external_id: "abc123"}
+          create(:subscription, :terminated, started_at: 20.days.ago, terminated_at: 15.days.ago, **attributes)
+          create(:subscription, :terminated, started_at: 15.days.ago, terminated_at: 5.days.ago, **attributes)
+          subscription = create(:subscription, started_at: 5.days.ago, **attributes)
+
+          expect { service.call }
+            .to have_enqueued_job(BillSubscriptionJob).exactly(:once)
+            .and have_enqueued_job(SendWebhookJob).with("subscription.trial_ended", subscription).exactly(:once)
+        end
+      end
+
       context "with a recurring invoice issued around the trial end" do
         # NOTE: The trial ends on 2024-11-01 at 23:40 UTC, the job runs the next day
         let(:timestamp) { Time.zone.parse("2024-11-02T00:35:00") }
