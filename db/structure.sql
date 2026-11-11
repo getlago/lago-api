@@ -92,6 +92,7 @@ ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c8606f586b;
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c82f03a405;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71f4b2026;
+ALTER TABLE IF EXISTS ONLY public.catalog_wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_c6aea8a656;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c60c12efbd;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
@@ -145,6 +146,7 @@ ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS fk_rails_a5a0718a08;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_a48f7202cc;
 ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_a3fff9bd72;
+ALTER TABLE IF EXISTS ONLY public.catalog_wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_a31c843179;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_a1b7668ced;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_a1ab65f1f7;
@@ -211,6 +213,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_7b324610ad;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS fk_rails_7aab96f30e;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS fk_rails_7a0704ce72;
+ALTER TABLE IF EXISTS ONLY public.catalog_wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_79a067463f;
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_rails_7995206484;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_78f6642ddf;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886e1bc34;
@@ -331,6 +334,7 @@ ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_selectors DROP CONSTRAINT IF EXISTS fk_rails_364d5e8b54;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_364213cc3e;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_3640b4a66a;
+ALTER TABLE IF EXISTS ONLY public.catalog_wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_35cbea9f8b;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_34b5ee1894;
 ALTER TABLE IF EXISTS ONLY public.wallets_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_34b4e489e6;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_34ab152115;
@@ -1025,6 +1029,13 @@ DROP INDEX IF EXISTS public.index_catalog_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_contract_id_and_code;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_one_pending_ongoing_balance;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_wallet_and_idempotency_key;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_organization_id;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_invoice_id;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_grant_occurrence;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_catalog_wallet_id;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_in_spending_order;
 DROP INDEX IF EXISTS public.index_catalog_wallet_selectors_on_plan_wallet_and_target;
 DROP INDEX IF EXISTS public.index_catalog_wallet_selectors_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_selectors_on_catalog_wallet_and_target;
@@ -1328,6 +1339,7 @@ ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS charges_pkey
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS charge_filters_pkey;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS charge_filter_values_pkey;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallets DROP CONSTRAINT IF EXISTS catalog_wallets_pkey;
+ALTER TABLE IF EXISTS ONLY public.catalog_wallet_transactions DROP CONSTRAINT IF EXISTS catalog_wallet_transactions_pkey;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_selectors DROP CONSTRAINT IF EXISTS catalog_wallet_selectors_pkey;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_credit_allocations DROP CONSTRAINT IF EXISTS catalog_wallet_credit_allocations_pkey;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_applied_taxes DROP CONSTRAINT IF EXISTS catalog_wallet_applied_taxes_pkey;
@@ -1526,6 +1538,7 @@ DROP TABLE IF EXISTS public.charges;
 DROP TABLE IF EXISTS public.charge_filters;
 DROP TABLE IF EXISTS public.charge_filter_values;
 DROP TABLE IF EXISTS public.catalog_wallets;
+DROP TABLE IF EXISTS public.catalog_wallet_transactions;
 DROP TABLE IF EXISTS public.catalog_wallet_selectors;
 DROP TABLE IF EXISTS public.catalog_wallet_credit_allocations;
 DROP TABLE IF EXISTS public.catalog_wallet_applied_taxes;
@@ -1607,6 +1620,10 @@ DROP TYPE IF EXISTS public.contract_status;
 DROP TYPE IF EXISTS public.contract_payment_method_type;
 DROP TYPE IF EXISTS public.contract_billing_time;
 DROP TYPE IF EXISTS public.connection_category;
+DROP TYPE IF EXISTS public.catalog_wallet_transaction_status;
+DROP TYPE IF EXISTS public.catalog_wallet_transaction_reason;
+DROP TYPE IF EXISTS public.catalog_wallet_transaction_direction;
+DROP TYPE IF EXISTS public.catalog_wallet_transaction_allocation_type;
 DROP TYPE IF EXISTS public.catalog_wallet_tax_application;
 DROP TYPE IF EXISTS public.catalog_wallet_selector_type;
 DROP TYPE IF EXISTS public.catalog_wallet_selector_fee_type;
@@ -1752,6 +1769,50 @@ CREATE TYPE public.catalog_wallet_selector_type AS ENUM (
 CREATE TYPE public.catalog_wallet_tax_application AS ENUM (
     'tax_on_consumption',
     'tax_on_purchase'
+);
+
+
+--
+-- Name: catalog_wallet_transaction_allocation_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.catalog_wallet_transaction_allocation_type AS ENUM (
+    'billing_cycle',
+    'ongoing_balance'
+);
+
+
+--
+-- Name: catalog_wallet_transaction_direction; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.catalog_wallet_transaction_direction AS ENUM (
+    'inbound',
+    'outbound'
+);
+
+
+--
+-- Name: catalog_wallet_transaction_reason; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.catalog_wallet_transaction_reason AS ENUM (
+    'top_up',
+    'credit_allocation',
+    'invoice_void',
+    'invoice_application',
+    'void'
+);
+
+
+--
+-- Name: catalog_wallet_transaction_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.catalog_wallet_transaction_status AS ENUM (
+    'pending',
+    'settled',
+    'failed'
 );
 
 
@@ -2934,6 +2995,51 @@ CASE selector_type
     WHEN 'product_filters'::public.catalog_wallet_selector_type THEN (product_filter_id IS NOT NULL)
     ELSE NULL::boolean
 END AND ((selector_type = 'product'::public.catalog_wallet_selector_type) OR (NOT with_product_filters))))
+);
+
+
+--
+-- Name: catalog_wallet_transactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.catalog_wallet_transactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    catalog_wallet_id uuid NOT NULL,
+    credit_allocation_id uuid,
+    invoice_id uuid,
+    direction public.catalog_wallet_transaction_direction NOT NULL,
+    status public.catalog_wallet_transaction_status NOT NULL,
+    reason public.catalog_wallet_transaction_reason NOT NULL,
+    allocation_type public.catalog_wallet_transaction_allocation_type,
+    priority integer DEFAULT 50 NOT NULL,
+    purchase_amount_cents bigint,
+    credit_amount_cents bigint NOT NULL,
+    remaining_credit_amount_cents bigint,
+    invoice_requires_successful_payment boolean,
+    source_cycle_started_at timestamp(6) without time zone,
+    idempotency_key character varying,
+    request_digest character varying,
+    settled_at timestamp(6) without time zone,
+    failed_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT catalog_wallet_transactions_allocation_fields CHECK (
+CASE reason
+    WHEN 'credit_allocation'::public.catalog_wallet_transaction_reason THEN ((num_nulls(credit_allocation_id, allocation_type) = 0) AND ((allocation_type = 'billing_cycle'::public.catalog_wallet_transaction_allocation_type) = (source_cycle_started_at IS NOT NULL)))
+    ELSE (num_nonnulls(credit_allocation_id, allocation_type, source_cycle_started_at) = 0)
+END),
+    CONSTRAINT catalog_wallet_transactions_amounts_positive CHECK (((credit_amount_cents > 0) AND (purchase_amount_cents >= 0))),
+    CONSTRAINT catalog_wallet_transactions_direction_fields CHECK (
+CASE direction
+    WHEN 'inbound'::public.catalog_wallet_transaction_direction THEN ((reason = ANY (ARRAY['top_up'::public.catalog_wallet_transaction_reason, 'credit_allocation'::public.catalog_wallet_transaction_reason, 'invoice_void'::public.catalog_wallet_transaction_reason])) AND (num_nulls(purchase_amount_cents, remaining_credit_amount_cents) = 0))
+    WHEN 'outbound'::public.catalog_wallet_transaction_direction THEN ((reason = ANY (ARRAY['invoice_application'::public.catalog_wallet_transaction_reason, 'void'::public.catalog_wallet_transaction_reason])) AND (num_nonnulls(purchase_amount_cents, remaining_credit_amount_cents) = 0))
+    ELSE NULL::boolean
+END),
+    CONSTRAINT catalog_wallet_transactions_remaining_non_negative CHECK ((remaining_credit_amount_cents >= 0)),
+    CONSTRAINT catalog_wallet_transactions_remaining_within_credit CHECK ((remaining_credit_amount_cents <= credit_amount_cents)),
+    CONSTRAINT catalog_wallet_transactions_request_digest_format CHECK (((request_digest)::text ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT catalog_wallet_transactions_settled_at_with_status CHECK (((status = 'settled'::public.catalog_wallet_transaction_status) = (settled_at IS NOT NULL)))
 );
 
 
@@ -7061,6 +7167,14 @@ ALTER TABLE ONLY public.catalog_wallet_selectors
 
 
 --
+-- Name: catalog_wallet_transactions catalog_wallet_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.catalog_wallet_transactions
+    ADD CONSTRAINT catalog_wallet_transactions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: catalog_wallets catalog_wallets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9341,6 +9455,55 @@ CREATE INDEX index_catalog_wallet_selectors_on_organization_id ON public.catalog
 --
 
 CREATE UNIQUE INDEX index_catalog_wallet_selectors_on_plan_wallet_and_target ON public.catalog_wallet_selectors USING btree (plan_wallet_id, selector_type, fee_type, product_category_id, product_id, product_filter_id) NULLS NOT DISTINCT WHERE (plan_wallet_id IS NOT NULL);
+
+
+--
+-- Name: index_catalog_wallet_transactions_in_spending_order; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_wallet_transactions_in_spending_order ON public.catalog_wallet_transactions USING btree (catalog_wallet_id, priority, ((purchase_amount_cents > 0)), created_at, id) WHERE ((direction = 'inbound'::public.catalog_wallet_transaction_direction) AND (status = 'settled'::public.catalog_wallet_transaction_status) AND (remaining_credit_amount_cents > 0));
+
+
+--
+-- Name: index_catalog_wallet_transactions_on_catalog_wallet_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_wallet_transactions_on_catalog_wallet_id ON public.catalog_wallet_transactions USING btree (catalog_wallet_id);
+
+
+--
+-- Name: index_catalog_wallet_transactions_on_grant_occurrence; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_catalog_wallet_transactions_on_grant_occurrence ON public.catalog_wallet_transactions USING btree (credit_allocation_id, source_cycle_started_at) WHERE (source_cycle_started_at IS NOT NULL);
+
+
+--
+-- Name: index_catalog_wallet_transactions_on_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_wallet_transactions_on_invoice_id ON public.catalog_wallet_transactions USING btree (invoice_id);
+
+
+--
+-- Name: index_catalog_wallet_transactions_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_wallet_transactions_on_organization_id ON public.catalog_wallet_transactions USING btree (organization_id);
+
+
+--
+-- Name: index_catalog_wallet_transactions_on_wallet_and_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_catalog_wallet_transactions_on_wallet_and_idempotency_key ON public.catalog_wallet_transactions USING btree (catalog_wallet_id, idempotency_key) WHERE (idempotency_key IS NOT NULL);
+
+
+--
+-- Name: index_catalog_wallet_transactions_one_pending_ongoing_balance; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_catalog_wallet_transactions_one_pending_ongoing_balance ON public.catalog_wallet_transactions USING btree (catalog_wallet_id) WHERE ((allocation_type = 'ongoing_balance'::public.catalog_wallet_transaction_allocation_type) AND (status = 'pending'::public.catalog_wallet_transaction_status));
 
 
 --
@@ -14264,6 +14427,14 @@ ALTER TABLE ONLY public.groups
 
 
 --
+-- Name: catalog_wallet_transactions fk_rails_35cbea9f8b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.catalog_wallet_transactions
+    ADD CONSTRAINT fk_rails_35cbea9f8b FOREIGN KEY (credit_allocation_id) REFERENCES public.catalog_wallet_credit_allocations(id);
+
+
+--
 -- Name: charge_filter_values fk_rails_3640b4a66a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15224,6 +15395,14 @@ ALTER TABLE ONLY public.applied_add_ons
 
 
 --
+-- Name: catalog_wallet_transactions fk_rails_79a067463f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.catalog_wallet_transactions
+    ADD CONSTRAINT fk_rails_79a067463f FOREIGN KEY (catalog_wallet_id) REFERENCES public.catalog_wallets(id);
+
+
+--
 -- Name: billable_metric_filters fk_rails_7a0704ce72; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15752,6 +15931,14 @@ ALTER TABLE ONLY public.group_properties
 
 
 --
+-- Name: catalog_wallet_transactions fk_rails_a31c843179; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.catalog_wallet_transactions
+    ADD CONSTRAINT fk_rails_a31c843179 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoice_connections fk_rails_a3fff9bd72; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16173,6 +16360,14 @@ ALTER TABLE ONLY public.payment_methods
 
 ALTER TABLE ONLY public.customers_invoice_custom_sections
     ADD CONSTRAINT fk_rails_c64033bcb0 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: catalog_wallet_transactions fk_rails_c6aea8a656; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.catalog_wallet_transactions
+    ADD CONSTRAINT fk_rails_c6aea8a656 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
 
 
 --
@@ -16846,6 +17041,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261111172009'),
 ('20261111171726'),
 ('20261111171723'),
 ('20261111171610'),
