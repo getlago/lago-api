@@ -15,6 +15,7 @@ RSpec.describe ContractRateCard do
       expect(contract_rate_card).to have_many(:terms).order([:effective_date, :created_at, :id]).class_name("ContractRateCardTerm").inverse_of(:contract_rate_card)
       expect(contract_rate_card).to have_many(:rate_phases).order(:position)
       expect(contract_rate_card).to have_many(:billing_segments)
+      expect(contract_rate_card).to have_many(:billing_operations)
       expect(contract_rate_card).to have_many(:fees)
       expect(contract_rate_card).to have_one(:product).through(:rate_card)
     end
