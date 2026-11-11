@@ -532,6 +532,21 @@ RSpec.describe Billing::RateCards::Schedule do
         expect(schedule.billing_at(timestamp: starts_at, target: "next")).to eq(Time.utc(2022, 6, 1))
       end
 
+      context "when pricing starts after many unpriced daily cycles" do
+        let(:anchor_date) { Date.new(2022, 1, 15) }
+        let(:starts_at) { Time.utc(2022, 1, 15) }
+        let(:phases) { [phase(cycle_count: nil, every: 1, unit: :day)] }
+        let(:rates) { [card_rate(Time.utc(2022, 6, 1), 1, :day)] }
+        let(:walker) { schedule.instance_variable_get(:@walker) }
+
+        before { allow(walker).to receive(:cycle_after).and_call_original }
+
+        it "walks unpriced cycles once and returns the first priced billing date" do
+          expect(schedule.billing_at(timestamp: starts_at, target: "next")).to eq(Time.utc(2022, 6, 2))
+          expect(walker).to have_received(:cycle_after).at_most(300).times
+        end
+      end
+
       context "when billing in advance" do
         let(:timing) { :advance }
 
@@ -568,6 +583,50 @@ RSpec.describe Billing::RateCards::Schedule do
 
       it "reports nothing further" do
         expect(schedule.billing_at(timestamp: Time.utc(2023, 1, 1), target: "next")).to be_nil
+      end
+    end
+  end
+
+  describe "cycle selection" do
+    it "returns the cycle containing the timestamp" do
+      cycle = schedule.cycle_at(Time.utc(2022, 2, 10))
+
+      expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 3, 1)])
+    end
+
+    it "finds the next priced cycle after the given cycle" do
+      cycle = schedule.next_billable_cycle(after_cycle_started_at: starts_at)
+
+      expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 3, 1)])
+    end
+
+    context "when later cycles are not priced yet" do
+      let(:rates) { [card_rate(Time.utc(2022, 5, 1))] }
+
+      it "skips unpriced cycles" do
+        cycle = schedule.next_billable_cycle(after_cycle_started_at: starts_at)
+
+        expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2022, 5, 1), Time.utc(2022, 6, 1)])
+      end
+    end
+  end
+
+  describe "#billable_segments_for_cycle" do
+    let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
+
+    it "splits at a rate change and bills each slice on its own arrears date" do
+      segments = schedule.billable_segments_for_cycle(schedule.cycle_at(Time.utc(2022, 2, 1)))
+
+      expect(segments.map(&:billing_at)).to eq([Time.utc(2022, 2, 15), Time.utc(2022, 3, 1)])
+    end
+
+    context "when billing in advance" do
+      let(:timing) { :advance }
+
+      it "splits at a rate change and bills each slice on its own advance date" do
+        segments = schedule.billable_segments_for_cycle(schedule.cycle_at(Time.utc(2022, 2, 1)))
+
+        expect(segments.map(&:billing_at)).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)])
       end
     end
   end
