@@ -59,6 +59,20 @@ RSpec.describe InvoiceProductFeesQuery do
     result.fees.map(&:amount_cents)
   end
 
+  def fee_groups
+    result.fees.map { [it.contract_id, it.invoiceable_id, (it.true_up_parent_fee || it).product_filter_id] }.uniq
+  end
+
+  # The same groups in the order of the tree that draws the headers; a product's own row comes before its filters.
+  def tree_groups
+    Invoices::ProductCatalogTreeService.call(invoice:).contracts.flat_map do |group|
+      group.sections.flat_map(&:products).flat_map do |product_group|
+        [[group.contract.id, product_group.product.id, nil]] +
+          product_group.filters.map { [group.contract.id, product_group.product.id, it.filter.id] }
+      end
+    end
+  end
+
   it "orders the fees by contract, category, product, filter and period" do
     expect(amounts).to eq([
       3_001, # annual > food > hamburger
@@ -77,6 +91,24 @@ RSpec.describe InvoiceProductFeesQuery do
     it "sorts on the name, as the PDF does" do
       expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
     end
+  end
+
+  context "with a display name that starts with a space" do
+    let(:zucchini) { create(:product, organization:, product_category: food, name: "Zucchini", code: "zucchini", invoice_display_name: " Zucchini") }
+
+    before { product_fee(annual, zucchini, amount_cents: 7) }
+
+    it "keeps the space when sorting, as the PDF and the tree do" do
+      expect(amounts).to eq([7, 3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+
+    it "lists the groups in the order of the product catalog tree" do
+      expect(fee_groups).to eq(tree_groups & fee_groups)
+    end
+  end
+
+  it "lists the groups in the order of the product catalog tree" do
+    expect(fee_groups).to eq(tree_groups & fee_groups)
   end
 
   context "with a contract without a name or a plan" do
