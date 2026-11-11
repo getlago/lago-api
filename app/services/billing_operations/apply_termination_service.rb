@@ -20,6 +20,7 @@ module BillingOperations
         schedule = BuildScheduleService.call!(contract_rate_card: card).schedule
         planned_operation = final_planned_operation(card, schedule)
         next unless planned_operation
+        next if final_operation_already_processed?(card, planned_operation, card.periodic_billing_action)
 
         result.billing_operations << BillingOperations::CreateService.call!(
           contract_rate_card: card,
@@ -92,6 +93,18 @@ module BillingOperations
       return unless cycle
 
       schedule.planned_operations_for_cycle(cycle, action_type:).last
+    end
+
+    def final_operation_already_processed?(card, planned_operation, action_type)
+      card.billing_operations
+        .where(
+          organization_id: contract.organization_id,
+          action_type:,
+          target_cycle_started_at: planned_operation.cycle_started_at
+        )
+        .where.not(processed_at: nil)
+        .where(billing_at: planned_operation.billing_at..)
+        .exists?
     end
   end
 end

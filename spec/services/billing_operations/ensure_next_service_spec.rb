@@ -52,13 +52,12 @@ RSpec.describe BillingOperations::EnsureNextService do
     before do
       operation
       allow(BillingOperations::BuildScheduleService).to receive(:call!).and_call_original
-      allow(BillingOperations::ResolvePlannedOperationService).to receive(:call!).and_call_original
     end
 
     it "uses a prepared resolution without rebuilding it" do
       expect(result).to be_success
       expect(BillingOperations::BuildScheduleService).to have_received(:call!).once
-      expect(BillingOperations::ResolvePlannedOperationService).to have_received(:call!).once
+      expect(resolution).to have_attributes(schedule: be_present, planned_operation: be_present)
     end
   end
 

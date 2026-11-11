@@ -88,6 +88,26 @@ RSpec.describe BillingOperations::ApplyTerminationService do
     end
   end
 
+  context "when the final arrears operation was processed at the cycle boundary" do
+    let(:contract) do
+      create(:contract, :terminated, organization:, customer:, started_at: Time.zone.parse("2026-01-01"),
+        ended_at: timestamp, terminated_at: timestamp)
+    end
+    let(:processed_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", causation_type: "contract_activation",
+        billing_at: timestamp, target_cycle_started_at: Time.zone.parse("2026-02-01"), processed_at: timestamp)
+    end
+
+    before { processed_operation }
+
+    it "does not create a duplicate termination operation" do
+      expect(result).to be_success
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.billing_operations.count).to eq(1)
+    end
+  end
+
   context "when the contract has an earlier natural end" do
     let(:timestamp) { Time.zone.parse("2026-03-01 00:00:00") }
     let(:contract) do
@@ -233,6 +253,35 @@ RSpec.describe BillingOperations::ApplyTerminationService do
         action_type: "close_fixed_arrears", causation_type: "contract_termination",
         billing_at: timestamp, target_cycle_started_at: Time.zone.parse("2026-01-01")
       )
+    end
+  end
+
+  context "when only an earlier arrears slice was processed" do
+    let(:timestamp) { Time.zone.parse("2026-02-20 00:00:00") }
+    let(:contract) do
+      create(:contract, :terminated, organization:, customer:, started_at: Time.zone.parse("2026-01-01"),
+        ended_at: timestamp, terminated_at: timestamp)
+    end
+    let(:processed_first_slice) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", causation_type: "contract_activation",
+        billing_at: Time.zone.parse("2026-02-15"), target_cycle_started_at: Time.zone.parse("2026-02-01"),
+        processed_at: Time.zone.parse("2026-02-15"))
+    end
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-02-15"),
+        billing_interval_count: 1, billing_interval_unit: "month")
+      processed_first_slice
+    end
+
+    it "creates the termination operation for the still-due final slice" do
+      expect(result).to be_success
+      expect(result.billing_operations.sole).to have_attributes(
+        action_type: "close_fixed_arrears", causation_type: "contract_termination",
+        billing_at: timestamp, target_cycle_started_at: Time.zone.parse("2026-02-01")
+      )
+      expect(processed_first_slice.reload.processed_at).to eq(Time.zone.parse("2026-02-15"))
     end
   end
 

@@ -93,6 +93,14 @@ RSpec.describe Api::V2::ContractRateCardsController do
       create(:billing_operation, organization:, customer:, contract_rate_card: second_card,
         billing_at: second_billing_at, target_cycle_started_at: second_billing_at - 1.month)
     end
+    let(:priced_cards) do
+      Array.new(3) do |index|
+        card = create(:rate_card, organization:)
+        create(:rate_card_rate, organization:, rate_card: card)
+        create(:contract_rate_card, organization:, contract:, rate_card: card,
+          effective_date: (index + 1).months.ago.to_date)
+      end
+    end
 
     before { create(:contract_rate_card, organization:) }
 
@@ -121,6 +129,23 @@ RSpec.describe Api::V2::ContractRateCardsController do
         contract_rate_card.id => first_billing_at.iso8601(6),
         second_card.id => second_billing_at.iso8601(6)
       )
+    end
+
+    it "preloads schedule inputs for cards without billing operations" do
+      priced_cards
+      queries = Hash.new { |hash, key| hash[key] = [] }
+      tables = %w[customers billing_entities rate_cards rate_card_rates rate_phases products billable_metrics]
+      subscriber = lambda do |*, payload|
+        sql = payload[:sql]
+        tables.each { |table| queries[table] << sql if sql.include?(%(FROM "#{table}")) }
+      end
+
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { subject }
+
+      clocks = json[:applied_rate_cards].to_h { [it[:lago_id], it[:next_billing_at]] }
+      expect(clocks.slice(*priced_cards.map(&:id)).values).to all(be_present)
+      expect(queries.values.flatten).not_to be_empty
+      expect(queries.values.map(&:size)).to all(be <= 1)
     end
 
     context "with include_total_count" do

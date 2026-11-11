@@ -31,6 +31,14 @@ RSpec.describe Resolvers::ContractResolver do
     create(:billing_operation, organization:, customer:, contract_rate_card: second_card,
       billing_at: second_billing_at, target_cycle_started_at: second_billing_at - 1.month)
   end
+  let(:priced_cards) do
+    Array.new(3) do |index|
+      rate_card = create(:rate_card, organization:)
+      create(:rate_card_rate, organization:, rate_card:)
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: (index + 1).months.ago.to_date)
+    end
+  end
 
   let(:query) do
     <<~GQL
@@ -80,6 +88,24 @@ RSpec.describe Resolvers::ContractResolver do
     expect(execution["data"]["contract"]["appliedRateCards"].map { it["nextBillingAt"] }).to eq(
       [second_billing_at.iso8601, first_billing_at.iso8601]
     )
+  end
+
+  it "preloads schedule inputs for cards without billing operations" do
+    priced_cards
+    queries = Hash.new { |hash, key| hash[key] = [] }
+    tables = %w[customers billing_entities rate_cards rate_card_rates rate_phases products billable_metrics]
+    subscriber = lambda do |*, payload|
+      sql = payload[:sql]
+      tables.each { |table| queries[table] << sql if sql.include?(%(FROM "#{table}")) }
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { execution }
+
+    clocks = execution["data"]["contract"]["appliedRateCards"].to_h { [it["id"], it["nextBillingAt"]] }
+    expect(clocks.slice(*priced_cards.map(&:id)).values).to all(be_present)
+    expect(queries.values.flatten).not_to be_empty
+    expect(queries.fetch("customers", []).size).to be <= 2 # The contract resolver also loads its customer.
+    expect(queries.except("customers").values.map(&:size)).to all(be <= 1)
   end
 
   # An unpriced card has no billable period, so the nullable field answers null.

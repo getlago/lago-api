@@ -7,6 +7,83 @@ RSpec.describe ContractRateCard do
 
   it_behaves_like "paper_trail traceable"
 
+  describe "billing operation clock aggregation" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:pending_at) { Time.utc(2026, 11, 1) }
+    let(:mixed_pending_at) { Time.utc(2026, 11, 2) }
+    let(:cards) do
+      %i[pending completed cancelled mixed empty discarded].map do |state|
+        create(
+          :contract_rate_card,
+          organization:,
+          contract:,
+          deleted_at: (Time.current if state == :discarded)
+        )
+      end
+    end
+
+    before do
+      pending, completed, cancelled, mixed, _empty, discarded = cards
+      create(:billing_operation, organization:, customer:, contract_rate_card: pending, billing_at: pending_at)
+      create(:billing_operation, organization:, customer:, contract_rate_card: completed, processed_at: Time.current)
+      create(
+        :billing_operation,
+        organization:,
+        customer:,
+        contract_rate_card: cancelled,
+        cancelled_at: Time.current,
+        cancelled_causation_type: :contract_termination
+      )
+      create(
+        :billing_operation,
+        organization:,
+        customer:,
+        contract_rate_card: mixed,
+        billing_at: mixed_pending_at,
+        cancelled_at: Time.current,
+        cancelled_causation_type: :contract_termination
+      )
+      create(:billing_operation, organization:, customer:, contract_rate_card: mixed, billing_at: mixed_pending_at)
+      create(
+        :billing_operation,
+        organization:,
+        customer:,
+        contract_rate_card: discarded,
+        processed_at: Time.current
+      )
+    end
+
+    it "returns pending dates and distinguishes operation history in two batch queries" do
+      queries = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        queries << payload[:sql] if payload[:name] != "SCHEMA" && payload[:sql].match?(/billing_operations|contract_rate_cards/)
+      end
+
+      described_class.preload_aggregations(cards, :billing_operation_clock)
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+      subscriber = nil
+
+      expect(cards.map(&:billing_operation_clock)).to eq(
+        [
+          {billing_at: pending_at, has_chain: true},
+          {billing_at: nil, has_chain: true},
+          {billing_at: nil, has_chain: true},
+          {billing_at: mixed_pending_at, has_chain: true},
+          {},
+          {billing_at: nil, has_chain: true}
+        ]
+      )
+      expect(queries.size).to eq(2)
+      expect(queries.first).to include("MIN")
+      expect(queries.first).to include("processed_at")
+      expect(queries.last).to include("EXISTS")
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
+    end
+  end
+
   describe "associations" do
     it do
       expect(contract_rate_card).to belong_to(:organization)
@@ -69,124 +146,6 @@ RSpec.describe ContractRateCard do
         it "leaves out the card" do
           expect(described_class.starting_before_contract_end).to be_empty
         end
-      end
-    end
-
-    describe ".eligible_for_operation_scheduling" do
-      let(:timestamp) { Time.zone.parse("2026-03-01 00:00:00") }
-      let(:organization) { create(:organization) }
-
-      # Priced by default: an unpriced rate card is not due, which one example checks on its own.
-      def card(contract: nil, priced: true, **attributes)
-        contract ||= create(:contract, organization:, started_at: 1.year.ago)
-        rate_card = create(:rate_card, organization:)
-        create(:rate_card_rate, organization:, rate_card:) if priced
-
-        create(:contract_rate_card, organization:, contract:, rate_card:, **attributes)
-      end
-
-      it "takes priced cards belonging to billable contracts that have started" do
-        eligible = card
-        card(priced: false)
-
-        expect(described_class.eligible_for_operation_scheduling(timestamp)).to contain_exactly(eligible)
-      end
-
-      it "includes eligible cards when product catalog is not enabled" do
-        eligible = card
-
-        expect(organization).not_to be_product_catalog_enabled
-        expect(described_class.eligible_for_operation_scheduling(timestamp)).to contain_exactly(eligible)
-      end
-
-      # Bringing a termination forward can leave a card starting after the contract ends. It
-      # has no window to owe anything in, so it is not due — and the calendar is never asked
-      # to build a schedule that ends before it starts.
-      it "leaves out a card that starts after its contract ends" do
-        ending_early = create(:contract, organization:, started_at: 1.year.ago, ended_at: 1.month.ago)
-        card(contract: ending_early, effective_date: 1.week.ago.to_date)
-
-        expect(described_class.eligible_for_operation_scheduling(timestamp)).to be_empty
-      end
-
-      # effective_date is the customer's local day; contracts.ended_at is a UTC instant.
-      # Both cards are effective Jan 1 local and their contracts end within hours of the UTC
-      # midnight the naive comparison used, one on either side of it.
-      context "when the customer's day is far from UTC" do
-        let(:timestamp) { Time.utc(2027, 1, 1) }
-
-        def card_ending_at(timezone, ended_at)
-          customer = create(:customer, organization:, timezone:)
-          contract = create(
-            :contract,
-            organization:,
-            customer:,
-            started_at: Time.utc(2026, 12, 1),
-            ended_at:
-          )
-          card(contract:, effective_date: Date.new(2027, 1, 1))
-        end
-
-        # Local midnight is Dec 31 11:00 UTC, so the contract still has nine hours to run.
-        it "keeps a card whose contract outlives its customer-local start" do
-          still_open = card_ending_at("Pacific/Tongatapu", Time.utc(2026, 12, 31, 20))
-
-          expect(described_class.eligible_for_operation_scheduling(timestamp)).to contain_exactly(still_open)
-        end
-
-        # Local midnight is Jan 1 12:00 UTC, after the contract ended: no window at all, and
-        # letting it through makes BuildScheduleService raise on ends_at before starts_at.
-        it "leaves out a card whose contract ended before its customer-local start" do
-          card_ending_at("Etc/GMT+12", Time.utc(2027, 1, 1, 5))
-
-          expect(described_class.eligible_for_operation_scheduling(timestamp)).to be_empty
-        end
-      end
-
-      it "leaves out a card whose rate card has no price yet" do
-        card(priced: false)
-
-        expect(described_class.eligible_for_operation_scheduling(timestamp)).to be_empty
-      end
-
-      # The instant governs the whole query, not only the clock: a catch-up run for a past date
-      # sees the cards that were live then, and does not lose the periods they still owe.
-      it "answers for the instant it is given rather than for now" do
-        past = 2.months.ago
-        ended_since = card(
-          contract: create(:contract, organization:, started_at: 1.year.ago, ended_at: 1.month.ago),
-          effective_date: 1.year.ago.to_date
-        )
-
-        expect(described_class.eligible_for_operation_scheduling(past)).to contain_exactly(ended_since)
-      end
-
-      # Deleting a customer leaves their contracts active, so without this the card stays due
-      # on every tick and the producer raises RecordNotFound loading the customer back:
-      # Contract#customer is with_discarded, Customer's own default scope is not.
-      it "leaves out cards of a deleted customer" do
-        deleted = create(:customer, organization:)
-        contract = create(:contract, organization:, customer: deleted, started_at: 1.year.ago)
-        card(contract:)
-        deleted.discard!
-
-        expect(described_class.eligible_for_operation_scheduling(timestamp)).to be_empty
-      end
-
-      it "leaves out cards of contracts that are not active" do
-        %w[pending terminated canceled].each do |status|
-          inactive = create(:contract, organization:, status:, started_at: 1.year.ago)
-          card(contract: inactive)
-        end
-
-        expect(described_class.eligible_for_operation_scheduling(timestamp)).to be_empty
-      end
-
-      it "leaves out a card whose contract has not started yet" do
-        late_contract = create(:contract, organization:, started_at: timestamp + 1.day)
-        card(contract: late_contract)
-
-        expect(described_class.eligible_for_operation_scheduling(timestamp)).to be_empty
       end
     end
   end

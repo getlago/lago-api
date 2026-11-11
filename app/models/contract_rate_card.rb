@@ -23,17 +23,31 @@ class ContractRateCard < ApplicationRecord
   has_many :fees
 
   preloadable_aggregation :billing_operation_clock, default: {} do |ids|
-    BillingOperation
-      .where(contract_rate_card_id: ids)
+    ids = ids.to_a
+    pending = BillingOperation
+      .where(contract_rate_card_id: ids, processed_at: nil, cancelled_at: nil)
       .group(:contract_rate_card_id)
-      .pluck(
-        :contract_rate_card_id,
-        Arel.sql("MIN(billing_at) FILTER (WHERE processed_at IS NULL AND cancelled_at IS NULL)"),
-        Arel.sql("COUNT(*) > 0")
-      )
-      .to_h do |id, pending_at, has_chain|
-        [id, {billing_at: pending_at, has_chain:}]
-      end
+      .minimum(:billing_at)
+
+    without_pending = ids - pending.keys
+    has_history = if without_pending.empty?
+      []
+    else
+      ContractRateCard.unscoped
+        .where(id: without_pending)
+        .where(<<~SQL.squish)
+          EXISTS (
+            SELECT 1
+            FROM billing_operations
+            WHERE billing_operations.contract_rate_card_id = contract_rate_cards.id
+          )
+        SQL
+        .pluck(:id)
+    end
+
+    pending.to_h do |id, billing_at|
+      [id, {billing_at:, has_chain: true}]
+    end.merge(has_history.index_with { {billing_at: nil, has_chain: true} })
   end
 
   validates :billing_anchor_date, presence: true
@@ -54,14 +68,6 @@ class ContractRateCard < ApplicationRecord
       "(contract_rate_cards.effective_date::timestamp AT TIME ZONE " \
       "COALESCE(customers.timezone, billing_entities.timezone, 'UTC'))"
     )
-  }
-
-  scope :eligible_for_operation_scheduling, ->(timestamp) {
-    priced
-      .starting_before_contract_end
-      .joins(contract: {customer: :billing_entity})
-      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
-      .where(customers: {deleted_at: nil})
   }
 
   def next_billing_at

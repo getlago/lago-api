@@ -149,31 +149,29 @@ RSpec.describe BillingOperations::ProcessService do
       let(:first_schedule) { BillingOperations::BuildScheduleService.call!(contract_rate_card:).schedule }
       let(:second_schedule) { BillingOperations::BuildScheduleService.call!(contract_rate_card: second_contract_rate_card).schedule }
       let(:first_resolution) do
-        BillingOperations::ResolvePlannedOperationService.call!(
-          operation: BillingOperation.new(contract_rate_card:, action_type: "close_fixed_arrears",
-            billing_at: timestamp, target_cycle_started_at: Time.utc(2026, 2, 1)),
-          schedule: first_schedule
+        planned_operation_for(
+          BillingOperation.new(contract_rate_card:, action_type: "close_fixed_arrears",
+            billing_at: timestamp, target_cycle_started_at: Time.utc(2026, 2, 1)), first_schedule
         )
       end
       let(:second_resolution) do
-        BillingOperations::ResolvePlannedOperationService.call!(
-          operation: BillingOperation.new(contract_rate_card: second_contract_rate_card,
+        planned_operation_for(
+          BillingOperation.new(contract_rate_card: second_contract_rate_card,
             action_type: "close_fixed_arrears", billing_at: timestamp,
-            target_cycle_started_at: Time.utc(2026, 2, 1)),
-          schedule: second_schedule
+            target_cycle_started_at: Time.utc(2026, 2, 1)), second_schedule
         )
       end
       let(:operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card:,
           action_type: "close_fixed_arrears",
-          billing_at: first_resolution.planned_operation.billing_at,
-          target_cycle_started_at: first_resolution.planned_operation.cycle_started_at)
+          billing_at: first_resolution.billing_at,
+          target_cycle_started_at: first_resolution.cycle_started_at)
       end
       let(:second_operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card: second_contract_rate_card,
           action_type: "close_fixed_arrears",
-          billing_at: second_resolution.planned_operation.billing_at,
-          target_cycle_started_at: second_resolution.planned_operation.cycle_started_at)
+          billing_at: second_resolution.billing_at,
+          target_cycle_started_at: second_resolution.cycle_started_at)
       end
 
       before do
@@ -247,11 +245,9 @@ RSpec.describe BillingOperations::ProcessService do
         ).schedule
       end
       let(:first_resolution) do
-        BillingOperations::ResolvePlannedOperationService.call!(
-          operation: BillingOperation.new(contract_rate_card:,
-            action_type: "renew_fixed_advance", billing_at: timestamp,
-            target_cycle_started_at: timestamp), schedule:
-        )
+        planned_operation_for(BillingOperation.new(contract_rate_card:,
+          action_type: "renew_fixed_advance", billing_at: timestamp,
+          target_cycle_started_at: timestamp), schedule)
       end
       let(:operation) do
         create(
@@ -260,8 +256,8 @@ RSpec.describe BillingOperations::ProcessService do
           customer:,
           contract_rate_card:,
           action_type: "renew_fixed_advance",
-          billing_at: first_resolution.planned_operation.billing_at,
-          target_cycle_started_at: first_resolution.planned_operation.cycle_started_at
+          billing_at: first_resolution.billing_at,
+          target_cycle_started_at: first_resolution.cycle_started_at
         )
       end
 
@@ -432,7 +428,6 @@ RSpec.describe BillingOperations::ProcessService do
           later_rate
           operation
           allow(BillingOperations::BuildScheduleService).to receive(:call!).and_call_original
-          allow(BillingOperations::ResolvePlannedOperationService).to receive(:call!).and_call_original
         end
 
         it "resolves once and creates a successor with the correct cycle dates" do
@@ -445,7 +440,6 @@ RSpec.describe BillingOperations::ProcessService do
             target_cycle_started_at: Time.utc(2026, 2, 1)
           )
           expect(BillingOperations::BuildScheduleService).to have_received(:call!).once
-          expect(BillingOperations::ResolvePlannedOperationService).to have_received(:call!).once
         end
       end
 
@@ -498,11 +492,9 @@ RSpec.describe BillingOperations::ProcessService do
         ).schedule
       end
       let(:resolution) do
-        BillingOperations::ResolvePlannedOperationService.call!(
-          operation: BillingOperation.new(contract_rate_card:,
-            action_type: "renew_recurring_metered_advance", billing_at: timestamp,
-            target_cycle_started_at: timestamp), schedule:
-        )
+        planned_operation_for(BillingOperation.new(contract_rate_card:,
+          action_type: "renew_recurring_metered_advance", billing_at: timestamp,
+          target_cycle_started_at: timestamp), schedule)
       end
       let(:operation) do
         create(
@@ -511,8 +503,8 @@ RSpec.describe BillingOperations::ProcessService do
           customer:,
           contract_rate_card:,
           action_type: "renew_recurring_metered_advance",
-          billing_at: resolution.planned_operation.billing_at,
-          target_cycle_started_at: resolution.planned_operation.cycle_started_at
+          billing_at: resolution.billing_at,
+          target_cycle_started_at: resolution.cycle_started_at
         )
       end
 
@@ -614,11 +606,9 @@ RSpec.describe BillingOperations::ProcessService do
         ).schedule
       end
       let(:resolution) do
-        BillingOperations::ResolvePlannedOperationService.call!(
-          operation: BillingOperation.new(contract_rate_card:,
-            action_type: "regroup_paid_fees", billing_at: Time.utc(2026, 3, 1),
-            target_cycle_started_at: timestamp), schedule:
-        )
+        planned_operation_for(BillingOperation.new(contract_rate_card:,
+          action_type: "regroup_paid_fees", billing_at: Time.utc(2026, 3, 1),
+          target_cycle_started_at: timestamp), schedule)
       end
       let(:operation) do
         create(
@@ -628,13 +618,13 @@ RSpec.describe BillingOperations::ProcessService do
           contract_rate_card:,
           action_type: "regroup_paid_fees",
           causation_type: :late_payment,
-          billing_at: resolution.planned_operation.billing_at,
-          target_cycle_started_at: resolution.planned_operation.cycle_started_at
+          billing_at: resolution.billing_at,
+          target_cycle_started_at: resolution.cycle_started_at
         )
       end
       let(:source_segment) do
         BillingSegments::BuildEventSegmentService.call!(
-          contract_rate_card:, billable_segment: resolution.planned_operation.billable_segments.sole
+          contract_rate_card:, billable_segment: resolution.billable_segments.sole
         ).billing_segment
       end
       let(:paid_fee) do
@@ -755,17 +745,15 @@ RSpec.describe BillingOperations::ProcessService do
           ).schedule
         end
         let(:empty_resolution) do
-          BillingOperations::ResolvePlannedOperationService.call!(
-            operation: BillingOperation.new(contract_rate_card: empty_contract_rate_card,
-              action_type: "regroup_paid_fees", billing_at: Time.utc(2026, 3, 1),
-              target_cycle_started_at: timestamp), schedule: empty_schedule
-          )
+          planned_operation_for(BillingOperation.new(contract_rate_card: empty_contract_rate_card,
+            action_type: "regroup_paid_fees", billing_at: Time.utc(2026, 3, 1),
+            target_cycle_started_at: timestamp), empty_schedule)
         end
         let(:empty_operation) do
           create(:billing_operation, organization:, customer:,
             contract_rate_card: empty_contract_rate_card, action_type: "regroup_paid_fees",
-            causation_type: :late_payment, billing_at: empty_resolution.planned_operation.billing_at,
-            target_cycle_started_at: empty_resolution.planned_operation.cycle_started_at)
+            causation_type: :late_payment, billing_at: empty_resolution.billing_at,
+            target_cycle_started_at: empty_resolution.cycle_started_at)
         end
         let(:invoice) { described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)).invoices.sole }
 
@@ -787,5 +775,11 @@ RSpec.describe BillingOperations::ProcessService do
         end
       end
     end
+  end
+
+  def planned_operation_for(operation, schedule)
+    cycle = schedule.cycle_at(operation.target_cycle_started_at)
+    schedule.planned_operations_for_cycle(cycle, action_type: operation.action_type)
+      .find { it.billing_at == operation.billing_at }
   end
 end

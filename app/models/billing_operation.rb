@@ -114,6 +114,8 @@ end
 #  index_billing_operations_on_customer_id                (customer_id)
 #  index_billing_operations_on_invoice_id                 (invoice_id)
 #  index_billing_operations_on_organization_id            (organization_id)
+#  index_pending_billing_operations_on_billing_at         (billing_at) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
+#  index_pending_billing_operations_on_card_and_date      (contract_rate_card_id,billing_at) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #  index_pending_billing_operations_on_org_and_date       (organization_id,billing_at,id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #  index_pending_billing_operations_on_org_customer_date  (organization_id,customer_id,billing_at,id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #

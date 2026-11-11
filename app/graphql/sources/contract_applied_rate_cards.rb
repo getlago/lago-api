@@ -11,7 +11,11 @@ module Sources
     def fetch(contract_ids)
       by_contract = ContractRateCard
         .where(contract_id: contract_ids)
-        .includes(:rate_card)
+        .preload(
+          :terms, :rate_phases,
+          {contract: [:customer, :billing_entity]},
+          {rate_card: [:rates, {product: :billable_metric}]}
+        )
         .order(:effective_date, :id)
         .group_by(&:contract_id)
 
