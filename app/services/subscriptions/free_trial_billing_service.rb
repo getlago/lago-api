@@ -73,7 +73,7 @@ module Subscriptions
           INNER JOIN customers ON subscriptions.customer_id = customers.id
           INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id
         WHERE
-          #{in_trial("subscriptions")}
+          #{in_trial}
           AND #{trial_end_date + at_time_zone} <= '#{timestamp}'#{at_time_zone}
       SQL
 
@@ -92,20 +92,21 @@ module Subscriptions
         FROM
           subscriptions
         WHERE (subscriptions.customer_id, subscriptions.external_id) IN (
-          SELECT trial_subscriptions.customer_id, trial_subscriptions.external_id
-          FROM subscriptions AS trial_subscriptions
-          WHERE #{in_trial("trial_subscriptions")}
+          SELECT subscriptions.customer_id, subscriptions.external_id
+          FROM subscriptions
+          WHERE #{in_trial}
         )
         GROUP BY subscriptions.customer_id, subscriptions.external_id
       SQL
     end
 
     # NOTE: Shared by the outer query and the initial_started_at CTE, which must select the same subscriptions.
-    def in_trial(subscriptions)
+    #       Each use has its own FROM subscriptions, so the name always refers to the nearest one.
+    def in_trial
       <<-SQL
-        #{subscriptions}.status = 1
-        AND #{subscriptions}.trial_ended_at IS NULL
-        AND #{subscriptions}.plan_id IN (SELECT trial_plans.id FROM plans AS trial_plans WHERE trial_plans.trial_period > 0)
+        subscriptions.status = 1
+        AND subscriptions.trial_ended_at IS NULL
+        AND subscriptions.plan_id IN (SELECT plans.id FROM plans WHERE plans.trial_period > 0)
       SQL
     end
 
