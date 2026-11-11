@@ -250,6 +250,13 @@ class Organization < ApplicationRecord
     feature_flag_enabled?(:product_catalog)
   end
 
+  # Whether this organization's events go to the product events topic, and so to the
+  # product ClickHouse tables. Without the topic, a product catalog organization keeps
+  # the subscription pipeline.
+  def product_events_pipeline?
+    product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?
+  end
+
   def account_tree_enabled?
     feature_flag_enabled?(:account_tree)
   end
@@ -306,6 +313,11 @@ class Organization < ApplicationRecord
 
   def can_create_billing_entity?
     remaining_billing_entities > 0
+  end
+
+  # The endpoint that `webhook_url` reads and writes. Ruby side so a preloaded association is reused.
+  def default_webhook_endpoint
+    webhook_endpoints.min_by(&:id)
   end
 
   def failed_tax_invoices_count

@@ -312,7 +312,7 @@ module Customers
       return customer.applied_dunning_campaign unless args.key?(:applied_dunning_campaign_id)
       return unless args[:applied_dunning_campaign_id]
 
-      DunningCampaign.find(args[:applied_dunning_campaign_id])
+      organization.dunning_campaigns.find(args[:applied_dunning_campaign_id])
     end
   end
 end

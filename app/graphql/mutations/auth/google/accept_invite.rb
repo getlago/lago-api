@@ -7,13 +7,12 @@ module Mutations
         graphql_name "GoogleAcceptInvite"
         description "Accepts a membership invite with Google Oauth"
 
-        argument :code, String, required: true
-        argument :invite_token, String, required: true
+        input_object_class Types::Auth::Google::AcceptInviteInput
 
         type Types::Payloads::RegisterUserType
 
-        def resolve(code:, invite_token:)
-          result = ::Auth::GoogleService.call(:accept_invite, code, invite_token)
+        def resolve(code:, invite_token:, state: nil, state_secret: nil)
+          result = ::Auth::GoogleService.call(:accept_invite, code, invite_token, state:, state_secret:)
 
           result.success? ? result : result_error(result)
         end

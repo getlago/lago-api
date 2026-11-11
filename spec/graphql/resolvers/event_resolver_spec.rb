@@ -18,6 +18,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
           ipAddress
           apiClient
           payload
+          preciseTotalAmountCents
           billableMetricName
           matchBillableMetric
           matchCustomField
@@ -52,6 +53,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
   let(:plan) { create(:plan, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:precise_total_amount_cents) { "1234.567" }
 
   let(:event) do
     create(
@@ -60,6 +62,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       organization:,
       external_subscription_id: subscription.external_id,
       timestamp: 2.days.ago,
+      precise_total_amount_cents:,
       properties: {foo_bar: 1234},
       metadata: {user_agent: "Lago Ruby v0.0.1", ip_address: "182.11.32.11"}
     )
@@ -83,11 +86,56 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
     event_response = result["data"]["event"]
     expect(event_response["id"]).to eq(event.id)
     expect(event_response["code"]).to eq(event.code)
+    expect(event_response["preciseTotalAmountCents"]).to eq("1234.567")
+    expect(event_response["payload"]).to eq(
+      event: {
+        transaction_id: event.transaction_id,
+        external_subscription_id: event.external_subscription_id,
+        code: event.code,
+        timestamp: event.timestamp.to_i,
+        precise_total_amount_cents: "1234.567",
+        properties: event.properties
+      }
+    )
+  end
+
+  context "when the event has no precise total amount" do
+    let(:precise_total_amount_cents) { nil }
+
+    it "returns nil" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: "developers:manage",
+        query:,
+        variables: {eventTransactionId: event.transaction_id}
+      )
+
+      expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+      expect(result["data"]["event"]["payload"][:event]).to include(precise_total_amount_cents: nil)
+    end
+  end
+
+  context "when the event has a zero precise total amount" do
+    let(:precise_total_amount_cents) { "0" }
+
+    it "returns nil" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: "developers:manage",
+        query:,
+        variables: {eventTransactionId: event.transaction_id}
+      )
+
+      expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+      expect(result["data"]["event"]["payload"][:event]).to include(precise_total_amount_cents: nil)
+    end
   end
 
   context "with clickhouse", clickhouse: true do
     let(:event) do
-      create(:clickhouse_events_raw, organization_id: organization.id)
+      create(:clickhouse_events_raw, organization_id: organization.id, precise_total_amount_cents:)
     end
 
     before { organization.update!(clickhouse_events_store: true) }
@@ -104,6 +152,51 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       event_response = result["data"]["event"]
       expect(event_response["id"]).to eq(event.id)
       expect(event_response["code"]).to eq(event.code)
+      expect(event_response["preciseTotalAmountCents"]).to eq("1234.567")
+      expect(event_response["payload"]).to eq(
+        event: {
+          transaction_id: event.transaction_id,
+          external_subscription_id: event.external_subscription_id,
+          code: event.code,
+          timestamp: event.timestamp.to_i,
+          precise_total_amount_cents: "1234.567",
+          properties: event.properties
+        }
+      )
+    end
+
+    context "when the event has no precise total amount" do
+      let(:precise_total_amount_cents) { nil }
+
+      it "returns nil" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: "developers:manage",
+          query:,
+          variables: {eventTransactionId: event.transaction_id}
+        )
+
+        expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+        expect(result["data"]["event"]["payload"][:event]).to include(precise_total_amount_cents: nil)
+      end
+    end
+
+    context "when the event has a zero precise total amount" do
+      let(:precise_total_amount_cents) { 0.0 }
+
+      it "returns nil" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: "developers:manage",
+          query:,
+          variables: {eventTransactionId: event.transaction_id}
+        )
+
+        expect(result["data"]["event"]["preciseTotalAmountCents"]).to be_nil
+        expect(result["data"]["event"]["payload"][:event]).to include(precise_total_amount_cents: nil)
+      end
     end
   end
 

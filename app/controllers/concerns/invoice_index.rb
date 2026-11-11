@@ -67,17 +67,7 @@ module InvoiceIndex
           :billing_entity,
           :organization,
           :applied_usage_thresholds,
-          customer: [
-            :billing_entity,
-            :organization,
-            :metadata,
-            :stripe_customer,
-            :gocardless_customer,
-            :cashfree_customer,
-            :adyen_customer,
-            :moneyhash_customer,
-            {integration_customers: :integration}
-          ]
+          customer: [*::V1::CustomerSerializer::PRELOADS, {integration_customers: :integration}]
         ),
         :offset_amount_cents
       )

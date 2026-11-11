@@ -25,6 +25,18 @@ RSpec.describe PasswordResets::CreateJob do
     end
   end
 
+  context "when the stored email is composed and the requested one decomposed" do
+    let(:user) { create(:user, email: "jo\u00E3o@acme.com") }
+
+    before { user }
+
+    it "creates the password reset for the existing user" do
+      described_class.perform_now("Joa\u0303o@acme.com")
+
+      expect(PasswordResets::CreateService).to have_received(:call!).with(user:)
+    end
+  end
+
   it "passes no user for an unknown email" do
     described_class.perform_now("nobody@example.com")
 
