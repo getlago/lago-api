@@ -148,6 +148,22 @@ module Invoices
     def billing_segments
       return @billing_segments if @billing_segments
 
+      operations = invoice.billing_operations
+        .order(:target_cycle_started_at, :billing_at, :id)
+        .includes(contract_rate_card: [
+          :terms,
+          {contract: :customer},
+          {rate_card: [:rates, {product: :billable_metric}]},
+          {rate_phases: :rate_override}
+        ])
+
+      unless operations.empty?
+        @billing_segments = operations.flat_map do |operation|
+          BillingOperations::ResolveSegmentsService.call!(operation:).segments
+        end
+        return @billing_segments
+      end
+
       timestamp = fetch_timestamp
       contract_rate_cards = ContractRateCard
         .where(

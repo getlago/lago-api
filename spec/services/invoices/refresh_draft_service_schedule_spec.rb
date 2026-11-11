@@ -60,8 +60,6 @@ RSpec.describe Invoices::RefreshDraftService do
   end
 
   it "rebuilds all advance slices due at the stored timestamp, with the schedule cutoff retained" do
-    statements = capture_sql { result }
-
     expect(result).to be_success
 
     expect(invoice.reload.fees.count).to eq(3)
@@ -73,8 +71,6 @@ RSpec.describe Invoices::RefreshDraftService do
     expect(invoice.total_amount_cents).to eq(3 * 2 * 1_500) # Three cycles, two units at $15 each.
     expect(invoice.fees.pluck(Arel.sql("properties ->> 'timestamp'")).map { Time.iso8601(it) }.uniq)
       .to eq([Time.utc(2026, 3, 1)])
-    expect(statements.grep(/billing_operations/i)).to be_empty
-
     first_coverage = fee_coverage
     first_total = invoice.total_amount_cents
     second_result = described_class.call(invoice:)
@@ -82,6 +78,100 @@ RSpec.describe Invoices::RefreshDraftService do
     expect(second_result).to be_success
     expect(fee_coverage).to eq(first_coverage)
     expect(invoice.reload.total_amount_cents).to eq(first_total)
+  end
+
+  context "when the invoice has linked billing operations" do
+    let(:operation_attributes) do
+      {
+        action_type: "renew_fixed_advance",
+        causation_type: :periodic_continuation,
+        billing_at: Time.utc(2026, 3, 1),
+        target_cycle_started_at: Time.utc(2026, 3, 1)
+      }
+    end
+
+    before do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:, **operation_attributes)
+    end
+
+    it "rebuilds only the slices covered by those operations" do
+      expect(result).to be_success
+
+      expect(invoice.reload.fees.count).to eq(1)
+      expect(fee_coverage).to eq([
+        [Time.utc(2026, 3, 1).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 4, 1)).iso8601(6), 3_000]
+      ])
+      expect(invoice.total_amount_cents).to eq(3_000)
+
+      first_coverage = fee_coverage
+      expect(described_class.call(invoice:)).to be_success
+      expect(fee_coverage).to eq(first_coverage)
+    end
+
+    context "when an arrears cycle has multiple due slices" do
+      let(:billing_timing) { "arrears" }
+      let(:operation_attributes) do
+        {
+          action_type: "close_fixed_arrears",
+          causation_type: :periodic_continuation,
+          billing_at: Time.utc(2026, 2, 1),
+          target_cycle_started_at: Time.utc(2026, 1, 1)
+        }
+      end
+
+      before do
+        create(
+          :rate_card_rate, organization:, rate_card:,
+          effective_from: Time.utc(2026, 1, 15),
+          billing_interval_count: 1, billing_interval_unit: "month",
+          rate_properties: {"amount" => "20.00"}
+        )
+      end
+
+      it "rebuilds only the linked later slice and preserves its billing timestamp" do
+        expect(result).to be_success
+
+        expect(fee_coverage).to eq([
+          [Time.utc(2026, 1, 15).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6), 4_000]
+        ])
+        expect(invoice.fees.pluck(Arel.sql("properties ->> 'timestamp'")).map { Time.iso8601(it) }.uniq)
+          .to eq([Time.utc(2026, 2, 1)])
+      end
+    end
+
+    context "when the invoice consolidates operations for multiple cards" do
+      let(:second_product) { create(:product, :fixed, organization:) }
+      let(:second_rate_card) { create(:rate_card, :advance, organization:, product: second_product, currency: "USD") }
+      let(:second_contract_rate_card) do
+        create(
+          :contract_rate_card, organization:, contract:, rate_card: second_rate_card,
+          billing_anchor_date: Date.new(2026, 1, 1), effective_date: Date.new(2026, 1, 1), units: 1
+        )
+      end
+
+      before do
+        create(
+          :rate_card_rate, organization:, rate_card: second_rate_card,
+          effective_from: Time.utc(2025, 1, 1), billing_interval_count: 1,
+          billing_interval_unit: "month", rate_properties: {"amount" => "10.00"}
+        )
+        create(
+          :billing_operation, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
+          action_type: "renew_fixed_advance", causation_type: :periodic_continuation,
+          billing_at: Time.utc(2026, 3, 1), target_cycle_started_at: Time.utc(2026, 3, 1)
+        )
+      end
+
+      it "rebuilds only the current-cycle slice for each linked card" do
+        expect(result).to be_success
+
+        expect(fee_coverage).to match_array([
+          [Time.utc(2026, 3, 1).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 4, 1)).iso8601(6), 3_000],
+          [Time.utc(2026, 3, 1).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 4, 1)).iso8601(6), 1_000]
+        ])
+        expect(invoice.fees.count).to eq(2)
+      end
+    end
   end
 
   context "when the resolved segments are accessed again" do

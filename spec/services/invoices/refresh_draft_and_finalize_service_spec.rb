@@ -110,13 +110,20 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
         create(:invoice, :draft, organization:, customer:, invoice_type: :contract,
           currency: "EUR", issuing_date: Date.new(2026, 1, 1))
       end
-      let(:contract) { create(:contract, organization:, customer:) }
-      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+      let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1, 5)) }
+      let(:product) { create(:product, :fixed, organization:) }
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "EUR", billing_timing: "arrears") }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:,
+          effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1), units: 1)
+      end
 
       before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2025, 1, 1),
+          billing_interval_count: 1, billing_interval_unit: "month", rate_properties: {"amount" => "10.00"})
         create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,
-          action_type: "close_fixed_arrears", billing_at: Time.current,
-          target_cycle_started_at: Time.current.beginning_of_month)
+          action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 2, 1, 5),
+          target_cycle_started_at: Time.utc(2026, 1, 1, 5))
         customer.update!(timezone: "America/New_York")
       end
 
