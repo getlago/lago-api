@@ -3,6 +3,8 @@
 RSpec.shared_examples "a credit note index endpoint" do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
+  # Customers whose credit notes the endpoint lists in the N+1 context: a customer-scoped endpoint lists only `customer`
+  let(:listed_customers) { [customer, other_customer] }
 
   let(:params) { {} }
 
@@ -454,6 +456,45 @@ RSpec.shared_examples "a credit note index endpoint" do
       expect(json[:credit_notes].count).to eq(3)
       json[:credit_notes].each do |credit_note|
         expect(credit_note[:metadata]).to eq(foo: "bar")
+      end
+    end
+  end
+
+  context "with N+1 query detection on customers", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:customer) { create(:customer, :with_tax_integration, organization:) }
+    let(:other_customer) { create(:customer, :with_tax_integration, organization:) }
+
+    before do
+      [customer, other_customer].each do |credit_note_customer|
+        create(:customer_metadata, customer: credit_note_customer, key: "lead_name", value: credit_note_customer.external_id)
+        create(:customer_metadata, customer: credit_note_customer, key: "region", value: "eu")
+
+        create_pair(:invoice, organization:, customer: credit_note_customer).each do |invoice|
+          create(:credit_note, invoice:, customer: credit_note_customer)
+        end
+      end
+    end
+
+    it "loads the customer associations once per page" do
+      queries = capture_sql { subject }
+
+      expect(response).to have_http_status(:success)
+      expect(json[:credit_notes].count).to eq(2 * listed_customers.count)
+      expect(json[:credit_notes].map { it[:customer][:lago_id] }.uniq).to match_array(listed_customers.map(&:id))
+      expect(queries.grep(/FROM "customer_metadata"/).count).to eq(1)
+      # NOTE: Bullet does not flag the integration of each integration customer, so the queries are counted
+      expect(queries.grep(/FROM "integrations"/).count).to eq(1)
+
+      json[:credit_notes].each do |credit_note|
+        rendered_customer = credit_note[:customer]
+        expected_customer = listed_customers.find { it.id == rendered_customer[:lago_id] }
+
+        expect(rendered_customer[:metadata].map { it.slice(:key, :value) }).to match_array(
+          [{key: "lead_name", value: expected_customer.external_id}, {key: "region", value: "eu"}]
+        )
+        expect(rendered_customer[:integration_customers].map { it.slice(:lago_id, :integration_code) }).to match_array(
+          expected_customer.integration_customers.map { {lago_id: it.id, integration_code: it.integration.code} }
+        )
       end
     end
   end
