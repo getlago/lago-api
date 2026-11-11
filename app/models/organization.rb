@@ -83,6 +83,7 @@ class Organization < ApplicationRecord
   has_many :contracts
   has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :invoices
+  has_many :billing_operations
   has_many :credit_notes
   has_many :fees
   has_many :events

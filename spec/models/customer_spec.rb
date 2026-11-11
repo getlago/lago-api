@@ -13,6 +13,7 @@ RSpec.describe Customer do
   it { is_expected.to belong_to(:applied_dunning_campaign).optional }
   it { is_expected.to belong_to(:billing_entity).optional }
   it { is_expected.to have_many(:daily_usages) }
+  it { is_expected.to have_many(:billing_operations) }
 
   it { is_expected.to have_many(:integration_customers).dependent(:destroy) }
   it { is_expected.to have_many(:payment_methods) }

@@ -122,6 +122,7 @@ ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b283a89721;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_b205a930f5;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
+ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS fk_rails_aef6cd8dda;
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS fk_rails_aed4cbd20b;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_aea6422e6a;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_ac146c9541;
@@ -658,6 +659,8 @@ DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_token_digest;
 DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_pending_signup_id;
 DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_live_pending_signup_id;
 DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_expires_at;
+DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_customer_date;
+DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_and_date;
 DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
@@ -1015,6 +1018,10 @@ DROP INDEX IF EXISTS public.index_billing_segments_on_contract_rate_card_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_contract_id;
 DROP INDEX IF EXISTS public.index_billing_segments_on_card_and_period;
 DROP INDEX IF EXISTS public.index_billing_segments_on_card_and_cycle;
+DROP INDEX IF EXISTS public.index_billing_operations_on_organization_id;
+DROP INDEX IF EXISTS public.index_billing_operations_on_invoice_id;
+DROP INDEX IF EXISTS public.index_billing_operations_on_customer_id;
+DROP INDEX IF EXISTS public.index_billing_operations_on_contract_rate_card_id;
 DROP INDEX IF EXISTS public.index_billing_object_connections_on_organization_id;
 DROP INDEX IF EXISTS public.index_billing_object_connections_on_integration_customer_id;
 DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_tax_id;
@@ -1292,6 +1299,7 @@ ALTER TABLE IF EXISTS ONLY public.catalog_plans DROP CONSTRAINT IF EXISTS catalo
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS cached_aggregations_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS billing_segments_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS billing_segments_no_overlapping_periods;
+ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS billing_operations_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS billing_object_connections_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS billing_entities_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS billing_entities_pkey;
@@ -1484,6 +1492,7 @@ DROP TABLE IF EXISTS public.charge_filter_values;
 DROP TABLE IF EXISTS public.catalog_plans;
 DROP TABLE IF EXISTS public.cached_aggregations;
 DROP TABLE IF EXISTS public.billing_segments;
+DROP TABLE IF EXISTS public.billing_operations;
 DROP TABLE IF EXISTS public.billing_object_connections;
 DROP TABLE IF EXISTS public.billing_entities_taxes;
 DROP TABLE IF EXISTS public.billing_entities_invoice_custom_sections;
@@ -1559,6 +1568,8 @@ DROP TYPE IF EXISTS public.contract_payment_method_type;
 DROP TYPE IF EXISTS public.contract_billing_time;
 DROP TYPE IF EXISTS public.connection_category;
 DROP TYPE IF EXISTS public.billing_segment_status;
+DROP TYPE IF EXISTS public.billing_operations_cancelled_causation_type;
+DROP TYPE IF EXISTS public.billing_operation_causation_type;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
@@ -1645,6 +1656,30 @@ CREATE TYPE public.billable_metric_weighted_interval AS ENUM (
 CREATE TYPE public.billing_object_connection_behavior AS ENUM (
     'specific',
     'skip'
+);
+
+
+--
+-- Name: billing_operation_causation_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.billing_operation_causation_type AS ENUM (
+    'contract_activation',
+    'periodic_continuation',
+    'contract_units_change',
+    'late_payment',
+    'rate_change',
+    'configuration_change',
+    'contract_termination'
+);
+
+
+--
+-- Name: billing_operations_cancelled_causation_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.billing_operations_cancelled_causation_type AS ENUM (
+    'contract_termination'
 );
 
 
@@ -2675,6 +2710,28 @@ CREATE TABLE public.billing_object_connections (
     integration_customer_id uuid,
     category public.connection_category NOT NULL,
     behavior public.billing_object_connection_behavior NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: billing_operations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.billing_operations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    customer_id uuid NOT NULL,
+    contract_rate_card_id uuid NOT NULL,
+    invoice_id uuid,
+    action_type character varying NOT NULL,
+    causation_type public.billing_operation_causation_type NOT NULL,
+    billing_at timestamp(6) without time zone NOT NULL,
+    cancelled_at timestamp(6) without time zone,
+    cancelled_causation_type public.billing_operations_cancelled_causation_type,
+    target_cycle_started_at timestamp(6) without time zone NOT NULL,
+    processed_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -6759,6 +6816,14 @@ ALTER TABLE ONLY public.billing_object_connections
 
 
 --
+-- Name: billing_operations billing_operations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_operations
+    ADD CONSTRAINT billing_operations_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: billing_segments billing_segments_no_overlapping_periods; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8859,6 +8924,34 @@ CREATE INDEX index_billing_object_connections_on_integration_customer_id ON publ
 --
 
 CREATE INDEX index_billing_object_connections_on_organization_id ON public.billing_object_connections USING btree (organization_id);
+
+
+--
+-- Name: index_billing_operations_on_contract_rate_card_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_operations_on_contract_rate_card_id ON public.billing_operations USING btree (contract_rate_card_id);
+
+
+--
+-- Name: index_billing_operations_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_operations_on_customer_id ON public.billing_operations USING btree (customer_id);
+
+
+--
+-- Name: index_billing_operations_on_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_operations_on_invoice_id ON public.billing_operations USING btree (invoice_id);
+
+
+--
+-- Name: index_billing_operations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_operations_on_organization_id ON public.billing_operations USING btree (organization_id);
 
 
 --
@@ -11358,6 +11451,20 @@ CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_i
 --
 
 CREATE INDEX index_pending_active_subscriptions_on_plan_id_and_status ON public.subscriptions USING btree (plan_id, status) WHERE (status = ANY (ARRAY[0, 1]));
+
+
+--
+-- Name: index_pending_billing_operations_on_org_and_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_billing_operations_on_org_and_date ON public.billing_operations USING btree (organization_id, billing_at, id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL));
+
+
+--
+-- Name: index_pending_billing_operations_on_org_customer_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_billing_operations_on_org_customer_date ON public.billing_operations USING btree (organization_id, customer_id, billing_at, id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL));
 
 
 --
@@ -15363,6 +15470,14 @@ ALTER TABLE ONLY public.billing_object_connections
 
 
 --
+-- Name: billing_operations fk_rails_aef6cd8dda; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_operations
+    ADD CONSTRAINT fk_rails_aef6cd8dda FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: daily_usages fk_rails_b07fc711f7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16273,6 +16388,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261109151633'),
 ('20261109122133'),
 ('20261109082523'),
 ('20261105094449'),
