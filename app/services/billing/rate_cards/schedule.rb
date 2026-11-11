@@ -97,9 +97,7 @@ module Billing
             candidate.billing_at > timestamp
           end
 
-          if segment
-            return segment.billing_at
-          end
+          return segment.billing_at if segment
 
           cycle = walker.cycle_after(cycle)
         end
@@ -109,10 +107,7 @@ module Billing
 
       def billable_segments_of(cycles)
         cycles.flat_map do |cycle|
-          segments = priced_segments_for_cycle(cycle)
-          next [] if segments.empty?
-
-          segments.map { build_billable_segment(cycle:, segment: it) }
+          priced_segments_for_cycle(cycle).map { build_billable_segment(cycle:, segment: it) }
         end
       end
 
