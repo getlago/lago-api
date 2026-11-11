@@ -60,7 +60,6 @@ module Subscriptions
         WITH
           initial_started_at AS (#{initial_started_at})
         SELECT
-          plans.pay_in_advance AS plan_pay_in_advance,
           #{billed_since_trial_end} AS was_billed_since_trial_end,
           #{trial_end_date} as trial_end_utc_date_from_query,
           subscriptions.*
