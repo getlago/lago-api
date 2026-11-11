@@ -67,7 +67,9 @@ module Subscriptions
         FROM
           subscriptions
           INNER JOIN plans ON subscriptions.plan_id = plans.id
-          INNER JOIN initial_started_at ON initial_started_at.external_id = subscriptions.external_id
+          INNER JOIN initial_started_at
+            ON initial_started_at.customer_id = subscriptions.customer_id
+            AND initial_started_at.external_id = subscriptions.external_id
           INNER JOIN customers ON subscriptions.customer_id = customers.id
           INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id
         WHERE
@@ -80,13 +82,25 @@ module Subscriptions
       Subscription.find_by_sql([sql, {timestamp:}])
     end
 
+    # NOTE: Same lookup as Subscription#initial_started_at, restricted to subscriptions still in trial,
+    #       so it never reads the whole subscriptions table.
     def initial_started_at
       <<-SQL
         SELECT
-          external_id,
-          FIRST_VALUE(started_at) OVER (PARTITION BY external_id ORDER BY started_at) AS initial_started_at
+          subscriptions.customer_id,
+          subscriptions.external_id,
+          MIN(subscriptions.started_at) AS initial_started_at
         FROM
           subscriptions
+        WHERE (subscriptions.customer_id, subscriptions.external_id) IN (
+          SELECT trial_subscriptions.customer_id, trial_subscriptions.external_id
+          FROM subscriptions AS trial_subscriptions
+            INNER JOIN plans AS trial_plans ON trial_plans.id = trial_subscriptions.plan_id
+          WHERE trial_subscriptions.status = 1
+            AND trial_subscriptions.trial_ended_at IS NULL
+            AND trial_plans.trial_period > 0
+        )
+        GROUP BY subscriptions.customer_id, subscriptions.external_id
       SQL
     end
 
