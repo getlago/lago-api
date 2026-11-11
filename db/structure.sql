@@ -5168,9 +5168,9 @@ CREATE TABLE public.wallets (
     code character varying,
     billing_entity_id uuid,
     purchase_order_number character varying,
+    payment_term jsonb,
     x402_enabled boolean DEFAULT false NOT NULL,
-    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL,
-    payment_term jsonb
+    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
