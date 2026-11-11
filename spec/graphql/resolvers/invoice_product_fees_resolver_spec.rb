@@ -68,6 +68,50 @@ RSpec.describe Resolvers::InvoiceProductFeesResolver do
     end
   end
 
+  context "with the fields of the invoice page" do
+    let(:query) do
+      <<~GQL
+        query($invoiceId: ID!) {
+          invoiceProductFees(invoiceId: $invoiceId, limit: 100) {
+            collection { id itemCode itemName appliedTaxes { taxRate } trueUpParentFee { id productFilter { id } } product { id } }
+          }
+        }
+      GQL
+    end
+    let(:small_invoice) { create(:invoice, organization:, customer:) }
+    let(:large_invoice) { create(:invoice, organization:, customer:) }
+
+    before do
+      taxed_fee(small_invoice, true_up_parent_fee: taxed_fee(small_invoice))
+      2.times { taxed_fee(large_invoice, true_up_parent_fee: taxed_fee(large_invoice)) }
+    end
+
+    def taxed_fee(fee_invoice, true_up_parent_fee: nil)
+      create(:fee, invoice: fee_invoice, organization:, subscription: nil, fee_type: "product",
+        invoiceable: product, contract:, contract_rate_card:, amount_cents: 1_000, true_up_parent_fee:,
+        rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card))
+        .tap { create(:fee_applied_tax, fee: it, organization:) }
+    end
+
+    def query_count(fee_invoice)
+      capture_sql do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {invoiceId: fee_invoice.id}
+        )
+      end.size
+    end
+
+    it "runs the same queries whatever the number of fees on the page" do
+      query_count(small_invoice)
+
+      expect(query_count(large_invoice)).to eq(query_count(small_invoice))
+    end
+  end
+
   context "when the invoice is not found" do
     let(:variables) { {invoiceId: create(:invoice, organization: create(:organization)).id} }
 
