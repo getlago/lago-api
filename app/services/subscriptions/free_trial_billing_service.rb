@@ -57,9 +57,7 @@ module Subscriptions
 
     def ending_trial_subscriptions
       sql = <<-SQL
-        WITH
-          initial_started_at AS (#{initial_started_at})
-        SELECT DISTINCT
+        SELECT
           plans.pay_in_advance AS plan_pay_in_advance,
           #{billed_since_trial_end} AS was_billed_since_trial_end,
           #{trial_end_date} as trial_end_utc_date_from_query,
@@ -67,9 +65,7 @@ module Subscriptions
         FROM
           subscriptions
           INNER JOIN plans ON subscriptions.plan_id = plans.id
-          INNER JOIN initial_started_at
-            ON initial_started_at.customer_id = subscriptions.customer_id
-            AND initial_started_at.external_id = subscriptions.external_id
+          CROSS JOIN LATERAL (#{initial_started_at}) AS initial_started_at
           INNER JOIN customers ON subscriptions.customer_id = customers.id
           INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id
         WHERE
@@ -82,26 +78,14 @@ module Subscriptions
       Subscription.find_by_sql([sql, {timestamp:}])
     end
 
-    # NOTE: Same lookup as Subscription#initial_started_at, restricted to the customer and external_id pairs
-    #       that have a subscription still in trial. It reads every subscription of those pairs, terminated
-    #       ones included, so an upgrade keeps the start of the first subscription.
+    # NOTE: Same lookup as Subscription#initial_started_at: it reads every subscription of the customer with
+    #       the same external_id, terminated ones included, so an upgrade keeps the start of the first one.
     def initial_started_at
       <<-SQL
-        SELECT
-          subscriptions.customer_id,
-          subscriptions.external_id,
-          MIN(subscriptions.started_at) AS initial_started_at
-        FROM
-          subscriptions
-        WHERE (subscriptions.customer_id, subscriptions.external_id) IN (
-          SELECT trial_subscriptions.customer_id, trial_subscriptions.external_id
-          FROM subscriptions AS trial_subscriptions
-            INNER JOIN plans AS trial_plans ON trial_plans.id = trial_subscriptions.plan_id
-          WHERE trial_subscriptions.status = 1
-            AND trial_subscriptions.trial_ended_at IS NULL
-            AND trial_plans.trial_period > 0
-        )
-        GROUP BY subscriptions.customer_id, subscriptions.external_id
+        SELECT MIN(previous_subscriptions.started_at) AS initial_started_at
+        FROM subscriptions AS previous_subscriptions
+        WHERE previous_subscriptions.customer_id = subscriptions.customer_id
+          AND previous_subscriptions.external_id = subscriptions.external_id
       SQL
     end
 
