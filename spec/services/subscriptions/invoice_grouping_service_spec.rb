@@ -137,6 +137,129 @@ RSpec.describe Subscriptions::InvoiceGroupingService do
       end
     end
 
+    context "when subscriptions have different connections" do
+      def create_connection(owner, category, **attributes)
+        create(:billing_object_connection, owner:, organization:, category:, behavior: "specific", **attributes)
+      end
+
+      context "when the multi_connection feature flag is disabled" do
+        before do
+          create_connection(subscription1, "accounting", integration_customer: create(:netsuite_customer, customer:))
+          create_connection(subscription2, "accounting", integration_customer: create(:xero_customer, customer:))
+        end
+
+        it "ignores connections and returns a single group" do
+          expect(result.subscription_groups).to eq([[subscription1, subscription2]])
+        end
+      end
+
+      context "when the multi_connection feature flag is enabled" do
+        let_it_be(:organization) { create(:organization, feature_flags: [:multi_connection]) }
+        let_it_be(:customer, refind: true) { create(:customer, organization:) }
+        let_it_be(:plan) { create(:plan, organization:, amount_currency: "EUR") }
+
+        context "when subscriptions have different payment connections" do
+          before do
+            create_connection(subscription1, "payment", payment_provider_customer: create(:stripe_customer, customer:))
+            create_connection(subscription2, "payment", payment_provider_customer: create(:gocardless_customer, customer:))
+          end
+
+          it "returns one group per payment connection" do
+            expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
+          end
+        end
+
+        context "when subscriptions have different tax connections" do
+          let(:anrok_customer) { create(:anrok_customer, customer:) }
+          let(:avalara_customer) { build(:avalara_customer, customer:).tap { |ic| ic.save!(validate: false) } }
+
+          before do
+            create_connection(subscription1, "tax", integration_customer: anrok_customer)
+            create_connection(subscription2, "tax", integration_customer: avalara_customer)
+          end
+
+          it "returns one group per tax connection" do
+            expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
+          end
+        end
+
+        context "when subscriptions have different accounting connections" do
+          before do
+            create_connection(subscription1, "accounting", integration_customer: create(:netsuite_customer, customer:))
+            create_connection(subscription2, "accounting", integration_customer: create(:xero_customer, customer:))
+          end
+
+          it "returns one group per accounting connection" do
+            expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
+          end
+        end
+
+        context "when subscriptions have different crm connections" do
+          before do
+            create_connection(subscription1, "crm", integration_customer: create(:netsuite_customer, customer:))
+            create_connection(subscription2, "crm", integration_customer: create(:xero_customer, customer:))
+          end
+
+          it "returns one group per accounting connection" do
+            expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
+          end
+        end
+
+        context "when a subscription skips a connection the other one inherits" do
+          before do
+            create(:anrok_customer, customer:)
+            create(:billing_object_connection, owner: subscription1, organization:, category: "tax", behavior: "skip")
+          end
+
+          it "returns one group per subscription" do
+            expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
+          end
+        end
+
+        context "when a subscription pins the connection the other one inherits" do
+          before do
+            create_connection(subscription1, "crm", integration_customer: create(:hubspot_customer, customer:))
+          end
+
+          it "returns a single group" do
+            expect(result.subscription_groups).to eq([[subscription1, subscription2]])
+          end
+        end
+
+        context "when the customer has several connections of the same category" do
+          let(:netsuite_customer) { create(:netsuite_customer, customer:, is_default: true) }
+
+          before do
+            create(:xero_customer, customer:)
+            create_connection(subscription1, "accounting", integration_customer: netsuite_customer)
+          end
+
+          it "resolves the inherited connection to the customer default" do
+            expect(result.subscription_groups).to eq([[subscription1, subscription2]])
+          end
+        end
+
+        context "when a subscription pins a connection that is not the customer default" do
+          before do
+            create(:netsuite_customer, customer:, is_default: true)
+            create_connection(subscription1, "accounting", integration_customer: create(:xero_customer, customer:))
+          end
+
+          it "returns one group per subscription" do
+            expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
+          end
+        end
+
+        context "when subscriptions have no connection override" do
+          before { create(:netsuite_customer, customer:) }
+
+          it "returns a single group" do
+            expect(result.subscription_groups).to eq([[subscription1, subscription2]])
+          end
+        end
+      end
+    end
+
     context "when subscriptions differ on several criteria" do
       let(:usd_plan) { create(:plan, organization:, amount_currency: "USD") }
       let(:billing_entity) { create(:billing_entity, organization:) }
