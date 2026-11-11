@@ -40,7 +40,7 @@ class InvoiceProductFeesQuery < BaseQuery
     fees = fees.where("products.product_type = ?", filters.product_type) if filters.product_type.present?
     fees = with_search_term(fees) if search_term.present?
 
-    result.fees = paginate(ordered(fees))
+    result.fees = paginate(ordered(fees).preload(:billed_product, :true_up_parent_fee, :applied_taxes))
     result
   end
 
@@ -98,21 +98,26 @@ class InvoiceProductFeesQuery < BaseQuery
   # a name or a plan sorts as an empty name, first.
   def ordered(scope)
     scope.order(
-      Arel.sql("LOWER(COALESCE(NULLIF(BTRIM(contracts.name), ''), NULLIF(BTRIM(catalog_plans.invoice_display_name), ''), catalog_plans.name, '')) COLLATE \"C\""),
+      Arel.sql("LOWER(COALESCE(#{presence_sql("contracts.name")}, #{presence_sql("catalog_plans.invoice_display_name")}, catalog_plans.name, '')) COLLATE \"C\""),
       Arel.sql("contracts.id"),
       Arel.sql("product_categories.id IS NULL"),
-      Arel.sql("LOWER(COALESCE(NULLIF(BTRIM(product_categories.invoice_display_name), ''), product_categories.name)) COLLATE \"C\""),
+      Arel.sql("LOWER(COALESCE(#{presence_sql("product_categories.invoice_display_name")}, product_categories.name)) COLLATE \"C\""),
       Arel.sql("product_categories.id"),
-      Arel.sql("LOWER(COALESCE(NULLIF(BTRIM(products.invoice_display_name), ''), products.name)) COLLATE \"C\""),
+      Arel.sql("LOWER(COALESCE(#{presence_sql("products.invoice_display_name")}, products.name)) COLLATE \"C\""),
       Arel.sql("products.id"),
       Arel.sql("product_filters.id IS NOT NULL"),
-      Arel.sql("LOWER(COALESCE(NULLIF(BTRIM(product_filters.invoice_display_name), ''), product_filters.name)) COLLATE \"C\""),
+      Arel.sql("LOWER(COALESCE(#{presence_sql("product_filters.invoice_display_name")}, product_filters.name)) COLLATE \"C\""),
       Arel.sql("product_filters.id"),
       Arel.sql("COALESCE(parent_fees.properties ->> 'from_datetime', fees.properties ->> 'from_datetime', '')"),
       Arel.sql("COALESCE(parent_fees.id, fees.id)"),
       Arel.sql("fees.true_up_parent_fee_id IS NOT NULL"),
       Arel.sql("fees.id")
     )
+  end
+
+  # SQL for Ruby's `column.presence`: NULL when blank, the stored value untouched otherwise.
+  def presence_sql(column)
+    "CASE WHEN #{column} ~ '^[[:space:]]*$' THEN NULL ELSE #{column} END"
   end
 
   # A malformed id matches nothing rather than failing the UUID cast.
