@@ -12,7 +12,7 @@ module DunningCampaigns
       # Run the eligibility query once, then load customers by primary key.
       # find_each would re-run the full query for every batch.
       eligible_customers.pluck(:id).each_slice(BATCH_SIZE) do |ids|
-        Customer.where(id: ids).find_each do |customer|
+        Customer.where(id: ids).select(:id).find_each do |customer|
           DunningCampaigns::ProcessCustomerJob.perform_later(customer)
         end
       end

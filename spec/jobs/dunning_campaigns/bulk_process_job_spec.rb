@@ -33,6 +33,25 @@ RSpec.describe DunningCampaigns::BulkProcessJob do
     end
   end
 
+  context "when the run fails", :premium do
+    around do |example|
+      ActiveJob::Uniqueness.reset_manager!
+      example.run
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    before do
+      allow(DunningCampaigns::BulkProcessService).to receive(:call).and_raise(ActiveRecord::QueryCanceled)
+    end
+
+    it "releases the lock so the next run can be enqueued" do
+      described_class.perform_later
+
+      expect { described_class.perform_now }.to raise_error(ActiveRecord::QueryCanceled)
+      expect { described_class.perform_later }.to change { enqueued_jobs.count }.by(1) # rubocop:disable RSpec/ExpectChange
+    end
+  end
+
   it "does nothing" do
     described_class.perform_now
 
