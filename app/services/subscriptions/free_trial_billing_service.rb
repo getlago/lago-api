@@ -82,8 +82,9 @@ module Subscriptions
       Subscription.find_by_sql([sql, {timestamp:}])
     end
 
-    # NOTE: Same lookup as Subscription#initial_started_at, restricted to subscriptions still in trial,
-    #       so it never reads the whole subscriptions table.
+    # NOTE: Same lookup as Subscription#initial_started_at, restricted to the customer and external_id pairs
+    #       that have a subscription still in trial. It reads every subscription of those pairs, terminated
+    #       ones included, so an upgrade keeps the start of the first subscription.
     def initial_started_at
       <<-SQL
         SELECT
