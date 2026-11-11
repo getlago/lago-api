@@ -41,6 +41,10 @@ describe CatalogWalletTransaction do
       expect(transaction).to belong_to(:catalog_wallet)
       expect(transaction).to belong_to(:credit_allocation).class_name("CatalogWalletCreditAllocation").optional
       expect(transaction).to belong_to(:invoice).optional
+      expect(transaction).to have_many(:consumptions)
+        .class_name("CatalogWalletConsumption").with_foreign_key(:inbound_transaction_id).inverse_of(:inbound_transaction)
+      expect(transaction).to have_many(:fundings)
+        .class_name("CatalogWalletConsumption").with_foreign_key(:outbound_transaction_id).inverse_of(:outbound_transaction)
     end
   end
 
