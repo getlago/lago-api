@@ -52,8 +52,6 @@ module BillingOperations
       case operation.action_type
       when "regroup_paid_fees"
         :advance_charges
-      when "reconcile_advance_coverage"
-        :reconciliation
       else
         :contract
       end
