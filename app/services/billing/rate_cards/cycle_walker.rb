@@ -23,10 +23,16 @@ module Billing
       def advance
         return nil unless current_cycle
 
-        @current_cycle = build_cycle(
-          index: current_cycle.index + 1,
-          started_at: current_cycle.ended_at,
-          previous_calendar: current_cycle.calendar
+        @current_cycle = cycle_after(current_cycle)
+      end
+
+      def cycle_after(cycle)
+        return unless cycle
+
+        build_cycle(
+          index: cycle.index + 1,
+          started_at: cycle.ended_at,
+          previous_calendar: cycle.calendar
         )
       end
 
