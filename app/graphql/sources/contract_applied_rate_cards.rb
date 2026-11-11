@@ -15,6 +15,8 @@ module Sources
         .order(:effective_date, :id)
         .group_by(&:contract_id)
 
+      ContractRateCard.preload_aggregations(by_contract.values.flatten, :billing_operation_clock)
+
       contract_ids.map { by_contract.fetch(it, []) }
     end
   end

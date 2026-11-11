@@ -97,6 +97,19 @@ RSpec.describe V2::ContractSerializer do
         flat_payload.merge(applied_rate_cards: expected.map { V2::ContractAppliedRateCardSerializer.new(it).serialize })
       )
     end
+
+    it "loads pending billing clocks in one aggregate query for the expanded cards" do
+      statements = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_name, _start, _finish, _id, payload|
+        statements << payload[:sql] if payload[:sql].include?("billing_operations")
+      end
+
+      payload
+
+      expect(statements.size).to eq(1)
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
   end
 
   context "with the plan expansion" do

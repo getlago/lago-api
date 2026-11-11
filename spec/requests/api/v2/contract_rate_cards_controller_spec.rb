@@ -82,6 +82,17 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
     let(:external_id) { contract.external_id }
     let!(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:second_card) { create(:contract_rate_card, organization:, contract:, effective_date: 2.days.ago.to_date) }
+    let(:first_billing_at) { Time.zone.parse("2026-11-10 12:00:00") }
+    let(:second_billing_at) { Time.zone.parse("2026-11-11 12:00:00") }
+    let(:first_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        billing_at: first_billing_at, target_cycle_started_at: first_billing_at - 1.month)
+    end
+    let(:second_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card: second_card,
+        billing_at: second_billing_at, target_cycle_started_at: second_billing_at - 1.month)
+    end
 
     before { create(:contract_rate_card, organization:) }
 
@@ -94,6 +105,22 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:applied_rate_cards].map { it[:lago_id] }).to eq([contract_rate_card.id])
       expect(json[:applied_rate_cards].sole.keys).to eq(flat_keys)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    it "loads billing-operation clocks once for the returned cards" do
+      first_operation
+      second_operation
+      queries = []
+      subscriber = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('FROM "billing_operations"') }
+
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { subject }
+
+      expect(queries.size).to eq(1)
+      expect(queries.sole).to include("GROUP BY")
+      expect(json[:applied_rate_cards].to_h { [it[:lago_id], it[:next_billing_at]] }).to eq(
+        contract_rate_card.id => first_billing_at.iso8601(6),
+        second_card.id => second_billing_at.iso8601(6)
+      )
     end
 
     context "with include_total_count" do
