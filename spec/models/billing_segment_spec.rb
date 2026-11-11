@@ -126,6 +126,14 @@ RSpec.describe BillingSegment do
 
         expect(segment.duration_in_days).to eq(31)
       end
+
+      it "counts an end-of-day value at nanosecond precision as the exclusive midnight" do
+        customer = build(:customer, timezone: "UTC")
+        segment = described_class.new(customer:, started_at: Time.utc(2026, 8, 1),
+          ended_at: Time.utc(2026, 8, 30, 23, 59, 59, 999_999) + Rational(999, 1_000_000_000))
+
+        expect(segment.duration_in_days).to eq(30)
+      end
     end
 
     describe "#elapsed_period_ratio" do

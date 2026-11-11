@@ -3,6 +3,7 @@
 class ContractRateCard < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+  include PreloadableAggregations
 
   self.discard_column = :deleted_at
   # The contract end date is the only end of a card; drop once released.
@@ -20,6 +21,20 @@ class ContractRateCard < ApplicationRecord
   has_many :terms, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardTerm", inverse_of: :contract_rate_card
   has_many :billing_operations
   has_many :fees
+
+  preloadable_aggregation :billing_operation_clock, default: {} do |ids|
+    BillingOperation
+      .where(contract_rate_card_id: ids)
+      .group(:contract_rate_card_id)
+      .pluck(
+        :contract_rate_card_id,
+        Arel.sql("MIN(billing_at) FILTER (WHERE processed_at IS NULL AND cancelled_at IS NULL)"),
+        Arel.sql("COUNT(*) > 0")
+      )
+      .to_h do |id, pending_at, has_chain|
+        [id, {billing_at: pending_at, has_chain:}]
+      end
+  end
 
   validates :billing_anchor_date, presence: true
   validates :effective_date, presence: true
@@ -50,9 +65,9 @@ class ContractRateCard < ApplicationRecord
   }
 
   def next_billing_at
-    pending_billing_at = billing_operations.where(processed_at: nil, cancelled_at: nil).minimum(:billing_at)
-    return pending_billing_at if pending_billing_at
-    return if billing_operations.exists?
+    clock = billing_operation_clock
+    return clock[:billing_at] if clock[:billing_at]
+    return if clock[:has_chain]
 
     build = Billing::RateCards::BuildScheduleService.call(contract_rate_card: self)
     return unless build.success?

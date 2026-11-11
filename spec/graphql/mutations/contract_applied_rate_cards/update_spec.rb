@@ -76,8 +76,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
         contract:,
         rate_card:,
         effective_date: Date.new(2026, 11, 1),
-        billing_anchor_date: Date.new(2026, 11, 1),
-        next_billing_at: Time.zone.parse("2026-12-01")
+        billing_anchor_date: Date.new(2026, 11, 1)
       )
     end
     let(:input) { {id: contract_rate_card.id, billingAnchorDate: "2026-11-15"} }

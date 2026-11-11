@@ -14,8 +14,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
       organization:,
       contract:,
       effective_date: Date.new(2026, 10, 1),
-      billing_anchor_date: Date.new(2026, 10, 1),
-      next_billing_at: Time.zone.parse("2026-10-01")
+      billing_anchor_date: Date.new(2026, 10, 1)
     )
   end
   let(:unit) do
@@ -31,8 +30,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
     expect(result).to be_success
     expect(contract_rate_card.reload).to have_attributes(
       effective_date: Date.new(2026, 11, 15),
-      billing_anchor_date: Date.new(2026, 11, 15),
-      next_billing_at: Time.zone.parse("2026-11-15")
+      billing_anchor_date: Date.new(2026, 11, 15)
     )
     expect(unit.reload).to have_attributes(units: 12, effective_date: Date.new(2026, 11, 15))
   end

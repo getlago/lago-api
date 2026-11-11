@@ -98,7 +98,8 @@ class BillingSegment
   end
 
   def duration_in_days
-    Billing::Days.between(started_at, BillingSegment.exclusive_end(ended_at), timezone: customer.applicable_timezone)
+    exclusive_end = BillingSegment.exclusive_end(ended_at.floor(6))
+    Billing::Days.between(started_at, exclusive_end, timezone: customer.applicable_timezone)
   end
 
   def elapsed_period_ratio(at: Time.current)
