@@ -1,0 +1,67 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+describe CatalogWalletSelector do
+  subject(:selector) { build(:catalog_wallet_selector) }
+
+  describe "enums" do
+    it do
+      expect(selector).to define_enum_for(:selector_type)
+        .backed_by_column_of_type(:enum)
+        .validating
+        .with_values(fee_type: "fee_type", product_category: "product_category", product: "product", product_filters: "product_filters")
+        .with_prefix
+      expect(selector).to define_enum_for(:fee_type)
+        .backed_by_column_of_type(:enum)
+        .validating(allowing_nil: true)
+        .with_values(fixed: "fixed", metered: "metered")
+        .with_prefix
+    end
+  end
+
+  describe "associations" do
+    it do
+      expect(selector).to belong_to(:organization)
+      expect(selector).to belong_to(:plan_wallet).optional
+      expect(selector).to belong_to(:catalog_wallet).optional
+      expect(selector).to belong_to(:product_category).optional
+      expect(selector).to belong_to(:product).optional
+      expect(selector).to belong_to(:product_filter).optional
+    end
+  end
+
+  describe "validations" do
+    it "accepts a plan wallet owner" do
+      expect(build(:catalog_wallet_selector, :plan_level)).to be_valid
+    end
+
+    it "rejects a selector with no owner" do
+      expect(build(:catalog_wallet_selector, catalog_wallet: nil).tap(&:valid?).errors)
+        .to be_added(:base, :exactly_one_owner_required)
+    end
+  end
+
+  describe "database constraints" do
+    it "refuses a target that is not the selector type's" do
+      selector = build(:catalog_wallet_selector, fee_type: nil, product: create(:product))
+
+      expect { selector.save!(validate: false) }
+        .to raise_error(ActiveRecord::StatementInvalid, /catalog_wallet_selectors_target_matches_type/)
+    end
+
+    it "refuses product filters on a selector that is not a product" do
+      selector = build(:catalog_wallet_selector, with_product_filters: true)
+
+      expect { selector.save!(validate: false) }
+        .to raise_error(ActiveRecord::StatementInvalid, /catalog_wallet_selectors_target_matches_type/)
+    end
+
+    it "refuses the same selector twice on a wallet" do
+      existing = create(:catalog_wallet_selector)
+      duplicate = build(:catalog_wallet_selector, catalog_wallet: existing.catalog_wallet)
+
+      expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
+end
