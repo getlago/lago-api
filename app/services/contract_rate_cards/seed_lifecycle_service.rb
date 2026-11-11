@@ -20,7 +20,6 @@ module ContractRateCards
         previous_effective_date = contract_rate_card.effective_date
         contract_rate_card.update!(contract_rate_card.contract.default_rate_card_lifecycle(billing_anchor_date:))
         sync_initial_term_date(previous_effective_date) if previous_effective_date != contract_rate_card.effective_date
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
       end
 
       result.contract_rate_card = contract_rate_card

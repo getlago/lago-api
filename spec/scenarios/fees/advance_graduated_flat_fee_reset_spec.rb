@@ -20,15 +20,14 @@ RSpec.describe "Graduated flat fees and filter buckets across a rate change" do
 
     timeline.sort_by(&:first).each do |timestamp, properties|
       travel_to(timestamp) do
-        BillingSegments::ScheduleService.call!(customer:)
         if properties
           create_event({
             external_contract_id: contract.external_id, code: billable_metric.code,
             timestamp: timestamp.utc.strftime("%s.%6N"), properties:
           }, perform_jobs: false)
-          perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+          perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
         else
-          BillingSegments::ProcessService.call!(customer:)
+          BillingOperations::ProcessJob.perform_now(customer.id)
         end
       end
     end

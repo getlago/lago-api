@@ -18,24 +18,26 @@ module Contracts
       return result.not_found_failure!(resource: "contract") unless contract
 
       ActiveRecord::Base.transaction do
-        # Re-read under lock: a contract canceled since it was loaded stays canceled.
-        contract.lock!
-        next unless due?
+        Customers::LockService.call!(customer: contract.customer, scope: :billing_schedule) do
+          # Re-read under lock: a contract canceled since it was loaded stays canceled.
+          contract.lock!
+          next unless due?
 
-        if active_sibling?
-          return result.single_validation_failure!(field: :external_id, error_code: "active_contract_exists")
+          if active_sibling?
+            return result.single_validation_failure!(field: :external_id, error_code: "active_contract_exists")
+          end
+
+          # Card and phase edits lock the card, then read the contract: holding the
+          # cards makes an edit in flight finish first, and a later one see the activation.
+          contract.applied_rate_cards.lock.pluck(:id)
+          reseed_stale_rate_cards
+
+          contract.update!(status: :active)
+          BillingOperations::ApplyActivationService.call!(contract:)
+          BillingOperations::ProcessJob.perform_after_commit(contract.customer_id)
+          SendWebhookJob.perform_after_commit("contract.started", contract)
+          Utils::ActivityLog.produce_after_commit(contract, "contract.started")
         end
-
-        # Card and phase edits lock the card, then read the contract: holding the
-        # cards makes an edit in flight finish first, and a later one see the activation.
-        contract.applied_rate_cards.lock.pluck(:id)
-        reseed_stale_rate_cards
-        reset_billing_clocks
-
-        contract.update!(status: :active)
-        BillingSegments::ScheduleJob.perform_after_commit(contract.customer_id)
-        SendWebhookJob.perform_after_commit("contract.started", contract)
-        Utils::ActivityLog.produce_after_commit(contract, "contract.started")
       end
 
       result.contract = contract
@@ -45,6 +47,8 @@ module Contracts
       raise unless e.message.include?("index_contracts_on_live_external_id")
 
       result.single_validation_failure!(field: :external_id, error_code: "active_contract_exists")
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
@@ -64,16 +68,6 @@ module Contracts
       contract.applied_rate_cards.where.not(effective_date: start_day).find_each do |card|
         own_anchor = card.inherited_billing_anchor?(contract.billing_anchor_date) ? nil : card.billing_anchor_date
         ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
-      end
-    end
-
-    # A clock was set from the schedule its card had when seeded; phases and
-    # rates edited while the contract was pending can change the cadence since.
-    # A card never billed yet waits for its first billing date, so a late
-    # activation still bills the periods elapsed since the start.
-    def reset_billing_clocks
-      contract.applied_rate_cards.find_each do |card|
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at)
       end
     end
 

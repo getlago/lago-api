@@ -53,30 +53,27 @@ module Contracts
       started_at = params[:started_at].present? ? started_at_in_customer_timezone : Time.current
 
       ActiveRecord::Base.transaction do
-        contract = organization.contracts.new(
-          customer:,
-          catalog_plan:,
-          external_id: params[:external_id],
-          name: params[:name],
-          billing_time: params[:billing_time].presence || "calendar",
-          billing_anchor_date: params[:billing_anchor_date],
-          started_at:,
-          ended_at: ended_at_in_customer_timezone,
-          status: started_at.future? ? :pending : :active
-        )
-        apply_settings(contract)
-        contract.save!
-        InvoiceCustomSections::AttachToResourceService.call!(resource: contract, params:)
+        Customers::LockService.call!(customer:, scope: :billing_schedule) do
+          contract = organization.contracts.new(
+            customer:,
+            catalog_plan:,
+            external_id: params[:external_id],
+            name: params[:name],
+            billing_time: params[:billing_time].presence || "calendar",
+            billing_anchor_date: params[:billing_anchor_date],
+            started_at:,
+            ended_at: ended_at_in_customer_timezone,
+            status: :pending
+          )
+          apply_settings(contract)
+          contract.save!
+          InvoiceCustomSections::AttachToResourceService.call!(resource: contract, params:)
 
-        Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
-        BillingSegments::ScheduleJob.perform_after_commit(customer.id)
-
-        result.contract = contract
-        Utils::ActivityLog.produce_after_commit(contract, "contract.created")
-        SendWebhookJob.perform_after_commit("contract.created", contract)
-        if contract.active?
-          SendWebhookJob.perform_after_commit("contract.started", contract)
-          Utils::ActivityLog.produce_after_commit(contract, "contract.started")
+          Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
+          result.contract = contract
+          Utils::ActivityLog.produce_after_commit(contract, "contract.created")
+          SendWebhookJob.perform_after_commit("contract.created", contract)
+          Contracts::ActivateService.call!(contract:, timestamp: Time.current) unless started_at.future?
         end
       end
 

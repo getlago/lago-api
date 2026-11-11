@@ -40,7 +40,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
           properties: {"quantity" => event_input.fetch(:quantity)}
         }, perform_jobs: false)
         # Processing a stored segment is a separate lifecycle from event-time invoicing.
-        perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+        perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
       end
     end
 
@@ -118,7 +118,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
       "from_datetime" => cycle_started_at.iso8601(6),
       "to_datetime" => BillingSegment.inclusive_end(second_rate_start).iso8601(6)
     )
-    expect(BillingSegment.where(contract:, cycle_started_at:)).to be_empty
+    expect(LegacyBillingSegment.where(contract_id: contract.id, cycle_started_at:)).to be_empty
     expect(fees.sole.invoice).to be_finalized
     expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(1)
   end
@@ -249,7 +249,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
           ["finalized", 1], ["finalized", 1], ["finalized", 1]
         ])
         expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(3)
-        expect(BillingSegment.where(contract:, cycle_started_at:)).to be_empty
+        expect(LegacyBillingSegment.where(contract_id: contract.id, cycle_started_at:)).to be_empty
       end
     end
   end

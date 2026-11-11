@@ -104,6 +104,28 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       end
     end
 
+    context "with a billing operation invoice" do
+      let(:billing_entity) { create(:billing_entity, organization:, subscription_invoice_issuing_date_adjustment: "keep_anchor") }
+      let(:invoice) do
+        create(:invoice, :draft, organization:, customer:, invoice_type: :contract,
+          currency: "EUR", issuing_date: Date.new(2026, 1, 1))
+      end
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+
+      before do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,
+          action_type: "close_fixed_arrears", billing_at: Time.current,
+          target_cycle_started_at: Time.current.beginning_of_month)
+        customer.update!(timezone: "America/New_York")
+      end
+
+      it "preserves the issuing date when finalizing the linked contract invoice" do
+        expect { described_class.call!(invoice:) }.not_to change { invoice.reload.issuing_date }
+        expect(invoice.reload).to be_finalized
+      end
+    end
+
     context "with a snapshotted payment term" do
       before do
         invoice.update!(payment_term: {term_type: "net", days: 10}, net_payment_term: 10)

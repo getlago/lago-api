@@ -40,6 +40,76 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     expect(contract.started_at).to be_within(5.seconds).of(Time.current)
     expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
     expect(contract.applied_rate_cards.sole.terms.sole.units).to eq(5)
+    expect(contract.applied_rate_cards.sole.billing_operations).to be_empty
+  end
+
+  context "when creating an active contract with a priced rate card" do
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance") }
+
+    before do
+      plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5)
+      create(:rate_phase, organization:, plan_rate_card:, position: 1)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    it "persists the initial periodic operation atomically without predicted segments" do
+      expect { result }
+        .to change(BillingOperation, :count).by(1)
+        .and not_change(LegacyBillingSegment, :count)
+
+      expect(result.contract.applied_rate_cards.sole.billing_operations.sole).to have_attributes(
+        action_type: "renew_fixed_advance", causation_type: "contract_activation"
+      )
+    end
+  end
+
+  context "when initial operation persistence fails" do
+    let(:invalid_contract) { organization.contracts.new(customer:) }
+    let(:operation_writes) { [] }
+    let(:first_product) { create(:product, :fixed, organization:) }
+    let(:first_rate_card) { create(:rate_card, organization:, product: first_product, billing_timing: "advance") }
+    let(:second_product) { create(:product, :fixed, organization:) }
+    let(:second_rate_card) { create(:rate_card, organization:, product: second_product, billing_timing: "advance") }
+    let(:rate_cards) { [first_rate_card, second_rate_card] }
+
+    before do
+      rate_cards.each do |rate_card|
+        plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
+        create(:rate_phase, organization:, plan_rate_card:, position: 1)
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
+      end
+
+      allow(BillingOperations::CreateInitialOperationService).to receive(:call!).and_wrap_original do |original, **attributes|
+        operation_writes << attributes
+        raise ActiveRecord::RecordInvalid.new(invalid_contract) if operation_writes.size == 2
+
+        original.call(**attributes)
+      end
+    end
+
+    it "rolls back the contract and operations already inserted in the transaction" do
+      expect { result }.not_to change(Contract, :count)
+      expect(BillingOperation.count).to eq(0)
+      expect(result).not_to be_success
+    end
+  end
+
+  context "when creating a pending contract with a priced rate card" do
+    let(:params) { super().merge(started_at: 1.month.from_now.iso8601) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+
+    before do
+      plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
+      create(:rate_phase, organization:, plan_rate_card:, position: 1)
+    end
+
+    it "does not create operations before activation" do
+      expect { result }.not_to change(BillingOperation, :count)
+      expect(result.contract).to be_pending
+    end
   end
 
   it "publishes created and started with the same post-materialization snapshot when immediately active" do

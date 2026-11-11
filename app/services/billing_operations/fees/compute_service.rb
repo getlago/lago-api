@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module BillingSegments
+module BillingOperations
   module Fees
     class ComputeService < BaseService
       Result = BaseResult[:fee, :true_up_fee]

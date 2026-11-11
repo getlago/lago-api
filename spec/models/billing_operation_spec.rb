@@ -289,4 +289,42 @@ RSpec.describe BillingOperation do
       end
     end
   end
+
+  describe "#due_for_processing?" do
+    subject(:due_for_processing) { operation.due_for_processing?(timestamp:) }
+
+    let(:timestamp) { Time.utc(2026, 2, 1) }
+    let(:billing_at) { timestamp }
+    let(:processed_at) { nil }
+    let(:cancelled_at) { nil }
+    let(:operation) { described_class.new(billing_at:, processed_at:, cancelled_at:) }
+
+    context "when billing is in the past" do
+      let(:billing_at) { timestamp - 1.second }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when billing is exactly due" do
+      it { is_expected.to be(true) }
+    end
+
+    context "when billing is in the future" do
+      let(:billing_at) { timestamp + 1.second }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when already processed" do
+      let(:processed_at) { timestamp }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when cancelled" do
+      let(:cancelled_at) { timestamp }
+
+      it { is_expected.to be(false) }
+    end
+  end
 end

@@ -26,7 +26,7 @@ module ActiveJob
       elsif source.is_a?(Fees::ChargeService::Sources::BillingSegment)
         {
           "source_type" => "billing_segment",
-          "billing_segment" => source.billing_segment.attributes.except("id", "created_at", "updated_at"),
+          "billing_segment" => source.billing_segment.attributes,
           "product_filter" => source.product_filter,
           "max_timestamp" => source.max_timestamp
         }
@@ -45,7 +45,7 @@ module ActiveJob
       case payload["source_type"]
       when "billing_segment"
         Fees::ChargeService::MeteredItem.from_billing_segment(
-          billing_segment: BillingSegment.new(payload.fetch("billing_segment")),
+          billing_segment: BillingSegment.from_attributes(payload.fetch("billing_segment")),
           product_filter: payload["product_filter"],
           max_timestamp: payload["max_timestamp"],
           event:

@@ -118,7 +118,9 @@ module Contracts
     def rate_card_usage(card)
       return if card.rate_card.rates.empty?
 
-      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule
+      schedule = Billing::RateCards::BuildScheduleService.call!(
+        contract_rate_card: card
+      ).schedule
       billable_segment = schedule.segment_covering(timestamp)
       return unless billable_segment
 
@@ -148,7 +150,7 @@ module Contracts
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
-        [BillingSegments::Fees::ComputeService.call!(billing_segment:).fee]
+        [BillingOperations::Fees::ComputeService.call!(billing_segment:).fee]
       end
     end
 

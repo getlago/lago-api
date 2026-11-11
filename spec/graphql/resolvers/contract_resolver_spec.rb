@@ -55,10 +55,9 @@ RSpec.describe Resolvers::ContractResolver do
     expect(response["appliedRateCardsCount"]).to eq(1)
   end
 
-  # A finished schedule has no next instant, so the field is nullable and must answer null
-  # rather than fail the whole query.
+  # An unpriced card has no billable period, so the nullable field answers null.
   it "answers null for a card whose schedule has run out" do
-    create(:contract_rate_card, organization:, contract:).update!(next_billing_at: nil)
+    create(:contract_rate_card, organization:, contract:)
 
     expect(execution["data"]["contract"]["appliedRateCards"].sole["nextBillingAt"]).to be_nil
   end

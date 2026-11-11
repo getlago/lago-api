@@ -40,6 +40,10 @@ class BillingOperation < ApplicationRecord
 
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
 
+  def due_for_processing?(timestamp:)
+    processed_at.nil? && cancelled_at.nil? && billing_at <= timestamp
+  end
+
   private
 
   def validate_identity

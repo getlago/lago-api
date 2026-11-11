@@ -44,12 +44,12 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
   it "builds the rate's covering slice without persisting a segment" do
     segment = billing_segments.sole
 
-    expect(segment).to be_new_record
+    expect(segment).not_to respond_to(:persisted?)
     expect(segment).to have_attributes(contract_rate_card:, rate_card_rate: second_rate,
       cycle_started_at: Time.zone.parse("2027-01-01"), started_at: rate_changed_at,
       ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-02-01")),
       rate_properties: second_rate.properties)
-    expect(contract_rate_card.billing_segments.count).to eq(0)
+    expect(LegacyBillingSegment.where(contract_rate_card_id: contract_rate_card.id).count).to eq(0)
   end
 
   it "preserves the segment snapshot across job serialization" do
@@ -59,7 +59,7 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
     serialized = JSON.parse(ActiveJob::Arguments.serialize([metered_item]).to_json).first
     restored = ActiveJob::Arguments.deserialize([serialized]).sole
 
-    expect(restored.billing_segment).to be_new_record
+    expect(restored.billing_segment).not_to respond_to(:persisted?)
     expect(restored.billing_segment).to have_attributes(rate_card_rate: second_rate,
       started_at: rate_changed_at, ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-02-01")))
   end
@@ -166,7 +166,7 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
 
     it "returns a covering segment for each product at the same effective date" do
       expect(billing_segments.map(&:contract_rate_card)).to match_array([contract_rate_card, other_attachment])
-      expect(billing_segments).to all(be_new_record)
+      expect(billing_segments).to all(respond_to(:attributes))
     end
 
     it "loads pricing for the selected cards in batches" do
@@ -300,32 +300,6 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
 
       expect(segment.pricing_unit).to eq(pricing_unit)
       expect(segment.pricing_unit_conversion_rate).to eq(3)
-    end
-  end
-
-  context "when a stored segment covers the old full cycle" do
-    let(:stored_segment) do
-      create(:billing_segment, organization:, customer:, contract:, contract_rate_card:,
-        rate_card_rate: first_rate, cycle_started_at: effective_date.in_time_zone(timezone),
-        started_at: effective_date.in_time_zone(timezone),
-        ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-02-01")), status: :processing)
-    end
-
-    before { stored_segment }
-
-    it "selects the new rate instead of the stored old one" do
-      expect(billing_segments.sole).to have_attributes(rate_card_rate: second_rate,
-        started_at: rate_changed_at)
-    end
-
-    context "when the stored segment is done" do
-      let(:segment_status) { :done }
-
-      before { stored_segment.update!(status: segment_status) }
-
-      it "still prices the event from the schedule" do
-        expect(billing_segments.sole.rate_card_rate).to eq(second_rate)
-      end
     end
   end
 

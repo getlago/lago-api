@@ -14,6 +14,8 @@ RSpec.describe Api::V2::ContractRateCardsController do
     ]
   end
 
+  before { organization.enable_feature_flag!(:product_catalog) }
+
   describe "POST /api/v2/contracts/:external_id/applied_rate_cards" do
     subject { post_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards", {applied_rate_card: create_params}) }
 
@@ -152,10 +154,10 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:applied_rate_card].keys).to eq(flat_keys)
     end
 
-    # A finished schedule has no next instant, and the payload has to say so rather than raise.
-    context "when the schedule has run out" do
+    # The schema keeps the field even when the card has no billable schedule.
+    context "when the card has no priced schedule" do
       it "serializes a blank clock as null" do
-        contract_rate_card.update!(next_billing_at: nil)
+        contract_rate_card
         subject
 
         expect(response).to have_http_status(:success)

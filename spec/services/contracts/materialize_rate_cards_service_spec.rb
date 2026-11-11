@@ -24,7 +24,7 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     expect(card.terms.sole).to have_attributes(units: 5, effective_date: card.effective_date)
     expect(card.effective_date).to eq(Date.new(2026, 10, 1))
     expect(card.billing_anchor_date).to eq(Date.new(2026, 10, 1))
-    expect(card.next_billing_at).to eq(contract.started_at)
+    expect(card.next_billing_at).to be_nil
     expect(card.rate_phases).to be_empty
     expect(result.contract_rate_cards).to eq([card])
   end
@@ -138,8 +138,8 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     end
 
     it "does not persist a segment for event-time pricing" do
-      expect { result }.not_to change(BillingSegment, :count)
-      expect(result.contract_rate_cards.sole.billing_segments).to be_empty
+      expect { result }.not_to change(LegacyBillingSegment, :count)
+      expect(LegacyBillingSegment.where(contract_rate_card_id: result.contract_rate_cards.sole.id)).to be_empty
     end
   end
 
@@ -162,8 +162,9 @@ RSpec.describe Contracts::MaterializeRateCardsService do
       expect(next_billing_at).to eq(Time.utc(2026, 2, 1))
     end
 
-    context "when the rate card bills in advance" do
-      let(:rate_card) { create(:rate_card, :advance, organization:) }
+    context "when a fixed rate card bills in advance" do
+      let(:product) { create(:product, :fixed, organization:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
 
       # Billable as soon as the cycle opens, and the cycle opens at the start of the
       # signing day rather than at 14:30.

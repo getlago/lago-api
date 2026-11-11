@@ -17,13 +17,15 @@ RSpec.describe Webhooks::ContractRateCards::DeletedService do
       rate_card:,
       units: 2.5,
       effective_date: Date.new(2026, 1, 2),
-      billing_anchor_date: Date.new(2026, 1, 3),
-      next_billing_at: Time.zone.parse("2026-02-03T04:05:06Z")
+      billing_anchor_date: Date.new(2026, 1, 3)
     )
   end
 
   before do
     allow(organization).to receive(:product_catalog_enabled?).and_return(true)
+    create(:billing_operation, organization:, contract_rate_card:,
+      billing_at: Time.zone.parse("2026-02-03T04:05:06Z"),
+      target_cycle_started_at: Time.zone.parse("2026-01-03T00:00:00Z"))
     contract_rate_card.discard
   end
 

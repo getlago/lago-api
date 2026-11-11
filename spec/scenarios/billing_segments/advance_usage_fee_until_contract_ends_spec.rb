@@ -10,11 +10,12 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
           external_id: "advance-period-contract",
           external_customer_id: customer.external_id,
           plan_code: "advance-period-plan",
-          started_at: period_started_at.iso8601
+          started_at: period_started_at.iso8601,
+          ended_at: period_ended_at.iso8601
         }})
       end
-      perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
-      perform_enqueued_jobs { BillingSegments::ScheduleJob.perform_now(customer.id) }
+      perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
+      perform_enqueued_jobs { BillingOperations::ProcessJob.perform_now(customer.id) }
     end
 
     travel_to(event_at) do
@@ -24,7 +25,7 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
         timestamp: event_at.utc.strftime("%s.%6N"),
         properties: {"quantity" => 40}
       }, perform_jobs: false)
-      perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+      perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
       Fees::UpdateService.call!(
         fee: Fee.find_by!(contract:, fee_type: :product),
         params: {payment_status: "succeeded"}
@@ -33,18 +34,19 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
 
     active_period = {
       fee: Fee.find_by!(contract:, fee_type: :product),
-      segment: BillingSegment.where(customer:).sole,
+      operation: BillingOperation.where(customer:).sole,
       invoices: Invoice.where(customer:).to_a
     }
 
     travel_to(period_ended_at + 5.minutes) do
       delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}")
-      perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
-      perform_enqueued_jobs { BillingSegments::ScheduleJob.perform_now(customer.id) }
+      perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
+      perform_enqueued_jobs { BillingOperations::ProcessJob.perform_now(customer.id) }
     end
 
-    segment = BillingSegment.where(customer:, started_at: period_started_at).sole
-    {active_period:, segment:, invoice: segment.invoice}
+    operation = BillingOperation.where(customer:, target_cycle_started_at: period_started_at,
+      causation_type: "contract_termination").sole
+    {active_period:, operation:, invoice: operation.invoice}
   end
 
   let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
@@ -107,9 +109,12 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
     expect(timeline.fetch(:active_period).fetch(:fee)).to have_attributes(
       amount_cents: 4_000, units: 40, pay_in_advance: true, payment_status: "succeeded", invoice_id: nil
     )
-    expect(timeline.fetch(:active_period).fetch(:segment)).to have_attributes(status: "pending", invoice_id: nil)
+    expect(timeline.fetch(:active_period).fetch(:operation).reload).to have_attributes(
+      processed_at: nil, invoice_id: nil, cancelled_causation_type: "contract_termination"
+    )
     expect(timeline.fetch(:active_period).fetch(:invoices)).to be_empty
-    expect(timeline.fetch(:segment)).to have_attributes(status: "done", invoice_id: invoice.id)
+    expect(timeline.fetch(:operation)).to have_attributes(processed_at: period_ended_at + 5.minutes, invoice_id: invoice.id)
+    expect(LegacyBillingSegment.where(customer_id: customer.id)).to be_empty
     expect(invoice).to have_attributes(status: "finalized", total_amount_cents: 4_000)
     expect(invoice.created_at).to be > period_ended_at
     expect(Fee.find_by!(contract:, fee_type: :product).invoice_id).to eq(invoice.id)

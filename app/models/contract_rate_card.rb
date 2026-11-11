@@ -8,6 +8,7 @@ class ContractRateCard < ApplicationRecord
   # The contract end date is the only end of a card; drop once released.
   self.ignored_columns += %w[ended_date]
   self.ignored_columns += %w[units]
+  self.ignored_columns += %w[next_billing_at]
 
   belongs_to :organization
   belongs_to :contract
@@ -17,13 +18,10 @@ class ContractRateCard < ApplicationRecord
 
   has_many :rate_phases, -> { order(:position) }
   has_many :terms, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardTerm", inverse_of: :contract_rate_card
-  has_many :billing_segments
   has_many :billing_operations
   has_many :fees
 
   validates :billing_anchor_date, presence: true
-  # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
-  validates :next_billing_at, presence: true, on: :create
   validates :effective_date, presence: true
   validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 
@@ -43,20 +41,54 @@ class ContractRateCard < ApplicationRecord
     )
   }
 
-  scope :due_for_billing, ->(timestamp) {
+  scope :eligible_for_operation_scheduling, ->(timestamp) {
     priced
       .starting_before_contract_end
       .joins(contract: {customer: :billing_entity})
-      .where(next_billing_at: ..timestamp)
       .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
       .where(customers: {deleted_at: nil})
   }
+
+  def next_billing_at
+    pending_billing_at = billing_operations.where(processed_at: nil, cancelled_at: nil).minimum(:billing_at)
+    return pending_billing_at if pending_billing_at
+    return if billing_operations.exists?
+
+    build = Billing::RateCards::BuildScheduleService.call(contract_rate_card: self)
+    return unless build.success?
+
+    target = Billing::RateCards::Schedule::BILLING_TARGET.fetch(
+      periodic_billing_action.present? ? :current : :next
+    )
+    build.schedule.billing_at(timestamp: Time.current, target:)
+  end
 
   # A card seeded from its contract carries the contract's explicit anchor, or
   # its own start day when the contract set none: an anchor matching what it
   # would have inherited follows the contract, any other was set on the card.
   def inherited_billing_anchor?(contract_billing_anchor_date)
     billing_anchor_date == (contract_billing_anchor_date || effective_date)
+  end
+
+  # NOTE: Metered advance billing has no periodic action unless it renews displayed recurring usage
+  # or regroups paid fees. Otherwise, usage events trigger billing and this returns nil.
+  def periodic_billing_action
+    rate = rate_card
+    product = rate.product
+    actions = BillingOperation::ACTION_TYPES
+
+    if product.fixed?
+      case rate.billing_timing
+      when "advance" then actions.fetch(:renew_fixed_advance)
+      when "arrears" then actions.fetch(:close_fixed_arrears)
+      end
+    elsif rate.advance? && rate.display_on_invoice? && product.metered? && product.billable_metric&.recurring?
+      actions.fetch(:renew_recurring_metered_advance)
+    elsif rate.advance? && rate.regroup_paid_fees_invoice?
+      actions.fetch(:regroup_paid_fees)
+    elsif product.metered? && rate.arrears?
+      actions.fetch(:close_metered_arrears)
+    end
   end
 
   def edit_error_code
@@ -73,7 +105,6 @@ end
 #  billing_anchor_date :date             not null
 #  deleted_at          :datetime
 #  effective_date      :date             not null
-#  next_billing_at     :datetime
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  contract_id         :uuid             not null

@@ -42,66 +42,92 @@ RSpec.describe Contracts::TerminateService do
         :contract_rate_card,
         organization:, contract:, rate_card:,
         effective_date: Date.new(2026, 8, 1),
-        billing_anchor_date: Date.new(2026, 8, 1),
-        next_billing_at: started_at
+        billing_anchor_date: Date.new(2026, 8, 1)
       )
     end
 
-    def segments_of(card) = BillingSegment.where(contract_rate_card: card)
+    def operations_of(card) = BillingOperation.where(contract_rate_card: card)
 
     before do
       arrears_card
       advance_card
-      BillingSegments::ScheduleService.call!(customer:, timestamp: started_at)
+      BillingOperations::ApplyActivationService.call!(contract:)
     end
 
-    it "bills the arrears card's whole price for the period it closes, as the card does not prorate" do
+    it "cancels the pending arrears operation and creates a final operation" do
       travel_to(terminated_at) { result }
 
-      expect(segments_of(arrears_card).sole).to have_attributes(
-        started_at:,
-        ended_at: BillingSegment.inclusive_end(terminated_at),
-        billing_at: terminated_at,
-        proration_ratio: 1,
-        status: "pending"
+      original = operations_of(arrears_card).find_by!(causation_type: "contract_activation")
+      final = operations_of(arrears_card).find_by!(causation_type: "contract_termination")
+      expect(original).to have_attributes(
+        billing_at: Time.find_zone("America/New_York").parse("2026-09-01 00:00:00"),
+        target_cycle_started_at: started_at, cancelled_at: contract.reload.terminated_at,
+        cancelled_causation_type: "contract_termination", processed_at: nil
       )
+      expect(final).to have_attributes(
+        billing_at: contract.terminated_at, target_cycle_started_at: started_at, processed_at: nil
+      )
+      expect(operations_of(arrears_card).count).to eq(2)
+      expect(LegacyBillingSegment.where(contract_rate_card_id: arrears_card.id)).to be_empty
     end
 
     context "when the arrears card prorates" do
       let(:arrears_card) { card(billing_timing: "arrears", proration: true) }
 
-      it "bills the days served, the termination day included" do
+      it "cancels the original period and resolves the final close date" do
         travel_to(terminated_at) { result }
 
-        expect(segments_of(arrears_card).sole).to have_attributes(
-          ended_at: BillingSegment.inclusive_end(terminated_at),
-          proration_ratio: (BigDecimal(21) / 31).round(10)
+        original = operations_of(arrears_card).find_by!(causation_type: "contract_activation")
+        final = operations_of(arrears_card).find_by!(causation_type: "contract_termination")
+        expect(original).to have_attributes(
+          cancelled_at: contract.reload.terminated_at,
+          cancelled_causation_type: "contract_termination", processed_at: nil
+        )
+        expect(final).to have_attributes(
+          billing_at: contract.terminated_at, target_cycle_started_at: started_at, processed_at: nil
         )
       end
     end
 
-    it "bills nothing more for the advance card, paid for the month already" do
-      expect { travel_to(terminated_at) { result } }.not_to change { segments_of(advance_card).pluck(:id) }
+    context "when the advance operation has already completed" do
+      before { advance_card.billing_operations.sole.update!(processed_at: started_at) }
+
+      it "does not create another charge or change its completed operation" do
+        previous = advance_card.billing_operations.sole.attributes
+
+        expect { travel_to(terminated_at) { result } }.not_to change { advance_card.billing_operations.count }
+        expect(advance_card.billing_operations.sole.attributes).to eq(previous)
+        expect(LegacyBillingSegment.where(contract_rate_card_id: advance_card.id)).to be_empty
+      end
     end
 
-    it "stops every card's clock" do
-      travel_to(terminated_at) { result }
-
-      expect([arrears_card.reload.next_billing_at, advance_card.reload.next_billing_at]).to eq([nil, nil])
-    end
-
-    it "invoices the closed period once the termination commits" do
+    it "does not create segments while scheduling the operation" do
       expect { travel_to(terminated_at) { result } }
-        .to have_enqueued_job_after_commit(BillingSegments::ProcessJob).with(customer.id)
+        .not_to change(LegacyBillingSegment, :count)
+    end
+
+    it "enqueues due operation processing after termination commits" do
+      expect { travel_to(terminated_at) { result } }
+        .to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
     end
 
     # Time is not frozen here: a real clock carries nanoseconds the database drops, and the
     # final slice must still fall due at the instant stored.
-    it "closes the period at whatever instant it terminates" do
+    it "cancels the earlier pending date and bills final coverage at termination" do
       result
 
-      expect(segments_of(arrears_card).order(:started_at).last.ended_at)
-        .to eq(BillingSegment.inclusive_end(contract.reload.terminated_at))
+      original = operations_of(arrears_card).find_by!(causation_type: "contract_activation")
+      final = operations_of(arrears_card).find_by!(causation_type: "contract_termination")
+      expect(original).to have_attributes(
+        billing_at: Time.find_zone("America/New_York").parse("2026-09-01 00:00:00"),
+        cancelled_at: contract.reload.terminated_at,
+        cancelled_causation_type: "contract_termination", processed_at: nil
+      )
+      expect(final).to have_attributes(
+        billing_at: contract.terminated_at,
+        target_cycle_started_at: contract.terminated_at.in_time_zone(customer.applicable_timezone).beginning_of_month,
+        processed_at: nil
+      )
     end
 
     context "when a card has no price yet" do
@@ -113,18 +139,19 @@ RSpec.describe Contracts::TerminateService do
         travel_to(terminated_at) { result }
 
         expect(result).to be_success
-        expect(segments_of(unpriced_card)).to be_empty
+        expect(operations_of(unpriced_card)).to be_empty
+        expect(LegacyBillingSegment.where(contract_rate_card_id: unpriced_card.id)).to be_empty
       end
     end
 
     context "when closing the billing fails" do
       before do
-        allow(BillingSegments::ScheduleFinalSegmentsService).to receive(:call!)
-          .and_raise(BaseService::ValidationFailure.new(BaseResult.new, messages: {billing_segment: ["overlapping_periods"]}))
+        allow(BillingOperations::ApplyTerminationService).to receive(:call!)
+          .and_raise(BaseService::ValidationFailure.new(BaseResult.new, messages: {billing_operation: ["value_is_invalid"]}))
       end
 
       it "leaves the contract active" do
-        expect(result.error.messages).to eq({billing_segment: ["overlapping_periods"]})
+        expect(result.error.messages).to eq({billing_operation: ["value_is_invalid"]})
         expect(contract.reload.status).to eq("active")
       end
     end
@@ -138,6 +165,57 @@ RSpec.describe Contracts::TerminateService do
         expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
         expect(contract.reload.status).to eq("active")
       end
+    end
+  end
+
+  context "when a fixed advance successor starts later in the current cycle" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:started_at) { Time.utc(2026, 1, 1) }
+    let(:terminated_at) { Time.utc(2026, 1, 10) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at:) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+    end
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at,
+        rate_model: "standard", rate_properties: {"amount" => "10"},
+        billing_interval_count: 1, billing_interval_unit: "month")
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
+        rate_model: "standard", rate_properties: {"amount" => "20"},
+        billing_interval_count: 1, billing_interval_unit: "month")
+      contract_rate_card
+      BillingOperations::ApplyActivationService.call!(contract:)
+      BillingOperations::ProcessService.call!(customer:, timestamp: started_at)
+    end
+
+    it "cancels the future renewal without changing the issued invoice" do
+      invoice = Invoice.where(customer:).sole
+      invoice_attributes = invoice.attributes
+      successor = contract_rate_card.billing_operations.pending.sole
+      expect(successor).to have_attributes(
+        target_cycle_started_at: started_at
+      )
+
+      termination = described_class.call(contract:, timestamp: terminated_at)
+      expect(termination).to be_success
+
+      processed = BillingOperations::ProcessService.call!(customer:, timestamp: terminated_at)
+
+      expect(processed.invoices).to be_empty
+      expect(successor.reload).to have_attributes(
+        cancelled_at: contract.reload.terminated_at,
+        cancelled_causation_type: "contract_termination",
+        processed_at: nil
+      )
+      expect(contract_rate_card.billing_operations.where(causation_type: "contract_termination")).to be_empty
+      expect(contract_rate_card.billing_operations.pending).to be_empty
+      expect(contract_rate_card.billing_operations.count).to eq(2)
+      expect(Invoice.where(customer:).pluck(:id)).to eq([invoice.id])
+      expect(invoice.reload.attributes).to eq(invoice_attributes)
     end
   end
 
@@ -165,6 +243,9 @@ RSpec.describe Contracts::TerminateService do
 
   context "when the contract is pending" do
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
 
     it "cancels it instead of terminating" do
       freeze_time do
@@ -174,6 +255,10 @@ RSpec.describe Contracts::TerminateService do
         expect(contract.terminated_at).to be_nil
         expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.canceled")
       end
+    end
+
+    it "does not seed billing operations" do
+      expect { result }.not_to change { card.billing_operations.count }
     end
   end
 
