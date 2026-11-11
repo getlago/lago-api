@@ -1078,12 +1078,23 @@ RSpec.describe Invoices::Payments::CreateService do
       context "when the organization skips the credit invoice auto-payment delay" do
         before { organization.enable_feature_flag!(:skip_credit_invoice_auto_payment_delay) }
 
-        it "still delays a non-credit invoice" do
-          freeze_time do
-            expect { ApplicationRecord.transaction { create_service.call_async } }
-              .to have_enqueued_job(Invoices::Payments::CreateJob)
-              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
-              .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+        it "enqueues the payment of a one-off invoice immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+
+        context "when the invoice is a subscription invoice" do
+          let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :subscription) }
+
+          it "still delays the first auto-payment" do
+            freeze_time do
+              expect { ApplicationRecord.transaction { create_service.call_async } }
+                .to have_enqueued_job(Invoices::Payments::CreateJob)
+                .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+                .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+            end
           end
         end
       end
