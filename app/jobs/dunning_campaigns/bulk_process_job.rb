@@ -2,7 +2,9 @@
 
 module DunningCampaigns
   class BulkProcessJob < ApplicationJob
-    queue_as :default
+    queue_as :low_priority
+
+    unique :until_executed, on_conflict: :log, lock_ttl: 2.hours
 
     def perform
       return unless License.premium?
