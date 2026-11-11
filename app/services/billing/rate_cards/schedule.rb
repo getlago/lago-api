@@ -3,6 +3,8 @@
 module Billing
   module RateCards
     class Schedule
+      BILLING_TARGET = {current: "current", next: "next"}.freeze
+
       def initialize(rates:, terms:, phases:, starts_at:, anchor_date:, timezone:, ends_at: nil, resume_at: nil)
         if resume_at && resume_at < starts_at.in_time_zone(timezone).beginning_of_day
           raise ArgumentError, "resume_at #{resume_at} precedes the card's start"
@@ -24,30 +26,15 @@ module Billing
         end
       end
 
-      # Next billing instant strictly after the given time, or nil when billing has ended.
-      def next_billing_at(after:)
-        cycle = walker.resume(after)
+      def billing_at(timestamp:, target:)
+        raise ArgumentError, "unknown billing target: #{target}" unless BILLING_TARGET.value?(target)
 
-        while cycle
-          segment = billable_segments_of([cycle]).find do |candidate|
-            candidate.billing_at > after
-          end
-
-          if segment
-            return segment.billing_at
-          end
-
-          cycle = walker.advance
+        if target == BILLING_TARGET.fetch(:current)
+          segment = segment_covering(timestamp)
+          segment&.billing_at || find_billing_after(timestamp)
+        else
+          find_billing_after(timestamp)
         end
-
-        nil
-      end
-
-      # Bill the segment being served, or the first future one if pricing has not started.
-      def billing_at_covering(timestamp)
-        segment = segment_covering(timestamp)
-
-        segment&.billing_at || next_billing_at(after: timestamp)
       end
 
       # Find the priced slice serving this instant, regardless of which cycles
@@ -79,6 +66,22 @@ module Billing
       private
 
       attr_reader :rates, :terms, :timezone, :resume_at, :walker
+
+      def find_billing_after(timestamp)
+        cycle = walker.resume(timestamp)
+
+        while cycle
+          segment = billable_segments_of([cycle]).find do |candidate|
+            candidate.billing_at > timestamp
+          end
+
+          return segment.billing_at if segment
+
+          cycle = walker.advance
+        end
+
+        nil
+      end
 
       def billable_segments_of(cycles)
         cycles.flat_map do |cycle|

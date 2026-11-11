@@ -153,7 +153,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
 
       # The original segment covers 17 days, even though the card has now ended inside it.
       expect(consumed).to eq([5.fdiv(17), 6.fdiv(17), 1.0])
-      expect(schedule.next_billing_at(after: contract.ended_at)).to be_nil
+      expect(schedule.billing_at(timestamp: contract.ended_at, target: "next")).to be_nil
     end
   end
 
