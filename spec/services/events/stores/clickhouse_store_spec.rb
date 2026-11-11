@@ -112,6 +112,88 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
+  describe "a late event read from a snapshot delta" do
+    subject(:result) { event_store.recurring_sum(watermark: Time.current + 1.hour, period:) }
+
+    let(:event_store) do
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries:, filters: {})
+    end
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", recurring: true) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {from_datetime: subscription.started_at.beginning_of_day, to_datetime: subscription.started_at.end_of_month.end_of_day, charges_duration: 31}
+    end
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: subscription.started_at + 3.days, watermark: Time.current - 1.hour)
+    end
+    let(:transaction_id) { SecureRandom.uuid }
+
+    def create_copy(value:, enriched_at:)
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: subscription.started_at + 1.day,
+        properties: {"value" => value},
+        value:,
+        decimal_value: value.to_d,
+        precise_total_amount_cents: value,
+        enriched_at:
+      )
+    end
+
+    before do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+      event_store.use_from_boundary = false
+    end
+
+    def executed_sql
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
+      queries.join("\n")
+    end
+
+    it "turns the exact mode off for the late events" do
+      expect(executed_sql).to include("enriched_at > ").and include("SETTINGS use_skip_indexes_if_final_exact_mode = 0")
+    end
+
+    context "when the inexact mode is disabled" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DISABLE_CLICKHOUSE_INEXACT_FINAL" => "true")) }
+
+      it "keeps the exact mode" do
+        expect(executed_sql).to include("enriched_at > ")
+        expect(executed_sql).not_to include("use_skip_indexes_if_final_exact_mode")
+      end
+    end
+
+    context "when the event is re-sent after the watermark" do
+      before do
+        create_copy(value: 10, enriched_at: Time.current - 30.minutes)
+        create_copy(value: 15, enriched_at: Time.current - 10.minutes)
+      end
+
+      it "counts the latest copy once" do
+        expect(result).to have_attributes(value: 15, events_count: 1)
+      end
+    end
+
+    context "when the event was read by the snapshot and re-sent after the watermark" do
+      before do
+        create_copy(value: 10, enriched_at: Time.current - 2.hours)
+        create_copy(value: 15, enriched_at: Time.current - 10.minutes)
+      end
+
+      it "counts the latest copy once" do
+        expect(result).to have_attributes(value: 15, events_count: 1)
+      end
+    end
+  end
+
   describe "string values containing a backslash or a quote" do
     subject(:event_store) do
       described_class.new(

@@ -522,6 +522,27 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#default_webhook_endpoint" do
+    # Reloaded: creating an endpoint leaves the association of this instance loaded without it.
+    subject(:default_webhook_endpoint) { organization.reload.default_webhook_endpoint }
+
+    let(:organization) { create(:organization, webhook_url: nil) }
+
+    context "when the organization has no webhook endpoint" do
+      it { is_expected.to be_nil }
+    end
+
+    context "when the organization has several webhook endpoints" do
+      let(:endpoints) { create_list(:webhook_endpoint, 3, organization:) }
+
+      before { endpoints }
+
+      it "returns the endpoint with the lowest id" do
+        expect(default_webhook_endpoint).to eq(WebhookEndpoint.where(organization:).order(:id).first)
+      end
+    end
+  end
+
   describe "#failed_tax_invoices_count" do
     subject(:failed_tax_invoices_count) { organization.failed_tax_invoices_count }
 
@@ -622,6 +643,29 @@ RSpec.describe Organization do
       it "returns clickhouse" do
         expect(organization.events_store).to eq("clickhouse")
       end
+    end
+  end
+
+  describe "#product_events_pipeline?" do
+    subject { organization.product_events_pipeline? }
+
+    let(:organization) { build_stubbed(:organization, feature_flags: ["product_catalog"]) }
+
+    before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+    after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+    it { is_expected.to be(true) }
+
+    context "without the product events topic" do
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "without the product catalog" do
+      let(:organization) { build_stubbed(:organization) }
+
+      it { is_expected.to be(false) }
     end
   end
 

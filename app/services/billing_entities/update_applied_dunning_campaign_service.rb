@@ -14,7 +14,7 @@ module BillingEntities
       return if billing_entity.applied_dunning_campaign_id == applied_dunning_campaign_id
 
       old_campaign = billing_entity.applied_dunning_campaign
-      dunning_campaign = DunningCampaign.find(applied_dunning_campaign_id) if applied_dunning_campaign_id
+      dunning_campaign = billing_entity.organization.dunning_campaigns.find(applied_dunning_campaign_id) if applied_dunning_campaign_id
       billing_entity.reset_customers_last_dunning_campaign_attempt
       billing_entity.update!(applied_dunning_campaign: dunning_campaign)
 

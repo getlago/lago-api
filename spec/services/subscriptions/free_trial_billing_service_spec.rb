@@ -54,6 +54,23 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
       end
     end
 
+    context "with an older subscription of another organization sharing the external_id" do
+      it "does not set trial_ended_at" do
+        other_organization = create(:organization)
+        create(
+          :subscription,
+          :terminated,
+          customer: create(:customer, organization: other_organization),
+          plan: create(:plan, organization: other_organization, trial_period: 10),
+          external_id: "abc123",
+          started_at: 30.days.ago
+        )
+        sub = create(:subscription, plan:, external_id: "abc123", started_at: 2.days.ago)
+
+        expect { service.call }.not_to change { sub.reload.trial_ended_at }.from(nil)
+      end
+    end
+
     context "with customer timezone" do
       let(:timestamp) { DateTime.parse("2024-03-11 13:03:00 UTC") }
 
@@ -127,6 +144,19 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
           it "enqueues a job to bill the subscription" do
             expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
           end
+        end
+      end
+
+      context "with several previous subscriptions sharing the external_id" do
+        it "bills the subscription and announces the trial end once" do
+          attributes = {customer: create(:customer), plan:, external_id: "abc123"}
+          create(:subscription, :terminated, started_at: 20.days.ago, terminated_at: 15.days.ago, **attributes)
+          create(:subscription, :terminated, started_at: 15.days.ago, terminated_at: 5.days.ago, **attributes)
+          subscription = create(:subscription, started_at: 5.days.ago, **attributes)
+
+          expect { service.call }
+            .to have_enqueued_job(BillSubscriptionJob).exactly(:once)
+            .and have_enqueued_job(SendWebhookJob).with("subscription.trial_ended", subscription).exactly(:once)
         end
       end
 

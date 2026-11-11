@@ -34505,6 +34505,18 @@
               "deprecationReason": null
             },
             {
+              "name": "preciseTotalAmountCents",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "receivedAt",
               "description": null,
               "args": [],
@@ -35597,6 +35609,12 @@
             },
             {
               "name": "realtime_usage",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "realtime_usage_recurring_sum",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

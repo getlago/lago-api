@@ -177,6 +177,47 @@ RSpec.describe Mutations::Customers::Update do
     end
   end
 
+  context "with an applied dunning campaign", :premium do
+    let(:dunning_campaign_mutation) do
+      <<~GQL
+        mutation($input: UpdateCustomerInput!) {
+          updateCustomer(input: $input) {
+            id
+            appliedDunningCampaign { id }
+          }
+        }
+      GQL
+    end
+    let(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
+    let(:dunning_campaign) { create(:dunning_campaign, organization:) }
+
+    it "applies a dunning campaign of the organization" do
+      result = execute_query(
+        query: dunning_campaign_mutation,
+        input: {id: customer.id, externalId: customer.external_id, appliedDunningCampaignId: dunning_campaign.id}
+      )
+
+      expect(result["data"]["updateCustomer"]["appliedDunningCampaign"]["id"]).to eq(dunning_campaign.id)
+    end
+
+    context "when the dunning campaign belongs to another organization" do
+      let(:dunning_campaign) { create(:dunning_campaign, organization: create(:organization)) }
+
+      it "returns an error and does not apply the campaign" do
+        result = nil
+
+        expect {
+          result = execute_query(
+            query: dunning_campaign_mutation,
+            input: {id: customer.id, externalId: customer.external_id, appliedDunningCampaignId: dunning_campaign.id}
+          )
+        }.not_to change { customer.reload.applied_dunning_campaign_id }
+
+        expect_graphql_error(result:, message: "Resource not found")
+      end
+    end
+  end
+
   context "with premium feature", :premium do
     it "updates a customer" do
       result = execute_query(

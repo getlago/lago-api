@@ -25,6 +25,43 @@ RSpec.describe EventQuery, transaction: false do
 
   before { event }
 
+  describe ".event_model" do
+    subject(:event_model) { described_class.event_model(organization: model_organization) }
+
+    let(:model_organization) { build_stubbed(:organization) }
+
+    before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+    after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+    it { is_expected.to eq(Event) }
+
+    context "with the clickhouse events store" do
+      let(:model_organization) { build_stubbed(:organization, clickhouse_events_store: true) }
+
+      it { is_expected.to eq(Clickhouse::EventsRaw) }
+    end
+
+    context "with the clickhouse events store and the product catalog" do
+      let(:model_organization) do
+        build_stubbed(:organization, clickhouse_events_store: true, feature_flags: ["product_catalog"])
+      end
+
+      it { is_expected.to eq(Clickhouse::ProductEventsRaw) }
+
+      context "without the product events topic" do
+        before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+        it { is_expected.to eq(Clickhouse::EventsRaw) }
+      end
+    end
+
+    context "with the product catalog on the postgres store" do
+      let(:model_organization) { build_stubbed(:organization, feature_flags: ["product_catalog"]) }
+
+      it { is_expected.to eq(Event) }
+    end
+  end
+
   it "returns the event" do
     expect(result).to be_success
     expect(result.event).to eq(event)
@@ -120,6 +157,46 @@ RSpec.describe EventQuery, transaction: false do
         )
 
         expect(query.event.timestamp).to eq(expected.timestamp)
+      end
+    end
+
+    context "with the product catalog" do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["product_catalog"]) }
+
+      let(:filters) { {transaction_id: "tx_ms", external_subscription_id: "contract_1"} }
+
+      let(:product_event) do
+        create(
+          :clickhouse_product_events_raw,
+          organization:,
+          transaction_id: "tx_ms",
+          external_contract_id: "contract_1",
+          timestamp: base_timestamp
+        )
+      end
+
+      let(:other_contract_event) do
+        create(
+          :clickhouse_product_events_raw,
+          organization:,
+          transaction_id: "tx_ms",
+          external_contract_id: "contract_2",
+          timestamp: base_timestamp,
+          ingested_at: base_timestamp + 1.second
+        )
+      end
+
+      before do
+        ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw"
+        product_event
+        other_contract_event
+      end
+
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "reads the product events, matching the contract on external_subscription_id" do
+        expect(result.event).to be_a(Clickhouse::ProductEventsRaw)
+        expect(result.event.external_contract_id).to eq("contract_1")
       end
     end
 
