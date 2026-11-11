@@ -35,17 +35,52 @@ class BillingOperation < ApplicationRecord
 
   validates :action_type, inclusion: {in: ACTION_TYPES.values}
   validates :billing_at, :target_cycle_started_at, presence: true
-  validate :validate_identity
+  validate :validate_identity, if: :identity_changed?
+  validate :validate_state
 
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
 
   private
 
   def validate_identity
-    return if contract_rate_card.blank? || customer.blank? || organization.blank?
+    return if contract_rate_card_id.blank? || customer_id.blank? || organization_id.blank?
 
-    errors.add(:customer, :invalid) unless contract_rate_card.contract.customer_id == customer_id
-    errors.add(:organization, :invalid) unless contract_rate_card.organization_id == organization_id && customer.organization_id == organization_id
+    rate_card = contract_rate_card
+    linked_customer = customer
+    unless rate_card
+      errors.add(:contract_rate_card, :invalid)
+      return
+    end
+    unless linked_customer
+      errors.add(:customer, :invalid)
+      return
+    end
+
+    errors.add(:customer, :invalid) unless rate_card.contract&.customer_id == customer_id
+    errors.add(:organization, :invalid) unless rate_card.organization_id == organization_id && linked_customer.organization_id == organization_id
+
+    assigned_invoice = invoice if invoice_id.present? || association(:invoice).loaded?
+    if assigned_invoice
+      errors.add(:invoice, :invalid) unless assigned_invoice.organization_id == organization_id && assigned_invoice.customer_id == customer_id
+    elsif invoice_id.present?
+      errors.add(:invoice, :invalid)
+    end
+  end
+
+  def identity_changed?
+    new_record? || will_save_change_to_organization_id? || will_save_change_to_customer_id? ||
+      will_save_change_to_contract_rate_card_id? || will_save_change_to_invoice_id? ||
+      (association(:invoice).loaded? && invoice.present? && invoice.new_record?)
+  end
+
+  def validate_state
+    if cancelled_at.present? != cancelled_causation_type.present?
+      errors.add(:cancelled_at, :invalid)
+    end
+
+    if cancelled_at.present? && processed_at.present?
+      errors.add(:processed_at, :invalid)
+    end
   end
 end
 
@@ -80,5 +115,8 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (contract_rate_card_id => contract_rate_cards.id)
+#  fk_rails_...  (customer_id => customers.id)
+#  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #

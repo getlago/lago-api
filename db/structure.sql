@@ -194,6 +194,7 @@ ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_81eedc32c0;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS fk_rails_81e3b6abba;
 ALTER TABLE IF EXISTS ONLY public.entitlement_features DROP CONSTRAINT IF EXISTS fk_rails_81d8b323cf;
+ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS fk_rails_7f682b1372;
 ALTER TABLE IF EXISTS ONLY public.recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_7ee22e9ea2;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_7eb0484711;
 ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS fk_rails_7e8a2f26e5;
@@ -220,6 +221,7 @@ ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_7418f461c3;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_73d83e23b6;
 ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_7286421039;
+ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS fk_rails_725aa4fdb3;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_710f37148d;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_7082696669;
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_6eb8abe6cb;
@@ -393,6 +395,7 @@ ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_0c9773c34d;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_0bb6dcc01f;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0baa7bd751;
+ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS fk_rails_0b0ce044e7;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_0934890b24;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_08dfe87131;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_085d1cc97b;
@@ -1568,8 +1571,8 @@ DROP TYPE IF EXISTS public.contract_payment_method_type;
 DROP TYPE IF EXISTS public.contract_billing_time;
 DROP TYPE IF EXISTS public.connection_category;
 DROP TYPE IF EXISTS public.billing_segment_status;
-DROP TYPE IF EXISTS public.billing_operations_cancelled_causation_type;
 DROP TYPE IF EXISTS public.billing_operation_causation_type;
+DROP TYPE IF EXISTS public.billing_operation_cancelled_causation_type;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
@@ -1660,6 +1663,15 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 
 
 --
+-- Name: billing_operation_cancelled_causation_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.billing_operation_cancelled_causation_type AS ENUM (
+    'contract_termination'
+);
+
+
+--
 -- Name: billing_operation_causation_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1670,15 +1682,6 @@ CREATE TYPE public.billing_operation_causation_type AS ENUM (
     'late_payment',
     'rate_change',
     'configuration_change',
-    'contract_termination'
-);
-
-
---
--- Name: billing_operations_cancelled_causation_type; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.billing_operations_cancelled_causation_type AS ENUM (
     'contract_termination'
 );
 
@@ -2729,7 +2732,7 @@ CREATE TABLE public.billing_operations (
     causation_type public.billing_operation_causation_type NOT NULL,
     billing_at timestamp(6) without time zone NOT NULL,
     cancelled_at timestamp(6) without time zone,
-    cancelled_causation_type public.billing_operations_cancelled_causation_type,
+    cancelled_causation_type public.billing_operation_cancelled_causation_type,
     target_cycle_started_at timestamp(6) without time zone NOT NULL,
     processed_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
@@ -13310,6 +13313,14 @@ ALTER TABLE ONLY public.fees
 
 
 --
+-- Name: billing_operations fk_rails_0b0ce044e7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_operations
+    ADD CONSTRAINT fk_rails_0b0ce044e7 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
 -- Name: usage_monitoring_triggered_alerts fk_rails_0baa7bd751; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14694,6 +14705,14 @@ ALTER TABLE ONLY public.usage_monitoring_alert_thresholds
 
 
 --
+-- Name: billing_operations fk_rails_725aa4fdb3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_operations
+    ADD CONSTRAINT fk_rails_725aa4fdb3 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
 -- Name: invoice_connections fk_rails_7286421039; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14899,6 +14918,14 @@ ALTER TABLE ONLY public.charges
 
 ALTER TABLE ONLY public.recurring_aggregation_snapshots
     ADD CONSTRAINT fk_rails_7ee22e9ea2 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
+-- Name: billing_operations fk_rails_7f682b1372; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_operations
+    ADD CONSTRAINT fk_rails_7f682b1372 FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
 
 
 --
