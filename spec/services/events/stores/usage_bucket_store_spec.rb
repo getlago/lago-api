@@ -106,14 +106,15 @@ RSpec.describe Events::Stores::UsageBucketStore do
         to_datetime: charges_from_datetime - 1.second, watermark: charges_from_datetime + 1.hour
       )
     end
-    let(:history_last_ingested_at) { charges_from_datetime }
+    let(:late_ingestion) { false }
     let(:usage_buckets) do
       Events::Stores::UsageBucketSet.new(
         totals: {[charge.id, ""] => totals},
-        grouped_totals: {[charge.id, ""] => {{"region" => "us"} => totals}},
-        history_last_ingested_at: {charge.id => history_last_ingested_at}
+        grouped_totals: {[charge.id, ""] => {{"region" => "us"} => totals}}
       )
     end
+
+    before { allow(delegated_store).to receive(:late_ingestion?).and_return(late_ingestion) }
 
     describe "#recurring_fallback_reason" do
       it { expect(store.recurring_fallback_reason(period)).to be_nil }
@@ -142,16 +143,16 @@ RSpec.describe Events::Stores::UsageBucketStore do
         it { expect(store.recurring_fallback_reason(period)).to eq("not_adjacent") }
       end
 
-      context "when a bucket before the window was ingested after the snapshot" do
-        let(:history_last_ingested_at) { period.watermark + 1.second }
+      context "when the events hold one ingested after the snapshot" do
+        let(:late_ingestion) { true }
 
         it { expect(store.recurring_fallback_reason(period)).to eq("late_ingestion") }
       end
 
-      context "when the buckets hold no row before the window" do
-        let(:history_last_ingested_at) { nil }
+      it "asks the store it wraps once per period" do
+        2.times { store.recurring_fallback_reason(period) }
 
-        it { expect(store.recurring_fallback_reason(period)).to be_nil }
+        expect(delegated_store).to have_received(:late_ingestion?).with(period).once
       end
     end
 
@@ -186,7 +187,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
       end
 
       context "when the delta has to come from the events" do
-        let(:history_last_ingested_at) { period.watermark + 1.second }
+        let(:late_ingestion) { true }
 
         it "delegates it to the store it wraps" do
           expect(store.recurring_sum(watermark:, period:)).to eq(delegated_result)
@@ -210,7 +211,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
       end
 
       context "when the delta has to come from the events" do
-        let(:history_last_ingested_at) { period.watermark + 1.second }
+        let(:late_ingestion) { true }
 
         it "delegates it to the store it wraps" do
           expect(store.grouped_recurring_sum(watermark:, period:)).to eq([])

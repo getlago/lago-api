@@ -258,7 +258,7 @@ RSpec.describe Events::Stores::Provider do
           )
         end
 
-        it "wraps the store in a bucket-backed one answering the delta from the window" do
+        it "wraps the store in a bucket-backed one answering the delta from the window", clickhouse: true do
           expect(store).to be_a(Events::Stores::UsageBucketStore)
           expect(store.recurring_fallback_reason(period)).to be_nil
         end

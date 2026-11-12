@@ -149,6 +149,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
     let(:old_events) { nil }
     let(:latest_events) { nil }
     let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "total_count") }
+    let(:late_event_ingested_at) { watermark(periods.first) + 1.minute }
     let(:periods) do
       Array.new(3) do |index|
         from = subscription.started_at + (index + 1).months
@@ -216,7 +217,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       create_event(timestamp: periods.last.begin + 2.days, value: 4, region: "apac")
 
       # Dated in the first period, ingested after its snapshot
-      create_event(timestamp: periods.first.begin + 2.days, created_at: watermark(periods.first) + 1.minute, value: 7, region: "eu")
+      create_event(timestamp: periods.first.begin + 2.days, created_at: late_event_ingested_at, value: 7, region: "eu")
     end
 
     it "matches the full scan from one period to the next" do
@@ -387,12 +388,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
           )
         end
         let(:apac_totals) { bucket_totals.with(units: BigDecimal(4), events_count: 1) }
-        let(:history_last_ingested_at) { watermark(periods.first) }
+        # Ingested at the watermark, so the snapshot counts it and the buckets can serve the window
+        let(:late_event_ingested_at) { watermark(periods.first) }
         let(:usage_buckets) do
           Events::Stores::UsageBucketSet.new(
             totals: {[charge.id, ""] => bucket_totals},
-            grouped_totals: {[charge.id, ""] => {{"region" => "eu"} => bucket_totals, {"region" => "apac"} => apac_totals}},
-            history_last_ingested_at: {charge.id => history_last_ingested_at}
+            grouped_totals: {[charge.id, ""] => {{"region" => "eu"} => bucket_totals, {"region" => "apac"} => apac_totals}}
           )
         end
 
@@ -414,8 +415,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         it "adds the buckets of the window to the snapshot" do
           result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
 
-          # snapshot units + window buckets, over the 2 events of the snapshot and the 2 of the buckets
-          expect(totals(result)).to eq([nil, 1000 + 25, 2 + 2, 1000, 2])
+          # snapshot units + window buckets, over the 3 events of the snapshot and the 2 of the buckets
+          expect(totals(result)).to eq([nil, 1000 + 25, 3 + 2, 1000, 3])
           expect(aggregator(periods.second, initial_value:, initial_period: closed(periods.first)).precomputed?).to be(true)
         end
 
@@ -429,8 +430,8 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
           end
         end
 
-        context "when a bucket before the window was ingested after the snapshot" do
-          let(:history_last_ingested_at) { watermark(periods.first) + 1.minute }
+        context "when an event of the snapshot period was ingested after it" do
+          let(:late_event_ingested_at) { watermark(periods.first) + 1.minute }
 
           it "adds the events the snapshot did not count instead, through the charge cache" do
             result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
@@ -466,16 +467,16 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
           it "joins the groups of the snapshot and of the buckets" do
             result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
 
-            # The late eu event is in neither: ingested after the snapshot, dated before the window
+            # The eu snapshot holds both events of the first period, the 7 ingested at its watermark
             expect(result.aggregations.map { totals(it) }).to match_array([
               [{"region" => "us"}, 3, 1, 3, 1],
-              [{"region" => "eu"}, 10 + 25, 1 + 2, 10, 1],
+              [{"region" => "eu"}, 10 + 7 + 25, 2 + 2, 10 + 7, 2],
               [{"region" => "apac"}, 4, 1, 0, 0]
             ])
           end
 
           context "when the incremental read takes over from a late ingestion" do
-            let(:history_last_ingested_at) { watermark(periods.first) + 1.minute }
+            let(:late_event_ingested_at) { watermark(periods.first) + 1.minute }
             let(:incremental) { true }
 
             it "groups every event of the subscription on the charge keys" do

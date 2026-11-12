@@ -70,12 +70,18 @@ module Events
 
       # Why the delta from `period` must come from the events: a late ingestion is an event the
       # snapshot missed. Snapshots the buckets can never complete are refused by the Provider.
+      # The events tell it, not the buckets: their ingestion time is not the one the watermark bounds.
       def recurring_fallback_reason(period)
         return "no_period" if period.nil?
         return "not_adjacent" unless adjacent?(period)
 
-        history_last_ingested_at = usage_buckets.history_last_ingested_at_for(charge_id:)
-        "late_ingestion" if history_last_ingested_at && history_last_ingested_at > period.watermark
+        "late_ingestion" if late_ingestion?(period)
+      end
+
+      # Asked again by the recurring reads of the same period
+      def late_ingestion?(period)
+        @late_ingestion ||= {}
+        @late_ingestion.fetch(period) { @late_ingestion[period] = super }
       end
 
       def max(with_count: true)
