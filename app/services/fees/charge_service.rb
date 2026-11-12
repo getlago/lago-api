@@ -597,7 +597,7 @@ module Fees
         # A weighted sum has no events count: its read never counts the events of a closed period.
         # Blank group values ("" and " ") are stored as one null group, so their units add up.
         recurring_snapshots << {
-          charge_filter: selected_metered_item.charge_filter,
+          filter: selected_metered_item.charge_filter,
           values: results.group_by { it.grouped_by || {} }.map do |grouped_by, group_results|
             {
               grouped_by:,
@@ -655,17 +655,15 @@ module Fees
       lambda do
         RecurringAggregationSnapshots::FetchService.call!(
           **arguments,
-          charge_period: recurring_charge_period(arguments[:charge], arguments[:from_datetime])
+          charge_period: recurring_charge_period(arguments[:key], arguments[:from_datetime])
         )
       end
     end
 
-    # One per charge, as the marker and the filter check are the same for all its charge filters
-    def recurring_charge_period(charge, from_datetime)
+    # One per key, as the marker and the filter check are the same for all its buckets
+    def recurring_charge_period(key, from_datetime)
       @recurring_charge_periods ||= {}
-      @recurring_charge_periods[[charge.id, from_datetime]] ||= RecurringAggregationSnapshots::ChargePeriod.new(
-        subscription:, charge:, from_datetime:
-      )
+      @recurring_charge_periods[[key, from_datetime]] ||= RecurringAggregationSnapshots::ChargePeriod.new(key:, from_datetime:)
     end
 
     def recurring_snapshots
@@ -677,8 +675,7 @@ module Fees
       return if recurring_snapshots.empty? || recurring_snapshots.size != metered_item.pricing_buckets.size
 
       RecurringAggregationSnapshots::PersistService.call!(
-        subscription:,
-        charge: metered_item.charge,
+        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge: metered_item.charge),
         to_datetime: metered_item.boundaries.charges_to_datetime,
         watermark: @recurring_watermark,
         buckets: recurring_snapshots

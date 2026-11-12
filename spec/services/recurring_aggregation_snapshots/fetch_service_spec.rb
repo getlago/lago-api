@@ -4,12 +4,13 @@ require "rails_helper"
 
 RSpec.describe RecurringAggregationSnapshots::FetchService do
   subject(:fetch_service) do
-    described_class.new(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, grouped_by_values:)
+    described_class.new(key:, filter: charge_filter, grouped_by_keys:, from_datetime:, grouped_by_values:)
   end
 
   let(:organization) { create(:organization) }
   let(:charge) { create(:standard_charge, organization:) }
   let(:subscription) { create(:subscription, organization:, plan: charge.plan) }
+  let(:key) { RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:) }
   let(:charge_filter) { nil }
   let(:grouped_by_keys) { nil }
   let(:grouped_by_values) { nil }
@@ -69,6 +70,39 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
       end
     end
 
+    context "with a contract key" do
+      let(:contract) { create(:contract, organization:, customer: create(:customer, organization:)) }
+      let(:product) { create(:product, organization:) }
+      let(:product_filter) { create(:product_filter, organization:, product:, created_at: watermark - 1.month) }
+      let(:key) { RecurringAggregationSnapshots::ContractKey.new(contract:, product:, product_filter:) }
+      let(:charge_filter) { product_filter }
+
+      def create_contract_snapshot(**attributes)
+        create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, product_filter:, watermark:, **attributes)
+      end
+
+      before do
+        create_contract_snapshot(to_datetime: previous_to_datetime - 1.month, units: 4)
+        create_contract_snapshot(to_datetime: previous_to_datetime, units: 10)
+        create_contract_snapshot(to_datetime: previous_to_datetime + 1.second, units: 99, product_filter: nil)
+      end
+
+      it "returns the latest period of the product filter's bucket, marked by its own snapshot" do
+        result = fetch_service.call
+
+        expect(result.period).to eq(described_class::Period.new(to_datetime: previous_to_datetime, watermark:))
+        expect(result.snapshots.map(&:units)).to eq([10])
+      end
+
+      context "when a filter of the product was created since the snapshot" do
+        before { create(:product_filter, organization:, product:, created_at: watermark + 1.minute) }
+
+        it "returns no snapshot" do
+          expect(fetch_service.call.period).to be_nil
+        end
+      end
+    end
+
     context "with a snapshot of another organization" do
       before { create_snapshot(to_datetime: previous_to_datetime, units: 10, organization: create(:organization)) }
 
@@ -93,24 +127,24 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
 
       context "with all_buckets: false" do
         subject(:fetch_service) do
-          described_class.new(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, all_buckets: false)
+          described_class.new(key:, filter: charge_filter, grouped_by_keys:, from_datetime:, all_buckets: false)
         end
 
         before { allow(RecurringAggregationSnapshots::ChargePeriod).to receive(:new).and_call_original }
 
         it "loads only the bucket of the charge filter" do
           expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
-          expect(RecurringAggregationSnapshots::ChargePeriod).to have_received(:new).with(hash_including(charge_filter_ids: [charge_filter.id]))
+          expect(RecurringAggregationSnapshots::ChargePeriod).to have_received(:new).with(hash_including(filter_ids: [charge_filter.id]))
         end
       end
 
       context "with a charge period of only some buckets" do
         subject(:fetch_service) do
-          described_class.new(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, charge_period:)
+          described_class.new(key:, filter: charge_filter, grouped_by_keys:, from_datetime:, charge_period:)
         end
 
         let(:charge_period) do
-          RecurringAggregationSnapshots::ChargePeriod.new(subscription:, charge:, from_datetime:, charge_filter_ids: [charge_filter.id])
+          RecurringAggregationSnapshots::ChargePeriod.new(key:, from_datetime:, filter_ids: [charge_filter.id])
         end
 
         before do

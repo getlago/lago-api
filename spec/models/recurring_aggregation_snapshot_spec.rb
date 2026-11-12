@@ -185,9 +185,12 @@ RSpec.describe RecurringAggregationSnapshot do
       instance_double(Fees::ChargeService::MeteredItem, charge:, charge_filter:, pricing_group_keys: %w[region], boundaries:)
     end
 
-    it "returns the subscription, charge, filter, grouping keys and period start" do
+    it "returns the subscription key, filter, grouping keys and period start" do
       expect(arguments).to eq(
-        subscription:, charge:, charge_filter:, grouped_by_keys: %w[region], from_datetime:
+        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:),
+        filter: charge_filter,
+        grouped_by_keys: %w[region],
+        from_datetime:
       )
     end
 

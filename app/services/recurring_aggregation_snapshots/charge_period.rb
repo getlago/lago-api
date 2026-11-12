@@ -1,70 +1,59 @@
 # frozen_string_literal: true
 
 module RecurringAggregationSnapshots
-  # The latest period of a charge closed before from_datetime. Loads the marker, the filter check
-  # and the snapshots once, for all charge filters.
+  # The latest period of a key closed before from_datetime. Loads the marker, the filter check
+  # and the snapshots once, for all the key's buckets.
   class ChargePeriod
-    # charge_filter_ids: the buckets to load besides the default one, every filter of the charge when nil
+    # filter_ids: the buckets to load besides the marker's, every bucket of the key when nil
     # grouped_by_values: loads only the snapshots of that group, plus one per bucket (see of_group)
-    def initialize(subscription:, charge:, from_datetime:, charge_filter_ids: nil, grouped_by_values: nil, grouped_by_keys: [])
-      @subscription = subscription
-      @charge = charge
+    def initialize(key:, from_datetime:, filter_ids: nil, grouped_by_values: nil, grouped_by_keys: [])
+      @key = key
       @from_datetime = from_datetime
-      @charge_filter_ids = charge_filter_ids
+      @filter_ids = filter_ids
       @grouped_by_values = grouped_by_values
       @grouped_by_keys = grouped_by_keys
     end
 
-    # Marker and snapshots of the charge filter's bucket, or nil without a marker. A marker the
-    # filters changed since gives [], a full scan rather than the previous subscription.
-    def period(charge_filter:)
+    # Marker and snapshots of the filter's bucket, or nil without a marker. A marker the
+    # filters changed since gives [], a full scan rather than the previous owner's period.
+    def period(filter:)
       return unless marker
 
       if filters_changed?
         []
       else
-        [marker, records.fetch(charge_filter&.id, [])]
+        [marker, records.fetch(filter&.id, [])]
       end
     end
 
     def all_buckets?
-      charge_filter_ids.nil?
+      filter_ids.nil?
     end
 
     private
 
-    attr_reader :subscription, :charge, :from_datetime, :charge_filter_ids, :grouped_by_values, :grouped_by_keys
+    attr_reader :key, :from_datetime, :filter_ids, :grouped_by_values, :grouped_by_keys
 
-    def charge_snapshots
-      RecurringAggregationSnapshot.where(
-        organization_id: subscription.organization_id,
-        subscription_id: subscription.id,
-        charge_id: charge.id
-      )
-    end
-
-    # The default bucket keeps a row for every closed period, other buckets only for groups with
+    # The marker bucket keeps a row for every closed period, other buckets only for groups with
     # units or events: the marker tells a bucket without usage from a period never closed.
     def marker
-      records[nil]&.first
+      records[key.marker_bucket_id]&.first
     end
 
     # Listing the buckets lets the period index serve to_datetime too
     def records
       @records ||= begin
-        bucket_ids = [nil, *(charge_filter_ids || charge.filters.ids)]
-        charge_snapshots.latest_period(bucket_ids, before: from_datetime)
+        bucket_ids = key.bucket_ids(filter_ids)
+        key.snapshots.latest_period(bucket_ids, before: from_datetime)
           .of_group(grouped_by_values, grouped_by_keys:, bucket_ids:)
-          .group_by(&:charge_filter_id)
+          .group_by { it[key.model::BUCKET_COLUMN] }
       end
     end
 
     def filters_changed?
       return @filters_changed if defined?(@filters_changed)
 
-      @filters_changed = RecurringAggregationSnapshot.filters_changed_since?(
-        organization_id: subscription.organization_id, charge_ids: charge.id, watermark: marker.watermark
-      )
+      @filters_changed = key.filters_changed_since?(marker.watermark)
     end
   end
 end

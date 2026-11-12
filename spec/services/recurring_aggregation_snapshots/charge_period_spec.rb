@@ -3,11 +3,12 @@
 require "rails_helper"
 
 RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
-  subject(:charge_period) { described_class.new(subscription:, charge:, from_datetime:) }
+  subject(:charge_period) { described_class.new(key:, from_datetime:) }
 
   let(:organization) { create(:organization) }
   let(:charge) { create(:standard_charge, organization:) }
   let(:subscription) { create(:subscription, organization:, plan: charge.plan) }
+  let(:key) { RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:) }
   let(:from_datetime) { Time.zone.parse("2026-10-01T00:00:00") }
   let(:previous_to_datetime) { Time.zone.parse("2026-09-30T23:59:59") }
   let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
@@ -38,18 +39,18 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
     end
 
     it "returns the marker and the snapshots of the charge filter's bucket" do
-      marker, records = charge_period.period(charge_filter: eu_filter)
+      marker, records = charge_period.period(filter: eu_filter)
 
       expect(marker).to have_attributes(charge_filter_id: nil, to_datetime: previous_to_datetime, units: 10)
       expect(records.map(&:units)).to eq([4])
-      expect(charge_period.period(charge_filter: us_filter).last).to eq([])
-      expect(charge_period.period(charge_filter: nil).last.map(&:units)).to eq([10])
+      expect(charge_period.period(filter: us_filter).last).to eq([])
+      expect(charge_period.period(filter: nil).last.map(&:units)).to eq([10])
     end
 
     it "loads the period once for all buckets" do
-      first_bucket_queries = count_queries { charge_period.period(charge_filter: eu_filter) }
+      first_bucket_queries = count_queries { charge_period.period(filter: eu_filter) }
       other_buckets_queries = count_queries do
-        [us_filter, nil].each { charge_period.period(charge_filter: it) }
+        [us_filter, nil].each { charge_period.period(filter: it) }
       end
 
       expect(first_bucket_queries).to eq(5)
@@ -57,28 +58,29 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
     end
 
     context "with charge_filter_ids" do
-      subject(:charge_period) { described_class.new(subscription:, charge:, from_datetime:, charge_filter_ids: [eu_filter.id]) }
+      subject(:charge_period) { described_class.new(key:, from_datetime:, filter_ids: [eu_filter.id]) }
 
       before { create_snapshot(to_datetime: previous_to_datetime, charge_filter: us_filter, units: 2) }
 
       it "loads only the default bucket and those buckets" do
-        expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to eq([4])
-        expect(charge_period.period(charge_filter: nil).last.map(&:units)).to eq([10])
-        expect(charge_period.period(charge_filter: us_filter).last).to eq([])
+        expect(charge_period.period(filter: eu_filter).last.map(&:units)).to eq([4])
+        expect(charge_period.period(filter: nil).last.map(&:units)).to eq([10])
+        expect(charge_period.period(filter: us_filter).last).to eq([])
       end
     end
 
     context "without a marker before from_datetime" do
+      let(:key) { RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:) }
       let(:from_datetime) { previous_to_datetime - 1.month }
 
       it "returns nil" do
-        expect(charge_period.period(charge_filter: eu_filter)).to be_nil
+        expect(charge_period.period(filter: eu_filter)).to be_nil
       end
     end
 
     context "with grouped_by_values" do
       subject(:charge_period) do
-        described_class.new(subscription:, charge:, from_datetime:, grouped_by_values:, grouped_by_keys: %w[region cloud])
+        described_class.new(key:, from_datetime:, grouped_by_values:, grouped_by_keys: %w[region cloud])
       end
 
       let(:grouped_by_values) { {"region" => "eu", "cloud" => "aws"} }
@@ -91,15 +93,15 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
 
       # {} sorts before any group with keys in jsonb, so the row of 4 units is the first of the bucket
       it "loads the group's snapshots and the first snapshot of each bucket" do
-        expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to match_array([4, 101])
-        expect(charge_period.period(charge_filter: nil).last.map(&:units)).to eq([10])
+        expect(charge_period.period(filter: eu_filter).last.map(&:units)).to match_array([4, 101])
+        expect(charge_period.period(filter: nil).last.map(&:units)).to eq([10])
       end
 
       context "without a value for a key" do
         let(:grouped_by_values) { {"region" => "eu"} }
 
         it "loads every value of that key" do
-          expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to match_array([4, 100, 101])
+          expect(charge_period.period(filter: eu_filter).last.map(&:units)).to match_array([4, 100, 101])
         end
       end
     end
@@ -108,7 +110,7 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
       before { create_filter(created_at: watermark + 1.minute) }
 
       it "returns no marker nor snapshot" do
-        expect(charge_period.period(charge_filter: eu_filter)).to eq([])
+        expect(charge_period.period(filter: eu_filter)).to eq([])
       end
     end
   end
@@ -117,7 +119,7 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
     it { is_expected.to be_all_buckets }
 
     context "with charge_filter_ids" do
-      subject(:charge_period) { described_class.new(subscription:, charge:, from_datetime:, charge_filter_ids: []) }
+      subject(:charge_period) { described_class.new(key:, from_datetime:, filter_ids: []) }
 
       it { is_expected.not_to be_all_buckets }
     end
