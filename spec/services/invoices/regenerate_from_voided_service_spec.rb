@@ -278,6 +278,20 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           expect(regenerate_result.invoice.progressive_billing_trigger).to eq("usage_threshold")
         end
 
+        context "when another progressive billing invoice of the subscription holds its lock" do
+          before { stub_const("Subscriptions::LockService::ACQUIRE_LOCK_TIMEOUT", 0) }
+
+          it "fails to acquire the lock and regenerates nothing" do
+            with_advisory_lock("subscription-#{subscription.id}", lock_released_after: 2.seconds) do
+              result = Invoices::RegenerateFromVoidedService.call(voided_invoice:, fees_params:)
+
+              expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+            end
+
+            expect(Invoice.where(voided_invoice_id: voided_invoice.id)).to be_empty
+          end
+        end
+
         context "when the voided invoice was triggered by a wallet expiration" do
           let(:wallet) { create(:wallet, customer:) }
 
