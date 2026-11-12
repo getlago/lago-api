@@ -314,6 +314,19 @@ RSpec.describe Analytics::GrossRevenue do
         end
       end
 
+      context "with a deleted product fee" do
+        let(:args) { {external_customer_id: contract_customer.external_id} }
+
+        before { create_product_fee(billing_entity: billing_entity1, amount_cents: 900).discard! }
+
+        it "leaves it out" do
+          expect(gross_revenues).to include(hash_including({
+            "billing_entity_id" => billing_entity1.id,
+            "amount_cents" => 500.0
+          }))
+        end
+      end
+
       context "when filtering by currency" do
         let(:args) { {currency: "USD"} }
 

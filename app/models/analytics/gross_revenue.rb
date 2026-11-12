@@ -87,6 +87,7 @@ module Analytics
             WHERE f.organization_id = :organization_id
             AND f.invoice_id IS NULL
             AND f.pay_in_advance IS TRUE
+            AND f.deleted_at IS NULL
             #{and_external_customer_id_sql}
             #{and_fee_billing_entity_id_sql}
           ),
