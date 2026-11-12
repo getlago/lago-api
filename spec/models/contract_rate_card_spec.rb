@@ -12,6 +12,7 @@ RSpec.describe ContractRateCard do
       expect(contract_rate_card).to belong_to(:organization)
       expect(contract_rate_card).to belong_to(:contract)
       expect(contract_rate_card).to belong_to(:rate_card)
+      expect(contract_rate_card).to have_many(:terms).order([:effective_date, :created_at, :id]).class_name("ContractRateCardTerm").inverse_of(:contract_rate_card)
       expect(contract_rate_card).to have_many(:rate_phases).order(:position)
       expect(contract_rate_card).to have_many(:billing_segments)
       expect(contract_rate_card).to have_many(:fees)
@@ -195,7 +196,6 @@ RSpec.describe ContractRateCard do
     it { is_expected.to validate_presence_of(:billing_anchor_date) }
     it { is_expected.to validate_presence_of(:next_billing_at) }
     it { is_expected.to validate_presence_of(:effective_date) }
-    it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0).allow_nil }
 
     describe "active uniqueness per (contract, rate_card)" do
       it "rejects a second active row for the same contract and rate card" do

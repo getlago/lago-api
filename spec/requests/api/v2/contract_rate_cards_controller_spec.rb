@@ -184,7 +184,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(contract_rate_card.reload.units).to eq(42)
+      expect(contract_rate_card.reload.terms.sole.units).to eq(42)
     end
   end
 

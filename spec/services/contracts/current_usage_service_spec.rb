@@ -226,6 +226,12 @@ RSpec.describe Contracts::CurrentUsageService do
       it "prices the cards of that product only" do
         expect(priced_cards.keys).to contain_exactly(rate_card, eu_rate_card)
       end
+
+      it "does not load units for the selected metered cards" do
+        statements = capture_sql { result }
+
+        expect(statements.grep(/FROM "contract_rate_cards_terms"/i)).to be_empty
+      end
     end
 
     context "with a product filter code filter" do
@@ -447,6 +453,28 @@ RSpec.describe Contracts::CurrentUsageService do
       usage = result.rate_card_usages.sole
 
       expect(usage.fees.sole).to have_attributes(fee_type: "product", units: 3, amount_cents: 3000)
+    end
+
+    context "with multiple fixed cards" do
+      let(:second_product) { create(:product, :fixed, organization:) }
+      let(:second_rate_card) { create(:rate_card, organization:, product: second_product, currency: "EUR") }
+
+      before do
+        create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card,
+          units: 4, effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+        create(:rate_card_rate, organization:, rate_card: second_rate_card,
+          effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "10"})
+      end
+
+      it "loads all card units in one query" do
+        contract_rate_card
+        second_rate_card
+
+        statements = capture_sql { result }
+
+        expect(result.rate_card_usages.size).to eq(2)
+        expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
+      end
     end
   end
 end
