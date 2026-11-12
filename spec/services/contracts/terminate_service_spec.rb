@@ -111,20 +111,32 @@ RSpec.describe Contracts::TerminateService do
         .to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
     end
 
+    context "when only overdue advance work remains" do
+      let(:arrears_card) { card(billing_timing: "arrears", priced: false) }
+
+      it "enqueues processing even though no new termination operation is created" do
+        expect { travel_to(terminated_at) { result } }
+          .to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
+        expect(advance_card.billing_operations.sole).to have_attributes(
+          causation_type: "contract_activation", cancelled_at: nil, processed_at: nil
+        )
+        expect(operations_of(arrears_card)).to be_empty
+      end
+    end
+
     # Time is not frozen here: a real clock carries nanoseconds the database drops, and the
     # final slice must still fall due at the instant stored.
-    it "cancels the earlier pending date and bills final coverage at termination" do
+    it "preserves the overdue operation and bills final coverage at the stored termination instant" do
       result
 
       original = operations_of(arrears_card).find_by!(causation_type: "contract_activation")
-      final = operations_of(arrears_card).find_by!(causation_type: "contract_termination")
+      final = operations_of(arrears_card).where(causation_type: "contract_termination").order(:billing_at).last
       expect(original).to have_attributes(
         billing_at: Time.find_zone("America/New_York").parse("2026-09-01 00:00:00"),
-        cancelled_at: contract.reload.terminated_at,
-        cancelled_causation_type: "contract_termination", processed_at: nil
+        cancelled_at: nil, cancelled_causation_type: nil, processed_at: nil
       )
       expect(final).to have_attributes(
-        billing_at: contract.terminated_at,
+        billing_at: contract.reload.terminated_at,
         target_cycle_started_at: contract.terminated_at.in_time_zone(customer.applicable_timezone).beginning_of_month,
         processed_at: nil
       )
@@ -216,6 +228,78 @@ RSpec.describe Contracts::TerminateService do
       expect(contract_rate_card.billing_operations.count).to eq(2)
       expect(Invoice.where(customer:).pluck(:id)).to eq([invoice.id])
       expect(invoice.reload.attributes).to eq(invoice_attributes)
+    end
+  end
+
+  context "when termination is scheduled several cycles ahead" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:started_at) { Time.utc(2026, 1, 1) }
+    let(:timestamp) { Time.utc(2026, 4, 15) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at:) }
+    let(:billing_timing) { "arrears" }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:, currency: "USD", proration: true) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, units: 1,
+        effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+    end
+    let(:original) { contract_rate_card.billing_operations.find_by!(causation_type: :contract_activation) }
+    let(:new_billing_dates) { [Time.utc(2026, 3, 1), Time.utc(2026, 4, 1), timestamp] }
+    let(:amount_due_now) { 10_000 }
+
+    before do
+      travel_to(Time.utc(2026, 2, 10))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at,
+        rate_model: "standard", rate_properties: {"amount" => "100"},
+        billing_interval_count: 1, billing_interval_unit: "month")
+      contract_rate_card
+      BillingOperations::ApplyActivationService.call!(contract:)
+      original
+    end
+
+    shared_examples "complete termination coverage" do
+      it "preserves overdue work and bills each missing cycle once, only when due" do
+        expect(described_class.call(contract:, timestamp:)).to be_success
+        expect(original.reload).to have_attributes(cancelled_at: nil, processed_at: nil)
+        expect(contract_rate_card.billing_operations.where(causation_type: :contract_termination).order(:billing_at).pluck(:billing_at))
+          .to eq(new_billing_dates)
+
+        BillingOperations::ProcessService.call!(customer:, timestamp: Time.current)
+        expect(Invoice.where(customer:).sum(:total_amount_cents)).to eq(amount_due_now)
+        expect(contract_rate_card.billing_operations.count).to eq(4)
+
+        travel_to(timestamp) do
+          BillingOperations::ProcessService.call!(customer:, timestamp:)
+          expect(Invoice.where(customer:).sum(:total_amount_cents)).to eq(30_000 + (10_000.to_d * 14 / 30).round)
+          # Three full months plus April 1–15 (14 of April's 30 days).
+          expect(contract_rate_card.billing_operations.pending).to be_empty
+          expect(contract_rate_card.billing_operations.count).to eq(4)
+          expect(BillingOperations::ProcessService.call!(customer:, timestamp:).invoices).to be_empty
+        end
+      end
+    end
+
+    it_behaves_like "complete termination coverage"
+
+    it "does not enqueue processing when every obligation is still in the future" do
+      travel_to(Time.utc(2026, 1, 10)) do
+        expect { described_class.call(contract:, timestamp:) }
+          .not_to have_enqueued_job(BillingOperations::ProcessJob)
+      end
+    end
+
+    context "when billing in advance" do
+      let(:billing_timing) { "advance" }
+      let(:new_billing_dates) { [Time.utc(2026, 2, 1), Time.utc(2026, 3, 1), Time.utc(2026, 4, 1)] }
+      let(:amount_due_now) { 20_000 }
+
+      it_behaves_like "complete termination coverage"
+
+      it "enqueues the preserved overdue renewal after commit" do
+        expect { described_class.call(contract:, timestamp:) }
+          .to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
+        expect(original.reload.cancelled_at).to be_nil
+      end
     end
   end
 

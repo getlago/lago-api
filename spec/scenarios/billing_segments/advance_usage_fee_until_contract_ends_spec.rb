@@ -45,7 +45,7 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
     end
 
     operation = BillingOperation.where(customer:, target_cycle_started_at: period_started_at,
-      causation_type: "contract_termination").sole
+      action_type: "regroup_paid_fees").sole
     {active_period:, operation:, invoice: operation.invoice}
   end
 
@@ -110,7 +110,8 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
       amount_cents: 4_000, units: 40, pay_in_advance: true, payment_status: "succeeded", invoice_id: nil
     )
     expect(timeline.fetch(:active_period).fetch(:operation).reload).to have_attributes(
-      processed_at: nil, invoice_id: nil, cancelled_causation_type: "contract_termination"
+      processed_at: period_ended_at + 5.minutes, invoice_id: invoice.id,
+      cancelled_at: nil, cancelled_causation_type: nil
     )
     expect(timeline.fetch(:active_period).fetch(:invoices)).to be_empty
     expect(timeline.fetch(:operation)).to have_attributes(processed_at: period_ended_at + 5.minutes, invoice_id: invoice.id)

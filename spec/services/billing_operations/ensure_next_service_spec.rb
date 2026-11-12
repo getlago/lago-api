@@ -167,6 +167,24 @@ RSpec.describe BillingOperations::EnsureNextService do
     end
   end
 
+  context "when termination has already planned the remaining cycles" do
+    let(:contract) do
+      create(:contract, :terminated, organization:, customer:, started_at: target_start,
+        terminated_at: Time.utc(2026, 4, 15))
+    end
+
+    before do
+      operation
+      BillingOperations::ApplyTerminationService.call!(contract:, timestamp: contract.terminated_at)
+    end
+
+    it "does not create another successor for the preserved operation" do
+      expect { result }.not_to change(BillingOperation, :count)
+      expect(result).to be_success
+      expect(result.operation).to be_nil
+    end
+  end
+
   context "when a processed successor already exists" do
     let!(:successor) do
       create(

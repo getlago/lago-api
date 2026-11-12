@@ -39,10 +39,10 @@ RSpec.describe BillingOperations::ApplyTerminationService do
   context "when pending work exists" do
     before { old_operation }
 
-    it "cancels it and creates one final operation at termination" do
+    it "preserves the overdue operation and creates the missing final cycle" do
       expect(result).to be_success
       expect(old_operation.reload).to have_attributes(
-        cancelled_at: timestamp, cancelled_causation_type: "contract_termination",
+        cancelled_at: nil, cancelled_causation_type: nil,
         causation_type: "contract_activation", processed_at: nil
       )
       expect(result.billing_operations.sole).to have_attributes(
@@ -50,6 +50,25 @@ RSpec.describe BillingOperations::ApplyTerminationService do
         billing_at: timestamp, target_cycle_started_at: Time.zone.parse("2026-02-01"), processed_at: nil
       )
       expect(contract_rate_card.billing_operations.count).to eq(2)
+    end
+
+    it "does not duplicate obligations when termination planning is retried" do
+      result
+      expect { described_class.call!(contract:, timestamp:) }.not_to change(BillingOperation, :count)
+      expect(old_operation.reload.cancelled_at).to be_nil
+    end
+
+    context "when the preserved close already owns several price slices" do
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
+          billing_interval_count: 1, billing_interval_unit: "month")
+      end
+
+      it "does not insert an earlier boundary inside the preserved coverage" do
+        expect(result.billing_operations.map(&:billing_at)).to eq([timestamp])
+        expect(BillingOperations::ResolveSegmentsService.call!(operation: old_operation).segments.map(&:started_at))
+          .to eq([Time.utc(2026, 1, 1), Time.utc(2026, 1, 15)])
+      end
     end
   end
 
@@ -71,20 +90,17 @@ RSpec.describe BillingOperations::ApplyTerminationService do
       pending_operation
     end
 
-    it "leaves completed history unchanged, cancels pending work, and creates the final operation" do
+    it "preserves history and reuses the pending operation due exactly at termination" do
       completed_attributes = completed_operation.attributes
 
       expect(result).to be_success
       expect(completed_operation.reload.attributes).to eq(completed_attributes)
       expect(pending_operation.reload).to have_attributes(
-        cancelled_at: timestamp, cancelled_causation_type: "contract_termination",
+        cancelled_at: nil, cancelled_causation_type: nil,
         causation_type: "contract_activation", processed_at: nil
       )
-      expect(result.billing_operations.sole).to have_attributes(
-        causation_type: "contract_termination", billing_at: timestamp,
-        target_cycle_started_at: Time.zone.parse("2026-02-01")
-      )
-      expect(contract_rate_card.billing_operations.count).to eq(3)
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.billing_operations.count).to eq(2)
     end
   end
 
@@ -101,10 +117,13 @@ RSpec.describe BillingOperations::ApplyTerminationService do
 
     before { processed_operation }
 
-    it "does not create a duplicate termination operation" do
+    it "fills the missing earlier cycle without duplicating the processed final cycle" do
       expect(result).to be_success
-      expect(result.billing_operations).to be_empty
-      expect(contract_rate_card.billing_operations.count).to eq(1)
+      expect(result.billing_operations.sole).to have_attributes(
+        causation_type: "contract_termination", billing_at: Time.utc(2026, 2, 1),
+        target_cycle_started_at: Time.utc(2026, 1, 1)
+      )
+      expect(contract_rate_card.billing_operations.count).to eq(2)
     end
   end
 
@@ -117,7 +136,8 @@ RSpec.describe BillingOperations::ApplyTerminationService do
 
     it "selects the final cycle before the natural end but bills at termination" do
       expect(result).to be_success
-      expect(result.billing_operations.sole).to have_attributes(
+      expect(result.billing_operations.map(&:billing_at)).to eq([Time.utc(2026, 2, 1), timestamp])
+      expect(result.billing_operations.last).to have_attributes(
         causation_type: "contract_termination", billing_at: timestamp,
         target_cycle_started_at: Time.zone.parse("2026-02-01")
       )
@@ -136,7 +156,7 @@ RSpec.describe BillingOperations::ApplyTerminationService do
     before { other_operation }
 
     it "leaves the other contract's pending operation unchanged" do
-      expect(result.billing_operations.map(&:contract_rate_card_id)).to eq([contract_rate_card.id])
+      expect(result.billing_operations.map(&:contract_rate_card_id)).to eq([contract_rate_card.id, contract_rate_card.id])
       expect(other_operation.reload).to have_attributes(cancelled_at: nil, processed_at: nil)
     end
   end
@@ -146,7 +166,7 @@ RSpec.describe BillingOperations::ApplyTerminationService do
 
     it "leaves it out instead of failing" do
       expect(result).to be_success
-      expect(result.billing_operations.map(&:contract_rate_card_id)).to eq([contract_rate_card.id])
+      expect(result.billing_operations.map(&:contract_rate_card_id)).to eq([contract_rate_card.id, contract_rate_card.id])
     end
   end
 
@@ -166,7 +186,7 @@ RSpec.describe BillingOperations::ApplyTerminationService do
       expect(future_operation.reload).to have_attributes(
         cancelled_at: timestamp, cancelled_causation_type: "contract_termination", processed_at: nil
       )
-      expect(result.billing_operations.map(&:contract_rate_card_id)).to eq([contract_rate_card.id])
+      expect(result.billing_operations.map(&:contract_rate_card_id)).to eq([contract_rate_card.id, contract_rate_card.id])
     end
   end
 
@@ -205,12 +225,13 @@ RSpec.describe BillingOperations::ApplyTerminationService do
       old_operation
     end
 
-    it "cancels the old operation and creates a final operation for the last surviving slice" do
+    it "cancels the future close and creates every missing earlier and final slice" do
       expect(result).to be_success
       expect(old_operation.reload).to have_attributes(
         cancelled_at: timestamp, cancelled_causation_type: "contract_termination", processed_at: nil
       )
-      expect(result.billing_operations.sole).to have_attributes(
+      expect(result.billing_operations.map(&:billing_at)).to eq([Time.utc(2026, 2, 1), Time.utc(2026, 2, 15), timestamp])
+      expect(result.billing_operations.last).to have_attributes(
         causation_type: "contract_termination", action_type: "close_fixed_arrears",
         billing_at: timestamp, target_cycle_started_at: Time.zone.parse("2026-02-01")
       )
@@ -277,7 +298,8 @@ RSpec.describe BillingOperations::ApplyTerminationService do
 
     it "creates the termination operation for the still-due final slice" do
       expect(result).to be_success
-      expect(result.billing_operations.sole).to have_attributes(
+      expect(result.billing_operations.map(&:billing_at)).to eq([Time.utc(2026, 2, 1), timestamp])
+      expect(result.billing_operations.last).to have_attributes(
         action_type: "close_fixed_arrears", causation_type: "contract_termination",
         billing_at: timestamp, target_cycle_started_at: Time.zone.parse("2026-02-01")
       )
@@ -295,9 +317,10 @@ RSpec.describe BillingOperations::ApplyTerminationService do
     let(:product) { create(:product, :metered, organization:, billable_metric:) }
     let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "arrears") }
 
-    it "creates one accrued-usage operation for the final cycle" do
+    it "creates accrued-usage operations for the missing earlier and final cycles" do
       expect(result).to be_success
-      expect(result.billing_operations.sole).to have_attributes(
+      expect(result.billing_operations.map(&:billing_at)).to eq([Time.utc(2026, 2, 1), timestamp])
+      expect(result.billing_operations.last).to have_attributes(
         action_type: "close_metered_arrears", causation_type: "contract_termination",
         billing_at: timestamp, target_cycle_started_at: Time.zone.parse("2026-02-01")
       )
@@ -325,12 +348,15 @@ RSpec.describe BillingOperations::ApplyTerminationService do
       pending_operation
     end
 
-    it "cancels renewals without creating another advance charge" do
+    it "cancels future renewals and creates the missing initial renewal" do
       expect(result).to be_success
       expect(pending_operation.reload).to have_attributes(
         cancelled_at: timestamp, cancelled_causation_type: "contract_termination", processed_at: nil
       )
-      expect(result.billing_operations).to be_empty
+      expect(result.billing_operations.sole).to have_attributes(
+        action_type: "renew_fixed_advance", causation_type: "contract_termination",
+        billing_at: Time.utc(2026, 1, 1), target_cycle_started_at: Time.utc(2026, 1, 1)
+      )
     end
   end
 
@@ -373,12 +399,69 @@ RSpec.describe BillingOperations::ApplyTerminationService do
 
     before { pending_operation }
 
-    it "cancels the renewal without creating another advance bill" do
+    it "cancels the future renewal and creates the missing initial renewal" do
       expect(result).to be_success
       expect(pending_operation.reload).to have_attributes(
         cancelled_at: timestamp, cancelled_causation_type: "contract_termination", processed_at: nil
       )
-      expect(result.billing_operations).to be_empty
+      expect(result.billing_operations.sole).to have_attributes(
+        action_type: "renew_recurring_metered_advance", causation_type: "contract_termination",
+        billing_at: Time.utc(2026, 1, 1), target_cycle_started_at: Time.utc(2026, 1, 1)
+      )
+    end
+  end
+
+  context "when an advance renewal starts exactly at termination" do
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+    let(:boundary_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "renew_fixed_advance", billing_at: timestamp, target_cycle_started_at: timestamp)
+    end
+
+    before { boundary_operation }
+
+    it "cancels the renewal and creates only the missing pre-termination cycles" do
+      expect(result).to be_success
+      expect(boundary_operation.reload).to have_attributes(
+        cancelled_at: timestamp, cancelled_causation_type: "contract_termination", processed_at: nil
+      )
+      expect(result.billing_operations.map { [it.target_cycle_started_at, it.billing_at] }).to eq([
+        [Time.utc(2026, 1, 1), Time.utc(2026, 1, 1)],
+        [Time.utc(2026, 2, 1), Time.utc(2026, 2, 1)]
+      ])
+    end
+  end
+
+  context "when a due same-cycle slice previously failed" do
+    let(:timestamp) { Time.utc(2026, 1, 20) }
+    let(:old_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 1, 10),
+        target_cycle_started_at: Time.utc(2026, 1, 1))
+    end
+    let(:processed_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 1, 15),
+        target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 1, 15))
+    end
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 10))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15))
+      old_operation
+      processed_operation
+    end
+
+    it "preserves its reservation even after a later slice has been processed" do
+      expect(result).to be_success
+      expect(old_operation.reload.cancelled_at).to be_nil
+      expect(result.billing_operations.sole).to have_attributes(
+        billing_at: timestamp, target_cycle_started_at: Time.utc(2026, 1, 1), causation_type: "contract_termination"
+      )
+      expect(BillingOperations::ResolveSegmentsService.call!(operation: old_operation).segments.map { [it.started_at, it.ended_at] })
+        .to eq([[Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 10))]])
+      expect(BillingOperations::ResolveSegmentsService.call!(operation: result.billing_operations.sole).segments.map { [it.started_at, it.ended_at] })
+        .to eq([[Time.utc(2026, 1, 15), BillingSegment.inclusive_end(timestamp)]])
     end
   end
 end

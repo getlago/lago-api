@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 module BillingOperations
-  # Cancels pending work and creates the contract's final arrears or regroup operation.
+  # Under the caller's customer billing-schedule lock, preserves owed work and persists all
+  # missing obligations through the effective end. ProcessService invoices them when due.
   class ApplyTerminationService < BaseService
     Result = BaseResult[:billing_operations]
 
@@ -13,21 +14,10 @@ module BillingOperations
 
     def call
       result.billing_operations = []
-      # Earlier cycles are assumed processed; cancellation does not replay overdue obligations.
       cancel_pending_operations
 
       final_cards.find_each do |card|
-        schedule = BuildScheduleService.call!(contract_rate_card: card).schedule
-        planned_operation = final_planned_operation(card, schedule)
-        next unless planned_operation
-        next if final_operation_already_processed?(card, planned_operation, card.periodic_billing_action)
-
-        result.billing_operations << BillingOperations::CreateService.call!(
-          contract_rate_card: card,
-          action_type: card.periodic_billing_action,
-          causation_type: BillingOperation::CAUSATION_TYPES.fetch(:contract_termination),
-          planned_operation: planned_operation.with(billing_at: timestamp)
-        ).operation
+        create_missing_operations(card)
       end
 
       result
@@ -41,10 +31,13 @@ module BillingOperations
 
     attr_reader :contract, :timestamp
 
+    # A later termination must not extend service beyond the contract's natural end.
     def effective_contract_end
       [contract.ended_at, contract.terminated_at].compact.min || timestamp
     end
 
+    # Keep overdue work for retry, including a close due exactly at termination. A cycle
+    # starting at the exclusive contract end owes nothing, even if its renewal is already due.
     def cancel_pending_operations
       card_ids = ContractRateCard.with_discarded
         .where(organization_id: contract.organization_id, contract_id: contract.id)
@@ -52,6 +45,8 @@ module BillingOperations
 
       BillingOperation.pending
         .where(organization_id: contract.organization_id, contract_rate_card_id: card_ids)
+        .where("billing_at > :timestamp OR target_cycle_started_at >= :contract_end",
+          timestamp:, contract_end: effective_contract_end)
         .find_each do |operation|
           operation.update!(
             cancelled_at: timestamp,
@@ -66,48 +61,32 @@ module BillingOperations
         .includes(:rate_card, {rate_phases: :rate_override}, contract: :customer)
     end
 
-    def final_planned_operation(card, schedule)
+    # Termination takes over the periodic chain: a future end needs every intervening cycle,
+    # not just the final one. New obligations carry contract_termination and have no successor.
+    def create_missing_operations(card)
       action_type = card.periodic_billing_action
+      return unless action_type
 
-      case action_type
-      when BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance)
-        # Fixed advance coverage was already billed; termination must not create another renewal.
-        nil
-      when BillingOperation::ACTION_TYPES.fetch(:renew_recurring_metered_advance)
-        # Advance coverage was already billed; cancel renewals without another charge or refund.
-        nil
-      when BillingOperation::ACTION_TYPES.fetch(:close_fixed_arrears)
-        # Close fixed arrears at termination for the final covered cycle.
-        last_planned_operation(schedule, action_type)
-      when BillingOperation::ACTION_TYPES.fetch(:close_metered_arrears)
-        # Close accrued metered usage at termination for the final covered cycle.
-        last_planned_operation(schedule, action_type)
-      when BillingOperation::ACTION_TYPES.fetch(:regroup_paid_fees)
-        # Group already-paid advance fees at termination without charging them again.
-        last_planned_operation(schedule, action_type)
+      schedule = BuildScheduleService.call!(contract_rate_card: card, ends_at: effective_contract_end).schedule
+      # Pending work reserves coverage even after failure; processed work must not be billed
+      # again. For each cycle, only slices beyond its latest live boundary need new operations.
+      covered_until = card.billing_operations
+        .where(organization_id: contract.organization_id, action_type:, cancelled_at: nil)
+        .group(:target_cycle_started_at).maximum(:billing_at)
+
+      schedule.segments_due_by(timestamp).group_by(&:cycle_started_at).each do |cycle_started_at, segments|
+        segments.map { schedule.due_at(it, action_type:) }.uniq.sort.each do |due_at|
+          next if covered_until[cycle_started_at] && due_at <= covered_until[cycle_started_at]
+
+          # Preserve intermediate due dates; the final close uses the termination timestamp,
+          # which can be later than the natural end of service.
+          billing_at = (due_at == effective_contract_end) ? timestamp : due_at
+          planned_operation = Schedule::PlannedOperation.new(cycle_started_at:, billing_at:)
+          result.billing_operations << CreateService.call!(
+            contract_rate_card: card, action_type:, causation_type: "contract_termination", planned_operation:
+          ).operation
+        end
       end
-    end
-
-    def last_planned_operation(schedule, action_type)
-      cycle = schedule.cycle_at(BillingSegment.inclusive_end(effective_contract_end))
-      return unless cycle
-
-      billing_at = schedule.billing_dates_for_cycle(cycle, action_type:).last
-      return unless billing_at
-
-      Schedule::PlannedOperation.new(cycle_started_at: cycle.started_at, billing_at:)
-    end
-
-    def final_operation_already_processed?(card, planned_operation, action_type)
-      card.billing_operations
-        .where(
-          organization_id: contract.organization_id,
-          action_type:,
-          target_cycle_started_at: planned_operation.cycle_started_at
-        )
-        .where.not(processed_at: nil)
-        .where(billing_at: planned_operation.billing_at..)
-        .exists?
     end
   end
 end

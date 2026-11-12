@@ -19,6 +19,8 @@ module BillingOperations
       return result if operation.action_type == "regroup_paid_fees" && operation.causation_type == "late_payment"
 
       contract_rate_card = operation.contract_rate_card
+      # Termination has already persisted every remaining obligation through the contract end.
+      return result if contract_rate_card.contract.terminated?
       return result unless resolution.cycle
 
       next_planned_operation = resolution.schedule.next_planned_operation(
