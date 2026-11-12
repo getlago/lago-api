@@ -7249,6 +7249,7 @@ Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
   account_tree
+  catalog_wallets
   charge_filters_single_scan
   fixed_charge_usage_delta_migration
   incremental_charge_cache
