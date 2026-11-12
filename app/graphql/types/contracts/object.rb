@@ -31,6 +31,8 @@ module Types
       # Also exposed as the bare id, matching the subscription read side.
       field :billing_entity_id, ID, null: true
       field :consolidate_invoice, Boolean, null: false
+      field :currency, Types::CurrencyEnum, null: false,
+        description: "The currency fees bill in: the plan's when there is one, otherwise the customer's, falling back to the organization default"
       field :payment_method, Types::PaymentMethods::Object, null: true
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum, null: false
       field :purchase_order_number, String, null: true
@@ -68,6 +70,19 @@ module Types
 
       def applied_rate_cards
         dataloader.with(Sources::ContractAppliedRateCards).load(object.id)
+      end
+
+      # Mirrors Contract#currency's fallback, batched so a list of contracts doesn't query
+      # the plan, customer and organization one by one.
+      def currency
+        catalog_plan = dataloader.with(Sources::ActiveRecordAssociation, :catalog_plan).load(object)
+        return catalog_plan.currency if catalog_plan
+
+        customer = dataloader.with(Sources::ActiveRecordAssociation, :customer).load(object)
+        return customer.currency if customer.currency
+
+        organization = dataloader.with(Sources::ActiveRecordAssociation, :organization).load(object)
+        organization.default_currency
       end
 
       def applied_rate_cards_count

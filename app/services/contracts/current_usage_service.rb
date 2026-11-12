@@ -4,15 +4,18 @@ module Contracts
   # Prices, for each card effective at the timestamp, the billing window open at that instant,
   # through the code that invoices it.
   class CurrentUsageService < BaseService
-    Filters = BaseFilters[:rate_card_code, :product_code, :product_filter_code, :product_type]
+    Filters = BaseFilters[:rate_card_code, :product_code, :product_filter_code, :product_type,
+      :product_ids, :product_category_ids, :without_product_category, :product_filter_ids, :without_product_filter]
 
-    Result = BaseResult[:contract, :rate_card_usages, :amount_cents, :taxes_amount_cents, :total_amount_cents]
+    Result = BaseResult[:contract, :rate_card_usages, :amount_cents, :taxes_amount_cents, :total_amount_cents, :taxes_unavailable]
 
-    def initialize(contract:, timestamp: Time.current, apply_taxes: true, filters: {})
+    def initialize(contract:, timestamp: Time.current, apply_taxes: true, untaxed_on_provider_failure: false, filters: {}, search_term: nil)
       @contract = contract
       @timestamp = timestamp
       @apply_taxes = apply_taxes
+      @untaxed_on_provider_failure = untaxed_on_provider_failure
       @filters = Filters.new(**(filters || {}))
+      @search_term = search_term
       super
     end
 
@@ -36,41 +39,26 @@ module Contracts
           .sort_by { |usage| usage_order(usage) }
       end
 
-      fees = result.rate_card_usages.flat_map(&:fees)
-      if apply_taxes && customer_provider_taxation?
-        taxes_result = apply_provider_taxes(fees.select(&:taxable?))
-        unless taxes_result.success?
-          # The taxes failed upstream (a provider refusal, or an error of the integration relaying it), which the
-          # request cannot fix. Its code may be the provider's, the integration's or a Lago fallback, so it is not sent.
-          return result.third_party_failure!(third_party: tax_provider, error_code: nil, error_message: taxes_result.error.message)
-        end
-      elsif apply_taxes
-        fees.each { |fee| Fees::ApplyTaxesService.call!(fee:, customer:) }
-      end
+      result.taxes_unavailable = false
+      apply_taxes_to(result.rate_card_usages.flat_map(&:fees)) if apply_taxes
+      return result if result.failure?
 
       result.amount_cents = result.rate_card_usages.sum(&:amount_cents)
       result.taxes_amount_cents = result.rate_card_usages.sum(&:taxes_amount_cents)
       result.total_amount_cents = result.amount_cents + result.taxes_amount_cents
       result
-    rescue BaseService::ThrottlingError => error
-      result.too_many_provider_requests_failure!(provider_name: error.provider_name, error:)
-    rescue Integrations::Aggregator::RequestLimitError => error
-      result.too_many_provider_requests_failure!(provider_name: tax_provider, error:)
-    # The tax jobs retry on these transient errors, which a request cannot wait for.
-    rescue *Integrations::Aggregator::BaseService.retryable_errors => error
-      result.third_party_failure!(third_party: tax_provider, error_code: nil, error_message: error.message)
     end
 
     private
 
-    attr_reader :contract, :timestamp, :apply_taxes, :filters
+    attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term
 
     delegate :customer, to: :contract
 
     # Filtered after the version selection, so that a superseded version never stands in for
     # the card that replaced it.
     def selected_cards
-      effective_cards.select { |card| matches_filters?(card) }
+      effective_cards.select { |card| matches_filters?(card) && matches_search?(card) }
     end
 
     def effective_cards
@@ -91,6 +79,10 @@ module Contracts
 
     def matches_filters?(card)
       rate_card = card.rate_card
+      return false if filters[:product_ids].present? && filters[:product_ids].exclude?(rate_card.product.id)
+      return false unless matches_category?(rate_card.product)
+      return false unless matches_product_filter?(rate_card)
+
       values = {
         rate_card_code: rate_card.code,
         product_code: rate_card.product.code,
@@ -99,6 +91,31 @@ module Contracts
       }
 
       values.all? { |name, value| filters[name].blank? || filters[name] == value }
+    end
+
+    # OR within the dimension (a category match or the standalone flag both admit), no constraint
+    # across the whole dimension when neither key is set - mirrors rate_card_list_filtering.rb.
+    def matches_category?(product)
+      return true if filters[:product_category_ids].blank? && filters[:without_product_category].blank?
+
+      (filters[:without_product_category].present? && product.product_category_id.nil?) ||
+        Array(filters[:product_category_ids]).include?(product.product_category_id)
+    end
+
+    def matches_product_filter?(rate_card)
+      return true if filters[:product_filter_ids].blank? && filters[:without_product_filter].blank?
+
+      (filters[:without_product_filter].present? && rate_card.product_filter_id.nil?) ||
+        Array(filters[:product_filter_ids]).include?(rate_card.product_filter_id)
+    end
+
+    def matches_search?(card)
+      return true if search_term.blank?
+
+      rate_card = card.rate_card
+      haystacks = [rate_card.name, rate_card.code, rate_card.product.name, (rate_card.product_filter || rate_card.product).invoice_name]
+
+      haystacks.any? { |value| value&.downcase&.include?(search_term.downcase) }
     end
 
     def rate_card_usage(card)
@@ -137,6 +154,35 @@ module Contracts
         ).fees
       else
         [BillingSegments::Fees::ComputeService.call!(billing_segment:).fee]
+      end
+    end
+
+    def apply_taxes_to(fees)
+      if customer_provider_taxation?
+        taxes_result = apply_provider_taxes(fees.select(&:taxable?))
+        return if taxes_result.success?
+
+        # The taxes failed upstream (a provider refusal, or an error of the integration relaying it), which the
+        # request cannot fix. Its code may be the provider's, the integration's or a Lago fallback, so it is not sent.
+        tax_provider_failure { result.third_party_failure!(third_party: tax_provider, error_code: nil, error_message: taxes_result.error.message) }
+      else
+        fees.each { |fee| Fees::ApplyTaxesService.call!(fee:, customer:) }
+      end
+    rescue BaseService::ThrottlingError => error
+      tax_provider_failure { result.too_many_provider_requests_failure!(provider_name: error.provider_name, error:) }
+    rescue Integrations::Aggregator::RequestLimitError => error
+      tax_provider_failure { result.too_many_provider_requests_failure!(provider_name: tax_provider, error:) }
+    # The tax jobs retry on these transient errors, which a request cannot wait for.
+    rescue *Integrations::Aggregator::BaseService.retryable_errors => error
+      tax_provider_failure { result.third_party_failure!(third_party: tax_provider, error_code: nil, error_message: error.message) }
+    end
+
+    # The provider fails before any fee is taxed, so the fees are left untaxed as they are.
+    def tax_provider_failure
+      if untaxed_on_provider_failure
+        result.taxes_unavailable = true
+      else
+        yield
       end
     end
 
