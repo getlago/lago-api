@@ -2,34 +2,30 @@
 
 module BillingOperations
   class Schedule < Billing::RateCards::Schedule
-    PlannedOperation = Data.define(:cycle_started_at, :billing_at, :billable_segments)
+    PlannedOperation = Data.define(:cycle_started_at, :billing_at)
 
-    # Keep separately due slices as separate obligations, in chronological order.
-    def planned_operations_for_cycle(cycle, action_type:)
-      segments = billable_segments_for_cycle(cycle)
-      groups = if action_type == "regroup_paid_fees"
-        segments.group_by(&:ended_at)
-      else
-        segments.group_by(&:billing_at)
-      end
+    # The first date due after an instant: in this cycle, or else the first one of the next
+    # billable cycle. A price change inside a cycle makes its slices due on separate dates.
+    def next_planned_operation(cycle, action_type:, after: nil)
+      while cycle
+        billing_at = billing_dates_for_cycle(cycle, action_type:).find { after.nil? || it > after }
+        return PlannedOperation.new(cycle_started_at: cycle.started_at, billing_at:) if billing_at
 
-      groups.sort_by(&:first).map do |billing_at, billable_segments|
-        PlannedOperation.new(cycle_started_at: cycle.started_at, billing_at:, billable_segments:)
+        cycle = next_billable_cycle(after_cycle_started_at: cycle.started_at)
+        after = nil
       end
     end
 
-    # A cycle can contain multiple independently due slices before the next cycle begins.
-    def next_planned_operation(planned_operation:, action_type:)
-      cycle = cycle_at(planned_operation.cycle_started_at)
-      same_cycle_successor = planned_operations_for_cycle(cycle, action_type:).find do |candidate|
-        candidate.billing_at > planned_operation.billing_at
-      end
+    def billing_dates_for_cycle(cycle, action_type:)
+      billable_segments_for_cycle(cycle).map { due_at(it, action_type:) }.uniq.sort
+    end
 
-      if same_cycle_successor
-        same_cycle_successor
+    # Paid fees are regrouped once their service ends, whatever the billing timing.
+    def due_at(billable_segment, action_type:)
+      if action_type == "regroup_paid_fees"
+        billable_segment.ended_at
       else
-        cycle = next_billable_cycle(after_cycle_started_at: planned_operation.cycle_started_at)
-        planned_operations_for_cycle(cycle, action_type:).first if cycle
+        billable_segment.billing_at
       end
     end
   end

@@ -19,9 +19,11 @@ module BillingOperations
       return result if operation.action_type == "regroup_paid_fees" && operation.causation_type == "late_payment"
 
       contract_rate_card = operation.contract_rate_card
-      return result unless resolution.planned_operation
+      return result unless resolution.cycle
 
-      next_planned_operation = resolution.next_planned_operation
+      next_planned_operation = resolution.schedule.next_planned_operation(
+        resolution.cycle, action_type: action, after: operation.billing_at
+      )
       return result unless next_planned_operation
 
       result.operation = BillingOperations::CreateService.call!(

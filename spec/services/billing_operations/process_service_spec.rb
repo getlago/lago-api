@@ -407,7 +407,7 @@ RSpec.describe BillingOperations::ProcessService do
         ).schedule
       end
       let(:first_planned_operation) do
-        schedule.planned_operations_for_cycle(schedule.cycle_at(timestamp), action_type: "close_fixed_arrears").first
+        first_planned_operation_for(schedule, timestamp, "close_fixed_arrears")
       end
 
       let(:operation) do
@@ -556,7 +556,7 @@ RSpec.describe BillingOperations::ProcessService do
         ).schedule
       end
       let(:planned_operation) do
-        schedule.planned_operations_for_cycle(schedule.cycle_at(timestamp), action_type: "close_metered_arrears").first
+        first_planned_operation_for(schedule, timestamp, "close_metered_arrears")
       end
       let(:operation) do
         create(
@@ -779,7 +779,22 @@ RSpec.describe BillingOperations::ProcessService do
 
   def planned_operation_for(operation, schedule)
     cycle = schedule.cycle_at(operation.target_cycle_started_at)
-    schedule.planned_operations_for_cycle(cycle, action_type: operation.action_type)
-      .find { it.billing_at == operation.billing_at }
+    billable_segments = schedule.billable_segments_for_cycle(cycle).select do
+      schedule.due_at(it, action_type: operation.action_type) == operation.billing_at
+    end
+
+    if billable_segments.any?
+      Struct.new(:cycle_started_at, :billing_at, :billable_segments)
+        .new(cycle.started_at, operation.billing_at, billable_segments)
+    end
+  end
+
+  def first_planned_operation_for(schedule, timestamp, action_type)
+    cycle = schedule.cycle_at(timestamp)
+
+    BillingOperations::Schedule::PlannedOperation.new(
+      cycle_started_at: cycle.started_at,
+      billing_at: schedule.billing_dates_for_cycle(cycle, action_type:).first
+    )
   end
 end

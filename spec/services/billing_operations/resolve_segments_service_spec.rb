@@ -46,11 +46,10 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
 
         before { later_rate }
 
-        it "returns the matching advance slice and its same-cycle successor" do
+        it "returns the advance slice due at the operation date" do
           result = described_class.call!(operation:)
 
-          expect(result.planned_operation).to have_attributes(billing_at: Time.utc(2026, 1, 1))
-          expect(result.next_planned_operation).to have_attributes(billing_at: Time.utc(2026, 1, 15))
+          expect(result.cycle).to have_attributes(started_at: Time.utc(2026, 1, 1), ended_at: Time.utc(2026, 2, 1))
           expect(result.segments.map { [it.started_at, it.ended_at, it.proration_ratio] }).to eq(
             [[Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)), BigDecimal(14).div(31, 10)]]
             # 14 days of the 31-day January billing cycle.
@@ -79,14 +78,59 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
             billing_interval_count: 1, billing_interval_unit: "month")
         end
 
-        it "matches the arrears date and returns the next same-cycle operation" do
-          result = described_class.call!(operation:)
-
-          expect(result.planned_operation).to have_attributes(billing_at: Time.utc(2026, 1, 15))
-          expect(result.next_planned_operation).to have_attributes(billing_at: Time.utc(2026, 2, 1))
-          expect(result.segments.map { [it.started_at, it.billing_at] }).to eq(
+        it "returns only the slice due at the price change" do
+          expect(segments.map { [it.started_at, it.billing_at] }).to eq(
             [[Time.utc(2026, 1, 1), operation.billing_at]]
           )
+        end
+
+        context "when the cycle close follows an operation at the price change" do
+          let(:close) do
+            create(:billing_operation, organization:, customer:, contract_rate_card:,
+              action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 2, 1),
+              target_cycle_started_at: Time.utc(2026, 1, 1))
+          end
+
+          before { operation }
+
+          it "returns only the slices after the previous operation" do
+            expect(described_class.call!(operation: close).segments.map(&:started_at)).to eq([Time.utc(2026, 1, 15)])
+          end
+
+          context "when the previous operation was cancelled" do
+            before do
+              operation.update!(cancelled_at: Time.utc(2026, 1, 10), cancelled_causation_type: :contract_termination)
+            end
+
+            it "returns every slice of the cycle" do
+              expect(described_class.call!(operation: close).segments.map(&:started_at))
+                .to eq([Time.utc(2026, 1, 1), Time.utc(2026, 1, 15)])
+            end
+          end
+
+          context "when the previous operation belongs to another cycle" do
+            before { operation.update!(target_cycle_started_at: Time.utc(2025, 12, 1)) }
+
+            it "returns every slice of the cycle" do
+              expect(described_class.call!(operation: close).segments.map(&:started_at))
+                .to eq([Time.utc(2026, 1, 1), Time.utc(2026, 1, 15)])
+            end
+          end
+        end
+
+        context "when the price change arrives after the cycle close was created" do
+          let(:operation) do
+            create(:billing_operation, organization:, customer:, contract_rate_card:,
+              action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 2, 1),
+              target_cycle_started_at: Time.utc(2026, 1, 1))
+          end
+
+          it "returns both slices instead of dropping the earlier one" do
+            expect(segments.map { [it.started_at, it.ended_at] }).to eq([
+              [Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 15))],
+              [Time.utc(2026, 1, 15), BillingSegment.inclusive_end(Time.utc(2026, 2, 1))]
+            ])
+          end
         end
       end
 
@@ -97,7 +141,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           )
         end
         let(:schedule) do
-          instance_double(BillingOperations::Schedule, cycle_at: short_cycle, planned_operations_for_cycle: [])
+          instance_double(BillingOperations::Schedule, cycle_at: short_cycle, billable_segments_for_cycle: [])
         end
 
         before do
@@ -158,7 +202,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns no match at the contract end" do
         result = described_class.call!(operation:)
 
-        expect(result).to have_attributes(segments: be_empty, planned_operation: be_nil, next_planned_operation: be_nil)
+        expect(result).to have_attributes(segments: be_empty, cycle: be_nil)
       end
 
       context "when the target cycle starts after contract end" do
@@ -167,13 +211,12 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         it "returns no match after the contract end" do
           result = described_class.call!(operation:)
 
-          expect(result).to have_attributes(segments: be_empty, planned_operation: be_nil,
-            next_planned_operation: be_nil)
+          expect(result).to have_attributes(segments: be_empty, cycle: be_nil)
         end
       end
     end
 
-    context "when the stored billing date is no longer scheduled" do
+    context "when the stored billing date is later than the scheduled one" do
       let(:operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card:,
           action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 2),
@@ -185,15 +228,39 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           billing_interval_count: 1, billing_interval_unit: "month")
       end
 
-      it "returns no segments instead of selecting a neighboring operation" do
+      it "returns the slices of its cycle that fell due before it" do
         result = described_class.call!(operation:)
 
-        expect(result).to have_attributes(segments: be_empty, planned_operation: be_nil, next_planned_operation: be_nil)
+        expect(result.segments.map { [it.started_at, it.billing_at] }).to eq([[Time.utc(2026, 1, 1), operation.billing_at]])
+      end
+    end
+
+    context "when the stored billing date is earlier than the scheduled one" do
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:,
+          action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 1, 20),
+          target_cycle_started_at: Time.utc(2026, 1, 1))
+      end
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1),
+          billing_interval_count: 1, billing_interval_unit: "month")
+      end
+
+      it "returns no segments while keeping the cycle" do
+        result = described_class.call!(operation:)
+
+        expect(result).to have_attributes(segments: be_empty, cycle: be_present)
       end
     end
 
     context "when resolving a termination operation" do
       let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+      let(:contract) do
+        create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1),
+          status: :terminated, terminated_at: Time.utc(2026, 1, 15))
+      end
       let(:operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card:,
           action_type: "close_fixed_arrears", causation_type: "contract_termination",
@@ -205,12 +272,13 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           billing_interval_count: 1, billing_interval_unit: "month")
       end
 
-      it "selects the last planned group without a successor and adapts segments to the stored date" do
+      it "returns the cycle clipped at the termination" do
         result = described_class.call!(operation:)
 
-        expect(result.planned_operation).to have_attributes(billing_at: Time.utc(2026, 2, 1))
-        expect(result.next_planned_operation).to be_nil
-        expect(result.segments.map(&:billing_at)).to eq([operation.billing_at])
+        expect(result.cycle).to have_attributes(started_at: Time.utc(2026, 1, 1), ended_at: Time.utc(2026, 1, 15))
+        expect(result.segments.map { [it.started_at, it.ended_at, it.billing_at] }).to eq(
+          [[Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)), operation.billing_at]]
+        )
       end
     end
 
@@ -229,8 +297,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "builds the schedule and returns an empty successful resolution" do
         result = described_class.call!(operation:)
 
-        expect(result).to have_attributes(segments: be_empty, schedule: be_present,
-          planned_operation: be_nil, next_planned_operation: be_nil)
+        expect(result).to have_attributes(segments: be_empty, schedule: be_present, cycle: be_nil)
         expect(BillingOperations::BuildScheduleService).to have_received(:call!).once
       end
     end
@@ -250,8 +317,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns a successful empty resolution" do
         result = described_class.call!(operation:)
 
-        expect(result).to have_attributes(segments: be_empty, schedule:, planned_operation: be_nil,
-          next_planned_operation: be_nil)
+        expect(result).to have_attributes(segments: be_empty, schedule:, cycle: be_nil)
       end
     end
 
@@ -264,6 +330,21 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
 
       it "returns the validation failure" do
         expect(described_class.call(operation:)).to be_failure
+      end
+
+      context "when it reconciles fixed coverage after a rate change" do
+        let(:operation) do
+          create(:billing_operation, organization:, customer:, contract_rate_card:,
+            action_type: "reconcile_fixed_coverage", causation_type: "rate_change",
+            billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1))
+        end
+
+        it "returns the validation failure" do
+          result = described_class.call(operation:)
+
+          expect(result).to be_failure
+          expect(result.error.messages).to eq({operation: ["fixed_coverage_reconciliation_unsupported"]})
+        end
       end
     end
 

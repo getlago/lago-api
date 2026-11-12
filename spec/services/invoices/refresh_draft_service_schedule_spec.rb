@@ -128,14 +128,34 @@ RSpec.describe Invoices::RefreshDraftService do
         )
       end
 
-      it "rebuilds only the linked later slice and preserves its billing timestamp" do
+      it "rebuilds every slice of the cycle that no earlier operation owns" do
         expect(result).to be_success
 
         expect(fee_coverage).to eq([
+          [Time.utc(2026, 1, 1).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)).iso8601(6), 3_000],
           [Time.utc(2026, 1, 15).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6), 4_000]
         ])
         expect(invoice.fees.pluck(Arel.sql("properties ->> 'timestamp'")).map { Time.iso8601(it) }.uniq)
           .to eq([Time.utc(2026, 2, 1)])
+      end
+
+      context "when an earlier operation of the cycle owns the first slice" do
+        before do
+          create(:billing_operation, organization:, customer:, contract_rate_card:,
+            action_type: "close_fixed_arrears", causation_type: :periodic_continuation,
+            billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1),
+            processed_at: Time.utc(2026, 1, 15))
+        end
+
+        it "rebuilds only the linked later slice and preserves its billing timestamp" do
+          expect(result).to be_success
+
+          expect(fee_coverage).to eq([
+            [Time.utc(2026, 1, 15).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6), 4_000]
+          ])
+          expect(invoice.fees.pluck(Arel.sql("properties ->> 'timestamp'")).map { Time.iso8601(it) }.uniq)
+            .to eq([Time.utc(2026, 2, 1)])
+        end
       end
     end
 

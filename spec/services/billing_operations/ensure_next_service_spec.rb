@@ -57,7 +57,7 @@ RSpec.describe BillingOperations::EnsureNextService do
     it "uses a prepared resolution without rebuilding it" do
       expect(result).to be_success
       expect(BillingOperations::BuildScheduleService).to have_received(:call!).once
-      expect(resolution).to have_attributes(schedule: be_present, planned_operation: be_present)
+      expect(resolution).to have_attributes(schedule: be_present, cycle: be_present)
     end
   end
 

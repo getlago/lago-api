@@ -24,13 +24,11 @@ RSpec.describe BillingOperations::BuildScheduleService do
 
   it "builds the operation schedule using the same card calendar and pricing" do
     cycle = result.schedule.cycle_at(Time.utc(2026, 2, 1))
-    planned_operations = result.schedule.planned_operations_for_cycle(cycle, action_type: "renew_fixed_advance")
+    billable_segments = result.schedule.billable_segments_for_cycle(cycle)
 
     expect(result).to be_success
     expect(result.schedule).to be_a(BillingOperations::Schedule)
-    expect(planned_operations.map(&:billing_at)).to eq([Time.utc(2026, 2, 1), Time.utc(2026, 2, 15)])
-    expect(planned_operations.map { it.billable_segments.map(&:started_at) }).to eq([
-      [Time.utc(2026, 2, 1)], [Time.utc(2026, 2, 15)]
-    ])
+    expect(billable_segments.map(&:billing_at)).to eq([Time.utc(2026, 2, 1), Time.utc(2026, 2, 15)])
+    expect(billable_segments.map(&:started_at)).to eq([Time.utc(2026, 2, 1), Time.utc(2026, 2, 15)])
   end
 end

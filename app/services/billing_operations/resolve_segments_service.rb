@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 module BillingOperations
+  # Resolves the slices an operation bills: those of its target cycle that fall due after the
+  # previous operation of that cycle and no later than its own billing date.
   class ResolveSegmentsService < BaseService
-    Result = BaseResult[:segments, :schedule, :planned_operation, :next_planned_operation]
+    Result = BaseResult[:segments, :schedule, :cycle]
 
     def initialize(operation:)
       @operation = operation
@@ -12,13 +14,12 @@ module BillingOperations
     def call
       return result.single_validation_failure!(field: :operation, error_code: "fixed_advance_reconciliation_unsupported") if
         operation.action_type == "reconcile_advance_coverage"
+      return result.single_validation_failure!(field: :operation, error_code: "fixed_coverage_reconciliation_unsupported") if
+        operation.action_type == "reconcile_fixed_coverage"
 
-      result.schedule = BuildScheduleService.call!(
-        contract_rate_card: operation.contract_rate_card
-      ).schedule
-      result.planned_operation = find_planned_operation(result.schedule)
-      result.next_planned_operation = next_planned_operation(result.schedule, result.planned_operation)
-      result.segments = result.planned_operation&.billable_segments&.map { build_billing_segment(it) } || []
+      result.schedule = BuildScheduleService.call!(contract_rate_card: operation.contract_rate_card).schedule
+      result.cycle = result.schedule.cycle_at(operation.target_cycle_started_at) if operation.action_type
+      result.segments = owned_billable_segments.map { build_billing_segment(it) }
       result
     rescue BaseService::FailedResult => error
       result.fail_with_error!(error)
@@ -28,23 +29,30 @@ module BillingOperations
 
     attr_reader :operation
 
-    def find_planned_operation(schedule)
-      return unless operation.action_type
+    def owned_billable_segments
+      return [] unless result.cycle
 
-      cycle = schedule.cycle_at(operation.target_cycle_started_at)
-      return unless cycle
+      after = previous_billing_at
 
-      planned_operations = schedule.planned_operations_for_cycle(cycle, action_type: operation.action_type)
-      return planned_operations.last if operation.causation_type == "contract_termination"
+      result.schedule.billable_segments_for_cycle(result.cycle).select do |billable_segment|
+        due_at = result.schedule.due_at(billable_segment, action_type: operation.action_type)
 
-      planned_operations.find { it.billing_at == operation.billing_at }
+        (after.nil? || due_at > after) && due_at <= operation.billing_at
+      end
     end
 
-    def next_planned_operation(schedule, planned_operation)
-      return unless planned_operation
-      return if operation.causation_type == "contract_termination"
-
-      schedule.next_planned_operation(planned_operation:, action_type: operation.action_type)
+    # An earlier operation of the cycle keeps its slices even when it failed, so a retry
+    # cannot bill them twice.
+    def previous_billing_at
+      operation.contract_rate_card.billing_operations
+        .where(
+          organization_id: operation.organization_id,
+          cancelled_at: nil,
+          action_type: operation.action_type,
+          target_cycle_started_at: operation.target_cycle_started_at,
+          billing_at: ...operation.billing_at
+        )
+        .maximum(:billing_at)
     end
 
     def build_billing_segment(billable_segment)

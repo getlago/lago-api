@@ -92,7 +92,10 @@ module BillingOperations
       cycle = schedule.cycle_at(BillingSegment.inclusive_end(effective_contract_end))
       return unless cycle
 
-      schedule.planned_operations_for_cycle(cycle, action_type:).last
+      billing_at = schedule.billing_dates_for_cycle(cycle, action_type:).last
+      return unless billing_at
+
+      Schedule::PlannedOperation.new(cycle_started_at: cycle.started_at, billing_at:)
     end
 
     def final_operation_already_processed?(card, planned_operation, action_type)

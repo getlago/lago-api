@@ -39,7 +39,7 @@ module BillingOperations
       cycle = schedule.next_billable_cycle(after_cycle_started_at: contract_rate_card.effective_date.in_time_zone(timezone).beginning_of_day - 1.second)
       return unless cycle
 
-      planned_operation = schedule.planned_operations_for_cycle(cycle, action_type: action).first
+      planned_operation = schedule.next_planned_operation(cycle, action_type: action)
 
       BillingOperations::CreateService.call!(contract_rate_card:, action_type: action, causation_type:, planned_operation:).operation
     end

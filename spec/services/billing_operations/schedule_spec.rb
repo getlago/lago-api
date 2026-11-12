@@ -50,26 +50,18 @@ RSpec.describe BillingOperations::Schedule do
     end
   end
 
-  describe "#planned_operations_for_cycle" do
-    subject(:planned_operations) do
-      schedule.planned_operations_for_cycle(schedule.cycle_at(starts_at), action_type:)
-    end
-
+  describe "billing dates of a cycle split by a price change" do
+    let(:cycle) { schedule.cycle_at(starts_at) }
     let(:starts_at) { Time.utc(2026, 2, 1) }
-    let(:action_type) { "renew_fixed_advance" }
     let(:anchor_date) { Date.new(2026, 2, 1) }
     let(:rates) { [card_rate(Time.utc(2026, 1, 1)), card_rate(Time.utc(2026, 2, 15))] }
 
     context "when billing in advance" do
       let(:timing) { :advance }
+      let(:action_type) { "renew_fixed_advance" }
 
-      it "keeps each separately due slice in its own operation" do
-        expect(planned_operations.map(&:billing_at)).to eq([Time.utc(2026, 2, 1), Time.utc(2026, 2, 15)])
-        expect(planned_operations.map { it.billable_segments.map(&:started_at) }).to eq([
-          [Time.utc(2026, 2, 1)], [Time.utc(2026, 2, 15)]
-        ])
-        expect(planned_operations.map(&:cycle_started_at).uniq).to eq([Time.utc(2026, 2, 1)])
-        expect(planned_operations.map { it.billable_segments.sole.proration_ratio }).to eq([14.fdiv(28), 14.fdiv(28)])
+      it "bills at the cycle start and releases the later slice at the price change" do
+        expect(schedule.billing_dates_for_cycle(cycle, action_type:)).to eq([Time.utc(2026, 2, 1), Time.utc(2026, 2, 15)])
       end
     end
 
@@ -77,9 +69,8 @@ RSpec.describe BillingOperations::Schedule do
       let(:timing) { :arrears }
       let(:action_type) { "close_fixed_arrears" }
 
-      it "releases each slice at its own end" do
-        expect(planned_operations.map(&:billing_at)).to eq([Time.utc(2026, 2, 15), Time.utc(2026, 3, 1)])
-        expect(planned_operations.map { it.billable_segments.sole.started_at }).to eq([Time.utc(2026, 2, 1), Time.utc(2026, 2, 15)])
+      it "closes at the cycle end and releases the earlier slice at the price change" do
+        expect(schedule.billing_dates_for_cycle(cycle, action_type:)).to eq([Time.utc(2026, 2, 15), Time.utc(2026, 3, 1)])
       end
     end
 
@@ -87,8 +78,50 @@ RSpec.describe BillingOperations::Schedule do
       let(:timing) { :advance }
       let(:action_type) { "regroup_paid_fees" }
 
-      it "groups recovered fees by their service end" do
-        expect(planned_operations.map(&:billing_at)).to eq([Time.utc(2026, 2, 15), Time.utc(2026, 3, 1)])
+      it "follows each slice's service end rather than its advance billing date" do
+        expect(schedule.billable_segments_for_cycle(cycle).map { schedule.due_at(it, action_type:) })
+          .to eq([Time.utc(2026, 2, 15), Time.utc(2026, 3, 1)])
+      end
+    end
+
+    context "when the cycle has a single price" do
+      let(:rates) { [card_rate(Time.utc(2026, 1, 1))] }
+      let(:action_type) { "close_fixed_arrears" }
+
+      it "has one billing date" do
+        expect(schedule.billing_dates_for_cycle(cycle, action_type:)).to eq([Time.utc(2026, 3, 1)])
+      end
+    end
+  end
+
+  describe "#next_planned_operation" do
+    let(:cycle) { schedule.cycle_at(starts_at) }
+    let(:starts_at) { Time.utc(2026, 2, 1) }
+    let(:anchor_date) { Date.new(2026, 2, 1) }
+    let(:rates) { [card_rate(Time.utc(2026, 1, 1)), card_rate(Time.utc(2026, 2, 15))] }
+    let(:timing) { :arrears }
+    let(:action_type) { "close_fixed_arrears" }
+
+    it "starts with the first billing date of the cycle" do
+      expect(schedule.next_planned_operation(cycle, action_type:))
+        .to eq(described_class::PlannedOperation.new(cycle_started_at: starts_at, billing_at: Time.utc(2026, 2, 15)))
+    end
+
+    it "moves to the next billing date of the same cycle" do
+      expect(schedule.next_planned_operation(cycle, action_type:, after: Time.utc(2026, 2, 15)))
+        .to eq(described_class::PlannedOperation.new(cycle_started_at: starts_at, billing_at: Time.utc(2026, 3, 1)))
+    end
+
+    it "moves to the next cycle after the last billing date" do
+      expect(schedule.next_planned_operation(cycle, action_type:, after: Time.utc(2026, 3, 1)))
+        .to eq(described_class::PlannedOperation.new(cycle_started_at: Time.utc(2026, 3, 1), billing_at: Time.utc(2026, 4, 1)))
+    end
+
+    context "when the contract ends with the cycle" do
+      let(:ends_at) { Time.utc(2026, 3, 1) }
+
+      it "plans nothing" do
+        expect(schedule.next_planned_operation(cycle, action_type:, after: Time.utc(2026, 3, 1))).to be_nil
       end
     end
   end

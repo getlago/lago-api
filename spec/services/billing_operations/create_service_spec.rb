@@ -22,8 +22,7 @@ RSpec.describe BillingOperations::CreateService do
 
   def build_planned_operation(cycle_started_at:, billing_at:)
     BillingOperations::Schedule::PlannedOperation.new(
-      cycle_started_at:, billing_at:,
-      billable_segments: []
+      cycle_started_at:, billing_at:
     )
   end
 
