@@ -126,9 +126,8 @@ module RecurringAggregationSnapshots
       return false unless RecurringAggregationSnapshot.eligible?(metered_item:, billing_context:)
 
       RecurringAggregationSnapshots::FetchService.call!(
-        subscription: billing_context.subscription,
-        charge: metered_item.charge,
-        charge_filter: metered_item.charge_filter,
+        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription: billing_context.subscription, charge: metered_item.charge),
+        filter: metered_item.charge_filter,
         grouped_by_keys: metered_item.pricing_group_keys,
         from_datetime: metered_item.boundaries.charges_from_datetime
       ).period.present?

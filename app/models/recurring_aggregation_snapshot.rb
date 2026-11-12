@@ -3,37 +3,14 @@
 class RecurringAggregationSnapshot < ApplicationRecord
   include RecurringAggregationSnapshotRecord
 
+  BUCKET_COLUMN = :charge_filter_id
+
   belongs_to :subscription
   belongs_to :charge, -> { with_discarded }
   belongs_to :charge_filter, -> { with_discarded }, optional: true
 
-  # Compared to a scalar subquery: the period index then serves to_datetime, which an IN subquery does not
-  scope :of_period, ->(to_datetime_query) { where(arel_table[:to_datetime].eq(Arel::Nodes::Grouping.new(to_datetime_query.arel))) }
-  # The default bucket keeps a row for every closed period: its latest row before `before` marks the period.
-  # One statement reads the marker and the buckets, so a run rewriting the period cannot land in between.
-  scope :latest_period, lambda { |bucket_ids, before: nil|
-    markers = where(charge_filter_id: nil)
-    markers = markers.where(to_datetime: ...before) if before
-    where(charge_filter_id: bucket_ids).of_period(markers.order(to_datetime: :desc).limit(1).select(:to_datetime))
-  }
-  # Chained after latest_period: the snapshots of one group, plus the first snapshot of each bucket for the
-  # marker and the grouping keys check. Each part reads one bucket, so a whole group is one unique index lookup.
-  # Stored groups hold a blank value as null, as the stores group it with a missing one. A key left out, such
-  # as the target wallet of an event targeting none, matches every value.
-  scope :of_group, lambda { |grouped_by_values, grouped_by_keys:, bucket_ids:|
-    next if grouped_by_values.blank?
-
-    group = if grouped_by_values.keys.sort == grouped_by_keys.map(&:to_s).sort
-      where(grouped_by: grouped_by_values)
-    else
-      where("grouped_by @> ?", grouped_by_values.to_json)
-    end
-    parts = bucket_ids.flat_map do |bucket_id|
-      [group.where(charge_filter_id: bucket_id).select(:id), where(charge_filter_id: bucket_id).select(:id).order(:grouped_by).limit(1)]
-    end
-
-    unscoped.where(arel_table[:id].in(parts.map { Arel::Nodes::Grouping.new(it.arel) }.reduce { Arel::Nodes::UnionAll.new(_1, _2) }))
-  }
+  # The default bucket keeps a row for every closed period, which marks the period for all buckets
+  scope :period_markers, -> { where(charge_filter_id: nil) }
 
   # Snapshots are keyed on a subscription, which billing segments do not bill
   def self.eligible?(metered_item:, billing_context:)
@@ -53,9 +30,8 @@ class RecurringAggregationSnapshot < ApplicationRecord
   # so both select the same snapshots. grouped_by_keys follows the aggregation's own grouping.
   def self.fetch_arguments(metered_item:, billing_context:, grouped_by_keys: metered_item.pricing_group_keys)
     {
-      subscription: billing_context.subscription,
-      charge: metered_item.charge,
-      charge_filter: metered_item.charge_filter,
+      key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription: billing_context.subscription, charge: metered_item.charge),
+      filter: metered_item.charge_filter,
       grouped_by_keys:,
       from_datetime: metered_item.boundaries.charges_from_datetime
     }

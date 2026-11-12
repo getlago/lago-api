@@ -3,17 +3,18 @@
 require "rails_helper"
 
 RSpec.describe RecurringAggregationSnapshots::PersistService do
-  subject(:result) { described_class.call(subscription:, charge:, to_datetime:, watermark:, buckets:) }
+  subject(:result) { described_class.call(key:, to_datetime:, watermark:, buckets:) }
 
   let(:organization) { create(:organization) }
   let(:charge) { create(:standard_charge, organization:) }
   let(:subscription) { create(:subscription, organization:, plan: charge.plan) }
+  let(:key) { RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:) }
   let(:charge_filter) { nil }
   let(:to_datetime) { Time.zone.parse("2026-09-30T23:59:59") }
   let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
   let(:presentation_breakdowns) { [{groups: {"region" => "eu"}, value: BigDecimal(12)}] }
   let(:values) { [{grouped_by: {}, units: 12, events_count: 4, presentation_breakdowns:}] }
-  let(:buckets) { [{charge_filter:, values:}] }
+  let(:buckets) { [{filter: charge_filter, values:}] }
 
   let(:snapshots) { RecurringAggregationSnapshot.where(subscription:, charge:) }
 
@@ -32,6 +33,67 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
         events_count: 4,
         presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "12.0"}]
       )
+    end
+
+    context "with a contract key" do
+      let(:contract) { create(:contract, organization:, customer: create(:customer, organization:)) }
+      let(:product) { create(:product, organization:) }
+      let(:product_filter) { create(:product_filter, organization:, product:) }
+      let(:key) { RecurringAggregationSnapshots::ContractKey.new(contract:, product:, product_filter:) }
+      let(:buckets) { [{filter: product_filter, values:}] }
+      let(:contract_snapshots) { ContractRecurringAggregationSnapshot.where(contract:) }
+
+      before do
+        [1, 2, 3].each do |months|
+          create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, product_filter:,
+            to_datetime: to_datetime - months.months, units: months)
+        end
+        create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, product_filter: nil,
+          to_datetime: to_datetime - 3.months, units: 7)
+      end
+
+      it "persists the snapshot in the product filter's bucket and keeps 3 periods of it" do
+        expect(result).to be_success
+
+        expect(snapshots).to be_empty
+        expect(contract_snapshots.pluck(:product_filter_id, :to_datetime, :units)).to match_array(
+          [
+            [product_filter.id, to_datetime, 12],
+            [product_filter.id, to_datetime - 1.month, 1],
+            [product_filter.id, to_datetime - 2.months, 2],
+            [nil, to_datetime - 3.months, 7]
+          ]
+        )
+        expect(contract_snapshots.find_by(to_datetime:)).to have_attributes(
+          organization_id: organization.id, product_id: product.id, billable_metric_id: product.billable_metric_id, watermark:, events_count: 4
+        )
+      end
+
+      context "when another filter of the product holds a later run of the period" do
+        before do
+          create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:,
+            product_filter: create(:product_filter, organization:, product:), to_datetime:, watermark: watermark + 1.minute)
+        end
+
+        it "persists the snapshot, as the run of another key does not cover it" do
+          result
+
+          expect(contract_snapshots.where(product_filter:, to_datetime:).pluck(:units)).to eq([12])
+        end
+      end
+
+      context "when the key's bucket holds a later run of the period" do
+        before do
+          create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, product_filter:,
+            to_datetime:, watermark: watermark + 1.minute, units: 5)
+        end
+
+        it "keeps the later run" do
+          result
+
+          expect(contract_snapshots.where(product_filter:, to_datetime:).pluck(:units)).to eq([5])
+        end
+      end
     end
 
     context "with groups" do
@@ -73,8 +135,8 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
       let(:charge_filter) { create(:charge_filter, charge:) }
       let(:buckets) do
         [
-          {charge_filter:, values: [{grouped_by: {}, units: 3, events_count: 2}]},
-          {charge_filter: build(:charge_filter, charge:), values: [{grouped_by: {}, units: 0, events_count: 0}]}
+          {filter: charge_filter, values: [{grouped_by: {}, units: 3, events_count: 2}]},
+          {filter: build(:charge_filter, charge:), values: [{grouped_by: {}, units: 0, events_count: 0}]}
         ]
       end
 
@@ -197,7 +259,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
 
       result
 
-      expect(RecurringAggregationSnapshots::LockService).to have_received(:call!).with(subscription:, charge:, to_datetime:)
+      expect(RecurringAggregationSnapshots::LockService).to have_received(:call!).with(key:, to_datetime:)
     end
 
     context "when a snapshot exists for another period" do

@@ -236,7 +236,8 @@ module RealtimeUsage
     # One per charge, as the marker is the same for all its charge filters.
     def charge_period(charge)
       @charge_periods[charge.id] ||= RecurringAggregationSnapshots::ChargePeriod.new(
-        subscription:, charge:, from_datetime: boundaries.charges_from_datetime
+        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:),
+        from_datetime: boundaries.charges_from_datetime
       )
     end
 
