@@ -433,11 +433,11 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         context "when an event of the snapshot period was ingested after it" do
           let(:late_event_ingested_at) { watermark(periods.first) + 1.minute }
 
-          it "adds the events the snapshot did not count instead, through the charge cache" do
+          it "adds the events the snapshot did not count instead, still bypassing the charge cache" do
             result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
 
             expect(result.aggregation).to eq(1000 + 7 + 20)
-            expect(aggregator(periods.second, initial_value:, initial_period: closed(periods.first)).precomputed?).to be(false)
+            expect(aggregator(periods.second, initial_value:, initial_period: closed(periods.first)).precomputed?).to be(true)
           end
 
           context "when the store it wraps answers the sum incrementally" do
@@ -452,11 +452,11 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         end
 
         context "without a snapshot period" do
-          it "sums every event of the subscription rather than the window alone" do
+          it "sums every event of the subscription rather than the window alone, still bypassing the charge cache" do
             result = aggregate(periods.second, initial_value: nil, options:)
 
             expect(result.aggregation).to eq(3 + 10 + 7 + 20)
-            expect(aggregator(periods.second, initial_value: nil).precomputed?).to be(false)
+            expect(aggregator(periods.second, initial_value: nil).precomputed?).to be(true)
           end
         end
 
