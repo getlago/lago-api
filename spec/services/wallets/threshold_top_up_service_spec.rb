@@ -60,6 +60,17 @@ RSpec.describe Wallets::ThresholdTopUpService do
         )
     end
 
+    context "when an unsettled expiration invoice still has to spend the expired wallet" do
+      before do
+        wallet.update!(expiration_at: 1.hour.ago)
+        create(:applied_wallet_expiration, wallet:, invoice: create(:invoice, customer: wallet.customer, status: :pending, tax_status: :pending))
+      end
+
+      it "does not top up the wallet" do
+        expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+    end
+
     context "when rule requires successful payment" do
       let(:recurring_transaction_rule) do
         create(

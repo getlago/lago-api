@@ -5171,7 +5171,8 @@ CREATE TABLE public.wallets (
     purchase_order_number character varying,
     payment_term jsonb,
     x402_enabled boolean DEFAULT false NOT NULL,
-    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
+    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    invoice_usage_on_expiration boolean DEFAULT false NOT NULL
 );
 
 
@@ -16312,6 +16313,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261019185402'),
 ('20261019185401'),
 ('20261019185400'),
+('20261019174914'),
 ('20261019074555'),
 ('20261016163945'),
 ('20261016163943'),

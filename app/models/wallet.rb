@@ -109,6 +109,21 @@ class Wallet < ApplicationRecord
     billable_metrics.any?
   end
 
+  def expiration_invoicing_enabled?
+    License.premium? &&
+      invoice_usage_on_expiration? &&
+      organization.feature_flag_enabled?(:invoice_usage_on_wallet_expiration)
+  end
+
+  def expired?
+    expiration_at.present? && expiration_at <= Time.current
+  end
+
+  # Once its expiration is invoiced, an expired wallet only pays its expiration invoices until it is terminated.
+  def reserved_for_expiration_invoice?
+    expired? && AppliedWalletExpiration.exists?(wallet_id: id)
+  end
+
   private
 
   def paid_top_up_max_greater_than_or_equal_min
@@ -148,6 +163,7 @@ end
 #  depleted_ongoing_balance            :boolean          default(FALSE), not null
 #  expiration_at                       :datetime
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
+#  invoice_usage_on_expiration         :boolean          default(FALSE), not null
 #  last_balance_sync_at                :datetime
 #  last_consumed_credit_at             :datetime
 #  last_ongoing_balance_sync_at        :datetime
