@@ -14,9 +14,6 @@ module BillingOperations
     def call
       return result.single_validation_failure!(field: :operation, error_code: "fixed_advance_reconciliation_unsupported") if
         operation.action_type == "reconcile_advance_coverage"
-      return result.single_validation_failure!(field: :operation, error_code: "fixed_coverage_reconciliation_unsupported") if
-        operation.action_type == "reconcile_fixed_coverage"
-
       result.schedule = BuildScheduleService.call!(contract_rate_card: operation.contract_rate_card).schedule
       result.cycle = result.schedule.cycle_at(operation.target_cycle_started_at) if operation.action_type
       result.segments = owned_billable_segments.map { build_billing_segment(it) }

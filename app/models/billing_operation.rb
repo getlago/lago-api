@@ -9,9 +9,7 @@ class BillingOperation < ApplicationRecord
     "regroup_paid_fees" => "Group paid advance fees onto an invoice when their service coverage ends"
   }.freeze
 
-  RECONCILIATION_ACTIONS = %w[reconcile_advance_coverage reconcile_fixed_coverage].freeze
-
-  ACTION_TYPES = (PERIODIC_ACTIONS.keys + RECONCILIATION_ACTIONS).index_by(&:to_sym).freeze
+  ACTION_TYPES = (PERIODIC_ACTIONS.keys + ["reconcile_advance_coverage"]).index_by(&:to_sym).freeze
 
   CAUSATION_TYPES = {
     contract_activation: "contract_activation",

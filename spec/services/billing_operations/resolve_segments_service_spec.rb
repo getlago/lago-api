@@ -331,21 +331,6 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns the validation failure" do
         expect(described_class.call(operation:)).to be_failure
       end
-
-      context "when it reconciles fixed coverage after a rate change" do
-        let(:operation) do
-          create(:billing_operation, organization:, customer:, contract_rate_card:,
-            action_type: "reconcile_fixed_coverage", causation_type: "rate_change",
-            billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1))
-        end
-
-        it "returns the validation failure" do
-          result = described_class.call(operation:)
-
-          expect(result).to be_failure
-          expect(result.error.messages).to eq({operation: ["fixed_coverage_reconciliation_unsupported"]})
-        end
-      end
     end
 
     context "when schedule construction fails" do
