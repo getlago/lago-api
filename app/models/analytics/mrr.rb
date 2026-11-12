@@ -25,6 +25,10 @@ module Analytics
           and_currency_sql = sanitize_sql(["AND cm.currency = :currency", args[:currency].upcase])
         end
 
+        # Product fees (contracts) are normalized from the rate interval, the override taking precedence:
+        # - monthly intervals are counted on the issuing month, like monthly plans
+        # - intervals longer than a month are spread over the months they cover, like yearly plans
+        # - shorter intervals average the billed periods of each product and scale them to a month
         sql = <<~SQL.squish
           WITH organization_creation_date AS (
             SELECT
@@ -41,7 +45,7 @@ module Analytics
               interval '1 month'
             ) AS month
           ),
-          invoice_details AS (
+          subscription_invoice_details AS (
             SELECT
               f.subscription_id,
               f.invoice_id,
@@ -73,6 +77,68 @@ module Analytics
               AND i.payment_dispute_lost_at IS NULL
               #{and_billing_entity_id_sql}
             ORDER BY issuing_date ASC
+          ),
+          product_invoice_details AS (
+            SELECT
+              f.subscription_id,
+              f.invoice_id,
+              c.name,
+              ((f.amount_cents - f.precise_coupons_amount_cents) + f.taxes_amount_cents) AS amount_cents,
+              f.amount_currency AS currency,
+              i.issuing_date,
+              (EXTRACT(DAY FROM CAST(f.properties ->> 'to_datetime' AS timestamp) - CAST(f.properties ->> 'from_datetime' AS timestamp))
+              + EXTRACT(HOUR FROM CAST(f.properties ->> 'to_datetime' AS timestamp) - CAST(f.properties ->> 'from_datetime' AS timestamp)) / 24
+              + EXTRACT(MINUTE FROM CAST(f.properties ->> 'to_datetime' AS timestamp) - CAST(f.properties ->> 'from_datetime' AS timestamp)) / 1440) / 30.44 AS billed_months,
+              f.pay_in_advance,
+              CASE
+                WHEN bi.unit = 'month' AND bi.count = 1 THEN 'monthly'
+                WHEN bi.unit IN ('month', 'year')
+                  OR (bi.unit = 'week' AND bi.count > 4)
+                  OR (bi.unit = 'day' AND bi.count > 31) THEN 'multi_month'
+                ELSE 'sub_monthly'
+              END AS plan_interval,
+              f.contract_rate_card_id,
+              f.properties ->> 'from_datetime' AS period_from,
+              CASE
+                WHEN bi.unit = 'week' THEN 4.33 / bi.count
+                WHEN bi.unit = 'day' THEN 30.44 / bi.count
+              END AS periods_per_month
+            FROM fees f
+            INNER JOIN invoices i ON f.invoice_id = i.id
+            INNER JOIN customers c ON c.id = i.customer_id
+            INNER JOIN rate_card_rates rcr ON rcr.id = f.rate_card_rate_id
+            INNER JOIN rate_cards rc ON rc.id = rcr.rate_card_id
+            INNER JOIN products pr ON pr.id = rc.product_id
+            LEFT JOIN rate_overrides ro ON ro.id = f.rate_override_id
+            CROSS JOIN LATERAL (
+              SELECT
+                COALESCE(ro.billing_interval_unit, rcr.billing_interval_unit) AS unit,
+                COALESCE(ro.billing_interval_count, rcr.billing_interval_count) AS count
+            ) bi
+            WHERE f.fee_type = #{Fee.fee_types[:product]}
+              AND f.organization_id = :organization_id
+              AND f.deleted_at IS NULL
+              AND pr.product_type = 'fixed'
+              AND i.self_billed IS FALSE
+              AND i.status = 1
+              AND i.payment_dispute_lost_at IS NULL
+              #{and_billing_entity_id_sql}
+          ),
+          invoice_details AS (
+            SELECT * FROM subscription_invoice_details
+            UNION ALL
+            SELECT
+              subscription_id,
+              invoice_id,
+              name,
+              amount_cents,
+              currency,
+              issuing_date,
+              billed_months,
+              pay_in_advance,
+              plan_interval
+            FROM product_invoice_details
+            WHERE plan_interval <> 'sub_monthly'
           ),
           quarterly_advance AS (
             SELECT
@@ -152,7 +218,7 @@ module Analytics
             FROM invoice_details,
             LATERAL GENERATE_SERIES(0, CEIL(billed_months) - 1) AS gs(month_index)
             WHERE pay_in_advance = TRUE
-            AND plan_interval = 'yearly'
+            AND plan_interval IN ('yearly', 'multi_month')
           ),
           yearly_arrears AS (
             SELECT
@@ -168,7 +234,7 @@ module Analytics
             FROM invoice_details,
             LATERAL GENERATE_SERIES(0, CEIL(billed_months::numeric) - 1) AS gs(month_index)
             WHERE pay_in_advance = FALSE
-            AND plan_interval = 'yearly'
+            AND plan_interval IN ('yearly', 'multi_month')
           ),
           monthly AS (
             SELECT
@@ -186,6 +252,15 @@ module Analytics
             FROM invoice_details
             WHERE plan_interval = 'weekly'
             GROUP BY month, currency
+          ),
+          sub_monthly AS (
+            SELECT
+              DATE_TRUNC('month', issuing_date) AS month,
+              currency,
+              (SUM(amount_cents) / COUNT(DISTINCT period_from)) * periods_per_month AS amount_cents
+            FROM product_invoice_details
+            WHERE plan_interval = 'sub_monthly'
+            GROUP BY month, currency, contract_rate_card_id, periods_per_month
           ),
           consolidated_mrr AS (
             SELECT month, amount_cents::numeric, currency
@@ -211,6 +286,9 @@ module Analytics
             UNION ALL
             SELECT month, amount_cents::numeric, currency
             FROM weekly
+            UNION ALL
+            SELECT month, amount_cents::numeric, currency
+            FROM sub_monthly
           )
           SELECT
             am.month,

@@ -58,16 +58,50 @@ module Analytics
             #{and_billing_entity_id_sql}
             AND c.organization_id = :organization_id
           ),
+          product_usage_fees AS (
+            SELECT
+              f.id,
+              pr.code,
+              (f.amount_cents::float - f.precise_coupons_amount_cents::float) AS amount_cents,
+              f.amount_currency AS currency,
+              f.created_at AS fee_created_at
+            FROM fees f
+            INNER JOIN invoices i ON f.invoice_id = i.id
+            INNER JOIN rate_card_rates rcr ON rcr.id = f.rate_card_rate_id
+            INNER JOIN rate_cards rc ON rc.id = rcr.rate_card_id
+            INNER JOIN products pr ON pr.id = rc.product_id
+            WHERE f.fee_type = #{Fee.fee_types[:product]}
+            AND f.organization_id = :organization_id
+            AND f.deleted_at IS NULL
+            AND pr.product_type = 'metered'
+            AND i.self_billed IS FALSE
+            AND i.payment_dispute_lost_at IS NULL
+            #{and_billing_entity_id_sql}
+          ),
           total_revenue_per_bm AS (
             SELECT
-              DATE_TRUNC('month', uf.fee_created_at) AS month,
-              bm.code,
-              uf.currency,
+              month,
+              code,
+              currency,
               COALESCE(SUM(amount_cents), 0) AS amount_cents
-            FROM usage_fees uf
-            LEFT JOIN charges c ON c.id = uf.charge_id
-            LEFT JOIN billable_metrics bm ON bm.id = c.billable_metric_id
-            GROUP BY month, bm.code, currency
+            FROM (
+              SELECT
+                DATE_TRUNC('month', uf.fee_created_at) AS month,
+                bm.code,
+                uf.currency,
+                uf.amount_cents
+              FROM usage_fees uf
+              LEFT JOIN charges c ON c.id = uf.charge_id
+              LEFT JOIN billable_metrics bm ON bm.id = c.billable_metric_id
+              UNION ALL
+              SELECT
+                DATE_TRUNC('month', puf.fee_created_at) AS month,
+                puf.code,
+                puf.currency,
+                puf.amount_cents
+              FROM product_usage_fees puf
+            ) AS fees_per_code
+            GROUP BY month, code, currency
             ORDER BY month
           )
           SELECT
