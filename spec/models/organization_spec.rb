@@ -43,6 +43,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:streaming_destinations).class_name("StreamingDestinations::BaseDestination")
       expect(subject).to have_many(:webhooks)
       expect(subject).to have_many(:recurring_aggregation_snapshots)
+      expect(subject).to have_many(:contract_recurring_aggregation_snapshots)
       expect(subject).to have_many(:hubspot_integrations)
       expect(subject).to have_many(:netsuite_integrations)
       expect(subject).to have_many(:xero_integrations)

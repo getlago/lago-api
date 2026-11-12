@@ -104,6 +104,7 @@ class Organization < ApplicationRecord
   has_many :webhooks
   has_many :cached_aggregations
   has_many :recurring_aggregation_snapshots
+  has_many :contract_recurring_aggregation_snapshots
   has_many :data_exports
   has_many :error_details
   has_many :dunning_campaigns
