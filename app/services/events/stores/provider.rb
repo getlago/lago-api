@@ -48,7 +48,8 @@ module Events
 
         @may_precompute = serve_current_usage_from_buckets &&
           whole_charge_read? &&
-          RealtimeUsage.enabled?(organization)
+          RealtimeUsage.enabled?(organization) &&
+          !product_events?
       end
 
       # Every gate a charge can be ruled out by before an aggregator and a store exist, so that
@@ -156,7 +157,16 @@ module Events
         return @scan_available if defined?(@scan_available)
 
         @scan_available = Events::Stores::StoreFactory.override.nil? &&
-          store_class == Events::Stores::ClickhouseStore
+          store_class == Events::Stores::ClickhouseStore &&
+          !product_events?
+      end
+
+      # The usage buckets and the scan's incremental cache are built from events_enriched, which
+      # the product events pipeline does not write to: its organizations read the plain store.
+      def product_events?
+        return @product_events if defined?(@product_events)
+
+        @product_events = organization.product_events_pipeline?
       end
 
       def charge_filters_single_scan?
