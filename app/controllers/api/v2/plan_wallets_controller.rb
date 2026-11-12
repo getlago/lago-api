@@ -9,6 +9,36 @@ module Api
       date_range_filtered_index(:created_at)
       serializable_with ::V2::PlanWalletSerializer, root: :wallet
 
+      def create
+        result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: wallet_params.to_h)
+
+        if result.success?
+          render_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def update
+        result = ::PlanWallets::UpdateService.call(plan_wallet: find_plan_wallet, params: wallet_params.to_h)
+
+        if result.success?
+          render_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def destroy
+        result = ::PlanWallets::DestroyService.call(plan_wallet: find_plan_wallet)
+
+        if result.success?
+          render_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
       def show
         plan_wallet = find_plan_wallet
 
@@ -45,6 +75,25 @@ module Api
 
       def find_plan_wallet
         find_catalog_plan&.wallets&.find_by(code: params[:code])
+      end
+
+      def wallet_params
+        params.require(:wallet).permit(
+          :code,
+          :name,
+          :invoice_display_name,
+          :currency,
+          :tax_application,
+          :priority,
+          :top_up_min_amount_cents,
+          :top_up_max_amount_cents,
+          # Passes through so that the services refuse it explicitly instead of strong params
+          # dropping it, as they do for an `exclude` inside `applies_to`.
+          :rate_amount,
+          tax_codes: [],
+          applies_to: {},
+          metadata: {}
+        )
       end
 
       def resource_name
