@@ -123,12 +123,13 @@ class Contract < ApplicationRecord
   end
 
   # The billing lifecycle a rate card inherits when attached: it starts on the
-  # contract's start day (customer-local) and shares its anchor. An explicit
-  # anchor overrides the default.
+  # contract's start day (customer-local) and shares its anchor and clock. An
+  # explicit anchor overrides the default.
   def default_rate_card_lifecycle(billing_anchor_date: nil)
     {
       effective_date: started_at.in_time_zone(customer.applicable_timezone).to_date,
-      billing_anchor_date: billing_anchor_date || effective_billing_anchor_date
+      billing_anchor_date: billing_anchor_date || effective_billing_anchor_date,
+      next_billing_at: started_at
     }
   end
 

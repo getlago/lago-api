@@ -21,17 +21,12 @@ module BillingOperations
         # Re-read under the same lock as processing and termination before changing obligations.
         Customers::LockService.call!(customer:, scope: :billing_schedule) do
           rate = RateCardRate.find_by(id: rate_card_rate_id, organization_id: customer.organization_id)
-          next unless rate && customer.reload.kept?
-          next unless rate.rate_card.kept?
+          next unless rate&.rate_card&.kept?
+          next unless customer.reload.kept?
 
-          contract_rate_cards = ContractRateCard.where(organization_id: customer.organization_id, rate_card_id: rate.rate_card_id)
-            .joins(:contract).where(contracts: {customer_id: customer.id, status: :active})
-            .includes(:rate_card, :terms, {rate_phases: :rate_override}, contract: :customer)
-          contract_rate_cards.find_each { |contract_rate_card| apply_rate_change(contract_rate_card, rate) }
-
-          if contract_rate_cards.due_for_billing(Time.current).exists?
-            ProcessJob.perform_after_commit(customer.id)
-          end
+          contract_rate_cards = active_contract_rate_cards(rate)
+          contract_rate_cards.find_each { apply_rate_change(it, rate) }
+          ProcessJob.perform_after_commit(customer.id) if contract_rate_cards.due_for_billing(Time.current).exists?
         end
       end
       result
@@ -45,6 +40,12 @@ module BillingOperations
 
     attr_reader :customer, :rate_card_rate_id
 
+    def active_contract_rate_cards(rate)
+      ContractRateCard.where(organization_id: customer.organization_id, rate_card_id: rate.rate_card_id)
+        .joins(:contract).where(contracts: {customer_id: customer.id, status: :active})
+        .includes(:rate_card, :terms, {rate_phases: :rate_override}, contract: :customer)
+    end
+
     def apply_rate_change(contract_rate_card, rate)
       action_type = contract_rate_card.periodic_billing_action
       return unless action_type.in?(%w[renew_fixed_advance close_fixed_arrears])
@@ -54,21 +55,18 @@ module BillingOperations
       # Changes at a cycle boundary are handled by normal periodic billing.
       return unless cycle && rate.effective_from > cycle.started_at
 
-      operations = contract_rate_card.billing_operations.where(
-        organization_id: customer.organization_id, target_cycle_started_at: cycle.started_at, cancelled_at: nil
-      )
+      operations = contract_rate_card.billing_operations.where(target_cycle_started_at: cycle.started_at, cancelled_at: nil)
       if action_type == "renew_fixed_advance"
         reconcile_advance(contract_rate_card, rate, cycle, operations, action_type:)
       else
-        reschedule_arrears(contract_rate_card, rate, cycle, schedule, operations, action_type:)
+        reschedule_arrears(contract_rate_card, rate, cycle, operations, action_type:)
       end
     end
 
     # Purchased advance coverage keeps its price. Record a no-charge reconciliation while
     # leaving the renewal chain intact; reuse it on retries, including after processing.
     def reconcile_advance(contract_rate_card, rate, cycle, operations, action_type:)
-      cursor = contract_rate_card.next_billing_at
-      represented = cursor && cursor >= cycle.started_at && cursor < cycle.ended_at
+      represented = (cycle.started_at...cycle.ended_at).cover?(contract_rate_card.next_billing_at)
       return unless represented || operations.completed.where(action_type:).exists?
 
       reconciliation = operations.find_by(
@@ -82,20 +80,16 @@ module BillingOperations
     end
 
     # Earlier overdue work keeps its cursor; successful processing discovers later boundaries.
-    def reschedule_arrears(contract_rate_card, rate, cycle, schedule, operations, action_type:)
-      closes = operations.where(action_type:)
-      processed_until = closes.where.not(processed_at: nil).maximum(:billing_at)
+    def reschedule_arrears(contract_rate_card, rate, cycle, operations, action_type:)
+      processed_until = operations.completed.where(action_type:).maximum(:billing_at)
       # A late job must not move a boundary into coverage that has already been billed.
       return if processed_until && processed_until >= rate.effective_from
 
       cursor = contract_rate_card.next_billing_at
       return unless cursor && cursor > rate.effective_from && cursor <= cycle.ended_at
 
-      # Use all known rates so out-of-order jobs cannot skip an earlier outstanding slice.
-      planned_operation = schedule.next_planned_operation(cycle, action_type:, after: processed_until)
-      return unless planned_operation && planned_operation.billing_at < cursor
-
-      contract_rate_card.update!(next_billing_at: planned_operation.billing_at)
+      # Reset from the first unbilled instant, so out-of-order jobs cannot skip an earlier outstanding slice.
+      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp: processed_until || cycle.started_at)
     end
   end
 end

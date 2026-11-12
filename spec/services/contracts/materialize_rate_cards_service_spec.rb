@@ -24,7 +24,7 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     expect(card.terms.sole).to have_attributes(units: 5, effective_date: card.effective_date)
     expect(card.effective_date).to eq(Date.new(2026, 10, 1))
     expect(card.billing_anchor_date).to eq(Date.new(2026, 10, 1))
-    expect(card.next_billing_at).to be_nil
+    expect(card.next_billing_at).to eq(contract.started_at)
     expect(card.rate_phases).to be_empty
     expect(result.contract_rate_cards).to eq([card])
   end

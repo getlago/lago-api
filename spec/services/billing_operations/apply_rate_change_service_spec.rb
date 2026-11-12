@@ -23,7 +23,7 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     create(:rate_card_rate, organization:, rate_card:, effective_from:, rate_properties: {"amount" => "60"})
   end
   let(:earlier_rates) { [] }
-  let(:initialize_clock) { ContractRateCards::InitializeBillingClockService.call!(contract_rate_card:) }
+  let(:initialize_clock) { ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp: contract.started_at) }
 
   around { |example| travel_to(Time.utc(2026, 11, 15)) { example.run } }
 
@@ -119,7 +119,7 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   end
 
   context "with no cursor" do
-    let(:initialize_clock) { contract_rate_card }
+    let(:initialize_clock) { contract_rate_card.update!(next_billing_at: nil) }
 
     it "does not seed an initial chain" do
       result

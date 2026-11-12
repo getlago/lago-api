@@ -95,7 +95,7 @@ RSpec.describe Contracts::ActivateService do
       before do
         failure_card
         create(:rate_card_rate, organization:, rate_card: failure_rate_card, effective_from: started_at, billing_interval_count: 1, billing_interval_unit: "month")
-        allow(ContractRateCards::InitializeBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
+        allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
           operation_writes << attributes
           if operation_writes.size == 2
             failure_card.errors.add(:next_billing_at, :invalid)
@@ -108,12 +108,12 @@ RSpec.describe Contracts::ActivateService do
       end
 
       it "rolls back activation, cursors and started notifications" do
-        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+        expect { result }
+          .to not_have_enqueued_job(SendWebhookJob)
+          .and not_change { [contract_rate_card.reload.next_billing_at, failure_card.reload.next_billing_at] }
         expect(BillingOperations::ProcessJob).not_to have_been_enqueued
         expect(result).not_to be_success
         expect(contract.reload).to be_pending
-        expect(contract_rate_card.reload.next_billing_at).to be_nil
-        expect(failure_card.reload.next_billing_at).to be_nil
         expect(BillingOperation.where(contract_rate_card_id: [contract_rate_card.id, failure_card.id])).to be_empty
         expect(LegacyBillingSegment.where(contract_rate_card_id: [contract_rate_card.id, failure_card.id])).to be_empty
       end

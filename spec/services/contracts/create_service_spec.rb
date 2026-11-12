@@ -77,7 +77,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
         create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
       end
 
-      allow(ContractRateCards::InitializeBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
+      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
         operation_writes << attributes
         raise ActiveRecord::RecordInvalid.new(invalid_contract) if operation_writes.size == 2
 

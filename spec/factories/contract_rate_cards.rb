@@ -6,6 +6,7 @@ FactoryBot.define do
     contract { association(:contract, organization:) }
     rate_card { association(:rate_card, organization:) }
     billing_anchor_date { Date.current }
+    next_billing_at { Time.current }
     effective_date { Date.current }
     transient do
       units { nil }

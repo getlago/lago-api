@@ -29,7 +29,7 @@ RSpec.describe ContractRateCards::CreateService do
     expect(card.terms.sole).to have_attributes(units: 10, effective_date: card.effective_date)
     expect(card.effective_date).to eq(contract.started_at.in_time_zone(customer.applicable_timezone).to_date)
     expect(card.billing_anchor_date).to eq(contract.effective_billing_anchor_date)
-    expect(card.next_billing_at).to be_nil
+    expect(card.next_billing_at).to eq(contract.started_at)
     expect(card.rate_phases.sole.code).to eq("default")
   end
 

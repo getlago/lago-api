@@ -21,6 +21,8 @@ class ContractRateCard < ApplicationRecord
   has_many :fees
 
   validates :billing_anchor_date, presence: true
+  # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
+  validates :next_billing_at, presence: true, on: :create
   validates :effective_date, presence: true
   validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 
@@ -28,10 +30,6 @@ class ContractRateCard < ApplicationRecord
 
   # Only a priced card owes anything: a period with no price is not one to be paid for.
   scope :priced, -> { where(rate_card_id: RateCardRate.select(:rate_card_id)) }
-
-  scope :due_for_billing, ->(timestamp) {
-    joins(:contract).where(next_billing_at: ..timestamp, contracts: {status: %w[active terminated]})
-  }
 
   # Only a card that starts before its contract ends has a period to owe anything in. Bringing
   # the end forward, planned or by a termination, can leave one starting after it.
@@ -42,6 +40,15 @@ class ContractRateCard < ApplicationRecord
       "(contract_rate_cards.effective_date::timestamp AT TIME ZONE " \
       "COALESCE(customers.timezone, billing_entities.timezone, 'UTC'))"
     )
+  }
+
+  scope :due_for_billing, ->(timestamp) {
+    priced
+      .starting_before_contract_end
+      .joins(contract: {customer: :billing_entity})
+      .where(next_billing_at: ..timestamp)
+      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
+      .where(customers: {deleted_at: nil})
   }
 
   # A card seeded from its contract carries the contract's explicit anchor, or
