@@ -26,6 +26,28 @@ module Billing
         end
       end
 
+      def cycle_at(timestamp)
+        walker.resume(timestamp)
+      end
+
+      def billable_segments_for_cycle(cycle)
+        billable_segments_of([cycle])
+      end
+
+      def next_billable_cycle(after_cycle_started_at:)
+        cycle = walker.resume(after_cycle_started_at)
+        cycle = walker.cycle_after(cycle) while cycle && cycle.started_at <= after_cycle_started_at
+
+        while cycle
+          return cycle if priced_segments_for_cycle(cycle).any?
+
+          cycle = walker.cycle_after(cycle)
+        end
+
+        nil
+      end
+
+      # The current billing instant covers the time being served; the next is strictly later.
       def billing_at(timestamp:, target:)
         raise ArgumentError, "unknown billing target: #{target}" unless BILLING_TARGET.value?(target)
 
@@ -77,7 +99,7 @@ module Billing
 
           return segment.billing_at if segment
 
-          cycle = walker.advance
+          cycle = walker.cycle_after(cycle)
         end
 
         nil
@@ -85,12 +107,12 @@ module Billing
 
       def billable_segments_of(cycles)
         cycles.flat_map do |cycle|
-          Segments.within(cycle, rates:).filter_map do |segment|
-            if segment.rate
-              build_billable_segment(cycle:, segment:)
-            end
-          end
+          priced_segments_for_cycle(cycle).map { build_billable_segment(cycle:, segment: it) }
         end
+      end
+
+      def priced_segments_for_cycle(cycle)
+        Segments.within(cycle, rates:).select(&:rate)
       end
 
       def build_billable_segment(cycle:, segment:)
