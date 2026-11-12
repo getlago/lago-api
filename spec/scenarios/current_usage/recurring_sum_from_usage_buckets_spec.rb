@@ -146,6 +146,7 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
       bill_at(Time.utc(2026, 5, 1, 1))
 
       send_event(4, at: Time.utc(2026, 5, 10))
+      send_event(1, at: Time.utc(2026, 5, 12), bucketed: false)
       may = usage_at(Time.utc(2026, 5, 20))
 
       {march:, april_without_event:, april:, april_after_late_event:, may:}
@@ -154,18 +155,34 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
     let(:expected_reads) do
       {
         # No snapshot before the first period
-        march: {amount_cents: 1300, units: 13, events_count: 2, buckets: ["no_period"]},
+        march: {amount_cents: 13 * 100, units: 13, events_count: 2, buckets: ["no_period"]},
         # An empty window adds nothing to the March snapshot
-        april_without_event: {amount_cents: 1300, units: 13, events_count: 2, buckets: ["served"]},
+        april_without_event: {amount_cents: 13 * 100, units: 13, events_count: 2, buckets: ["served"]},
         # The 5 and the 2 share a bucket; the 1 of 18 April is not in the buckets yet
-        april: {amount_cents: 2000, units: 13 + 5 + 2, events_count: 4, buckets: ["served"]},
+        april: {amount_cents: (13 + 5 + 2) * 100, units: 13 + 5 + 2, events_count: 2 + 2, buckets: ["served"]},
         # The March snapshot misses the late 7, so the events answer, with the unbucketed 1
-        april_after_late_event: {amount_cents: 2800, units: 13 + 7 + 5 + 2 + 1, events_count: 6, buckets: ["late_ingestion"]},
-        # The April snapshot counts the late 7, the unbucketed 1 and the 1 of 30 April, so the buckets complete it again
-        may: {amount_cents: 3400, units: 29 + 1 + 4, events_count: 9, buckets: ["served"]}
+        april_after_late_event: {
+          amount_cents: (13 + 7 + 5 + 2 + 1) * 100,
+          units: 13 + 7 + 5 + 2 + 1,
+          events_count: 2 + 1 + 2 + 1, # March, late 7, 15 April, unbucketed 1
+          buckets: ["late_ingestion"]
+        },
+        # The April snapshot counts the late 7, the unbucketed 1 and the 1 of 30 April, so the buckets complete
+        # it again; the 1 of 12 May is not in the buckets yet
+        may: {
+          amount_cents: (29 + 1 + 4) * 100,
+          units: 29 + 1 + 4,
+          events_count: 7 + 2, # the 7 events of the April snapshot, then 1 and 10 May
+          buckets: ["served"]
+        }
       }
     end
-    let(:events_only_reads) { {april: {amount_cents: 2100, units: 13 + 5 + 2 + 1, events_count: 5}} }
+    let(:events_only_reads) do
+      {
+        april: {amount_cents: (13 + 5 + 2 + 1) * 100, units: 13 + 5 + 2 + 1, events_count: 2 + 3},
+        may: {amount_cents: (29 + 1 + 4 + 1) * 100, units: 29 + 1 + 4 + 1, events_count: 7 + 3}
+      }
+    end
 
     include_examples "the same usage with the recurring flag off"
   end
@@ -175,9 +192,10 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
     let(:upgraded_charge) { create(:standard_charge, plan: upgraded_plan, billable_metric:, properties: {amount: "2"}) }
     let(:expected_reads) do
       {
-        # The March snapshot of the previous subscription plus the 5 of the new one, at $2. The buckets
-        # never see the previous subscription, so they are not read for it.
-        april: {amount_cents: 3600, units: 13 + 5, events_count: 3, buckets: []}
+        # The March snapshot of the previous subscription plus the 5 of the new one, at $2. The Provider
+        # refuses a subscription with a predecessor, so no bucket store is built; serving it would give the
+        # same units here, so only the empty source list pins that refusal.
+        april: {amount_cents: (13 + 5) * 200, units: 13 + 5, events_count: 2 + 1, buckets: []}
       }
     end
 
@@ -205,9 +223,10 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
     let(:downgraded_charge) { create(:standard_charge, plan: downgraded_plan, billable_metric:, properties: {amount: "2"}) }
     let(:expected_reads) do
       {
-        # The March snapshot of the previous subscription is adjacent to the April window, but the late 7
-        # is in a bucket of the previous subscription, which the history of the new one never reads.
-        april: {amount_cents: 5000, units: 13 + 7 + 5, events_count: 4, buckets: []}
+        # The March snapshot of the previous subscription is adjacent to the April window, and the Provider
+        # refuses the new subscription for its predecessor. Without that refusal the late 7 would still be
+        # caught, on the shared external id, so only the empty source list pins the refusal.
+        april: {amount_cents: (13 + 7 + 5) * 200, units: 13 + 7 + 5, events_count: 2 + 1 + 1, buckets: []}
       }
     end
 
@@ -233,6 +252,34 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
     include_examples "the same usage with the recurring flag off"
   end
 
+  # A charge the buckets serve is left out of the usage pre-filtering, so its cached fee has no
+  # ingestion timestamp to be invalidated by: a fallback has to bypass the charge cache.
+  describe "with the charge cache on while the buckets fall back", cache: :memory do
+    let(:expected_reads) do
+      {
+        after_late_event: {amount_cents: (13 + 7) * 100, units: 13 + 7, events_count: 2 + 1, buckets: ["late_ingestion"]},
+        after_new_event: {amount_cents: (13 + 7 + 5) * 100, units: 13 + 7 + 5, events_count: 2 + 1 + 1, buckets: ["late_ingestion"]}
+      }
+    end
+
+    def usage_reads
+      start_subscription
+      send_event(10, at: Time.utc(2026, 3, 5))
+      send_event(3, at: Time.utc(2026, 3, 10))
+      bill_at(Time.utc(2026, 4, 1, 1))
+
+      # Dated in March, ingested after the snapshot of March
+      send_event(7, at: Time.utc(2026, 4, 22), timestamp: Time.utc(2026, 3, 20))
+      after_late_event = usage_at(Time.utc(2026, 4, 22, 12))
+      send_event(5, at: Time.utc(2026, 4, 24))
+      after_new_event = usage_at(Time.utc(2026, 4, 25))
+
+      {after_late_event:, after_new_event:}
+    end
+
+    include_examples "the same usage with the recurring flag off"
+  end
+
   describe "with a grouped charge targeting wallets" do
     let(:premium_integrations) { %w[events_targeting_wallets] }
     let(:charge) do
@@ -241,7 +288,7 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
     let(:expected_reads) do
       {
         april: {
-          amount_cents: 2000,
+          amount_cents: (13 + 5 + 2) * 100,
           units: 13 + 5 + 2,
           events_count: 4,
           groups: {
@@ -252,7 +299,7 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
           buckets: ["served"]
         },
         april_after_late_event: {
-          amount_cents: 2800,
+          amount_cents: (13 + 7 + 5 + 2 + 1) * 100,
           units: 13 + 7 + 5 + 2 + 1,
           events_count: 6,
           groups: {
@@ -268,7 +315,7 @@ describe "Recurring sum current usage from usage buckets", clickhouse: true, tra
     let(:events_only_reads) do
       {
         april: {
-          amount_cents: 2100,
+          amount_cents: (13 + 5 + 2 + 1) * 100,
           units: 13 + 5 + 2 + 1,
           events_count: 5,
           groups: {
