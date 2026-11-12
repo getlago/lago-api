@@ -15,6 +15,7 @@ module DailyUsages
     def call
       result.daily_usages = []
       return result if contract.daily_usages.exists?(usage_date:)
+      return result if terminated_before_usage_date?
 
       daily_usages = rate_card_usages.filter_map do |rate_card_usage|
         rate_card_usage = rate_card_usage.with(fees: rate_card_usage.fees.select(&:non_zero?))
@@ -57,10 +58,22 @@ module DailyUsages
     def rate_card_usages
       Contracts::CurrentUsageService.call(
         contract:,
-        timestamp: usage_date.in_time_zone(timezone).end_of_day,
+        timestamp: usage_timestamp,
         apply_taxes: false,
         filters: {product_type: Product::PRODUCT_TYPES[:metered]}
       ).raise_if_error!.rate_card_usages
+    end
+
+    # A contract terminated during the day is read at its last instant: its schedule ends there.
+    def usage_timestamp
+      end_of_day = usage_date.in_time_zone(timezone).end_of_day
+      return end_of_day unless contract.terminated_at
+
+      [end_of_day, BillingSegment.inclusive_end(contract.terminated_at)].min
+    end
+
+    def terminated_before_usage_date?
+      contract.terminated? && contract.terminated_at < usage_date.in_time_zone(timezone).beginning_of_day
     end
 
     def timezone
