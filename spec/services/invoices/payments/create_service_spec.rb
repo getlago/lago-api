@@ -862,13 +862,7 @@ RSpec.describe Invoices::Payments::CreateService do
         end
       end
 
-      [
-        PaymentProviders::Adyen::Payments::CreateService,
-        PaymentProviders::Cashfree::Payments::CreateService,
-        PaymentProviders::Gocardless::Payments::CreateService,
-        PaymentProviders::Moneyhash::Payments::CreateService,
-        PaymentProviders::Stripe::Payments::CreateService
-      ].each do |refusing_service|
+      Customer::PAYMENT_PROVIDERS.filter_map { PaymentProviders::CreatePaymentFactory.service_class(provider: it) }.each do |refusing_service|
         context "when #{refusing_service.module_parent.module_parent.name.demodulize} refuses the payment" do
           let(:result) do
             refusing_service::Result.new.tap do |r|
