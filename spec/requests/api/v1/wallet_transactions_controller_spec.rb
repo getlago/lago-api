@@ -64,6 +64,49 @@ RSpec.describe Api::V1::WalletTransactionsController do
       ))
     end
 
+    context "with connections" do
+      let(:params) do
+        {wallet_id:, paid_credits: "10", connections: {payment: {code: "stripe_us"}, tax: {behavior: "skip"}}}
+      end
+
+      before { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+
+      context "when the multi_connection flag is disabled" do
+        it "returns a forbidden error" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+        end
+      end
+
+      context "when the multi_connection flag is enabled" do
+        before { organization.enable_feature_flag!(:multi_connection) }
+
+        it "routes the top-up to the connections" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transactions].sole[:connections]).to eq(
+            payment: {behavior: "specific", code: "stripe_us"},
+            tax: {behavior: "skip", code: nil},
+            accounting: {behavior: "inherit", code: nil},
+            crm: {behavior: "inherit", code: nil}
+          )
+        end
+
+        context "when the code does not resolve" do
+          let(:params) { {wallet_id:, paid_credits: "10", connections: {payment: {code: "unknown"}}} }
+
+          it "returns a validation error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details][:connections]).to eq(["connection_not_found"])
+          end
+        end
+      end
+    end
+
     context "when paid credits is below the wallet minimum" do
       it "returns an error" do
         wallet.update!(paid_top_up_min_amount_cents: 20_00)

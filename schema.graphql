@@ -3815,6 +3815,7 @@ input CreateCustomerWalletTransactionInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  connections: ConnectionsInput
   grantedCredits: String
   ignorePaidTopUpLimits: Boolean
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
@@ -17807,6 +17808,7 @@ enum WalletStatusEnum {
 
 type WalletTransaction {
   amount: String!
+  connections: [ConnectionRouting!]!
   createdAt: ISO8601DateTime!
   creditAmount: String!
   failedAt: ISO8601DateTime

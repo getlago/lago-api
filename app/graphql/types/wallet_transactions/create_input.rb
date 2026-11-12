@@ -18,6 +18,7 @@ module Types
       argument :priority, Integer, required: false
       argument :purchase_order_number, String, required: false
       argument :voided_credits, String, required: false
+      argument :connections, Types::Connections::Input, required: false
     end
   end
 end

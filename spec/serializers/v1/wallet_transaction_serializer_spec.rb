@@ -40,6 +40,12 @@ RSpec.describe ::V1::WalletTransactionSerializer do
         "metadata" => wallet_transaction.metadata,
         "name" => "Custom Transaction Name"
       )
+      expect(result["wallet_transaction"]["connections"]).to eq(
+        "payment" => {"behavior" => "inherit", "code" => nil},
+        "tax" => {"behavior" => "inherit", "code" => nil},
+        "accounting" => {"behavior" => "inherit", "code" => nil},
+        "crm" => {"behavior" => "inherit", "code" => nil}
+      )
       expect(result["wallet_transaction"]["payment_method"]["payment_method_id"]).to eq(nil)
       expect(result["wallet_transaction"]["payment_method"]["payment_method_type"]).to eq("provider")
     end
@@ -142,6 +148,27 @@ RSpec.describe ::V1::WalletTransactionSerializer do
 
       expect(result["wallet_transaction"]["applied_invoice_custom_sections"].first).to include(
         "lago_id" => invoice_custom_section.id
+      )
+    end
+  end
+
+  context "when transaction has connection overrides" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+
+    before do
+      create(:billing_object_connection, owner: wallet_transaction, organization:, category: :payment,
+        behavior: :specific, payment_provider_customer: stripe_connection)
+      create(:billing_object_connection, owner: wallet_transaction, organization:, category: :tax, behavior: :skip)
+    end
+
+    it "serializes the routing of every category" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["wallet_transaction"]["connections"]).to eq(
+        "payment" => {"behavior" => "specific", "code" => "stripe_us"},
+        "tax" => {"behavior" => "skip", "code" => nil},
+        "accounting" => {"behavior" => "inherit", "code" => nil},
+        "crm" => {"behavior" => "inherit", "code" => nil}
       )
     end
   end
