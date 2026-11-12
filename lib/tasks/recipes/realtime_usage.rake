@@ -110,6 +110,8 @@ namespace :recipes do
       with_cutover_risk = 0
       eligible_charges = 0
       served_charges = 0
+      recurring_eligible_charges = 0
+      recurring_served_charges = 0
       recurring_fallback_reasons = Hash.new(0)
 
       subscriptions.each do |subscription|
@@ -124,6 +126,8 @@ namespace :recipes do
         compared += 1
         eligible_charges += comparison.eligible_charges_count
         served_charges += comparison.served_charges_count
+        recurring_eligible_charges += comparison.recurring_eligible_charges_count
+        recurring_served_charges += comparison.recurring_served_charges_count
         comparison.recurring_fallback_reasons.each { |reason, count| recurring_fallback_reasons[reason] += count }
         declined += 1 if comparison.served_charges_count.zero?
         mismatching += 1 if comparison.differences.any?
@@ -142,6 +146,7 @@ namespace :recipes do
       puts "Summary"
       puts "  subscriptions compared:      #{compared} (#{failed} failed)"
       puts "  charges served from buckets: #{served_charges}/#{eligible_charges} comparable"
+      puts "  recurring charges served:    #{recurring_served_charges}/#{recurring_eligible_charges} comparable"
       puts "  recurring charges falling back to events: #{realtime_usage_format_reasons(recurring_fallback_reasons)}"
       puts "  subscriptions declined:      #{declined} (nothing was served, nothing was compared)"
       puts "  subscriptions mismatching:   #{mismatching}"
@@ -213,9 +218,11 @@ def realtime_usage_csv_rows(subscription, comparison)
 end
 
 def realtime_usage_format_reasons(reasons)
-  return "none" if reasons.empty?
-
-  reasons.sort.map { |reason, count| "#{reason} #{count}" }.join(", ")
+  if reasons.empty?
+    "none"
+  else
+    reasons.sort.map { |reason, count| "#{reason} #{count}" }.join(", ")
+  end
 end
 
 def realtime_usage_print_gate(label, ok)

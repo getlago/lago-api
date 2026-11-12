@@ -60,9 +60,7 @@ module RealtimeUsage
     # On top of enabled?, so recurring sums roll back on their own without turning off the buckets
     # for the organization's other charges.
     def recurring_sum_enabled?(organization)
-      return true if forced_gate?
-
-      organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
+      forced_gate? || organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
     end
 
     # Served from the snapshot of the previous period plus the buckets of the window, rather than

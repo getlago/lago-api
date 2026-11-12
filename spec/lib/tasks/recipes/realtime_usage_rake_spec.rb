@@ -34,13 +34,16 @@ RSpec.describe "recipes:realtime_usage:compare_usage", :premium do # rubocop:dis
     )
   end
 
-  def comparison_result(rows:, served_charges_count: 1, declined_reason: nil, recurring_fallback_reasons: {})
+  def comparison_result(rows:, served_charges_count: 1, declined_reason: nil, recurring_fallback_reasons: {},
+    recurring_eligible_charges_count: 0, recurring_served_charges_count: 0)
     RealtimeUsage::CompareUsageService::Result.new.tap do
       it.rows = rows
       it.differences = rows.select(&:different?)
       it.cutover_risks = rows.select(&:cutover_risk?)
       it.eligible_charges_count = 1
       it.served_charges_count = served_charges_count
+      it.recurring_eligible_charges_count = recurring_eligible_charges_count
+      it.recurring_served_charges_count = recurring_served_charges_count
       it.recurring_fallback_reasons = recurring_fallback_reasons
       it.duplicate_events_count = 0
       it.declined_reason = declined_reason
@@ -112,15 +115,35 @@ RSpec.describe "recipes:realtime_usage:compare_usage", :premium do # rubocop:dis
 
   context "when recurring charges fell back to the events" do
     let(:comparison) do
-      comparison_result(rows: [row], recurring_fallback_reasons: {"not_adjacent" => 1, "late_ingestion" => 2})
+      comparison_result(
+        rows: [row],
+        recurring_fallback_reasons: {"not_adjacent" => 1, "late_ingestion" => 2},
+        recurring_eligible_charges_count: 4,
+        recurring_served_charges_count: 1
+      )
     end
 
-    it "reports the reasons for the subscription and in the summary" do
+    it "reports the reasons for the subscription, and the served share in the summary" do
       expect { task.invoke }.to output(
         a_string_including(
           "      recurring charges falling back to events: late_ingestion 2, not_adjacent 1",
+          "  recurring charges served:    1/4 comparable",
           "  recurring charges falling back to events: late_ingestion 2, not_adjacent 1"
         )
+      ).to_stdout
+    end
+  end
+
+  context "when the comparison fails" do
+    let(:comparison) do
+      RealtimeUsage::CompareUsageService::Result.new.tap do
+        it.service_failure!(code: "recurring_fallback_during_comparison", message: "fell back twice")
+      end
+    end
+
+    it "counts the subscription as failed and goes on" do
+      expect { task.invoke }.to output(
+        a_string_including("FAILED", "subscriptions compared:      0 (1 failed)")
       ).to_stdout
     end
   end

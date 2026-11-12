@@ -220,9 +220,25 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
       end
     end
 
+    def create_late_event
+      Clickhouse::EventsEnriched.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: snapshot_to_datetime - 1.day,
+        properties: {billable_metric.field_name => 3},
+        value: "3",
+        decimal_value: 3,
+        enriched_at: [watermark + 1.minute, Time.current].max
+      )
+    end
+
     it "compares it, both runs reading the snapshots and only one the buckets" do
       expect(comparison.eligible_charges_count).to eq(1)
       expect(comparison.served_charges_count).to eq(1)
+      expect(comparison.recurring_eligible_charges_count).to eq(1)
+      expect(comparison.recurring_served_charges_count).to eq(1)
       expect(comparison.recurring_fallback_reasons).to eq({})
       expect(comparison.rows.map(&:classification)).to eq(["match"])
       expect(runs).to eq(
@@ -240,19 +256,7 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
     end
 
     context "when an event was ingested into a closed period after the snapshot" do
-      before do
-        Clickhouse::EventsEnriched.create!(
-          transaction_id: SecureRandom.uuid,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code: billable_metric.code,
-          timestamp: snapshot_to_datetime - 1.day,
-          properties: {billable_metric.field_name => 3},
-          value: "3",
-          decimal_value: 3,
-          enriched_at: watermark + 1.minute
-        )
-      end
+      before { create_late_event }
 
       it "reports the charge as falling back rather than comparing the events with themselves" do
         expect(comparison.served_charges_count).to eq(0)
@@ -273,6 +277,29 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
           expect(comparison.declined_reason).to be_nil
           expect(runs.map { it[:charge_ids] }).to eq([[other_charge.id], [other_charge.id]])
         end
+
+        context "when the buckets hold nothing for the other charge" do
+          let(:usage_buckets) { Events::Stores::UsageBucketSet.new }
+
+          it "reports the missing buckets of the other charge rather than the recurring fallback" do
+            expect(comparison.served_charges_count).to eq(0)
+            expect(comparison.recurring_fallback_reasons).to eq({"late_ingestion" => 1})
+            expect(comparison.declined_reason).to eq("no_buckets")
+          end
+        end
+      end
+    end
+
+    context "when the bucket read was refused" do
+      before do
+        allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_return(RealtimeUsage::FetchBucketsService::Result.new)
+      end
+
+      it "counts the charge as declined, so the reasons add up to the eligible recurring charges" do
+        expect(comparison.recurring_eligible_charges_count).to eq(1)
+        expect(comparison.recurring_served_charges_count).to eq(0)
+        expect(comparison.recurring_fallback_reasons).to eq({"declined" => 1})
+        expect(comparison.declined_reason).to eq("recurring_fallback")
       end
     end
 
@@ -368,7 +395,24 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
       end
     end
 
-    context "when the charge falls back during the bucket run" do
+    context "when an event lands in the snapshot period between the decision and the bucket run" do
+      before do
+        allow(Invoices::CustomerUsageService).to receive(:call!).and_wrap_original do |original, use_usage_buckets:, **args|
+          create_late_event if use_usage_buckets && runs.empty?
+          runs << {use_usage_buckets:}
+          original.call(use_usage_buckets:, **args)
+        end
+      end
+
+      it "decides again, leaving the charge out under late_ingestion rather than failing" do
+        expect(comparison).to be_success
+        expect(comparison.served_charges_count).to eq(0)
+        expect(comparison.recurring_fallback_reasons).to eq({"late_ingestion" => 1})
+        expect(runs).to eq([{use_usage_buckets: true}])
+      end
+    end
+
+    context "when the charge falls back during the bucket run again after deciding once more" do
       before do
         allow(Invoices::CustomerUsageService).to receive(:call!)
           .and_raise(RealtimeUsage::RecurringFallbackError, "charge #{charge.id} fell back to the events")
@@ -377,6 +421,27 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
       it "fails rather than reporting a match the buckets never served" do
         expect(comparison).to be_failure
         expect(comparison.error.code).to eq("recurring_fallback_during_comparison")
+        expect(Invoices::CustomerUsageService).to have_received(:call!).twice
+      end
+    end
+
+    context "when an event lands in the snapshot period between the two runs" do
+      let(:bucket_units) { BigDecimal(12) }
+
+      before do
+        stub_const("#{described_class}::RECHECK_DELAY", 0)
+        allow(Invoices::CustomerUsageService).to receive(:call!) do |use_usage_buckets:, **|
+          create_late_event if runs == [true]
+          runs << use_usage_buckets
+          use_usage_buckets ? bucket_usage_result : events_usage_result
+        end
+      end
+
+      it "compares once more, as the late event moves the recurring usage, and leaves the charge out" do
+        expect(comparison.rechecked).to be(true)
+        expect(comparison.differences).to be_empty
+        expect(comparison.recurring_fallback_reasons).to eq({"late_ingestion" => 1})
+        expect(runs).to eq([true, false])
       end
     end
   end
