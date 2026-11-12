@@ -87,11 +87,65 @@ RSpec.describe Wallets::ExpireWithInvoicingService, :premium, transaction: false
   context "when the wallet has no balance left" do
     let(:balance_cents) { 0 }
 
-    it "terminates the wallet without invoicing" do
+    it "invoices the usage before terminating the wallet" do
+      expect(result).to be_success
+
+      invoice = customer.invoices.progressive_billing.sole
+      expect(invoice).to have_attributes(fees_amount_cents: 100, prepaid_credit_amount_cents: 0, total_amount_cents: 100)
+      expect(wallet.reload.status).to eq("terminated")
+    end
+  end
+
+  context "when several subscriptions are in the wallet currency" do
+    let(:balance_cents) { 100 }
+    let(:other_subscription) { create(:subscription, plan:, customer:, started_at: 1.week.ago) }
+
+    before do
+      create(
+        :event,
+        organization_id: organization.id,
+        external_subscription_id: other_subscription.external_id,
+        code: billable_metric.code,
+        properties: {billable_metric.field_name => 1},
+        timestamp: 2.hours.ago
+      )
+    end
+
+    it "invoices each subscription, what the wallet does not cover being due" do
+      expect(result).to be_success
+
+      invoices = customer.invoices.progressive_billing
+      expect(invoices.count).to eq(2)
+      expect(invoices.sum(:prepaid_credit_amount_cents)).to eq(100)
+      expect(invoices.sum(:total_amount_cents)).to eq(100)
+      expect(wallet.reload).to have_attributes(status: "terminated", balance_cents: 0)
+    end
+  end
+
+  context "when the expiration was pushed back after the job was enqueued" do
+    before { wallet.update!(expiration_at: 1.day.from_now) }
+
+    it "neither invoices the usage nor terminates the wallet" do
       expect(result).to be_success
 
       expect(customer.invoices).to be_empty
-      expect(wallet.reload.status).to eq("terminated")
+      expect(wallet.reload.status).to eq("active")
+    end
+  end
+
+  context "when the subscription already has an expiration invoice for this wallet" do
+    before do
+      invoice = create(:invoice, organization:, customer:, invoice_type: :progressive_billing, status: :failed)
+      create(:invoice_subscription, invoice:, subscription:)
+      create(:applied_wallet_expiration, wallet:, invoice:)
+      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call).and_call_original
+    end
+
+    it "does not compute its usage again" do
+      expect(result).to be_success
+
+      expect(Invoices::ProgressiveBilling::WalletExpirationService).not_to have_received(:call)
+      expect(wallet.reload.status).to eq("active")
     end
   end
 
@@ -133,6 +187,44 @@ RSpec.describe Wallets::ExpireWithInvoicingService, :premium, transaction: false
       expect(result).to be_success
 
       expect(wallet.reload.status).to eq("terminated")
+    end
+  end
+
+  context "when the expiration invoice of the wallet waits for its taxes" do
+    before do
+      pending_invoice = create(
+        :invoice,
+        organization:,
+        customer:,
+        invoice_type: :progressive_billing,
+        status: :pending,
+        tax_status: :pending
+      )
+      create(:applied_wallet_expiration, wallet:, invoice: pending_invoice)
+      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call)
+        .and_return(BaseService::Result.new.fail_with_error!(Idempotency::IdempotencyError.new("already invoiced")))
+    end
+
+    it "keeps the wallet active so the invoice can spend it once its taxes are applied" do
+      expect(result).to be_success
+
+      expect(wallet.reload.status).to eq("active")
+    end
+  end
+
+  context "when invoicing is disabled while an expiration invoice of the wallet failed" do
+    let(:feature_flags) { [] }
+
+    before do
+      failed_invoice = create(:invoice, organization:, customer:, invoice_type: :progressive_billing, status: :failed)
+      create(:applied_wallet_expiration, wallet:, invoice: failed_invoice)
+    end
+
+    it "keeps the wallet active so the retried invoice can spend it" do
+      expect(result).to be_success
+
+      expect(customer.invoices.count).to eq(1)
+      expect(wallet.reload.status).to eq("active")
     end
   end
 

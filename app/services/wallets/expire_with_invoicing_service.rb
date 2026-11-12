@@ -10,15 +10,13 @@ module Wallets
       super
     end
 
+    # The expiration can be pushed back after the clock enqueued the job.
     def call
-      if wallet.active? && wallet.expiration_invoicing_enabled? && wallet.balance_cents.positive?
-        subscriptions.find_each { |subscription| invoice_usage(subscription) }
-      end
+      if wallet.expired?
+        invoice_usage if wallet.active? && wallet.expiration_invoicing_enabled?
 
-      # A failed expiration invoice spends the wallet when it is retried, so the wallet stays active until then.
-      unless expiration_invoice_failed?
         # Applying the wallet credits updates its row, which bumps lock_version.
-        Wallets::TerminateService.call!(wallet: wallet.reload)
+        Wallets::TerminateService.call!(wallet: wallet.reload) unless expiration_invoice_unsettled?
       end
 
       result.wallet = wallet
@@ -29,18 +27,29 @@ module Wallets
 
     attr_reader :wallet
 
-    def expiration_invoice_failed?
-      wallet.organization.invoices.failed
-        .joins(:applied_wallet_expiration)
-        .where(applied_wallet_expirations: {wallet_id: wallet.id})
-        .exists?
+    # An unsettled expiration invoice still spends the wallet when its taxes are applied or when it is retried.
+    def expiration_invoice_unsettled?
+      AppliedWalletExpiration.where(wallet_id: wallet.id).with_unsettled_invoice.exists?
+    end
+
+    def invoice_usage
+      subscriptions.where.not(id: invoiced_subscription_ids).find_each do |subscription|
+        invoice_subscription_usage(subscription)
+      end
     end
 
     def subscriptions
       wallet.customer.subscriptions.active.joins(:plan).where(plans: {amount_currency: wallet.currency})
     end
 
-    def invoice_usage(subscription)
+    def invoiced_subscription_ids
+      InvoiceSubscription
+        .joins(invoice: :applied_wallet_expiration)
+        .where(applied_wallet_expirations: {wallet_id: wallet.id})
+        .select(:subscription_id)
+    end
+
+    def invoice_subscription_usage(subscription)
       invoice_result = Invoices::ProgressiveBilling::WalletExpirationService.call(wallet:, subscription:)
 
       # An idempotency error means a previous run already invoiced this subscription for this wallet.
