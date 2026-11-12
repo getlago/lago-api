@@ -49,7 +49,9 @@ RSpec.describe "Contract usage billing behavior" do
   before do
     rate
     card
-    BillingOperations::ApplyActivationService.call!(contract:)
+    contract.applied_rate_cards.find_each do |contract_rate_card|
+      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp: contract.started_at)
+    end
   end
 
   describe "advance event invoices" do

@@ -286,6 +286,101 @@ RSpec.describe ContractRateCard do
     end
   end
 
+  describe "#requires_termination_billing?" do
+    subject(:requires_termination_billing) { card.requires_termination_billing?(timestamp:) }
+
+    let(:card) { described_class.new(next_billing_at:, effective_date:, contract:) }
+    let(:customer) { build_stubbed(:customer, timezone:) }
+    let(:contract) { build_stubbed(:contract, customer:, ended_at:, terminated_at:) }
+    let(:timezone) { "UTC" }
+    let(:effective_date) { Date.new(2026, 1, 1) }
+    let(:ended_at) { nil }
+    let(:terminated_at) { nil }
+    let(:timestamp) { Time.utc(2026, 1, 15) }
+    let(:next_billing_at) { Time.utc(2026, 2, 1) }
+    let(:action) { BillingOperation::ACTION_TYPES.fetch(:close_fixed_arrears) }
+
+    before { allow(card).to receive(:periodic_billing_action).and_return(action) }
+
+    %i[close_fixed_arrears close_metered_arrears regroup_paid_fees].each do |action_name|
+      context "with #{action_name}" do
+        let(:action) { BillingOperation::ACTION_TYPES.fetch(action_name) }
+
+        it { is_expected.to be(true) }
+      end
+    end
+
+    %i[renew_fixed_advance renew_recurring_metered_advance].each do |action_name|
+      context "with #{action_name}" do
+        let(:action) { BillingOperation::ACTION_TYPES.fetch(action_name) }
+
+        it { is_expected.to be(false) }
+      end
+    end
+
+    context "without a periodic action" do
+      let(:action) { nil }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "without a cursor" do
+      let(:next_billing_at) { nil }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when billing is due at termination" do
+      let(:next_billing_at) { timestamp }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when billing is overdue" do
+      let(:next_billing_at) { timestamp - 1.second }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the card starts at termination" do
+      let(:effective_date) { Date.new(2026, 1, 15) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the card starts after termination" do
+      let(:effective_date) { Date.new(2026, 1, 16) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the planned end is before the card starts" do
+      let(:ended_at) { Time.utc(2025, 12, 31) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the recorded termination is before the card starts" do
+      let(:terminated_at) { Time.utc(2025, 12, 31) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a customer-local start date" do
+      let(:timezone) { "America/Los_Angeles" }
+      let(:effective_date) { Date.new(2026, 1, 15) }
+      let(:timestamp) { Time.utc(2026, 1, 15, 7) }
+
+      it { is_expected.to be(false) }
+
+      context "when termination is after local midnight" do
+        let(:timestamp) { Time.utc(2026, 1, 15, 9) }
+
+        it { is_expected.to be(true) }
+      end
+    end
+  end
+
   describe "#edit_error_code" do
     it "is nil while the contract is pending" do
       card = create(:contract_rate_card, contract: create(:contract, :pending))

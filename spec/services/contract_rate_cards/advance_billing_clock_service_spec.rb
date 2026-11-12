@@ -10,7 +10,8 @@ RSpec.describe ContractRateCards::AdvanceBillingClockService do
   let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1), **contract_attributes) }
   let(:contract_attributes) { {} }
   let(:product) { create(:product, :fixed, organization:) }
-  let(:rate_card) { create(:rate_card, organization:, product:) }
+  let(:billing_timing) { "arrears" }
+  let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:) }
   let(:contract_rate_card) do
     create(:contract_rate_card, organization:, contract:, rate_card:, next_billing_at: Time.utc(2026, 2, 1),
       effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
@@ -47,6 +48,55 @@ RSpec.describe ContractRateCards::AdvanceBillingClockService do
     end
   end
 
+  context "when advancing an advance-billed operation" do
+    let(:billing_timing) { "advance" }
+
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
+        billing_at: Time.utc(2026, 2, 1), target_cycle_started_at: Time.utc(2026, 2, 1), processed_at: Time.current)
+    end
+
+    it "does not repeat the completed renewal" do
+      result
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+    end
+  end
+
+  context "when terminated after the planned schedule end" do
+    let(:contract_attributes) do
+      {status: :terminated, ended_at: Time.utc(2026, 2, 10), terminated_at: Time.utc(2026, 2, 15)}
+    end
+
+    it "plans the final closure at termination, then exhausts the clock" do
+      result
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 15))
+    end
+
+    context "when the completed billing instant is the natural schedule end" do
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+          billing_at: Time.utc(2026, 2, 10), target_cycle_started_at: Time.utc(2026, 2, 1), processed_at: Time.current)
+      end
+
+      it "compares against the remapped termination timestamp" do
+        result
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 15))
+      end
+    end
+
+    context "when advancing after the final closure" do
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+          billing_at: Time.utc(2026, 2, 15), target_cycle_started_at: Time.utc(2026, 2, 1), processed_at: Time.current)
+      end
+
+      it "clears the exhausted clock" do
+        result
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+      end
+    end
+  end
+
   context "with a reconciliation" do
     let(:operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:,
@@ -56,6 +106,34 @@ RSpec.describe ContractRateCards::AdvanceBillingClockService do
     let(:resolution) { nil }
 
     it "leaves the periodic cursor untouched" do
+      result
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
+    end
+  end
+
+  context "when the operation was cancelled" do
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+        billing_at: Time.utc(2026, 2, 1), target_cycle_started_at: Time.utc(2026, 1, 1),
+        cancelled_at: Time.current, cancelled_causation_type: "rate_change")
+    end
+    let(:resolution) { nil }
+
+    it "does not resolve or alter the schedule cursor" do
+      result
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
+    end
+  end
+
+  context "when a regrouped fee was paid late" do
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "regroup_paid_fees",
+        causation_type: "late_payment", billing_at: Time.utc(2026, 2, 1),
+        target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.current)
+    end
+    let(:resolution) { nil }
+
+    it "leaves the periodic cursor untouched without resolving segments" do
       result
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
     end

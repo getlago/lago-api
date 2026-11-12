@@ -47,10 +47,24 @@ module BillingOperations
           action_type = contract_rate_card.periodic_billing_action
           next unless action_type
 
-          BillingOperation.new(
-            organization_id: customer.organization_id, customer:, contract_rate_card:, action_type:,
-            causation_type: "periodic_continuation", billing_at: contract_rate_card.next_billing_at
-          )
+          billing_at = contract_rate_card.next_billing_at
+          activation_operation = BillingOperation.pending
+            .where(
+              organization_id: customer.organization_id, customer_id: customer.id, contract_rate_card:,
+              action_type:, causation_type: "contract_activation"
+            )
+            .order(:created_at, :id)
+            .first
+
+          if activation_operation
+            activation_operation.billing_at = billing_at
+            activation_operation
+          else
+            BillingOperation.new(
+              organization_id: customer.organization_id, customer:, contract_rate_card:, action_type:,
+              causation_type: "periodic_continuation", billing_at:
+            )
+          end
         end
         .sort_by { [it.billing_at, it.contract_rate_card_id] }
     end
@@ -93,7 +107,14 @@ module BillingOperations
       ActiveRecord::Base.transaction(requires_new: true) do
         operations.select! do |operation|
           if operation.persisted?
-            operation.lock!
+            billing_at = operation.billing_at
+            operation.reload(lock: true)
+            operation.contract_rate_card.lock!
+            next false unless operation.contract_rate_card.next_billing_at == billing_at
+
+            if operation.causation_type == "contract_activation"
+              operation.billing_at = billing_at
+            end
             operation.due_for_processing?(timestamp:)
           else
             operation.contract_rate_card.lock!

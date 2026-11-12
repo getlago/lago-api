@@ -33,7 +33,7 @@ module Contracts
           reseed_stale_rate_cards
 
           contract.update!(status: :active)
-          BillingOperations::ApplyActivationService.call!(contract:)
+          reset_billing_clocks
           BillingOperations::ProcessJob.perform_after_commit(contract.customer_id)
           SendWebhookJob.perform_after_commit("contract.started", contract)
           Utils::ActivityLog.produce_after_commit(contract, "contract.started")
@@ -49,6 +49,8 @@ module Contracts
       result.single_validation_failure!(field: :external_id, error_code: "active_contract_exists")
     rescue BaseService::FailedResult => e
       e.result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
     end
 
     private
@@ -68,6 +70,36 @@ module Contracts
       contract.applied_rate_cards.where.not(effective_date: start_day).find_each do |card|
         own_anchor = card.inherited_billing_anchor?(contract.billing_anchor_date) ? nil : card.billing_anchor_date
         ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
+      end
+    end
+
+    # A clock was set from the schedule its card had when seeded; phases and
+    # rates edited while the contract was pending can change the cadence since.
+    # A card never billed yet waits for its first billing date, so a late
+    # activation still bills the periods elapsed since the start.
+    def reset_billing_clocks
+      contract.applied_rate_cards.find_each do |card|
+        build = Billing::RateCards::BuildScheduleService.call(contract_rate_card: card)
+        next if build.failure?
+
+        schedule = build.schedule
+
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at, schedule:)
+        action = card.periodic_billing_action
+        # Event-only advance usage is billed by usage events, not periodic operations.
+        next unless action
+
+        plan_result = BillingOperations::Schedule::BuildPlannedOperation.call!(
+          contract_rate_card: card, schedule:, timestamp: contract.started_at
+        )
+        next unless plan_result.planned_operation
+
+        BillingOperations::CreateService.call!(
+          contract_rate_card: card,
+          action_type: action,
+          causation_type: BillingOperation::CAUSATION_TYPES.fetch(:contract_activation),
+          planned_operation: plan_result.planned_operation
+        )
       end
     end
 

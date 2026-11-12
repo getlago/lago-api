@@ -59,7 +59,7 @@ module Contracts
     def terminate
       contract.update!(status: :terminated, terminated_at: timestamp)
 
-      BillingOperations::ApplyTerminationService.call!(
+      BillingOperations::TerminateService.call!(
         contract:, timestamp: contract.terminated_at
       )
       if contract.applied_rate_cards.due_for_billing(Time.current).exists?

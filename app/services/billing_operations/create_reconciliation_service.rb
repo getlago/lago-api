@@ -12,18 +12,16 @@ module BillingOperations
     end
 
     def call
-      return result.not_found_failure!(resource: "contract_rate_card") unless contract_rate_card
-
-      result.operation = contract_rate_card.billing_operations.create!(
-        organization: contract_rate_card.organization,
-        customer: contract_rate_card.contract.customer,
-        action_type: "reconcile_advance_coverage", causation_type:,
-        billing_at: planned_operation.billing_at,
-        target_cycle_started_at: planned_operation.cycle_started_at
+      created = CreateService.call!(
+        contract_rate_card:,
+        action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage),
+        causation_type:,
+        planned_operation:
       )
+      result.operation = created.operation
       result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e.result.error)
     end
 
     private

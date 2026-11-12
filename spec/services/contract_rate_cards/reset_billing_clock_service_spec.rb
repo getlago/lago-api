@@ -33,6 +33,34 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
     expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
   end
 
+  context "with a supplied schedule" do
+    let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule }
+
+    before do
+      schedule
+      allow(Billing::RateCards::BuildScheduleService).to receive(:call).and_raise("unexpected schedule build")
+    end
+
+    it "uses it without rebuilding" do
+      result = described_class.call!(contract_rate_card:, timestamp:, schedule:)
+
+      expect(result.contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
+    end
+  end
+
+  context "with an explicitly nil schedule" do
+    before do
+      allow(Billing::RateCards::BuildScheduleService).to receive(:call).and_raise("unexpected schedule build")
+    end
+
+    it "keeps the cursor without rebuilding" do
+      result = described_class.call!(contract_rate_card:, timestamp:, schedule: nil)
+
+      expect(result).to be_success
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-30"))
+    end
+  end
+
   context "when the card has no schedule" do
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, next_billing_at: Time.zone.parse("2026-10-30")) }
 
@@ -41,6 +69,21 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
     it "keeps the clock" do
       expect(result).to be_success
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-30"))
+    end
+  end
+
+  context "when paid fees are regrouped after service" do
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: :sum_agg, recurring: false, field_name: "units")
+    end
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:rate_card) do
+      create(:rate_card, organization:, product:, billing_timing: "advance", regroup_paid_fees: "invoice", display_on_invoice: false)
+    end
+
+    it "updates the cursor to the service segment end" do
+      expect(result).to be_success
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
     end
   end
 end

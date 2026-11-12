@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class ContractRateCard < ApplicationRecord
+  TERMINATION_BILLING_ACTIONS = BillingOperation::ACTION_TYPES.values_at(
+    :close_fixed_arrears, :close_metered_arrears, :regroup_paid_fees
+  ).freeze
+
   include PaperTrailTraceable
   include Discard::Model
 
@@ -77,6 +81,12 @@ class ContractRateCard < ApplicationRecord
     elsif product.metered? && rate.arrears?
       actions.fetch(:close_metered_arrears)
     end
+  end
+
+  def requires_termination_billing?(timestamp:)
+    next_billing_at.present? && timestamp < next_billing_at &&
+      periodic_billing_action.in?(TERMINATION_BILLING_ACTIONS) &&
+      effective_date.in_time_zone(contract.customer.applicable_timezone) < [contract.ended_at, contract.terminated_at, timestamp].compact.min
   end
 
   def edit_error_code

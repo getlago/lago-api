@@ -51,25 +51,34 @@ RSpec.describe Contracts::TerminateService do
     before do
       arrears_card
       advance_card
-      BillingOperations::ApplyActivationService.call!(contract:)
+      contract.applied_rate_cards.find_each do |card|
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at)
+      end
     end
 
-    it "moves the arrears cursor to the final close" do
-      travel_to(terminated_at) { result }
+    it "persists the final arrears operation without changing the cursor" do
+      expect { travel_to(terminated_at) { result } }.not_to change { arrears_card.reload.next_billing_at }
 
-      expect(arrears_card.reload.next_billing_at).to eq(contract.reload.terminated_at)
-      expect(operations_of(arrears_card)).to be_empty
+      expect(result).to be_success
+      expect(operations_of(arrears_card).sole).to have_attributes(
+        action_type: "close_fixed_arrears", causation_type: "contract_termination",
+        billing_at: contract.reload.terminated_at, target_cycle_started_at: started_at,
+        processed_at: nil, invoice_id: nil
+      )
       expect(LegacyBillingSegment.where(contract_rate_card_id: arrears_card.id)).to be_empty
     end
 
     context "when the arrears card prorates" do
       let(:arrears_card) { card(billing_timing: "arrears", proration: true) }
 
-      it "moves the cursor to the prorated final close date" do
+      it "persists the final close date for the prorated card" do
         travel_to(terminated_at) { result }
 
-        expect(arrears_card.reload.next_billing_at).to eq(contract.reload.terminated_at)
-        expect(operations_of(arrears_card)).to be_empty
+        expect(result).to be_success
+        expect(operations_of(arrears_card).sole).to have_attributes(
+          action_type: "close_fixed_arrears", causation_type: "contract_termination",
+          billing_at: contract.reload.terminated_at, target_cycle_started_at: started_at
+        )
       end
     end
 
@@ -132,7 +141,7 @@ RSpec.describe Contracts::TerminateService do
 
     context "when closing the billing fails" do
       before do
-        allow(BillingOperations::ApplyTerminationService).to receive(:call!)
+        allow(BillingOperations::TerminateService).to receive(:call!)
           .and_raise(BaseService::ValidationFailure.new(BaseResult.new, messages: {billing_operation: ["value_is_invalid"]}))
       end
 
@@ -174,7 +183,9 @@ RSpec.describe Contracts::TerminateService do
         rate_model: "standard", rate_properties: {"amount" => "20"},
         billing_interval_count: 1, billing_interval_unit: "month")
       contract_rate_card
-      BillingOperations::ApplyActivationService.call!(contract:)
+      contract.applied_rate_cards.find_each do |card|
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at)
+      end
       BillingOperations::ProcessService.call!(customer:, timestamp: started_at)
     end
 
@@ -219,7 +230,9 @@ RSpec.describe Contracts::TerminateService do
         rate_model: "standard", rate_properties: {"amount" => "100"},
         billing_interval_count: 1, billing_interval_unit: "month")
       contract_rate_card
-      BillingOperations::ApplyActivationService.call!(contract:)
+      contract.applied_rate_cards.find_each do |card|
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at)
+      end
     end
 
     shared_examples "complete termination coverage" do

@@ -47,6 +47,11 @@ class BillingOperation < ApplicationRecord
     processed_at.nil? && cancelled_at.nil? && billing_at <= timestamp
   end
 
+  def advances_billing_clock?
+    cancelled_at.nil? && PERIODIC_ACTIONS.key?(action_type) &&
+      !(action_type == ACTION_TYPES.fetch(:regroup_paid_fees) && late_payment?)
+  end
+
   private
 
   def validate_identity

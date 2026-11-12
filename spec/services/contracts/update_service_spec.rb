@@ -464,7 +464,10 @@ RSpec.describe Contracts::UpdateService do
         expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 9, 29))
         expect(BillingOperations::ProcessJob).to have_been_enqueued.with(customer.id)
         expect(inherited_card.reload.next_billing_at).to eq(Time.zone.parse("2026-09-29"))
-        expect(inherited_card.billing_operations).to be_empty
+        expect(inherited_card.billing_operations.sole).to have_attributes(
+          action_type: "renew_fixed_advance", causation_type: "contract_activation",
+          billing_at: Time.zone.parse("2026-09-29"), target_cycle_started_at: Time.zone.parse("2026-09-29")
+        )
         expect(LegacyBillingSegment.where(contract_rate_card_id: inherited_card.id)).to be_empty
       end
 

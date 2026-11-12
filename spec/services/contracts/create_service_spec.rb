@@ -53,10 +53,10 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
     end
 
-    it "persists the initial cursor atomically without predicted segments" do
-      expect { result }
-        .not_to change(BillingOperation, :count)
+    it "persists the initial operation and cursor atomically without predicted segments" do
+      expect { result }.to change(BillingOperation, :count).by(1)
       expect(result.contract.applied_rate_cards.sole.next_billing_at).to be_present
+      expect(result.contract.applied_rate_cards.sole.billing_operations.sole.causation_type).to eq("contract_activation")
       expect(LegacyBillingSegment.count).to eq(0)
     end
   end

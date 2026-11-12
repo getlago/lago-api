@@ -43,6 +43,85 @@ RSpec.describe BillingOperations::ProcessService do
     expect(contract_rate_card.fees.count).to eq(1)
   end
 
+  context "with a pending activation operation" do
+    let(:activation_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+        causation_type: "contract_activation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
+    end
+
+    before { activation_operation }
+
+    it "reuses the operation and does not create another on retry" do
+      expect { result }.not_to change(BillingOperation, :count)
+      expect(result.invoices.sole.billing_operations.sole.id).to eq(activation_operation.id)
+      expect(activation_operation.reload).to have_attributes(processed_at: timestamp, billing_at: cursor)
+      expect { described_class.call!(customer:, timestamp:) }.not_to change(BillingOperation, :count)
+    end
+
+    context "when the billing cursor has moved earlier" do
+      let(:cursor) { Time.utc(2026, 1, 15) }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: cursor, rate_properties: {"amount" => "62"})
+        activation_operation.update!(billing_at: Time.utc(2026, 2, 1))
+      end
+
+      it "reuses the row at the current cursor and keeps its original cycle" do
+        invoice = result.invoices.sole
+
+        expect(invoice.total_amount_cents).to eq(1400) # $31 * 14 / 31 days.
+        expect(invoice.billing_operations.sole.id).to eq(activation_operation.id)
+        expect(activation_operation.reload).to have_attributes(
+          billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: timestamp
+        )
+      end
+    end
+
+    context "when the operation is not due" do
+      let(:cursor) { Time.utc(2026, 3, 1) }
+      let(:timestamp) { cursor - 1.second }
+
+      it "leaves the activation operation and cursor pending" do
+        expect(result.invoices).to be_empty
+        expect(activation_operation.reload.processed_at).to be_nil
+        expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+      end
+    end
+
+    context "when fee computation fails" do
+      let(:failure) { BaseService::Result.new.single_validation_failure!(field: :base, error_code: "cannot_bill") }
+
+      before do
+        allow(BillingOperations::ComputeInvoiceService).to receive(:call!).and_raise(BaseService::FailedResult.new(failure, "cannot bill"))
+      end
+
+      it "rolls back the operation and cursor for retry" do
+        expect(result).to be_failure
+        expect(activation_operation.reload).to have_attributes(processed_at: nil, invoice_id: nil, billing_at: cursor)
+        expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+        expect(Invoice.where(customer:)).to be_empty
+      end
+    end
+
+    context "when the cursor changes after the snapshot" do
+      before do
+        allow(described_class).to receive(:new).and_wrap_original do |original, **kwargs|
+          service = original.call(**kwargs)
+          allow(service).to receive(:due_operations).and_wrap_original do |load|
+            load.call.tap { contract_rate_card.update!(next_billing_at: cursor + 1.day) }
+          end
+          service
+        end
+      end
+
+      it "skips the persisted row after rechecking the cursor under lock" do
+        expect(result.invoices).to be_empty
+        expect(activation_operation.reload).to have_attributes(processed_at: nil, billing_at: cursor)
+        expect(contract_rate_card.reload.next_billing_at).to eq(cursor + 1.day)
+      end
+    end
+  end
+
   context "when the cursor is not due yet" do
     let(:timestamp) { cursor - 1.second }
 

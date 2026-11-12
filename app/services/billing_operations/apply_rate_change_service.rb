@@ -70,10 +70,11 @@ module BillingOperations
       return unless represented || operations.completed.where(action_type:).exists?
 
       reconciliation = operations.find_by(
-        action_type: "reconcile_advance_coverage", causation_type: "rate_change", billing_at: rate.effective_from
+        action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage),
+        causation_type: BillingOperation::CAUSATION_TYPES.fetch(:rate_change), billing_at: rate.effective_from
       )
       reconciliation ||= CreateReconciliationService.call!(
-        contract_rate_card:, causation_type: "rate_change",
+        contract_rate_card:, causation_type: BillingOperation::CAUSATION_TYPES.fetch(:rate_change),
         planned_operation: Schedule::PlannedOperation.new(cycle_started_at: cycle.started_at, billing_at: rate.effective_from)
       ).operation
       result.billing_operations << reconciliation

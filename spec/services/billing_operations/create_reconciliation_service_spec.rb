@@ -52,4 +52,16 @@ RSpec.describe BillingOperations::CreateReconciliationService do
       expect(BillingOperation.count).to eq(0)
     end
   end
+
+  context "when operation creation fails validation" do
+    let(:planned_operation) do
+      build_planned_operation(cycle_started_at: nil, billing_at: started_at)
+    end
+
+    it "propagates the creation failure" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(contract_rate_card.billing_operations).to be_empty
+    end
+  end
 end

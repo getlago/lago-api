@@ -290,6 +290,53 @@ RSpec.describe BillingOperation do
     end
   end
 
+  describe "#advances_billing_clock?" do
+    subject(:advances_billing_clock) { operation.advances_billing_clock? }
+
+    let(:operation) { described_class.new(action_type:, causation_type:, cancelled_at:) }
+    let(:action_type) { described_class::ACTION_TYPES.fetch(:renew_fixed_advance) }
+    let(:causation_type) { described_class::CAUSATION_TYPES.fetch(:contract_activation) }
+    let(:cancelled_at) { nil }
+
+    described_class::PERIODIC_ACTIONS.each_key do |periodic_action|
+      context "with #{periodic_action}" do
+        let(:action_type) { periodic_action }
+
+        it { is_expected.to be(true) }
+      end
+    end
+
+    context "when cancelled" do
+      let(:cancelled_at) { Time.utc(2026, 2, 1) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a reconciliation" do
+      let(:action_type) { described_class::ACTION_TYPES.fetch(:reconcile_advance_coverage) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "without an action" do
+      let(:action_type) { nil }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a late payment" do
+      let(:causation_type) { described_class::CAUSATION_TYPES.fetch(:late_payment) }
+
+      it { is_expected.to be(true) }
+
+      context "when regrouping paid fees" do
+        let(:action_type) { described_class::ACTION_TYPES.fetch(:regroup_paid_fees) }
+
+        it { is_expected.to be(false) }
+      end
+    end
+  end
+
   describe "#due_for_processing?" do
     subject(:due_for_processing) { operation.due_for_processing?(timestamp:) }
 
