@@ -38,6 +38,7 @@ class SendEmailJob < ActionMailer::MailDeliveryJob
   retry_on Net::ReadTimeout, wait: :polynomially_longer, attempts: 6
   retry_on Net::OpenTimeout, wait: :polynomially_longer, attempts: 6
   retry_on EOFError, wait: :polynomially_longer, attempts: 6
+  retry_on SocketError, wait: :polynomially_longer, attempts: 6
   retry_on Net::SMTPServerBusy, wait: :polynomially_longer, attempts: 25
   retry_on PaymentReceipts::FilesNotReadyError, wait: :polynomially_longer, attempts: 8
 
