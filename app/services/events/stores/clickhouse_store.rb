@@ -559,6 +559,21 @@ module Events
         end
       end
 
+      def late_ingestion?(period)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = arel_table
+          query = apply_arel_grouped_by_values(query) if grouped_by_values?
+          query = arel_filters_scope(query)
+
+          sql = with_ctes(
+            {"events_enriched" => late_events_sql(period, deduplicated_columns: [])},
+            "#{query.project(Arel.sql("1")).to_sql(::Clickhouse::EventsEnriched)} LIMIT 1"
+          )
+
+          connection.select_value(sql).present?
+        end
+      end
+
       def grouped_recurring_sum(watermark:, period: nil)
         groups, column_names = grouped_arel_columns
 
@@ -793,15 +808,23 @@ module Events
       # index pruned. The late branch turns it off: the latest copy of an event is ingested last,
       # so its granule passes the index and FINAL still picks it over the older ones.
       def snapshot_delta_events_sql(period, deduplicated_columns:)
-        columns = (DEDUP_KEY_COLUMNS + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
-        select = "SELECT #{columns} FROM events_enriched FINAL " \
-          "WHERE #{deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)}"
-
         [
-          "#{select} AND #{sql_condition("timestamp > ?", period.to_datetime)}",
-          "#{select} AND #{sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)}" \
-            "#{inexact_final_skip_indexes_sql}"
+          "#{snapshot_delta_select_sql(deduplicated_columns)} AND #{sql_condition("timestamp > ?", period.to_datetime)}",
+          late_events_sql(period, deduplicated_columns:)
         ].join(" UNION ALL ")
+      end
+
+      def late_events_sql(period, deduplicated_columns:)
+        "#{snapshot_delta_select_sql(deduplicated_columns)} " \
+          "AND #{sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)}" \
+          "#{inexact_final_skip_indexes_sql}"
+      end
+
+      def snapshot_delta_select_sql(deduplicated_columns)
+        columns = (DEDUP_KEY_COLUMNS + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
+
+        "SELECT #{columns} FROM events_enriched FINAL " \
+          "WHERE #{deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)}"
       end
 
       # ClickHouse knows the setting from 25.5: an older server needs it turned off.

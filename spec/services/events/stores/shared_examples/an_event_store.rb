@@ -1999,6 +1999,51 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
       end
     end
+
+    describe "#late_ingestion?" do
+      subject(:late_ingestion) { event_store.late_ingestion?(period) }
+
+      let(:period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(
+          to_datetime: subscription_started_at + 3.days,
+          watermark: (Time.current + 1.minute).floor(3)
+        )
+      end
+
+      before { event_store.use_from_boundary = false }
+
+      it { is_expected.to be(false) }
+
+      context "with an event dated in the period and ingested after its watermark" do
+        before do
+          create_event(timestamp: subscription_started_at + 2.days, value: 1000, created_at: period.watermark + 0.001)
+        end
+
+        it { is_expected.to be(true) }
+
+        context "when the filters leave it out" do
+          let(:matching_filters) { {"region" => ["europe"]} }
+
+          it { is_expected.to be(false) }
+        end
+      end
+
+      context "with an event dated in the period and ingested at its watermark" do
+        before do
+          create_event(timestamp: subscription_started_at + 2.days, value: 1000, created_at: period.watermark)
+        end
+
+        it { is_expected.to be(false) }
+      end
+
+      context "with an event dated after the period and ingested after its watermark" do
+        before do
+          create_event(timestamp: period.to_datetime + 1.second, value: 1000, created_at: period.watermark + 1.hour)
+        end
+
+        it { is_expected.to be(false) }
+      end
+    end
   end
 
   if include_feature?(:grouped_sum_breakdown)
