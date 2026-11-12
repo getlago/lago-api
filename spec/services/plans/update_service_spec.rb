@@ -1080,6 +1080,16 @@ RSpec.describe Plans::UpdateService do
           end
         end
 
+        context "when the payload leaves the cascaded attributes of the charge unchanged" do
+          before { update_args[:charges].first[:properties] = {amount: "300"} }
+
+          it "does not enqueue the job for updating charge" do
+            expect do
+              plans_service.call
+            end.not_to have_enqueued_job(Charges::UpdateChildrenJob)
+          end
+        end
+
         context "when cascade is false with children plans" do
           before do
             update_args[:cascade_updates] = false
@@ -1764,6 +1774,43 @@ RSpec.describe Plans::UpdateService do
             expect do
               plans_service.call
             end.to have_enqueued_job(FixedCharges::DestroyChildrenJob).exactly(1).times
+          end
+
+          context "when the payload leaves the cascaded attributes of a fixed charge unchanged" do
+            let(:unchanged_fixed_charge_args) do
+              {
+                id: fixed_charge_to_update.id,
+                add_on_id: add_on.id,
+                charge_model: "standard",
+                invoice_display_name: "renamed",
+                units: 1,
+                properties: fixed_charge_to_update.properties
+              }
+            end
+            let(:fixed_charges_args) { [unchanged_fixed_charge_args] }
+
+            it "does not schedule job to update fixed_charges of children plans" do
+              expect do
+                plans_service.call
+              end.not_to have_enqueued_job(FixedCharges::CascadePlanUpdateJob)
+            end
+
+            context "when the payload also creates a fixed charge" do
+              let(:fixed_charges_args) do
+                [
+                  unchanged_fixed_charge_args,
+                  {add_on_id: add_on.id, charge_model: "standard", units: 1, properties: {amount: "100"}}
+                ]
+              end
+
+              it "cascades only the created fixed charge" do
+                expect do
+                  plans_service.call
+                end.to have_enqueued_job(FixedCharges::CascadePlanUpdateJob).with { |args|
+                  expect(args[:cascade_fixed_charges_payload].pluck(:action)).to eq([:create])
+                }
+              end
+            end
           end
         end
       end

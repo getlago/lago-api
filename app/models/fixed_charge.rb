@@ -32,6 +32,9 @@ class FixedCharge < ApplicationRecord
     volume: "volume"
   }.freeze
 
+  # What FixedCharges::UpdateService writes on a child in cascade mode
+  CASCADED_ATTRIBUTES = %w[code charge_model properties units].freeze
+
   enum :charge_model, CHARGE_MODELS
 
   validates :units, numericality: {greater_than_or_equal_to: 0}
@@ -49,6 +52,10 @@ class FixedCharge < ApplicationRecord
     charge_model == fixed_charge.charge_model &&
       properties == fixed_charge.properties &&
       units == fixed_charge.units
+  end
+
+  def cascaded_attributes_changed?(old_attributes)
+    CASCADED_ATTRIBUTES.any? { |attribute| self[attribute] != old_attributes[attribute] }
   end
 
   def effective_units_for(subscription)

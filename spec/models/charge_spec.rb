@@ -967,6 +967,51 @@ RSpec.describe Charge do
     end
   end
 
+  describe "#cascaded_attributes_changed?" do
+    subject(:cascaded_attributes_changed) do
+      charge.cascaded_attributes_changed?(charge.attributes.merge(old_values), old_applied_pricing_unit_attributes)
+    end
+
+    let(:charge) do
+      build(:standard_charge, code: "storage", properties: {"amount" => "100"}, applied_pricing_unit:)
+    end
+    let(:applied_pricing_unit) { build(:applied_pricing_unit, conversion_rate: 2.5) }
+    let(:old_applied_pricing_unit_attributes) { {"conversion_rate" => BigDecimal("2.5")} }
+    let(:old_values) { {} }
+
+    context "when only attributes that are not cascaded changed" do
+      let(:old_values) { {"invoice_display_name" => "Old name", "pay_in_advance" => true, "min_amount_cents" => 500} }
+
+      it { is_expected.to be false }
+    end
+
+    {
+      "code" => "old_storage",
+      "charge_model" => "graduated",
+      "properties" => {"amount" => "90"},
+      "accepts_target_wallet" => true
+    }.each do |attribute, old_value|
+      context "when #{attribute} changed" do
+        let(:old_values) { {attribute => old_value} }
+
+        it { is_expected.to be true }
+      end
+    end
+
+    context "when the pricing unit conversion rate changed" do
+      let(:old_applied_pricing_unit_attributes) { {"conversion_rate" => BigDecimal("2")} }
+
+      it { is_expected.to be true }
+    end
+
+    context "when the charge has no pricing unit" do
+      let(:applied_pricing_unit) { nil }
+      let(:old_applied_pricing_unit_attributes) { nil }
+
+      it { is_expected.to be false }
+    end
+  end
+
   describe "#equal_applied_pricing_unit_rate?" do
     subject { charge.equal_applied_pricing_unit_rate?(another_charge) }
 

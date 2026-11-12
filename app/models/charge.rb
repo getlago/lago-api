@@ -39,6 +39,9 @@ class Charge < ApplicationRecord
 
   REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
 
+  # What Charges::UpdateService writes on a child in cascade mode, with the pricing unit rate
+  CASCADED_ATTRIBUTES = %w[code charge_model properties accepts_target_wallet].freeze
+
   enum :charge_model, CHARGE_MODELS, validate: true
 
   attribute :regroup_paid_fees, :integer
@@ -89,6 +92,11 @@ class Charge < ApplicationRecord
 
   def equal_properties?(charge)
     charge_model == charge.charge_model && properties == charge.properties
+  end
+
+  def cascaded_attributes_changed?(old_attributes, old_applied_pricing_unit_attributes)
+    CASCADED_ATTRIBUTES.any? { |attribute| self[attribute] != old_attributes[attribute] } ||
+      applied_pricing_unit&.conversion_rate != old_applied_pricing_unit_attributes&.[]("conversion_rate")
   end
 
   def equal_applied_pricing_unit_rate?(another_charge)

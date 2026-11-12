@@ -434,6 +434,17 @@ RSpec.describe Charges::UpdateService do
             expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
           end
         end
+
+        context "when the update leaves the cascaded attributes unchanged" do
+          let(:params) { super().merge(properties: {amount: "300"}) }
+          let(:applied_pricing_unit_params) { {conversion_rate: 1.1} }
+
+          it "does not trigger cascade update" do
+            subject
+
+            expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
+          end
+        end
       end
 
       context "without cascade_updates when charge has children" do

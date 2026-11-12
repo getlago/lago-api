@@ -244,6 +244,35 @@ RSpec.describe FixedCharge do
     end
   end
 
+  describe "#cascaded_attributes_changed?" do
+    subject(:cascaded_attributes_changed) do
+      fixed_charge.cascaded_attributes_changed?(fixed_charge.attributes.merge(old_values))
+    end
+
+    let(:fixed_charge) { build(:fixed_charge, code: "seats", units: 10, properties: {"amount" => "100"}) }
+
+    context "when only attributes that are not cascaded changed" do
+      let(:old_values) do
+        {"invoice_display_name" => "Old name", "pay_in_advance" => true, "units" => BigDecimal("10.0")}
+      end
+
+      it { is_expected.to be false }
+    end
+
+    {
+      "code" => "old_seats",
+      "charge_model" => "graduated",
+      "properties" => {"amount" => "90"},
+      "units" => BigDecimal("5")
+    }.each do |attribute, old_value|
+      context "when #{attribute} changed" do
+        let(:old_values) { {attribute => old_value} }
+
+        it { is_expected.to be true }
+      end
+    end
+  end
+
   describe "#parent_or_self" do
     context "when the fixed charge has a parent" do
       let(:parent) { create(:fixed_charge) }
