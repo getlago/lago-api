@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-RSpec.shared_examples "an event store" do |with_event_duplication: true, excluding_features: []|
+# product_events: the organization is on the product events pipeline, so a store that tells the
+# pipelines apart reads the product events table.
+RSpec.shared_examples "an event store" do |with_event_duplication: true, excluding_features: [], product_events: false|
   subject(:event_store) do
     described_class.new(
       code:,
@@ -17,7 +19,14 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     )
   end
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization) do
+    create_default(:organization, feature_flags: product_events ? ["product_catalog"] : [])
+  end
+
+  if product_events
+    before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+    after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+  end
   let_it_be(:billable_metric) { create_default(:sum_billable_metric, field_name: "value", code: "bm:code") }
   let(:charge) { create(:standard_charge, organization:, billable_metric:) }
   let(:charge_filter) { nil }

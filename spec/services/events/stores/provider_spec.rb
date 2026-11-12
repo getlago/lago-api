@@ -139,6 +139,21 @@ RSpec.describe Events::Stores::Provider do
         expect(provider.may_precompute?).to be(true)
       end
     end
+
+    # The buckets are built from events_enriched, which the product events pipeline does not
+    # write to.
+    context "when the organization is on the product events pipeline" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: %w[realtime_usage product_catalog])
+      end
+
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
   end
 
   describe "#store_for, with the usage buckets" do
@@ -697,6 +712,21 @@ RSpec.describe Events::Stores::Provider do
 
     context "without the feature flag" do
       let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    # The scan's incremental cache reads events_enriched, which the product events pipeline
+    # does not write to.
+    context "when the organization is on the product events pipeline" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: %w[charge_filters_single_scan product_catalog])
+      end
+
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
 
       it "returns the store" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
