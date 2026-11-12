@@ -30,6 +30,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       field :voided_invoice, Types::Invoices::Object, null: true
 
+      field :connections, [Types::Connections::Object], null: false, method: :connection_routing
       field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
       field :skip_invoice_custom_sections, Boolean
 

@@ -3,10 +3,13 @@
 class WalletTransaction < ApplicationRecord
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
+  include ConnectionResolvable
 
   belongs_to :wallet
   belongs_to :organization
   belongs_to :billing_entity, optional: true
+
+  delegate :customer, to: :wallet
 
   # these two relationships are populated only for outbound transactions
   belongs_to :invoice, optional: true
@@ -28,6 +31,7 @@ class WalletTransaction < ApplicationRecord
     inverse_of: :outbound_wallet_transaction,
     dependent: :destroy
 
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
   has_many :applied_invoice_custom_sections,
     class_name: "WalletTransaction::AppliedInvoiceCustomSection",
     dependent: :destroy

@@ -43,7 +43,14 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            result.wallet_transactions.includes(:billing_entity, wallet: {customer: :billing_entity}),
+            result.wallet_transactions.includes(
+              :billing_entity,
+              :billing_object_connections,
+              wallet: [
+                :billing_object_connections,
+                {customer: [:billing_entity, :payment_provider_customers, :integration_customers]}
+              ]
+            ),
             ::V1::WalletTransactionSerializer,
             collection_name: "wallet_transactions",
             meta: pagination_metadata(result.wallet_transactions)
@@ -144,6 +151,12 @@ module Api
           invoice_custom_section: [
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}
+          ],
+          connections: [
+            payment: [:behavior, :code],
+            tax: [:behavior, :code],
+            accounting: [:behavior, :code],
+            crm: [:behavior, :code]
           ]
         )
       end
