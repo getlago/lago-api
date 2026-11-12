@@ -299,7 +299,23 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
         expect(comparison.recurring_eligible_charges_count).to eq(1)
         expect(comparison.recurring_served_charges_count).to eq(0)
         expect(comparison.recurring_fallback_reasons).to eq({"declined" => 1})
-        expect(comparison.declined_reason).to eq("recurring_fallback")
+        expect(comparison.declined_reason).to eq("no_buckets")
+      end
+    end
+
+    context "when the organization sends its events to the product events pipeline" do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["product_catalog"]) }
+
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "counts the charge as declined and names the pipeline" do
+        expect(comparison.recurring_eligible_charges_count).to eq(1)
+        expect(comparison.recurring_served_charges_count).to eq(0)
+        expect(comparison.recurring_fallback_reasons).to eq({"declined" => 1})
+        expect(comparison.declined_reason).to eq("product_events_pipeline")
+        expect(runs).to be_empty
       end
     end
 

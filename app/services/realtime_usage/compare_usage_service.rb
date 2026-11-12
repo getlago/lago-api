@@ -176,7 +176,11 @@ module RealtimeUsage
         serve_current_usage_from_buckets: true,
         charges:
       )
-      return [] unless provider.may_precompute?
+      unless provider.may_precompute?
+        # Counted so the reasons still add up to the eligible recurring charges.
+        result.recurring_fallback_reasons["declined"] += eligible_charges.count { RealtimeUsage.recurring_charge?(it) }
+        return []
+      end
 
       eligible_charges.select do |charge|
         metered_item = Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:)
@@ -304,9 +308,14 @@ module RealtimeUsage
       return "not_premium" unless License.premium?
       return "clickhouse_disabled" unless Events::Stores::StoreFactory.supports_clickhouse?
       return "postgres_events_store" unless organization.clickhouse_events_store?
-      return "recurring_fallback" if eligible_charges.all? { RealtimeUsage.recurring_charge?(it) }
+      return "product_events_pipeline" if organization.product_events_pipeline?
 
-      "no_buckets"
+      # A charge only declined fell back on nothing: its buckets were missing or refused.
+      if eligible_charges.all? { RealtimeUsage.recurring_charge?(it) } && result.recurring_fallback_reasons.except("declined").any?
+        "recurring_fallback"
+      else
+        "no_buckets"
+      end
     end
 
     def fetch_duplicate_events_by_code(served_charges)
