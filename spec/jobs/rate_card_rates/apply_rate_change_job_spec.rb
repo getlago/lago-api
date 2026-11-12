@@ -63,8 +63,10 @@ RSpec.describe RateCardRates::ApplyRateChangeJob do
   context "when the product is metered" do
     let(:product) { create(:product, organization:) }
 
-    it "does nothing" do
-      expect { perform_job }.not_to have_enqueued_job(BillingOperations::ApplyRateChangeJob)
+    it "fans out once per eligible customer" do
+      expect { perform_job }.to have_enqueued_job(BillingOperations::ApplyRateChangeJob).exactly(2).times
+      expect(BillingOperations::ApplyRateChangeJob).to have_been_enqueued.with(customer.id, rate.id)
+      expect(BillingOperations::ApplyRateChangeJob).to have_been_enqueued.with(other_customer.id, rate.id)
     end
   end
 end

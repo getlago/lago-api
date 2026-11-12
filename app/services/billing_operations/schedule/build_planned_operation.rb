@@ -3,9 +3,14 @@
 module BillingOperations
   class Schedule
     class BuildPlannedOperation < BaseService
-      Result = BaseResult[:planned_operation]
+      Result = BaseResult[:planned_operation, :cycle, :schedule]
 
-      def initialize(contract_rate_card:, schedule:, timestamp:, after: nil)
+      def initialize(
+        contract_rate_card:,
+        timestamp:,
+        schedule: contract_rate_card && BillingOperations::BuildScheduleService.call!(contract_rate_card:).schedule,
+        after: nil
+      )
         @contract_rate_card = contract_rate_card
         @schedule = schedule
         @timestamp = timestamp
@@ -16,6 +21,7 @@ module BillingOperations
       def call
         return result.not_found_failure!(resource: "contract_rate_card") unless contract_rate_card
 
+        result.schedule = schedule
         result.planned_operation = build_planned_operation
         result
       end
@@ -36,6 +42,7 @@ module BillingOperations
             plan = planned_operation(segment)
             next if after && plan.billing_at <= after
 
+            result.cycle = cycle
             return plan
           end
 

@@ -146,14 +146,20 @@ RSpec.describe ContractRateCard do
     context "with a fixed product billed in advance" do
       let(:product) { build(:product, :fixed, organization:) }
 
-      it { expect(card.periodic_billing_action).to eq("renew_fixed_advance") }
+      it do
+        expect(card.periodic_billing_action).to eq("renew_fixed_advance")
+        expect(card.needs_reconciliation?).to be(true)
+      end
     end
 
     context "with a fixed product billed in arrears" do
       let(:product) { build(:product, :fixed, organization:) }
       let(:billing_timing) { :arrears }
 
-      it { expect(card.periodic_billing_action).to eq("close_fixed_arrears") }
+      it do
+        expect(card.periodic_billing_action).to eq("close_fixed_arrears")
+        expect(card.needs_reconciliation?).to be(false)
+      end
     end
 
     context "with recurring metered charges displayed in advance" do
@@ -163,29 +169,42 @@ RSpec.describe ContractRateCard do
         build(:product, organization:, billable_metric: metric)
       end
 
-      it { expect(card.periodic_billing_action).to eq("renew_recurring_metered_advance") }
+      it do
+        expect(card.periodic_billing_action).to eq("renew_recurring_metered_advance")
+        expect(card.needs_reconciliation?).to be(false)
+      end
 
       context "when paid fees are also regrouped" do
         let(:regroup_paid_fees) { "invoice" }
 
-        it { expect(card.periodic_billing_action).to eq("renew_recurring_metered_advance") }
+        it do
+          expect(card.periodic_billing_action).to eq("renew_recurring_metered_advance")
+          expect(card.needs_reconciliation?).to be(false)
+        end
       end
     end
 
     context "with advance metered charges regrouped on the invoice" do
       let(:regroup_paid_fees) { "invoice" }
 
-      it { expect(card.periodic_billing_action).to eq("regroup_paid_fees") }
+      it do
+        expect(card.periodic_billing_action).to eq("regroup_paid_fees")
+        expect(card.needs_reconciliation?).to be(false)
+      end
     end
 
     context "with metered charges in arrears" do
       let(:billing_timing) { :arrears }
 
-      it { expect(card.periodic_billing_action).to eq("close_metered_arrears") }
+      it do
+        expect(card.periodic_billing_action).to eq("close_metered_arrears")
+        expect(card.needs_reconciliation?).to be(false)
+      end
     end
 
     it "returns nil for an unsupported metered advance configuration" do
       expect(card.periodic_billing_action).to be_nil
+      expect(card.needs_reconciliation?).to be(false)
     end
   end
 

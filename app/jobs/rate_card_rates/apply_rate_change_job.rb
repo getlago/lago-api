@@ -8,7 +8,7 @@ module RateCardRates
     def perform(rate_card_rate_id)
       rate = RateCardRate.find_by(id: rate_card_rate_id)
       return unless rate
-      return unless rate.rate_card.kept? && rate.rate_card.product.fixed?
+      return unless rate.rate_card.kept?
 
       contract_ids = rate.rate_card.contract_applied_rate_cards
         .where(organization_id: rate.organization_id).select(:contract_id)

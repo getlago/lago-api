@@ -83,6 +83,10 @@ class ContractRateCard < ApplicationRecord
     end
   end
 
+  def needs_reconciliation?
+    periodic_billing_action == BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance)
+  end
+
   def requires_termination_billing?(timestamp:)
     next_billing_at.present? && timestamp < next_billing_at &&
       periodic_billing_action.in?(TERMINATION_BILLING_ACTIONS) &&

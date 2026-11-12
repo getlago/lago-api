@@ -30,6 +30,11 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
 
   it "returns the first planned segment using the customer's timezone" do
     expect(result).to be_success
+    expect(result.schedule).to be(schedule)
+    expect(result.cycle).to have_attributes(
+      started_at: Time.utc(2026, 11, 1, 7),
+      ended_at: Time.utc(2026, 12, 1, 8)
+    )
     expect(result.planned_operation).to have_attributes(
       cycle_started_at: Time.utc(2026, 11, 1, 7),
       billing_at: Time.utc(2026, 11, 1, 7)
@@ -135,9 +140,14 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   context "with no schedule" do
     let(:schedule) { nil }
 
+    before { allow(BillingOperations::BuildScheduleService).to receive(:call!) }
+
     it "returns no planned operation" do
       expect(result).to be_success
       expect(result.planned_operation).to be_nil
+      expect(result.cycle).to be_nil
+      expect(result.schedule).to be_nil
+      expect(BillingOperations::BuildScheduleService).not_to have_received(:call!)
     end
   end
 
@@ -147,6 +157,8 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     it "returns no planned operation" do
       expect(result).to be_success
       expect(result.planned_operation).to be_nil
+      expect(result.cycle).to be_nil
+      expect(result.schedule).to be(schedule)
     end
   end
 
@@ -156,6 +168,35 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
 
     it "returns a not found failure" do
       expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.cycle).to be_nil
+    end
+  end
+
+  context "when schedule is omitted" do
+    subject(:result) { described_class.call(contract_rate_card:, timestamp:, after:) }
+
+    it "builds the schedule and returns the cycle for the planned operation" do
+      expect(result).to be_success
+      expect(result.planned_operation).to have_attributes(
+        cycle_started_at: Time.utc(2026, 11, 1, 7),
+        billing_at: Time.utc(2026, 11, 1, 7)
+      )
+      expect(result.cycle).to have_attributes(
+        started_at: Time.utc(2026, 11, 1, 7),
+        ended_at: Time.utc(2026, 12, 1, 8)
+      )
+      expect(result.schedule).to be_a(BillingOperations::Schedule)
+    end
+
+    context "when the rate card is missing" do
+      let(:contract_rate_card) { nil }
+
+      before { allow(BillingOperations::BuildScheduleService).to receive(:call!) }
+
+      it "returns not found without trying to build a schedule" do
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(BillingOperations::BuildScheduleService).not_to have_received(:call!)
+      end
     end
   end
 end
