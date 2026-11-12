@@ -118,6 +118,7 @@ RSpec.describe SendEmailJob do
       [Net::ReadTimeout, 6],
       [Net::OpenTimeout, 6],
       [EOFError, 6],
+      [Socket::ResolutionError.new("getaddrinfo: No address associated with hostname"), 6],
       [Net::SMTPServerBusy.new("busy"), 25],
       [PaymentReceipts::FilesNotReadyError, 8]
     ].each do |error, attempts|
