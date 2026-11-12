@@ -98,6 +98,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
           customer:,
           currency: "EUR",
           invoice_type: :progressive_billing,
+          progressive_billing_trigger: :wallet_expiration,
           taxes_amount_cents:,
           total_amount_cents: amount_cents
         )

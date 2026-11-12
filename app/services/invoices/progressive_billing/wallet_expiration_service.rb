@@ -10,15 +10,6 @@ module Invoices
         super(timestamp:)
       end
 
-      # Without credits left, the wallet would pay for none of the usage.
-      def call
-        if wallet.balance_cents.positive?
-          super
-        else
-          result
-        end
-      end
-
       private
 
       attr_reader :wallet, :subscription

@@ -84,11 +84,50 @@ RSpec.describe Invoices::ProgressiveBilling::WalletExpirationService, transactio
   context "when the wallet has no credits left" do
     let(:balance_cents) { 0 }
 
-    it "does not create an invoice" do
-      expect { result }.not_to change(Invoice, :count)
+    it "invoices the usage, due from the customer" do
+      expect(result.invoice).to have_attributes(
+        fees_amount_cents: 100,
+        prepaid_credit_amount_cents: 0,
+        total_amount_cents: 100,
+        payment_status: "pending"
+      )
+    end
+  end
 
-      expect(result).to be_success
-      expect(result.invoice).to be_nil
+  context "when the wallet credits cover part of the usage" do
+    let(:balance_cents) { 50 }
+
+    it "leaves the rest of the usage due from the customer" do
+      expect(result.invoice).to have_attributes(
+        fees_amount_cents: 100,
+        prepaid_credit_amount_cents: 50,
+        total_amount_cents: 50,
+        payment_status: "pending"
+      )
+      expect(wallet.reload.balance_cents).to eq(0)
+    end
+  end
+
+  context "when the wallet cannot pay the invoiced fees" do
+    let(:wallet) do
+      create(
+        :wallet,
+        :with_inbound_transaction,
+        customer:,
+        balance_cents:,
+        credits_balance: balance_cents / 100.0,
+        expiration_at:,
+        allowed_fee_types: %w[subscription]
+      )
+    end
+
+    it "invoices the usage, due from the customer" do
+      expect(result.invoice).to have_attributes(
+        fees_amount_cents: 100,
+        prepaid_credit_amount_cents: 0,
+        total_amount_cents: 100
+      )
+      expect(wallet.reload.balance_cents).to eq(1000)
     end
   end
 
