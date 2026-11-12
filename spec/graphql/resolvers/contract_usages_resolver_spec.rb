@@ -204,6 +204,111 @@ RSpec.describe Resolvers::ContractUsagesResolver do
         expect(result["data"]["contractUsages"]["collection"].sole["rateCardCode"]).to eq(rate_card.code)
       end
     end
+
+    context "with productIds" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!, $productIds: [ID!]) {
+            contractUsages(contractId: $contractId, productIds: $productIds) {
+              collection { rateCardCode }
+            }
+          }
+        GQL
+      end
+
+      it "excludes a card on another product, proving the argument reaches the service" do
+        create_excluded_card
+
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:,
+          variables: {contractId: contract.id, productIds: [product.id]}
+        )
+
+        expect(result["data"]["contractUsages"]["collection"].sole["rateCardCode"]).to eq(rate_card.code)
+      end
+    end
+
+    context "with productCategoryIds" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!, $productCategoryIds: [ID!]) {
+            contractUsages(contractId: $contractId, productCategoryIds: $productCategoryIds) {
+              collection { rateCardCode }
+            }
+          }
+        GQL
+      end
+
+      it "matches only the requested category, excluding the standalone card" do
+        create_excluded_card
+
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:,
+          variables: {contractId: contract.id, productCategoryIds: [categorized_product.product_category_id]}
+        )
+
+        expect(result["data"]["contractUsages"]["collection"].sole["rateCardCode"]).to eq(categorized_rate_card.code)
+      end
+    end
+
+    context "with productFilterIds" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!, $productFilterIds: [ID!]) {
+            contractUsages(contractId: $contractId, productFilterIds: $productFilterIds) {
+              collection { rateCardCode }
+            }
+          }
+        GQL
+      end
+
+      it "matches only the requested product filter, excluding the unfiltered cards" do
+        product_filter = create(:product_filter, organization:, product: categorized_product)
+        filtered_rate_card = create(:rate_card, organization:, product: categorized_product, product_filter:, currency: "EUR")
+        create(:contract_rate_card, organization:, contract:, rate_card: filtered_rate_card,
+          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+        create(:rate_card_rate, organization:, rate_card: filtered_rate_card,
+          effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:,
+          variables: {contractId: contract.id, productFilterIds: [product_filter.id]}
+        )
+
+        expect(result["data"]["contractUsages"]["collection"].sole["rateCardCode"]).to eq(filtered_rate_card.code)
+      end
+    end
+
+    context "with productType" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!, $productType: ProductTypeEnum) {
+            contractUsages(contractId: $contractId, productType: $productType) {
+              collection { rateCardCode }
+            }
+          }
+        GQL
+      end
+
+      it "matches only the requested product type, excluding the metered card" do
+        fixed_rate_card = create(:rate_card, organization:, product: create(:product, :fixed, :standalone, organization:), currency: "EUR")
+        create(:contract_rate_card, organization:, contract:, rate_card: fixed_rate_card, units: 1,
+          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+        create(:rate_card_rate, organization:, rate_card: fixed_rate_card,
+          effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:,
+          variables: {contractId: contract.id, productType: "fixed"}
+        )
+
+        expect(result["data"]["contractUsages"]["collection"].sole["rateCardCode"]).to eq(fixed_rate_card.code)
+      end
+    end
   end
 
   context "with a product's filter card chronologically split from its own unfiltered card by another product" do
