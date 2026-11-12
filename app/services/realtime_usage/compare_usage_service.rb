@@ -154,7 +154,8 @@ module RealtimeUsage
       )
       return [] unless provider.may_precompute?
 
-      eligible_charges.select do |charge|
+      # Recurring charges wait until both runs force the same snapshot read.
+      eligible_charges.reject { RealtimeUsage.recurring_charge?(it) }.select do |charge|
         metered_item = Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:)
         provider.serves_whole_charge_from_buckets?(
           metered_item:,
