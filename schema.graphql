@@ -1920,6 +1920,12 @@ type Contract {
   canceledAt: ISO8601DateTime
   consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
+
+  """
+  The currency fees bill in: the plan's when there is one, otherwise the
+  customer's, falling back to the organization default
+  """
+  currency: CurrencyEnum!
   customer: Customer!
 
   """

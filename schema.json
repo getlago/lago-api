@@ -10998,6 +10998,22 @@
               "deprecationReason": null
             },
             {
+              "name": "currency",
+              "description": "The currency fees bill in: the plan's when there is one, otherwise the customer's, falling back to the organization default",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "customer",
               "description": null,
               "args": [],
