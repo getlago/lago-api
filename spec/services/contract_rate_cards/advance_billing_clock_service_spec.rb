@@ -14,7 +14,7 @@ RSpec.describe ContractRateCards::AdvanceBillingClockService do
     create(:contract_rate_card, organization:, contract:, next_billing_at: clock)
   end
 
-  let(:schedule) { instance_double(Billing::RateCards::Schedule, next_billing_at: next_due) }
+  let(:schedule) { instance_double(Billing::RateCards::Schedule, billing_at: next_due) }
 
   describe "#call" do
     context "when the schedule falls due again later" do
@@ -29,7 +29,10 @@ RSpec.describe ContractRateCards::AdvanceBillingClockService do
       it "asks the schedule about the instant it was given" do
         result
 
-        expect(schedule).to have_received(:next_billing_at).with(after: timestamp)
+        expect(schedule).to have_received(:billing_at).with(
+          timestamp:,
+          target: Billing::RateCards::Schedule::BILLING_TARGET.fetch(:next)
+        )
       end
     end
 
