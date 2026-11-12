@@ -81,24 +81,16 @@ RSpec.describe Api::V2::ContractRateCardsController do
     subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards") }
 
     let(:external_id) { contract.external_id }
-    let!(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
-    let(:second_card) { create(:contract_rate_card, organization:, contract:, effective_date: 2.days.ago.to_date) }
+    let!(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, next_billing_at: first_billing_at) }
+    let(:second_card) { create(:contract_rate_card, organization:, contract:, effective_date: 2.days.ago.to_date, next_billing_at: second_billing_at) }
     let(:first_billing_at) { Time.zone.parse("2026-11-10 12:00:00") }
     let(:second_billing_at) { Time.zone.parse("2026-11-11 12:00:00") }
-    let(:first_operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card:,
-        billing_at: first_billing_at, target_cycle_started_at: first_billing_at - 1.month)
-    end
-    let(:second_operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card: second_card,
-        billing_at: second_billing_at, target_cycle_started_at: second_billing_at - 1.month)
-    end
     let(:priced_cards) do
       Array.new(3) do |index|
         card = create(:rate_card, organization:)
         create(:rate_card_rate, organization:, rate_card: card)
         create(:contract_rate_card, organization:, contract:, rate_card: card,
-          effective_date: (index + 1).months.ago.to_date)
+          effective_date: (index + 1).months.ago.to_date, next_billing_at: first_billing_at)
       end
     end
 
@@ -115,23 +107,21 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
-    it "loads billing-operation clocks once for the returned cards" do
-      first_operation
-      second_operation
+    it "reads billing cursors without querying operations" do
+      second_card
       queries = []
       subscriber = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('FROM "billing_operations"') }
 
       ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { subject }
 
-      expect(queries.size).to eq(1)
-      expect(queries.sole).to include("GROUP BY")
+      expect(queries).to be_empty
       expect(json[:applied_rate_cards].to_h { [it[:lago_id], it[:next_billing_at]] }).to eq(
         contract_rate_card.id => first_billing_at.iso8601(6),
         second_card.id => second_billing_at.iso8601(6)
       )
     end
 
-    it "preloads schedule inputs for cards without billing operations" do
+    it "renders stored cursors without loading each card's schedule" do
       priced_cards
       queries = Hash.new { |hash, key| hash[key] = [] }
       tables = %w[customers billing_entities rate_cards rate_card_rates rate_phases products billable_metrics]

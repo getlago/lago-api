@@ -5,7 +5,7 @@ module BillingOperations
     private
 
     def build_schedule(**attributes)
-      Schedule.new(**attributes)
+      Schedule.new(**attributes, final_billing_at: contract_rate_card.contract.terminated_at)
     end
   end
 end

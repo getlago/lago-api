@@ -27,6 +27,7 @@ RSpec.describe Webhooks::Contracts::CreatedService do
       contract:,
       rate_card:,
       units: 2,
+      next_billing_at: Time.zone.parse("2026-02-01T00:00:00Z"),
       effective_date: Date.new(2026, 1, 1),
       billing_anchor_date: Date.new(2026, 1, 1)
     )
@@ -35,9 +36,6 @@ RSpec.describe Webhooks::Contracts::CreatedService do
   before do
     allow(contract.organization).to receive(:product_catalog_enabled?).and_return(true)
     applied_rate_card
-    create(:billing_operation, organization: contract.organization, contract_rate_card: applied_rate_card,
-      billing_at: Time.zone.parse("2026-02-01T00:00:00Z"),
-      target_cycle_started_at: Time.zone.parse("2026-01-01T00:00:00Z"))
   end
 
   describe ".call" do

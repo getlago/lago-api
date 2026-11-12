@@ -7,7 +7,7 @@ module Contracts
   # agreement ever took effect. Both transitions are terminal: a terminated or
   # canceled contract is history and cannot be terminated again.
   #
-  # Terminating persists all missing billing obligations through the end, including future cycles.
+  # Terminating keeps billing cursors alive until all coverage through the end is processed.
   class TerminateService < BaseService
     Result = BaseResult[:contract]
 
@@ -62,8 +62,7 @@ module Contracts
       BillingOperations::ApplyTerminationService.call!(
         contract:, timestamp: contract.terminated_at
       )
-      if contract.applied_rate_cards.joins(:billing_operations).merge(BillingOperation.pending)
-          .where(billing_operations: {billing_at: ..Time.current}).exists?
+      if contract.applied_rate_cards.due_for_billing(Time.current).exists?
         BillingOperations::ProcessJob.perform_after_commit(contract.customer_id)
       end
     end

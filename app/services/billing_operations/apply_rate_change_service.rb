@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module BillingOperations
-  # Applies rate changes to existing fixed-billing chains whose coverage overlaps the effective date.
-  # Activation and periodic continuation remain responsible for creating new cycles.
+  # Moves outstanding fixed-arrears cursors earlier and records independent advance
+  # reconciliations. Purchased advance coverage and its renewal cursor stay unchanged.
   class ApplyRateChangeService < BaseService
     Result = BaseResult[:billing_operations]
 
@@ -16,7 +16,7 @@ module BillingOperations
       result.billing_operations = []
       return result.not_found_failure!(resource: "customer") unless customer
 
-      # A failed replacement must roll back its cancellation even inside a caller's transaction.
+      # A failure on one card rolls back all cursor changes and reconciliations for this customer.
       ActiveRecord::Base.transaction(requires_new: true) do
         # Re-read under the same lock as processing and termination before changing obligations.
         Customers::LockService.call!(customer:, scope: :billing_schedule) do
@@ -29,7 +29,7 @@ module BillingOperations
             .includes(:rate_card, :terms, {rate_phases: :rate_override}, contract: :customer)
           contract_rate_cards.find_each { |contract_rate_card| apply_rate_change(contract_rate_card, rate) }
 
-          if result.billing_operations.any? { it.due_for_processing?(timestamp: Time.current) }
+          if contract_rate_cards.due_for_billing(Time.current).exists?
             ProcessJob.perform_after_commit(customer.id)
           end
         end
@@ -60,44 +60,42 @@ module BillingOperations
       if action_type == "renew_fixed_advance"
         reconcile_advance(contract_rate_card, rate, cycle, operations, action_type:)
       else
-        replace_arrears_close(contract_rate_card, rate, cycle, schedule, operations, action_type:)
+        reschedule_arrears(contract_rate_card, rate, cycle, schedule, operations, action_type:)
       end
     end
 
     # Purchased advance coverage keeps its price. Record a no-charge reconciliation while
     # leaving the renewal chain intact; reuse it on retries, including after processing.
     def reconcile_advance(contract_rate_card, rate, cycle, operations, action_type:)
-      return unless operations.where(action_type:).exists?
+      cursor = contract_rate_card.next_billing_at
+      represented = cursor && cursor >= cycle.started_at && cursor < cycle.ended_at
+      return unless represented || operations.completed.where(action_type:).exists?
 
       reconciliation = operations.find_by(
         action_type: "reconcile_advance_coverage", causation_type: "rate_change", billing_at: rate.effective_from
       )
-      reconciliation ||= CreateService.call!(
-        contract_rate_card:, action_type: "reconcile_advance_coverage", causation_type: "rate_change",
+      reconciliation ||= CreateReconciliationService.call!(
+        contract_rate_card:, causation_type: "rate_change",
         planned_operation: Schedule::PlannedOperation.new(cycle_started_at: cycle.started_at, billing_at: rate.effective_from)
       ).operation
       result.billing_operations << reconciliation
     end
 
-    # Move the pending close to the earliest outstanding boundary. Its successful processing
-    # creates the later close, keeping the remaining coverage in the same sequential chain.
-    def replace_arrears_close(contract_rate_card, rate, cycle, schedule, operations, action_type:)
+    # Earlier overdue work keeps its cursor; successful processing discovers later boundaries.
+    def reschedule_arrears(contract_rate_card, rate, cycle, schedule, operations, action_type:)
       closes = operations.where(action_type:)
       processed_until = closes.where.not(processed_at: nil).maximum(:billing_at)
       # A late job must not move a boundary into coverage that has already been billed.
       return if processed_until && processed_until >= rate.effective_from
 
-      pending_close = closes.pending.order(:billing_at, :id).first
-      return unless pending_close && pending_close.billing_at > rate.effective_from
+      cursor = contract_rate_card.next_billing_at
+      return unless cursor && cursor > rate.effective_from && cursor <= cycle.ended_at
 
       # Use all known rates so out-of-order jobs cannot skip an earlier outstanding slice.
       planned_operation = schedule.next_planned_operation(cycle, action_type:, after: processed_until)
-      return unless planned_operation && planned_operation.billing_at < pending_close.billing_at
+      return unless planned_operation && planned_operation.billing_at < cursor
 
-      pending_close.update!(cancelled_at: Time.current, cancelled_causation_type: "rate_change")
-      result.billing_operations << CreateService.call!(
-        contract_rate_card:, action_type:, causation_type: "rate_change", planned_operation:
-      ).operation
+      contract_rate_card.update!(next_billing_at: planned_operation.billing_at)
     end
   end
 end

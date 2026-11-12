@@ -3,9 +3,8 @@
 module ContractRateCards
   # Starts a card's billing lifecycle from its contract: the card begins on the
   # contract's start day and keeps an anchor of its own or inherits the
-  # contract's. On a contract that started in the past, the clock waits for the
-  # billing date of the current period; the schedule still walks from the
-  # card's start, so the periods before it are billed on that date.
+  # contract's. The cursor starts at the first priced obligation, including
+  # overdue coverage when the contract starts in the past.
   class SeedLifecycleService < BaseService
     Result = BaseResult[:contract_rate_card]
 
@@ -20,6 +19,8 @@ module ContractRateCards
         previous_effective_date = contract_rate_card.effective_date
         contract_rate_card.update!(contract_rate_card.contract.default_rate_card_lifecycle(billing_anchor_date:))
         sync_initial_term_date(previous_effective_date) if previous_effective_date != contract_rate_card.effective_date
+        contract_rate_card.update!(next_billing_at: nil)
+        InitializeBillingClockService.call!(contract_rate_card:)
       end
 
       result.contract_rate_card = contract_rate_card

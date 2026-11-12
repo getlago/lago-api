@@ -34,7 +34,8 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
 
     active_period = {
       fee: Fee.find_by!(contract:, fee_type: :product),
-      operation: BillingOperation.where(customer:).sole,
+      next_billing_at: contract.applied_rate_cards.sole.next_billing_at,
+      operations: BillingOperation.where(customer:).to_a,
       invoices: Invoice.where(customer:).to_a
     }
 
@@ -109,10 +110,8 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
     expect(timeline.fetch(:active_period).fetch(:fee)).to have_attributes(
       amount_cents: 4_000, units: 40, pay_in_advance: true, payment_status: "succeeded", invoice_id: nil
     )
-    expect(timeline.fetch(:active_period).fetch(:operation).reload).to have_attributes(
-      processed_at: period_ended_at + 5.minutes, invoice_id: invoice.id,
-      cancelled_at: nil, cancelled_causation_type: nil
-    )
+    expect(timeline.fetch(:active_period).fetch(:next_billing_at)).to eq(period_ended_at)
+    expect(timeline.fetch(:active_period).fetch(:operations)).to be_empty
     expect(timeline.fetch(:active_period).fetch(:invoices)).to be_empty
     expect(timeline.fetch(:operation)).to have_attributes(processed_at: period_ended_at + 5.minutes, invoice_id: invoice.id)
     expect(LegacyBillingSegment.where(customer_id: customer.id)).to be_empty

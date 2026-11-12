@@ -3,13 +3,11 @@
 class ContractRateCard < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
-  include PreloadableAggregations
 
   self.discard_column = :deleted_at
   # The contract end date is the only end of a card; drop once released.
   self.ignored_columns += %w[ended_date]
   self.ignored_columns += %w[units]
-  self.ignored_columns += %w[next_billing_at]
 
   belongs_to :organization
   belongs_to :contract
@@ -22,34 +20,6 @@ class ContractRateCard < ApplicationRecord
   has_many :billing_operations
   has_many :fees
 
-  preloadable_aggregation :billing_operation_clock, default: {} do |ids|
-    ids = ids.to_a
-    pending = BillingOperation
-      .where(contract_rate_card_id: ids, processed_at: nil, cancelled_at: nil)
-      .group(:contract_rate_card_id)
-      .minimum(:billing_at)
-
-    without_pending = ids - pending.keys
-    has_history = if without_pending.empty?
-      []
-    else
-      ContractRateCard.unscoped
-        .where(id: without_pending)
-        .where(<<~SQL.squish)
-          EXISTS (
-            SELECT 1
-            FROM billing_operations
-            WHERE billing_operations.contract_rate_card_id = contract_rate_cards.id
-          )
-        SQL
-        .pluck(:id)
-    end
-
-    pending.to_h do |id, billing_at|
-      [id, {billing_at:, has_chain: true}]
-    end.merge(has_history.index_with { {billing_at: nil, has_chain: true} })
-  end
-
   validates :billing_anchor_date, presence: true
   validates :effective_date, presence: true
   validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
@@ -58,6 +28,10 @@ class ContractRateCard < ApplicationRecord
 
   # Only a priced card owes anything: a period with no price is not one to be paid for.
   scope :priced, -> { where(rate_card_id: RateCardRate.select(:rate_card_id)) }
+
+  scope :due_for_billing, ->(timestamp) {
+    joins(:contract).where(next_billing_at: ..timestamp, contracts: {status: %w[active terminated]})
+  }
 
   # Only a card that starts before its contract ends has a period to owe anything in. Bringing
   # the end forward, planned or by a termination, can leave one starting after it.
@@ -69,20 +43,6 @@ class ContractRateCard < ApplicationRecord
       "COALESCE(customers.timezone, billing_entities.timezone, 'UTC'))"
     )
   }
-
-  def next_billing_at
-    clock = billing_operation_clock
-    return clock[:billing_at] if clock[:billing_at]
-    return if clock[:has_chain]
-
-    build = Billing::RateCards::BuildScheduleService.call(contract_rate_card: self)
-    return unless build.success?
-
-    target = Billing::RateCards::Schedule::BILLING_TARGET.fetch(
-      periodic_billing_action.present? ? :current : :next
-    )
-    build.schedule.billing_at(timestamp: Time.current, target:)
-  end
 
   # A card seeded from its contract carries the contract's explicit anchor, or
   # its own start day when the contract set none: an anchor matching what it
@@ -126,6 +86,7 @@ end
 #  billing_anchor_date :date             not null
 #  deleted_at          :datetime
 #  effective_date      :date             not null
+#  next_billing_at     :datetime
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  contract_id         :uuid             not null

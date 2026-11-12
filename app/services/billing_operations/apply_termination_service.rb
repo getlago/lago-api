@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module BillingOperations
-  # Under the caller's customer billing-schedule lock, preserves owed work and persists all
-  # missing obligations through the effective end. ProcessService invoices them when due.
+  # The caller holds the customer billing lock. Keep overdue cursors, move future arrears
+  # closes to the contract end, and let successful billing advance through remaining cycles.
   class ApplyTerminationService < BaseService
-    Result = BaseResult[:billing_operations]
+    Result = BaseResult
 
     def initialize(contract:, timestamp:)
       @contract = contract
@@ -13,13 +13,23 @@ module BillingOperations
     end
 
     def call
-      result.billing_operations = []
-      cancel_pending_operations
+      contract.applied_rate_cards.with_discarded.includes(:rate_card, contract: :customer).find_each do |contract_rate_card|
+        contract_rate_card.billing_operations.pending
+          .where("billing_at > :timestamp OR target_cycle_started_at >= :ends_at", timestamp:, ends_at:)
+          .find_each { it.update!(cancelled_at: timestamp, cancelled_causation_type: "contract_termination") }
+        next if contract_rate_card.discarded?
 
-      final_cards.find_each do |card|
-        create_missing_operations(card)
+        action = contract_rate_card.periodic_billing_action
+        next unless action
+
+        if action.in?(%w[renew_fixed_advance renew_recurring_metered_advance])
+          if contract_rate_card.next_billing_at && contract_rate_card.next_billing_at >= ends_at
+            contract_rate_card.update!(next_billing_at: nil)
+          end
+        elsif !contract_rate_card.next_billing_at || contract_rate_card.next_billing_at > timestamp
+          schedule_final_close(contract_rate_card, action)
+        end
       end
-
       result
     rescue ActiveRecord::RecordInvalid => error
       result.record_validation_failure!(record: error.record)
@@ -31,62 +41,20 @@ module BillingOperations
 
     attr_reader :contract, :timestamp
 
-    # A later termination must not extend service beyond the contract's natural end.
-    def effective_contract_end
+    def ends_at
       [contract.ended_at, contract.terminated_at].compact.min || timestamp
     end
 
-    # Keep overdue work for retry, including a close due exactly at termination. A cycle
-    # starting at the exclusive contract end owes nothing, even if its renewal is already due.
-    def cancel_pending_operations
-      card_ids = ContractRateCard.with_discarded
-        .where(organization_id: contract.organization_id, contract_id: contract.id)
-        .select(:id)
+    def schedule_final_close(contract_rate_card, action)
+      return unless contract_rate_card.rate_card.rates.exists?
 
-      BillingOperation.pending
-        .where(organization_id: contract.organization_id, contract_rate_card_id: card_ids)
-        .where("billing_at > :timestamp OR target_cycle_started_at >= :contract_end",
-          timestamp:, contract_end: effective_contract_end)
-        .find_each do |operation|
-          operation.update!(
-            cancelled_at: timestamp,
-            cancelled_causation_type: BillingOperation::CANCELLED_CAUSATION_TYPES.fetch(:contract_termination)
-          )
-        end
-    end
-
-    def final_cards
-      ContractRateCard.priced.starting_before_contract_end
-        .where(organization_id: contract.organization_id, contract_id: contract.id)
-        .includes(:rate_card, {rate_phases: :rate_override}, contract: :customer)
-    end
-
-    # Termination takes over the periodic chain: a future end needs every intervening cycle,
-    # not just the final one. New obligations carry contract_termination and have no successor.
-    def create_missing_operations(card)
-      action_type = card.periodic_billing_action
-      return unless action_type
-
-      schedule = BuildScheduleService.call!(contract_rate_card: card, ends_at: effective_contract_end).schedule
-      # Pending work reserves coverage even after failure; processed work must not be billed
-      # again. For each cycle, only slices beyond its latest live boundary need new operations.
-      covered_until = card.billing_operations
-        .where(organization_id: contract.organization_id, action_type:, cancelled_at: nil)
-        .group(:target_cycle_started_at).maximum(:billing_at)
-
-      schedule.segments_due_by(timestamp).group_by(&:cycle_started_at).each do |cycle_started_at, segments|
-        segments.map { schedule.due_at(it, action_type:) }.uniq.sort.each do |due_at|
-          next if covered_until[cycle_started_at] && due_at <= covered_until[cycle_started_at]
-
-          # Preserve intermediate due dates; the final close uses the termination timestamp,
-          # which can be later than the natural end of service.
-          billing_at = (due_at == effective_contract_end) ? timestamp : due_at
-          planned_operation = Schedule::PlannedOperation.new(cycle_started_at:, billing_at:)
-          result.billing_operations << CreateService.call!(
-            contract_rate_card: card, action_type:, causation_type: "contract_termination", planned_operation:
-          ).operation
-        end
-      end
+      schedule = BuildScheduleService.call!(contract_rate_card:).schedule
+      previous = contract_rate_card.billing_operations.periodic.completed.where(action_type: action)
+        .order(:target_cycle_started_at, :billing_at, :id).last
+      timezone = contract.customer.applicable_timezone
+      cycle = schedule.cycle_at(previous&.target_cycle_started_at || contract_rate_card.effective_date.in_time_zone(timezone))
+      planned = schedule.next_planned_operation(cycle, action_type: action, after: previous&.billing_at)
+      contract_rate_card.update!(next_billing_at: planned&.billing_at)
     end
   end
 end

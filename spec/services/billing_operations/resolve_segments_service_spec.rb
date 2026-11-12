@@ -17,7 +17,11 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1), units: 1)
     end
     let(:timestamp) { Time.utc(2026, 3, 1) }
-    let(:operation) { BillingOperations::CreateInitialOperationService.call!(contract_rate_card:, causation_type: "contract_activation").billing_operations.sole }
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 1),
+        target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 1, 1))
+    end
 
     before { organization.enable_feature_flag!(:product_catalog) }
 
@@ -69,7 +73,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         let(:operation) do
           create(:billing_operation, organization:, customer:, contract_rate_card:,
             action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 1, 15),
-            target_cycle_started_at: Time.utc(2026, 1, 1))
+            target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 1, 15))
         end
 
         before do
@@ -99,7 +103,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
 
           context "when the previous operation was cancelled" do
             before do
-              operation.update!(cancelled_at: Time.utc(2026, 1, 10), cancelled_causation_type: :contract_termination)
+              operation.update!(processed_at: nil, cancelled_at: Time.utc(2026, 1, 10), cancelled_causation_type: :contract_termination)
             end
 
             it "returns every slice of the cycle" do
@@ -148,12 +152,12 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           allow(BillingOperations::BuildScheduleService).to receive(:call!).and_return(double(schedule:))
         end
 
-        it "leaves the operation pending without output or a successor" do
+        it "does not rewrite completed history when replay produces no segments" do
           result = described_class.call(operation:)
 
           expect(result).to be_success
           expect(result.segments).to be_empty
-          expect(operation.reload).to have_attributes(processed_at: nil, cancelled_at: nil)
+          expect(operation.reload).to have_attributes(processed_at: Time.utc(2026, 1, 1), cancelled_at: nil)
           expect(contract_rate_card.billing_operations.count).to eq(1)
         end
       end

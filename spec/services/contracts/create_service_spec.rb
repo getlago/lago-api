@@ -53,18 +53,15 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
     end
 
-    it "persists the initial periodic operation atomically without predicted segments" do
+    it "persists the initial cursor atomically without predicted segments" do
       expect { result }
-        .to change(BillingOperation, :count).by(1)
-        .and not_change(LegacyBillingSegment, :count)
-
-      expect(result.contract.applied_rate_cards.sole.billing_operations.sole).to have_attributes(
-        action_type: "renew_fixed_advance", causation_type: "contract_activation"
-      )
+        .not_to change(BillingOperation, :count)
+      expect(result.contract.applied_rate_cards.sole.next_billing_at).to be_present
+      expect(LegacyBillingSegment.count).to eq(0)
     end
   end
 
-  context "when initial operation persistence fails" do
+  context "when initial cursor persistence fails" do
     let(:invalid_contract) { organization.contracts.new(customer:) }
     let(:operation_writes) { [] }
     let(:first_product) { create(:product, :fixed, organization:) }
@@ -80,7 +77,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
         create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
       end
 
-      allow(BillingOperations::CreateInitialOperationService).to receive(:call!).and_wrap_original do |original, **attributes|
+      allow(ContractRateCards::InitializeBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
         operation_writes << attributes
         raise ActiveRecord::RecordInvalid.new(invalid_contract) if operation_writes.size == 2
 
@@ -88,7 +85,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       end
     end
 
-    it "rolls back the contract and operations already inserted in the transaction" do
+    it "rolls back the contract and its cards" do
       expect { result }.not_to change(Contract, :count)
       expect(BillingOperation.count).to eq(0)
       expect(result).not_to be_success

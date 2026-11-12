@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingOperations::CreateService do
+RSpec.describe BillingOperations::CreateReconciliationService do
   subject(:result) { described_class.call(**attributes) }
 
   let(:organization) { create(:organization) }
@@ -15,7 +15,7 @@ RSpec.describe BillingOperations::CreateService do
   end
   let(:attributes) do
     {
-      contract_rate_card:, action_type: "renew_fixed_advance", causation_type: :contract_activation,
+      contract_rate_card:, causation_type: :rate_change,
       planned_operation:
     }
   end
@@ -31,7 +31,7 @@ RSpec.describe BillingOperations::CreateService do
     expect(result.operation).to have_attributes(
       organization: contract_rate_card.organization, customer: contract_rate_card.contract.customer,
       contract_rate_card:, billing_at: started_at,
-      target_cycle_started_at: started_at
+      target_cycle_started_at: started_at, action_type: "reconcile_advance_coverage", processed_at: nil
     )
   end
 

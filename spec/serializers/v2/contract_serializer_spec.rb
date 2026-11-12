@@ -98,7 +98,7 @@ RSpec.describe V2::ContractSerializer do
       )
     end
 
-    it "batches pending dates and operation history for the expanded cards" do
+    it "reads stored cursors without querying operation history" do
       statements = []
       subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_name, _start, _finish, _id, payload|
         statements << payload[:sql] if payload[:sql].include?("billing_operations")
@@ -106,9 +106,7 @@ RSpec.describe V2::ContractSerializer do
 
       payload
 
-      expect(statements.size).to eq(2)
-      expect(statements.first).to include("MIN")
-      expect(statements.last).to include("EXISTS")
+      expect(statements).to be_empty
     ensure
       ActiveSupport::Notifications.unsubscribe(subscriber)
     end

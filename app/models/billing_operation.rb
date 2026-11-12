@@ -40,6 +40,8 @@ class BillingOperation < ApplicationRecord
   validate :validate_state
 
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
+  scope :completed, -> { where.not(processed_at: nil) }
+  scope :periodic, -> { where(action_type: PERIODIC_ACTIONS.keys).where.not(causation_type: :late_payment) }
 
   def due_for_processing?(timestamp:)
     processed_at.nil? && cancelled_at.nil? && billing_at <= timestamp

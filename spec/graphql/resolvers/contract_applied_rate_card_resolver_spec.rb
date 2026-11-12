@@ -24,6 +24,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
       organization:,
       contract:,
       units: 3,
+      next_billing_at: Time.zone.parse("2026-10-15T00:00:00Z"),
       effective_date: Date.new(2026, 10, 1),
       billing_anchor_date: Date.new(2026, 10, 15)
     )
@@ -49,18 +50,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "contracts:view"
 
-  context "when the applied rate card has a billing operation" do
-    before do
-      create(
-        :billing_operation,
-        organization: contract_rate_card.organization,
-        customer: contract_rate_card.contract.customer,
-        contract_rate_card:,
-        billing_at: Time.zone.parse("2026-10-15T00:00:00Z"),
-        target_cycle_started_at: Time.zone.parse("2026-10-01T00:00:00Z")
-      )
-    end
-
+  context "when the applied rate card has a billing cursor" do
     it "returns the applied rate card with its contract, dates and rate phases" do
       rate_override = create(:rate_override, organization:)
       rate_phase = create(:rate_phase, :contract_level, organization:, contract_rate_card:, rate_override:)

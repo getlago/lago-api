@@ -7,83 +7,6 @@ RSpec.describe ContractRateCard do
 
   it_behaves_like "paper_trail traceable"
 
-  describe "billing operation clock aggregation" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:contract) { create(:contract, organization:, customer:) }
-    let(:pending_at) { Time.utc(2026, 11, 1) }
-    let(:mixed_pending_at) { Time.utc(2026, 11, 2) }
-    let(:cards) do
-      %i[pending completed cancelled mixed empty discarded].map do |state|
-        create(
-          :contract_rate_card,
-          organization:,
-          contract:,
-          deleted_at: (Time.current if state == :discarded)
-        )
-      end
-    end
-
-    before do
-      pending, completed, cancelled, mixed, _empty, discarded = cards
-      create(:billing_operation, organization:, customer:, contract_rate_card: pending, billing_at: pending_at)
-      create(:billing_operation, organization:, customer:, contract_rate_card: completed, processed_at: Time.current)
-      create(
-        :billing_operation,
-        organization:,
-        customer:,
-        contract_rate_card: cancelled,
-        cancelled_at: Time.current,
-        cancelled_causation_type: :contract_termination
-      )
-      create(
-        :billing_operation,
-        organization:,
-        customer:,
-        contract_rate_card: mixed,
-        billing_at: mixed_pending_at,
-        cancelled_at: Time.current,
-        cancelled_causation_type: :contract_termination
-      )
-      create(:billing_operation, organization:, customer:, contract_rate_card: mixed, billing_at: mixed_pending_at)
-      create(
-        :billing_operation,
-        organization:,
-        customer:,
-        contract_rate_card: discarded,
-        processed_at: Time.current
-      )
-    end
-
-    it "returns pending dates and distinguishes operation history in two batch queries" do
-      queries = []
-      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-        queries << payload[:sql] if payload[:name] != "SCHEMA" && payload[:sql].match?(/billing_operations|contract_rate_cards/)
-      end
-
-      described_class.preload_aggregations(cards, :billing_operation_clock)
-      ActiveSupport::Notifications.unsubscribe(subscriber)
-      subscriber = nil
-
-      expect(cards.map(&:billing_operation_clock)).to eq(
-        [
-          {billing_at: pending_at, has_chain: true},
-          {billing_at: nil, has_chain: true},
-          {billing_at: nil, has_chain: true},
-          {billing_at: mixed_pending_at, has_chain: true},
-          {},
-          {billing_at: nil, has_chain: true}
-        ]
-      )
-      expect(queries.size).to eq(2)
-      expect(queries.first).to include("MIN")
-      expect(queries.first).to include("processed_at")
-      expect(queries.last).to include("EXISTS")
-    ensure
-      ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
-    end
-  end
-
   describe "associations" do
     it do
       expect(contract_rate_card).to belong_to(:organization)
@@ -313,16 +236,16 @@ RSpec.describe ContractRateCard do
       travel_to(Time.utc(2026, 10, 7, 8, 11)) { example.run }
     end
 
-    it "returns the next schedule date for event-only advance metered fees" do
-      expect(next_billing_at).to eq(Time.utc(2026, 10, 8))
+    it "does not derive a cursor for event-only advance metered fees" do
+      expect(next_billing_at).to be_nil
     end
 
     context "when a regular advance schedule has no operation yet" do
       let(:product) { create(:product, :fixed, organization:) }
       let(:display_on_invoice) { true }
 
-      it "keeps the billing instant of the period currently served" do
-        expect(next_billing_at).to eq(Time.utc(2026, 10, 7))
+      it "does not invent a cursor before scheduling" do
+        expect(next_billing_at).to be_nil
       end
     end
 
@@ -343,12 +266,13 @@ RSpec.describe ContractRateCard do
           cancelled_operation
           create(
             :billing_operation, organization:, customer:, contract_rate_card: card,
-            billing_at: Time.utc(2026, 10, 9), target_cycle_started_at: Time.utc(2026, 10, 8)
+            action_type: "reconcile_advance_coverage", billing_at: Time.utc(2026, 10, 9), target_cycle_started_at: Time.utc(2026, 10, 8)
           )
+          card.update!(next_billing_at: Time.utc(2026, 10, 10))
         end
 
-        it "returns the pending operation date rather than the cancelled one" do
-          expect(next_billing_at).to eq(Time.utc(2026, 10, 9))
+        it "returns the periodic cursor independently of pending reconciliations" do
+          expect(next_billing_at).to eq(Time.utc(2026, 10, 10))
         end
       end
 

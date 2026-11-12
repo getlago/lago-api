@@ -173,14 +173,13 @@ RSpec.describe Contracts::MaterializeRateCardsService do
       end
     end
 
-    # The contract is backdated by nearly three months. Those periods are not billed:
-    # the card joins the calendar at the period it lands in today.
+    # Backdated contracts keep their first outstanding obligation rather than skipping to today.
     context "when the contract is backdated" do
       let(:started_at) { Time.utc(2025, 12, 15) }
       let(:now) { Time.utc(2026, 3, 10, 12, 0) }
 
-      it "starts from the current period rather than back-billing the gap" do
-        expect(next_billing_at).to eq(Time.utc(2026, 4, 1))
+      it "starts from the first unpaid period" do
+        expect(next_billing_at).to eq(Time.utc(2026, 1, 1))
       end
     end
 

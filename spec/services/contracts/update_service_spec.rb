@@ -463,14 +463,12 @@ RSpec.describe Contracts::UpdateService do
         expect(contract.reload).to be_active
         expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 9, 29))
         expect(BillingOperations::ProcessJob).to have_been_enqueued.with(customer.id)
-        expect(inherited_card.billing_operations.sole).to have_attributes(
-          action_type: "renew_fixed_advance", causation_type: "contract_activation",
-          target_cycle_started_at: Time.zone.parse("2026-09-29")
-        )
+        expect(inherited_card.reload.next_billing_at).to eq(Time.zone.parse("2026-09-29"))
+        expect(inherited_card.billing_operations).to be_empty
         expect(LegacyBillingSegment.where(contract_rate_card_id: inherited_card.id)).to be_empty
       end
 
-      context "when operation persistence fails" do
+      context "when cursor persistence fails" do
         let(:failure_product) { create(:product, :fixed, organization:) }
         let(:failure_rate_card) { create(:rate_card, organization:, product: failure_product, billing_timing: "advance") }
         let(:failure_card) do
@@ -485,7 +483,7 @@ RSpec.describe Contracts::UpdateService do
         before do
           failure_card
           create(:rate_card_rate, organization:, rate_card: failure_card.rate_card, effective_from: Time.zone.parse("2026-09-01"), billing_interval_count: 1, billing_interval_unit: "month")
-          allow(BillingOperations::CreateService).to receive(:call!).and_wrap_original do |original, **attributes|
+          allow(ContractRateCards::InitializeBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
             operation_writes << attributes
             raise ActiveRecord::RecordInvalid.new(failure_card) if operation_writes.size == 2
 
@@ -493,9 +491,10 @@ RSpec.describe Contracts::UpdateService do
           end
         end
 
-        it "rolls back the moved start, activation and earlier operations" do
+        it "rolls back the moved start, activation and earlier cursors" do
           expect(result).not_to be_success
           expect(contract.reload).to have_attributes(status: "pending", started_at: Time.zone.parse("2026-10-15"))
+          expect(inherited_card.reload.next_billing_at).to be_nil
           expect(BillingOperation.where(contract_rate_card_id: [inherited_card.id, failure_card.id])).to be_empty
         end
       end

@@ -40,12 +40,19 @@ module BillingOperations
     attr_reader :customer, :timestamp
 
     def due_operations
-      @due_operations ||= BillingOperation.pending
-        .where(organization_id: customer.organization_id, customer_id: customer.id)
-        .where(billing_at: ..timestamp)
-        .includes(contract_rate_card: [:terms, {contract: :customer, rate_card: {product: :billable_metric}}])
-        .order(:billing_at, :id)
-        .to_a
+      ContractRateCard.due_for_billing(timestamp)
+        .where(organization_id: customer.organization_id, contracts: {customer_id: customer.id})
+        .includes(:terms, contract: :customer, rate_card: {product: :billable_metric})
+        .filter_map do |contract_rate_card|
+          action_type = contract_rate_card.periodic_billing_action
+          next unless action_type
+
+          BillingOperation.new(
+            organization_id: customer.organization_id, customer:, contract_rate_card:, action_type:,
+            causation_type: "periodic_continuation", billing_at: contract_rate_card.next_billing_at
+          )
+        end
+        .sort_by { [it.billing_at, it.contract_rate_card_id] }
     end
 
     def invoice_kind(operation)
@@ -61,7 +68,7 @@ module BillingOperations
       contract = operation.contract_rate_card.contract
       [
         operation.billing_at.in_time_zone(customer.applicable_timezone).to_date,
-        contract.consolidate_invoice ? :shared : [operation.id, operation.target_cycle_started_at],
+        contract.consolidate_invoice ? :shared : [operation.contract_rate_card_id, operation.id],
         operation.contract_rate_card.rate_card.currency,
         contract.billing_entity_id || customer.billing_entity_id,
         payment_method_key(contract),
@@ -83,9 +90,16 @@ module BillingOperations
 
     def process_invoice_batch(operations)
       invoice = nil
-      ActiveRecord::Base.transaction do
-        operations.each(&:lock!)
-        operations.select! { |operation| operation.due_for_processing?(timestamp:) }
+      ActiveRecord::Base.transaction(requires_new: true) do
+        operations.select! do |operation|
+          if operation.persisted?
+            operation.lock!
+            operation.due_for_processing?(timestamp:)
+          else
+            operation.contract_rate_card.lock!
+            operation.contract_rate_card.next_billing_at == operation.billing_at
+          end
+        end
         next if operations.empty?
 
         operation_segments = operations.index_with { |operation| resolve_operation(operation) }.compact
@@ -99,7 +113,7 @@ module BillingOperations
         end
         complete_operations(operation_segments)
       end
-      finalize_generating_invoices(operations)
+      finalize_generating_invoices(operations.filter_map(&:invoice_id))
       invoice&.reload
       invoice
     end
@@ -107,7 +121,10 @@ module BillingOperations
     def resolve_operation(operation)
       return unless eligible?(operation)
 
-      return if obsolete_terminal_renewal?(operation)
+      if obsolete_terminal_renewal?(operation)
+        operation.contract_rate_card.update!(next_billing_at: nil) if operation.new_record?
+        return
+      end
 
       ResolveSegmentsService.call!(operation:)
     end
@@ -116,12 +133,11 @@ module BillingOperations
       return false unless operation.action_type.in?(%w[renew_fixed_advance renew_recurring_metered_advance])
 
       ended_at = [operation.contract_rate_card.contract.ended_at, operation.contract_rate_card.contract.terminated_at].compact.min
-      ended_at && ended_at <= operation.target_cycle_started_at
+      ended_at && ended_at <= (operation.target_cycle_started_at || operation.billing_at)
     end
 
     def eligible?(operation)
-      ELIGIBLE_ACTION_TYPES.include?(operation.action_type) ||
-        (operation.action_type == "reconcile_advance_coverage" && operation.causation_type == "rate_change")
+      ELIGIBLE_ACTION_TYPES.include?(operation.action_type)
     end
 
     def create_contract_invoice(segments, operation_segments)
@@ -152,7 +168,7 @@ module BillingOperations
         end
       end
       billed_segments = outputs.filter_map { |segment, fees| segment if fees.any? }
-      operations_with_billed_segments(billed_segments, operation_segments).each { |operation| operation.update!(invoice:) }
+      operations_with_billed_segments(billed_segments, operation_segments).each { |operation| operation.invoice = invoice }
       invoice
     rescue EmptyInvoice
       nil
@@ -188,7 +204,7 @@ module BillingOperations
           end
         )
         invoice.update!(payment_status: :succeeded)
-        operations_with_billed_segments(invoiced_segments, operation_segments).each { |operation| operation.update!(invoice:) }
+        operations_with_billed_segments(invoiced_segments, operation_segments).each { |operation| operation.invoice = invoice }
       end
       invoice
     rescue EmptyInvoice
@@ -206,12 +222,12 @@ module BillingOperations
       operation_segments.each do |operation, resolution|
         operation.update!(processed_at: timestamp)
 
-        EnsureNextService.call!(operation:, resolution:)
+        ContractRateCards::AdvanceBillingClockService.call!(operation:, resolution:)
       end
     end
 
-    def finalize_generating_invoices(operations)
-      Invoice.where(id: operations.map(&:invoice_id).compact.uniq, status: :generating)
+    def finalize_generating_invoices(invoice_ids)
+      Invoice.where(id: invoice_ids, status: :generating)
         .order(:issuing_date, :id).each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)

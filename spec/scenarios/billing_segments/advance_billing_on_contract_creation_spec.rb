@@ -69,7 +69,8 @@ describe "A contract billed in advance invoices on creation" do
       perform_enqueued_jobs { expect(create_contract).to be_success }
 
       expect(Invoice.where(customer:)).to be_empty
-      expect(BillingOperation.where(customer:).sole).to have_attributes(processed_at: nil, invoice_id: nil)
+      expect(BillingOperation.where(customer:)).to be_empty
+      expect(ContractRateCard.joins(:contract).where(contracts: {customer_id: customer.id}).sole.next_billing_at).to be_present
       expect(LegacyBillingSegment.where(customer_id: customer.id)).to be_empty
     end
   end

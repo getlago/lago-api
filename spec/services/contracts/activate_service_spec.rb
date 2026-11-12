@@ -66,28 +66,22 @@ RSpec.describe Contracts::ActivateService do
       create(:rate_card_rate, organization:, rate_card:, effective_from: started_at, billing_interval_count: 1, billing_interval_unit: "month")
     end
 
-    it "persists the initial operation inside activation without creating billing segments" do
+    it "persists the initial cursor inside activation without future operations or segments" do
       expect { result }
-        .to change(BillingOperation, :count).by(1)
-        .and not_change(LegacyBillingSegment, :count)
-
-      expect(contract_rate_card.reload.billing_operations.sole).to have_attributes(
-        action_type: "close_fixed_arrears", causation_type: "contract_activation",
-        target_cycle_started_at: started_at
-      )
+        .not_to change(BillingOperation, :count)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
+      expect(LegacyBillingSegment.count).to eq(0)
     end
 
-    it "does not reset a processed operation when activation is retried" do
+    it "does not reset the cursor when activation is retried" do
       result
-      operation = contract_rate_card.billing_operations.sole
-      operation.update!(processed_at: timestamp)
-      attributes = operation.attributes
+      contract_rate_card.update!(next_billing_at: Time.utc(2026, 11, 30))
 
       expect(described_class.call(contract:, timestamp:)).to be_success
-      expect(operation.reload.attributes).to eq(attributes)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 30))
     end
 
-    context "when operation persistence fails after an earlier card was seeded" do
+    context "when cursor persistence fails after an earlier card was seeded" do
       let(:failure_product) { create(:product, :fixed, organization:) }
       let(:failure_rate_card) { create(:rate_card, organization:, product: failure_product, billing_timing: "advance") }
       let(:failure_card) do
@@ -101,19 +95,25 @@ RSpec.describe Contracts::ActivateService do
       before do
         failure_card
         create(:rate_card_rate, organization:, rate_card: failure_rate_card, effective_from: started_at, billing_interval_count: 1, billing_interval_unit: "month")
-        allow(BillingOperations::CreateService).to receive(:call!).and_wrap_original do |original, **attributes|
+        allow(ContractRateCards::InitializeBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
           operation_writes << attributes
-          raise ActiveRecord::RecordInvalid.new(failure_card) if operation_writes.size == 2
+          if operation_writes.size == 2
+            failure_card.errors.add(:next_billing_at, :invalid)
+            failure = BaseService::Result.new.record_validation_failure!(record: failure_card)
+            raise BaseService::FailedResult.new(failure, "cursor failed")
+          end
 
           original.call(**attributes)
         end
       end
 
-      it "rolls back activation, all operations and started notifications" do
+      it "rolls back activation, cursors and started notifications" do
         expect { result }.not_to have_enqueued_job(SendWebhookJob)
         expect(BillingOperations::ProcessJob).not_to have_been_enqueued
         expect(result).not_to be_success
         expect(contract.reload).to be_pending
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+        expect(failure_card.reload.next_billing_at).to be_nil
         expect(BillingOperation.where(contract_rate_card_id: [contract_rate_card.id, failure_card.id])).to be_empty
         expect(LegacyBillingSegment.where(contract_rate_card_id: [contract_rate_card.id, failure_card.id])).to be_empty
       end
@@ -194,10 +194,7 @@ RSpec.describe Contracts::ActivateService do
     it "resolves the original target cycle from the current cadence" do
       result
 
-      expect(contract_rate_card.billing_operations.sole).to have_attributes(
-        target_cycle_started_at: Time.zone.parse("2026-09-30"),
-        billing_at: Time.zone.parse("2026-10-07")
-      )
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
     end
   end
 

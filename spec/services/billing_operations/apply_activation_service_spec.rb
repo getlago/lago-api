@@ -19,9 +19,10 @@ RSpec.describe BillingOperations::ApplyActivationService do
     create(:rate_card_rate, organization:, rate_card:, effective_from: Time.current, billing_interval_count: 1, billing_interval_unit: "month")
   end
 
-  it "creates the initial operations for priced cards with activation causation" do
-    expect { result }.to change(BillingOperation, :count).by(1)
-    expect(result.billing_operations.sole.causation_type).to eq("contract_activation")
+  it "initializes the cursor for priced cards without creating operations" do
+    expect { result }.not_to change(BillingOperation, :count)
+    expect(contract.applied_rate_cards.sole.reload.next_billing_at).to be_present
+    expect(BillingOperation.count).to eq(0)
   end
 
   context "when product catalog is disabled" do
@@ -29,7 +30,7 @@ RSpec.describe BillingOperations::ApplyActivationService do
 
     it "does not create an operation" do
       expect { result }.not_to change(BillingOperation, :count)
-      expect(result.billing_operations).to be_empty
+      expect(BillingOperation.count).to eq(0)
     end
   end
 end
