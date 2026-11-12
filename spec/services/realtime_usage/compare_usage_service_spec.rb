@@ -197,14 +197,12 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
     let(:charges_from_datetime) { timestamp.beginning_of_month }
     let(:watermark) { charges_from_datetime + 1.second }
     let(:snapshot_to_datetime) { charges_from_datetime - 1.second }
-    let(:history_last_ingested_at) { watermark - 1.day }
     let(:snapshot) { create(:recurring_aggregation_snapshot, subscription:, charge:, to_datetime: snapshot_to_datetime, watermark:) }
     let(:runs) { [] }
 
     let(:usage_buckets) do
       Events::Stores::UsageBucketSet.new(
-        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum", units: bucket_units, events_count: bucket_events_count, last_event_at: Time.current)},
-        history_last_ingested_at: {charge.id => history_last_ingested_at}
+        totals: {[charge.id, ""] => Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum", units: bucket_units, events_count: bucket_events_count, last_event_at: Time.current)}
       )
     end
 
@@ -242,7 +240,19 @@ RSpec.describe RealtimeUsage::CompareUsageService, clickhouse: true do
     end
 
     context "when an event was ingested into a closed period after the snapshot" do
-      let(:history_last_ingested_at) { watermark + 1.minute }
+      before do
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: SecureRandom.uuid,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: snapshot_to_datetime - 1.day,
+          properties: {billable_metric.field_name => 3},
+          value: "3",
+          decimal_value: 3,
+          enriched_at: watermark + 1.minute
+        )
+      end
 
       it "reports the charge as falling back rather than comparing the events with themselves" do
         expect(comparison.served_charges_count).to eq(0)
