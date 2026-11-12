@@ -67,12 +67,16 @@ RSpec.describe Invoices::ProgressiveBilling::UsageThresholdService, transaction:
         .to eq(lifetime_usage.total_amount_cents)
     end
 
-    it "builds the invoice under the subscription lock" do
-      allow(Subscriptions::LockService).to receive(:call).and_call_original
+    context "when another progressive billing invoice of the subscription holds its lock" do
+      before { stub_const("Subscriptions::LockService::ACQUIRE_LOCK_TIMEOUT", 0) }
 
-      create_service.call
+      it "fails to acquire the lock and creates no invoice" do
+        with_advisory_lock("subscription-#{subscription.id}", lock_released_after: 2.seconds) do
+          expect { create_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
+        end
 
-      expect(Subscriptions::LockService).to have_received(:call).with(subscription:)
+        expect(customer.invoices).to be_empty
+      end
     end
 
     it "makes sure that only 1 invoice is generated for a given threshold" do
