@@ -165,6 +165,23 @@ RSpec.describe DailyUsages::ComputeContractService do
     end
   end
 
+  context "when the contract was terminated during the usage date" do
+    before { contract.update!(status: :terminated, terminated_at: Time.zone.parse("2027-02-10 18:00:00")) }
+
+    it "records its last day" do
+      expect { result }.to change(DailyUsage, :count).by(1)
+      expect(result.daily_usages.sole.usage_date).to eq(Date.new(2027, 2, 10))
+    end
+  end
+
+  context "when the contract was terminated before the usage date" do
+    before { contract.update!(status: :terminated, terminated_at: Time.zone.parse("2027-02-09 18:00:00")) }
+
+    it "records nothing" do
+      expect { result }.not_to change(DailyUsage, :count)
+    end
+  end
+
   context "when the card has no usage" do
     let(:event_timestamps) { [] }
 

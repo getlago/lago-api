@@ -129,10 +129,15 @@ module DailyUsages
     end
 
     # Contracts have no last received event to select on: every active contract with a metered
-    # card is computed once a day, in the window its customer enters a new day.
+    # card is computed once a day, in the window its customer enters a new day. A contract
+    # terminated since the previous run is kept for its last day, which ComputeContractService
+    # skips when the termination came before it.
     def metered_contracts(organization)
       Contract.where(organization_id: organization.id)
-        .active
+        .where(
+          "contracts.status = :active OR (contracts.status = :terminated AND contracts.terminated_at >= :since)",
+          active: Contract::STATUSES[:active], terminated: Contract::STATUSES[:terminated], since: timestamp - 2.days
+        )
         .where(id: metered_contract_ids(organization))
         .joins(customer: :billing_entity)
         .where(timezone_window_sql, timestamp:)

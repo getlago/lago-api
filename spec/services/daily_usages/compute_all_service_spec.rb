@@ -311,6 +311,24 @@ RSpec.describe DailyUsages::ComputeAllService do
         end
       end
 
+      context "when the contract was terminated during the previous day" do
+        let(:contract) { create(:contract, :terminated, organization:, customer:, terminated_at: timestamp - 12.hours) }
+
+        it "enqueues a job to compute its last day" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeContractJob).to have_been_enqueued.with(contract, timestamp:).at(a_value_between(0.minutes.from_now, 30.minutes.from_now))
+        end
+      end
+
+      context "when the contract was terminated before the previous run" do
+        let(:contract) { create(:contract, :terminated, organization:, customer:, terminated_at: timestamp - 3.days) }
+
+        it "does not enqueue any job for the contract" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeContractJob).not_to have_been_enqueued
+        end
+      end
+
       context "when the contract is not active" do
         let(:contract) { create(:contract, :pending, organization:, customer:) }
 
