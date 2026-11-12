@@ -81,3 +81,7 @@ sso_cross_organization_sessions:
 recurring_aggregation_snapshots:
   description: "Persist the units of recurring sum and weighted sum charges at the end of each billed period, so later periods can start from them instead of the full event history"
   owners: ["@vincent-pochet"]
+
+catalog_wallets:
+  description: "Enable contract wallets (prepaid credit owned by a contract) on the v2 API, on top of product_catalog"
+  owners: ["@osmarluz"]

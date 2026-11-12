@@ -669,6 +669,20 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#catalog_wallets_enabled?" do
+    subject { organization.catalog_wallets_enabled? }
+
+    let(:organization) { build_stubbed(:organization, feature_flags: ["product_catalog", "catalog_wallets"]) }
+
+    it { is_expected.to be(true) }
+
+    context "without the catalog_wallets flag" do
+      let(:organization) { build_stubbed(:organization, feature_flags: ["product_catalog"]) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "#organization" do
     it "returns the organization" do
       expect(organization.organization).to eq(organization)

@@ -257,6 +257,10 @@ class Organization < ApplicationRecord
     product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?
   end
 
+  def catalog_wallets_enabled?
+    feature_flag_enabled?(:catalog_wallets)
+  end
+
   def account_tree_enabled?
     feature_flag_enabled?(:account_tree)
   end
