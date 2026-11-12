@@ -1669,7 +1669,8 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 --
 
 CREATE TYPE public.billing_operation_cancelled_causation_type AS ENUM (
-    'contract_termination'
+    'contract_termination',
+    'rate_change'
 );
 
 
@@ -16431,6 +16432,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261112145548'),
 ('20261111173458'),
 ('20261111173450'),
 ('20261109151633'),

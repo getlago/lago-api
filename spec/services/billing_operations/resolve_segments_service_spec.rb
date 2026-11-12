@@ -331,6 +331,19 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns the validation failure" do
         expect(described_class.call(operation:)).to be_failure
       end
+
+      context "when a rate-change reconciliation targets an arrears card" do
+        let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+        let(:operation) do
+          build(:billing_operation, organization:, customer:, contract_rate_card:,
+            action_type: "reconcile_advance_coverage", causation_type: "rate_change",
+            billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1))
+        end
+
+        it "rejects the unsupported action" do
+          expect(described_class.call(operation:).error.messages).to eq(operation: ["fixed_advance_reconciliation_unsupported"])
+        end
+      end
     end
 
     context "when schedule construction fails" do

@@ -22,6 +22,7 @@ class BillingOperation < ApplicationRecord
   }.freeze
 
   CANCELLED_CAUSATION_TYPES = {
+    rate_change: "rate_change",
     contract_termination: "contract_termination"
   }.freeze
 

@@ -120,7 +120,8 @@ module BillingOperations
     end
 
     def eligible?(operation)
-      ELIGIBLE_ACTION_TYPES.include?(operation.action_type)
+      ELIGIBLE_ACTION_TYPES.include?(operation.action_type) ||
+        (operation.action_type == "reconcile_advance_coverage" && operation.causation_type == "rate_change")
     end
 
     def create_contract_invoice(segments, operation_segments)

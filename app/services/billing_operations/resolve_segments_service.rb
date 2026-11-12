@@ -12,8 +12,16 @@ module BillingOperations
     end
 
     def call
-      return result.single_validation_failure!(field: :operation, error_code: "fixed_advance_reconciliation_unsupported") if
-        operation.action_type == "reconcile_advance_coverage"
+      if operation.action_type == "reconcile_advance_coverage"
+        unless operation.causation_type == "rate_change" && operation.contract_rate_card.periodic_billing_action == "renew_fixed_advance"
+          return result.single_validation_failure!(field: :operation, error_code: "fixed_advance_reconciliation_unsupported")
+        end
+
+        # Price changes do not repurchase advance coverage or adjust an existing fee.
+        result.segments = []
+        return result
+      end
+
       result.schedule = BuildScheduleService.call!(contract_rate_card: operation.contract_rate_card).schedule
       result.cycle = result.schedule.cycle_at(operation.target_cycle_started_at) if operation.action_type
       result.segments = owned_billable_segments.map { build_billing_segment(it) }

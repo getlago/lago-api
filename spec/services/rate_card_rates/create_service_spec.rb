@@ -39,6 +39,12 @@ RSpec.describe RateCardRates::CreateService do
     expect(rate.code).to eq("standard_price")
   end
 
+  it "enqueues rate-change planning after commit" do
+    expect { result }.to have_enqueued_job_after_commit(RateCardRates::ApplyRateChangeJob).with do |id|
+      expect(id).to eq(result.rate_card_rate.id)
+    end
+  end
+
   context "with graduated tiers" do
     let(:params) do
       super().merge(
@@ -81,6 +87,10 @@ RSpec.describe RateCardRates::CreateService do
     it "does not enqueue a webhook" do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
     end
+
+    it "does not enqueue rate-change planning" do
+      expect { result }.not_to have_enqueued_job(RateCardRates::ApplyRateChangeJob)
+    end
   end
 
   it "publishes rate_card_rate.created to both channels" do
@@ -100,6 +110,12 @@ RSpec.describe RateCardRates::CreateService do
   end
 
   context "when emit_events is false" do
+    it "still schedules rate-change planning" do
+      expect do
+        described_class.call(rate_card:, params:, emit_events: false)
+      end.to have_enqueued_job_after_commit(RateCardRates::ApplyRateChangeJob)
+    end
+
     it "suppresses both activity and webhook events" do
       expect do
         described_class.call(rate_card:, params:, emit_events: false)
