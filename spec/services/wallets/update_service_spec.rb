@@ -273,6 +273,15 @@ RSpec.describe Wallets::UpdateService do
         expect(result.wallet.invoice_usage_on_expiration).to eq(true)
       end
 
+      context "when the value is blank" do
+        let(:params) { {id: wallet.id, invoice_usage_on_expiration: ""} }
+
+        it "returns a validation failure" do
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:invoice_usage_on_expiration]).to eq(["value_is_reserved"])
+        end
+      end
+
       context "when the feature flag is disabled" do
         let(:feature_flag_enabled) { false }
 
