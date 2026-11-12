@@ -383,6 +383,21 @@ enum ActivityTypeEnum {
   plan_updated
 
   """
+  plan_wallet.created
+  """
+  plan_wallet_created
+
+  """
+  plan_wallet.deleted
+  """
+  plan_wallet_deleted
+
+  """
+  plan_wallet.updated
+  """
+  plan_wallet_updated
+
+  """
   product_category.created
   """
   product_category_created
@@ -14582,6 +14597,11 @@ enum ResourceTypeEnum {
   PlanRateCard
   """
   plan_rate_card
+
+  """
+  PlanWallet
+  """
+  plan_wallet
 
   """
   Product

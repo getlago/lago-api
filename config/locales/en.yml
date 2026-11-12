@@ -95,6 +95,9 @@ en:
           attributes:
             permissions:
               forbidden_keys: 'contains forbidden keys: %{keys}'
+        plan_wallet:
+          not_a_number: value_is_invalid
+          not_an_integer: value_is_invalid
         webhook_endpoint:
           attributes:
             event_types:
