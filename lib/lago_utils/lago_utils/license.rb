@@ -11,11 +11,7 @@ module LagoUtils
       return if ENV["LAGO_LICENSE"].blank?
 
       # Runs at boot: a transient failure must not crash the process.
-      http_client = LagoHttpClient::Client.new(
-        "#{url}/verify/#{ENV["LAGO_LICENSE"]}",
-        retry_on_transient_errors: true,
-        retries_on: [SocketError, Socket::ResolutionError]
-      )
+      http_client = LagoHttpClient::Client.new("#{url}/verify/#{ENV["LAGO_LICENSE"]}", retry_on_transient_errors: true)
       response = http_client.get
 
       @premium = response["valid"]
