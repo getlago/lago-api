@@ -118,9 +118,7 @@ module Contracts
     def rate_card_usage(card)
       return if card.rate_card.rates.empty?
 
-      schedule = Billing::RateCards::BuildScheduleService.call!(
-        contract_rate_card: card, resume_from_billing_segments: false
-      ).schedule
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule
       billable_segment = schedule.segment_covering(timestamp)
       return unless billable_segment
 

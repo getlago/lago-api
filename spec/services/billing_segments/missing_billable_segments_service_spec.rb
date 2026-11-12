@@ -78,8 +78,8 @@ RSpec.describe BillingSegments::MissingBillableSegmentsService do
         )
       end
 
-      it "treats the whole cycle as settled" do
-        expect(result.billable_segments).to eq([])
+      it "excludes the settled cycle but keeps earlier unstored coverage" do
+        expect(result.billable_segments.map(&:started_at)).to eq([Time.zone.parse("2026-01-01 00:00:00")])
       end
     end
 
@@ -102,8 +102,10 @@ RSpec.describe BillingSegments::MissingBillableSegmentsService do
         )
       end
 
-      it "still owes the piece that ends there" do
-        expect(result.billable_segments.map(&:started_at)).to eq([Time.zone.parse("2026-02-01 00:00:00")])
+      it "still owes the touching piece and earlier unstored coverage" do
+        expect(result.billable_segments.map(&:started_at)).to eq(
+          [Time.zone.parse("2026-01-01 00:00:00"), Time.zone.parse("2026-02-01 00:00:00")]
+        )
       end
     end
 
@@ -115,7 +117,7 @@ RSpec.describe BillingSegments::MissingBillableSegmentsService do
       end
 
       it "does not read the card's stored segments, which have no window to be bounded by" do
-        schedule # built here, so the builder's own read is not what the spy sees
+        schedule
         allow(contract_rate_card).to receive(:billing_segments).and_call_original
 
         result
@@ -124,8 +126,7 @@ RSpec.describe BillingSegments::MissingBillableSegmentsService do
       end
     end
 
-    # The run that billed February 15 stored the cycle's first slice. Resuming from that
-    # cycle's start replays the cycle whole, so the schedule hands the stored slice back.
+    # Replaying the schedule includes the stored first slice and earlier unstored coverage.
     context "when the cycle is partly stored" do
       before do
         create(
@@ -142,8 +143,10 @@ RSpec.describe BillingSegments::MissingBillableSegmentsService do
         )
       end
 
-      it "hands back only the segment that is not durable yet" do
-        expect(result.billable_segments.map(&:started_at)).to eq([Time.zone.parse("2026-02-15 00:00:00")])
+      it "excludes the stored slice but keeps every unstored segment" do
+        expect(result.billable_segments.map(&:started_at)).to eq(
+          [Time.zone.parse("2026-01-01 00:00:00"), Time.zone.parse("2026-02-15 00:00:00")]
+        )
       end
     end
   end
