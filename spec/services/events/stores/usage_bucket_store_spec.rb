@@ -193,6 +193,12 @@ RSpec.describe Events::Stores::UsageBucketStore do
           expect(store.recurring_sum(watermark:, period:)).to eq(delegated_result)
           expect(delegated_store).to have_received(:recurring_sum).with(watermark:, period:)
         end
+
+        it "raises under the forced gate, as the parity comparison would compare the events with themselves" do
+          expect { RealtimeUsage.with_forced_gate { store.recurring_sum(watermark:, period:) } }
+            .to raise_error(RealtimeUsage::RecurringFallbackError)
+          expect(delegated_store).not_to have_received(:recurring_sum)
+        end
       end
     end
 
@@ -217,6 +223,11 @@ RSpec.describe Events::Stores::UsageBucketStore do
           expect(store.grouped_recurring_sum(watermark:, period:)).to eq([])
           expect(delegated_store).to have_received(:grouped_recurring_sum).with(watermark:, period:)
         end
+
+        it "raises under the forced gate" do
+          expect { RealtimeUsage.with_forced_gate { store.grouped_recurring_sum(watermark:, period:) } }
+            .to raise_error(RealtimeUsage::RecurringFallbackError)
+        end
       end
     end
 
@@ -236,6 +247,15 @@ RSpec.describe Events::Stores::UsageBucketStore do
         expect(delegated_store).to have_received(:grouped_sum).with(with_count: true)
         expect(store.sum_precise_total_amount_cents).to eq(:events_amount)
         expect(store.grouped_sum_precise_total_amount_cents).to eq(:events_grouped_amount)
+      end
+
+      it "raises on each under the forced gate" do
+        RealtimeUsage.with_forced_gate do
+          expect { store.sum }.to raise_error(RealtimeUsage::RecurringFallbackError)
+          expect { store.grouped_sum }.to raise_error(RealtimeUsage::RecurringFallbackError)
+          expect { store.sum_precise_total_amount_cents }.to raise_error(RealtimeUsage::RecurringFallbackError)
+          expect { store.grouped_sum_precise_total_amount_cents }.to raise_error(RealtimeUsage::RecurringFallbackError)
+        end
       end
     end
   end

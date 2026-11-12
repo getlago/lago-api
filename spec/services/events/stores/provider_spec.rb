@@ -276,6 +276,7 @@ RSpec.describe Events::Stores::Provider do
         it "wraps the store in a bucket-backed one answering the delta from the window", clickhouse: true do
           expect(store).to be_a(Events::Stores::UsageBucketStore)
           expect(store.recurring_fallback_reason(period)).to be_nil
+          expect(provider.recurring_refusal_reason(metered_item)).to be_nil
         end
 
         context "when the aggregator reads the sum without a snapshot" do
@@ -312,6 +313,7 @@ RSpec.describe Events::Stores::Provider do
 
           it "reads events, as the buckets have no snapshot to add the window to" do
             expect(store).to be_a(Events::Stores::ClickhouseStore)
+            expect(provider.recurring_refusal_reason(metered_item)).to eq("no_snapshot_read")
           end
         end
 
@@ -320,6 +322,7 @@ RSpec.describe Events::Stores::Provider do
 
           it "reads events, as its precise amounts span the whole history" do
             expect(store).to be_a(Events::Stores::ClickhouseStore)
+            expect(provider.recurring_refusal_reason(metered_item)).to eq("dynamic")
           end
         end
 
@@ -346,6 +349,7 @@ RSpec.describe Events::Stores::Provider do
 
           it "reads events, as the snapshots hold usage bucketed under the previous subscription" do
             expect(store).to be_a(Events::Stores::ClickhouseStore)
+            expect(provider.recurring_refusal_reason(metered_item)).to eq("has_predecessor")
           end
         end
       end

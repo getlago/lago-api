@@ -21,6 +21,10 @@ module RealtimeUsage
 
   FORCED_GATE_KEY = :lago_realtime_usage_forced_gate
 
+  # A recurring charge falling back to the events under the forced gate, which the parity
+  # comparison only opens on charges it found served.
+  class RecurringFallbackError < StandardError; end
+
   class << self
     # Opens the flag and the kill switch for the duration of the block. Reserved for the parity
     # comparison, which has to exercise the bucket path on an organization the flag is off for;
@@ -54,10 +58,9 @@ module RealtimeUsage
     end
 
     # On top of enabled?, so recurring sums roll back on their own without turning off the buckets
-    # for the organization's other charges. The forced gate leaves it closed until the parity task
-    # reads the snapshots on both sides, which it needs to compare recurring charges.
+    # for the organization's other charges.
     def recurring_sum_enabled?(organization)
-      organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
+      forced_gate? || organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
     end
 
     # Served from the snapshot of the previous period plus the buckets of the window, rather than

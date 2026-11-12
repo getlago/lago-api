@@ -61,8 +61,9 @@ module Events
       end
 
       # Every gate a charge can be ruled out by before an aggregator and a store exist, so that
-      # a charge the buckets cannot answer costs nothing to skip.
-      def may_precompute_charge?(metered_item:, boundaries:)
+      # a charge the buckets cannot answer costs nothing to skip. The parity task skips the
+      # recurring refusal to ask it last, so a refused charge is counted under one reason.
+      def may_precompute_charge?(metered_item:, boundaries:, refuse_recurring: true)
         return false unless may_precompute?
         # The buckets are keyed by charge, and a billing segment is priced from its product
         # rather than from the optional legacy charge that product may carry.
@@ -75,15 +76,25 @@ module Events
         return false if wallet_charge_changed_in_window?(charge)
         return false unless RealtimeUsage.supported_charge?(charge)
 
-        !RealtimeUsage.recurring_charge?(charge) || recurring_snapshot_completable?(metered_item)
+        !refuse_recurring || !RealtimeUsage.recurring_charge?(charge) || recurring_refusal_reason(metered_item).nil?
+      end
+
+      # Why the buckets can never complete the snapshot of a recurring charge: they only add the
+      # window to a snapshot of this subscription, and a dynamic charge also reads its precise
+      # amounts over the whole history.
+      def recurring_refusal_reason(metered_item)
+        return "dynamic" if metered_item.charge.dynamic?
+        return "no_snapshot_read" unless RecurringAggregationSnapshot.readable?(metered_item:, billing_context:)
+
+        "has_predecessor" if billing_context.previous_subscription_id?
       end
 
       # Charge-wide counterpart of `served_from_buckets?`: true only when every pricing bucket of
       # the charge will be served.
-      def serves_whole_charge_from_buckets?(metered_item:, boundaries:)
+      def serves_whole_charge_from_buckets?(metered_item:, boundaries:, refuse_recurring: true)
         return false if requested_presentation_by(metered_item).present?
 
-        served_from_buckets?(metered_item:, boundaries:)
+        served_from_buckets?(metered_item:, boundaries:, refuse_recurring:)
       end
 
       # The charge filters the buckets hold usage for, the default bucket being nil as in the
@@ -107,8 +118,8 @@ module Events
         !usage_filters.full_usage && usage_filters.filter_by_group.blank?
       end
 
-      def served_from_buckets?(metered_item:, boundaries:, filters: {})
-        return false unless may_precompute_charge?(metered_item:, boundaries:)
+      def served_from_buckets?(metered_item:, boundaries:, filters: {}, refuse_recurring: true)
+        return false unless may_precompute_charge?(metered_item:, boundaries:, refuse_recurring:)
         return false unless filters[:grouped_by_values].blank? &&
           filters[:event].blank? &&
           filters[:presentation_by].blank?
@@ -122,14 +133,6 @@ module Events
         else
           usage_buckets.present?
         end
-      end
-
-      # The buckets only add the window to a snapshot of this subscription. A dynamic charge also
-      # reads its precise amounts over the whole history, which the buckets cannot answer.
-      def recurring_snapshot_completable?(metered_item)
-        !metered_item.charge.dynamic? &&
-          RecurringAggregationSnapshot.readable?(metered_item:, billing_context:) &&
-          !billing_context.previous_subscription_id?
       end
 
       # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A
