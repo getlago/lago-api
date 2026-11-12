@@ -40,6 +40,17 @@ describe Clock::TerminateWalletsJob, job: true do
     expect(to_keep_active_wallet.reload.status).to eq("active")
   end
 
+  context "when the wallet stopped invoicing its usage on expiration after its expiration was invoiced" do
+    before { create(:applied_wallet_expiration, wallet: to_expire_wallet) }
+
+    it "enqueues its expiration, which settles its expiration invoices first" do
+      described_class.perform_now
+
+      expect(Wallets::ExpireWithInvoicingJob).to have_been_enqueued.with(to_expire_wallet)
+      expect(to_expire_wallet.reload.status).to eq("active")
+    end
+  end
+
   context "when the wallet invoices its usage on expiration", :premium do
     let(:balance_cents) { 1000 }
     let(:to_expire_wallet) do
@@ -67,31 +78,28 @@ describe Clock::TerminateWalletsJob, job: true do
     context "when the feature flag is disabled" do
       let(:feature_flags) { [] }
 
-      it "terminates it inline" do
+      it "still enqueues its expiration, which settles its expiration invoices first" do
         described_class.perform_now
 
-        expect(Wallets::ExpireWithInvoicingJob).not_to have_been_enqueued
-        expect(to_expire_wallet.reload.status).to eq("terminated")
+        expect(Wallets::ExpireWithInvoicingJob).to have_been_enqueued.with(to_expire_wallet)
+      end
+    end
+
+    context "without a premium license", premium: false do
+      it "still enqueues its expiration, which settles its expiration invoices first" do
+        described_class.perform_now
+
+        expect(Wallets::ExpireWithInvoicingJob).to have_been_enqueued.with(to_expire_wallet)
       end
     end
 
     context "when the wallet has no credits left" do
       let(:balance_cents) { 0 }
 
-      it "terminates it inline" do
+      it "enqueues its expiration" do
         described_class.perform_now
 
-        expect(Wallets::ExpireWithInvoicingJob).not_to have_been_enqueued
-        expect(to_expire_wallet.reload.status).to eq("terminated")
-      end
-    end
-
-    context "without a premium license", premium: false do
-      it "terminates it inline" do
-        described_class.perform_now
-
-        expect(Wallets::ExpireWithInvoicingJob).not_to have_been_enqueued
-        expect(to_expire_wallet.reload.status).to eq("terminated")
+        expect(Wallets::ExpireWithInvoicingJob).to have_been_enqueued.with(to_expire_wallet)
       end
     end
   end

@@ -6,7 +6,8 @@ module Clock
 
     def perform
       Wallet.active.expired.includes(:organization).find_each do |wallet|
-        if wallet.expiration_invoicing_enabled? && wallet.balance_cents.positive?
+        # Disabling the invoicing must not terminate a wallet that an unsettled expiration invoice still spends.
+        if wallet.invoice_usage_on_expiration? || wallet.reserved_for_expiration_invoice?
           Wallets::ExpireWithInvoicingJob.perform_later(wallet)
         else
           Wallets::TerminateService.call(wallet:)

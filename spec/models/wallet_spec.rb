@@ -242,6 +242,40 @@ RSpec.describe Wallet do
     end
   end
 
+  describe "#reserved_for_expiration_invoice?" do
+    subject(:wallet) { create(:wallet, expiration_at:) }
+
+    let(:expiration_at) { 1.hour.ago }
+    let(:invoice_status) { :failed }
+
+    before do
+      invoice = create(:invoice, organization: wallet.organization, customer: wallet.customer, status: invoice_status)
+      create(:applied_wallet_expiration, wallet:, invoice:)
+    end
+
+    it "is true once the expiration of the expired wallet is invoiced" do
+      expect(wallet).to be_reserved_for_expiration_invoice
+    end
+
+    context "when its expiration invoice is settled" do
+      let(:invoice_status) { :finalized }
+
+      it { expect(wallet).to be_reserved_for_expiration_invoice }
+    end
+
+    context "when the wallet is not expired" do
+      let(:expiration_at) { 1.hour.from_now }
+
+      it { expect(wallet).not_to be_reserved_for_expiration_invoice }
+    end
+
+    context "when the expiration of the wallet is not invoiced" do
+      before { AppliedWalletExpiration.where(wallet:).delete_all }
+
+      it { expect(wallet).not_to be_reserved_for_expiration_invoice }
+    end
+  end
+
   describe "#expiration_invoicing_enabled?", :premium do
     subject(:wallet) { build(:wallet, organization:, invoice_usage_on_expiration:) }
 
