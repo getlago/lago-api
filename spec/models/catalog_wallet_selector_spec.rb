@@ -49,15 +49,15 @@ describe CatalogWalletSelector do
       it "requires the target of the selector type" do
         selector = build(:catalog_wallet_selector, selector_type: "product", fee_type: nil)
 
-        expect(selector.tap(&:valid?).errors.to_hash).to eq(product: ["value_is_mandatory"])
+        expect(selector.tap(&:valid?).errors.to_hash).to eq(product_id: ["value_is_mandatory"])
       end
 
       it "refuses the targets of other types" do
         selector = build(:catalog_wallet_selector, product_category: create(:product_category), product_filter: create(:product_filter))
 
         expect(selector.tap(&:valid?).errors.to_hash).to eq(
-          product_category: ["value_must_be_blank"],
-          product_filter: ["value_must_be_blank"]
+          product_category_id: ["value_must_be_blank"],
+          product_filter_id: ["value_must_be_blank"]
         )
       end
 
