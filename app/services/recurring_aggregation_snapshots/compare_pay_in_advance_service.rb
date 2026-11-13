@@ -120,8 +120,8 @@ module RecurringAggregationSnapshots
     end
 
     # RecurringAggregationSnapshot.readable?: with a period, the event group starts
-    # from its snapshot, or from zero without one. The subscription is the one the event resolves
-    # to, which an upgrade can make another one.
+    # from its snapshot, or from zero without one. The owner is the subscription or contract the event
+    # resolves to, which an upgrade can make another subscription.
     def snapshot_read?(metered_item, billing_context)
       return false unless RecurringAggregationSnapshot.eligible?(metered_item:, billing_context:)
 
