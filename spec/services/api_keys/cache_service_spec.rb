@@ -124,20 +124,36 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
         end
       end
 
-      context "with an entry cached under the previous version" do
-        let(:previous_key) { "api_key/1/#{auth_token}" }
-
+      context "with an entry written before a column was added" do
         before do
           stale_organization = organization.attributes.except("self_serve", "environment", "production_organization_id")
-          Rails.cache.write(previous_key, {api_key: api_key.attributes, organization: stale_organization}.to_json)
+          Rails.cache.write(cache_service.cache_key, {api_key: api_key.attributes, organization: stale_organization}.to_json)
         end
 
-        it "reads the organization from the database and caches it under the current version" do
+        it "reads the api_key and the organization from the database" do
           result = cache_service.call
 
           expect(result).to eq([api_key, organization])
           expect(result.last.environment).to eq("production")
-          expect(Rails.cache.read(cache_service.cache_key)).to be_present
+        end
+      end
+
+      context "when an instance running the previous code revokes the cached api key" do
+        include_context "with mocked security logger"
+
+        let(:api_key) { create(:api_key) }
+
+        before do
+          create(:api_key)
+          cache_service.call
+
+          # What `expire_cache` of the previous release writes during a rolling deploy.
+          api_key.touch(:expires_at) # rubocop:disable Rails/SkipsModelValidations
+          Rails.cache.write("api_key/1/#{auth_token}", described_class::INVALIDATED_MARKER)
+        end
+
+        it "does not authenticate the revoked api key" do
+          expect(described_class.call(auth_token, with_cache: true)).to eq([nil, nil])
         end
       end
 
