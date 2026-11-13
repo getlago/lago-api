@@ -154,7 +154,8 @@ end
 
 # Their watermarks were compared with Postgres created_at, not ClickHouse enriched_at
 def delete_recurring_aggregation_snapshots(organization)
-  deleted_count = RecurringAggregationSnapshot.where(organization:).delete_all
+  deleted_count = RecurringAggregationSnapshot.where(organization:).delete_all +
+    ContractRecurringAggregationSnapshot.where(organization:).delete_all
   puts "  Deleted #{deleted_count} recurring aggregation snapshot(s)."
 end
 
