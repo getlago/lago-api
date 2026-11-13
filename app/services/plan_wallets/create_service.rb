@@ -39,11 +39,6 @@ module PlanWallets
         )
       end
 
-      # A contract is invoiced in its plan's currency, so a wallet in another one could never pay.
-      if params[:currency].present? && params[:currency] != catalog_plan.currency
-        return result.single_validation_failure!(field: :currency, error_code: "currency_does_not_match")
-      end
-
       ActiveRecord::Base.transaction do
         plan_wallet = catalog_plan.wallets.create!(organization:, **params.slice(*ATTRIBUTES).compact.symbolize_keys)
 
