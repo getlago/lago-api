@@ -5,6 +5,12 @@ require "rails_helper"
 describe SegmentTrackJob, job: true do
   subject { described_class }
 
+  describe "logging" do
+    it "keeps its properties out of the job logs" do
+      expect(subject.log_arguments?).to be(false)
+    end
+  end
+
   describe ".perform" do
     let(:membership_id) { "membership/#{SecureRandom.uuid}" }
     let(:event) { "event" }
