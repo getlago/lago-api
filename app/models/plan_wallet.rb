@@ -42,6 +42,7 @@ end
 #
 # Indexes
 #
+#  index_plan_wallets_by_cursor                    (catalog_plan_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_plan_wallets_on_catalog_plan_id_and_code  (catalog_plan_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #  index_plan_wallets_on_organization_id           (organization_id)
 #
