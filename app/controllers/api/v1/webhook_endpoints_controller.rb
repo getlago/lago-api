@@ -3,31 +3,27 @@
 module Api
   module V1
     class WebhookEndpointsController < Api::V1::BaseController
+      # The create, update and show responses carry the whsec_ signing keys.
+      filter_audit_log_response! :secret_key
+
       def create
-        service = ::WebhookEndpoints::CreateService.new(
-          organization: current_organization,
-          params: create_params
-        )
+        result = ::WebhookEndpoints::CreateService.call(organization: current_organization, params: create_params)
 
-        result = service.call
-
-        return render_webhook_endpoint(result.webhook_endpoint) if result.success?
-
-        render_error_response(result)
+        if result.success?
+          render_webhook_endpoint(result.webhook_endpoint, with_signing_keys: true)
+        else
+          render_error_response(result)
+        end
       end
 
       def update
-        service = ::WebhookEndpoints::UpdateService.new(
-          id: params[:id],
-          organization: current_organization,
-          params: update_params
-        )
+        result = ::WebhookEndpoints::UpdateService.call(id: params[:id], organization: current_organization, params: update_params)
 
-        result = service.call
-
-        return render_webhook_endpoint(result.webhook_endpoint) if result.success?
-
-        render_error_response(result)
+        if result.success?
+          render_webhook_endpoint(result.webhook_endpoint, with_signing_keys: true)
+        else
+          render_error_response(result)
+        end
       end
 
       def index
@@ -58,7 +54,7 @@ module Api
 
         return not_found_error(resource: "webhook_endpoint") unless webhook_endpoint
 
-        render_webhook_endpoint(webhook_endpoint)
+        render_webhook_endpoint(webhook_endpoint, with_signing_keys: true)
       end
 
       def destroy
@@ -101,11 +97,15 @@ module Api
         permitted_options
       end
 
-      def render_webhook_endpoint(webhook_endpoint)
+      # Only a key that can write webhook endpoints reads their signing secrets.
+      def render_webhook_endpoint(webhook_endpoint, with_signing_keys: false)
+        includes = (with_signing_keys && current_api_key.permit?(resource_name, "write")) ? [:signing_keys] : []
+
         render(
           json: ::V1::WebhookEndpointSerializer.new(
             webhook_endpoint,
-            root_name: "webhook_endpoint"
+            root_name: "webhook_endpoint",
+            includes:
           )
         )
       end

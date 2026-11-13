@@ -21,6 +21,10 @@ module RealtimeUsage
 
   FORCED_GATE_KEY = :lago_realtime_usage_forced_gate
 
+  # A recurring charge falling back to the events under the forced gate, which the parity
+  # comparison only opens on charges it found served.
+  class RecurringFallbackError < StandardError; end
+
   class << self
     # Opens the flag and the kill switch for the duration of the block. Reserved for the parity
     # comparison, which has to exercise the bucket path on an organization the flag is off for;
@@ -53,6 +57,18 @@ module RealtimeUsage
       organization.feature_flag_enabled?(:realtime_usage)
     end
 
+    # On top of enabled?, so recurring sums roll back on their own without turning off the buckets
+    # for the organization's other charges.
+    def recurring_sum_enabled?(organization)
+      forced_gate? || organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
+    end
+
+    # Served from the snapshot of the previous period plus the buckets of the window, rather than
+    # from the window alone.
+    def recurring_charge?(charge)
+      charge.billable_metric.recurring?
+    end
+
     def floor_to_bucket(time)
       Time.zone.at(time.to_i - (time.to_i % BUCKET_DURATION.to_i))
     end
@@ -76,12 +92,17 @@ module RealtimeUsage
       return "unsupported_aggregation_type" unless SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type)
       return "pay_in_advance" if charge.pay_in_advance?
       return "prorated" if charge.prorated?
-      return "recurring_metric" if billable_metric.recurring?
-
-      # `target_wallet_code` will be handled later.
-      return "target_wallet" if charge.accepts_target_wallet
+      # Within the supported aggregation types, only sum_agg can be recurring. The metric's
+      # organization is the one usage callers preload.
+      return "recurring_metric" if billable_metric.recurring? && !recurring_sum_enabled?(billable_metric.organization)
 
       nil
+    end
+
+    # Buckets written before a charge accepted a target wallet hold no wallet code, so their usage
+    # would be debited from the wrong wallet. Nothing records that switch, so any edit counts.
+    def wallet_charge_changed_since?(charge, datetime)
+      charge.accepts_target_wallet && charge.updated_at > datetime
     end
   end
 end

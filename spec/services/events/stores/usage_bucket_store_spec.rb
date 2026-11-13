@@ -91,6 +91,175 @@ RSpec.describe Events::Stores::UsageBucketStore do
     end
   end
 
+  context "with a recurring charge" do
+    subject(:store) do
+      described_class.new(
+        delegated_store, usage_buckets:, charge_id: charge.id, charge_filter_id:, recurring: true, charges_from_datetime:
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+    let(:charges_from_datetime) { Time.current.beginning_of_month }
+    let(:watermark) { Time.current }
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(
+        to_datetime: charges_from_datetime - 1.second, watermark: charges_from_datetime + 1.hour
+      )
+    end
+    let(:late_ingestion) { false }
+    let(:usage_buckets) do
+      Events::Stores::UsageBucketSet.new(
+        totals: {[charge.id, ""] => totals},
+        grouped_totals: {[charge.id, ""] => {{"region" => "us"} => totals}}
+      )
+    end
+
+    before { allow(delegated_store).to receive(:late_ingestion?).and_return(late_ingestion) }
+
+    describe "#recurring_fallback_reason" do
+      it { expect(store.recurring_fallback_reason(period)).to be_nil }
+
+      context "without a snapshot period" do
+        it { expect(store.recurring_fallback_reason(nil)).to eq("no_period") }
+      end
+
+      context "when the snapshot period ends before the previous period" do
+        let(:period) do
+          RecurringAggregationSnapshots::FetchService::Period.new(
+            to_datetime: charges_from_datetime - 1.month - 1.second, watermark: charges_from_datetime - 1.month + 1.hour
+          )
+        end
+
+        it { expect(store.recurring_fallback_reason(period)).to eq("not_adjacent") }
+      end
+
+      context "when the snapshot period ends inside the window" do
+        let(:period) do
+          RecurringAggregationSnapshots::FetchService::Period.new(
+            to_datetime: charges_from_datetime, watermark: charges_from_datetime + 1.hour
+          )
+        end
+
+        it { expect(store.recurring_fallback_reason(period)).to eq("not_adjacent") }
+      end
+
+      context "when the events hold one ingested after the snapshot" do
+        let(:late_ingestion) { true }
+
+        it { expect(store.recurring_fallback_reason(period)).to eq("late_ingestion") }
+      end
+
+      it "asks the store it wraps once per period" do
+        2.times { store.recurring_fallback_reason(period) }
+
+        expect(delegated_store).to have_received(:late_ingestion?).with(period).once
+      end
+    end
+
+    describe "#recurring_sum" do
+      let(:delegated_result) do
+        Events::Stores::BaseStore::RecurringAggregationResult.new(
+          value: BigDecimal(3), snapshot_value: BigDecimal(3), events_count: 1, snapshot_events_count: 1
+        )
+      end
+
+      before { allow(delegated_store).to receive(:recurring_sum).and_return(delegated_result) }
+
+      it "answers the units of the window, persisting no snapshot units" do
+        expect(store.recurring_sum(watermark:, period:)).to eq(
+          Events::Stores::BaseStore::RecurringAggregationResult.new(
+            value: BigDecimal("42.5"), snapshot_value: 0, events_count: 7, snapshot_events_count: 0
+          )
+        )
+        expect(delegated_store).not_to have_received(:recurring_sum)
+      end
+
+      context "when the buckets hold no row in the window" do
+        let(:usage_buckets) { Events::Stores::UsageBucketSet.new }
+
+        it "answers zero" do
+          expect(store.recurring_sum(watermark:, period:)).to eq(
+            Events::Stores::BaseStore::RecurringAggregationResult.new(
+              value: 0, snapshot_value: 0, events_count: 0, snapshot_events_count: 0
+            )
+          )
+        end
+      end
+
+      context "when the delta has to come from the events" do
+        let(:late_ingestion) { true }
+
+        it "delegates it to the store it wraps" do
+          expect(store.recurring_sum(watermark:, period:)).to eq(delegated_result)
+          expect(delegated_store).to have_received(:recurring_sum).with(watermark:, period:)
+        end
+
+        it "raises under the forced gate, as the parity comparison would compare the events with themselves" do
+          expect { RealtimeUsage.with_forced_gate { store.recurring_sum(watermark:, period:) } }
+            .to raise_error(RealtimeUsage::RecurringFallbackError)
+          expect(delegated_store).not_to have_received(:recurring_sum)
+        end
+      end
+    end
+
+    describe "#grouped_recurring_sum" do
+      before { allow(delegated_store).to receive(:grouped_recurring_sum).and_return([]) }
+
+      it "answers one result per group of the window, persisting no snapshot units" do
+        expect(store.grouped_recurring_sum(watermark:, period:)).to eq(
+          [
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(
+              groups: {"region" => "us"}, value: BigDecimal("42.5"), snapshot_value: 0, events_count: 7,
+              snapshot_events_count: 0
+            )
+          ]
+        )
+      end
+
+      context "when the delta has to come from the events" do
+        let(:late_ingestion) { true }
+
+        it "delegates it to the store it wraps" do
+          expect(store.grouped_recurring_sum(watermark:, period:)).to eq([])
+          expect(delegated_store).to have_received(:grouped_recurring_sum).with(watermark:, period:)
+        end
+
+        it "raises under the forced gate" do
+          expect { RealtimeUsage.with_forced_gate { store.grouped_recurring_sum(watermark:, period:) } }
+            .to raise_error(RealtimeUsage::RecurringFallbackError)
+        end
+      end
+    end
+
+    describe "the reads without a snapshot" do
+      before do
+        allow(delegated_store).to receive_messages(
+          sum: :events_sum,
+          grouped_sum: :events_grouped_sum,
+          sum_precise_total_amount_cents: :events_amount,
+          grouped_sum_precise_total_amount_cents: :events_grouped_amount
+        )
+      end
+
+      it "delegates them, as the window alone is not the recurring total" do
+        expect(store.sum).to eq(:events_sum)
+        expect(store.grouped_sum).to eq(:events_grouped_sum)
+        expect(delegated_store).to have_received(:grouped_sum).with(with_count: true)
+        expect(store.sum_precise_total_amount_cents).to eq(:events_amount)
+        expect(store.grouped_sum_precise_total_amount_cents).to eq(:events_grouped_amount)
+      end
+
+      it "raises on each under the forced gate" do
+        RealtimeUsage.with_forced_gate do
+          expect { store.sum }.to raise_error(RealtimeUsage::RecurringFallbackError)
+          expect { store.grouped_sum }.to raise_error(RealtimeUsage::RecurringFallbackError)
+          expect { store.sum_precise_total_amount_cents }.to raise_error(RealtimeUsage::RecurringFallbackError)
+          expect { store.grouped_sum_precise_total_amount_cents }.to raise_error(RealtimeUsage::RecurringFallbackError)
+        end
+      end
+    end
+  end
+
   describe "#max" do
     let(:aggregation_type) { "max" }
 

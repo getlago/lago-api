@@ -42,7 +42,7 @@ RSpec.describe ApiLoggable do
       post :index
 
       expect(Utils::ApiLog).to have_received(:produce)
-        .with(anything, anything, organization: nil, filtered_params: [])
+        .with(anything, anything, organization: nil, filtered_params: [], filtered_response: [])
     end
   end
 
@@ -65,7 +65,51 @@ RSpec.describe ApiLoggable do
       post :index
 
       expect(Utils::ApiLog).to have_received(:produce)
-        .with(anything, anything, organization: nil, filtered_params: [:secret_field])
+        .with(anything, anything, organization: nil, filtered_params: [:secret_field], filtered_response: [])
+    end
+  end
+
+  context "with filter_audit_log_response!" do
+    # rubocop:disable RSpec/DescribedClass
+    controller(ApplicationController) do
+      include ApiLoggable
+
+      filter_audit_log_response! :secret_field
+
+      attr_accessor :current_organization
+
+      def index
+        render json: {item: {secret_field: "secret-value", other_field: "visible"}}
+      end
+    end
+    # rubocop:enable RSpec/DescribedClass
+
+    it "produces api log with the filtered response keys" do
+      post :index
+
+      expect(Utils::ApiLog).to have_received(:produce)
+        .with(anything, anything, organization: nil, filtered_params: [], filtered_response: [:secret_field])
+    end
+
+    context "when the API log is sent to Kafka", :capture_kafka_messages do
+      include_context "with API log infrastructure"
+
+      let(:organization) { create(:organization) }
+
+      before do
+        # Utils::ApiLog reads the API version from the path.
+        routes.draw { post "api/v1/items" => "anonymous#index" }
+        allow(Utils::ApiLog).to receive(:produce).and_call_original
+        controller.current_organization = organization
+      end
+
+      it "masks the filtered keys of the logged response" do
+        post :index
+
+        expect(api_log_payload["request_response"]).to eq(
+          "item" => {"secret_field" => "[FILTERED]", "other_field" => "visible"}
+        )
+      end
     end
   end
 

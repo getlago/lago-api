@@ -11,6 +11,7 @@ RSpec.describe Mutations::LoginUser do
       mutation($input: LoginUserInput!) {
         loginUser(input: $input) {
           token
+          needsOrganization
           user {
             id
             email
@@ -35,6 +36,27 @@ RSpec.describe Mutations::LoginUser do
 
     expect(result_data["token"]).to be_present
     expect(result_data["user"]["id"]).to eq(user.id)
+    expect(result_data["needsOrganization"]).to be(false)
+  end
+
+  context "with a self-serve user who never had an organization" do
+    let(:orgless_user) { create(:user, :self_serve, password: "Lago-Passw0rd") }
+    let(:result) { execute_graphql(query: mutation, variables: {input: {email: orgless_user.email, password: "Lago-Passw0rd"}}) }
+
+    context "when self-serve is on" do
+      include_context "with self-serve enabled"
+
+      it "returns a session that needs an organization" do
+        expect(result["data"]["loginUser"]["token"]).to be_present
+        expect(result["data"]["loginUser"]["needsOrganization"]).to be(true)
+      end
+    end
+
+    context "when self-serve is off" do
+      it "refuses as today" do
+        expect(result["errors"].first.dig("extensions", "details", "base")).to eq(["incorrect_login_or_password"])
+      end
+    end
   end
 
   context "with bad credentials" do
@@ -175,6 +197,57 @@ RSpec.describe Mutations::LoginUser do
       result = login("ILoveLago")
 
       expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+    end
+
+    context "when self-serve is on" do
+      include_context "with self-serve enabled"
+
+      it "limits attempts per IPv6 /64 across addresses" do
+        30.times { |i| login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:2::#{i + 1}")) }
+
+        result = login("ILoveLago", request: request_from("2001:db8:1:2::ffff"))
+
+        expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+      end
+
+      it "limits attempts per IPv6 /48 across networks" do
+        # 600 attempts, 25 from each of 24 networks, all under their own limit of 30
+        600.times do |i|
+          login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:#{(i / 25 + 1).to_s(16)}::#{i + 1}"))
+        end
+
+        result = login("ILoveLago", request: request_from("2001:db8:1:ff::1"))
+
+        expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+      end
+
+      it "lets a neighbour log in while a few networks of its /48 sit at their own limit" do
+        5.times do |network|
+          30.times { |i| login("badpassword", email: "unknown-#{network}-#{i}@example.com", request: request_from("2001:db8:1:#{network + 1}::#{i + 1}")) }
+        end
+
+        result = login("ILoveLago", request: request_from("2001:db8:1:ff::1"))
+
+        expect(result["data"]["loginUser"]["token"]).to be_present
+      end
+
+      it "keeps attempts refused by a /64's own limit out of its /48's budget" do
+        601.times { |i| login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:2::#{(i + 1).to_s(16)}")) }
+
+        result = login("ILoveLago", request: request_from("2001:db8:1:ff::1"))
+
+        expect(result["data"]["loginUser"]["token"]).to be_present
+      end
+    end
+
+    context "when self-serve is off" do
+      it "counts IPv6 attempts per address, as before" do
+        30.times { |i| login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:2::#{i + 1}")) }
+
+        result = login("ILoveLago", request: request_from("2001:db8:1:2::ffff"))
+
+        expect(result["data"]["loginUser"]["token"]).to be_present
+      end
     end
   end
 end

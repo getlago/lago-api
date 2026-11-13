@@ -88,6 +88,36 @@ RSpec.describe Resolvers::ContractResolver do
     end
   end
 
+  describe "currency" do
+    let(:query) do
+      <<~GQL
+        query($contractId: ID!) {
+          contract(id: $contractId) { currency }
+        }
+      GQL
+    end
+
+    it "follows the plan's currency when there is one" do
+      expect(execution["data"]["contract"]["currency"]).to eq("EUR")
+    end
+
+    context "with no catalog plan" do
+      let(:contract) { create(:contract, organization:, customer:) }
+
+      it "falls back to the customer's currency" do
+        expect(execution["data"]["contract"]["currency"]).to eq(customer.currency)
+      end
+
+      context "when the customer has no currency set" do
+        let(:customer) { create(:customer, organization:, currency: nil) }
+
+        it "falls back to the organization's default currency" do
+          expect(execution["data"]["contract"]["currency"]).to eq(organization.default_currency)
+        end
+      end
+    end
+  end
+
   context "when the contract belongs to another organization" do
     let(:contract) { create(:contract) }
 

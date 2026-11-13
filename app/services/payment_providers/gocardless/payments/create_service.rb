@@ -4,7 +4,7 @@ module PaymentProviders
   module Gocardless
     module Payments
       class CreateService < BaseService
-        Result = BaseResult[:payment, :error_message, :error_code, :reraise]
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise, :should_retry]
 
         class MandateNotFoundError < StandardError
           DEFAULT_MESSAGE = "No mandate available for payment"

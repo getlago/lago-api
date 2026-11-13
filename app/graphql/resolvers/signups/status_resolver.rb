@@ -16,7 +16,8 @@ module Resolvers
         guard_error = signup_guard_error(:signup_status)
         return guard_error if guard_error
 
-        {status: ::Signups::StatusService.call(signup_secret:).status.to_s}
+        result = ::Signups::StatusService.call(signup_secret:)
+        {status: result.status.to_s, pending_signup: result.pending_signup}
       end
     end
   end

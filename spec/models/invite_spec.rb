@@ -28,6 +28,16 @@ RSpec.describe Invite do
       end
     end
 
+    context "when the invite spells the user's composed email decomposed" do
+      subject(:invite) { create(:invite, email: "Joa\u0303o@example.com") }
+
+      before { create(:user, email: "jo\u00E3o@example.com") }
+
+      it "returns true" do
+        expect(invite).to be_existing_user
+      end
+    end
+
     context "when no user with the invited email exists" do
       it "returns false" do
         expect(invite).not_to be_existing_user

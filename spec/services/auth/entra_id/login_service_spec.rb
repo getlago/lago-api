@@ -195,6 +195,23 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
       end
     end
 
+    context "when an existing user is stored composed and the typed email is decomposed" do
+      let!(:user) { create(:user, email: "jo\u00E3o@bar.com") }
+      let(:entra_id_userinfo_response) { {"email" => "Joa\u0303o@bar.com"} }
+
+      before do
+        Rails.cache.write(state, "Joa\u0303o@bar.com")
+        create(:membership, user:, organization: entra_id_integration.organization)
+      end
+
+      it "signs in the existing user instead of creating a new one" do
+        result = nil
+
+        expect { result = service.call }.not_to change(User, :count)
+        expect(result.user).to eq(user)
+      end
+    end
+
     context "when an existing user differs from the typed email only by casing" do
       let!(:user) { create(:user, email: "Foo@Bar.com") }
 

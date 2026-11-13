@@ -6,10 +6,9 @@ require_relative "shared_examples/an_event_store"
 
 RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true} do
   def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil, event_charge: nil, created_at: nil)
-    Clickhouse::EventsEnriched.create!(
+    attributes = {
       transaction_id: transaction_id,
       organization_id: organization.id,
-      external_subscription_id: subscription.external_id,
       code:,
       timestamp: timestamp,
       properties: properties.merge(billable_metric.field_name => value).compact,
@@ -17,7 +16,13 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       decimal_value: value&.to_i&.to_d,
       precise_total_amount_cents: value,
       enriched_at: created_at || enriched_at || Time.current
-    )
+    }
+
+    if organization.product_events_pipeline?
+      Clickhouse::ProductEventsEnriched.create!(**attributes, external_contract_id: subscription.external_id)
+    else
+      Clickhouse::EventsEnriched.create!(**attributes, external_subscription_id: subscription.external_id)
+    end
   end
 
   def format_timestamp(timestamp, precision: 3)
@@ -25,6 +30,84 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
   end
 
   it_behaves_like "an event store"
+
+  context "with an organization on the product events pipeline" do
+    it_behaves_like "an event store", product_events: true
+  end
+
+  describe "events table" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context:,
+        boundaries: {from_datetime: started_at, to_datetime: started_at.end_of_month, charges_duration: 31},
+        filters: {}
+      )
+    end
+
+    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+    let(:customer) { create(:customer, organization:) }
+    let(:started_at) { Time.zone.parse("2026-10-01") }
+    let(:contract) { create(:contract, customer:, started_at:) }
+    let(:billing_context) { Billing::Context.from(contract:) }
+
+    let(:product_event) do
+      create(
+        :clickhouse_product_events_enriched,
+        organization:,
+        external_contract_id: contract.external_id,
+        code: billable_metric.code,
+        timestamp: started_at + 1.day,
+        properties: {"value" => "3"},
+        value: "3",
+        decimal_value: 3
+      )
+    end
+
+    let(:subscription_event) do
+      Clickhouse::EventsEnriched.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: contract.external_id,
+        code: billable_metric.code,
+        timestamp: started_at + 2.days,
+        properties: {"value" => "5"},
+        value: "5",
+        decimal_value: 5,
+        enriched_at: Time.current
+      )
+    end
+
+    before do
+      product_event
+      subscription_event
+    end
+
+    context "with an organization on the product events pipeline" do
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "reads the contract's events from the product events table" do
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+        expect(event_store.sum(with_count: false).value).to eq(3)
+        expect(event_store.events.map(&:transaction_id)).to eq([product_event.transaction_id])
+      end
+
+      it "returns the property combinations of the product events" do
+        combinations = event_store.distinct_codes_and_property_combinations(codes: [billable_metric.code], filter_keys: ["value"])
+
+        expect(combinations.map { it.first(2) }).to eq([[billable_metric.code, {"value" => "3"}]])
+      end
+    end
+
+    context "without the product events topic" do
+      it "reads the events_enriched table" do
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+        expect(event_store.sum(with_count: false).value).to eq(5)
+      end
+    end
+  end
 
   # Regression test for https://github.com/getlago/lago-api/pull/5359
   #
@@ -108,6 +191,88 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
       it "counts the deduplicated event exactly once" do
         expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+      end
+    end
+  end
+
+  describe "a late event read from a snapshot delta" do
+    subject(:result) { event_store.recurring_sum(watermark: Time.current + 1.hour, period:) }
+
+    let(:event_store) do
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries:, filters: {})
+    end
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", recurring: true) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {from_datetime: subscription.started_at.beginning_of_day, to_datetime: subscription.started_at.end_of_month.end_of_day, charges_duration: 31}
+    end
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: subscription.started_at + 3.days, watermark: Time.current - 1.hour)
+    end
+    let(:transaction_id) { SecureRandom.uuid }
+
+    def create_copy(value:, enriched_at:)
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: subscription.started_at + 1.day,
+        properties: {"value" => value},
+        value:,
+        decimal_value: value.to_d,
+        precise_total_amount_cents: value,
+        enriched_at:
+      )
+    end
+
+    before do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+      event_store.use_from_boundary = false
+    end
+
+    def executed_sql
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
+      queries.join("\n")
+    end
+
+    it "turns the exact mode off for the late events" do
+      expect(executed_sql).to include("enriched_at > ").and include("SETTINGS use_skip_indexes_if_final_exact_mode = 0")
+    end
+
+    context "when the inexact mode is disabled" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DISABLE_CLICKHOUSE_INEXACT_FINAL" => "true")) }
+
+      it "keeps the exact mode" do
+        expect(executed_sql).to include("enriched_at > ")
+        expect(executed_sql).not_to include("use_skip_indexes_if_final_exact_mode")
+      end
+    end
+
+    context "when the event is re-sent after the watermark" do
+      before do
+        create_copy(value: 10, enriched_at: Time.current - 30.minutes)
+        create_copy(value: 15, enriched_at: Time.current - 10.minutes)
+      end
+
+      it "counts the latest copy once" do
+        expect(result).to have_attributes(value: 15, events_count: 1)
+      end
+    end
+
+    context "when the event was read by the snapshot and re-sent after the watermark" do
+      before do
+        create_copy(value: 10, enriched_at: Time.current - 2.hours)
+        create_copy(value: 15, enriched_at: Time.current - 10.minutes)
+      end
+
+      it "counts the latest copy once" do
+        expect(result).to have_attributes(value: 15, events_count: 1)
       end
     end
   end

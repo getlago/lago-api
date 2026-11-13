@@ -66,13 +66,16 @@ describe Api::V1::X402::ConnectionsController, :premium do
       end
     end
 
-    context "when the API log is produced" do
-      before { allow(Utils::ApiLog).to receive(:produce) }
+    context "when the API log is produced", :capture_kafka_messages do
+      include_context "with API log infrastructure"
 
       it "filters the CDP credentials out of the logged params" do
         subject
-        expect(Utils::ApiLog).to have_received(:produce)
-          .with(anything, anything, organization:, filtered_params: [:secret, :_key])
+
+        expect(api_log_payload["request_body"]["x402_connection"]).to include(
+          "code" => "my_cdp", "cdp_api_key_id" => "[FILTERED]", "cdp_api_key_secret" => "[FILTERED]"
+        )
+        expect(api_log_payload["request_response"]["x402_connection"]["code"]).to eq("my_cdp")
       end
     end
 

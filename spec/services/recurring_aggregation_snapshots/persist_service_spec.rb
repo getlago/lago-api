@@ -212,6 +212,79 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
       end
     end
 
+    context "with more periods than kept" do
+      let(:other_filter) { create(:charge_filter, charge:) }
+      let(:other_subscription) { create(:subscription, organization:, plan: charge.plan) }
+      let(:other_charge) { create(:standard_charge, organization:, plan: charge.plan) }
+
+      before do
+        [1, 2, 3].each do |months|
+          period = {organization:, subscription:, charge:, to_datetime: to_datetime - months.months}
+          create(:recurring_aggregation_snapshot, **period)
+          create(:recurring_aggregation_snapshot, **period, grouped_by: {"region" => "eu"}, units: 3)
+          create(:recurring_aggregation_snapshot, **period, charge_filter: other_filter, units: 5)
+        end
+        create(:recurring_aggregation_snapshot, organization:, subscription: other_subscription, charge:,
+          to_datetime: to_datetime - 3.months)
+        create(:recurring_aggregation_snapshot, organization:, subscription:, charge: other_charge,
+          to_datetime: to_datetime - 3.months)
+      end
+
+      it "deletes every bucket of the periods before the kept ones" do
+        result
+
+        expect(snapshots.distinct.order(:to_datetime).pluck(:to_datetime)).to eq(
+          [to_datetime - 2.months, to_datetime - 1.month, to_datetime]
+        )
+        expect(snapshots.where(to_datetime: to_datetime - 1.month).count).to eq(3)
+        expect(RecurringAggregationSnapshot.where(subscription: other_subscription).count).to eq(1)
+        expect(RecurringAggregationSnapshot.where(charge: other_charge).count).to eq(1)
+      end
+
+      context "when the run of the period has a later watermark" do
+        before do
+          create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:,
+            watermark: watermark + 1.minute)
+        end
+
+        it "keeps every period" do
+          result
+
+          expect(snapshots.distinct.count(:to_datetime)).to eq(4)
+        end
+      end
+    end
+
+    context "when a draft refresh rewrites an older period" do
+      let(:later_periods) { [1, 2] }
+
+      before do
+        later_periods.each do |months|
+          create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime: to_datetime + months.months)
+        end
+      end
+
+      it "keeps the newer periods" do
+        result
+
+        expect(snapshots.order(:to_datetime).pluck(:to_datetime)).to eq(
+          [to_datetime, to_datetime + 1.month, to_datetime + 2.months]
+        )
+      end
+
+      context "when the period is before the kept ones" do
+        let(:later_periods) { [1, 2, 3] }
+
+        it "deletes the period it rewrote" do
+          result
+
+          expect(snapshots.order(:to_datetime).pluck(:to_datetime)).to eq(
+            [to_datetime + 1.month, to_datetime + 2.months, to_datetime + 3.months]
+          )
+        end
+      end
+    end
+
     context "without values" do
       let(:values) { [] }
 

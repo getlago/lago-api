@@ -141,6 +141,44 @@ RSpec.describe Subscriptions::PlanUpgradeService do
       end
     end
 
+    context "when the current subscription has a payment_term" do
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: old_plan,
+          status: :active,
+          subscription_at: Time.current,
+          started_at: Time.current,
+          external_id: SecureRandom.uuid,
+          payment_term: {term_type: "net", days: 60}
+        )
+      end
+
+      it "inherits the payment_term when params omit it" do
+        expect(result).to be_success
+        expect(result.subscription.payment_term).to eq({"term_type" => "net", "days" => 60})
+      end
+
+      context "when params provide a payment_term" do
+        let(:params) { {name: subscription_name, payment_term: {term_type: "end_of_month"}} }
+
+        it "sets it on the new subscription" do
+          expect(result).to be_success
+          expect(result.subscription.payment_term).to eq({"term_type" => "end_of_month"})
+        end
+      end
+
+      context "when params provide an explicit nil payment_term" do
+        let(:params) { {name: subscription_name, payment_term: nil} }
+
+        it "clears it on the new subscription" do
+          expect(result).to be_success
+          expect(result.subscription.payment_term).to be_nil
+        end
+      end
+    end
+
     context "with payment method" do
       let(:payment_method) { create(:payment_method, organization: subscription.organization, customer: subscription.customer) }
       let(:params) do
@@ -197,6 +235,34 @@ RSpec.describe Subscriptions::PlanUpgradeService do
         expect(result.subscription.id).to eq(subscription.id)
         expect(result.subscription.plan_id).to eq(plan.id)
         expect(result.subscription.name).to eq(subscription_name)
+      end
+
+      context "with a payment_term in params" do
+        let(:params) { {name: subscription_name, payment_term: {term_type: "net", days: 45}} }
+
+        it "writes the normalized payment_term on the pending subscription" do
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(subscription.id)
+          expect(subscription.reload.payment_term).to eq({"term_type" => "net", "days" => 45})
+        end
+      end
+
+      context "when the pending subscription has a payment_term" do
+        before { subscription.update!(payment_term: {term_type: "net", days: 60}) }
+
+        it "keeps it when params omit payment_term" do
+          expect(result).to be_success
+          expect(subscription.reload.payment_term).to eq({"term_type" => "net", "days" => 60})
+        end
+
+        context "with an explicit nil payment_term in params" do
+          let(:params) { {name: subscription_name, payment_term: nil} }
+
+          it "clears it" do
+            expect(result).to be_success
+            expect(subscription.reload.payment_term).to be_nil
+          end
+        end
       end
 
       context "with activation_rules in params" do
