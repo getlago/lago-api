@@ -130,10 +130,45 @@ RSpec.describe Organizations::LinkSandboxService do
       expect(refusal).to eq("sandbox_has_other_members")
     end
 
+    it "refuses a target with a custom role production lacks" do
+      create(:role, organization: target, code: "ops")
+
+      expect(refusal).to eq("sandbox_has_other_roles")
+    end
+
+    it "refuses a target with a custom role production defines differently" do
+      create(:role, organization: production, code: "ops", name: "Ops", permissions: %w[organization:view customers:view])
+      create(:role, organization: target, code: "ops", name: "Ops", permissions: %w[organization:view])
+
+      expect(refusal).to eq("sandbox_has_other_roles")
+      expect(target.roles.sole.permissions).to eq(%w[organization:view])
+    end
+
+    it "refuses a target with a custom role production names differently" do
+      create(:role, organization: production, code: "ops", name: "Ops", permissions: %w[organization:view])
+      create(:role, organization: target, code: "ops", name: "Operations", permissions: %w[organization:view])
+
+      expect(refusal).to eq("sandbox_has_other_roles")
+    end
+
     it "writes nothing when it refuses" do
       create(:membership, organization: target)
 
       expect { result }.not_to change { target.reload.attributes }
+    end
+  end
+
+  context "when the target has the custom roles of production" do
+    before do
+      create(:role, organization: production, code: "ops", name: "Ops", permissions: %w[organization:view customers:view])
+      create(:role, organization: target, code: "ops", name: "Ops", permissions: %w[customers:view organization:view])
+      create(:role, organization: create(:organization), code: "other", name: "Other")
+      create(:role, organization: target, code: "old", name: "Old").discard!
+    end
+
+    it "links it" do
+      expect(result).to be_success
+      expect(target.reload).to be_sandbox
     end
   end
 
