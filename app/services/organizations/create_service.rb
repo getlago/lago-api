@@ -31,7 +31,8 @@ module Organizations
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique => e
-      unique_index_failure!(e, "index_organizations_on_slug" => :slug)
+      unique_index_failure!(e, "index_organizations_on_slug" => :slug,
+        "index_organizations_on_production_organization_id" => :production_organization_id)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     end
