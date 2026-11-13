@@ -37,8 +37,10 @@ describe CatalogWalletSelector do
     end
 
     it "rejects a selector with no owner" do
-      expect(build(:catalog_wallet_selector, catalog_wallet: nil).tap(&:valid?).errors)
-        .to be_added(:base, :exactly_one_owner_required)
+      errors = build(:catalog_wallet_selector, catalog_wallet: nil).tap(&:valid?).errors
+
+      expect(errors).to be_added(:base, :exactly_one_owner_required)
+      expect(errors.messages[:base]).to eq(["exactly_one_owner_required"])
     end
   end
 
