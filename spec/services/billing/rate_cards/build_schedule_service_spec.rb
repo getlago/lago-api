@@ -48,6 +48,25 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     expect(segment.billing_at).to eq(Time.utc(2026, 2, 1))
   end
 
+  context "when resuming the schedule at a timestamp" do
+    subject(:result) { described_class.call(contract_rate_card:, resume_at:) }
+
+    let(:resume_at) { Time.utc(2026, 2, 15) }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: resume_at)
+    end
+
+    it "includes the whole cycle containing the resume timestamp" do
+      segments = result.schedule.segments_due_by(Time.utc(2026, 3, 1))
+
+      expect(segments.map { [it.started_at, it.ended_at, it.billing_at] }).to eq([
+        [Time.utc(2026, 2, 1), resume_at, resume_at],
+        [resume_at, Time.utc(2026, 3, 1), Time.utc(2026, 3, 1)]
+      ])
+    end
+  end
+
   # Completed operations record prior billing without changing the card's schedule origin.
   context "when the card has already been billed for some cycles" do
     let(:successor) do

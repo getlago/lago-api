@@ -30,10 +30,6 @@ module Billing
         walker.resume(timestamp)
       end
 
-      def billable_segments_for_cycle(cycle)
-        billable_segments_of([cycle])
-      end
-
       def next_billable_cycle(after_cycle_started_at:)
         cycle = walker.resume(after_cycle_started_at)
         cycle = walker.cycle_after(cycle) while cycle && cycle.started_at <= after_cycle_started_at

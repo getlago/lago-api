@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 module BillingOperations
-  # Resolves the slices an operation bills: those of its target cycle that fall due after the
-  # previous operation of that cycle and no later than its own billing date.
+  # Resolves a persisted operation's slices in its stored cycle without changing its identity.
   class ResolveSegmentsService < BaseService
     Result = BaseResult[:segments, :schedule, :cycle]
 
@@ -22,19 +21,21 @@ module BillingOperations
         return result
       end
 
-      result.schedule = BuildScheduleService.call!(contract_rate_card: operation.contract_rate_card).schedule
-      result.cycle = result.schedule.cycle_at(cycle_timestamp) if operation.action_type
-      operation.target_cycle_started_at = result.cycle.started_at if operation.new_record? && result.cycle
-      if operation.new_record?
-        operation.causation_type = if operation.contract_rate_card.contract.terminated?
-          "contract_termination"
-        elsif !operation.contract_rate_card.billing_operations.periodic.completed.exists?
-          "contract_activation"
-        else
-          "periodic_continuation"
-        end
-      end
-      result.segments = owned_billable_segments.map { build_billing_segment(it) }
+      resume_at = previous_billing_at
+      schedule = Billing::RateCards::BuildScheduleService.call!(
+        contract_rate_card: operation.contract_rate_card,
+        resume_at: resume_at || operation.target_cycle_started_at
+      ).schedule
+      plan_result = Schedule::BuildPlannedOperation.call!(
+        contract_rate_card: operation.contract_rate_card,
+        timestamp: operation.target_cycle_started_at,
+        schedule:,
+        after: resume_at,
+        operation:
+      )
+      result.schedule = plan_result.schedule
+      result.cycle = plan_result.cycle
+      result.segments = plan_result.billable_segments.map { build_billing_segment(it) }
       result
     rescue BaseService::FailedResult => error
       result.fail_with_error!(error)
@@ -43,31 +44,6 @@ module BillingOperations
     private
 
     attr_reader :operation
-
-    # Arrears closes own the cycle before their billing instant, including a terminal close
-    # issued after the natural contract end. Completed operations keep their original cycle.
-    def cycle_timestamp
-      return operation.target_cycle_started_at if operation.target_cycle_started_at
-
-      if operation.action_type.in?(%w[renew_fixed_advance renew_recurring_metered_advance])
-        operation.billing_at
-      else
-        contract = operation.contract_rate_card.contract
-        BillingSegment.inclusive_end([operation.billing_at, contract.ended_at, contract.terminated_at].compact.min)
-      end
-    end
-
-    def owned_billable_segments
-      return [] unless result.cycle
-
-      after = previous_billing_at
-
-      result.schedule.billable_segments_for_cycle(result.cycle).select do |billable_segment|
-        due_at = result.schedule.due_at(billable_segment, action_type: operation.action_type)
-
-        (after.nil? || due_at > after) && due_at <= operation.billing_at
-      end
-    end
 
     # Only completed billing owns coverage; a failed run leaves its cursor unchanged.
     def previous_billing_at

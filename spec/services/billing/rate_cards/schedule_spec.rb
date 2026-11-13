@@ -611,26 +611,6 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
-  describe "#billable_segments_for_cycle" do
-    let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
-
-    it "splits at a rate change and bills each slice on its own arrears date" do
-      segments = schedule.billable_segments_for_cycle(schedule.cycle_at(Time.utc(2022, 2, 1)))
-
-      expect(segments.map(&:billing_at)).to eq([Time.utc(2022, 2, 15), Time.utc(2022, 3, 1)])
-    end
-
-    context "when billing in advance" do
-      let(:timing) { :advance }
-
-      it "splits at a rate change and bills each slice on its own advance date" do
-        segments = schedule.billable_segments_for_cycle(schedule.cycle_at(Time.utc(2022, 2, 1)))
-
-        expect(segments.map(&:billing_at)).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)])
-      end
-    end
-  end
-
   describe "#billing_at with current target" do
     # Every other example here asks at a NON-boundary instant, where the two readings agree.
     # Materialization asks exactly on the boundary on every rollover, and there `>=` returns

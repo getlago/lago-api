@@ -39,6 +39,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
       cycle_started_at: Time.utc(2026, 11, 1, 7),
       billing_at: Time.utc(2026, 11, 1, 7)
     )
+    expect(result.planned_operation).to be_a(described_class::PlannedOperation)
   end
 
   context "when billing in arrears" do
@@ -49,6 +50,62 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
         cycle_started_at: Time.utc(2026, 11, 1, 7),
         billing_at: Time.utc(2026, 12, 1, 8)
       )
+    end
+  end
+
+  context "when a rate changes at a mid-cycle billing boundary" do
+    let(:timestamp) { Time.utc(2026, 11, 15) }
+    let(:rate_effective_from) { Time.utc(2026, 11, 1) }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: timestamp,
+        billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    context "when billing in arrears" do
+      let(:billing_timing) { "arrears" }
+
+      it "retains the closing segment due at the boundary" do
+        expect(result.planned_operation).to have_attributes(
+          cycle_started_at: Time.utc(2026, 11, 1, 7),
+          billing_at: timestamp
+        )
+      end
+    end
+
+    context "when billing in advance" do
+      it "selects the new segment opening at the boundary" do
+        expect(result.planned_operation).to have_attributes(
+          cycle_started_at: Time.utc(2026, 11, 1, 7),
+          billing_at: timestamp
+        )
+      end
+    end
+
+    context "when regrouping paid fees" do
+      let(:product) { create(:product, organization:) }
+      let(:rate_card) do
+        create(:rate_card, organization:, product:, billing_timing:, regroup_paid_fees: :invoice, display_on_invoice: false)
+      end
+
+      it "retains the closing segment due at its service end" do
+        expect(result.planned_operation).to have_attributes(
+          cycle_started_at: Time.utc(2026, 11, 1, 7),
+          billing_at: timestamp
+        )
+      end
+    end
+
+    context "when selecting after the boundary was completed" do
+      let(:billing_timing) { "arrears" }
+      let(:after) { timestamp }
+
+      it "skips the boundary and selects the next closing segment" do
+        expect(result.planned_operation).to have_attributes(
+          cycle_started_at: Time.utc(2026, 11, 1, 7),
+          billing_at: Time.utc(2026, 12, 1, 8)
+        )
+      end
     end
   end
 
@@ -109,6 +166,19 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     end
   end
 
+  context "when the completed billing instant is the cycle's first advance date" do
+    let(:timestamp) { Time.utc(2026, 11, 1, 7) }
+    let(:after) { Time.utc(2026, 11, 1, 7) }
+
+    it "returns the next cycle and keeps the planned cycle aligned" do
+      expect(result.planned_operation).to have_attributes(
+        cycle_started_at: Time.utc(2026, 12, 1, 8),
+        billing_at: Time.utc(2026, 12, 1, 8)
+      )
+      expect(result.cycle.started_at).to eq(result.planned_operation.cycle_started_at)
+    end
+  end
+
   context "when billing in arrears after a completed mid-cycle segment" do
     let(:billing_timing) { "arrears" }
     let(:timestamp) { Time.utc(2026, 11, 1, 7) }
@@ -140,14 +210,14 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   context "with no schedule" do
     let(:schedule) { nil }
 
-    before { allow(BillingOperations::BuildScheduleService).to receive(:call!) }
+    before { allow(Billing::RateCards::BuildScheduleService).to receive(:call!) }
 
     it "returns no planned operation" do
       expect(result).to be_success
       expect(result.planned_operation).to be_nil
       expect(result.cycle).to be_nil
       expect(result.schedule).to be_nil
-      expect(BillingOperations::BuildScheduleService).not_to have_received(:call!)
+      expect(Billing::RateCards::BuildScheduleService).not_to have_received(:call!)
     end
   end
 
@@ -185,18 +255,70 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
         started_at: Time.utc(2026, 11, 1, 7),
         ended_at: Time.utc(2026, 12, 1, 8)
       )
-      expect(result.schedule).to be_a(BillingOperations::Schedule)
+      expect(result.schedule).to be_an_instance_of(Billing::RateCards::Schedule)
+    end
+
+    context "when given a resumed schedule" do
+      subject(:result) { described_class.call(contract_rate_card:, timestamp:, after:, schedule:) }
+
+      let(:resume_at) { Time.utc(2026, 12, 15) }
+      let(:schedule) do
+        Billing::RateCards::BuildScheduleService.call!(contract_rate_card:, resume_at:).schedule
+      end
+
+      it "respects the injected schedule's resume cycle" do
+        expect(result.planned_operation).to have_attributes(
+          cycle_started_at: Time.utc(2026, 12, 1, 8),
+          billing_at: Time.utc(2026, 12, 1, 8)
+        )
+        expect(result.cycle.started_at).to eq(result.planned_operation.cycle_started_at)
+        expect(result.schedule).to be(schedule)
+        expect(result.schedule.segments_due_by(Time.utc(2026, 12, 31, 23)).map(&:started_at))
+          .to eq([Time.utc(2026, 12, 1, 8)])
+      end
     end
 
     context "when the rate card is missing" do
       let(:contract_rate_card) { nil }
 
-      before { allow(BillingOperations::BuildScheduleService).to receive(:call!) }
+      before { allow(Billing::RateCards::BuildScheduleService).to receive(:call!) }
 
       it "returns not found without trying to build a schedule" do
         expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(BillingOperations::BuildScheduleService).not_to have_received(:call!)
+        expect(Billing::RateCards::BuildScheduleService).not_to have_received(:call!)
       end
+    end
+  end
+
+  context "when resolving a persisted operation's owned segments" do
+    subject(:result) do
+      described_class.call(contract_rate_card:, timestamp:, after:, schedule:, operation:)
+    end
+
+    let(:billing_timing) { "arrears" }
+    let(:timestamp) { Time.utc(2026, 11, 1, 7) }
+    let(:after) { Time.utc(2026, 11, 15) }
+    let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:, resume_at: after).schedule }
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 12, 1, 8),
+        target_cycle_started_at: timestamp)
+    end
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: after,
+        billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    it "returns only the unpaid due segment in the operation's stored cycle" do
+      expect(result).to be_success
+      expect(result).to have_attributes(
+        cycle: have_attributes(started_at: timestamp, ended_at: Time.utc(2026, 12, 1, 8)),
+        planned_operation: nil
+      )
+      expect(result.billable_segments.map { [it.started_at, it.billing_at] }).to eq(
+        [[after, Time.utc(2026, 12, 1, 8)]]
+      )
     end
   end
 end

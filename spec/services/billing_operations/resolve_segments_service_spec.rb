@@ -34,6 +34,62 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       expect(segments).not_to respond_to(:save!)
     end
 
+    context "when the planner's next priced cycle follows the stored cycle" do
+      let(:planner_results) { [] }
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:,
+          action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 1),
+          target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 1, 1))
+      end
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 2, 15),
+          billing_interval_count: 1, billing_interval_unit: "month")
+        allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
+          original.call(**attributes).tap { planner_results << it }
+        end
+      end
+
+      it "keeps the resolution on the operation's stored cycle" do
+        resolution = described_class.call!(operation:)
+
+        expect(planner_results.sole.cycle.started_at).to eq(Time.utc(2026, 1, 1))
+        expect(planner_results.sole.billable_segments).to be_empty
+        expect(resolution.schedule).to be_a(Billing::RateCards::Schedule)
+        expect(resolution.cycle.started_at).to eq(Time.utc(2026, 1, 1))
+        expect(resolution.segments).to be_empty
+      end
+    end
+
+    context "when resolving regrouped paid fees" do
+      let(:billable_metric) do
+        create(:billable_metric, organization:, aggregation_type: :sum_agg, recurring: false, field_name: "units")
+      end
+      let(:product) { create(:product, organization:, billable_metric:) }
+      let(:rate_card) do
+        create(:rate_card, organization:, product:, billing_timing: "advance", regroup_paid_fees: :invoice,
+          display_on_invoice: false, currency: "USD")
+      end
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:,
+          action_type: "regroup_paid_fees", billing_at: Time.utc(2026, 1, 15),
+          target_cycle_started_at: Time.utc(2026, 1, 1))
+      end
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1),
+          billing_interval_count: 1, billing_interval_unit: "month")
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
+          billing_interval_count: 1, billing_interval_unit: "month")
+      end
+
+      it "uses segment end as the regroup date" do
+        resolution = described_class.call!(operation:)
+
+        expect(resolution.segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1)])
+      end
+    end
+
     context "when replaying current pricing" do
       before do
         create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1),
@@ -94,11 +150,27 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
               action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 2, 1),
               target_cycle_started_at: Time.utc(2026, 1, 1))
           end
+          let(:built_schedules) { [] }
+          let(:planned_results) { [] }
 
-          before { operation }
+          before do
+            operation
+            allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_wrap_original do |original, **attributes|
+              original.call(**attributes).tap { built_schedules << it.schedule }
+            end
+            allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
+              original.call(**attributes).tap { planned_results << it }
+            end
+          end
 
           it "returns only the slices after the previous operation" do
-            expect(described_class.call!(operation: close).segments.map(&:started_at)).to eq([Time.utc(2026, 1, 15)])
+            result = described_class.call!(operation: close)
+
+            expect(result.segments.map(&:started_at)).to eq([Time.utc(2026, 1, 15)])
+            expect(Billing::RateCards::BuildScheduleService).to have_received(:call!).with(
+              contract_rate_card:, resume_at: operation.billing_at
+            )
+            expect(planned_results.sole.schedule).to be(built_schedules.sole)
           end
 
           context "when the previous operation was cancelled" do
@@ -145,11 +217,13 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           )
         end
         let(:schedule) do
-          instance_double(BillingOperations::Schedule, cycle_at: short_cycle, billable_segments_for_cycle: [])
+          instance_double(Billing::RateCards::Schedule)
         end
 
         before do
-          allow(BillingOperations::BuildScheduleService).to receive(:call!).and_return(double(schedule:))
+          allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_return(
+            double(schedule:, cycle: short_cycle, billable_segments: [])
+          )
         end
 
         it "does not rewrite completed history when replay produces no segments" do
@@ -173,11 +247,15 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         end
 
         it "resolves clipped coverage from the saved billing instant without changing operation identity" do
-          expect(segments.sole).to have_attributes(
+          result = described_class.call!(operation:)
+
+          expect(result.segments.sole).to have_attributes(
             started_at: Time.utc(2026, 1, 1), ended_at: BillingSegment.inclusive_end(Time.utc(2026, 1, 15))
           )
+          expect(operation).not_to be_changed
           expect(operation.reload).to have_attributes(
             action_type: "renew_fixed_advance",
+            causation_type: "contract_activation",
             billing_at: Time.utc(2026, 1, 1),
             target_cycle_started_at: Time.utc(2026, 1, 1),
             processed_at: nil,
@@ -221,6 +299,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
     end
 
     context "when the stored billing date is later than the scheduled one" do
+      let(:built_schedules) { [] }
       let(:operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card:,
           action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 2),
@@ -230,12 +309,34 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       before do
         create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1),
           billing_interval_count: 1, billing_interval_unit: "month")
+        allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_wrap_original do |original, **attributes|
+          original.call(**attributes).tap { built_schedules << it.schedule }
+        end
       end
 
       it "returns the slices of its cycle that fell due before it" do
         result = described_class.call!(operation:)
 
         expect(result.segments.map { [it.started_at, it.billing_at] }).to eq([[Time.utc(2026, 1, 1), operation.billing_at]])
+        expect(Billing::RateCards::BuildScheduleService).to have_received(:call!).with(
+          contract_rate_card:, resume_at: operation.target_cycle_started_at
+        )
+        expect(result.schedule).to be(built_schedules.sole)
+      end
+
+      context "when the stored billing date reaches the next cycle" do
+        let(:operation) do
+          create(:billing_operation, organization:, customer:, contract_rate_card:,
+            action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 2, 1),
+            target_cycle_started_at: Time.utc(2026, 1, 1))
+        end
+
+        it "returns only segments from the stored cycle" do
+          result = described_class.call!(operation:)
+
+          expect(result.cycle).to have_attributes(started_at: Time.utc(2026, 1, 1))
+          expect(result.segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1)])
+        end
       end
     end
 
@@ -286,36 +387,19 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       end
     end
 
-    context "when the operation has no schedule action" do
-      let(:operation) do
-        build(:billing_operation, organization:, customer:, contract_rate_card:,
-          action_type: nil, billing_at: Time.utc(2026, 1, 1), target_cycle_started_at: Time.utc(2026, 1, 1))
-      end
-
-      before do
-        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1),
-          billing_interval_count: 1, billing_interval_unit: "month")
-        allow(BillingOperations::BuildScheduleService).to receive(:call!).and_call_original
-      end
-
-      it "builds the schedule and returns an empty successful resolution" do
-        result = described_class.call!(operation:)
-
-        expect(result).to have_attributes(segments: be_empty, schedule: be_present, cycle: be_nil)
-        expect(BillingOperations::BuildScheduleService).to have_received(:call!).once
-      end
-    end
-
     context "when the stored cycle is absent from the schedule" do
       let(:operation) do
-        build(:billing_operation, organization:, customer:, contract_rate_card:,
+        create(:billing_operation, organization:, customer:, contract_rate_card:,
           action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 1),
           target_cycle_started_at: Time.utc(2026, 1, 1))
       end
-      let(:schedule) { instance_double(BillingOperations::Schedule, cycle_at: nil) }
+      let(:schedule) { instance_double(Billing::RateCards::Schedule) }
 
       before do
-        allow(BillingOperations::BuildScheduleService).to receive(:call!).and_return(double(schedule:))
+        allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_return(double(schedule:))
+        allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_return(
+          double(schedule:, cycle: nil, billable_segments: [])
+        )
       end
 
       it "returns a successful empty resolution" do
@@ -339,7 +423,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       context "when a rate-change reconciliation targets an arrears card" do
         let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
         let(:operation) do
-          build(:billing_operation, organization:, customer:, contract_rate_card:,
+          create(:billing_operation, organization:, customer:, contract_rate_card:,
             action_type: "reconcile_advance_coverage", causation_type: "rate_change",
             billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1))
         end
@@ -350,9 +434,23 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       end
     end
 
+    context "when resolving a supported rate-change reconciliation" do
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:,
+          action_type: "reconcile_advance_coverage", causation_type: "rate_change",
+          billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1))
+      end
+
+      it "returns an empty resolution without requiring priced rates" do
+        result = described_class.call!(operation:)
+
+        expect(result).to have_attributes(segments: be_empty, schedule: nil, cycle: nil)
+      end
+    end
+
     context "when schedule construction fails" do
       let(:operation) do
-        build(:billing_operation, organization:, customer:, contract_rate_card:,
+        create(:billing_operation, organization:, customer:, contract_rate_card:,
           action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 1),
           target_cycle_started_at: Time.utc(2026, 1, 1))
       end

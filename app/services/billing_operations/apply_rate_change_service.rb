@@ -56,14 +56,8 @@ module BillingOperations
         )
         result.billing_operations << reconciliation.operation
       else
-        timestamp = contract_rate_card.next_billing_at
-        # Closing actions owe the cycle ending at the cursor, not at the new rate boundary.
-        if contract_rate_card.periodic_billing_action.in?(ContractRateCard::TERMINATION_BILLING_ACTIONS)
-          timestamp = BillingSegment.inclusive_end(timestamp)
-        end
-
         ContractRateCards::ResetBillingClockService.call!(
-          contract_rate_card:, timestamp:, schedule: plan_result.schedule
+          contract_rate_card:, timestamp: rate.effective_from, schedule: plan_result.schedule
         )
       end
     end
