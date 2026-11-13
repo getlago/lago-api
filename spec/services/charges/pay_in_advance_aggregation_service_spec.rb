@@ -131,15 +131,47 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       end
 
       context "with a recurring sum metric" do
-        let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+        let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+        let(:started_at) { billing_segment.started_at }
+        let(:snapshot_watermark) { started_at + 1.hour }
+        let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:, created_at: 1.month.ago) }
+        let(:event) { create_contract_event(timestamp: started_at + 2.days, value: 5) }
 
-        before { organization.enable_feature_flag!(:persisted_recurring_values) }
+        def create_contract_event(timestamp:, value:, created_at: timestamp)
+          create(:event, organization:, external_subscription_id: contract.external_id, code: billable_metric.code,
+            timestamp:, created_at:, properties: {value:})
+        end
 
-        it "reads no snapshot, as snapshots are keyed on a subscription" do
-          agg_service.call
+        before do
+          allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+          organization.enable_feature_flag!(:persisted_recurring_values)
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: nil, initial_period: nil))
+          create_contract_event(timestamp: started_at - 10.days, value: 10)
+          # Dated in the snapshot period, ingested after its watermark
+          create_contract_event(timestamp: started_at - 5.days, value: 7, created_at: snapshot_watermark + 1.minute)
+        end
+
+        it "reads the full history without a snapshot" do
+          expect(agg_service.call.aggregation).to eq(10 + 7 + 5)
+        end
+
+        context "with a snapshot of the contract's previous segment" do
+          before do
+            create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, units: 100, events_count: 1,
+              to_datetime: BillingSegment.inclusive_end(started_at), watermark: snapshot_watermark)
+          end
+
+          it "adds the events the snapshot did not count to its units" do
+            expect(agg_service.call.aggregation).to eq(100 + 7 + 5)
+          end
+
+          context "without the persisted_recurring_values feature flag" do
+            before { organization.disable_feature_flag!(:persisted_recurring_values) }
+
+            it "reads the full history" do
+              expect(agg_service.call.aggregation).to eq(10 + 7 + 5)
+            end
+          end
         end
       end
     end
