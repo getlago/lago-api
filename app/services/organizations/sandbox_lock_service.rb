@@ -38,7 +38,8 @@ module Organizations
 
     attr_reader :organization, :allow_sandbox, :lock_sandbox
 
-    # Read without a lock: only the creation of a sandbox sets its link, so the one read here is the one it keeps.
+    # Read without a lock. A link committed after this read leaves the organization a sandbox whose production is
+    # not locked here: the callers that allow a sandbox only refuse or skip such a write, so none locks production.
     def lock_production_of_sandbox
       production_id = Organization.where(id: organization.id).pick(:production_organization_id)
       Organization.lock(LOCK_MODE).find_by(id: production_id) if production_id
