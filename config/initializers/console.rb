@@ -44,11 +44,16 @@ Rails.application.console do
     Sidekiq::DeadSet.new.map { it.args[0]["job_class"] }.tally
   end
 
+  # A sandbox follows its production: enable the integration there instead.
   def enable_premium_integration!(org_id, integration_name)
     org = Organization.find(org_id)
-    if org.premium_integrations.exclude?(integration_name)
-      org.premium_integrations << integration_name
-      org.save!
+    ActiveRecord::Base.transaction do
+      Organizations::SandboxLockService.call!(organization: org)
+      if org.premium_integrations.exclude?(integration_name)
+        org.premium_integrations << integration_name
+        org.save!
+      end
+      Organizations::SyncSandboxSettingsService.call!(organization: org)
     end
     org.reload.premium_integrations
   end
@@ -65,7 +70,11 @@ Rails.application.console do
 
   def enable_all_premium_integrations!(org_id)
     org = Organization.find(org_id)
-    org.update! premium_integrations: Organization::PREMIUM_INTEGRATIONS
+    ActiveRecord::Base.transaction do
+      Organizations::SandboxLockService.call!(organization: org)
+      org.update! premium_integrations: Organization::PREMIUM_INTEGRATIONS
+      Organizations::SyncSandboxSettingsService.call!(organization: org)
+    end
     org.reload.premium_integrations
   end
 

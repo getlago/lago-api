@@ -33,6 +33,39 @@ RSpec.describe Admin::ApplyFeatureChangeService do
       expect(organization.reload.feature_flags).to match_array(%w[wallet_traceability order_forms])
     end
 
+    context "when the organization has a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+      before { sandbox }
+
+      it "mirrors the change, with an audit row on the sandbox in the same batch" do
+        result = change_feature(organization:)
+
+        expect(result).to be_success
+        expect(sandbox.reload.premium_integrations).to eq(["okta"])
+        mirror = CsAdminAuditLog.find_by!(organization: sandbox)
+        expect(mirror).to have_attributes(action: "toggle_on", feature_type: "premium_integration", feature_key: "okta",
+          before_value: false, after_value: true, actor_user: actor, reason:)
+        expect(mirror.batch_id).to eq(result.audit_log.batch_id).and be_present
+      end
+    end
+
+    it "leaves the batch empty when nothing is mirrored" do
+      expect(change_feature(organization:).audit_log.batch_id).to be_nil
+    end
+
+    context "when the organization is a sandbox" do
+      let(:organization) { create(:organization, :sandbox) }
+
+      it "refuses the change" do
+        result = change_feature(organization:)
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(organization.reload.premium_integrations).to eq([])
+        expect(CsAdminAuditLog.count).to eq(0)
+      end
+    end
+
     [true, false].each do |enabled|
       context "when the feature is already #{enabled ? "enabled" : "disabled"}" do
         before { organization.update!(premium_integrations: enabled ? ["okta"] : []) }

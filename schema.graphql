@@ -730,6 +730,12 @@ type AdminAuditLog {
   organizationName: String!
   reason: String!
   rollbackOfId: ID
+
+  """
+  False for a rollback, an entry already rolled back, an organization creation,
+  or an entry of a sandbox, whose settings follow its production
+  """
+  rollbackable: Boolean!
   rolledBack: Boolean!
 }
 

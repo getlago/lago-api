@@ -21,13 +21,20 @@ module Integrations
           host: args[:host]
         )
 
-        integration.save!
-        organization.enable_okta_authentication!
+        ActiveRecord::Base.transaction do
+          # A sandbox has no SSO integration of its own: it accepts the sessions of its production's.
+          ::Organizations::SandboxLockService.call!(organization:)
+          integration.save!
+          organization.enable_okta_authentication!
+          ::Organizations::SyncSandboxSettingsService.call!(organization:)
+        end
 
         result.integration = integration
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
       end
     end
   end

@@ -13,43 +13,10 @@ module Organizations
     end
 
     def call
-      organization.email = params[:email] if params.key?(:email)
-      organization.legal_name = params[:legal_name] if params.key?(:legal_name)
-      organization.legal_number = params[:legal_number] if params.key?(:legal_number)
-      if params.key?(:tax_identification_number)
-        organization.tax_identification_number = params[:tax_identification_number]
-      end
-      organization.address_line1 = params[:address_line1] if params.key?(:address_line1)
-      organization.address_line2 = params[:address_line2] if params.key?(:address_line2)
-      organization.zipcode = params[:zipcode] if params.key?(:zipcode)
-      organization.city = params[:city] if params.key?(:city)
-      organization.state = params[:state] if params.key?(:state)
-      organization.country = params[:country]&.upcase if params.key?(:country)
-      organization.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
-      organization.document_number_prefix = params[:document_number_prefix] if params.key?(:document_number_prefix)
-      organization.slug = params[:slug]&.strip&.downcase if params.key?(:slug)
-      organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
-      organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
-      organization.document_url_expiration_days = params[:document_url_expiration_days] if params.key?(:document_url_expiration_days)
-      organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
-      if params.key?(:customer_portal_locked_fields)
-        organization.customer_portal_locked_fields = params[:customer_portal_locked_fields]&.uniq
-      end
-      if params.key?(:authentication_methods)
-        deletions = organization.authentication_methods - params[:authentication_methods]
-        additions = params[:authentication_methods] - organization.authentication_methods
-        organization.authentication_methods = params[:authentication_methods]
-
-        if organization.authentication_methods_changed?
-          @authentication_methods_diff = {additions:, deletions:}
-        end
-      end
-
-      billing = params[:billing_configuration]&.to_h || {}
-      organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
-      organization.document_locale = billing[:document_locale] if billing.key?(:document_locale)
-
       ActiveRecord::Base.transaction do
+        lock_for_authentication_methods if params.key?(:authentication_methods)
+        assign_attributes
+
         handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
         handle_webhook_url if params.key?(:webhook_url)
@@ -70,7 +37,10 @@ module Organizations
           BillingEntities::UpdateService.call(billing_entity: organization.default_billing_entity, params: params)
         update_billing_entity_result.raise_if_error!
 
-        notify_authentication_methods_change if @authentication_methods_diff
+        if @authentication_methods_diff
+          notify_authentication_methods_change
+          SyncSandboxSettingsService.call!(organization:, actor: user)
+        end
       end
 
       ApiKeys::CacheService.expire_all_cache(organization)
@@ -102,6 +72,58 @@ module Organizations
 
       # The endpoint services save their own instances: drop the cached association so responses render the new url.
       organization.webhook_endpoints.reset
+    end
+
+    def assign_attributes
+      organization.email = params[:email] if params.key?(:email)
+      organization.legal_name = params[:legal_name] if params.key?(:legal_name)
+      organization.legal_number = params[:legal_number] if params.key?(:legal_number)
+      if params.key?(:tax_identification_number)
+        organization.tax_identification_number = params[:tax_identification_number]
+      end
+      organization.address_line1 = params[:address_line1] if params.key?(:address_line1)
+      organization.address_line2 = params[:address_line2] if params.key?(:address_line2)
+      organization.zipcode = params[:zipcode] if params.key?(:zipcode)
+      organization.city = params[:city] if params.key?(:city)
+      organization.state = params[:state] if params.key?(:state)
+      organization.country = params[:country]&.upcase if params.key?(:country)
+      organization.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
+      organization.document_number_prefix = params[:document_number_prefix] if params.key?(:document_number_prefix)
+      organization.slug = params[:slug]&.strip&.downcase if params.key?(:slug)
+      organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
+      organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
+      organization.document_url_expiration_days = params[:document_url_expiration_days] if params.key?(:document_url_expiration_days)
+      organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
+      if params.key?(:customer_portal_locked_fields)
+        organization.customer_portal_locked_fields = params[:customer_portal_locked_fields]&.uniq
+      end
+      # A reordered resubmission of the same set is no change: assigning it would log and email one.
+      if params.key?(:authentication_methods) && params[:authentication_methods].to_a.sort != organization.authentication_methods.sort
+        deletions = organization.authentication_methods - params[:authentication_methods]
+        additions = params[:authentication_methods] - organization.authentication_methods
+        organization.authentication_methods = params[:authentication_methods]
+
+        if organization.authentication_methods_changed?
+          @authentication_methods_diff = {additions:, deletions:}
+        end
+      end
+
+      organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
+      organization.document_locale = billing[:document_locale] if billing.key?(:document_locale)
+    end
+
+    # Locks the row before anything is assigned (the lock reloads it), so a sandbox linked meanwhile is seen. A sandbox
+    # keeps the methods of its production: resubmitting the same set is accepted, another one is refused.
+    def lock_for_authentication_methods
+      SandboxLockService.call!(organization:, allow_sandbox: true)
+      return unless organization.sandbox?
+      return if params[:authentication_methods].to_a.sort == organization.authentication_methods.sort
+
+      result.forbidden_failure!(code: "sandbox_managed_by_production").raise_if_error!
+    end
+
+    def billing
+      @billing ||= params[:billing_configuration]&.to_h || {}
     end
 
     def assign_premium_attributes

@@ -15,15 +15,30 @@ module Admin
       def call
         return result.not_found_failure!(resource: "organization") unless organization
 
-        organization.name = params[:name] if params.key?(:name)
-        organization.premium_integrations = params[:premium_integrations] if params.key?(:premium_integrations)
+        ActiveRecord::Base.transaction do
+          ::Organizations::SandboxLockService.call!(organization:, allow_sandbox: true)
+          # A sandbox keeps its production's integrations: resubmitting the same set is accepted, another one is refused.
+          if organization.sandbox? && params.key?(:premium_integrations) &&
+              params[:premium_integrations].to_a.sort != organization.premium_integrations.sort
+            result.forbidden_failure!(code: "sandbox_managed_by_production").raise_if_error!
+          end
 
-        organization.save!
+          organization.name = params[:name] if params.key?(:name)
+          organization.premium_integrations = params[:premium_integrations] if params.key?(:premium_integrations)
+          organization.save!
+
+          if organization.saved_change_to_premium_integrations?
+            ::Organizations::SyncSandboxSettingsService.call!(organization:)
+          end
+        end
+        ApiKeys::CacheService.expire_all_cache(organization)
 
         result.organization = organization
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
       end
 
       private

@@ -2354,6 +2354,22 @@
               "deprecationReason": null
             },
             {
+              "name": "rollbackable",
+              "description": "False for a rollback, an entry already rolled back, an organization creation, or an entry of a sandbox, whose settings follow its production",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "rolledBack",
               "description": null,
               "args": [],

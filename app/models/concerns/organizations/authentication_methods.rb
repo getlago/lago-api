@@ -63,11 +63,13 @@ module Organizations
     # NOTE: An Okta or Entra ID login only proves the user's identity to the identity provider
     #       that answered it. Other organizations accept the session only when their own
     #       integration points to that same provider tenant, or when both organizations are flagged.
+    #       A sandbox, which has no integration of its own, accepts the sessions of its production.
     def accessible_by_session?(login_method: nil, sso_organization_id: nil, sso_issuer: nil)
       return false unless authentication_methods.include?(login_method)
       return true unless SSO_INTEGRATION_TYPES.key?(login_method)
 
       id == sso_organization_id ||
+        (sso_organization_id.present? && production_organization_id == sso_organization_id) ||
         sso_issuer_of_own_integration?(login_method, sso_issuer) ||
         flagged_with_sso_organization?(sso_organization_id)
     end
