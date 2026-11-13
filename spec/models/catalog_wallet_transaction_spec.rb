@@ -59,6 +59,14 @@ describe CatalogWalletTransaction do
       it "orders by priority, then free credit before bought credit, then oldest first" do
         expect(catalog_wallet.transactions.in_spending_order).to eq([first_priority, free, newer_free, bought])
       end
+
+      context "when joined with the credit allocation" do
+        let(:grant) { create(:catalog_wallet_transaction, :billing_cycle_grant, catalog_wallet:) }
+
+        it "orders by the entry's own purchase amount" do
+          expect(catalog_wallet.transactions.joins(:credit_allocation).in_spending_order).to eq([grant])
+        end
+      end
     end
   end
 
@@ -105,6 +113,20 @@ describe CatalogWalletTransaction do
     it "refuses a remaining credit on an outbound entry" do
       expect { save_unvalidated(:invoice_application, remaining_credit_amount_cents: 0) }
         .to raise_error(ActiveRecord::StatementInvalid, /catalog_wallet_transactions_direction_fields/)
+    end
+
+    it "refuses a failed entry without a failure date" do
+      expect { save_unvalidated(:failed, failed_at: nil) }
+        .to raise_error(ActiveRecord::StatementInvalid, /catalog_wallet_transactions_failed_at_with_status/)
+    end
+
+    it "refuses a failure date on an entry that did not fail" do
+      expect { save_unvalidated(failed_at: Time.current) }
+        .to raise_error(ActiveRecord::StatementInvalid, /catalog_wallet_transactions_failed_at_with_status/)
+    end
+
+    it "accepts a failed entry with its failure date" do
+      expect(create(:catalog_wallet_transaction, :failed)).to be_persisted
     end
 
     it "refuses a second grant for the same rule and cycle" do
