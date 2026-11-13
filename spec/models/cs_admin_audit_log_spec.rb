@@ -43,6 +43,32 @@ RSpec.describe CsAdminAuditLog, type: :model do
     end
   end
 
+  describe "#rollbackable?" do
+    let(:audit_log) { create(:cs_admin_audit_log) }
+
+    it "is true for a toggle on a production organization" do
+      expect(audit_log.rollbackable?).to be(true)
+    end
+
+    it "is false once rolled back" do
+      create(:cs_admin_audit_log, action: :rollback, rollback_of: audit_log, organization: audit_log.organization)
+
+      expect(audit_log.reload.rollbackable?).to be(false)
+    end
+
+    it "is false for a rollback" do
+      expect(build(:cs_admin_audit_log, action: :rollback).rollbackable?).to be(false)
+    end
+
+    it "is false for an organization creation" do
+      expect(build(:cs_admin_audit_log, action: :org_created, feature_type: :organization).rollbackable?).to be(false)
+    end
+
+    it "is false for an entry of a sandbox" do
+      expect(build(:cs_admin_audit_log, organization: build(:organization, :sandbox)).rollbackable?).to be(false)
+    end
+  end
+
   describe "Scopes" do
     describe ".newest_first" do
       let(:org) { create(:organization) }
