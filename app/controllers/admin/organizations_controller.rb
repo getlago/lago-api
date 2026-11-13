@@ -49,12 +49,13 @@ module Admin
     end
 
     def create_params
-      params.permit(:name, :email, :self_serve, premium_integrations: [])
+      params.permit(:name, :email, premium_integrations: [])
     end
 
     # Strict: ActiveModel's boolean cast would read "no" as true. Anything else reaches the service, which refuses it.
+    # Read unpermitted, as `permit` would turn a list or an object into nil, read as false.
     def self_serve_param
-      value = create_params[:self_serve]
+      value = params[:self_serve]
       case value
       when nil, false, "false" then false
       when true, "true" then true
