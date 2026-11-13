@@ -28,6 +28,8 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
   # One read per segment, nil when it falls back to the full history
   let(:invoice_reads) { [nil, march_snapshot, april_snapshot] }
   let(:usage_reads) { [march_snapshot, april_snapshot] }
+  # Bucket of the snapshot row edited by "bills from the stored snapshot"
+  let(:edited_filter) { nil }
 
   around do |example|
     topic = ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"]
@@ -128,11 +130,11 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
   end
 
   def usage_at(time)
-    invoice_reads = read_periods[:invoice].size
+    reads_before = read_periods[:invoice].size
     usage = travel_to(time) do
       api_call(perform_jobs: false) { get_with_token(organization, "/api/v2/contracts/snapshot-contract/current_usage") }
     end
-    read_periods[:usage].concat(read_periods[:invoice].slice!(invoice_reads..))
+    read_periods[:usage].concat(read_periods[:invoice].slice!(reads_before..))
 
     usage[:current_usage][:rate_cards].map do |card|
       {
@@ -205,6 +207,27 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
     june_usage = usage_at(Time.utc(2026, 6, 1, 0, 0, 30))
 
     {march_invoice:, april_usage:, april_invoice:, june_usage:, may_invoice: bill_at(Time.utc(2026, 6, 1, 1))}
+  end
+
+  # A read that ignores the stored values bills the full history, as every other example expects
+  shared_examples "bills from the stored snapshot" do
+    context "with a snapshot edited after it was written" do
+      let(:snapshot_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+
+      def bill_at(time)
+        super.tap do
+          next unless time == edited_after
+
+          snapshot = ContractRecurringAggregationSnapshot.where(organization:, to_datetime: edited_to)
+            .find_by!(product_filter: edited_filter && ProductFilter.find_by!(organization:, code: edited_filter))
+          snapshot.update!(units: snapshot.units + 100, events_count: snapshot.events_count + 1)
+        end
+      end
+
+      it "adds the stored values to the delta" do
+        expect(bill.slice(*edited_billed.keys)).to eq(edited_billed)
+      end
+    end
   end
 
   shared_examples "on each ClickHouse pipeline" do |examples|
@@ -285,25 +308,18 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
 
     include_examples "bills the same with every snapshot flag"
 
-    context "with a snapshot edited after it was written" do
-      let(:snapshot_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
-
-      # A read that ignores the stored values bills the full history, as every other example expects
-      def bill_at(time)
-        super.tap do
-          ContractRecurringAggregationSnapshot.where(organization:).sole.update!(units: 115, events_count: 4) if time == march_billed_at
-        end
-      end
-
-      # 115 + 1 after the watermark + 7 + 5, then + 4 in May
-      it "adds the stored values to the delta" do
-        expect(bill).to eq(
+    include_examples "bills from the stored snapshot" do
+      let(:edited_after) { march_billed_at }
+      let(:edited_to) { march_snapshot }
+      # 100 more units and 1 more event than the March snapshot holds
+      let(:edited_billed) do
+        {
           march_invoice: [{amount_cents: 1600, units: 16, events_count: 4}],
           april_usage: [{amount_cents: 12800, units: 128, events_count: 7}],
           april_invoice: [{amount_cents: 12800, units: 128, events_count: 7}],
           june_usage: [{amount_cents: 13200, units: 132, events_count: 8}],
           may_invoice: [{amount_cents: 13200, units: 132, events_count: 8}]
-        )
+        }
       end
     end
   end
@@ -338,6 +354,20 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
     end
 
     include_examples "bills the same with every snapshot flag"
+
+    include_examples "bills from the stored snapshot" do
+      let(:edited_after) { march_billed_at }
+      let(:edited_to) { march_snapshot }
+      # The 100 units added to the March snapshot are carried in full into every later period
+      let(:edited_billed) do
+        {
+          april_usage: [{amount_cents: 12567, units: 128, events_count: 7}],
+          april_invoice: [{amount_cents: 12567, units: 128, events_count: 7}],
+          june_usage: [{amount_cents: 13200, units: 132, events_count: 8}],
+          may_invoice: [{amount_cents: 13084, units: 132, events_count: 8}]
+        }
+      end
+    end
   end
 
   describe "with a prorated recurring sum" do
@@ -371,24 +401,17 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
 
     include_examples "bills the same with every snapshot flag"
 
-    context "with a snapshot edited after it was written" do
-      let(:snapshot_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
-
-      def bill_at(time)
-        super.tap do
-          ContractRecurringAggregationSnapshot.where(organization:).sole.update!(units: 116) if time == march_billed_at
-        end
-      end
-
-      it "starts April from the stored value" do
-        expect(bill.slice(*billed.keys)).to eq(
-          march_invoice: [{amount_cents: 1088, units: BigDecimal("10.8790322581"), events_count: 4}],
+    include_examples "bills from the stored snapshot" do
+      let(:edited_after) { march_billed_at }
+      let(:edited_to) { march_snapshot }
+      let(:edited_billed) do
+        {
           # (116 × 14 + 121 × 16) / 30 days
           april_usage: [{amount_cents: 11867, units: BigDecimal("118.6666666667"), events_count: 1}],
           april_invoice: [{amount_cents: 11867, units: BigDecimal("118.6666666667"), events_count: 1}],
           # (121 × 9 + 125 × 22) / 31 days
           may_invoice: [{amount_cents: 12384, units: BigDecimal("123.8387096774"), events_count: 1}]
-        )
+        }
       end
     end
   end
@@ -443,6 +466,18 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
     end
 
     include_examples "bills the same with every snapshot flag"
+
+    include_examples "bills from the stored snapshot" do
+      let(:edited_after) { Time.utc(2026, 4, 15, 1) }
+      let(:edited_to) { mid_april_snapshot }
+      # 128 + 4, at $2
+      let(:edited_billed) do
+        {
+          april_usage: [{amount_cents: 26400, units: 132, events_count: 8}],
+          april_invoice: [{amount_cents: 26400, units: 132, events_count: 8}]
+        }
+      end
+    end
   end
 
   shared_examples "a filtered and an unfiltered card on one product" do
@@ -523,6 +558,25 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
     end
 
     include_examples "bills the same with every snapshot flag"
+
+    include_examples "bills from the stored snapshot" do
+      let(:edited_after) { Time.utc(2026, 5, 1, 1) }
+      let(:edited_to) { april_snapshot }
+      let(:edited_filter) { "eu" }
+      # eu: 117 at $2, us unchanged
+      let(:edited_billed) do
+        {
+          june_usage: [
+            {amount_cents: 1500, units: 15, events_count: 4},
+            {filter: "eu", amount_cents: 23400, units: 117, events_count: 4}
+          ],
+          may_invoice: [
+            {amount_cents: 1500, units: 15, events_count: 4},
+            {filter: "eu", amount_cents: 23400, units: 117, events_count: 4}
+          ]
+        }
+      end
+    end
   end
 
   describe "with a filtered and an unfiltered card on one product" do
@@ -569,6 +623,13 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
     end
 
     include_examples "bills the same with every snapshot flag"
+
+    include_examples "bills from the stored snapshot" do
+      let(:edited_after) { Time.utc(2026, 5, 1, 1) }
+      let(:edited_to) { april_snapshot }
+      # 128 + 4
+      let(:edited_billed) { {termination_invoice: [{amount_cents: 13200, units: 132, events_count: 8}]} }
+    end
   end
 
   describe "with an advance recurring card" do
