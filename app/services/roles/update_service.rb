@@ -17,6 +17,9 @@ module Roles
 
       ActiveRecord::Base.transaction do
         Organizations::SandboxLockService.call!(organization: role.organization)
+        # Every role write takes the lock: reloaded, the checks and the logged diff see the last committed edit.
+        role.reload
+        return result.not_found_failure!(resource: "role") if role.discarded?
         return result.forbidden_failure!(code: "cannot_grant_permissions") unless acting_membership.can_grant_roles?([role])
         return result.forbidden_failure!(code: "cannot_grant_permissions") if adding_permissions_not_held?
 
