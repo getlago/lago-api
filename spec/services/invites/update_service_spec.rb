@@ -107,6 +107,21 @@ RSpec.describe Invites::UpdateService do
       end
     end
 
+    context "when the invite was accepted after it was loaded" do
+      let(:acting_user) { create(:membership, organization:, roles: %i[admin]).user }
+      let(:invite) { create(:invite, organization:, status: "pending", roles: %w[admin]) }
+
+      before do
+        create(:role, :manager)
+        Invite.find(invite.id).update!(status: :accepted, accepted_at: Time.current)
+      end
+
+      it "refuses it and keeps the roles the member was granted" do
+        expect(result.error.code).to eq("cannot_update_accepted_invite")
+        expect(invite.reload.roles).to eq(%w[admin])
+      end
+    end
+
     context "when invite is accepted" do
       let(:invite) { create(:invite, organization:, status: "accepted") }
 
