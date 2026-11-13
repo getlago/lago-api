@@ -50,6 +50,10 @@ RSpec.describe Admin::ApplyFeatureChangeService do
       end
     end
 
+    it "leaves the batch empty when nothing is mirrored" do
+      expect(change_feature(organization:).audit_log.batch_id).to be_nil
+    end
+
     context "when the organization is a sandbox" do
       let(:organization) { create(:organization, :sandbox) }
 

@@ -56,6 +56,7 @@ RSpec.describe Admin::SlackNotificationService do
         end
 
         before do
+          audit_log
           sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME <Sandbox>")
           create(:cs_admin_audit_log, organization: sandbox, action: :toggle_on, feature_key: "netsuite",
             actor_email: "admin@lago.com", reason: "Enabling for customer onboarding POC", batch_id:)
@@ -67,6 +68,29 @@ RSpec.describe Admin::SlackNotificationService do
           expect(a_request(:post, webhook_url).with { |req|
             JSON.parse(req.body)["blocks"].first["text"]["text"].include?("(mirrored to *ACME &lt;Sandbox&gt;*)")
           }).to have_been_made.once
+        end
+      end
+
+      context "when a rollback shares the batch of an entry mirrored before it" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :rollback, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Rolling back the onboarding POC", batch_id:)
+        end
+
+        before do
+          sandbox = create(:organization, :sandbox, production_organization: organization)
+          create(:cs_admin_audit_log, organization: sandbox, action: :toggle_on, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Enabling for customer onboarding POC", batch_id:,
+            created_at: 1.day.ago)
+        end
+
+        it "does not say it was mirrored" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("mirrored")
+          }).not_to have_been_made
         end
       end
 
