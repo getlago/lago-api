@@ -57,6 +57,50 @@ RSpec.describe Integrations::EntraId::DestroyService do
       end
     end
 
+    context "when another change left Entra ID as the only login method meanwhile" do
+      before do
+        organization.update!(premium_integrations: ["entra_id"], authentication_methods: %w[email_password entra_id])
+        Organization.find(organization.id).update!(authentication_methods: ["entra_id"])
+      end
+
+      it "reads the methods under the lock and refuses" do
+        result = destroy_service.call
+
+        expect(result.error.code).to eq("enabled_authentication_methods_required")
+        expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
+      end
+    end
+
+    context "when the organization has a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+      before do
+        organization.update!(premium_integrations: ["entra_id"], authentication_methods: %w[email_password entra_id])
+        sandbox
+        Organizations::SyncSandboxSettingsService.call!(organization:)
+      end
+
+      it "removes the Entra ID login method from the sandbox too" do
+        expect(sandbox.reload.authentication_methods).to include("entra_id")
+
+        expect(destroy_service.call).to be_success
+        expect(sandbox.reload.authentication_methods).to eq(["email_password"])
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, premium_integrations: ["entra_id"], authentication_methods: %w[email_password entra_id]) }
+      let(:integration) { create(:entra_id_integration, organization: sandbox) }
+
+      it "refuses to destroy the integration" do
+        result = destroy_service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
+        expect(sandbox.reload.authentication_methods).to eq(%w[email_password entra_id])
+      end
+    end
+
     context "when entra_id authentication is disabled" do
       before do
         organization.update(authentication_methods: ["email_password"])
