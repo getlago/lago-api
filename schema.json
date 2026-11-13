@@ -969,6 +969,24 @@
               "deprecationReason": null
             },
             {
+              "name": "plan_wallet_created",
+              "description": "plan_wallet.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_wallet_updated",
+              "description": "plan_wallet.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_wallet_deleted",
+              "description": "plan_wallet.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract_rate_card_created",
               "description": "contract_rate_card.created",
               "isDeprecated": false,
@@ -80392,6 +80410,12 @@
             {
               "name": "plan_rate_card",
               "description": "PlanRateCard",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_wallet",
+              "description": "PlanWallet",
               "isDeprecated": false,
               "deprecationReason": null
             },

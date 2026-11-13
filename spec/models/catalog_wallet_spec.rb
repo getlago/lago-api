@@ -36,7 +36,7 @@ describe CatalogWallet do
     it do
       expect(catalog_wallet).to validate_presence_of(:code)
       expect(catalog_wallet).to validate_inclusion_of(:currency).in_array(described_class.currency_list)
-      expect(catalog_wallet).to validate_inclusion_of(:priority).in_range(1..50)
+      expect(catalog_wallet).to validate_numericality_of(:priority).only_integer.is_greater_than_or_equal_to(1).is_less_than_or_equal_to(50)
       expect(catalog_wallet).to have_readonly_attribute(:currency)
       expect(catalog_wallet).to have_readonly_attribute(:tax_application)
     end

@@ -34,7 +34,7 @@ describe PlanWallet do
     it do
       expect(plan_wallet).to validate_presence_of(:code)
       expect(plan_wallet).to validate_inclusion_of(:currency).in_array(described_class.currency_list)
-      expect(plan_wallet).to validate_inclusion_of(:priority).in_range(1..50)
+      expect(plan_wallet).to validate_numericality_of(:priority).only_integer.is_greater_than_or_equal_to(1).is_less_than_or_equal_to(50)
       expect(plan_wallet).to validate_numericality_of(:top_up_min_amount_cents).only_integer.is_greater_than_or_equal_to(0).allow_nil
       expect(plan_wallet).to validate_numericality_of(:top_up_max_amount_cents).only_integer.is_greater_than_or_equal_to(0).allow_nil
     end
@@ -56,6 +56,50 @@ describe PlanWallet do
           reused = build(:plan_wallet, catalog_plan: existing.catalog_plan, organization: existing.organization, code: "credits")
 
           expect(reused).to be_valid
+        end
+      end
+    end
+
+    describe "currency validation" do
+      subject(:plan_wallet) { build(:plan_wallet, catalog_plan:, currency:) }
+
+      let(:catalog_plan) { create(:catalog_plan, currency: "USD") }
+      let(:currency) { "USD" }
+
+      it "accepts the currency of the plan" do
+        expect(plan_wallet).to be_valid
+      end
+
+      context "with another currency" do
+        let(:currency) { "EUR" }
+
+        it "rejects it" do
+          expect(plan_wallet).not_to be_valid
+          expect(plan_wallet.errors.where(:currency, :currency_does_not_match)).to be_present
+        end
+      end
+
+      context "with an unknown currency" do
+        let(:currency) { "XXX" }
+
+        it "only reports the unknown currency" do
+          expect(plan_wallet).not_to be_valid
+          expect(plan_wallet.errors.details[:currency].map { it[:error] }).to eq([:inclusion])
+        end
+      end
+
+      context "when the currency of the plan changed after the wallet was saved" do
+        subject(:plan_wallet) { create(:plan_wallet, catalog_plan:, currency: "USD") }
+
+        before do
+          plan_wallet
+          catalog_plan.update!(currency: "EUR")
+        end
+
+        it "still accepts an edit of another field" do
+          plan_wallet.name = "Credits"
+
+          expect(plan_wallet).to be_valid
         end
       end
     end
