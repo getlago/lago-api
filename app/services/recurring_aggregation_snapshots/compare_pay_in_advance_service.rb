@@ -200,11 +200,11 @@ module RecurringAggregationSnapshots
     end
 
     def compared?(metered_item)
-      if contract
-        compared_cards.any? { it.id == metered_item.contract_rate_card&.id }
-      else
-        compared_charges.any? { it.id == metered_item.charge_id }
-      end
+      compared_ids.include?(contract ? metered_item.contract_rate_card&.id : metered_item.charge_id)
+    end
+
+    def compared_ids
+      @compared_ids ||= (contract ? compared_cards : compared_charges).map(&:id).to_set
     end
 
     def compared_items_count
