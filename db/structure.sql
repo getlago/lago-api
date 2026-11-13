@@ -868,6 +868,7 @@ DROP INDEX IF EXISTS public.index_entitlement_subscription_feature_removals_on_d
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_entitlement_feature_id;
 DROP INDEX IF EXISTS public.index_entitlement_features_on_organization_id;
+DROP INDEX IF EXISTS public.index_entitlement_features_by_cursor;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_subscription_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_plan_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_organization_id;
@@ -9878,6 +9879,13 @@ CREATE INDEX index_entitlement_entitlements_on_subscription_id ON public.entitle
 
 
 --
+-- Name: index_entitlement_features_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_features_by_cursor ON public.entitlement_features USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_entitlement_features_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16260,6 +16268,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261113204932'),
 ('20261109122133'),
 ('20261109082523'),
 ('20261106220629'),

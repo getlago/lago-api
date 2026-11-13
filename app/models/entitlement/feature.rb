@@ -66,6 +66,7 @@ end
 # Indexes
 #
 #  idx_features_code_unique_per_organization      (code,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_entitlement_features_by_cursor           (organization_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_entitlement_features_on_organization_id  (organization_id)
 #
 # Foreign Keys
