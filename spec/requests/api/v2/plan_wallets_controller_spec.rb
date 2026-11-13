@@ -285,6 +285,7 @@ describe Api::V2::PlanWalletsController do
         ["a scope that is not an object", {applies_to: [{type: "fee_type", code: "fixed"}]}, "value_is_invalid", "applies_to"],
         ["tax codes that are not a list", {tax_codes: "vat_20"}, "value_is_invalid", "tax_codes"],
         ["metadata that is not an object", {metadata: "growth"}, "value_is_invalid", "metadata"],
+        ["a metadata value that is not a string", {metadata: {seats: 5}}, "value_is_invalid", "metadata"],
         ["an unknown tax application", {tax_application: "tax_free"}, "value_is_invalid", "tax_application", {allowed_values: %w[tax_on_consumption tax_on_purchase]}],
         ["a negative top-up minimum", {top_up_min_amount_cents: -1}, "value_is_out_of_range", "top_up_min_amount_cents", {min: 0}],
         ["a fractional top-up maximum", {top_up_max_amount_cents: 60_000.5}, "value_is_invalid", "top_up_max_amount_cents"],
