@@ -11,6 +11,12 @@ module Organizations
     WWW = /(?<![\p{L}\p{N}])www\./
     IPV4 = /(?<![\d.])\d{1,3}(?:\.\d{1,3}){3}(?!\.?\d)/
     DOTTED_TOKEN = /[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+/
+    # Legal forms written after a dot (`Acme Co.Ltd`, `Muster GmbH & Co.KG`): some are also top-level domains, so a
+    # dotted token loses them before the domain check.
+    LEGAL_FORMS = %w[
+      ab ag as bhd bv co corp gmbh inc kft kg kk lda llc llp lp ltd ltda nv oy plc pte pty pvt sa sarl sas sdn se sl
+      spa sro srl ug
+    ].to_set.freeze
     # Ideographic and full-width full stops read as dots.
     DOT_LOOKALIKES = "。．｡"
     # Zero-width non-joiner and joiner: invisible, but part of Persian, Urdu and Indic spellings.
@@ -57,7 +63,14 @@ module Organizations
       text = value.gsub(JOINERS, "").unicode_normalize(:nfkc).downcase.tr(DOT_LOOKALIKES, "...")
       return true if URL_SCHEME.match?(text) || WWW.match?(text) || IPV4.match?(text)
 
-      text.scan(DOTTED_TOKEN).any? { PublicSuffix.valid?(it.delete_prefix("-"), default_rule: nil) }
+      text.scan(DOTTED_TOKEN).any? { domain?(it.delete_prefix("-")) }
+    end
+
+    # `co.ltd` is checked as `co`, `acme.com.ltd` as `acme.com`.
+    def domain?(token)
+      labels = token.split(".")
+      labels.pop while labels.size > 1 && LEGAL_FORMS.include?(labels.last)
+      labels.size > 1 && PublicSuffix.valid?(labels.join("."), default_rule: nil)
     end
   end
 end
