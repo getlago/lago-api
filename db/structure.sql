@@ -2838,6 +2838,8 @@ CREATE TABLE public.catalog_wallet_credit_allocations (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT catalog_wallet_credit_allocations_billing_cycles_positive CHECK ((billing_cycles >= 1)),
+    CONSTRAINT catalog_wallet_credit_allocations_credit_amount_positive CHECK ((credit_amount_cents > 0)),
     CONSTRAINT catalog_wallet_credit_allocations_trigger_fields CHECK (
 CASE trigger
     WHEN 'billing_cycle'::public.catalog_wallet_credit_allocation_trigger THEN ((num_nonnulls(product_id, product_filter_id) = 1) AND (num_nonnulls(threshold_amount_cents, purchase_amount_cents, invoice_requires_successful_payment) = 0))
