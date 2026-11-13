@@ -280,7 +280,7 @@ RSpec.describe BillingEntity do
         subject
 
         expect(billing_entity.document_number_prefix)
-          .to eq "#{billing_entity.name.first(3).upcase}-#{billing_entity.id.last(4).upcase}"
+          .to eq "#{billing_entity.name.first(3).delete(" ").upcase}-#{billing_entity.id.last(4).upcase}"
       end
 
       context "with a name that upcasing lengthens" do
@@ -290,6 +290,16 @@ RSpec.describe BillingEntity do
           subject
 
           expect(billing_entity.document_number_prefix).to eq("SSS-#{billing_entity.id.last(4).upcase}")
+        end
+      end
+
+      context "with a name of two characters before a space" do
+        let(:billing_entity) { build(:billing_entity, name: "ab Sandbox") }
+
+        it "leaves the space out of the prefix" do
+          subject
+
+          expect(billing_entity.document_number_prefix).to eq("AB-#{billing_entity.id.last(4).upcase}")
         end
       end
 
