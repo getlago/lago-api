@@ -9,6 +9,9 @@ module Api
       date_range_filtered_index(:created_at)
       serializable_with ::V2::PlanWalletSerializer, root: :wallet
 
+      # What a selector renders its target from.
+      SELECTOR_TARGETS = [:product_category, :product, {product_filter: :product}].freeze
+
       def create
         result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: wallet_params.to_h)
 
@@ -40,7 +43,7 @@ module Api
       end
 
       def show
-        plan_wallet = find_plan_wallet
+        plan_wallet = plan_wallets&.includes(selectors: SELECTOR_TARGETS)&.find_by(code: params[:code])
 
         return not_found_error(resource: "wallet") unless plan_wallet
 
@@ -58,7 +61,7 @@ module Api
 
         if result.success?
           render_wallets(
-            result.plan_wallets.includes(:catalog_plan, selectors: [:product_category, :product, {product_filter: :product}])
+            result.plan_wallets.includes(:catalog_plan, selectors: SELECTOR_TARGETS)
           )
         else
           render_error_response(result)
@@ -73,8 +76,12 @@ module Api
         @find_catalog_plan = current_organization.catalog_plans.find_by(code: params[:plan_code])
       end
 
+      def plan_wallets
+        find_catalog_plan&.wallets
+      end
+
       def find_plan_wallet
-        find_catalog_plan&.wallets&.find_by(code: params[:code])
+        plan_wallets&.find_by(code: params[:code])
       end
 
       def wallet_params

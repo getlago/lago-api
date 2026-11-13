@@ -7,11 +7,13 @@ module PlanWallets
 
     activity_loggable(
       action: "plan_wallet.deleted",
-      record: -> { plan_wallet }
+      record: -> { plan_wallet },
+      condition: -> { emit_events }
     )
 
-    def initialize(plan_wallet:)
+    def initialize(plan_wallet:, emit_events: true)
       @plan_wallet = plan_wallet
+      @emit_events = emit_events
       super
     end
 
@@ -32,6 +34,6 @@ module PlanWallets
 
     private
 
-    attr_reader :plan_wallet
+    attr_reader :plan_wallet, :emit_events
   end
 end

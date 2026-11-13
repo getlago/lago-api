@@ -26,6 +26,10 @@ module PlanWallets
         return result.single_validation_failure!(field: :rate_amount, error_code: "not_supported")
       end
 
+      if (field = malformed_param)
+        return result.single_validation_failure!(field:, error_code: "value_is_invalid")
+      end
+
       if params.key?(:tax_application) && !PlanWallet.tax_applications.key?(params[:tax_application])
         return result.single_validation_failure!(
           field: :tax_application,
@@ -74,6 +78,15 @@ module PlanWallets
 
     def code_change_requested?
       params.key?(:code) && params[:code] != plan_wallet.code
+    end
+
+    # The field whose value has another shape than its service reads: a metadata object, a list of tax codes.
+    def malformed_param
+      if !params[:metadata].nil? && !params[:metadata].is_a?(Hash)
+        :metadata
+      elsif !params[:tax_codes].nil? && !(params[:tax_codes].is_a?(Array) && params[:tax_codes].all?(String))
+        :tax_codes
+      end
     end
   end
 end
