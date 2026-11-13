@@ -60,6 +60,22 @@ RSpec.describe BillingOperations::ScheduleJob, job: true do
         processed_at: nil
       )
     end
+
+    context "when operation creation fails" do
+      let(:failure) { BaseService::Result.new.single_validation_failure!(field: :base, error_code: "cannot_schedule") }
+
+      before do
+        allow(BillingOperations::CreateService).to receive(:call!)
+          .and_raise(BaseService::FailedResult.new(failure, "cannot schedule"))
+      end
+
+      it "does not dispatch processing without persisted scheduled work" do
+        expect { perform_job }.to raise_error(BaseService::FailedResult)
+        expect(BillingOperation.where(customer:)).to be_empty
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 15))
+        expect(BillingOperations::ProcessJob).not_to have_been_enqueued
+      end
+    end
   end
 
   context "when the customer has no due pending operations" do

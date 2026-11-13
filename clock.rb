@@ -100,9 +100,9 @@ module Clockwork
       .perform_later
   end
 
-  # Dispatch persisted billing operations that are due; no initial-seeding sweep is needed.
+  # Schedule due billing operations before dispatching persisted work for processing.
   every(1.hour, "schedule:process_billing_operations", at: "*:17") do
-    Clock::ProcessBillingOperationsJob
+    Clock::ScheduleBillingOperationsJob
       .set(sentry: {"slug" => "lago_process_billing_operations", "cron" => "17 */1 * * *"})
       .perform_later
   end
