@@ -52,5 +52,27 @@ RSpec.describe Memberships::CreateService do
         expect(result.error.messages[:user_id]).to include("value_already_exist")
       end
     end
+
+    context "when the organization has a sandbox" do
+      let(:organization) { create(:organization, :with_sandbox) }
+
+      it "adds the member to the sandbox too" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(organization.sandbox_organization.memberships.active.pluck(:user_id)).to eq([user.id])
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:organization) { create(:organization, :sandbox) }
+
+      it "refuses it and creates nothing" do
+        result = create_service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(organization.memberships).to be_empty
+      end
+    end
   end
 end
