@@ -96,6 +96,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - A public mutation or query (no session) that checks a credential or a token counts its attempts with `Auth::AttemptsThrottle` (`ThrottlesAuthAttempts`) before any other work. The `invite` and `passwordReset` queries, the Google login, register and invite mutations, and the Okta and Entra ID ones do not yet: do not copy them. The self-serve signup ones call `GuardsSignupAttempts#signup_guard_error` right after the self-serve gate, before any password hashing, email, provider call or write; its `GUARDS` table holds their rules and reCAPTCHA action, so they declare no rule or action of their own.
 - Return `result.success? ? result.record : result_error(result)`. Keep query logic in a query object, not in the resolver.
 - Avoid N+1 queries with `dataload_association` in types. Give new enums an explicit `graphql_name`, and match field nullability to the model.
+- A secret field (`WebhookEndpoint.signingKeys`, `ApiKey.value`) is exposed on the single-record query and on the mutations that create, update or rotate it (`rotateApiKey` must return the new value), never on a list. `destroyApiKey` also returns the full value: do not copy it. Lists use a separate sanitized type (`SanitizedApiKey`); a type that other fields also reach uses an allow-list instead: those resolvers call `context.scoped_set!(:expose_<name>, true)`, and the field returns `nil` unless that flag is set. Never hide it with a deny-list.
 
 ## Models and queries
 
