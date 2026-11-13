@@ -4,10 +4,11 @@ module WebhookEndpoints
   class UpdateService < BaseService
     Result = BaseResult[:webhook_endpoint]
 
-    def initialize(id:, organization:, params:)
+    def initialize(id:, organization:, params:, signature_algo_rule: nil)
       @id = id
       @organization = organization
       @params = params
+      @signature_algo_rule = signature_algo_rule || WebhookEndpoint.v1_signature_algo_rule(organization)
 
       super
     end
@@ -17,18 +18,24 @@ module WebhookEndpoints
 
       return result.not_found_failure!(resource: "webhook_endpoint") if webhook_endpoint.blank?
 
+      # Only a change is checked, so an endpoint keeps an algorithm the API no longer offers.
       # The column is NOT NULL, so null is refused like an unknown value.
-      if params.key?(:signature_algo) && !WebhookEndpoint.signature_algos.key?(params[:signature_algo].to_s)
+      if signature_algo_changed?(webhook_endpoint) && !signature_algo_rule.allow?(params[:signature_algo])
         return invalid_signature_algo_failure
       end
 
-      webhook_endpoint.webhook_url = params[:webhook_url] if params.key?(:webhook_url)
-      webhook_endpoint.signature_algo = params[:signature_algo] if params.key?(:signature_algo)
-      webhook_endpoint.name = params[:name] if params.key?(:name)
-      webhook_endpoint.event_types = params[:event_types] if params.key?(:event_types)
-      webhook_endpoint.save!
+      ActiveRecord::Base.transaction do
+        webhook_endpoint.webhook_url = params[:webhook_url] if params.key?(:webhook_url)
+        webhook_endpoint.signature_algo = params[:signature_algo] if params.key?(:signature_algo)
+        webhook_endpoint.name = params[:name] if params.key?(:name)
+        webhook_endpoint.event_types = params[:event_types] if params.key?(:event_types)
+        webhook_endpoint.save!
 
-      register_security_log(webhook_endpoint)
+        # Only a switch to standard_webhooks needs a key: the key service reuses the one kept from an earlier switch.
+        switched_to_standard_webhooks = webhook_endpoint.standard_webhooks? && webhook_endpoint.saved_change_to_signature_algo?
+        register_security_log(webhook_endpoint)
+        SigningKeys::CreateService.call!(webhook_endpoint:) if switched_to_standard_webhooks
+      end
 
       result.webhook_endpoint = webhook_endpoint
       result
@@ -39,13 +46,17 @@ module WebhookEndpoints
 
     private
 
-    attr_reader :id, :organization, :params
+    attr_reader :id, :organization, :params, :signature_algo_rule
+
+    def signature_algo_changed?(webhook_endpoint)
+      params.key?(:signature_algo) && params[:signature_algo].to_s != webhook_endpoint.signature_algo
+    end
 
     def invalid_signature_algo_failure
       result.single_validation_failure!(
         field: :signature_algo,
         error_code: "value_is_invalid",
-        meta: {allowed_values: WebhookEndpoint.signature_algos.keys}
+        meta: {allowed_values: signature_algo_rule.allowed_values}
       )
     end
 

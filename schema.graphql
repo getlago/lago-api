@@ -7293,6 +7293,7 @@ enum FeatureFlagEnum {
   recurring_aggregation_snapshots
   skip_credit_invoice_auto_payment_delay
   sso_cross_organization_sessions
+  standard_webhooks_signature
   stripe_shared_payment_token
   usage_prefilter_incremental
   usage_prefilter_short_cache
@@ -17824,6 +17825,7 @@ input WebhookEndpointCreateInput {
 enum WebhookEndpointSignatureAlgoEnum {
   hmac
   jwt
+  standard_webhooks
 }
 
 """

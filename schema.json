@@ -35811,6 +35811,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "standard_webhooks_signature",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -97422,6 +97428,12 @@
             },
             {
               "name": "hmac",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "standard_webhooks",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
