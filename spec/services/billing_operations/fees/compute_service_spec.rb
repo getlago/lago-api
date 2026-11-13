@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingSegments::Fees::ComputeService do
+RSpec.describe BillingOperations::Fees::ComputeService do
   describe ".call" do
     subject(:result) { described_class.call(billing_segment:) }
 
@@ -17,8 +17,9 @@ RSpec.describe BillingSegments::Fees::ComputeService do
     let(:rate_card_rate) do
       create(:rate_card_rate, organization:, rate_card:, rate_model:, rate_properties:, min_amount_cents:)
     end
+    let(:pricing_unit) { nil }
     let(:billing_segment) do
-      create(
+      build(
         :billing_segment,
         organization:,
         contract:,
@@ -26,10 +27,11 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         contract_rate_card:,
         rate_card_rate:,
         rate_properties:,
+        pricing_unit:,
         proration_ratio:,
         cycle_started_at: Time.utc(2026, 8, 1),
         started_at: Time.utc(2026, 8, 1),
-        ended_at: Time.utc(2026, 8, 31).end_of_day
+        ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1))
       )
     end
     let(:units) { 15 }
@@ -62,6 +64,66 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         expect(result.fee.subscription).to be_nil
         expect(result.fee.pay_in_advance).to be(false)
         expect(result.true_up_fee).to be_nil
+      end
+
+      context "with four configured term units" do
+        let(:units) { 4 }
+
+        it "uses the contract rate card's term quantity" do
+          expect(result.fee.units).to eq(4)
+          expect(result.fee.amount_cents).to eq(12_000)
+        end
+
+        context "when configured units are zero and a minimum applies" do
+          let(:units) { 0 }
+          let(:min_amount_cents) { 1_000 }
+
+          it "retains the periodic minimum true-up" do
+            expect(result).to be_success
+            expect(result.fee.units).to eq(0)
+            expect(result.true_up_fee.amount_cents).to eq(1_000)
+          end
+        end
+      end
+
+      it "looks up contract rate card units once when the association is not preloaded" do
+        billing_segment
+
+        statements = capture_sql { result }
+
+        expect(result.fee.units).to eq(15)
+        expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
+      end
+
+      context "without a units row" do
+        let(:units) { nil }
+
+        it "memoizes the missing units lookup" do
+          billing_segment
+
+          statements = capture_sql { result }
+
+          expect(result.fee.units).to eq(BigDecimal(0))
+          expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
+        end
+      end
+
+      context "when multiple units rows exist" do
+        before do
+          create(
+            :contract_rate_card_term,
+            organization:,
+            contract_rate_card:,
+            units: 7,
+            effective_date: Date.new(2026, 7, 1)
+          )
+        end
+
+        it "uses the first effective units row" do
+          expect(result).to be_success
+          expect(result.fee.units).to eq(7)
+          expect(result.fee.amount_cents).to eq(21_000)
+        end
       end
 
       context "with an advance rate card" do
@@ -134,7 +196,8 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         end
 
         it "measures progress within the segment rather than its parent cycle" do
-          billing_segment.update!(started_at: Time.utc(2026, 8, 20), ended_at: Time.utc(2026, 8, 29).end_of_day)
+          billing_segment.started_at = Time.utc(2026, 8, 20)
+          billing_segment.ended_at = BillingSegment.inclusive_end(Time.utc(2026, 8, 30))
 
           travel_to(Time.utc(2026, 8, 21, 12)) do
             expect(result).to be_success
@@ -148,10 +211,9 @@ RSpec.describe BillingSegments::Fees::ComputeService do
           let(:customer) { create(:customer, organization:, currency: "USD", timezone: "America/New_York") }
 
           it "uses the customer's date when UTC has already reached the last day" do
-            billing_segment.update!(
-              cycle_started_at: Time.utc(2026, 8, 1, 4), started_at: Time.utc(2026, 8, 1, 4),
-              ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1, 4))
-            )
+            billing_segment.cycle_started_at = Time.utc(2026, 8, 1, 4)
+            billing_segment.started_at = Time.utc(2026, 8, 1, 4)
+            billing_segment.ended_at = BillingSegment.inclusive_end(Time.utc(2026, 9, 1, 4))
 
             travel_to(Time.utc(2026, 8, 31, 2)) do
               expect(result).to be_success
@@ -181,8 +243,6 @@ RSpec.describe BillingSegments::Fees::ComputeService do
           )
         end
         let(:units) { 5 }
-
-        before { billing_segment.update!(pricing_unit:) }
 
         it "converts the pricing unit amount to fiat currency" do
           expect(result).to be_success
@@ -354,6 +414,23 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         expect(result.fee.unit_amount_cents).to eq(266)
         expect(result.fee.precise_unit_amount).to be_within(0.000000000000001).of(BigDecimal(40) / 15)
         expect(result.fee.amount_details["per_package_size"]).to eq(10)
+      end
+
+      context "when decimal proration is just above a package boundary" do
+        let(:package_metric) { create(:sum_billable_metric, organization:, field_name: "amount", recurring: true) }
+        let(:package_product) { create(:product, :metered, organization:, billable_metric: package_metric) }
+        let(:rate_card) do
+          create(:rate_card, organization:, product: package_product, currency: "USD")
+        end
+        let(:units) { 3 }
+        let(:proration_ratio) { 20.fdiv(30) }
+        let(:rate_properties) { {"amount" => "20", "free_units" => 0, "package_size" => 1} }
+
+        it "preserves the legacy decimal scale before rounding packages up" do
+          expect(result).to be_success
+          expect(result.fee.amount_cents).to eq(6_000)
+          expect(result.fee.units).to eq(3)
+        end
       end
     end
 

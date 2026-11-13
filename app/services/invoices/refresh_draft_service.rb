@@ -92,11 +92,12 @@ module Invoices
     end
 
     def refresh_product_catalog_fees!
+      segments = billing_segments
       reset_product_catalog_invoice_values!
 
-      BillingSegments::ComputeInvoiceService.call!(
+      BillingOperations::ComputeInvoiceService.call!(
         invoice:,
-        billing_segments:,
+        billing_segments: segments,
         context: billing_segment_context
       )
     end
@@ -145,13 +146,48 @@ module Invoices
     end
 
     def billing_segments
-      @billing_segments ||= invoice.billing_segments.includes(
-        :pricing_unit,
-        :rate_override,
-        :contract,
-        contract_rate_card: {rate_card: :product},
-        rate_card_rate: :rate_card
-      )
+      return @billing_segments if @billing_segments
+
+      operations = invoice.billing_operations
+        .order(:target_cycle_started_at, :billing_at, :id)
+        .includes(contract_rate_card: [
+          :terms,
+          {contract: :customer},
+          {rate_card: [:rates, {product: :billable_metric}]},
+          {rate_phases: :rate_override}
+        ])
+
+      unless operations.empty?
+        @billing_segments = operations.flat_map do |operation|
+          BillingOperations::ResolveSegmentsService.call!(operation:).segments
+        end
+        return @billing_segments
+      end
+
+      timestamp = fetch_timestamp
+      contract_rate_cards = ContractRateCard
+        .where(
+          organization_id: invoice.organization_id,
+          id: invoice.fees.where.not(contract_rate_card_id: nil).select(:contract_rate_card_id)
+        )
+        .order(:created_at, :id)
+        .includes(
+          :terms,
+          {contract: :customer},
+          {rate_card: [:rates, {product: :billable_metric}]},
+          {rate_phases: :rate_override}
+        )
+
+      @billing_segments = contract_rate_cards.flat_map do |contract_rate_card|
+        schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
+
+        schedule.segments_due_by(timestamp).map do |billable_segment|
+          BillingSegments::BuildEventSegmentService
+            .call!(contract_rate_card:, billable_segment:)
+            .billing_segment
+            .tap { it.billing_at = timestamp }
+        end
+      end
     end
 
     def fetch_timestamp

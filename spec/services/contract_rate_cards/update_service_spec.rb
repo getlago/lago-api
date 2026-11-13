@@ -13,9 +13,67 @@ RSpec.describe ContractRateCards::UpdateService do
 
   before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
 
-  it "updates the units while the contract is pending" do
+  it "replaces all unit rows while the contract is pending" do
     expect(result).to be_success
-    expect(result.contract_rate_card.reload.units).to eq(20)
+    expect(result.contract_rate_card.reload.terms.map { |unit| [unit.units, unit.effective_date] }).to eq([[20, contract_rate_card.effective_date]])
+  end
+
+  context "when the units change after the card was last updated" do
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, units: 5, updated_at: 1.day.ago) }
+
+    it "advances updated_at when units are supplied" do
+      freeze_time do
+        expect { result }
+          .to change { contract_rate_card.reload.updated_at }
+          .from(1.day.ago)
+          .to(Time.current)
+      end
+    end
+  end
+
+  context "when the card has multiple dated unit rows" do
+    before do
+      create(
+        :contract_rate_card_term,
+        organization:,
+        contract_rate_card:,
+        units: 8,
+        effective_date: contract_rate_card.effective_date + 1.day
+      )
+    end
+
+    it "replaces the full collection with a row effective on the card start" do
+      expect(result).to be_success
+      expect(contract_rate_card.reload.terms.map { |unit| [unit.units, unit.effective_date] })
+        .to eq([[20, contract_rate_card.effective_date]])
+    end
+  end
+
+  context "when units are omitted" do
+    let(:params) { {billing_anchor_date: "2026-05-01"} }
+
+    it "leaves the existing unit rows untouched" do
+      expect { result }.not_to change { contract_rate_card.terms.count }
+      expect(contract_rate_card.terms.sole.units).to eq(5)
+    end
+  end
+
+  context "when units are explicitly nil" do
+    let(:params) { {units: nil} }
+
+    it "clears every unit row" do
+      expect { result }.to change { contract_rate_card.terms.count }.from(1).to(0)
+    end
+  end
+
+  context "when units are invalid" do
+    let(:params) { {units: "-1"} }
+
+    it "fails and rolls back the deletion of existing rows" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:units]).to be_present
+      expect(contract_rate_card.reload.terms.sole.units).to eq(5)
+    end
   end
 
   it "publishes contract_rate_card.updated with the post-write hierarchy" do
@@ -68,8 +126,7 @@ RSpec.describe ContractRateCards::UpdateService do
         contract:,
         rate_card:,
         effective_date: Date.new(2026, 11, 1),
-        billing_anchor_date: Date.new(2026, 11, 1),
-        next_billing_at: Time.zone.parse("2026-12-01")
+        billing_anchor_date: Date.new(2026, 11, 1)
       )
     end
     let(:params) { {billing_anchor_date: "2026-11-15"} }
@@ -95,7 +152,7 @@ RSpec.describe ContractRateCards::UpdateService do
 
     it "fails with a contract_locked error" do
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
-      expect(contract_rate_card.reload.units).to eq(5)
+      expect(contract_rate_card.reload.terms.sole.units).to eq(5)
     end
   end
 

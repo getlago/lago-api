@@ -113,7 +113,7 @@ RSpec.describe "Advance SUM billing after a usage decrease" do
           timestamp: input.fetch(:at).to_i,
           properties: {units: input.fetch(:value)}
         }, perform_jobs: false)
-        perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+        perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
       end
 
       Fee.where(contract:, fee_type: :product).order(:created_at).to_a
@@ -137,7 +137,7 @@ RSpec.describe "Advance SUM billing after a usage decrease" do
     end
     let(:contract_rate_card) do
       create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: started_at.to_date,
-        billing_anchor_date: started_at.to_date, next_billing_at: started_at)
+        billing_anchor_date: started_at.to_date)
     end
     let(:expected_amounts) { [780, 1780, 0, 280] }
     let(:expected_fixed_fee) { "0.0" }

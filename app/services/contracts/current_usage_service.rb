@@ -58,23 +58,37 @@ module Contracts
     # Filtered after the version selection, so that a superseded version never stands in for
     # the card that replaced it.
     def selected_cards
-      effective_cards.select { |card| matches_filters?(card) && matches_search?(card) }
+      cards = effective_cards.select { |card| matches_filters?(card) && matches_search?(card) }
+      preload_pricing_associations(cards)
+      cards
     end
 
     def effective_cards
       cards = contract.applied_rate_cards
         .starting_before_contract_end
-        .includes(
-          {rate_card: [:rates, :product_filter, {product: [:billable_metric, :product_category]}]},
-          {rate_phases: :rate_override},
-          :organization,
-          :product
-        )
+        .includes(rate_card: [:product_filter, :product])
         .order(:effective_date, :created_at, :id)
         .to_a
       date = timestamp.in_time_zone(customer.applicable_timezone).to_date
 
       ContractRateCards::SelectEffectiveService.call!(contract_rate_cards: cards, date:).contract_rate_cards
+    end
+
+    def preload_pricing_associations(cards)
+      return if cards.empty?
+
+      ActiveRecord::Associations::Preloader.new(
+        records: cards,
+        associations: [
+          {rate_card: [:rates, {product: [:billable_metric, :product_category]}]},
+          {rate_phases: :rate_override},
+          :organization,
+          :product
+        ]
+      ).call
+
+      fixed_cards = cards.select { |card| !card.rate_card.product.metered? && card.rate_card.rates.any? }
+      ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
     end
 
     def matches_filters?(card)
@@ -122,7 +136,7 @@ module Contracts
       return if card.rate_card.rates.empty?
 
       schedule = Billing::RateCards::BuildScheduleService.call!(
-        contract_rate_card: card, resume_from_billing_segments: false
+        contract_rate_card: card
       ).schedule
       billable_segment = schedule.segment_covering(timestamp)
       return unless billable_segment
@@ -153,7 +167,7 @@ module Contracts
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
-        [BillingSegments::Fees::ComputeService.call!(billing_segment:).fee]
+        [BillingOperations::Fees::ComputeService.call!(billing_segment:).fee]
       end
     end
 

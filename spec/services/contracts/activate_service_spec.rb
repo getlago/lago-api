@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Contracts::ActivateService do
   subject(:result) { described_class.call(contract:, timestamp:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:) }
   let(:started_at) { Time.zone.parse("2026-09-30T00:00:00Z") }
   let(:contract) { create(:contract, :pending, organization:, customer:, started_at:) }
@@ -30,10 +30,8 @@ RSpec.describe Contracts::ActivateService do
     expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.started").once
   end
 
-  it "schedules the customer's billing" do
-    result
-
-    expect(BillingSegments::ScheduleJob).to have_been_enqueued.with(customer.id)
+  it "enqueues the customer's billing directly after activation commits" do
+    expect { result }.to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
   end
 
   context "with rate cards" do
@@ -47,6 +45,79 @@ RSpec.describe Contracts::ActivateService do
 
       expect(queries).to include(a_string_matching(/FROM "contract_rate_cards".*FOR UPDATE/m))
     end
+
+    it "does not seed an operation for an unpriced rate card" do
+      expect { result }.not_to change(BillingOperation, :count)
+    end
+  end
+
+  context "with a priced rate card" do
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "arrears") }
+    let(:contract_rate_card) do
+      create(
+        :contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: started_at.to_date, billing_anchor_date: started_at.to_date
+      )
+    end
+
+    before do
+      contract_rate_card
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at, billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    it "persists the initial operation inside activation without creating billing segments" do
+      expect { result }
+        .to change(BillingOperation, :count).by(1)
+        .and not_change(LegacyBillingSegment, :count)
+
+      expect(contract_rate_card.reload.billing_operations.sole).to have_attributes(
+        action_type: "close_fixed_arrears", causation_type: "contract_activation",
+        target_cycle_started_at: started_at
+      )
+    end
+
+    it "does not reset a processed operation when activation is retried" do
+      result
+      operation = contract_rate_card.billing_operations.sole
+      operation.update!(processed_at: timestamp)
+      attributes = operation.attributes
+
+      expect(described_class.call(contract:, timestamp:)).to be_success
+      expect(operation.reload.attributes).to eq(attributes)
+    end
+
+    context "when operation persistence fails after an earlier card was seeded" do
+      let(:failure_product) { create(:product, :fixed, organization:) }
+      let(:failure_rate_card) { create(:rate_card, organization:, product: failure_product, billing_timing: "advance") }
+      let(:failure_card) do
+        create(
+          :contract_rate_card, organization:, contract:, rate_card: failure_rate_card,
+          effective_date: started_at.to_date, billing_anchor_date: started_at.to_date
+        )
+      end
+      let(:operation_writes) { [] }
+
+      before do
+        failure_card
+        create(:rate_card_rate, organization:, rate_card: failure_rate_card, effective_from: started_at, billing_interval_count: 1, billing_interval_unit: "month")
+        allow(BillingOperations::CreateService).to receive(:call!).and_wrap_original do |original, **attributes|
+          operation_writes << attributes
+          raise ActiveRecord::RecordInvalid.new(failure_card) if operation_writes.size == 2
+
+          original.call(**attributes)
+        end
+      end
+
+      it "rolls back activation, all operations and started notifications" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+        expect(BillingOperations::ProcessJob).not_to have_been_enqueued
+        expect(result).not_to be_success
+        expect(contract.reload).to be_pending
+        expect(BillingOperation.where(contract_rate_card_id: [contract_rate_card.id, failure_card.id])).to be_empty
+        expect(LegacyBillingSegment.where(contract_rate_card_id: [contract_rate_card.id, failure_card.id])).to be_empty
+      end
+    end
   end
 
   context "with cards still starting on a previous start date" do
@@ -56,8 +127,7 @@ RSpec.describe Contracts::ActivateService do
         organization:,
         contract:,
         effective_date: Date.new(2026, 10, 15),
-        billing_anchor_date: Date.new(2026, 10, 15),
-        next_billing_at: Time.zone.parse("2026-10-15")
+        billing_anchor_date: Date.new(2026, 10, 15)
       )
     end
     let(:anchored_card) do
@@ -66,8 +136,7 @@ RSpec.describe Contracts::ActivateService do
         organization:,
         contract:,
         effective_date: Date.new(2026, 10, 15),
-        billing_anchor_date: Date.new(2026, 10, 1),
-        next_billing_at: Time.zone.parse("2026-10-15")
+        billing_anchor_date: Date.new(2026, 10, 1)
       )
     end
     let(:current_card) do
@@ -76,8 +145,7 @@ RSpec.describe Contracts::ActivateService do
         organization:,
         contract:,
         effective_date: Date.new(2026, 9, 30),
-        billing_anchor_date: Date.new(2026, 9, 20),
-        next_billing_at: Time.zone.parse("2026-09-30")
+        billing_anchor_date: Date.new(2026, 9, 20)
       )
     end
 
@@ -103,7 +171,7 @@ RSpec.describe Contracts::ActivateService do
 
   context "with a card whose cadence changed while the contract was pending" do
     let(:rate_card) { create(:rate_card, organization:) }
-    # Seeded while the rate was monthly: the clock waits for the end of the first month.
+    # The target cycle is resolved again from the current cadence at activation.
     let(:contract_rate_card) do
       create(
         :contract_rate_card,
@@ -111,8 +179,7 @@ RSpec.describe Contracts::ActivateService do
         contract:,
         rate_card:,
         effective_date: Date.new(2026, 9, 30),
-        billing_anchor_date: Date.new(2026, 9, 30),
-        next_billing_at: Time.zone.parse("2026-10-30")
+        billing_anchor_date: Date.new(2026, 9, 30)
       )
     end
 
@@ -123,11 +190,14 @@ RSpec.describe Contracts::ActivateService do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:)
     end
 
-    # Activated three weeks late: the first weekly period is due at once.
-    it "waits for the first billing date of the current cadence" do
+    # The first weekly period remains anchored to the card's original effective date.
+    it "resolves the original target cycle from the current cadence" do
       result
 
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
+      expect(contract_rate_card.billing_operations.sole).to have_attributes(
+        target_cycle_started_at: Time.zone.parse("2026-09-30"),
+        billing_at: Time.zone.parse("2026-10-07")
+      )
     end
   end
 
@@ -138,7 +208,7 @@ RSpec.describe Contracts::ActivateService do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).to be_success
       expect(contract.reload).to be_pending
-      expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end
@@ -150,7 +220,7 @@ RSpec.describe Contracts::ActivateService do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).to be_success
       expect(contract.reload).to be_pending
-      expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end
@@ -162,7 +232,7 @@ RSpec.describe Contracts::ActivateService do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).to be_success
       expect(contract.reload).to be_canceled
-      expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end
@@ -175,7 +245,7 @@ RSpec.describe Contracts::ActivateService do
       expect(result).not_to be_success
       expect(result.error.messages[:external_id]).to eq(["active_contract_exists"])
       expect(contract.reload).to be_pending
-      expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end

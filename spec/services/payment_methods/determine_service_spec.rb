@@ -280,8 +280,22 @@ RSpec.describe PaymentMethods::DetermineService do
       context "with a contract invoice" do
         let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract) }
         let(:contract) { create(:contract, organization:, customer:) }
+        let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+        let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
 
-        before { create(:billing_segment, organization:, customer:, contract:, invoice:) }
+        before do
+          create(
+            :fee,
+            invoice:,
+            organization:,
+            subscription: nil,
+            fee_type: :product,
+            invoiceable: contract_rate_card.rate_card.product,
+            contract:,
+            contract_rate_card:,
+            rate_card_rate:
+          )
+        end
 
         context "when contract has no payment method configured" do
           it "returns the customer default payment method" do
@@ -315,13 +329,28 @@ RSpec.describe PaymentMethods::DetermineService do
           end
         end
 
-        context "when billing segments belong to several contracts" do
+        context "when fees belong to several contracts" do
           let(:contract_payment_method) { create(:payment_method, customer:, is_default: false) }
           let(:contract) { create(:contract, organization:, customer:, payment_method: contract_payment_method, created_at: 2.days.ago) }
+          let(:later_payment_method) { create(:payment_method, customer:, is_default: false) }
+          let(:later_contract) do
+            create(:contract, organization:, customer:, payment_method: later_payment_method, created_at: contract.created_at + 1.day)
+          end
+          let(:later_contract_rate_card) { create(:contract_rate_card, organization:, contract: later_contract) }
+          let(:later_rate_card_rate) { create(:rate_card_rate, organization:, rate_card: later_contract_rate_card.rate_card) }
 
           before do
-            later_contract = create(:contract, organization:, customer:, payment_method: create(:payment_method, customer:, is_default: false))
-            create(:billing_segment, organization:, customer:, contract: later_contract, invoice:)
+            create(
+              :fee,
+              invoice:,
+              organization:,
+              subscription: nil,
+              fee_type: :product,
+              invoiceable: later_contract_rate_card.rate_card.product,
+              contract: later_contract,
+              contract_rate_card: later_contract_rate_card,
+              rate_card_rate: later_rate_card_rate
+            )
           end
 
           it "returns the payment method of the earliest contract" do

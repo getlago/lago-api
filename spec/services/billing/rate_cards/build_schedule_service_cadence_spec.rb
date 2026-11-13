@@ -38,8 +38,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         :contract_rate_card,
         organization:, contract:, rate_card:,
         billing_anchor_date: Date.new(2026, 1, 1),
-        effective_date: Date.new(2026, 1, 1),
-        next_billing_at: Time.utc(2026, 1, 1)
+        effective_date: Date.new(2026, 1, 1)
       )
     end
 
@@ -215,8 +214,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         :contract_rate_card,
         organization:, contract:, rate_card:,
         billing_anchor_date: Date.new(2026, 8, 3),
-        effective_date: Date.new(2026, 7, 1),
-        next_billing_at: Time.utc(2026, 7, 1)
+        effective_date: Date.new(2026, 7, 1)
       )
     end
 
@@ -290,8 +288,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         :contract_rate_card,
         organization:, contract:, rate_card:,
         billing_anchor_date: Date.new(2026, 8, 3),
-        effective_date: Date.new(2026, 8, 3),
-        next_billing_at: Time.utc(2026, 8, 3)
+        effective_date: Date.new(2026, 8, 3)
       )
     end
 
@@ -317,7 +314,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "stops producing cycles after the termination" do
-      expect(schedule.next_billing_at(after: Time.utc(2027, 1, 1))).to be_nil
+      expect(schedule.billing_at(timestamp: Time.utc(2027, 1, 1), target: "next")).to be_nil
     end
   end
 end

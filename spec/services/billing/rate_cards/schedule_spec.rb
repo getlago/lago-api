@@ -475,35 +475,29 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
-  # What seeds the clock. It counts a cycle already due but still
-  # running, because nothing has billed it yet.
-  # Two questions, two methods, and the names used to be one. #next_billing_at ADVANCES the
-  # clock — strictly after, per segment; #billing_at_covering SEEDS it — the cycle being
-  # served, even when it already fell due. The consumer lane calls the first from three
-  # places with `after:`, and the second only at materialization.
-  describe "#next_billing_at" do
+  describe "#billing_at with next target" do
     it "answers the first slice falling due strictly after the instant asked about" do
-      expect(schedule.next_billing_at(after: starts_at)).to eq(Time.utc(2022, 2, 1))
+      expect(schedule.billing_at(timestamp: starts_at, target: "next")).to eq(Time.utc(2022, 2, 1))
     end
 
     it "skips the cycles that already closed" do
-      expect(schedule.next_billing_at(after: Time.utc(2022, 3, 10))).to eq(Time.utc(2022, 4, 1))
+      expect(schedule.billing_at(timestamp: Time.utc(2022, 3, 10), target: "next")).to eq(Time.utc(2022, 4, 1))
     end
 
     it "skips billing exactly at the requested instant" do
-      expect(schedule.next_billing_at(after: Time.utc(2022, 3, 1))).to eq(Time.utc(2022, 4, 1))
+      expect(schedule.billing_at(timestamp: Time.utc(2022, 3, 1), target: "next")).to eq(Time.utc(2022, 4, 1))
     end
 
     context "when asked before the card starts" do
       it "returns the end of the first priced segment in arrears" do
-        expect(schedule.next_billing_at(after: Time.utc(2022, 1, 1))).to eq(Time.utc(2022, 2, 1))
+        expect(schedule.billing_at(timestamp: Time.utc(2022, 1, 1), target: "next")).to eq(Time.utc(2022, 2, 1))
       end
 
       context "when billing in advance" do
         let(:timing) { :advance }
 
         it "returns the card's start" do
-          expect(schedule.next_billing_at(after: Time.utc(2022, 1, 1))).to eq(starts_at)
+          expect(schedule.billing_at(timestamp: Time.utc(2022, 1, 1), target: "next")).to eq(starts_at)
         end
       end
     end
@@ -515,18 +509,18 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
 
       it "owes the cut, not the end of the cycle" do
-        expect(schedule.next_billing_at(after: Time.utc(2022, 2, 1))).to eq(Time.utc(2022, 2, 15))
+        expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 1), target: "next")).to eq(Time.utc(2022, 2, 15))
       end
 
       context "when billing in advance" do
         let(:timing) { :advance }
 
         it "finds the next segment in a cycle that is already due" do
-          expect(schedule.next_billing_at(after: Time.utc(2022, 2, 10))).to eq(Time.utc(2022, 2, 15))
+          expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 10), target: "next")).to eq(Time.utc(2022, 2, 15))
         end
 
         it "skips the segment starting exactly at the requested instant" do
-          expect(schedule.next_billing_at(after: Time.utc(2022, 2, 15))).to eq(Time.utc(2022, 3, 1))
+          expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 15), target: "next")).to eq(Time.utc(2022, 3, 1))
         end
       end
     end
@@ -535,14 +529,29 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:rates) { [card_rate(Time.utc(2022, 5, 1))] }
 
       it "finds the end of the first priced segment in arrears" do
-        expect(schedule.next_billing_at(after: starts_at)).to eq(Time.utc(2022, 6, 1))
+        expect(schedule.billing_at(timestamp: starts_at, target: "next")).to eq(Time.utc(2022, 6, 1))
+      end
+
+      context "when pricing starts after many unpriced daily cycles" do
+        let(:anchor_date) { Date.new(2022, 1, 15) }
+        let(:starts_at) { Time.utc(2022, 1, 15) }
+        let(:phases) { [phase(cycle_count: nil, every: 1, unit: :day)] }
+        let(:rates) { [card_rate(Time.utc(2022, 6, 1), 1, :day)] }
+        let(:walker) { schedule.instance_variable_get(:@walker) }
+
+        before { allow(walker).to receive(:cycle_after).and_call_original }
+
+        it "walks unpriced cycles once and returns the first priced billing date" do
+          expect(schedule.billing_at(timestamp: starts_at, target: "next")).to eq(Time.utc(2022, 6, 2))
+          expect(walker).to have_received(:cycle_after).at_most(300).times
+        end
       end
 
       context "when billing in advance" do
         let(:timing) { :advance }
 
         it "finds the start of the first priced segment" do
-          expect(schedule.next_billing_at(after: starts_at)).to eq(Time.utc(2022, 5, 1))
+          expect(schedule.billing_at(timestamp: starts_at, target: "next")).to eq(Time.utc(2022, 5, 1))
         end
       end
 
@@ -550,7 +559,7 @@ RSpec.describe Billing::RateCards::Schedule do
         let(:ends_at) { Time.utc(2022, 4, 1) }
 
         it "reports nothing further" do
-          expect(schedule.next_billing_at(after: starts_at)).to be_nil
+          expect(schedule.billing_at(timestamp: starts_at, target: "next")).to be_nil
         end
       end
     end
@@ -565,7 +574,7 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:starts_at) { Time.utc(2022, 1, 1) }
 
       it "still finds the next slice" do
-        expect(schedule.next_billing_at(after: Time.utc(2022, 1, 1))).to eq(Time.utc(2024, 1, 1))
+        expect(schedule.billing_at(timestamp: Time.utc(2022, 1, 1), target: "next")).to eq(Time.utc(2024, 1, 1))
       end
     end
 
@@ -573,48 +582,92 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:ends_at) { Time.utc(2022, 3, 1) }
 
       it "reports nothing further" do
-        expect(schedule.next_billing_at(after: Time.utc(2023, 1, 1))).to be_nil
+        expect(schedule.billing_at(timestamp: Time.utc(2023, 1, 1), target: "next")).to be_nil
       end
     end
   end
 
-  describe "#billing_at_covering" do
+  describe "cycle selection" do
+    it "returns the cycle containing the timestamp" do
+      cycle = schedule.cycle_at(Time.utc(2022, 2, 10))
+
+      expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 3, 1)])
+    end
+
+    it "finds the next priced cycle after the given cycle" do
+      cycle = schedule.next_billable_cycle(after_cycle_started_at: starts_at)
+
+      expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 3, 1)])
+    end
+
+    context "when later cycles are not priced yet" do
+      let(:rates) { [card_rate(Time.utc(2022, 5, 1))] }
+
+      it "skips unpriced cycles" do
+        cycle = schedule.next_billable_cycle(after_cycle_started_at: starts_at)
+
+        expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2022, 5, 1), Time.utc(2022, 6, 1)])
+      end
+    end
+  end
+
+  describe "#billable_segments_for_cycle" do
+    let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
+
+    it "splits at a rate change and bills each slice on its own arrears date" do
+      segments = schedule.billable_segments_for_cycle(schedule.cycle_at(Time.utc(2022, 2, 1)))
+
+      expect(segments.map(&:billing_at)).to eq([Time.utc(2022, 2, 15), Time.utc(2022, 3, 1)])
+    end
+
+    context "when billing in advance" do
+      let(:timing) { :advance }
+
+      it "splits at a rate change and bills each slice on its own advance date" do
+        segments = schedule.billable_segments_for_cycle(schedule.cycle_at(Time.utc(2022, 2, 1)))
+
+        expect(segments.map(&:billing_at)).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)])
+      end
+    end
+  end
+
+  describe "#billing_at with current target" do
     # Every other example here asks at a NON-boundary instant, where the two readings agree.
     # Materialization asks exactly on the boundary on every rollover, and there `>=` returns
     # the cycle that just CLOSED — seeding the clock a whole period in the past and re-billing
     # a period already invoiced.
     it "answers the cycle a boundary opens, not the one it closes" do
-      expect(schedule.billing_at_covering(Time.utc(2022, 3, 1))).to eq(Time.utc(2022, 4, 1))
+      expect(schedule.billing_at(timestamp: Time.utc(2022, 3, 1), target: "current")).to eq(Time.utc(2022, 4, 1))
     end
 
     it "waits for the first cycle to close in arrears" do
-      expect(schedule.billing_at_covering(starts_at)).to eq(Time.utc(2022, 2, 1))
+      expect(schedule.billing_at(timestamp: starts_at, target: "current")).to eq(Time.utc(2022, 2, 1))
     end
 
     context "when a rate change splits the current cycle" do
       let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
 
       it "returns the current segment's end before the change" do
-        expect(schedule.billing_at_covering(Time.utc(2022, 2, 10))).to eq(Time.utc(2022, 2, 15))
+        expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 10), target: "current")).to eq(Time.utc(2022, 2, 15))
       end
 
       it "selects the new segment exactly at the change" do
-        expect(schedule.billing_at_covering(Time.utc(2022, 2, 15))).to eq(Time.utc(2022, 3, 1))
+        expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 15), target: "current")).to eq(Time.utc(2022, 3, 1))
       end
 
       context "when billing in advance" do
         let(:timing) { :advance }
 
         it "returns the current segment's start before the change" do
-          expect(schedule.billing_at_covering(Time.utc(2022, 2, 10))).to eq(Time.utc(2022, 2, 1))
+          expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 10), target: "current")).to eq(Time.utc(2022, 2, 1))
         end
 
         it "returns the new segment's start exactly at the change" do
-          expect(schedule.billing_at_covering(Time.utc(2022, 2, 15))).to eq(Time.utc(2022, 2, 15))
+          expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 15), target: "current")).to eq(Time.utc(2022, 2, 15))
         end
 
         it "keeps the current segment's billing date after the change" do
-          expect(schedule.billing_at_covering(Time.utc(2022, 2, 20))).to eq(Time.utc(2022, 2, 15))
+          expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 20), target: "current")).to eq(Time.utc(2022, 2, 15))
         end
       end
     end
@@ -623,14 +676,14 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:rates) { [card_rate(Time.utc(2022, 5, 1))] }
 
       it "waits for the first priced segment to end" do
-        expect(schedule.billing_at_covering(starts_at)).to eq(Time.utc(2022, 6, 1))
+        expect(schedule.billing_at(timestamp: starts_at, target: "current")).to eq(Time.utc(2022, 6, 1))
       end
 
       context "when billing in advance" do
         let(:timing) { :advance }
 
         it "waits for the first priced segment to start" do
-          expect(schedule.billing_at_covering(starts_at)).to eq(Time.utc(2022, 5, 1))
+          expect(schedule.billing_at(timestamp: starts_at, target: "current")).to eq(Time.utc(2022, 5, 1))
         end
       end
 
@@ -638,7 +691,7 @@ RSpec.describe Billing::RateCards::Schedule do
         let(:ends_at) { Time.utc(2022, 4, 1) }
 
         it "has no billing date" do
-          expect(schedule.billing_at_covering(starts_at)).to be_nil
+          expect(schedule.billing_at(timestamp: starts_at, target: "current")).to be_nil
         end
       end
     end
@@ -647,22 +700,20 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:timing) { :advance }
 
       it "reports the cycle in force even though it is already due" do
-        expect(schedule.billing_at_covering(starts_at)).to eq(starts_at)
+        expect(schedule.billing_at(timestamp: starts_at, target: "current")).to eq(starts_at)
       end
 
       # The cycle covering Mar 10 opened on Mar 1 and was never billed, so the clock owes
       # that rather than the cycle ahead.
       it "does not skip a due cycle that is still running" do
-        expect(schedule.billing_at_covering(Time.utc(2022, 3, 10))).to eq(Time.utc(2022, 3, 1))
+        expect(schedule.billing_at(timestamp: Time.utc(2022, 3, 10), target: "current")).to eq(Time.utc(2022, 3, 1))
       end
 
-      # The one case that separates the two methods, and the reason shipping them under one
-      # name was a defect: seeding must answer the period being served, advancing must not.
-      it "differs from #next_billing_at on the very cycle being served" do
+      it "distinguishes the current billing date from the next one" do
         at = Time.utc(2022, 3, 10)
 
-        expect(schedule.billing_at_covering(at)).to eq(Time.utc(2022, 3, 1))
-        expect(schedule.next_billing_at(after: at)).to eq(Time.utc(2022, 4, 1))
+        expect(schedule.billing_at(timestamp: at, target: "current")).to eq(Time.utc(2022, 3, 1))
+        expect(schedule.billing_at(timestamp: at, target: "next")).to eq(Time.utc(2022, 4, 1))
       end
     end
 
@@ -670,13 +721,18 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:ends_at) { Time.utc(2022, 3, 1) }
 
       it "reports nothing further" do
-        expect(schedule.billing_at_covering(Time.utc(2023, 1, 1))).to be_nil
+        expect(schedule.billing_at(timestamp: Time.utc(2023, 1, 1), target: "current")).to be_nil
       end
 
       it "has no segment covering the exclusive end" do
-        expect(schedule.billing_at_covering(ends_at)).to be_nil
+        expect(schedule.billing_at(timestamp: ends_at, target: "current")).to be_nil
       end
     end
+  end
+
+  it "rejects an unknown billing target" do
+    expect { schedule.billing_at(timestamp: starts_at, target: "later") }
+      .to raise_error(ArgumentError, "unknown billing target: later")
   end
 
   # The walk builds one ruler per (anchor, interval), not one per cycle. No assertion on the
@@ -885,7 +941,7 @@ RSpec.describe Billing::RateCards::Schedule do
     it "reports the published next billing date, on the day the intro ended" do
       asked_at = Time.utc(2026, 9, 25)
 
-      expect(schedule.next_billing_at(after: asked_at)).to eq(Time.utc(2026, 10, 21))
+      expect(schedule.billing_at(timestamp: asked_at, target: "next")).to eq(Time.utc(2026, 10, 21))
     end
 
     it "never returns to the card's own anchor day once the cadence has changed" do

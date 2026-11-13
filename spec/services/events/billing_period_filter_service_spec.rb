@@ -62,7 +62,7 @@ RSpec.describe Events::BillingPeriodFilterService do
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
     let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
     let(:billing_segment) do
-      create(
+      build(
         :billing_segment,
         organization:,
         customer:,
@@ -169,16 +169,20 @@ RSpec.describe Events::BillingPeriodFilterService do
         .with(codes: [billable_metric.code], filter_keys: ["region"], with_last_seen_at: true)
     end
 
-    context "with a relation containing segments sharing a billable metric" do
+    context "with multiple in-memory segments sharing a billable metric" do
       subject(:filter_result) do
-        described_class.for_billing_segments!(billing_segments: contract.billing_segments)
+        described_class.for_billing_segments!(billing_segments: [billing_segment, later_segment])
+      end
+
+      let(:later_segment) do
+        build(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
+          cycle_started_at: billing_segment.cycle_started_at + 1.month,
+          started_at: billing_segment.started_at + 1.month, ended_at: billing_segment.ended_at + 1.month)
       end
 
       before do
         billing_segment
-        create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
-          cycle_started_at: billing_segment.cycle_started_at + 1.month,
-          started_at: billing_segment.started_at + 1.month, ended_at: billing_segment.ended_at + 1.month)
+        later_segment
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
       end
 
@@ -203,7 +207,7 @@ RSpec.describe Events::BillingPeriodFilterService do
       let(:second_contract_event_created_at) { Time.zone.parse("2026-08-13 00:00:00") }
       let(:second_contract_rate_card) { create(:contract_rate_card, organization:, contract: second_contract, rate_card:) }
       let(:second_segment) do
-        create(
+        build(
           :billing_segment,
           organization:,
           customer:,
@@ -260,7 +264,7 @@ RSpec.describe Events::BillingPeriodFilterService do
       end
 
       it "uses the combined period start for segments sharing a product" do
-        later_segment = create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
+        later_segment = build(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
           cycle_started_at: billing_segment.cycle_started_at + 1.month,
           started_at: billing_segment.started_at + 1.month, ended_at: billing_segment.ended_at + 1.month)
 

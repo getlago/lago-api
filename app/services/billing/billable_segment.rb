@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Billing
-  # One slice of one cycle — everything a writer needs for one `billing_segments` row.
+  # One priced slice of a cycle, used to build an in-memory billing segment.
   #
   # @example a monthly cycle cut by a rate change on Feb 15, in arrears
   #   [Segment(Feb 1 -> Feb 15, billing_at Feb 15), Segment(Feb 15 -> Mar 1, billing_at Mar 1)]
@@ -19,12 +19,12 @@ module Billing
     # The calendar only builds a segment for a window it can price, so a segment without
     # either is a caller's mistake rather than a state to carry. Same guard as Terms and
     # Phase: the invariant belongs where the value is made, not where it is read.
-    def initialize(rate:, rate_override:, **)
+    def initialize(rate:, rate_override:, **attributes)
       if rate.nil? && rate_override.nil?
         raise ArgumentError, "a billable segment needs a rate or an override to price it"
       end
 
-      super
+      super(**attributes, rate:, rate_override:)
     end
 
     # A phase override prices the segment; the rate card's own rate does otherwise.

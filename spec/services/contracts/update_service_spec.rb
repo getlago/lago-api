@@ -312,7 +312,8 @@ RSpec.describe Contracts::UpdateService do
       expect(result).to be_success
       expect(contract.reload.catalog_plan).to eq(other_plan)
       card = contract.applied_rate_cards.sole
-      expect(card).to have_attributes(rate_card: new_rate_card, units: 3)
+      expect(card.rate_card).to eq(new_rate_card)
+      expect(card.terms.sole.units).to eq(3)
       expect(card.rate_phases.map(&:code)).to eq(["intro"])
     end
 
@@ -338,14 +339,16 @@ RSpec.describe Contracts::UpdateService do
 
   context "when moving the start of a pending contract" do
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-15")) }
+    let(:activation_product) { create(:product, :fixed, organization:) }
+    let(:activation_rate_card) { create(:rate_card, organization:, product: activation_product, billing_timing: "advance") }
     let(:inherited_card) do
       create(
         :contract_rate_card,
         organization:,
         contract:,
+        rate_card: activation_rate_card,
         effective_date: Date.new(2026, 10, 15),
-        billing_anchor_date: Date.new(2026, 10, 15),
-        next_billing_at: Time.zone.parse("2026-10-15")
+        billing_anchor_date: Date.new(2026, 10, 15)
       )
     end
     let(:anchored_card) do
@@ -354,8 +357,7 @@ RSpec.describe Contracts::UpdateService do
         organization:,
         contract:,
         effective_date: Date.new(2026, 10, 15),
-        billing_anchor_date: Date.new(2026, 10, 1),
-        next_billing_at: Time.zone.parse("2026-10-15")
+        billing_anchor_date: Date.new(2026, 10, 1)
       )
     end
     let(:params) { {started_at: "2026-11-01T00:00:00"} }
@@ -365,6 +367,7 @@ RSpec.describe Contracts::UpdateService do
     before do
       inherited_card
       anchored_card
+      create(:rate_card_rate, organization:, rate_card: activation_rate_card, effective_from: Time.zone.parse("2026-09-01"), billing_interval_count: 1, billing_interval_unit: "month")
     end
 
     it "starts its cards on the new date, keeping an anchor set on a card" do
@@ -372,8 +375,7 @@ RSpec.describe Contracts::UpdateService do
       expect(contract.reload).to be_pending
       expect(inherited_card.reload).to have_attributes(
         effective_date: Date.new(2026, 11, 1),
-        billing_anchor_date: Date.new(2026, 11, 1),
-        next_billing_at: Time.zone.parse("2026-11-01")
+        billing_anchor_date: Date.new(2026, 11, 1)
       )
       expect(anchored_card.reload).to have_attributes(effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 10, 1))
     end
@@ -386,8 +388,7 @@ RSpec.describe Contracts::UpdateService do
           organization:,
           contract:,
           effective_date: Date.new(2026, 10, 15),
-          billing_anchor_date: Date.new(2026, 10, 15),
-          next_billing_at: Time.zone.parse("2026-10-15")
+          billing_anchor_date: Date.new(2026, 10, 15)
         )
       end
       let(:params) { {started_at: "2026-11-01T00:00:00"} }
@@ -411,8 +412,7 @@ RSpec.describe Contracts::UpdateService do
           organization:,
           contract:,
           effective_date: Date.new(2026, 10, 15),
-          billing_anchor_date: Date.new(2026, 10, 15),
-          next_billing_at: Time.zone.parse("2026-10-15")
+          billing_anchor_date: Date.new(2026, 10, 15)
         )
       end
 
@@ -462,7 +462,42 @@ RSpec.describe Contracts::UpdateService do
         expect(result).to be_success
         expect(contract.reload).to be_active
         expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 9, 29))
-        expect(BillingSegments::ScheduleJob).to have_been_enqueued.with(customer.id)
+        expect(BillingOperations::ProcessJob).to have_been_enqueued.with(customer.id)
+        expect(inherited_card.billing_operations.sole).to have_attributes(
+          action_type: "renew_fixed_advance", causation_type: "contract_activation",
+          target_cycle_started_at: Time.zone.parse("2026-09-29")
+        )
+        expect(LegacyBillingSegment.where(contract_rate_card_id: inherited_card.id)).to be_empty
+      end
+
+      context "when operation persistence fails" do
+        let(:failure_product) { create(:product, :fixed, organization:) }
+        let(:failure_rate_card) { create(:rate_card, organization:, product: failure_product, billing_timing: "advance") }
+        let(:failure_card) do
+          create(
+            :contract_rate_card, organization:, contract:,
+            rate_card: failure_rate_card,
+            effective_date: Date.new(2026, 9, 29), billing_anchor_date: Date.new(2026, 9, 29)
+          )
+        end
+        let(:operation_writes) { [] }
+
+        before do
+          failure_card
+          create(:rate_card_rate, organization:, rate_card: failure_card.rate_card, effective_from: Time.zone.parse("2026-09-01"), billing_interval_count: 1, billing_interval_unit: "month")
+          allow(BillingOperations::CreateService).to receive(:call!).and_wrap_original do |original, **attributes|
+            operation_writes << attributes
+            raise ActiveRecord::RecordInvalid.new(failure_card) if operation_writes.size == 2
+
+            original.call(**attributes)
+          end
+        end
+
+        it "rolls back the moved start, activation and earlier operations" do
+          expect(result).not_to be_success
+          expect(contract.reload).to have_attributes(status: "pending", started_at: Time.zone.parse("2026-10-15"))
+          expect(BillingOperation.where(contract_rate_card_id: [inherited_card.id, failure_card.id])).to be_empty
+        end
       end
 
       it "publishes contract.updated and exactly one contract.started pair" do

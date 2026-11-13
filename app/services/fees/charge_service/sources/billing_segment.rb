@@ -135,10 +135,8 @@ module Fees
         def applied_pricing_unit
           return nil unless pricing_unit
 
-          AppliedPricingUnit.new(
-            organization_id: organization_id,
+          Fees::AmountsService::AppliedPricingUnit.from_pricing_unit(
             pricing_unit:,
-            pricing_unitable: billing_segment,
             conversion_rate: billing_segment.pricing_unit_conversion_rate
           )
         end

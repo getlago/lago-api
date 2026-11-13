@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-# Voiding a contract invoice does not reopen its period: the segments stay done on the voided
+# Voiding a contract invoice does not reopen its period: the operations stay completed on the voided
 # invoice, so the next tick bills the next period only. Billing a voided period again is the
 # regenerate flow's job.
 describe "Void a contract invoice" do
@@ -70,7 +70,7 @@ describe "Void a contract invoice" do
 
   def tick(at)
     travel_to(at) do
-      Clock::CreateBillingSegmentsJob.perform_now
+      Clock::ProcessBillingOperationsJob.perform_now
       perform_all_enqueued_jobs
     end
   end
@@ -89,11 +89,13 @@ describe "Void a contract invoice" do
 
     expect(invoice).to be_voided
     expect(fee.reload).to have_attributes(invoice_id: invoice.id, rate_card_rate_id: rate.id, units: 80, amount_cents: 8_000)
-    expect(BillingSegment.where(contract:).sole).to have_attributes(started_at: january, status: "done", invoice_id: invoice.id)
+    expect(invoice.billing_operations.sole).to have_attributes(target_cycle_started_at: january,
+      processed_at: february + 12.minutes, invoice_id: invoice.id)
 
     tick(Time.zone.parse("2027-03-01 00:12:00"))
 
-    expect(BillingSegment.where(contract:).order(:started_at).pluck(:started_at)).to eq([january, february])
+    expect(BillingOperation.where(contract_rate_card: contract.applied_rate_cards).where.not(processed_at: nil)
+      .order(:target_cycle_started_at).pluck(:target_cycle_started_at)).to eq([january, february])
     expect(Fee.where(contract:).where("properties->>'charges_from_datetime' = ?", fee.properties["charges_from_datetime"]))
       .to eq([fee])
   end

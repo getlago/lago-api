@@ -61,7 +61,7 @@ module Events
       return if card.rate_card.rates.empty?
 
       schedule = Billing::RateCards::BuildScheduleService.call!(
-        contract_rate_card: card, resume_from_billing_segments: false
+        contract_rate_card: card
       ).schedule
       segment = schedule.segment_covering(event.timestamp)
 
