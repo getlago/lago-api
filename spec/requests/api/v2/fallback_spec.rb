@@ -28,4 +28,71 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
     expect(response).to be_not_found_error("add_on")
     expect(json).not_to have_key(:details)
   end
+
+  # Only the features index is native: the other features actions stay on v1 until they are.
+  context "with the features actions v2 does not serve natively" do
+    let(:feature) { create(:feature, organization:, code: "seats", name: "Seats", description: "Number of seats") }
+
+    before { create(:privilege, feature:, code: "max", name: "Maximum", value_type: "integer") }
+
+    it "serves the index natively and the show of the same feature with the v1 body" do
+      get_with_token(organization, "/api/v2/features")
+
+      expect(response).to have_http_status(:success)
+      expect(json[:features].map { it[:lago_id] }).to eq([feature.id])
+      expect(json[:features].first).not_to have_key(:privileges)
+      expect(json[:meta]).not_to have_key(:current_page)
+
+      get_with_token(organization, "/api/v2/features/seats")
+
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).not_to have_key(:lago_id)
+      expect(json[:feature]).to have_key(:privileges)
+    end
+
+    it "creates a feature with the v1 body" do
+      post_with_token(organization, "/api/v2/features", {feature: {code: "storage", name: "Storage", privileges: [{code: "gb", value_type: "integer"}]}})
+
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).not_to have_key(:lago_id)
+      expect(json[:feature]).to include(code: "storage", privileges: [{code: "gb", name: nil, value_type: "integer", config: {}}])
+    end
+
+    it "shows a feature with the v1 body" do
+      get_with_token(organization, "/api/v2/features/seats")
+
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).to eq(
+        code: "seats",
+        name: "Seats",
+        description: "Number of seats",
+        privileges: [{code: "max", name: "Maximum", value_type: "integer", config: {}}],
+        created_at: feature.created_at.iso8601
+      )
+    end
+
+    it "updates a feature with the v1 body" do
+      put_with_token(organization, "/api/v2/features/seats", {feature: {name: "Renamed"}})
+
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).not_to have_key(:lago_id)
+      expect(json[:feature]).to include(code: "seats", name: "Renamed")
+    end
+
+    it "deletes a feature with the v1 body" do
+      delete_with_token(organization, "/api/v2/features/seats")
+
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).not_to have_key(:lago_id)
+      expect(json[:feature]).to include(code: "seats")
+      expect(feature.reload.deleted_at).to be_present
+    end
+
+    it "renders the v1 not found error for an unknown feature" do
+      get_with_token(organization, "/api/v2/features/unknown")
+
+      expect(response).to be_not_found_error("feature")
+      expect(json).not_to have_key(:details)
+    end
+  end
 end
