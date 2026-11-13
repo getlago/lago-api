@@ -311,15 +311,18 @@ RSpec.describe Invoices::RefreshDraftService do
     context "with a product catalog invoice" do
       let(:invoice_subscription) { nil }
       let(:tax) { nil }
-      let(:customer) { create(:customer, currency: "USD") }
-      let(:contract) { create(:contract, organization:, customer:) }
+      let(:customer) { create(:customer, currency: "USD", timezone: "UTC") }
+      let(:timestamp) { Time.utc(2026, 2, 1) }
+      let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1)) }
       let(:product) { create(:product, :fixed, organization:) }
       let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
       let(:contract_rate_card) do
-        create(:contract_rate_card, organization:, contract:, rate_card:, units: 5)
+        create(:contract_rate_card, organization:, contract:, rate_card:, units: 5,
+          effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
       end
       let(:rate_card_rate) do
-        create(:rate_card_rate, organization:, rate_card:, rate_properties: {"amount" => "15.00"})
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2025, 1, 1),
+          billing_interval_count: 1, billing_interval_unit: "month", rate_properties: {"amount" => "15.00"})
       end
       let(:invoice) do
         create(
@@ -334,22 +337,22 @@ RSpec.describe Invoices::RefreshDraftService do
         )
       end
       let(:billing_segment) do
-        create(
-          :billing_segment,
-          organization:,
-          customer:,
-          contract:,
-          contract_rate_card:,
-          rate_card_rate:,
-          invoice:,
-          status: :done,
-          currency: "USD"
-        )
+        billable_segment = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:)
+          .schedule.segments_due_by(timestamp).sole
+        BillingSegments::BuildEventSegmentService.call!(contract_rate_card:, billable_segment:).billing_segment
+      end
+      let(:seed_fee) do
+        create(:fee, invoice:, organization:, billing_entity: invoice.billing_entity, subscription: nil,
+          contract:, contract_rate_card:, rate_card_rate:, invoiceable: product, fee_type: :product,
+          amount_currency: "USD", amount_cents: 7_500, properties: {"timestamp" => timestamp.iso8601})
       end
 
-      before { billing_segment }
+      before do
+        rate_card_rate
+        seed_fee
+      end
 
-      it "rebuilds the product fees and totals from the billing segments" do
+      it "rebuilds the product fees and totals from the referenced card schedule" do
         result = refresh_service.call
 
         expect(result).to be_success
@@ -360,6 +363,38 @@ RSpec.describe Invoices::RefreshDraftService do
           total_amount_cents: 7_500
         )
         expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
+      end
+
+      context "with multiple billing segments" do
+        let(:second_product) { create(:product, :fixed, organization:) }
+        let(:second_rate_card) { create(:rate_card, organization:, product: second_product, currency: "USD") }
+        let(:second_contract_rate_card) do
+          create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card, units: 2,
+            effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+        end
+        let(:second_rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card: second_rate_card, effective_from: Time.utc(2025, 1, 1),
+            billing_interval_count: 1, billing_interval_unit: "month", rate_properties: {"amount" => "5.00"})
+        end
+        let(:second_seed_fee) do
+          create(:fee, invoice:, organization:, billing_entity: invoice.billing_entity, subscription: nil,
+            contract:, contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
+            invoiceable: second_product, fee_type: :product, amount_currency: "USD", amount_cents: 1000,
+            properties: {"timestamp" => timestamp.iso8601})
+        end
+
+        before { second_seed_fee }
+
+        it "loads units for all segments in one query" do
+          billing_segment
+          refresh_service
+
+          refresh_result = nil
+          statements = capture_sql { refresh_result = refresh_service.call }
+
+          expect(refresh_result).to be_success
+          expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
+        end
       end
 
       context "with recurring weighted usage" do
@@ -411,6 +446,8 @@ RSpec.describe Invoices::RefreshDraftService do
       end
 
       context "with an early custom advance renewal" do
+        let(:timestamp) { Time.utc(2026, 1, 1) }
+
         let(:billable_metric) do
           create(
             :custom_billable_metric,
@@ -528,7 +565,7 @@ RSpec.describe Invoices::RefreshDraftService do
           )
         end
         let(:compute_result) do
-          BillingSegments::ComputeInvoiceService::Result.new.tap do |service_result|
+          BillingOperations::ComputeInvoiceService::Result.new.tap do |service_result|
             service_result.validation_failure!(errors: {base: ["invalid"]})
           end
         end
@@ -536,7 +573,7 @@ RSpec.describe Invoices::RefreshDraftService do
         before do
           original_fee
           invoice.update!(fees_amount_cents: 1_000, total_amount_cents: 1_000)
-          allow(BillingSegments::ComputeInvoiceService).to receive(:call!).and_raise(compute_result.error)
+          allow(BillingOperations::ComputeInvoiceService).to receive(:call!).and_raise(compute_result.error)
         end
 
         it "returns the invoice refresh failure and rolls back the reset" do

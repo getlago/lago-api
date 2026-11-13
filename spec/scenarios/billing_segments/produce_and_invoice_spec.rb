@@ -2,11 +2,9 @@
 
 require "rails_helper"
 
-# The two halves meeting: the hourly clock produces a customer's due segments, and the
-# consumer turns them into an invoice in the same run. Everything between is real —
-# the calendar, the selection, the writer, the clock, the fee computation.
-describe "Billing segments produced by the clock and invoiced" do
-  let(:organization) { create(:organization, webhook_url: nil) }
+# The clocks discover due operations and invoice them through the real calendar and fee computation.
+describe "Billing operations discovered by the clocks and invoiced" do
+  let(:organization) { create(:organization, webhook_url: nil, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
   let(:product) { create(:product, :fixed, organization:) }
 
@@ -15,7 +13,7 @@ describe "Billing segments produced by the clock and invoiced" do
   end
 
   let(:contract) do
-    create(:contract, organization:, customer:, billing_entity: organization.default_billing_entity,
+    create(:contract, :pending, organization:, customer:, billing_entity: organization.default_billing_entity,
       started_at: Time.zone.parse("2026-01-01 00:00:00"))
   end
 
@@ -28,40 +26,49 @@ describe "Billing segments produced by the clock and invoiced" do
       billing_interval_count: 1, billing_interval_unit: "month")
 
     create(:contract_rate_card, organization:, contract:, rate_card:, units: 3,
-      effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1),
-      next_billing_at: Time.zone.parse("2026-02-01 00:00:00"))
+      effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+
+    travel_to(Time.zone.parse("2026-01-01 00:05:00")) do
+      perform_enqueued_jobs { Clock::ActivateContractsJob.perform_now }
+    end
+  end
+
+  def run_billing_clocks
+    perform_enqueued_jobs do
+      Clock::ProcessBillingOperationsJob.perform_now
+    end
   end
 
   it "bills January in arrears on the tick that follows it" do
     travel_to(Time.zone.parse("2026-02-01 00:12:00")) do
-      perform_enqueued_jobs { Clock::CreateBillingSegmentsJob.perform_now }
+      run_billing_clocks
     end
 
     invoice = Invoice.where(customer:).sole
 
     expect(invoice).to have_attributes(status: "finalized", currency: "EUR", total_amount_cents: 15_000)
-    expect(BillingSegment.find_by(customer:)).to have_attributes(
-      started_at: Time.zone.parse("2026-01-01 00:00:00"),
-      ended_at: BillingSegment.inclusive_end(Time.zone.parse("2026-02-01 00:00:00")),
+    expect(invoice.billing_operations.sole).to have_attributes(
+      target_cycle_started_at: Time.zone.parse("2026-01-01 00:00:00"),
       billing_at: Time.zone.parse("2026-02-01 00:00:00"),
-      currency: "EUR",
-      status: "done",
+      processed_at: Time.zone.parse("2026-02-01 00:12:00"),
       invoice_id: invoice.id
     )
+    expect(LegacyBillingSegment.where(customer_id: customer.id)).to be_empty
   end
 
   it "moves the clock on, so the next tick bills February and not January again" do
     travel_to(Time.zone.parse("2026-02-01 00:12:00")) do
-      perform_enqueued_jobs { Clock::CreateBillingSegmentsJob.perform_now }
+      run_billing_clocks
     end
 
     expect(ContractRateCard.sole.next_billing_at).to eq(Time.zone.parse("2026-03-01 00:00:00"))
 
     travel_to(Time.zone.parse("2026-03-01 00:12:00")) do
-      perform_enqueued_jobs { Clock::CreateBillingSegmentsJob.perform_now }
+      run_billing_clocks
     end
 
-    expect(BillingSegment.where(customer:).order(:started_at).pluck(:started_at)).to eq(
+    expect(BillingOperation.where(customer:).where.not(processed_at: nil)
+      .order(:target_cycle_started_at).pluck(:target_cycle_started_at)).to eq(
       [Time.zone.parse("2026-01-01 00:00:00"), Time.zone.parse("2026-02-01 00:00:00")]
     )
   end

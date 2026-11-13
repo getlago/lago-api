@@ -7,9 +7,7 @@ module Contracts
   # agreement ever took effect. Both transitions are terminal: a terminated or
   # canceled contract is history and cannot be terminated again.
   #
-  # Terminating also closes billing: every card stops at the termination
-  # instant, and the period still open is written as segments and invoiced.
-  # The clock only bills active contracts, so nothing else would bill it.
+  # Terminating persists all missing billing obligations through the end, including future cycles.
   class TerminateService < BaseService
     Result = BaseResult[:contract]
 
@@ -22,7 +20,7 @@ module Contracts
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
-      # The clock's lock first, then the row: writing a segment takes a key-share lock on the
+      # The clock's lock first, then the row: writing billing output takes a key-share lock on the
       # contract row, so the reverse order deadlocks with a running clock.
       Customers::LockService.call(customer: contract.customer, scope: :billing_schedule) do
         # Re-read under lock: a pending contract the clock just activated has
@@ -61,8 +59,13 @@ module Contracts
     def terminate
       contract.update!(status: :terminated, terminated_at: timestamp)
 
-      closing = BillingSegments::ScheduleFinalSegmentsService.call!(contract:, timestamp: contract.terminated_at)
-      BillingSegments::ProcessJob.perform_after_commit(contract.customer_id) if closing.billing_segments.any?
+      BillingOperations::ApplyTerminationService.call!(
+        contract:, timestamp: contract.terminated_at
+      )
+      if contract.applied_rate_cards.joins(:billing_operations).merge(BillingOperation.pending)
+          .where(billing_operations: {billing_at: ..Time.current}).exists?
+        BillingOperations::ProcessJob.perform_after_commit(contract.customer_id)
+      end
     end
   end
 end

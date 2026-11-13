@@ -65,7 +65,13 @@ module Api
         )
 
         if result.success?
-          render_applied_rate_cards(result.contract_rate_cards.includes(:contract, :rate_card))
+          cards = result.contract_rate_cards.preload(
+            :terms, :rate_phases,
+            {contract: [:customer, :billing_entity]},
+            {rate_card: [:rates, {product: :billable_metric}]}
+          )
+          ContractRateCard.preload_aggregations(cards, :billing_operation_clock)
+          render_applied_rate_cards(cards)
         else
           render_error_response(result)
         end

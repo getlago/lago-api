@@ -82,6 +82,29 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob do
         expect(Rails.logger).to have_received(:error)
           .with(/no billing context for event.*charge_id=#{charge.id}/)
       end
+
+      context "with an in-memory billing segment" do
+        let(:cycle_started_at) { Time.utc(2026, 1, 1) }
+        let(:billing_segment) { BillingSegment.new(cycle_started_at:) }
+        let(:metered_item) do
+          instance_double(Fees::ChargeService::MeteredItem, event:, billing_segment:)
+        end
+        let(:job) { described_class.new }
+
+        before do
+          allow(job).to receive(:pay_in_advance_arguments).and_return(
+            instance_double(PayInAdvanceArguments, metered_item:, billing_context: nil)
+          )
+        end
+
+        it "logs the target cycle instead of a persisted segment id" do
+          expect { job.perform(timestamp:, event:) }.not_to raise_error
+
+          expect(Invoices::CreatePayInAdvanceChargeService).not_to have_received(:call)
+          expect(Rails.logger).to have_received(:error)
+            .with(/no billing context for event.*target_cycle_started_at=#{cycle_started_at.iso8601}/)
+        end
+      end
     end
 
     context "when result is a failure" do

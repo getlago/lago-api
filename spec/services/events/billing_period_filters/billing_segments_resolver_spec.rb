@@ -15,7 +15,7 @@ RSpec.describe Events::BillingPeriodFilters::BillingSegmentsResolver do
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
   let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
   let(:billing_segment) do
-    create(
+    build(
       :billing_segment,
       organization:,
       customer:,
@@ -29,6 +29,76 @@ RSpec.describe Events::BillingPeriodFilters::BillingSegmentsResolver do
   end
 
   describe "#filter_targets" do
+    let(:event) do
+      create(
+        :event,
+        organization:,
+        customer:,
+        external_subscription_id: contract.external_id,
+        code: billable_metric.code,
+        timestamp: billing_segment.started_at + 1.day
+      )
+    end
+
+    context "with unsaved segment objects" do
+      before do
+        event
+      end
+
+      it "returns targets without persisting supplied slices" do
+        legacy_segment_count = LegacyBillingSegment.count
+        targets = described_class.new(billing_segments: [billing_segment]).filter_targets
+
+        expect(targets).to eq(billing_segment.target_key => {nil => event.created_at})
+        expect(billing_segment).not_to respond_to(:persisted?)
+        expect(LegacyBillingSegment.count).to eq(legacy_segment_count)
+      end
+
+      it "applies explicit code filtering to unsaved targets" do
+        expect(described_class.new(billing_segments: [billing_segment], codes: ["unknown_code"]).filter_targets).to eq({})
+      end
+    end
+
+    it "rejects ids because billing periods are supplied as in-memory slices" do
+      expect { described_class.new(billing_segments: ["legacy-segment-id"]).filter_targets }
+        .to raise_error(ArgumentError, "billing_segments must contain in-memory BillingSegment objects")
+    end
+
+    context "when selecting by captured metric code" do
+      let(:captured_code) { "metric_code" }
+      let(:captured_code_segment) { BillingSegment.new(billable_metric_code: captured_code) }
+      let(:resolver) { described_class.new(billing_segments: [captured_code_segment], codes: ["metric_code"]) }
+      let(:selected_segments) { resolver.send(:target_segments) }
+
+      it "selects segments without querying or traversing associations" do
+        queries = []
+        subscriber = ->(*, payload) { queries << payload[:sql] unless payload[:name] == "SCHEMA" }
+
+        selected = ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+          selected_segments
+        end
+
+        expect(selected).to eq([captured_code_segment])
+        expect(queries).to be_empty
+      end
+
+      context "when the captured code differs" do
+        let(:captured_code) { "other" }
+
+        it "excludes the segment" do
+          expect(selected_segments).to eq([])
+        end
+      end
+
+      context "when the captured code is nil" do
+        let(:captured_code) { nil }
+
+        it "excludes the segment" do
+          expect(selected_segments).to eq([])
+        end
+      end
+    end
+
     it "memoizes the filter target for a billing segment instance" do
       create(
         :event,
@@ -124,6 +194,64 @@ RSpec.describe Events::BillingPeriodFilters::BillingSegmentsResolver do
       end
     end
 
+    context "with unsaved segments from contracts sharing a metric code" do
+      let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:eu_filter) { create(:product_filter, organization:, product:) }
+      let(:second_contract) { create(:contract, organization:, customer:, external_id: "second-contract-id") }
+      let(:second_card) { create(:contract_rate_card, organization:, contract: second_contract, rate_card:) }
+      let(:second_segment) do
+        build(:billing_segment, organization:, customer:, contract: second_contract, contract_rate_card: second_card,
+          rate_card_rate:, cycle_started_at: billing_segment.cycle_started_at,
+          started_at: billing_segment.started_at, ended_at: billing_segment.ended_at)
+      end
+      let(:first_slice) { billing_segment.dup }
+      let(:second_slice) { second_segment.dup }
+
+      before do
+        create(:product_filter_value, organization:, product_filter: eu_filter, billable_metric_filter: region_filter, value: "eu")
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, properties: {region: "eu"}, timestamp: billing_segment.started_at + 1.hour)
+        create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
+          code: billable_metric.code, properties: {region: "us"}, timestamp: second_segment.started_at + 2.hours)
+      end
+
+      it "keeps property buckets isolated by contract without persisting the supplied slices" do
+        legacy_segment_count = LegacyBillingSegment.count
+        targets = described_class.new(billing_segments: [first_slice, second_slice]).filter_targets
+
+        expect(targets[billing_segment.target_key]).to eq(eu_filter.id => Event.where(external_subscription_id: contract.external_id).sole.created_at)
+        expect(targets[second_segment.target_key]).to eq(nil => Event.where(external_subscription_id: second_contract.external_id).sole.created_at)
+        expect([first_slice, second_slice]).to all(respond_to(:attributes))
+        expect(LegacyBillingSegment.count).to eq(legacy_segment_count)
+      end
+    end
+
+    context "with recurring usage on an unsaved segment" do
+      let(:billable_metric) do
+        create(:sum_billable_metric, organization:, field_name: "quantity", recurring: true)
+      end
+      let(:historical_event) do
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, properties: {quantity: 1}, timestamp: billing_segment.started_at - 1.month,
+          created_at: billing_segment.started_at + 2.days)
+      end
+      let(:unsaved_recurring_segment) { billing_segment.dup }
+
+      before do
+        historical_event
+        unsaved_recurring_segment
+      end
+
+      it "includes prior-period ingestion history without writing the segment" do
+        legacy_segment_count = LegacyBillingSegment.count
+        targets = described_class.new(billing_segments: [unsaved_recurring_segment]).filter_targets
+
+        expect(targets).to eq(billing_segment.target_key => {nil => historical_event.created_at})
+        expect(unsaved_recurring_segment).not_to respond_to(:persisted?)
+        expect(LegacyBillingSegment.count).to eq(legacy_segment_count)
+      end
+    end
+
     context "with only an empty explicit product filter" do
       before do
         create(:product_filter, organization:, product:)
@@ -150,7 +278,7 @@ RSpec.describe Events::BillingPeriodFilters::BillingSegmentsResolver do
       let(:broad_filter) { create(:product_filter, organization:, product:, created_at: 2.days.ago) }
       let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us]) }
       let(:billing_segment) do
-        create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
+        build(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
           cycle_started_at: Time.current.beginning_of_month, started_at: Time.current.beginning_of_month,
           ended_at: Time.current.end_of_month)
       end

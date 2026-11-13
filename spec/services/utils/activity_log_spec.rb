@@ -683,7 +683,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               units: nil,
               effective_date: "2023-03-22",
               billing_anchor_date: "2023-03-22",
-              next_billing_at: timestamp,
+              next_billing_at: nil,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: nil

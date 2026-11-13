@@ -18,10 +18,12 @@ RSpec.describe Fees::ChargeService do
     create(:rate_card_rate, organization:, rate_card:, rate_properties: {"amount" => "9"}, min_amount_cents:)
   end
   let(:min_amount_cents) { 0 }
+  let(:proration_ratio) { BigDecimal("1.0") }
+  let(:pricing_unit) { nil }
   let(:billing_segment) do
-    create(
+    build(
       :billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
-      currency: "USD", rate_properties:,
+      currency: "USD", rate_properties:, pricing_unit:, proration_ratio:,
       cycle_started_at: Time.utc(2026, 8, 1), started_at: Time.utc(2026, 8, 1),
       ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1)), billing_at: Time.utc(2026, 9, 1)
     )
@@ -254,12 +256,13 @@ RSpec.describe Fees::ChargeService do
   end
 
   it "prices distinct windows independently on the same invoice" do
-    billing_segment.update!(ended_at: BillingSegment.inclusive_end(Time.utc(2026, 8, 15)))
+    billing_segment.ended_at = BillingSegment.inclusive_end(Time.utc(2026, 8, 15))
     first_fee = result.fees.sole
-    later_segment = create(
+    later_segment = build(
       :billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
       currency: "USD", rate_properties: {"amount" => "3"}, cycle_started_at: billing_segment.cycle_started_at,
-      started_at: Time.utc(2026, 8, 15), ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1))
+      started_at: Time.utc(2026, 8, 15), ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1)),
+      proration_ratio: BigDecimal("1.0")
     )
     later_item = described_class::MeteredItem.from_billing_segment(billing_segment: later_segment)
 
@@ -572,31 +575,195 @@ RSpec.describe Fees::ChargeService do
     end
   end
 
+  describe "recurring aggregation snapshots" do
+    let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: Date.new(2026, 8, 1)) }
+    let(:snapshots) { ContractRecurringAggregationSnapshot.where(contract:, product:) }
+    let(:now) { Time.utc(2026, 9, 1, 1) }
+    let(:watermark) { now - RecurringAggregationSnapshot::WATERMARK_LAG }
+
+    around { |example| travel_to(now) { example.run } }
+
+    before do
+      create(:event, organization:, customer:, external_subscription_id: contract.external_id, code: billable_metric.code,
+        timestamp: Time.utc(2026, 7, 10), created_at: watermark - 1.minute, properties: {value: 4, region: "eu"})
+      create(:event, organization:, customer:, external_subscription_id: contract.external_id, code: billable_metric.code,
+        timestamp: Time.utc(2026, 8, 12), created_at: watermark - 1.minute, properties: {value: 6, region: "us"})
+    end
+
+    it "persists the cumulative units under the contract at the segment end" do
+      expect(result.fees.sole.units).to eq(10) # 4 from July + 6 from August, recurring
+      expect(snapshots.sole).to have_attributes(
+        organization_id: organization.id,
+        product_filter_id: nil,
+        billable_metric_id: billable_metric.id,
+        grouped_by: {},
+        to_datetime: billing_segment.ended_at,
+        watermark:,
+        units: 10,
+        events_count: 2,
+        presentation_breakdowns: [],
+        priced_product_filter_ids: []
+      )
+      expect(RecurringAggregationSnapshot.count).to eq(0)
+    end
+
+    context "without the recurring_aggregation_snapshots feature flag" do
+      let(:organization) { create(:organization) }
+
+      it "bills the units without persisting snapshots" do
+        expect(result.fees.sole.units).to eq(10)
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with a weighted sum metric" do
+      let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:, field_name: "value") }
+
+      it "persists the units at the segment end" do
+        expect(result).to be_success
+        expect(snapshots.sole).to have_attributes(units: 10, to_datetime: billing_segment.ended_at)
+      end
+    end
+
+    context "with pricing group keys" do
+      let(:rate_properties) { {"amount" => "2", "pricing_group_keys" => ["region"]} }
+
+      it "persists one snapshot per group" do
+        expect(result).to be_success
+        expect(snapshots.pluck(:grouped_by, :units, :events_count)).to contain_exactly([{"region" => "eu"}, 4, 1], [{"region" => "us"}, 6, 1])
+      end
+    end
+
+    context "with a rate card scoped to a product filter" do
+      let(:region) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:eu_filter) { create(:product_filter, organization:, product:) }
+      let(:us_filter) { create(:product_filter, organization:, product:) }
+      let(:product_filter) { eu_filter }
+
+      before do
+        create(:product_filter_value, organization:, product_filter: eu_filter, billable_metric_filter: region, value: "eu")
+        create(:product_filter_value, organization:, product_filter: us_filter, billable_metric_filter: region, value: "us")
+      end
+
+      it "persists the filter's bucket and the filters priced in the segment" do
+        expect(result).to be_success
+        expect(snapshots.sole).to have_attributes(product_filter_id: eu_filter.id, units: 4, events_count: 1, priced_product_filter_ids: [eu_filter.id])
+      end
+
+      context "with another priced filter of the product" do
+        before do
+          create(:contract_rate_card, organization:, contract:, effective_date: Date.new(2026, 8, 1),
+            rate_card: create(:rate_card, organization:, product:, product_filter: us_filter, currency: "USD"))
+        end
+
+        it "stores every priced filter of the product" do
+          expect(result).to be_success
+          expect(snapshots.sole.priced_product_filter_ids).to eq([eu_filter.id, us_filter.id].sort)
+        end
+      end
+
+      context "without events in the bucket" do
+        let(:product_filter) { us_filter }
+
+        before { Event.where(organization:).where("properties->>'region' = 'us'").delete_all }
+
+        it "persists a zero units snapshot as the marker of the period" do
+          expect(result).to be_success
+          expect(snapshots.pluck(:product_filter_id, :grouped_by, :units)).to eq([[us_filter.id, {}, 0]])
+        end
+      end
+    end
+
+    context "without events" do
+      before { Event.where(organization:).delete_all }
+
+      it "persists a zero units snapshot as the marker of the period" do
+        expect(result).to be_success
+        expect(snapshots.pluck(:product_filter_id, :units, :events_count)).to eq([[nil, 0, 0]])
+      end
+    end
+
+    context "with an advance renewal" do
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, product_filter:, currency: "USD") }
+      let(:metered_item) do
+        described_class::MeteredItem.from_billing_segment(billing_segment:, max_timestamp: BillingSegment.inclusive_end(billing_segment.started_at))
+      end
+      let(:options) { described_class::Options.new(context: :advance_renewal) }
+
+      it "bills the units up to the segment start without persisting snapshots" do
+        expect(result.fees.sole.units).to eq(4)
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with a max timestamp" do
+      let(:metered_item) do
+        described_class::MeteredItem.from_billing_segment(billing_segment:, max_timestamp: Time.utc(2026, 8, 5))
+      end
+
+      it "persists no snapshot, as the units stop before the segment end" do
+        expect(result.fees.sole.units).to eq(4)
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with current usage" do
+      let(:invoice) { nil }
+      let(:options) { described_class::Options.new(context: :current_usage) }
+
+      it "persists no snapshot" do
+        expect(result).to be_success
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with an invoice preview" do
+      let(:options) { described_class::Options.new(context: :invoice_preview) }
+
+      it "persists no snapshot" do
+        expect(result).to be_success
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with a count metric" do
+      let(:billable_metric) { create(:billable_metric, :recurring, organization:, aggregation_type: :unique_count_agg, field_name: "value") }
+
+      it "persists no snapshot" do
+        expect(result).to be_success
+        expect(snapshots).to be_empty
+      end
+    end
+  end
+
   context "with a minimum amount" do
     let(:min_amount_cents) { 1000 }
 
     it "uses the segment proration ratio" do
-      billing_segment.update!(proration_ratio: 0.5)
+      billing_segment.proration_ratio = 0.5
 
       expect(result.fees.map(&:amount_cents)).to eq([400, 100])
       expect(result.fees.last).to have_attributes(fee_type: "product", rate_card_rate:, true_up_parent_fee: result.fees.first)
     end
 
     it "does not create a true-up at or above the minimum" do
-      billing_segment.update!(rate_properties: {"amount" => "5"})
+      billing_segment.rate_properties = {"amount" => "5"}
 
       expect(result.fees.sole.amount_cents).to eq(1000)
     end
 
     it "bills the minimum even when no events match" do
-      billing_segment.update!(started_at: Time.utc(2026, 8, 25))
+      billing_segment.started_at = Time.utc(2026, 8, 25)
 
       expect(result.fees.map(&:amount_cents)).to eq([0, 1000])
     end
 
     it "uses the override minimum and preserves pricing identity" do
       override = create(:rate_override, organization:, min_amount_cents: 1400)
-      billing_segment.update!(rate_override: override, proration_ratio: 0.5)
+      billing_segment.rate_override = override
+      billing_segment.proration_ratio = 0.5
 
       expect(result.fees.map(&:amount_cents)).to eq([400, 300])
       expect(result.fees.map(&:rate_override)).to eq([override, override])
@@ -609,7 +776,7 @@ RSpec.describe Fees::ChargeService do
         create(:rate_card_rate, organization:, rate_card:, min_amount_cents:, applied_pricing_unit_conversion_rate: 0.5)
       end
 
-      before { billing_segment.update!(pricing_unit:, proration_ratio: 0.5) }
+      before { billing_segment.proration_ratio = 0.5 }
 
       it "converts the prorated minimum and usage with the segment conversion rate" do
         expect(result.fees.map(&:amount_cents)).to eq([200, 300])
@@ -619,7 +786,7 @@ RSpec.describe Fees::ChargeService do
 
       it "uses the override conversion rate rather than the catalog rate" do
         override = create(:rate_override, organization:, min_amount_cents: 1000, pricing_unit_conversion_rate: 0.25)
-        billing_segment.update!(rate_override: override)
+        billing_segment.rate_override = override
 
         expect(result.fees.map(&:amount_cents)).to eq([100, 400])
         expect(result.fees.map { |fee| fee.pricing_unit_usage.conversion_rate }).to eq([0.25, 0.25])

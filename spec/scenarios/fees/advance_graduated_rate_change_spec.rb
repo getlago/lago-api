@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Advance graduated pricing across persisted rate segments" do
+RSpec.describe "Advance graduated pricing across rate changes" do
   subject(:fees) do
     travel_to(Time.zone.parse("2027-01-01 00:05:00")) do
       api_call(perform_jobs: false) do
@@ -16,16 +16,13 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     end
 
     travel_to(first_event_at) do
-      # No public endpoint schedules billing segments; keep them processing for event pricing.
-      BillingSegments::ScheduleService.call!(customer:)
       create_event({
         external_contract_id: contract.external_id,
         code: billable_metric.code,
         timestamp: first_event_at.utc.strftime("%s.%6N"),
         properties: {"quantity" => 80}
       }, perform_jobs: false)
-      # Segment finalization is a separate lifecycle case; it can mark an unused row done.
-      perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+      perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
     end
 
     if append_second_rate_later
@@ -37,14 +34,13 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     end
 
     travel_to(second_event_at) do
-      BillingSegments::ScheduleService.call!(customer:)
       create_event({
         external_contract_id: contract.external_id,
         code: billable_metric.code,
         timestamp: second_event_at.utc.strftime("%s.%6N"),
         properties: {"quantity" => 40}
       }, perform_jobs: false)
-      perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+      perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
     end
 
     if third_event_quantity
@@ -54,7 +50,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
           code: billable_metric.code,
           properties: {"quantity" => third_event_quantity}
         }, perform_jobs: false)
-        perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+        perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
       end
     end
 
@@ -146,9 +142,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     expect([first_fee.units, second_fee.units]).to eq([80, 40])
     expect([first_fee.rate_card_rate, second_fee.rate_card_rate]).to eq([first_rate, second_rate])
     expect(first_fee.reload.amount_cents).to eq(8_000)
-    expect(BillingSegment.where(contract:).order(:started_at).pluck(:started_at, :cycle_started_at)).to eq([
-      [cycle_started_at, cycle_started_at], [rate_changed_at, cycle_started_at]
-    ])
+    expect(LegacyBillingSegment.where(contract_id: contract.id)).to be_empty
     expect(second_fee.properties).to include(
       "from_datetime" => rate_changed_at.iso8601(6),
       "charges_from_datetime" => rate_changed_at.iso8601(6),
@@ -187,7 +181,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     end
   end
 
-  context "when the new rate is appended after the first segment was stored" do
+  context "when the new rate is appended after the first fee was issued" do
     let(:append_second_rate_later) { true }
 
     it "prices the second event with the new rate and shortens its service period without changing the issued fee" do
@@ -201,9 +195,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
         "to_datetime" => BillingSegment.inclusive_end(cycle_ended_at).iso8601(6),
         "charges_from_datetime" => rate_changed_at.iso8601(6)
       )
-      expect(BillingSegment.where(contract:).pluck(:rate_card_rate_id, :ended_at)).to eq([
-        [first_rate.id, BillingSegment.inclusive_end(cycle_ended_at)]
-      ])
+      expect(LegacyBillingSegment.where(contract_id: contract.id)).to be_empty
     end
 
     context "when another event arrives before the new rate activates" do

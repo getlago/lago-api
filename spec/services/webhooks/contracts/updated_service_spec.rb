@@ -8,12 +8,15 @@ RSpec.describe Webhooks::Contracts::UpdatedService do
   let(:contract) { create(:contract, external_id: "contract_external_id", name: "Original agreement", status: :active, billing_time: :calendar, billing_anchor_date: Date.new(2026, 1, 1), started_at: Time.zone.parse("2026-01-01T00:00:00Z"), consolidate_invoice: false, purchase_order_number: "PO-123", skip_invoice_custom_sections: true) }
   let(:rate_card) { create(:rate_card, organization: contract.organization, code: "standard") }
   let(:applied_rate_card) do
-    create(:contract_rate_card, organization: contract.organization, contract:, rate_card:, units: 2, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1), next_billing_at: Time.zone.parse("2026-02-01T00:00:00Z"))
+    create(:contract_rate_card, organization: contract.organization, contract:, rate_card:, units: 2, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
   end
 
   before do
     allow(contract.organization).to receive(:product_catalog_enabled?).and_return(true)
     applied_rate_card
+    create(:billing_operation, organization: contract.organization, contract_rate_card: applied_rate_card,
+      billing_at: Time.zone.parse("2026-02-01T00:00:00Z"),
+      target_cycle_started_at: Time.zone.parse("2026-01-01T00:00:00Z"))
     contract.update!(name: "Updated agreement")
   end
 

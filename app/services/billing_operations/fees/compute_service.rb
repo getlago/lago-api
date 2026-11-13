@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module BillingSegments
+module BillingOperations
   module Fees
     class ComputeService < BaseService
       Result = BaseResult[:fee, :true_up_fee]
@@ -93,7 +93,7 @@ module BillingSegments
       end
 
       def units
-        contract_rate_card.units || BigDecimal(0)
+        @units ||= contract_rate_card.terms.first&.units || BigDecimal(0)
       end
 
       def charge_model_result

@@ -679,12 +679,12 @@ describe Clockwork do
     end
   end
 
-  describe "schedule:process_billing_segments" do
-    let(:job) { "schedule:process_billing_segments" }
+  describe "schedule:process_billing_operations" do
+    let(:job) { "schedule:process_billing_operations" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:00:00") }
     let(:end_time) { Time.zone.parse("1 Apr 2022 01:00:00") }
 
-    it "enqueues a process billing segments job once an hour" do
+    it "enqueues a process billing operations job once an hour" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,
@@ -696,7 +696,7 @@ describe Clockwork do
       expect(Clockwork::Test.times_run(job)).to eq(1)
 
       Clockwork::Test.block_for(job).call
-      expect(Clock::ProcessBillingSegmentsJob).to have_been_enqueued
+      expect(Clock::ProcessBillingOperationsJob).to have_been_enqueued
     end
   end
 end

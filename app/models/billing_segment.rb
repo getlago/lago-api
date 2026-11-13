@@ -1,89 +1,88 @@
 # frozen_string_literal: true
 
-# A durable priced slice of a contract rate card billing cycle. A whole cycle has one
-# segment; a rate change inside the cycle creates several segments sharing cycle_started_at.
-class BillingSegment < ApplicationRecord
+# An in-memory priced slice of a contract rate card billing cycle.
+class BillingSegment
   include Currencies
 
   MICROSECOND = Rational(1, 1_000_000)
+  PRORATION_RATIO_TYPE = ActiveModel::Type::Decimal.new(precision: 30, scale: 10)
 
-  # Schedule windows have exclusive ends; the database overlap constraint uses inclusive ends.
+  ATTRIBUTES = %w[
+    organization_id customer_id contract_id contract_rate_card_id rate_card_rate_id
+    rate_override_id pricing_unit_id
+    rate_properties currency started_at ended_at cycle_started_at billing_at proration_ratio billable_metric_code
+  ].freeze
+
+  attr_accessor :organization, :customer, :contract, :contract_rate_card, :rate_card_rate,
+    :rate_override, :pricing_unit, :rate_properties, :currency, :started_at, :ended_at,
+    :cycle_started_at, :billing_at, :billable_metric_code
+
+  attr_reader :proration_ratio
+
   def self.inclusive_end(instant) = instant - MICROSECOND
 
   def self.exclusive_end(instant) = instant + MICROSECOND
 
-  STATUSES = {
-    pending: "pending",
-    processing: "processing",
-    done: "done",
-    failed: "failed"
-  }.freeze
+  def self.from_attributes(attributes)
+    attributes = attributes.to_h.symbolize_keys
+    organization = Organization.find(attributes.fetch(:organization_id))
+    attributes[:organization] = organization
+    attributes[:customer] = organization.customers.with_discarded.find(attributes.fetch(:customer_id))
+    attributes[:contract] = organization.contracts.find(attributes.fetch(:contract_id))
+    attributes[:contract_rate_card] = ContractRateCard.with_discarded.where(organization:)
+      .find(attributes.fetch(:contract_rate_card_id))
+    attributes[:billable_metric_code] ||= attributes[:contract_rate_card].rate_card.product.billable_metric&.code
+    attributes[:rate_card_rate] = organization.rate_card_rates.with_discarded.find(attributes[:rate_card_rate_id]) if attributes[:rate_card_rate_id]
+    attributes[:rate_override] = RateOverride.with_discarded.where(organization:).find(attributes[:rate_override_id]) if attributes[:rate_override_id]
+    attributes[:pricing_unit] = organization.pricing_units.find(attributes[:pricing_unit_id]) if attributes[:pricing_unit_id]
 
-  belongs_to :organization
-  belongs_to :contract
-  belongs_to :customer, -> { with_discarded }
-  belongs_to :contract_rate_card, -> { with_discarded }
-  belongs_to :invoice, optional: true
-  belongs_to :rate_card_rate, -> { with_discarded }, optional: true
-  belongs_to :rate_override, -> { with_discarded }, optional: true
-  belongs_to :pricing_unit, optional: true
+    new(attributes)
+  end
 
-  enum :status, STATUSES, validate: true, prefix: true
+  def proration_ratio=(value)
+    @proration_ratio = PRORATION_RATIO_TYPE.cast(value)
+  end
 
-  # Pending periodic segments are ready immediately. Advance-metered usage is reconciled
-  # after its segment ends, except displayed recurring usage, which bills at renewal.
-  scope :ready_for_invoicing, ->(timestamp = Time.current) {
-    status_pending
-      .joins(contract_rate_card: {rate_card: :product})
-      .joins("LEFT OUTER JOIN billable_metrics ON billable_metrics.id = products.billable_metric_id")
-      .where(
-        "(NOT (rate_cards.billing_timing = :advance AND products.product_type = :metered) OR " \
-        "(rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
-        "billing_segments.ended_at <= :timestamp) OR " \
-        "(rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
-        "rate_cards.display_on_invoice = TRUE AND " \
-        "billable_metrics.recurring = TRUE AND billing_segments.billing_at <= :timestamp))",
-        advance: RateCard::BILLING_TIMINGS[:advance],
-        metered: Product::PRODUCT_TYPES[:metered],
-        timestamp:
-      )
-  }
+  def initialize(attributes = {})
+    values = attributes.to_h.symbolize_keys
+    ATTRIBUTES.each do |name|
+      instance_variable_set("@#{name}", values[name.to_sym]) if name.end_with?("_id")
+    end
+    %i[organization customer contract contract_rate_card rate_card_rate rate_override pricing_unit
+      rate_properties currency started_at ended_at cycle_started_at billing_at proration_ratio billable_metric_code].each do |attribute|
+      public_send("#{attribute}=", values[attribute]) if values.key?(attribute)
+    end
+  end
 
-  validates :billing_at, presence: true
-  validates :cycle_started_at, presence: true
-  validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
-  validates :started_at, presence: true
-  validates :ended_at, presence: true
-  validates :proration_ratio, numericality: {greater_than_or_equal_to: 0, less_than_or_equal_to: 1}
+  %i[organization customer contract contract_rate_card rate_card_rate rate_override pricing_unit].each do |association|
+    define_method("#{association}_id") do
+      instance_variable_get("@#{association}_id") || public_send(association)&.id
+    end
+  end
 
-  validate :validate_rate_presence
-  validate :validate_period_bounds
-  validate :validate_cycle_bounds
+  def attributes
+    ATTRIBUTES.index_with { |name| public_send(name) }
+  end
 
   def rate
     rate_override || rate_card_rate
   end
 
   def recurring_advance_invoiceable?
-    rate_card = contract_rate_card.rate_card
-    product = rate_card.product
+    card = contract_rate_card.rate_card
+    product = card.product
     metric = product.billable_metric
-
-    rate_card.advance? && product.metered? && rate_card.display_on_invoice? && metric&.recurring?
+    card.advance? && product.metered? && card.display_on_invoice? && metric&.recurring?
   end
 
   def target_key
     "contract-#{contract_id}-#{contract_rate_card.product.target_key}"
   end
 
-  # The shared matcher expects a filter object for the default bucket, not nil.
-  # This mirrors the empty ChargeFilter in app/services/fees/charge_service.rb:85-95.
   def empty_product_filter
     ProductFilter.new(organization:, product: contract_rate_card.rate_card.product)
   end
 
-  # Product filters priced by applied rate cards effective during this segment.
-  # effective_date is a customer-local day, so derive both boundaries in that timezone.
   def priced_product_filter_ids
     product = contract_rate_card.rate_card.product
     timezone = customer.applicable_timezone
@@ -99,17 +98,12 @@ class BillingSegment < ApplicationRecord
   end
 
   def duration_in_days
-    Billing::Days.between(
-      started_at,
-      BillingSegment.exclusive_end(ended_at),
-      timezone: customer.applicable_timezone
-    )
+    exclusive_end = BillingSegment.exclusive_end(ended_at.floor(6))
+    Billing::Days.between(started_at, exclusive_end, timezone: customer.applicable_timezone)
   end
 
-  # Elapsed progress is independent of the stored service-price proration_ratio.
   def elapsed_period_ratio(at: Time.current)
     timezone = customer.applicable_timezone
-
     Billing::ElapsedPeriodRatio.calculate(
       from_date: started_at.in_time_zone(timezone).to_date,
       to_date: ended_at.in_time_zone(timezone).to_date,
@@ -119,25 +113,15 @@ class BillingSegment < ApplicationRecord
   end
 
   def pricing_unit_conversion_rate
-    if rate_override
-      rate_override.pricing_unit_conversion_rate
-    else
-      rate_card_rate.applied_pricing_unit_conversion_rate
-    end
+    rate_override ? rate_override.pricing_unit_conversion_rate : rate_card_rate.applied_pricing_unit_conversion_rate
   end
 
   def min_amount_cents
-    if rate_override
-      rate_override.min_amount_cents
-    else
-      rate_card_rate.min_amount_cents
-    end
+    rate_override ? rate_override.min_amount_cents : rate_card_rate.min_amount_cents
   end
 
-  # Returns the prorated minimum in pricing-unit cents when configured, otherwise fiat cents.
   def prorated_min_amount_cents
     minimum = min_amount_cents.to_d * proration_ratio
-
     if pricing_unit
       minimum / Money::Currency.new(currency).subunit_to_unit /
         pricing_unit_conversion_rate * pricing_unit.subunit_to_unit.to_d
@@ -145,81 +129,4 @@ class BillingSegment < ApplicationRecord
       minimum
     end
   end
-
-  private
-
-  def validate_rate_presence
-    if rate_card_rate || rate_override
-      return
-    end
-
-    errors.add(:base, :rate_card_rate_or_rate_override_required)
-  end
-
-  def validate_period_bounds
-    if started_at.blank? || ended_at.blank? || started_at <= ended_at
-      return
-    end
-
-    errors.add(:ended_at, :must_be_after_started_at)
-  end
-
-  def validate_cycle_bounds
-    if cycle_started_at.blank? || started_at.blank? || cycle_started_at <= started_at
-      return
-    end
-
-    errors.add(:cycle_started_at, :must_be_before_started_at)
-  end
 end
-
-# == Schema Information
-#
-# Table name: billing_segments
-# Database name: primary
-#
-#  id                    :uuid             not null, primary key
-#  billing_at            :datetime         not null
-#  currency              :string           not null
-#  cycle_started_at      :datetime         not null
-#  ended_at              :datetime         not null
-#  proration_ratio       :decimal(30, 10)  default(1.0), not null
-#  rate_properties       :jsonb            not null
-#  started_at            :datetime         not null
-#  status                :enum             default("pending"), not null
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  contract_id           :uuid             not null
-#  contract_rate_card_id :uuid             not null
-#  customer_id           :uuid             not null
-#  invoice_id            :uuid
-#  organization_id       :uuid             not null
-#  pricing_unit_id       :uuid
-#  rate_card_rate_id     :uuid
-#  rate_override_id      :uuid
-#
-# Indexes
-#
-#  billing_segments_no_overlapping_periods                (organization_id, contract_id, customer_id, contract_rate_card_id, tsrange(started_at, ended_at, '[]'::text)) USING gist
-#  idx_on_contract_id_billing_at_status_3588bfae7a        (contract_id,billing_at,status)
-#  index_billing_segments_on_card_and_cycle               (contract_rate_card_id,cycle_started_at)
-#  index_billing_segments_on_card_and_period              (contract_rate_card_id,started_at) UNIQUE
-#  index_billing_segments_on_contract_id                  (contract_id)
-#  index_billing_segments_on_contract_rate_card_id        (contract_rate_card_id)
-#  index_billing_segments_on_customer_awaiting_invoicing  (status,customer_id) WHERE (status = ANY (ARRAY['pending'::billing_segment_status, 'processing'::billing_segment_status]))
-#  index_billing_segments_on_customer_id                  (customer_id)
-#  index_billing_segments_on_invoice_id                   (invoice_id)
-#  index_billing_segments_on_organization_id              (organization_id)
-#  index_billing_segments_on_rate_override_id             (rate_override_id)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (contract_id => contracts.id)
-#  fk_rails_...  (contract_rate_card_id => contract_rate_cards.id)
-#  fk_rails_...  (customer_id => customers.id)
-#  fk_rails_...  (invoice_id => invoices.id)
-#  fk_rails_...  (organization_id => organizations.id)
-#  fk_rails_...  (pricing_unit_id => pricing_units.id)
-#  fk_rails_...  (rate_card_rate_id => rate_card_rates.id)
-#  fk_rails_...  (rate_override_id => rate_overrides.id)
-#

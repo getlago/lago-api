@@ -82,7 +82,7 @@ module Fees
         event_timestamp: timestamp.iso8601
       }.merge(
         if metered_item.billing_segment
-          {billing_segment_id: metered_item.billing_segment.id}
+          {target_cycle_started_at: metered_item.billing_segment.cycle_started_at.iso8601}
         else
           {charge_id: metered_item.charge.id}
         end

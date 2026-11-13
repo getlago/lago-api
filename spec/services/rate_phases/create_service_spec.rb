@@ -71,10 +71,10 @@ RSpec.describe RatePhases::CreateService do
     end
 
     it "creates the phase without persisting an event-pricing segment" do
-      expect { result }.not_to change(BillingSegment, :count)
+      expect { result }.not_to change(LegacyBillingSegment, :count)
       expect(result).to be_success
       expect(result.rate_phase).to be_persisted
-      expect(contract_rate_card.billing_segments).to be_empty
+      expect(LegacyBillingSegment.where(contract_rate_card_id: contract_rate_card.id)).to be_empty
     end
   end
 

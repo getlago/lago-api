@@ -10,11 +10,13 @@ module RecurringAggregationSnapshots
     # key: a SubscriptionKey or ContractKey
     # buckets: one {filter:, values:} per pricing bucket of the key
     # values: one {grouped_by:, units:, events_count:, presentation_breakdowns:} per group of the bucket
-    def initialize(key:, to_datetime:, watermark:, buckets:)
+    # period_attributes: columns shared by every row of the period
+    def initialize(key:, to_datetime:, watermark:, buckets:, period_attributes: {})
       @key = key
       @to_datetime = to_datetime
       @watermark = watermark
       @buckets = buckets
+      @period_attributes = period_attributes
 
       super
     end
@@ -38,7 +40,7 @@ module RecurringAggregationSnapshots
 
     private
 
-    attr_reader :key, :to_datetime, :watermark, :buckets
+    attr_reader :key, :to_datetime, :watermark, :buckets, :period_attributes
 
     def period_snapshots
       key.snapshots.where(to_datetime:)
@@ -59,6 +61,7 @@ module RecurringAggregationSnapshots
         bucket[:values].map do |value|
           {
             **key.row_attributes,
+            **period_attributes,
             key.model::BUCKET_COLUMN => key.bucket_id(bucket[:filter]),
             :grouped_by => value[:grouped_by] || {},
             :to_datetime => to_datetime,

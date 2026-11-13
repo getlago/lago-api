@@ -15,12 +15,11 @@ RSpec.describe "Advance graduated usage before the first priced segment" do
 
     event_quantities.each do |timestamp, quantity|
       travel_to(timestamp) do
-        BillingSegments::ScheduleService.call!(customer:)
         create_event({
           external_contract_id: contract.external_id, code: billable_metric.code,
           timestamp: timestamp.utc.strftime("%s.%6N"), properties: {"quantity" => quantity}
         }, perform_jobs: false)
-        perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+        perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
       end
     end
 

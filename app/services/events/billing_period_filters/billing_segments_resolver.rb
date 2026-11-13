@@ -30,7 +30,7 @@ module Events
 
           event_codes = combinations.map(&:first).to_set
           contract_targets = segments_by_contract.fetch(contract.id, []).select do |target|
-            event_codes.include?(filter_target_for(target).billable_metric.code)
+            event_codes.include?(target.billable_metric_code)
           end
 
           filter_targets_from_combinations(
@@ -57,21 +57,19 @@ module Events
       end
 
       def target_segments
-        @target_segments ||= billing_segments_scope.preload(
-          :contract,
-          contract_rate_card: {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]}
-        ).to_a
+        @target_segments ||= begin
+          segments = supplied_billing_segments
+          segments.select do |segment|
+            segment.billable_metric_code && (codes.blank? || codes.include?(segment.billable_metric_code))
+          end
+        end
       end
 
-      def billing_segments_scope
-        scope = BillingSegment.where(id: billing_segments)
-          .joins(contract_rate_card: {product: :billable_metric})
+      def supplied_billing_segments
+        segments = billing_segments.to_a
+        raise ArgumentError, "billing_segments must contain in-memory BillingSegment objects" unless segments.all? { |item| item.is_a?(BillingSegment) }
 
-        if codes.present?
-          scope.where(billable_metrics: {code: codes.to_a})
-        else
-          scope
-        end
+        segments
       end
 
       def event_values_with_history_for(contract_id:)
@@ -93,19 +91,16 @@ module Events
       end
 
       def metric_codes_by_contract_id
-        @metric_codes_by_contract_id ||= billing_segments_scope
-          .distinct
-          .pluck("contract_rate_cards.contract_id, billable_metrics.code")
-          .group_by(&:first).transform_values! { |pairs| pairs.map(&:last) }
+        @metric_codes_by_contract_id ||= target_segments.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |segment, grouped|
+          grouped[segment.contract_id] << segment.billable_metric_code
+        end.transform_values!(&:uniq)
       end
 
       def recurring_metric_codes_by_contract_id
-        @recurring_metric_codes_by_contract_id ||= billing_segments_scope
-          .where(billable_metrics: {recurring: true})
-          .distinct
-          .pluck("contract_rate_cards.contract_id, billable_metrics.code")
-          .group_by(&:first)
-          .transform_values! { |pairs| pairs.map(&:last) }
+        @recurring_metric_codes_by_contract_id ||= target_segments.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |segment, grouped|
+          metric = filter_target_for(segment).billable_metric
+          grouped[segment.contract_id] << metric.code if metric.recurring?
+        end.transform_values!(&:uniq)
       end
 
       def current_recurring_targets
@@ -117,12 +112,10 @@ module Events
       end
 
       def billable_metric_filter_keys_by_contract
-        @billable_metric_filter_keys_by_contract ||= billing_segments_scope
-          .joins(contract_rate_card: {product: {billable_metric: :filters}})
-          .distinct
-          .pluck("contract_rate_cards.contract_id", "billable_metric_filters.key")
-          .group_by(&:first)
-          .transform_values! { |pairs| pairs.map(&:last) }
+        @billable_metric_filter_keys_by_contract ||= target_segments.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |segment, grouped|
+          metric = filter_target_for(segment).billable_metric
+          grouped[segment.contract_id].concat(metric.filters.map(&:key))
+        end.transform_values!(&:uniq)
       end
 
       def event_store_for(contract)

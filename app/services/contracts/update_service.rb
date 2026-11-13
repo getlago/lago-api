@@ -36,11 +36,14 @@ module Contracts
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
-      # Locked before the status gates: the clock may activate a pending
-      # contract while it is edited, and the edit must then obey the active rules.
+      # Match scheduling's customer-first lock order before the contract lock.
       ActiveRecord::Base.transaction do
-        contract.lock!
-        update_contract
+        Customers::LockService.call!(customer:, scope: :billing_schedule) do
+          # The clock may activate a pending contract while it is edited, and
+          # the edit must then obey the active rules.
+          contract.lock!
+          update_contract
+        end
       end
 
       result
