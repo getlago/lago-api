@@ -3,6 +3,8 @@
 module Mutations
   module Admin
     class LinkSandboxOrganization < BaseMutation
+      # Included first, so the admin checks run before it.
+      include RequiresSelfServe
       include AuthenticableAdminUser
 
       graphql_name "AdminLinkSandboxOrganization"

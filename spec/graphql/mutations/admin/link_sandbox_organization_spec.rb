@@ -39,6 +39,20 @@ RSpec.describe Mutations::Admin::LinkSandboxOrganization do
     expect(link(sandbox_organization_id: "not-a-uuid")["errors"].first["extensions"]["code"]).to eq("not_found")
   end
 
+  context "with a CS admin", :premium do
+    subject(:result) { link }
+
+    it_behaves_like "a self-serve entry point"
+  end
+
+  context "when self-serve is off", :premium do
+    let(:self_serve_env) { {"LAGO_SELF_SERVE_ENABLED" => "false"} }
+
+    it "refuses a user who is not a CS admin as unauthorized" do
+      expect(link(current_user: create(:user))["errors"].first["extensions"]["code"]).to eq("unauthorized")
+    end
+  end
+
   it "refuses a user who is not a CS admin", :premium do
     result = link(current_user: create(:user))
 
