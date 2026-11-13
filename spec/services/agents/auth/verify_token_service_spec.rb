@@ -24,6 +24,17 @@ RSpec.describe Agents::Auth::VerifyTokenService do
     end
   end
 
+  context "with a token of another storefront that has the same scope" do
+    # A rename keeps the scope, so a storefront created under the old code shares it.
+    let(:renamed) { create(:agent_storefront_integration, organization: storefront.organization, code: "#{storefront.code}_v2", scope: storefront.scope) }
+    let(:claims) { super().merge(iss: renamed.agent_url, sub: create(:agent_registration, storefront: renamed).id) }
+
+    it "refuses" do
+      expect(renamed.scope).to eq(storefront.scope)
+      expect(result.error.message).to eq("invalid_token")
+    end
+  end
+
   context "with an expired token" do
     let(:claims) { super().merge(exp: 1.second.ago.to_i) }
 
