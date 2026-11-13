@@ -51,9 +51,16 @@ module Roles
       copy
     end
 
+    # The copy's links go with it, then each sandbox member who held it is synced again, so they keep production's roles.
     def discard(sandbox, copy)
+      links = MembershipRole.where(organization: sandbox, role: copy)
+      users = User.where(id: sandbox.memberships.active.where(id: links.select(:membership_id)).select(:user_id)).order(:id).to_a
+
+      links.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       copy.discard!
       log(sandbox, "role.deleted", role_code: copy.code)
+
+      users.each { Memberships::SyncSandboxService.call!(organization: role.organization, user: it, actor:) }
     end
 
     def log(sandbox, log_event, resources)
