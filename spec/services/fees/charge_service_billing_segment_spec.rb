@@ -736,6 +736,132 @@ RSpec.describe Fees::ChargeService do
         expect(snapshots).to be_empty
       end
     end
+
+    context "with a snapshot of the previous segment" do
+      let(:organization) { create(:organization, feature_flags: %w[recurring_aggregation_snapshots persisted_recurring_values]) }
+      let(:previous_watermark) { watermark - 30.seconds } # after both events were ingested
+      let(:previous_priced_ids) { [] }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: Date.new(2026, 8, 1), created_at: previous_watermark - 1.day)
+      end
+
+      before do
+        create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, product_filter:, units: 100,
+          events_count: 1, to_datetime: BillingSegment.inclusive_end(billing_segment.started_at), watermark: previous_watermark,
+          priced_product_filter_ids: previous_priced_ids)
+      end
+
+      it "bills the snapshot units plus the events after it, and persists them at the segment end" do
+        expect(result.fees.sole.units).to eq(100 + 6) # snapshot + August event
+        expect(snapshots.order(:to_datetime).last).to have_attributes(to_datetime: billing_segment.ended_at, units: 106, events_count: 2)
+      end
+
+      context "with an event dated in the snapshot period and ingested after its watermark" do
+        before do
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id, code: billable_metric.code,
+            timestamp: Time.utc(2026, 7, 20), created_at: previous_watermark + 1.second, properties: {value: 3})
+        end
+
+        it "adds the late event to the snapshot units" do
+          expect(result.fees.sole.units).to eq(100 + 3 + 6) # snapshot + late July event + August event
+        end
+      end
+
+      context "without the persisted_recurring_values feature flag" do
+        let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
+
+        it "reads the full history" do
+          expect(result.fees.sole.units).to eq(4 + 6)
+        end
+      end
+
+      context "with current usage" do
+        let(:invoice) { nil }
+        let(:options) { described_class::Options.new(context: :current_usage) }
+
+        it "reads the snapshot" do
+          expect(result.fees.sole.units).to eq(100 + 6)
+        end
+      end
+
+      context "when the period was closed with other priced filters" do
+        let(:previous_priced_ids) { [create(:product_filter, organization:, product:, created_at: previous_watermark - 1.day).id] }
+
+        it "reads the full history" do
+          expect(result.fees.sole.units).to eq(4 + 6)
+        end
+      end
+
+      context "when a rate card of the product was added to the contract since the snapshot" do
+        # The filter predates the snapshot and the card starts before the segment, so only the card changed since it
+        before do
+          create(:contract_rate_card, organization:, contract:, effective_date: Date.new(2026, 7, 1),
+            rate_card: create(:rate_card, organization:, product:, currency: "USD",
+              product_filter: create(:product_filter, organization:, product:, created_at: previous_watermark - 1.day)))
+        end
+
+        it "reads the full history" do
+          expect(result.fees.sole.units).to eq(4 + 6)
+        end
+      end
+
+      context "with two priced filters of the product" do
+        let(:region) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:eu_filter) { create(:product_filter, organization:, product:, created_at: previous_watermark - 1.day) }
+        let(:us_filter) { create(:product_filter, organization:, product:, created_at: previous_watermark - 1.day) }
+        let(:product_filter) { eu_filter }
+        let(:previous_priced_ids) { [eu_filter.id, us_filter.id].sort }
+
+        before do
+          [[eu_filter, "eu"], [us_filter, "us"]].each do |filter, value|
+            create(:product_filter_value, organization:, product_filter: filter, billable_metric_filter: region, value:,
+              created_at: previous_watermark - 1.day, updated_at: previous_watermark - 1.day)
+          end
+          create(:contract_rate_card, organization:, contract:, effective_date: Date.new(2026, 8, 1), created_at: previous_watermark - 1.day,
+            rate_card: create(:rate_card, organization:, product:, product_filter: us_filter, currency: "USD"))
+        end
+
+        it "reads the snapshot of the filter's bucket" do
+          expect(result.fees.sole.units).to eq(100) # snapshot, the August event being in the us bucket
+        end
+
+        context "when the period was closed with only the filter priced" do
+          let(:previous_priced_ids) { [eu_filter.id] }
+
+          it "reads the full history" do
+            expect(result.fees.sole.units).to eq(4) # July eu event
+          end
+        end
+      end
+
+      context "with a weighted sum metric" do
+        let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:, field_name: "value") }
+
+        it "starts from the snapshot units" do
+          # 100 for the 11 days before the August event, 106 for the 20 days after it, over 31 days
+          expect(result.fees.sole.units.round(5)).to eq(BigDecimal("103.87097")) # (100 * 11 + 106 * 20) / 31
+        end
+      end
+
+      context "with a prorated rate card" do
+        let(:rate_card) { create(:rate_card, organization:, product:, product_filter:, currency: "USD", proration: true) }
+
+        it "bills the snapshot units for the whole segment and the event from its date" do
+          fee = result.fees.sole
+          expect(fee.units).to eq(100 + 6) # snapshot + August event
+          expect(fee.precise_amount_cents.round(3)).to eq(BigDecimal("20774.194")) # 2 USD * (100 + 6 * 20 / 31) units, the August event over 20 of 31 days
+        end
+
+        context "with a partial segment" do
+          let(:proration_ratio) { BigDecimal("0.5") }
+
+          it "applies the segment ratio to the snapshot units" do
+            # 2 USD * 0.5 * (100 + 6 * 20 / 31) units, units ceiled to 5 decimals; the full scan bills from 4 instead of 100
+            expect(result.fees.sole.precise_amount_cents.round(3)).to eq(BigDecimal("10387.098"))
+          end
+        end
+      end
+    end
   end
 
   context "with a minimum amount" do
