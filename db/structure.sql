@@ -1029,7 +1029,6 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
-DROP INDEX IF EXISTS public.index_catalog_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_contract_id_and_code;
@@ -3092,7 +3091,6 @@ CREATE TABLE public.catalog_wallets (
     top_up_max_amount_cents bigint,
     balance_cents bigint DEFAULT 0 NOT NULL,
     ongoing_balance_cents bigint DEFAULT 0 NOT NULL,
-    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
     last_ongoing_balance_sync_at timestamp(6) without time zone,
     terminated_at timestamp(6) without time zone,
     deleted_at timestamp(6) without time zone,
@@ -9604,13 +9602,6 @@ CREATE INDEX index_catalog_wallets_on_customer_id ON public.catalog_wallets USIN
 --
 
 CREATE INDEX index_catalog_wallets_on_organization_id ON public.catalog_wallets USING btree (organization_id);
-
-
---
--- Name: index_catalog_wallets_on_ready_to_be_refreshed; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_catalog_wallets_on_ready_to_be_refreshed ON public.catalog_wallets USING btree (ready_to_be_refreshed) WHERE ready_to_be_refreshed;
 
 
 --
