@@ -182,6 +182,15 @@ RSpec.describe Organizations::CreateService do
         expect(ApiKey.count).to eq(0)
         expect(service_result.error.messages).to eq(code: ["value_already_exist"])
       end
+
+      context "when called inside a caller's transaction" do
+        subject(:service_result) { ApplicationRecord.transaction { described_class.call(params) } }
+
+        it "rolls back its own writes" do
+          expect { service_result }.not_to change(Organization, :count)
+          expect(ApiKey.count).to eq(0)
+        end
+      end
     end
 
     context "when a concurrent request took the slug" do
