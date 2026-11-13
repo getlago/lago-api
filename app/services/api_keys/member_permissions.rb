@@ -68,7 +68,9 @@ module ApiKeys
       "usage_attribution_type" => crud("usage_attribution_types"),
       "wallet" => {read: %w[customers:view], write: %w[wallets:create wallets:update wallets:top_up wallets:terminate]},
       "wallet_transaction" => {read: %w[customers:view], write: %w[wallets:top_up]},
-      "webhook_endpoint" => {read: %w[developers:manage], write: %w[developers:manage]},
+      # Writing webhook endpoints also returns their signing secrets, which the dashboard
+      # shows only with developers:keys:manage.
+      "webhook_endpoint" => {read: %w[developers:manage], write: %w[developers:manage developers:keys:manage]},
       "webhook_jwt_public_key" => {read: %w[developers:manage]}
     }.freeze
 

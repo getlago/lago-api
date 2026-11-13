@@ -46,6 +46,16 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
         .with(anything, described_class::INVALIDATED_MARKER, expires_in: described_class::INVALIDATED_MARKER_TTL)
         .exactly(3).times
     end
+
+    it "also invalidates the keys minted for the AI agent" do
+      member_key = ApiKeys::CreateMemberKeyService.call!(membership: create(:membership, organization:)).api_key
+      allow(Rails.cache).to receive(:write)
+
+      described_class.expire_all_cache(organization)
+
+      expect(Rails.cache).to have_received(:write)
+        .with("api_key/#{described_class::CACHE_KEY_VERSION}/#{member_key.value}", described_class::INVALIDATED_MARKER, anything)
+    end
   end
 
   describe "#call" do

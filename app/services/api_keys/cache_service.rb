@@ -2,7 +2,9 @@
 
 module ApiKeys
   class CacheService < ::CacheService
-    CACHE_KEY_VERSION = "1"
+    # Bumped when a cached key gains an attribute its permissions depend on (membership_id), so
+    # entries written by a previous release are never read without it.
+    CACHE_KEY_VERSION = "2"
 
     # Written in place of the cached key when it is invalidated. It only needs to outlive a request
     # that read the key from the database just before the change, see `write_to_cache`. Keep it short:
@@ -19,7 +21,8 @@ module ApiKeys
     end
 
     def self.expire_all_cache(organization)
-      organization.api_keys.each { expire_cache(it.value) }
+      # Not organization.api_keys, which leaves out the keys minted for the AI agent.
+      ApiKey.where(organization:).find_each { expire_cache(it.value) }
     end
 
     def expire_cache
