@@ -19,9 +19,9 @@ module Admin
     def call
       return result.not_found_failure!(resource: "organization") unless organization
 
-      organization.with_lock do
-        # After the lock reloaded the row, so a toggle that waited behind a link sees it.
-        next result.forbidden_failure!(code: "sandbox_managed_by_production") if organization.sandbox?
+      ActiveRecord::Base.transaction do
+        # Refuses a sandbox once the row is locked and reloaded, so a toggle that waited behind a link sees it.
+        ::Organizations::SandboxLockService.call!(organization:)
 
         before_value = current_features.include?(feature_key)
         validator = FeatureChangeValidator.new(
