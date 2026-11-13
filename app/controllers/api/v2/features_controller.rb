@@ -7,6 +7,14 @@ module Api
       date_range_filtered_index(:created_at)
       serializable_with ::V2::Entitlement::FeatureSerializer
 
+      def show
+        feature = current_organization.features.find_by(code: params[:code])
+
+        return not_found_error(resource: "feature") unless feature
+
+        render_feature(feature)
+      end
+
       def index
         result = ::Entitlement::FeaturesQuery.call(
           organization: current_organization,
