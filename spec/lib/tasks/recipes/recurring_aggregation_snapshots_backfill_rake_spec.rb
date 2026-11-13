@@ -167,6 +167,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:backfill" do # rubocop:d
     it "enqueues a job per contract as well and reports them apart" do
       expect { perform_enqueued_jobs { task.invoke } }.to output(
         a_string_including(
+          "or none when contract IDs are listed next",
           "1 active contract(s) with a recurring sum rate card and a closed period.",
           "Enqueued 2 job(s).",
           "Subscriptions backfilled: 1/1, failed: 0, not enqueued: 0, nothing written: 0",
