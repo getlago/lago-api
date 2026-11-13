@@ -170,6 +170,16 @@ RSpec.describe Organizations::LinkSandboxService do
       expect(result).to be_success
       expect(target.reload).to be_sandbox
     end
+
+    it "copies the custom roles of production that no member holds" do
+      create(:role, organization: production, code: "unused", name: "Unused", permissions: %w[customers:view])
+
+      expect(result).to be_success
+      expect(target.roles.map { [it.code, it.name, it.permissions.sort] }).to match_array([
+        ["ops", "Ops", %w[customers:view organization:view]],
+        ["unused", "Unused", %w[customers:view]]
+      ])
+    end
   end
 
   context "when another sandbox of production is created during the link" do
