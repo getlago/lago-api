@@ -3,7 +3,8 @@
 module Organizations
   # Turns an existing organization into the sandbox of a production organization, then mirrors production's settings
   # and members onto it. Refuses every link that would leave the target with something production does not mirror:
-  # its own SSO, settings the copy would remove, a looser login, pending invites, or members production lacks.
+  # its own SSO, settings the copy would remove, a looser login, pending invites, members production lacks, or custom
+  # roles that production does not define the same way.
   class LinkSandboxService < BaseService
     Result = BaseResult[:organization, :sandbox_organization]
 
@@ -104,6 +105,19 @@ module Organizations
         "sandbox_has_pending_invites"
       elsif target.active_memberships.where.not(user_id: production.active_memberships.select(:user_id)).exists?
         "sandbox_has_other_members"
+      elsif other_roles?(production, target)
+        "sandbox_has_other_roles"
+      end
+    end
+
+    # The role mirror matches on the code: it would rewrite a target role production defines differently, and never
+    # touch one production lacks, which the sandbox could then not edit.
+    def other_roles?(production, target)
+      production_roles = production.roles.index_by(&:code)
+
+      target.roles.any? do |role|
+        source = production_roles[role.code]
+        source.nil? || source.name != role.name || source.permissions.sort != role.permissions.sort
       end
     end
   end
