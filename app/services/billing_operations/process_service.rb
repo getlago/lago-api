@@ -101,6 +101,7 @@ module BillingOperations
         end
         next if operations.empty?
 
+        preload_schedule_inputs(operations)
         operation_segments = operations.index_with { |operation| resolve_operation(operation) }.compact
         segments = operation_segments.values.flat_map(&:segments)
         invoice = if segments.any?
@@ -115,6 +116,19 @@ module BillingOperations
       finalize_generating_invoices(operations.filter_map(&:invoice_id))
       invoice&.reload
       invoice
+    end
+
+    # Locking reloads each operation and its card, which drops what was preloaded with them.
+    # Every schedule of the batch reads these records, so they are loaded once here.
+    def preload_schedule_inputs(operations)
+      ActiveRecord::Associations::Preloader.new(
+        records: operations.map(&:contract_rate_card),
+        associations: [
+          {rate_card: [:rates, {product: :billable_metric}]},
+          {rate_phases: :rate_override},
+          {contract: :customer}
+        ]
+      ).call
     end
 
     def resolve_operation(operation)

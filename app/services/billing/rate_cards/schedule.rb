@@ -2,8 +2,11 @@
 
 module Billing
   module RateCards
+    # Answers when a rate card bills. Cycles come from the walker; each cycle is cut at rate
+    # changes into priced slices, and every question below is asked of those slices.
     class Schedule
-      # `due_on_coverage_end` makes every slice fall due when its coverage ends, whatever the terms' timing.
+      # `due_on_coverage_end` makes every slice fall due when its coverage ends, whatever the
+      # terms' timing. Cards that regroup paid advance fees use it (see BillableSegment).
       def initialize(
         rates:, terms:, phases:, starts_at:, anchor_date:, timezone:,
         ends_at: nil, due_on_coverage_end: false
@@ -14,7 +17,9 @@ module Billing
         @walker = CycleWalker.new(rates:, phases:, starts_at:, anchor_date:, timezone:, ends_at:)
       end
 
-      # A rate change can make a segment due before its cycle ends.
+      # Every slice from the card's start that the terms bill by the instant. It reads
+      # `billing_at`, not `due_at`: it lists what is billed, not what an operation picks up.
+      # A rate change can make a slice billable before its cycle ends.
       def segments_due_by(timestamp)
         cycles = walker.walk_to(timestamp)
 
@@ -23,22 +28,29 @@ module Billing
         end
       end
 
+      # The cycle containing the instant, or nil once the schedule has ended.
       def cycle_at(timestamp)
         walker.resume(timestamp)
       end
 
-      # The first slice still open at the instant, or falling due exactly on it.
+      # The first slice still open at the instant, or falling due exactly on it. The second
+      # case keeps an arrears slice that closes on a mid-cycle rate change owed at that change.
+      # Only the cycle containing the instant is searched backwards: a slice of an earlier
+      # cycle that closed on the instant is not returned.
       def first_obligation(at:)
         segments(from: at).find { it.ended_at > at || it.due_at == at }
       end
 
-      # The first slice falling due strictly after a completed billing instant.
+      # The first slice falling due strictly after a completed billing instant, so a slice
+      # billed at that instant is never returned twice. `from` names the cycle to start
+      # walking from, for a billing that belongs to an earlier cycle than its instant.
       # A block maps a slice to its due instant when the caller moves it.
       def next_obligation(after:, from: after)
         segments(from:).find { (block_given? ? yield(it) : it.due_at) > after }
       end
 
-      # The slices of one cycle falling due after a completed billing and by the given instant.
+      # The slices of one cycle falling due after a completed billing and by the given instant:
+      # what one operation of that cycle bills. `cycle_started_at` must be a cycle's own start.
       def segments_due_in_cycle(cycle_started_at, by:, after: nil)
         segments(from: cycle_started_at)
           .take_while { it.cycle_started_at == cycle_started_at }
@@ -62,7 +74,8 @@ module Billing
 
       attr_reader :rates, :terms, :due_on_coverage_end, :walker
 
-      # Every priced slice in billing order, from the cycle containing `from`.
+      # Every priced slice in billing order, from the cycle containing `from`. Lazy, because an
+      # open-ended card has no last cycle: callers stop at the first slice that answers them.
       # Unpriced cycles yield nothing.
       def segments(from:)
         Enumerator.new do |yielder|

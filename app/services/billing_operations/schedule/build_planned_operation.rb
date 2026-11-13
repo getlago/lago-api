@@ -2,12 +2,20 @@
 
 module BillingOperations
   module Schedule
+    # Turns the schedule's next obligation into what a billing operation stores.
     class BuildPlannedOperation < BaseService
       Result = BaseResult[:planned_operation]
+
+      # `cycle_started_at` identifies the cycle the operation bills. `billing_at` is when the
+      # operation runs: the slice's `due_at`, not its terms' `billing_at`, which differ for
+      # cards that regroup paid advance fees (see Billing::BillableSegment).
       PlannedOperation = Data.define(:cycle_started_at, :billing_at)
 
-      # Pass `at:` for the first obligation still open at an instant, or `after:` for the first
-      # one falling due after a completed billing, walking from the cycle of `from:`.
+      # Two ways to plan, and exactly one must be given:
+      # - `at:` when nothing was billed yet from that instant (activation, clock reset, rate
+      #   change, termination): the first obligation still open at it.
+      # - `after:` once a billing completed: the first obligation falling due later, walking
+      #   from the cycle of `from:` because a billing can belong to an earlier cycle.
       def initialize(contract_rate_card:, schedule:, at: nil, after: nil, from: nil)
         raise ArgumentError, "pass either at: or after:" unless at.nil? ^ after.nil?
 
@@ -39,7 +47,9 @@ module BillingOperations
 
       attr_reader :contract_rate_card, :schedule, :at, :after, :from
 
-      # A contract terminated after its planned end closes its last slice at the termination.
+      # A contract terminated after its planned end closes its last slice at the termination,
+      # not at the planned end. Only applied after a completed billing, as the first plan of a
+      # termination sets its own billing instant.
       def final_due_at(segment)
         contract = contract_rate_card.contract
 

@@ -3,6 +3,12 @@
 module Billing
   # One priced slice of a cycle, used to build an in-memory billing segment.
   #
+  # A slice carries two instants that usually match:
+  # - `billing_at` is where the card's terms place it: its start in advance, its end in arrears.
+  # - `due_at` is when a periodic operation picks it up. It differs for cards that regroup paid
+  #   advance fees: usage events bill them as they arrive, and the periodic operation only
+  #   gathers them once coverage ends, so the slice falls due at `ended_at`.
+  #
   # @example a monthly cycle cut by a rate change on Feb 15, in arrears
   #   [Segment(Feb 1 -> Feb 15, billing_at Feb 15), Segment(Feb 15 -> Mar 1, billing_at Mar 1)]
   BillableSegment = Data.define(
@@ -25,7 +31,7 @@ module Billing
         raise ArgumentError, "a billable segment needs a rate or an override to price it"
       end
 
-      # A slice falls due when it is billed, unless its schedule closes coverage first.
+      # Without a due instant of its own, a slice falls due when its terms bill it.
       super(**attributes, rate:, rate_override:, due_at: due_at || attributes[:billing_at])
     end
 

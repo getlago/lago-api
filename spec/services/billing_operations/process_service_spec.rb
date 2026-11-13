@@ -475,6 +475,12 @@ RSpec.describe BillingOperations::ProcessService do
         expect(invoice.billing_operations.pluck(:contract_rate_card_id)).to match_array([contract_rate_card.id, other_card.id])
         expect(other_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
       end
+
+      it "loads the rates both schedules read in one query" do
+        rate_queries = capture_sql { result }.grep(/FROM "rate_card_rates" WHERE.*"rate_card_id"/)
+
+        expect(rate_queries.size).to eq(1)
+      end
     end
   end
 
