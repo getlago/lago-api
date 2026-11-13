@@ -135,6 +135,93 @@ RSpec.describe Organizations::CreateService do
       end
     end
 
+    context "with a frozen params hash" do
+      let(:params) { {name: "Acme", document_numbering: "per_organization"}.freeze }
+
+      it "leaves the caller's params unchanged" do
+        expect(service_result).to be_success
+        expect(params).to eq(name: "Acme", document_numbering: "per_organization")
+      end
+    end
+
+    context "with billing entity fields outside the organization's own" do
+      let(:params) { {name: "Acme", email: "billing@acme.com", tax_codes: ["vat"]} }
+
+      it "passes only the name, code, numbering and timezone to the billing entity" do
+        billing_entity = service_result.organization.billing_entities.sole
+
+        expect(billing_entity).to have_attributes(email: nil, code: "acme")
+        expect(billing_entity.taxes).to be_empty
+      end
+    end
+
+    context "with the self-serve and sandbox fields" do
+      let(:production) { create(:organization) }
+      let(:feature_flag) { FeatureFlag::DEFINITION.keys.first }
+      let(:params) do
+        {name: "Acme Sandbox", slug: "acme-sandbox", self_serve: true, environment: "sandbox",
+         production_organization_id: production.id, feature_flags: [feature_flag]}
+      end
+
+      it "sets them" do
+        expect(service_result.organization).to have_attributes(slug: "acme-sandbox", self_serve: true,
+          environment: "sandbox", production_organization_id: production.id, feature_flags: [feature_flag])
+      end
+    end
+
+    context "when the billing entity cannot be created" do
+      let(:params) { {name: "Acme"} }
+
+      before do
+        failure = BaseResult.new.validation_failure!(errors: {code: ["value_already_exist"]}).error
+        allow(BillingEntities::CreateService).to receive(:call!).and_raise(failure)
+      end
+
+      it "returns the failure and creates nothing" do
+        expect { service_result }.not_to change(Organization, :count)
+        expect(ApiKey.count).to eq(0)
+        expect(service_result.error.messages).to eq(code: ["value_already_exist"])
+      end
+
+      context "when called inside a caller's transaction" do
+        subject(:service_result) { ApplicationRecord.transaction { described_class.call(params) } }
+
+        it "rolls back its own writes" do
+          expect { service_result }.not_to change(Organization, :count)
+          expect(ApiKey.count).to eq(0)
+        end
+      end
+    end
+
+    context "when a concurrent request took the slug" do
+      let(:params) { {name: "Acme", slug: "acme"} }
+
+      before do
+        create(:organization, slug: "acme")
+        # The uniqueness validation ran before the concurrent request committed.
+        allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+      end
+
+      it "returns the validation error of a taken value" do
+        expect(service_result.error.messages).to eq(slug: ["value_already_exist"])
+      end
+    end
+
+    context "when a concurrent request gave the production organization a sandbox" do
+      let(:production) { create(:organization) }
+      let(:params) { {name: "Acme Sandbox", environment: "sandbox", production_organization_id: production.id} }
+
+      before do
+        create(:organization, :sandbox, production_organization: production)
+        # The uniqueness validation ran before the concurrent request committed.
+        allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+      end
+
+      it "returns the validation error of a taken value" do
+        expect(service_result.error.messages).to eq(production_organization_id: ["value_already_exist"])
+      end
+    end
+
     context "with invalid params" do
       let(:params) { {} }
 
