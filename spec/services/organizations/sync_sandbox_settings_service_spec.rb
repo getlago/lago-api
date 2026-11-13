@@ -70,6 +70,25 @@ RSpec.describe Organizations::SyncSandboxSettingsService do
     end
   end
 
+  context "when the caller's copy predates a link that made the organization a sandbox" do
+    subject(:result) { described_class.call(organization: stale) }
+
+    let(:linked) { create(:organization, premium_integrations: %w[netsuite]) }
+    let(:stale) { Organization.find(linked.id) }
+
+    before do
+      stale
+      linked.update!(environment: "sandbox", production_organization: create(:organization))
+    end
+
+    it "does nothing" do
+      expect(result).to be_success
+      expect(result.sandbox_organization).to be_nil
+      expect(result.changes).to eq({})
+      expect(linked.reload.premium_integrations).to eq(%w[netsuite])
+    end
+  end
+
   context "without a sandbox" do
     let(:sandbox) { nil }
 
