@@ -3,10 +3,11 @@
 require "rails_helper"
 
 RSpec.describe RecurringAggregationSnapshots::LockService do
-  subject(:lock_service) { described_class.new(subscription:, charge:, to_datetime:) }
+  subject(:lock_service) { described_class.new(key:, to_datetime:) }
 
   let(:subscription) { create(:subscription) }
   let(:charge) { create(:standard_charge, plan: subscription.plan) }
+  let(:key) { RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:) }
   let(:to_datetime) { Time.zone.parse("2026-09-30T23:59:59.999999") }
   let(:lock_key) { "recurring-aggregation-snapshot-#{subscription.id}-#{charge.id}-2026-09-30T23:59:59.999999Z" }
 
