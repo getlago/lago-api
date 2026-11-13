@@ -56,14 +56,14 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
 
   it "computes both paths and reports no difference when the snapshot is right" do
     expect(result).to be_success
-    expect(result.compared_charges_count).to eq(1)
-    expect(result.snapshot_charges_count).to eq(1)
+    expect(result.compared_items_count).to eq(1)
+    expect(result.snapshot_items_count).to eq(1)
     expect(result.rechecked).to be(false)
     expect(result.differences).to be_empty
     expect(result.rows.sole).to have_attributes(
-      charge_id: charge.id,
+      item_id: charge.id,
       billable_metric_code: billable_metric.code,
-      charge_filter_id: nil,
+      filter_id: nil,
       grouped_by: {},
       snapshot_read: true,
       snapshot: have_attributes(units: 8, events_count: 2, amount_cents: 800),
@@ -84,7 +84,7 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     it "reports the leaf after checking it again" do
       expect(result.rechecked).to be(true)
       expect(result.differences.sole).to have_attributes(
-        charge_id: charge.id,
+        item_id: charge.id,
         snapshot: have_attributes(units: 23),
         full_scan: have_attributes(units: 8)
       )
@@ -110,7 +110,7 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     let(:snapshot_units) { 20 }
 
     it "reads the snapshots grouped on the target wallet and reports their difference" do
-      expect(result.snapshot_charges_count).to eq(1)
+      expect(result.snapshot_items_count).to eq(1)
       expect(result.differences.sole).to have_attributes(
         grouped_by: {"target_wallet_code" => nil},
         snapshot: have_attributes(units: 23),
@@ -155,7 +155,7 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     let(:snapshot_units) { 20 }
 
     it "does not count it as read from a snapshot nor report its difference" do
-      expect(result.snapshot_charges_count).to eq(0)
+      expect(result.snapshot_items_count).to eq(0)
       expect(result.rows).to be_empty
     end
   end
@@ -173,7 +173,7 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     let(:snapshot_watermark) { upgraded_at + 1.second }
 
     it "does not count it as read from a snapshot" do
-      expect(result.snapshot_charges_count).to eq(0)
+      expect(result.snapshot_items_count).to eq(0)
       expect(result.rows).to be_empty
     end
   end
@@ -191,9 +191,9 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     end
 
     it "counts the filter without usage at the end of the previous period as read from the period" do
-      expect(result.snapshot_charges_count).to eq(1)
-      expect(result.rows.find { it.charge_filter_id.nil? }).to have_attributes(snapshot_read: true)
-      expect(result.rows.find { it.charge_filter_id == charge_filter.id }).to have_attributes(snapshot_read: true)
+      expect(result.snapshot_items_count).to eq(1)
+      expect(result.rows.find { it.filter_id.nil? }).to have_attributes(snapshot_read: true)
+      expect(result.rows.find { it.filter_id == charge_filter.id }).to have_attributes(snapshot_read: true)
       expect(result.differences).to be_empty
     end
 
@@ -201,7 +201,7 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
       let(:filter_created_at) { Time.zone.parse("2022-05-10") }
 
       it "compares nothing, as every bucket of the charge scans its full history" do
-        expect(result.snapshot_charges_count).to eq(0)
+        expect(result.snapshot_items_count).to eq(0)
         expect(result.rows).to be_empty
       end
     end
@@ -211,8 +211,8 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     before { RecurringAggregationSnapshot.delete_all }
 
     it "compares nothing" do
-      expect(result.compared_charges_count).to eq(1)
-      expect(result.snapshot_charges_count).to eq(0)
+      expect(result.compared_items_count).to eq(1)
+      expect(result.snapshot_items_count).to eq(0)
       expect(result.rows).to be_empty
     end
   end
@@ -221,7 +221,7 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
 
     it "compares nothing" do
-      expect(result.compared_charges_count).to eq(0)
+      expect(result.compared_items_count).to eq(0)
       expect(result.rows).to be_empty
     end
   end

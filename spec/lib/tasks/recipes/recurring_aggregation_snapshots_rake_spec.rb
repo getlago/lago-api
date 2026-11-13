@@ -27,9 +27,9 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     RecurringAggregationSnapshots::ComparePayInAdvanceService::Row.new(
       event_transaction_id: "tr_1",
       event_timestamp: Time.zone.parse("2022-05-10"),
-      charge_id: charge.id,
+      item_id: charge.id,
       billable_metric_code: billable_metric.code,
-      charge_filter_id: nil,
+      filter_id: nil,
       grouped_by: {},
       snapshot_read:,
       snapshot: aggregation.new(aggregation: snapshot_aggregation, **values),
@@ -37,22 +37,22 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     )
   end
 
-  def pay_in_advance_result(rows:, compared_charges_count: 1)
+  def pay_in_advance_result(rows:, compared_items_count: 1)
     RecurringAggregationSnapshots::ComparePayInAdvanceService::Result.new.tap do
       it.rows = rows
       it.differences = rows.select(&:different?)
-      it.compared_charges_count = compared_charges_count
+      it.compared_items_count = compared_items_count
       it.compared_events_count = rows.size
       it.rechecked = false
     end
   end
 
-  def build_row(snapshot_units:)
-    totals = RecurringAggregationSnapshots::CompareUsageService::Totals
-    RecurringAggregationSnapshots::CompareUsageService::Row.new(
-      charge_id: charge.id,
+  def build_row(snapshot_units:, item_id: charge.id)
+    totals = RecurringAggregationSnapshots::UsageComparison::Totals
+    RecurringAggregationSnapshots::UsageComparison::Row.new(
+      item_id:,
       billable_metric_code: billable_metric.code,
-      charge_filter_id: nil,
+      filter_id: nil,
       grouped_by: {},
       snapshot_read: true,
       snapshot: totals.new(
@@ -66,12 +66,12 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     )
   end
 
-  def comparison_result(rows:, snapshot_charges_count: 1)
+  def comparison_result(rows:, snapshot_items_count: 1)
     RecurringAggregationSnapshots::CompareUsageService::Result.new.tap do
       it.rows = rows
       it.differences = rows.select(&:different?)
-      it.compared_charges_count = 1
-      it.snapshot_charges_count = snapshot_charges_count
+      it.compared_items_count = 1
+      it.snapshot_items_count = snapshot_items_count
       it.rechecked = false
     end
   end
@@ -100,7 +100,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     before { stub_stdin(organization.id, "y", subscription.id, csv_path) }
 
     it "compares the given subscription and writes one CSV row per leaf" do
-      expect { task.invoke }.to output(/No mismatch over the charges and events read from a snapshot/).to_stdout
+      expect { task.invoke }.to output(/No mismatch over the items and events read from a snapshot/).to_stdout
 
       expect(RecurringAggregationSnapshots::CompareUsageService).to have_received(:call).with(subscription:)
 
@@ -108,6 +108,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       expect(csv.first).to eq(RECURRING_SNAPSHOTS_CSV_HEADERS)
       expect(csv.second).to eq(
         [
+          "subscription",
           subscription.id,
           subscription.external_id,
           charge.id,
@@ -132,6 +133,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       expect(pay_in_advance_csv.first).to eq(RECURRING_SNAPSHOTS_PAY_IN_ADVANCE_CSV_HEADERS)
       expect(pay_in_advance_csv.second).to eq(
         [
+          "subscription",
           subscription.id,
           subscription.external_id,
           "tr_1",
@@ -189,10 +191,10 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       end
 
       context "without a pay in advance charge" do
-        let(:pay_in_advance_comparison) { pay_in_advance_result(rows: [], compared_charges_count: 0) }
+        let(:pay_in_advance_comparison) { pay_in_advance_result(rows: [], compared_items_count: 0) }
 
         it "reports no mismatch" do
-          expect { task.invoke }.to output(/No mismatch over the charges and events read from a snapshot/).to_stdout
+          expect { task.invoke }.to output(/No mismatch over the items and events read from a snapshot/).to_stdout
         end
       end
     end
@@ -206,7 +208,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     end
 
     context "when no subscription read a snapshot" do
-      let(:comparison) { comparison_result(rows: [], snapshot_charges_count: 0) }
+      let(:comparison) { comparison_result(rows: [], snapshot_items_count: 0) }
       let(:pay_in_advance_comparison) { pay_in_advance_result(rows: []) }
 
       it "says the run proves nothing about parity" do
@@ -223,7 +225,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     end
 
     it "says nothing could be compared" do
-      expect { task.invoke }.to output(/No subscription could be compared/).to_stdout
+      expect { task.invoke }.to output(/Nothing could be compared/).to_stdout
     end
   end
 
@@ -251,8 +253,8 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       expect { task.invoke }.to output(
         a_string_including(
           "pay in advance: FAILED",
-          "subscriptions compared:         1 (0 failed)",
-          "pay in advance events replayed: 0 (1 subscription(s) failed)",
+          "compared:                       1 (0 failed)",
+          "pay in advance events replayed: 0 (1 failed)",
           "No mismatch over the comparisons that ran, but 1 failed: rerun them before enabling the organization."
         )
       ).to_stdout
@@ -268,15 +270,74 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     end
 
     context "when current usage read no snapshot" do
-      let(:comparison) { comparison_result(rows: [], snapshot_charges_count: 0) }
+      let(:comparison) { comparison_result(rows: [], snapshot_items_count: 0) }
 
       it "asks to rerun the failed comparison instead of reporting no snapshot" do
         expect { task.invoke }.to output(
           a_string_including(
-            "subscriptions without snapshot: 0",
+            "without snapshot:               0",
             "No mismatch over the comparisons that ran, but 1 failed: rerun them before enabling the organization."
           )
         ).to_stdout
+      end
+    end
+  end
+
+  context "with contract snapshots" do
+    let(:contract) { create(:contract, organization:, customer: subscription.customer) }
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:contract_comparison) { comparison_result(rows: [build_row(snapshot_units: BigDecimal(10), item_id: product.id)]) }
+
+    before do
+      create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:)
+      allow(RecurringAggregationSnapshots::CompareContractUsageService).to receive(:call).and_return(contract_comparison)
+    end
+
+    context "with a listed contract" do
+      before { stub_stdin(organization.id, "y", subscription.id, contract.id, csv_path) }
+
+      it "compares the contract after the subscriptions, in the same CSVs" do
+        expect { task.invoke }.to output(
+          a_string_including("Contract #{contract.id} (#{contract.external_id}): 1/1 products read from a snapshot")
+        ).to_stdout
+
+        expect(RecurringAggregationSnapshots::CompareContractUsageService).to have_received(:call).with(contract:)
+        expect(RecurringAggregationSnapshots::ComparePayInAdvanceService).to have_received(:call).with(contract:)
+        expect(CSV.read(csv_path).map(&:first)).to eq(["owner_type", "subscription", "contract"])
+        expect(CSV.read(csv_path).last.first(6)).to eq(["contract", contract.id, contract.external_id, product.id, billable_metric.code, nil])
+        expect(CSV.read(pay_in_advance_csv_path).last.first(3)).to eq(["contract", contract.id, contract.external_id])
+      end
+    end
+
+    context "with an unknown listed contract" do
+      before { stub_stdin(organization.id, "y", subscription.id, "#{contract.id} #{SecureRandom.uuid}", csv_path) }
+
+      it "names the skipped id" do
+        expect { task.invoke }.to output(/Not found in the organization, not active or without snapshots, skipped/).to_stdout
+        expect(RecurringAggregationSnapshots::CompareContractUsageService).to have_received(:call).once
+      end
+    end
+
+    context "when contracts are skipped" do
+      before { stub_stdin(organization.id, "y", subscription.id, "none", csv_path) }
+
+      it "compares the listed subscription only" do
+        expect { task.invoke }.to output(/Comparing 1 subscription\(s\)/).to_stdout
+        expect(RecurringAggregationSnapshots::CompareContractUsageService).not_to have_received(:call)
+      end
+    end
+
+    context "without listed contracts" do
+      before do
+        create(:contract, organization:, customer: subscription.customer)
+        terminated = create(:contract, organization:, customer: subscription.customer, status: :terminated)
+        create(:contract_recurring_aggregation_snapshot, organization:, contract: terminated, product:)
+        stub_stdin(organization.id, "y", subscription.id, "", "5", csv_path)
+      end
+
+      it "samples the active contracts with snapshots" do
+        expect { task.invoke }.to output(/Organization has 1 active contract\(s\) with snapshots/).to_stdout
+        expect(RecurringAggregationSnapshots::CompareContractUsageService).to have_received(:call).once.with(contract:)
       end
     end
   end

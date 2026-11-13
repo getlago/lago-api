@@ -52,14 +52,14 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
 
   it "replays the events of the period on both paths and reports no difference when the snapshot is right" do
     expect(result).to be_success
-    expect(result.compared_charges_count).to eq(1)
+    expect(result.compared_items_count).to eq(1)
     expect(result.compared_events_count).to eq(1)
     expect(result.rechecked).to be(false)
     expect(result.differences).to be_empty
     expect(result.rows.sole).to have_attributes(
       event_timestamp: Time.zone.parse("2022-05-10"),
-      charge_id: charge.id,
-      charge_filter_id: nil,
+      item_id: charge.id,
+      filter_id: nil,
       grouped_by: {},
       snapshot_read: true,
       snapshot: have_attributes(aggregation: 8, pay_in_advance_aggregation: 3),
@@ -346,11 +346,109 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
     end
   end
 
+  context "with a contract" do
+    subject(:result) { described_class.call(contract:) }
+
+    let(:organization) { create(:organization, feature_flags: [:product_catalog]) }
+    let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
+    let(:contract) { create(:contract, organization:, customer:, started_at:) }
+    let(:product) { create(:product, :metered, organization:, billable_metric:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "EUR") }
+    let(:contract_snapshot_units) { 5 }
+
+    before do
+      # Created before the snapshot's watermark, so the card is not a change since the snapshot
+      create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: started_at.to_date,
+        billing_anchor_date: started_at.to_date, created_at: started_at)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at, rate_properties: {"amount" => "1"})
+
+      [[Time.zone.parse("2022-04-10"), 5], [Time.zone.parse("2022-05-10"), 3]].each do |timestamp, value|
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id, code: billable_metric.code,
+          timestamp:, created_at: timestamp, properties: {value:})
+      end
+      create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, units: contract_snapshot_units,
+        events_count: 1, to_datetime: BillingSegment.inclusive_end(Time.zone.parse("2022-05-01")),
+        watermark: Time.zone.parse("2022-05-01"))
+    end
+
+    it "replays the events of the open segment on both paths" do
+      expect(result).to be_success
+      expect(result.compared_items_count).to eq(1)
+      expect(result.compared_events_count).to eq(1)
+      expect(result.differences).to be_empty
+      expect(result.rows.sole).to have_attributes(
+        event_timestamp: Time.zone.parse("2022-05-10"),
+        item_id: product.id,
+        billable_metric_code: billable_metric.code,
+        filter_id: nil,
+        snapshot_read: true,
+        snapshot: have_attributes(aggregation: 5 + 3), # snapshot + May event
+        full_scan: have_attributes(aggregation: 5 + 3) # April + May events
+      )
+    end
+
+    context "when the snapshot disagrees with the full history" do
+      let(:contract_snapshot_units) { 20 }
+
+      it "reports the event after checking it again" do
+        expect(result.rechecked).to be(true)
+        expect(result.differences.sole).to have_attributes(
+          item_id: product.id,
+          snapshot: have_attributes(aggregation: 20 + 3), # snapshot + May event
+          full_scan: have_attributes(aggregation: 5 + 3)
+        )
+      end
+    end
+
+    context "without a snapshot of the contract" do
+      before { ContractRecurringAggregationSnapshot.delete_all }
+
+      it "does not count the event as read from a snapshot" do
+        expect(result.differences).to be_empty
+        expect(result.rows.sole).to have_attributes(snapshot_read: false)
+      end
+    end
+
+    context "with a later card of the product opening its segment mid month" do
+      before do
+        later_rate_card = create(:rate_card, :advance, organization:, product: create(:product, :metered, organization:, billable_metric:),
+          currency: "EUR")
+        create(:contract_rate_card, organization:, contract:, rate_card: later_rate_card, effective_date: Date.new(2022, 5, 12),
+          billing_anchor_date: Date.new(2022, 5, 12), created_at: started_at)
+        create(:rate_card_rate, organization:, rate_card: later_rate_card, effective_from: started_at, rate_properties: {"amount" => "1"})
+      end
+
+      it "reads the events from the earliest open segment" do
+        expect(result.compared_items_count).to eq(2)
+        expect(result.rows.map(&:event_timestamp)).to include(Time.zone.parse("2022-05-10"))
+      end
+    end
+
+    context "when the card is not effective yet" do
+      before { ContractRateCard.update_all(effective_date: Date.new(2022, 6, 1)) } # rubocop:disable Rails/SkipsModelValidations
+
+      it "compares nothing" do
+        expect(result.compared_items_count).to eq(0)
+        expect(result.compared_events_count).to eq(0)
+      end
+    end
+
+    context "with an arrears rate card" do
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "EUR") }
+
+      it "compares nothing, as only advance cards are paid in advance" do
+        expect(result.compared_items_count).to eq(0)
+        expect(result.compared_events_count).to eq(0)
+        expect(result.rows).to be_empty
+      end
+    end
+  end
+
   context "with a charge that is not paid in advance" do
     let(:charge) { create(:standard_charge, plan:, billable_metric:) }
 
     it "compares nothing" do
-      expect(result.compared_charges_count).to eq(0)
+      expect(result.compared_items_count).to eq(0)
       expect(result.compared_events_count).to eq(0)
       expect(result.rows).to be_empty
     end
