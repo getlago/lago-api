@@ -198,6 +198,21 @@ RSpec.describe Organizations::CreateService do
       end
     end
 
+    context "when a concurrent request gave the production organization a sandbox" do
+      let(:production) { create(:organization) }
+      let(:params) { {name: "Acme Sandbox", environment: "sandbox", production_organization_id: production.id} }
+
+      before do
+        create(:organization, :sandbox, production_organization: production)
+        # The uniqueness validation ran before the concurrent request committed.
+        allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+      end
+
+      it "returns the validation error of a taken value" do
+        expect(service_result.error.messages).to eq(production_organization_id: ["value_already_exist"])
+      end
+    end
+
     context "with invalid params" do
       let(:params) { {} }
 
