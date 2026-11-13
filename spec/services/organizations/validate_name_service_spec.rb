@@ -73,7 +73,7 @@ RSpec.describe Organizations::ValidateNameService do
     links = ["https://acme.example", "Acme www.acme", "acme.com", "Visit acme.co.uk", "ａｃｍｅ．ｃｏｍ",
       "contact@acme.io", "Visit 10.0.0.1", "acme。com", "acme\u200D.com", "acme\uFE0F.com", "acme.com.ltd", "acme.io",
       "booking.com", "Dr.Ing Consulting", "javascript:alert(1)", "mailto:x@y", "Data:text/html,hi", "vbscript:x",
-      "file:x"]
+      "file:x", "acme.co", "shop.se", "Visit t.co/abc", "shop.acme.co", "acme.ag"]
 
     expect(links.index_with { described_class.call(name: it).error&.messages })
       .to eq(links.index_with { {name: ["value_contains_link"]} })

@@ -72,8 +72,15 @@ module Organizations
     # `co.ltd` is checked as `co`, `acme.com.ltd` as `acme.com`.
     def domain?(token)
       labels = token.split(".")
-      labels.pop while labels.size > 1 && LEGAL_FORMS.include?(labels.last)
+      labels.pop while labels.size > 1 && trailing_legal_form?(labels)
       labels.size > 1 && PublicSuffix.valid?(labels.join("."), default_rule: nil)
+    end
+
+    # A two-letter legal form is also a country code: it goes only after another legal form (`Co.KG`), so a bare
+    # domain on it (`acme.co`, `shop.se`) stays a domain.
+    def trailing_legal_form?(labels)
+      form = labels.last
+      LEGAL_FORMS.include?(form) && (form.length > 2 || LEGAL_FORMS.include?(labels[-2]))
     end
   end
 end
