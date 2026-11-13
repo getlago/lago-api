@@ -10,7 +10,7 @@ class CreateCatalogWalletTransactions < ActiveRecord::Migration[8.1]
     create_table :catalog_wallet_transactions, id: :uuid do |t|
       t.references :organization, type: :uuid, null: false, foreign_key: true, index: true
       t.references :catalog_wallet, type: :uuid, null: false, foreign_key: true, index: true
-      t.references :credit_allocation, type: :uuid, foreign_key: {to_table: :catalog_wallet_credit_allocations}, index: false
+      t.references :credit_allocation, type: :uuid, foreign_key: {to_table: :catalog_wallet_credit_allocations}, index: true
       t.references :invoice, type: :uuid, foreign_key: true, index: true
 
       t.enum :direction, enum_type: :catalog_wallet_transaction_direction, null: false
