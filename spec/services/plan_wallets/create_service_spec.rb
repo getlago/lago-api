@@ -103,6 +103,7 @@ describe PlanWallets::CreateService do
       ["no code", {code: nil}, {code: ["value_is_mandatory"]}],
       ["a code that is not URL safe", {code: "ai credits"}, {code: ["value_is_invalid"]}],
       ["metadata that is not an object", {metadata: "growth"}, {metadata: ["value_is_invalid"]}],
+      ["a metadata value that is not a string", {metadata: {seats: 5}}, {metadata: ["value_is_invalid"]}],
       ["tax codes that are not a list", {tax_codes: "vat_20"}, {tax_codes: ["value_is_invalid"]}],
       ["a tax code that is not a string", {tax_codes: ["vat_20", {code: "vat_10"}]}, {tax_codes: ["value_is_invalid"]}],
       ["an unknown tax application", {tax_application: "tax_free"}, {tax_application: ["value_is_invalid"]}, {tax_application: {allowed_values: %w[tax_on_consumption tax_on_purchase]}}],

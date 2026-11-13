@@ -157,6 +157,7 @@ describe PlanWallets::UpdateService do
       ["a null priority", {priority: nil}, {priority: ["value_is_invalid"]}],
       ["a priority above 50", {priority: 51}, {priority: ["value_is_out_of_range"]}, {priority: {max: 50}}],
       ["metadata that is not an object", {metadata: "growth"}, {metadata: ["value_is_invalid"]}],
+      ["a metadata value that is not a string", {metadata: {seats: 5}}, {metadata: ["value_is_invalid"]}],
       ["tax codes that are not a list", {tax_codes: "vat_20"}, {tax_codes: ["value_is_invalid"]}],
       ["an unknown tax application", {tax_application: "tax_free"}, {tax_application: ["value_is_invalid"]}, {tax_application: {allowed_values: %w[tax_on_consumption tax_on_purchase]}}],
       ["a null tax application", {tax_application: nil}, {tax_application: ["value_is_invalid"]}, {tax_application: {allowed_values: %w[tax_on_consumption tax_on_purchase]}}],
