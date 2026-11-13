@@ -828,6 +828,7 @@ RSpec.describe Api::V1::EventsController do
       expect(fee[:amount_currency]).to eq("EUR")
       expect(fee[:units]).to eq("400.0")
       expect(fee[:events_count]).to eq(1)
+      expect(fee[:progressive_billing_credit_amount_cents]).to eq(0)
     end
 
     context "with multiple events" do
@@ -919,6 +920,7 @@ RSpec.describe Api::V1::EventsController do
       expect(fee[:amount_currency]).to eq("EUR")
       expect(fee[:units]).to eq("400.0")
       expect(fee[:events_count]).to eq(1)
+      expect(fee[:progressive_billing_credit_amount_cents]).to eq(0)
     end
 
     context "with missing subscription id" do

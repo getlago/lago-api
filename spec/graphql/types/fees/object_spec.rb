@@ -33,6 +33,7 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:precise_coupons_amount_cents).of_type("Float!")
     expect(subject).to have_field(:precise_total_amount_cents).of_type("Float!")
     expect(subject).to have_field(:precise_unit_amount).of_type("Float!")
+    expect(subject).to have_field(:progressive_billing_credit_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:sub_total_excluding_taxes_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:sub_total_excluding_taxes_precise_amount_cents).of_type("Float!")
     expect(subject).to have_field(:succeeded_at).of_type("ISO8601DateTime")

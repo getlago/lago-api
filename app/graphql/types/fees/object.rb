@@ -35,6 +35,7 @@ module Types
       field :precise_coupons_amount_cents, GraphQL::Types::Float, null: false
       field :precise_total_amount_cents, GraphQL::Types::Float, null: false
       field :precise_unit_amount, GraphQL::Types::Float, null: false
+      field :progressive_billing_credit_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_excluding_taxes_precise_amount_cents, GraphQL::Types::Float, null: false
       field :succeeded_at, GraphQL::Types::ISO8601DateTime, null: true

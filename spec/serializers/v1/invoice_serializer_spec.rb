@@ -203,7 +203,9 @@ RSpec.describe ::V1::InvoiceSerializer do
         "presentation_group_keys" => [{"value" => "department", "options" => {"display_in_invoice" => true}}]
       })
     end
-    let(:fee1) { create(:charge_fee, charge:, invoice:, presentation_breakdowns: [build(:presentation_breakdown)]) }
+    let(:fee1) do
+      create(:charge_fee, charge:, invoice:, presentation_breakdowns: [build(:presentation_breakdown)], precise_coupons_amount_cents: 2000, progressive_billing_credit_amount_cents: 1500)
+    end
     let(:fee2) { create(:fee, invoice:) }
 
     let(:includes) { %i[fees] }
@@ -219,6 +221,8 @@ RSpec.describe ::V1::InvoiceSerializer do
       expect(result["invoice"]["fees"].count).to eq(2)
       expect(result["invoice"]["fees"].first["presentation_breakdowns"]).to eq([{"presentation_by" => {"department" => "engineering"}, "units" => "60.0"}])
       expect(result["invoice"]["fees"].second["presentation_breakdowns"]).to eq([])
+      expect(result["invoice"]["fees"].to_h { [it["lago_id"], it["progressive_billing_credit_amount_cents"]] })
+        .to eq(fee1.id => 1500, fee2.id => 0)
     end
   end
 
