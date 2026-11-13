@@ -83,7 +83,18 @@ class Subscription < ApplicationRecord
   validates :started_at, presence: true, if: -> { incomplete? }
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
-  scope :expirable, -> { incomplete.joins(:activation_rules).merge(Subscription::ActivationRule.expirable) }
+  scope :expirable, -> {
+    # Taxes still pending (VIES check in flight) means no payment was offered yet.
+    tax_pending_invoices = InvoiceSubscription
+      .joins(:invoice)
+      .merge(Invoice.where(status: :open, tax_status: :pending))
+      .where("invoice_subscriptions.subscription_id = subscriptions.id")
+
+    incomplete
+      .joins(:activation_rules)
+      .merge(Subscription::ActivationRule.expirable)
+      .where.not(tax_pending_invoices.arel.exists)
+  }
   scope :without_fixed_charge_units_override_for, ->(fixed_charge) {
     overrides = Subscription::FixedChargeUnitsOverride
       .where(fixed_charge:)

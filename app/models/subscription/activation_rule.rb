@@ -52,6 +52,10 @@ class Subscription::ActivationRule < ApplicationRecord
     evaluate_service_class.call!(rule: self)
   end
 
+  def compute_expires_at
+    Time.current + timeout_hours.hours if timeout_hours.positive?
+  end
+
   private
 
   def evaluate_service_class

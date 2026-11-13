@@ -117,6 +117,26 @@ RSpec.describe Subscription::ActivationRule do
     end
   end
 
+  describe "#compute_expires_at" do
+    subject(:activation_rule) { build(:subscription_activation_rule, timeout_hours:) }
+
+    let(:timeout_hours) { 2 }
+
+    before { freeze_time }
+
+    it "returns the time the timeout ends from now" do
+      expect(activation_rule.compute_expires_at).to eq(2.hours.from_now)
+    end
+
+    context "when timeout_hours is zero" do
+      let(:timeout_hours) { 0 }
+
+      it "returns nil as the rule never expires" do
+        expect(activation_rule.compute_expires_at).to be_nil
+      end
+    end
+  end
+
   describe "#evaluate!" do
     it "calls the type-specific EvaluateService" do
       allow(Subscriptions::ActivationRules::Payment::EvaluateService).to receive(:call!)
