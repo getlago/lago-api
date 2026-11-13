@@ -341,6 +341,26 @@ RSpec.describe Api::V1::InvoicesController do
       expect(json[:invoice][:fees].first).to include(lago_charge_filter_id: charge_filter.id)
     end
 
+    context "when a progressive billing credit was applied to a charge fee" do
+      let(:charge_fee) do
+        create(:charge_fee, invoice:, precise_coupons_amount_cents: 2000, progressive_billing_credit_amount_cents: 1500)
+      end
+      let(:subscription_fee) { create(:fee, invoice:) }
+
+      before do
+        charge_fee
+        subscription_fee
+      end
+
+      it "returns the progressive billing credit amount of each fee" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:fees].to_h { [it[:lago_id], it[:progressive_billing_credit_amount_cents]] })
+          .to eq(charge_fee.id => 1500, subscription_fee.id => 0)
+      end
+    end
+
     context "when the invoice has a product fee" do
       let(:product) do
         create(:product, organization:, code: "compute", name: "Compute", description: "Compute usage")

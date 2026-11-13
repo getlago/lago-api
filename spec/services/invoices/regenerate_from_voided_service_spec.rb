@@ -216,6 +216,72 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "when the voided fee carries a progressive billing credit" do
+      let(:charge) { create(:standard_charge, plan:, organization:) }
+      let(:original_invoice) do
+        create(:invoice, :subscription, :voided, customer:, organization:, currency: "EUR", subscriptions: [subscription]).tap do |invoice|
+          invoice.invoice_subscriptions.sole.update!(
+            charges_from_datetime: DateTime.new(2023, 2, 1),
+            charges_to_datetime: DateTime.new(2023, 3, 1),
+            timestamp: DateTime.new(2023, 3, 1)
+          )
+        end
+      end
+      let(:original_fee) do
+        create(
+          :charge_fee,
+          invoice: original_invoice,
+          subscription:,
+          charge:,
+          units: 10,
+          amount_cents: 1000,
+          unit_amount_cents: 100,
+          precise_coupons_amount_cents: 200,
+          progressive_billing_credit_amount_cents: 200
+        )
+      end
+      let(:progressive_billing_invoice) do
+        create(
+          :invoice,
+          :progressive_billing_invoice,
+          customer:,
+          organization:,
+          currency: "EUR",
+          status: :finalized,
+          fees_amount_cents: 300,
+          issuing_date: Date.new(2023, 2, 15),
+          subscriptions: [subscription]
+        ).tap do |invoice|
+          invoice.invoice_subscriptions.sole.update!(
+            charges_from_datetime: DateTime.new(2023, 2, 1),
+            charges_to_datetime: DateTime.new(2023, 3, 1),
+            timestamp: DateTime.new(2023, 2, 15)
+          )
+        end
+      end
+      let(:fees_params) do
+        [{id: original_fee.id, subscription_id: subscription.id, units: 10, unit_amount_cents: 100}]
+      end
+
+      before do
+        create(:charge_fee, invoice: progressive_billing_invoice, subscription:, charge:, amount_cents: 300)
+      end
+
+      it "stores only the recomputed progressive billing credit on the regenerated fee" do
+        regenerated_invoice = regenerate_result.invoice
+        regenerated_fee = regenerated_invoice.fees.sole
+
+        # min(300 to invoice from the progressive billing invoice, 300 creditable on its fee, 1000 fee amount),
+        # not 200 copied from the voided fee, nor 200 copied + 300 recomputed
+        expect(regenerated_fee.progressive_billing_credit_amount_cents).to eq(300)
+        expect(regenerated_fee.precise_coupons_amount_cents).to eq(300)
+        expect(regenerated_invoice.progressive_billing_credit_amount_cents).to eq(300)
+        expect(regenerated_invoice.fees.sum(:progressive_billing_credit_amount_cents))
+          .to eq(regenerated_invoice.progressive_billing_credit_amount_cents)
+        expect(original_fee.reload.progressive_billing_credit_amount_cents).to eq(200)
+      end
+    end
+
     describe "invoice_subscriptions duplication" do
       context "when voided invoice is subscription type" do
         it "duplicates invoice_subscriptions to the regenerated invoice" do

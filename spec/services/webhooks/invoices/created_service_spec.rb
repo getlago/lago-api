@@ -48,5 +48,23 @@ RSpec.describe Webhooks::Invoices::CreatedService do
         hash_including("presentation_breakdowns" => [])
       )
     end
+
+    context "when a progressive billing credit was applied to a charge fee" do
+      let(:credited_fee) do
+        create(:charge_fee, charge:, invoice:, precise_coupons_amount_cents: 2000, progressive_billing_credit_amount_cents: 1500)
+      end
+
+      before { credited_fee }
+
+      it "includes progressive_billing_credit_amount_cents in fees" do
+        webhook_service.call
+
+        webhook = Webhook.order(created_at: :desc).first
+        fees = webhook.payload["invoice"]["fees"]
+
+        expect(fees.to_h { [it["lago_id"], it["progressive_billing_credit_amount_cents"]] })
+          .to eq(invoice.fees.to_h { [it.id, (it.id == credited_fee.id) ? 1500 : 0] })
+      end
+    end
   end
 end

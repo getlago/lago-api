@@ -57,6 +57,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
           pay_in_advance: true,
           invoiceable: charge.invoiceable,
           events_count: 1,
+          progressive_billing_credit_amount_cents: 0,
           event_transaction_id: transaction_id
         )
       end
@@ -90,6 +91,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
             pay_in_advance: true,
             invoiceable: charge.invoiceable,
             events_count: 1,
+            progressive_billing_credit_amount_cents: 0,
             event_transaction_id: transaction_id
           )
         end
@@ -228,6 +230,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
           pay_in_advance: true,
           invoiceable: charge.invoiceable,
           events_count: 1,
+          progressive_billing_credit_amount_cents: 0,
           event_transaction_id: transaction_id
         )
         expect(fee2).to be_a(Hash)
@@ -235,6 +238,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
           pay_in_advance: true,
           invoiceable: charge.invoiceable,
           events_count: 1,
+          progressive_billing_credit_amount_cents: 0,
           event_transaction_id: event2[:transaction_id]
         )
       end

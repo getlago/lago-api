@@ -40,11 +40,13 @@ RSpec.describe ::V1::FeeSerializer do
   let(:result) { JSON.parse(serializer.to_json) }
 
   it "serializes the fee" do
-    expect(result["fee"]).to include(
+    expect(result["fee"]).to eq(
       "lago_id" => fee.id,
       "lago_charge_id" => fee.charge_id,
       "lago_charge_filter_id" => fee.charge_filter_id,
+      "lago_fixed_charge_id" => nil,
       "lago_invoice_id" => fee.invoice_id,
+      "lago_original_fee_id" => nil,
       "lago_true_up_fee_id" => fee.true_up_fee&.id,
       "lago_true_up_parent_fee_id" => fee.true_up_parent_fee_id,
       "lago_subscription_id" => fee.subscription_id,
@@ -62,8 +64,10 @@ RSpec.describe ::V1::FeeSerializer do
       "taxes_precise_amount" => fee.taxes_precise_amount_cents.fdiv(100.to_d).to_s,
       "precise_total_amount" => fee.precise_total_amount_cents.fdiv(100.to_d).to_s,
       "units" => fee.units.to_s,
+      "description" => fee.description,
       "precise_unit_amount" => fee.precise_unit_amount.to_s,
       "precise_coupons_amount_cents" => fee.precise_coupons_amount_cents.to_s,
+      "progressive_billing_credit_amount_cents" => 0,
       "sub_total_excluding_taxes_amount_cents" => fee.sub_total_excluding_taxes_amount_cents.round,
       "sub_total_excluding_taxes_precise_amount_cents" => fee.sub_total_excluding_taxes_precise_amount_cents.to_s,
       "pay_in_advance" => fee.subscription.plan.pay_in_advance,
@@ -77,23 +81,43 @@ RSpec.describe ::V1::FeeSerializer do
       "amount_details" => fee.amount_details,
       "self_billed" => fee.invoice.self_billed,
       "pricing_unit_details" => nil,
-      "presentation_breakdowns" => [{"presentation_by" => {"department" => "engineering"}, "units" => BigDecimal(60).to_s}]
-    )
-    expect(result["fee"]["item"]).to include(
-      "type" => fee.fee_type,
-      "code" => fee.item_code,
-      "name" => fee.item_name,
-      "description" => fee.item_description,
-      "invoice_display_name" => fee.invoice_name,
-      "filter_invoice_display_name" => fee.charge_filter&.display_name,
-      "filters" => nil,
-      "lago_item_id" => fee.item_id,
-      "item_type" => fee.item_type,
-      "grouped_by" => fee.grouped_by
+      "presentation_breakdowns" => [{"presentation_by" => {"department" => "engineering"}, "units" => BigDecimal(60).to_s}],
+      "item" => {
+        "type" => fee.fee_type,
+        "code" => fee.item_code,
+        "name" => fee.item_name,
+        "description" => fee.item_description,
+        "invoice_display_name" => fee.invoice_name,
+        "filter_invoice_display_name" => fee.charge_filter&.display_name,
+        "filters" => nil,
+        "lago_item_id" => fee.item_id,
+        "item_type" => fee.item_type,
+        "grouped_by" => fee.grouped_by
+      },
+      "from_date" => fee.date_boundaries[:from_date],
+      "to_date" => fee.date_boundaries[:to_date]
     )
 
     expect(result["fee"]["from_date"]).not_to be_nil
     expect(result["fee"]["to_date"]).not_to be_nil
+  end
+
+  context "when a progressive billing credit was applied to the fee" do
+    let(:fee) do
+      create(
+        :charge_fee,
+        charge:,
+        precise_coupons_amount_cents: 2000,
+        progressive_billing_credit_amount_cents: 1500
+      )
+    end
+
+    it "serializes the progressive billing credit apart from the coupons amount" do
+      expect(result["fee"]).to include(
+        "precise_coupons_amount_cents" => "2000.0",
+        "progressive_billing_credit_amount_cents" => 1500
+      )
+    end
   end
 
   context "when fee is not attached to an invoice" do

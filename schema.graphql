@@ -7362,6 +7362,7 @@ type Fee implements InvoiceItem {
   preciseUnitAmount: Float!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
+  progressiveBillingCreditAmountCents: BigInt!
   properties: FeeProperties
   subTotalExcludingTaxesAmountCents: BigInt!
   subTotalExcludingTaxesPreciseAmountCents: Float!
