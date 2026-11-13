@@ -12,8 +12,10 @@ module Api
       # What a selector renders its target from.
       SELECTOR_TARGETS = [:product_category, :product, {product_filter: :product}].freeze
 
+      UNFILTERED_PARAMS = %i[tax_codes applies_to metadata].freeze
+
       def create
-        result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: wallet_params.to_h)
+        result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: wallet_params)
 
         if result.success?
           render_wallet(result.plan_wallet)
@@ -23,7 +25,7 @@ module Api
       end
 
       def update
-        result = ::PlanWallets::UpdateService.call(plan_wallet: find_plan_wallet, params: wallet_params.to_h)
+        result = ::PlanWallets::UpdateService.call(plan_wallet: find_plan_wallet, params: wallet_params)
 
         if result.success?
           render_wallet(result.plan_wallet)
@@ -85,7 +87,8 @@ module Api
       end
 
       def wallet_params
-        params.require(:wallet).permit(
+        wallet = params.require(:wallet)
+        permitted = wallet.permit(
           :code,
           :name,
           :invoice_display_name,
@@ -100,7 +103,23 @@ module Api
           tax_codes: [],
           applies_to: {},
           metadata: {}
-        )
+        ).to_h
+
+        # Strong params drop a null and a value of another shape. The services need both: a null
+        # metadata clears it, and another shape is refused instead of ignored.
+        UNFILTERED_PARAMS.each do |key|
+          permitted[key] = unfiltered(wallet[key]) if wallet.key?(key) && !permitted.key?(key)
+        end
+
+        permitted
+      end
+
+      def unfiltered(value)
+        case value
+        when ActionController::Parameters then value.to_unsafe_h
+        when Array then value.map { unfiltered(it) }
+        else value
+        end
       end
 
       def resource_name

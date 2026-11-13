@@ -282,6 +282,9 @@ describe Api::V2::PlanWalletsController do
         ["a priority that is not a number", {priority: "high"}, "value_is_invalid", "priority"],
         ["a rate amount", {rate_amount: "1.0"}, "not_supported", "rate_amount"],
         ["a currency other than the plan's", {currency: "EUR"}, "currency_does_not_match", "currency"],
+        ["a scope that is not an object", {applies_to: [{type: "fee_type", code: "fixed"}]}, "value_is_invalid", "applies_to"],
+        ["tax codes that are not a list", {tax_codes: "vat_20"}, "value_is_invalid", "tax_codes"],
+        ["metadata that is not an object", {metadata: "growth"}, "value_is_invalid", "metadata"],
         ["an unknown tax application", {tax_application: "tax_free"}, "value_is_invalid", "tax_application", {allowed_values: %w[tax_on_consumption tax_on_purchase]}],
         ["a negative top-up minimum", {top_up_min_amount_cents: -1}, "value_is_out_of_range", "top_up_min_amount_cents", {min: 0}],
         ["a fractional top-up maximum", {top_up_max_amount_cents: 60_000.5}, "value_is_invalid", "top_up_max_amount_cents"],
@@ -333,6 +336,33 @@ describe Api::V2::PlanWalletsController do
       expect(json[:wallet]).to include(
         lago_id: plan_wallet.id, code: "credits", priority: 20, applies_to: {include: [{type: "fee_type", code: "fixed"}]}
       )
+    end
+
+    context "with a null metadata" do
+      let(:update_params) { {metadata: nil} }
+
+      before { create(:item_metadata, organization:, owner: plan_wallet, value: {"team" => "growth"}) }
+
+      it "removes the metadata of the wallet template" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(plan_wallet.reload.metadata).to be_nil
+      end
+    end
+
+    context "with a scope that is not an object" do
+      let(:update_params) { {applies_to: "metered"} }
+
+      before { create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:) }
+
+      it "returns a validation error on applies_to and keeps the scope" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "applies_to", meta: {}}])
+        expect(plan_wallet.selectors.count).to eq(1)
+      end
     end
 
     context "when the plan has a contract with its own copy of the wallet" do
