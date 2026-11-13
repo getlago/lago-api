@@ -49,6 +49,23 @@ describe CatalogWalletTransaction do
   end
 
   describe "Scopes" do
+    describe ".spendable" do
+      let(:catalog_wallet) { create(:catalog_wallet) }
+      let(:spendable) { create(:catalog_wallet_transaction, catalog_wallet:) }
+
+      before do
+        spendable
+        create(:catalog_wallet_transaction, :pending, catalog_wallet:)
+        create(:catalog_wallet_transaction, :failed, catalog_wallet:)
+        create(:catalog_wallet_transaction, catalog_wallet:, remaining_credit_amount_cents: 0)
+        create(:catalog_wallet_transaction, :invoice_application, catalog_wallet:)
+      end
+
+      it "returns the settled inbound entries with credit left" do
+        expect(catalog_wallet.transactions.spendable).to eq([spendable])
+      end
+    end
+
     describe ".in_spending_order" do
       let(:catalog_wallet) { create(:catalog_wallet) }
       let(:bought) { create(:catalog_wallet_transaction, catalog_wallet:, purchase_amount_cents: 8_000, created_at: 3.days.ago) }

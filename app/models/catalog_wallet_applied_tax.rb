@@ -26,10 +26,10 @@ end
 #
 # Indexes
 #
-#  idx_on_catalog_wallet_id_tax_id_95501fdc40             (catalog_wallet_id,tax_id) UNIQUE WHERE (catalog_wallet_id IS NOT NULL)
-#  idx_on_plan_wallet_id_tax_id_d82685b30a                (plan_wallet_id,tax_id) UNIQUE WHERE (plan_wallet_id IS NOT NULL)
-#  index_catalog_wallet_applied_taxes_on_organization_id  (organization_id)
-#  index_catalog_wallet_applied_taxes_on_tax_id           (tax_id)
+#  index_catalog_wallet_applied_taxes_on_catalog_wallet_and_tax  (catalog_wallet_id,tax_id) UNIQUE WHERE (catalog_wallet_id IS NOT NULL)
+#  index_catalog_wallet_applied_taxes_on_organization_id         (organization_id)
+#  index_catalog_wallet_applied_taxes_on_plan_wallet_and_tax     (plan_wallet_id,tax_id) UNIQUE WHERE (plan_wallet_id IS NOT NULL)
+#  index_catalog_wallet_applied_taxes_on_tax_id                  (tax_id)
 #
 # Foreign Keys
 #
