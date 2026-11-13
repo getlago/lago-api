@@ -29,7 +29,8 @@ module CatalogWalletSettings
 
     validates :code, presence: true
     validates :currency, inclusion: {in: currency_list}
-    validates :priority, inclusion: {in: 1..LOWEST_PRIORITY}
+    validates :priority,
+      numericality: {only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: LOWEST_PRIORITY}
     validates :top_up_min_amount_cents, :top_up_max_amount_cents,
       numericality: {only_integer: true, greater_than_or_equal_to: 0},
       allow_nil: true
