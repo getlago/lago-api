@@ -32,6 +32,39 @@ RSpec.describe RecurringAggregationSnapshots::EnqueueBackfillService do
   it "enqueues a job per backfillable subscription" do
     expect { result }.to have_enqueued_job(RecurringAggregationSnapshots::BackfillJob).with(subscription).once
     expect(result.subscription_ids).to eq([subscription.id])
+    expect(result.contract_ids).to eq([])
+  end
+
+  context "with backfillable contracts" do
+    let(:contract) { create(:contract, organization:, customer: create(:customer, organization:)) }
+    let(:other_contract) { create(:contract, organization:, customer: create(:customer, organization:)) }
+
+    def close_rate_card(contract)
+      product = create(:product, :metered, organization:, billable_metric:)
+      contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:))
+      create(:billing_operation, organization:, contract_rate_card:, customer: contract.customer,
+        action_type: "close_metered_arrears", processed_at: Time.current)
+    end
+
+    before do
+      close_rate_card(contract)
+      close_rate_card(other_contract)
+    end
+
+    it "enqueues a job per contract too" do
+      expect { result }.to have_enqueued_job(RecurringAggregationSnapshots::BackfillJob).exactly(3).times
+      expect(result.subscription_ids).to eq([subscription.id])
+      expect(result.contract_ids).to match_array([contract.id, other_contract.id])
+    end
+
+    context "with listed contracts" do
+      subject(:result) { described_class.call(organization:, contract_ids: [contract.id], poll_interval: 0) }
+
+      it "enqueues them only" do
+        expect { result }.to have_enqueued_job(RecurringAggregationSnapshots::BackfillJob).with(contract).once
+        expect(result.contract_ids).to eq([contract.id])
+      end
+    end
   end
 
   context "with subscriptions that cannot be backfilled" do

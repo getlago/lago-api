@@ -144,4 +144,63 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:backfill" do # rubocop:d
       expect { task.invoke }.to raise_error(SystemExit).and output(/0 active subscription/).to_stdout
     end
   end
+
+  context "with backfillable contracts" do
+    let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:contract_ids) { "" }
+
+    before do
+      product = create(:product, :metered, organization:, billable_metric:)
+      contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:))
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_metered_arrears", processed_at: Time.current)
+
+      # Written by the job: its watermark follows the start of the task
+      create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, watermark: 1.hour.from_now)
+
+      stub_stdin(organization.id, "y", subscription_ids, contract_ids, "y")
+      allow(RecurringAggregationSnapshots::ContractBackfillService).to receive(:call).and_return(
+        RecurringAggregationSnapshots::ContractBackfillService::Result.new.tap { it.failed_rate_cards = [] }
+      )
+    end
+
+    it "enqueues a job per contract as well and reports them apart" do
+      expect { perform_enqueued_jobs { task.invoke } }.to output(
+        a_string_including(
+          "1 active contract(s) with a recurring sum rate card and a closed period.",
+          "Enqueued 2 job(s).",
+          "Subscriptions backfilled: 1/1, failed: 0, not enqueued: 0, nothing written: 0",
+          "Contracts backfilled: 1/1, failed: 0, not enqueued: 0, nothing written: 0"
+        )
+      ).to_stdout
+
+      expect(RecurringAggregationSnapshots::ContractBackfillService).to have_received(:call).with(contract:)
+    end
+
+    context "with listed contracts" do
+      let(:contract_ids) { "#{contract.id},#{SecureRandom.uuid}" }
+
+      it "backfills those it can, and no subscription" do
+        expect { perform_enqueued_jobs { task.invoke } }.to output(
+          a_string_including(
+            "Skipped, not found or without a recurring sum rate card or a closed period:\n",
+            "0 active subscription(s)",
+            "Enqueued 1 job(s)."
+          )
+        ).to_stdout
+
+        expect(RecurringAggregationSnapshot.where(subscription:)).to be_empty
+      end
+    end
+
+    context "with listed subscriptions only" do
+      let(:subscription_ids) { subscription.id }
+
+      it "leaves the contracts out" do
+        expect { perform_enqueued_jobs { task.invoke } }.to output(a_string_including("Enqueued 1 job(s).")).to_stdout
+
+        expect(RecurringAggregationSnapshots::ContractBackfillService).not_to have_received(:call)
+      end
+    end
+  end
 end
