@@ -16,6 +16,44 @@ describe CatalogWalletConsumption do
 
   describe "validations" do
     it { is_expected.to validate_numericality_of(:credit_amount_cents).only_integer.is_greater_than(0) }
+
+    describe "inbound_transaction validation" do
+      subject(:consumption) { build(:catalog_wallet_consumption, inbound_transaction:) }
+
+      let(:inbound_transaction) { build(:catalog_wallet_transaction) }
+
+      it "accepts an inbound entry" do
+        expect(consumption).to be_valid
+      end
+
+      context "when the entry is outbound" do
+        let(:inbound_transaction) { build(:catalog_wallet_transaction, :invoice_application) }
+
+        it "is invalid" do
+          expect(consumption).not_to be_valid
+          expect(consumption.errors.where(:inbound_transaction, :invalid)).to be_present
+        end
+      end
+    end
+
+    describe "outbound_transaction validation" do
+      subject(:consumption) { build(:catalog_wallet_consumption, outbound_transaction:) }
+
+      let(:outbound_transaction) { build(:catalog_wallet_transaction, :invoice_application) }
+
+      it "accepts an outbound entry" do
+        expect(consumption).to be_valid
+      end
+
+      context "when the entry is inbound" do
+        let(:outbound_transaction) { build(:catalog_wallet_transaction) }
+
+        it "is invalid" do
+          expect(consumption).not_to be_valid
+          expect(consumption.errors.where(:outbound_transaction, :invalid)).to be_present
+        end
+      end
+    end
   end
 
   describe "database constraints" do
