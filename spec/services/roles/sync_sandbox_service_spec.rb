@@ -20,44 +20,43 @@ RSpec.describe Roles::SyncSandboxService do
   end
 
   context "when the copy exists" do
-    let(:copy) { create(:role, organization: sandbox, code: "auditor", name: "Old", permissions: %w[organization:view]) }
+    let(:copy) { create(:role, organization: sandbox, code: "auditor", name: "Old", permissions: %w[customers:view]) }
 
     before { copy }
 
     it "updates it" do
-      role.update!(name: "Auditor", permissions: %w[organization:view customers:view])
-
       expect(result.sandbox_role).to eq(copy)
-      expect(copy.reload).to have_attributes(name: "Auditor", permissions: %w[customers:view organization:view])
+      expect(copy.reload).to have_attributes(name: "Auditor", permissions: %w[organization:view])
       expect(security_logger).to have_received(:produce).with(organization: sandbox, log_type: "role",
         log_event: "role.updated", user: actor, resources: {role_code: "auditor"})
     end
 
-    it "discards it with the production role" do
-      role.discard!
+    context "when the production role is discarded" do
+      before { role.discard! }
 
-      expect(result.sandbox_role).to be_nil
-      expect(copy.reload).to be_discarded
-    end
-
-    context "when sandbox members hold the copy" do
-      let(:member) { create(:membership, organization: production, roles: %i[finance]) }
-      let(:drifted) { create(:membership, organization: sandbox) }
-      let(:finance) { create(:role, :finance) }
-
-      before do
-        create(:membership, user: member.user, organization: sandbox, role: copy)
-        create(:membership_role, membership: drifted, role: copy)
-        role.discard!
+      it "discards it" do
+        expect(result.sandbox_role).to be_nil
+        expect(copy.reload).to be_discarded
       end
 
-      it "discards their links to it and gives them production's roles back" do
-        result
+      context "when sandbox members hold the copy" do
+        let(:member) { create(:membership, organization: production, roles: %i[finance]) }
+        let(:drifted) { create(:membership, organization: sandbox) }
+        let(:finance) { create(:role, :finance) }
 
-        expect(MembershipRole.where(role: copy)).to be_empty
-        expect(sandbox.memberships.active.find_by(user: member.user).roles).to eq([finance])
-        # Not a member of production: the sync revokes it rather than leave it without a role.
-        expect(drifted.reload).to be_revoked
+        before do
+          create(:membership, user: member.user, organization: sandbox, role: copy)
+          create(:membership_role, membership: drifted, role: copy)
+        end
+
+        it "discards their links to it and gives them production's roles back" do
+          result
+
+          expect(MembershipRole.where(role: copy)).to be_empty
+          expect(sandbox.memberships.active.find_by(user: member.user).roles).to eq([finance])
+          # Not a member of production: the sync revokes it rather than leave it without a role.
+          expect(drifted.reload).to be_revoked
+        end
       end
     end
   end

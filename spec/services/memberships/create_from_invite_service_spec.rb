@@ -22,7 +22,9 @@ RSpec.describe Memberships::CreateFromInviteService do
 
     context "when the organization has a sandbox" do
       let(:organization) { create(:organization, :with_sandbox) }
-      let!(:admin_role) { create(:role, :admin) }
+      let(:admin_role) { create(:role, :admin) }
+
+      before { admin_role }
 
       it "adds the user to the sandbox with the same roles" do
         create_service.call
