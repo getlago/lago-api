@@ -257,17 +257,20 @@ describe Api::V2::PlanWalletsController do
 
     describe "validations" do
       [
-        ["a priority below 1", {priority: 0}, "value_is_invalid", "priority"],
-        ["a priority above 50", {priority: 51}, "value_is_invalid", "priority"],
+        ["a priority below 1", {priority: 0}, "value_is_out_of_range", "priority", {min: 1}],
+        ["a priority above 50", {priority: 51}, "value_is_out_of_range", "priority", {max: 50}],
+        ["a priority that is not a number", {priority: "high"}, "value_is_invalid", "priority"],
         ["a rate amount", {rate_amount: "1.0"}, "not_supported", "rate_amount"],
         ["a currency other than the plan's", {currency: "EUR"}, "currency_does_not_match", "currency"],
-        ["an unknown tax application", {tax_application: "tax_free"}, "value_is_invalid", "tax_application"],
-        ["a negative top-up minimum", {top_up_min_amount_cents: -1}, "value_is_out_of_range", "top_up_min_amount_cents"],
+        ["an unknown tax application", {tax_application: "tax_free"}, "value_is_invalid", "tax_application", {allowed_values: %w[tax_on_consumption tax_on_purchase]}],
+        ["a negative top-up minimum", {top_up_min_amount_cents: -1}, "value_is_out_of_range", "top_up_min_amount_cents", {min: 0}],
         ["a fractional top-up maximum", {top_up_max_amount_cents: 60_000.5}, "value_is_invalid", "top_up_max_amount_cents"],
-        ["a top-up minimum above the maximum", {top_up_min_amount_cents: 50_001}, "value_is_out_of_range", "top_up_max_amount_cents"],
+        ["a top-up minimum above the maximum", {top_up_min_amount_cents: 50_001}, "value_is_out_of_range", "top_up_max_amount_cents", {min: 50_001}],
         ["an excluded scope", {applies_to: {exclude: [{type: "fee_type", code: "fixed"}]}}, "not_supported", "applies_to.exclude"],
+        ["a selector of an unknown type", {applies_to: {include: [{type: "rate_card", code: "api_calls"}]}}, "value_is_invalid", "applies_to.include[0].type", {allowed_values: %w[fee_type product_category product product_filters]}],
+        ["a selector of an unknown fee type", {applies_to: {include: [{type: "fee_type", code: "usage"}]}}, "value_is_invalid", "applies_to.include[0].code", {allowed_values: %w[fixed metered]}],
         ["a selector that does not exist", {applies_to: {include: [{type: "fee_type", code: "metered"}, {type: "product", code: "unknown"}]}}, "product_not_found", "applies_to.include[1].code"]
-      ].each do |description, overrides, code, field|
+      ].each do |description, overrides, code, field, meta|
         context "with #{description}" do
           let(:create_params) { super().merge(overrides) }
 
@@ -276,7 +279,7 @@ describe Api::V2::PlanWalletsController do
 
             expect(response).to have_http_status(:unprocessable_content)
             expect(json[:code]).to eq("validation_errors")
-            expect(json[:details].map { it.slice(:code, :field) }).to eq([{code:, field:}])
+            expect(json[:details]).to eq([{code:, field:, meta: meta || {}}])
           end
         end
       end
