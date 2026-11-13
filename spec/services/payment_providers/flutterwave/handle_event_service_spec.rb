@@ -45,6 +45,20 @@ RSpec.describe PaymentProviders::Flutterwave::HandleEventService do
 
         expect { handle_event_service.call }.not_to raise_error
       end
+
+      it "raises a transient HTTP error" do
+        allow(PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService)
+          .to receive(:call!).and_raise(LagoHttpClient::HttpError.new(503, "", "https://api.flutterwave.com"))
+
+        expect { handle_event_service.call }.to raise_error(LagoHttpClient::HttpError)
+      end
+
+      it "raises a transient network error" do
+        allow(PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService)
+          .to receive(:call!).and_raise(Net::OpenTimeout)
+
+        expect { handle_event_service.call }.to raise_error(Net::OpenTimeout)
+      end
     end
 
     context "when event is not supported" do

@@ -10,6 +10,14 @@ module PaymentProviders
     PROCESSING_STATUSES = %w[pending].freeze
     SUCCESS_STATUSES = %w[successful].freeze
     FAILED_STATUSES = %w[failed cancelled].freeze
+
+    # NOTE: Flutterwave does not resend a webhook it got a 200 for, so jobs retry these
+    #       rather than dropping a payment that went through.
+    TRANSIENT_ERRORS = [
+      LagoHttpClient::HttpError,
+      *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES
+    ].freeze
+
     validates :secret_key, presence: true
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 
