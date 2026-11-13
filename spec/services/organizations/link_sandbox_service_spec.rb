@@ -172,6 +172,33 @@ RSpec.describe Organizations::LinkSandboxService do
     end
   end
 
+  context "when another sandbox of production is created during the link" do
+    before do
+      allow(target).to receive(:update!).and_wrap_original do |original, *args, **kwargs|
+        create(:organization, :sandbox, production_organization: production)
+        original.call(*args, **kwargs)
+      end
+    end
+
+    it "answers as the uniqueness validation would" do
+      expect(result.error.messages).to eq(production_organization_id: ["value_already_exist"])
+      expect(target.reload).to have_attributes(environment: "production", production_organization_id: nil)
+    end
+  end
+
+  context "when another link holds the lock" do
+    before do
+      allow(Organization).to receive(:with_advisory_lock!)
+        .and_raise(WithAdvisoryLock::FailedToAcquireLock.new(described_class::LOCK_KEY))
+    end
+
+    it "fails with lock_acquisition_failed" do
+      expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+      expect(result.error.code).to eq("lock_acquisition_failed")
+      expect(target.reload).to be_production
+    end
+  end
+
   context "when a mirror fails" do
     before do
       allow(Memberships::SyncSandboxService).to receive(:call!)
