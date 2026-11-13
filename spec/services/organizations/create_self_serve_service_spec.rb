@@ -149,5 +149,11 @@ RSpec.describe Organizations::CreateSelfServeService do
       expect { result }.not_to change { [Organization.count, ApiKey.count, BillingEntity.count] }
       expect(result.error.messages).to eq(name: ["value_is_invalid"])
     end
+
+    it "rolls the production organization back inside a caller's transaction" do
+      expect { ApplicationRecord.transaction { result } }
+        .not_to change { [Organization.count, ApiKey.count, BillingEntity.count] }
+      expect(result.error.messages).to eq(name: ["value_is_invalid"])
+    end
   end
 end

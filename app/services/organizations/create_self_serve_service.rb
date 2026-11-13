@@ -28,7 +28,8 @@ module Organizations
         return result.validation_failure!(errors: {feature_flags: ["value_is_invalid"]})
       end
 
-      ActiveRecord::Base.transaction do
+      # A savepoint inside a caller's transaction, so a failed sandbox leaves no production behind.
+      ActiveRecord::Base.transaction(requires_new: true) do
         production = CreateService.call!(**shared_attributes, name: name_result.name, environment: "production")
           .organization
         sandbox = CreateService.call!(
