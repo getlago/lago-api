@@ -24,6 +24,8 @@ describe PlanWallet do
       expect(plan_wallet).to belong_to(:catalog_plan)
       expect(plan_wallet).to have_many(:credit_allocations).class_name("PlanWalletCreditAllocation")
       expect(plan_wallet).to have_many(:selectors).class_name("CatalogWalletSelector")
+      expect(plan_wallet).to have_many(:applied_taxes).class_name("CatalogWalletAppliedTax")
+      expect(plan_wallet).to have_many(:taxes).through(:applied_taxes)
       expect(plan_wallet).to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy)
     end
   end
