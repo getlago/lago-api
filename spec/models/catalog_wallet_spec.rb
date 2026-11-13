@@ -23,6 +23,7 @@ describe CatalogWallet do
       expect(catalog_wallet).to belong_to(:organization)
       expect(catalog_wallet).to belong_to(:contract)
       expect(catalog_wallet).to belong_to(:customer)
+      expect(catalog_wallet).to have_many(:credit_allocations).class_name("CatalogWalletCreditAllocation")
       expect(catalog_wallet).to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy)
     end
   end
