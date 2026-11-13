@@ -156,6 +156,8 @@ describe PlanWallets::UpdateService do
       ["a null code", {code: nil}, {code: ["value_is_mandatory"]}],
       ["a null priority", {priority: nil}, {priority: ["value_is_invalid"]}],
       ["a priority above 50", {priority: 51}, {priority: ["value_is_out_of_range"]}, {priority: {max: 50}}],
+      ["metadata that is not an object", {metadata: "growth"}, {metadata: ["value_is_invalid"]}],
+      ["tax codes that are not a list", {tax_codes: "vat_20"}, {tax_codes: ["value_is_invalid"]}],
       ["an unknown tax application", {tax_application: "tax_free"}, {tax_application: ["value_is_invalid"]}, {tax_application: {allowed_values: %w[tax_on_consumption tax_on_purchase]}}],
       ["a null tax application", {tax_application: nil}, {tax_application: ["value_is_invalid"]}, {tax_application: {allowed_values: %w[tax_on_consumption tax_on_purchase]}}],
       ["a top-up maximum below the minimum", {top_up_min_amount_cents: 1000, top_up_max_amount_cents: 999}, {top_up_max_amount_cents: ["value_is_out_of_range"]}, {top_up_max_amount_cents: {min: 1000}}],

@@ -24,6 +24,16 @@ describe PlanWallets::DestroyService do
     expect(Utils::ActivityLog).to have_received(:produce).with(plan_wallet, "plan_wallet.deleted", after_commit: true)
   end
 
+  context "when its plan is being deleted" do
+    subject(:result) { described_class.call(plan_wallet:, emit_events: false) }
+
+    it "soft deletes the wallet template without logging it" do
+      expect(result).to be_success
+      expect(result.plan_wallet).to be_discarded
+      expect(Utils::ActivityLog).not_to have_received(:produce)
+    end
+  end
+
   context "when the wallet template has credit allocations, taxes and a scope" do
     let(:credit_allocation) { create(:plan_wallet_credit_allocation, organization:, plan_wallet:) }
     let(:applied_tax) { create(:catalog_wallet_applied_tax, :plan_level, organization:, plan_wallet:) }
