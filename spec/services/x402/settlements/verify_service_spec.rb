@@ -492,5 +492,283 @@ describe X402::Settlements::VerifyService do
         end
       end
     end
+
+    context "with the gate's settle response" do
+      subject(:result) { described_class.call(connection: x402_connection, payment:, payment_requirements:, settle_response:, verify_response:) }
+
+      let(:payer) { "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2" }
+      let(:settle_response) { {"success" => true, "transaction" => "0x#{"cd" * 32}", "network" => "eip155:84532", "payer" => payer} }
+      let(:verify_response) { nil }
+
+      it "succeeds" do
+        expect(result).to be_success
+      end
+
+      it "does not request /verify" do
+        result
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+      end
+
+      it "derives the payer" do
+        expect(result.verified_payment.payer_address).to eq(payer)
+      end
+
+      it "carries the digest" do
+        digest = X402::Payments::ComputeDigestService.call!(payment:, network: "eip155:84532", asset: base_asset).digest
+
+        expect(result.verified_payment.payment_digest).to eq(digest)
+      end
+
+      it "carries no verify answer" do
+        expect(result.verified_payment.verify_response).to be_nil
+      end
+
+      context "with the gate's verify answer" do
+        let(:verify_response) { {"isValid" => true, "payer" => payer} }
+
+        it "carries it" do
+          expect(result.verified_payment.verify_response).to eq(verify_response)
+        end
+      end
+
+      context "with symbol keys" do
+        let(:settle_response) { super().symbolize_keys }
+        let(:verify_response) { {isValid: true} }
+
+        it "succeeds" do
+          expect(result).to be_success
+        end
+
+        it "carries the verify answer with string keys" do
+          expect(result.verified_payment.verify_response).to eq({"isValid" => true})
+        end
+      end
+
+      context "with a maxTimeoutSeconds of 300" do
+        let(:payment_requirements) { x402_evm_requirements.merge("maxTimeoutSeconds" => 300) }
+
+        it "succeeds" do
+          expect(result).to be_success
+        end
+      end
+
+      context "without maxTimeoutSeconds" do
+        let(:payment_requirements) { x402_evm_requirements.except("maxTimeoutSeconds") }
+
+        it "succeeds" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with a string maxTimeoutSeconds" do
+        let(:payment_requirements) { x402_evm_requirements.merge("maxTimeoutSeconds" => "60") }
+
+        it "succeeds" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with a validBefore an hour away" do
+        let(:payment) { authorization_override("validBefore" => "1789652871") }
+
+        it "succeeds" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with another payTo" do
+        let(:payment_requirements) { x402_evm_requirements.merge("payTo" => other_pay_to) }
+
+        it_behaves_like "a refusal before verify", {payment_requirements: ["invalid_pay_to"]}
+      end
+
+      context "with an authorization value other than the amount" do
+        let(:payment) { authorization_override("value" => "1050002") }
+
+        it_behaves_like "a refusal before verify", {payment: ["amount_mismatch"]}
+      end
+
+      context "with an unsuccessful settle" do
+        let(:settle_response) { super().merge("success" => false, "errorReason" => "insufficient_funds") }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["settle_not_successful"]}
+      end
+
+      context "with success as a string" do
+        let(:settle_response) { super().merge("success" => "true") }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["settle_not_successful"]}
+      end
+
+      context "without a transaction" do
+        let(:settle_response) { super().except("transaction") }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["settle_not_successful"]}
+      end
+
+      context "with a malformed transaction" do
+        let(:settle_response) { super().merge("transaction" => "0x1234") }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["settle_not_successful"]}
+      end
+
+      context "with another network" do
+        let(:settle_response) { super().merge("network" => "eip155:8453") }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["does_not_match_payment"]}
+
+        it "logs the mismatched field" do
+          result
+          expect(Rails.logger).to have_received(:warn).with("X402::Settlements::VerifyService call failed reason=network_mismatch network=eip155:84532").once
+        end
+      end
+
+      context "with another payer" do
+        let(:payer) { other_pay_to }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["does_not_match_payment"]}
+
+        it "logs the mismatched field" do
+          result
+          expect(Rails.logger).to have_received(:warn).with("X402::Settlements::VerifyService call failed reason=payer_mismatch network=eip155:84532").once
+        end
+      end
+
+      context "with a payer that is not a string" do
+        let(:payer) { 42 }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["does_not_match_payment"]}
+      end
+
+      context "with the payer in lowercase" do
+        let(:payer) { super().downcase }
+
+        it "succeeds" do
+          expect(result).to be_success
+        end
+      end
+
+      context "without a payer" do
+        let(:settle_response) { super().except("payer") }
+
+        it "succeeds" do
+          expect(result).to be_success
+        end
+
+        it "derives the payer" do
+          expect(result.verified_payment.payer_address).to eq("0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2")
+        end
+      end
+
+      context "when the settle response is not a hash" do
+        let(:settle_response) { "settled" }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["invalid_settle_response"]}
+      end
+
+      context "when the settle response holds a NUL" do
+        let(:settle_response) { super().merge("errorReason" => "\u0000") }
+
+        it_behaves_like "a refusal before verify", {settle_response: ["invalid_settle_response"]}
+      end
+
+      context "when the verify answer is not a hash" do
+        let(:verify_response) { ["valid"] }
+
+        it_behaves_like "a refusal before verify", {verify_response: ["invalid_verify_response"]}
+      end
+
+      context "when the verify answer holds a NUL" do
+        let(:verify_response) { {"invalidMessage" => "\u0000"} }
+
+        it_behaves_like "a refusal before verify", {verify_response: ["invalid_verify_response"]}
+      end
+
+      context "with a Solana payment" do
+        let(:mint) { "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU" }
+        let(:transferred) { 10_000 }
+        let(:transfer_data) { transfer_checked_data(transferred) }
+        let(:solana_transaction) do
+          build_solana_transaction(
+            keys: [
+              "D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM", x402_svm_payer, "6TWy94HPrwQxtNBjPAzJUBizBUmmtd1Q6bh9TUwa21S5",
+              "H6KPkFCgvBzk6uCcD3VmQKZdp2BTkcoCctcgziSLeSpL", mint, SolanaTransactionBuilder::TOKEN_PROGRAM
+            ],
+            instructions: [{program: 5, accounts: [2, 4, 3, 1], data: transfer_data}],
+            signatures: ["\x00".b * 64, "\x02".b * 64]
+          )
+        end
+        let(:payment) { x402_svm_payment.deep_merge("payload" => {"transaction" => Base64.strict_encode64(solana_transaction)}) }
+        let(:payment_requirements) { x402_svm_requirements }
+        let(:x402_svm_requirements) { super().merge("amount" => "10000") }
+        let(:payer) { x402_svm_payer }
+        let(:settle_response) do
+          {"success" => true, "transaction" => X402::Base58.encode("\x01".b * 64), "network" => "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", "payer" => payer}
+        end
+
+        it "succeeds" do
+          expect(result).to be_success
+        end
+
+        it "does not request /verify" do
+          result
+          expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+        end
+
+        it "derives the payer from the transaction" do
+          expect(result.verified_payment.payer_address).to eq(x402_svm_payer)
+        end
+
+        context "with another payer" do
+          let(:payer) { "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG" }
+
+          it_behaves_like "a refusal before verify", {settle_response: ["does_not_match_payment"]}
+        end
+
+        context "without a payer" do
+          let(:settle_response) { super().except("payer") }
+
+          it "derives the payer from the transaction" do
+            expect(result.verified_payment.payer_address).to eq(x402_svm_payer)
+          end
+        end
+
+        context "with an EVM hash as the transaction" do
+          let(:settle_response) { super().merge("transaction" => "0x#{"cd" * 32}") }
+
+          it_behaves_like "a refusal before verify", {settle_response: ["settle_not_successful"]}
+        end
+
+        context "with a transfer of another amount" do
+          let(:transferred) { 9_999 }
+
+          it_behaves_like "a refusal before verify", {payment: ["amount_mismatch"]}
+        end
+
+        context "with a transfer of another mint" do
+          let(:mint) { "So11111111111111111111111111111111111111112" }
+
+          it_behaves_like "a refusal before verify", {payment: ["asset_mismatch"]}
+        end
+
+        context "with a transfer that stops inside the amount" do
+          let(:transfer_data) { [12, 10_000].pack("CL<") }
+
+          it_behaves_like "a refusal before verify", {payment: ["unsupported_transaction"]}
+        end
+
+        context "with a durable nonce" do
+          let(:solana_transaction) do
+            build_solana_transaction(
+              keys: ["D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM", x402_svm_payer, SolanaTransactionBuilder::SYSTEM_PROGRAM, SolanaTransactionBuilder::TOKEN_PROGRAM],
+              instructions: [{program: 2, accounts: [1, 0, 1], data: [4].pack("L<")}, {program: 3, accounts: [1, 1, 1, 1], data: transfer_data}],
+              signatures: ["\x00".b * 64, "\x02".b * 64]
+            )
+          end
+
+          it_behaves_like "a refusal before verify", {payment: ["unsupported_transaction"]}
+        end
+      end
+    end
   end
 end

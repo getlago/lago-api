@@ -10,6 +10,7 @@ module X402
       LANDING_WINDOW = 10.minutes
       EXPIRY_PROOF = 120.seconds
       COMMITMENT = "finalized"
+      TRANSFER_AMOUNT_BYTES = 1..8
 
       def initialize(network:, payment:, payment_requirements:, since:)
         @network = network
@@ -33,6 +34,21 @@ module X402
       def payer
         buyer_signature
         Base58.encode(authority)
+      end
+
+      def transfer_amount
+        data = transaction.transfer_checked.data
+
+        if data.bytesize > TRANSFER_AMOUNT_BYTES.end
+          data.byteslice(TRANSFER_AMOUNT_BYTES).unpack1("Q<")
+        else
+          raise UnreadablePaymentError, "the TransferChecked data has no amount"
+        end
+      end
+
+      def mint
+        key = transaction.account_keys[transaction.transfer_checked.accounts[1]]
+        key && Base58.encode(key)
       end
 
       private

@@ -197,6 +197,72 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
       end
     end
 
+    context "with the record mode" do
+      let(:params) { super().merge(mode: "record", settle_response:) }
+      let(:settle_response) do
+        {success: true, transaction: "0x#{"ef" * 32}", network: "eip155:84532", payer: payer_address, extensions: {"trace" => [nil, 1]}}
+      end
+
+      it "renders the recorded purchase" do
+        subject
+        expect(json[:x402_settlement]).to include(
+          status: "settled", replayed: false, network: "eip155:84532", transaction_hash: "0x#{"ef" * 32}",
+          payer_address:, credits_granted: "10000.0", settled_amount_cents: 1000, reconcile_after: nil
+        )
+      end
+
+      it "calls no facilitator" do
+        subject
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+        expect(a_request(:post, "#{cdp_facilitator_url}/settle")).not_to have_been_made
+      end
+
+      it "stores the settle response as sent" do
+        subject
+        expect(X402::Settlement.sole.payload["settle_response"]).to eq(settle_response.deep_stringify_keys)
+      end
+
+      context "without an idempotency key" do
+        let(:params) { super().except(:idempotency_key) }
+
+        it "answers 422 on the key" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(idempotency_key: ["value_is_mandatory"])
+        end
+      end
+
+      context "with the settle response of a failed settle" do
+        let(:settle_response) { {success: false, errorReason: "insufficient_funds", transaction: "", network: "eip155:84532"} }
+
+        it "answers 422 on the settle response" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "validation_errors", error_details: {settle_response: ["settle_not_successful"]})
+        end
+
+        it "calls no facilitator" do
+          subject
+          expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+        end
+      end
+    end
+
+    context "with an unknown mode" do
+      let(:params) { super().merge(mode: "steal") }
+
+      it "answers 422 on the mode" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(mode: ["invalid_value"])
+      end
+
+      it "calls no facilitator" do
+        subject
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+      end
+    end
+
     context "with a facilitator outage on /verify" do
       before { stub_cdp_answer("/verify", status: 500, body: {errorType: "internal_server_error", correlationId: "corr-1"}) }
 

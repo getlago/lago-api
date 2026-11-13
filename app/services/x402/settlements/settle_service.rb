@@ -5,7 +5,6 @@ module X402
     class SettleService < BaseService
       Result = BaseResult[:settlement, :outcome, :transaction_hash]
       RECONCILE_MARGIN = 30.seconds
-      SVM_SIGNATURE_BYTES = 64
       INVOICE_CURRENCY = "USD"
       RACE_CODES = {
         "index_x402_settlements_on_payment_digest" => "payment_already_recorded",
@@ -181,13 +180,7 @@ module X402
       end
 
       def well_formed_hash?(transaction)
-        return false unless transaction.is_a?(String)
-
-        if verified_payment.family == :evm
-          X402::Chain::EvmReader::HEX_WORD.match?(transaction)
-        else
-          X402::Base58.decode(transaction)&.bytesize == SVM_SIGNATURE_BYTES
-        end
+        X402::Network.valid_transaction?(transaction, family: verified_payment.family)
       end
 
       def record_unsettled(settlement, error_reason, error)
