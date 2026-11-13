@@ -26,7 +26,6 @@ end
 #  name                         :string
 #  ongoing_balance_cents        :bigint           default(0), not null
 #  priority                     :integer          default(50), not null
-#  ready_to_be_refreshed        :boolean          default(FALSE), not null
 #  tax_application              :enum             default("tax_on_consumption"), not null
 #  terminated_at                :datetime
 #  top_up_max_amount_cents      :bigint
@@ -39,10 +38,9 @@ end
 #
 # Indexes
 #
-#  index_catalog_wallets_on_contract_id_and_code   (contract_id,code) UNIQUE WHERE (deleted_at IS NULL)
-#  index_catalog_wallets_on_customer_id            (customer_id)
-#  index_catalog_wallets_on_organization_id        (organization_id)
-#  index_catalog_wallets_on_ready_to_be_refreshed  (ready_to_be_refreshed) WHERE ready_to_be_refreshed
+#  index_catalog_wallets_on_contract_id_and_code  (contract_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#  index_catalog_wallets_on_customer_id           (customer_id)
+#  index_catalog_wallets_on_organization_id       (organization_id)
 #
 # Foreign Keys
 #
