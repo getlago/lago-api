@@ -48,6 +48,8 @@ RSpec.describe Resolvers::InviteResolver do
   end
 
   context "when the organization has a sandbox" do
+    include_context "with self-serve enabled"
+
     let(:query) do
       <<~GQL
         query($token: String!) {

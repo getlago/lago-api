@@ -213,6 +213,8 @@ RSpec.describe Resolvers::MembershipsResolver do
     end
 
     context "with the sandbox of a pair the viewer does not belong to" do
+      include_context "with self-serve enabled"
+
       let(:organization_field) { "sandboxOrganization { id }" }
 
       before do

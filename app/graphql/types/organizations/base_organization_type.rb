@@ -13,12 +13,21 @@ module Types
         }
       end
 
+      # With self-serve off, every organization answers as a standalone production one, whatever its columns say.
+      def environment
+        Lago::SelfServe.enabled? ? object.environment : "production"
+      end
+
+      def self_serve
+        Lago::SelfServe.enabled? && object.self_serve
+      end
+
       def production_organization
-        linked_organization(:production_organization) if object.sandbox?
+        linked_organization(:production_organization) if Lago::SelfServe.enabled? && object.sandbox?
       end
 
       def sandbox_organization
-        linked_organization(:sandbox_organization) if object.production?
+        linked_organization(:sandbox_organization) if Lago::SelfServe.enabled? && object.production?
       end
 
       private

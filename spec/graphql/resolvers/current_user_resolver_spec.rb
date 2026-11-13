@@ -102,6 +102,8 @@ RSpec.describe Resolvers::CurrentUserResolver do
   end
 
   describe "with a production organization and its sandbox" do
+    include_context "with self-serve enabled"
+
     let(:query) do
       <<~GRAPHQL
         query {
@@ -188,6 +190,24 @@ RSpec.describe Resolvers::CurrentUserResolver do
       end
 
       expect(pair_queries.call).to eq(one_pair)
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "shows each organization of the pair as a standalone production one" do
+        create(:membership, user:, organization: production)
+        create(:membership, user:, organization: sandbox)
+
+        result = execute_graphql(current_user: user, query:)
+
+        expect(organizations_of(result)).to eq([
+          {"id" => production.id, "selfServe" => false, "environment" => "production",
+           "productionOrganization" => nil, "sandboxOrganization" => nil},
+          {"id" => sandbox.id, "selfServe" => false, "environment" => "production",
+           "productionOrganization" => nil, "sandboxOrganization" => nil}
+        ])
+      end
     end
   end
 
