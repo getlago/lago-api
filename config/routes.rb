@@ -71,7 +71,7 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
-        resources :wallets, param: :code, code: /.*/, only: %i[index show], controller: "plan_wallets"
+        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets"
         draw(:plan_nested_api)
       end
       # The constraint mirrors v1: without it, an external id containing a
