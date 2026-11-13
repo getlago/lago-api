@@ -1034,6 +1034,7 @@ DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_wallet_and_idem
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_grant_occurrence;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_credit_allocation_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_catalog_wallet_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_in_spending_order;
 DROP INDEX IF EXISTS public.index_catalog_wallet_selectors_on_plan_wallet_and_target;
@@ -9473,6 +9474,13 @@ CREATE INDEX index_catalog_wallet_transactions_in_spending_order ON public.catal
 --
 
 CREATE INDEX index_catalog_wallet_transactions_on_catalog_wallet_id ON public.catalog_wallet_transactions USING btree (catalog_wallet_id);
+
+
+--
+-- Name: index_catalog_wallet_transactions_on_credit_allocation_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_wallet_transactions_on_credit_allocation_id ON public.catalog_wallet_transactions USING btree (credit_allocation_id);
 
 
 --

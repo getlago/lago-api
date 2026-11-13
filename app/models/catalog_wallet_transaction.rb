@@ -73,6 +73,7 @@ end
 #
 #  index_catalog_wallet_transactions_in_spending_order              (catalog_wallet_id, priority, ((purchase_amount_cents > 0)), created_at, id) WHERE ((direction = 'inbound'::catalog_wallet_transaction_direction) AND (status = 'settled'::catalog_wallet_transaction_status) AND (remaining_credit_amount_cents > 0))
 #  index_catalog_wallet_transactions_on_catalog_wallet_id           (catalog_wallet_id)
+#  index_catalog_wallet_transactions_on_credit_allocation_id        (credit_allocation_id)
 #  index_catalog_wallet_transactions_on_grant_occurrence            (credit_allocation_id,source_cycle_started_at) UNIQUE WHERE (source_cycle_started_at IS NOT NULL)
 #  index_catalog_wallet_transactions_on_invoice_id                  (invoice_id)
 #  index_catalog_wallet_transactions_on_organization_id             (organization_id)
