@@ -56,6 +56,14 @@ RSpec.describe ApiKeys::MemberPermissions do
       end
     end
 
+    context "when the member manages developers but not their keys" do
+      let(:role) { create(:role, organization:, permissions: %w[developers:manage]) }
+
+      it "grants no write on webhook endpoints, which returns their signing secrets" do
+        expect(permissions["webhook_endpoint"]).to eq(["read"])
+      end
+    end
+
     context "when the member can edit plans but not their charges" do
       let(:role) do
         create(:role, organization:, permissions: %w[plans:view plans:create plans:update plans:delete])
