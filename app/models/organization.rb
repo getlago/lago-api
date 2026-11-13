@@ -145,8 +145,9 @@ class Organization < ApplicationRecord
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
 
   belongs_to :production_organization, class_name: "Organization", optional: true, inverse_of: :sandbox_organization
+  # No path deletes an organization today; a future one gets an error instead of the foreign key's exception.
   has_one :sandbox_organization, class_name: "Organization", foreign_key: :production_organization_id,
-    inverse_of: :production_organization
+    inverse_of: :production_organization, dependent: :restrict_with_error
 
   has_many :invoice_custom_sections
   has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"

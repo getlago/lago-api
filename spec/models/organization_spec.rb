@@ -24,7 +24,7 @@ RSpec.describe Organization do
       expect(subject).to belong_to(:production_organization).class_name("Organization").optional
         .inverse_of(:sandbox_organization)
       expect(subject).to have_one(:sandbox_organization).class_name("Organization")
-        .with_foreign_key(:production_organization_id).inverse_of(:production_organization)
+        .with_foreign_key(:production_organization_id).inverse_of(:production_organization).dependent(:restrict_with_error)
       expect(subject).to have_many(:stripe_payment_providers)
       expect(subject).to have_many(:gocardless_payment_providers)
       expect(subject).to have_many(:adyen_payment_providers)
@@ -381,6 +381,16 @@ RSpec.describe Organization do
           expect(organization).not_to be_valid
           expect(organization.errors.to_hash).to eq(production_organization_id: ["value_already_exist"])
           expect { organization.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+      end
+
+      context "when destroying a production organization that owns a sandbox" do
+        before { create(:organization, :sandbox, production_organization: production) }
+
+        it "refuses with an error and keeps both organizations" do
+          expect(production.destroy).to be(false)
+          expect(production.errors.details[:base]).to eq([{error: :"restrict_dependent_destroy.has_one", record: "sandbox organization"}])
+          expect(described_class.where(id: production.id)).to exist
         end
       end
 
