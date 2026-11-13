@@ -48,9 +48,7 @@ RSpec.describe Invites::AcceptService do
     end
 
     context "when the organization became a sandbox after the invite was sent" do
-      let(:invite) { create(:invite, organization: create(:organization), email: "new@example.com") }
-
-      before { invite.organization.update!(environment: "sandbox", production_organization: create(:organization)) }
+      let(:invite) { create(:invite, organization: create(:organization, :sandbox), email: "new@example.com") }
 
       it "refuses the acceptance and creates no user" do
         result = accept_service.call(**accept_args)

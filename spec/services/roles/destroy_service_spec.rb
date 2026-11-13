@@ -32,7 +32,9 @@ RSpec.describe Roles::DestroyService do
       let(:actor) { create(:user) }
       let(:production) { create(:organization, :with_sandbox) }
       let(:role) { create(:role, organization: production, code: "auditor") }
-      let!(:copy) { create(:role, organization: production.sandbox_organization, code: "auditor") }
+      let(:copy) { create(:role, organization: production.sandbox_organization, code: "auditor") }
+
+      before { copy }
 
       it "discards the sandbox copy, logged with the actor" do
         expect(result).to be_success
