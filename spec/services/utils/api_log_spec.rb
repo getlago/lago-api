@@ -106,6 +106,112 @@ RSpec.describe Utils::ApiLog do
         end
       end
 
+      context "with filtered response" do
+        let(:fake_response) do
+          instance_double(
+            "ActionDispatch::Response",
+            status: 200,
+            body: {
+              webhook_endpoint: {
+                lago_id: "abc",
+                secret_key: "top",
+                my_secret_key: "keep",
+                signing_keys: [{lago_id: "k1", secret_key: "whsec_x", created_at: "2023-03-22T12:00:00Z"}]
+              }
+            }.to_json
+          )
+        end
+
+        it "masks every value of the filtered key and keeps the other fields" do
+          api_log.produce(fake_request, fake_response, organization:, filtered_response: [:secret_key])
+
+          expect(karafka_producer).to have_received(:produce_async).with(
+            topic: "api_logs",
+            key: "#{organization.id}--1234",
+            payload: {
+              request_id: "1234",
+              organization_id: organization.id,
+              api_key_id: api_key.id,
+              api_version: "v1",
+              client: "RSpec",
+              request_body: {parameters: [1, 2, 3, 4]},
+              request_path: "/api/v1/customers",
+              request_origin: "https://lago.test",
+              http_method: :post,
+              request_response: {
+                "webhook_endpoint" => {
+                  "lago_id" => "abc",
+                  "secret_key" => "[FILTERED]",
+                  "my_secret_key" => "keep",
+                  "signing_keys" => [{"lago_id" => "k1", "secret_key" => "[FILTERED]", "created_at" => "2023-03-22T12:00:00Z"}]
+                }
+              },
+              http_status: 200,
+              logged_at: Time.current.iso8601[...-1],
+              created_at: Time.current.iso8601[...-1]
+            }.to_json
+          )
+        end
+
+        it "logs the response unchanged without filtered response keys" do
+          api_log.produce(fake_request, fake_response, organization:)
+
+          expect(karafka_producer).to have_received(:produce_async).with(
+            topic: "api_logs",
+            key: "#{organization.id}--1234",
+            payload: {
+              request_id: "1234",
+              organization_id: organization.id,
+              api_key_id: api_key.id,
+              api_version: "v1",
+              client: "RSpec",
+              request_body: {parameters: [1, 2, 3, 4]},
+              request_path: "/api/v1/customers",
+              request_origin: "https://lago.test",
+              http_method: :post,
+              request_response: {
+                "webhook_endpoint" => {
+                  "lago_id" => "abc",
+                  "secret_key" => "top",
+                  "my_secret_key" => "keep",
+                  "signing_keys" => [{"lago_id" => "k1", "secret_key" => "whsec_x", "created_at" => "2023-03-22T12:00:00Z"}]
+                }
+              },
+              http_status: 200,
+              logged_at: Time.current.iso8601[...-1],
+              created_at: Time.current.iso8601[...-1]
+            }.to_json
+          )
+        end
+
+        context "when the response body is a JSON array" do
+          let(:fake_response) do
+            instance_double(
+              "ActionDispatch::Response",
+              status: 200,
+              body: [{secret_key: "whsec_x", name: "a"}, "plain", nil].to_json
+            )
+          end
+
+          it "masks the filtered key inside the array items" do
+            api_log.produce(fake_request, fake_response, organization:, filtered_response: [:secret_key])
+
+            expect(JSON.parse(kafka_messages.sole[:payload])["request_response"])
+              .to eq([{"secret_key" => "[FILTERED]", "name" => "a"}, "plain", nil])
+          end
+        end
+
+        context "when the response body is empty" do
+          let(:fake_response) { instance_double("ActionDispatch::Response", status: 204, body: "") }
+
+          it "logs a nil response" do
+            api_log.produce(fake_request, fake_response, organization:, filtered_response: [:secret_key])
+
+            expect(JSON.parse(kafka_messages.sole[:payload])["request_response"]).to be_nil
+          end
+        end
+      end
+
       context "when request_id is empty" do
         let(:fake_request) do
           instance_double(
