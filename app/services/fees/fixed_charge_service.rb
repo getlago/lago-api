@@ -85,19 +85,7 @@ module Fees
 
       deduction = Fees::AmountsService::Deduction.none
       if first_prorated_paid_in_advance_charge_billed_in_prev_subscription?
-        already_paid_fee = find_already_paid_fee_for_the_fixed_charge(boundaries)
-        if already_paid_fee
-          current_period_duration_days = ((boundaries[:fixed_charges_to_datetime] - boundaries[:fixed_charges_from_datetime]) / 1.day.in_seconds).ceil
-          # note: previous pay in advance FC fee was issued at the event of the timestamp, so that's when we received this event, and since when
-          # the proration is started, despite from-to boundaries are taking into account the whole
-          already_paid_fee_prorated_days = ((already_paid_fee.properties["fixed_charges_to_datetime"].to_time -
-                                             already_paid_fee.properties["timestamp"].to_time) / 1.day.in_seconds).ceil
-          deduction = Fees::AmountsService::Deduction.new(
-            amount_cents: already_paid_fee.amount_cents,
-            billed_days: current_period_duration_days,
-            period_days: already_paid_fee_prorated_days
-          )
-        end
+        deduction = already_paid_fees_deduction(boundaries)
       end
 
       amount = Fees::AmountsService.call(
@@ -243,7 +231,28 @@ module Fees
       fixed_charge.matching_fixed_charge_prev_subscription(subscription).present?
     end
 
-    def find_already_paid_fee_for_the_fixed_charge(current_fee_boundaries)
+    def already_paid_fees_deduction(current_fee_boundaries)
+      already_paid_fees = find_already_paid_fees_for_the_fixed_charge(current_fee_boundaries).pluck(:amount_cents, :properties)
+      return Fees::AmountsService::Deduction.none if already_paid_fees.empty?
+
+      current_period_duration_days = ((current_fee_boundaries[:fixed_charges_to_datetime] -
+                                       current_fee_boundaries[:fixed_charges_from_datetime]) / 1.day.in_seconds).ceil
+      amount_cents = already_paid_fees.sum do |already_paid_amount_cents, properties|
+        # A pay-in-advance fixed-charge fee is issued at the event timestamp, so its proration starts
+        # there even though its stored boundaries cover the whole fixed-charge period.
+        already_paid_fee_prorated_days = ((properties["fixed_charges_to_datetime"].to_time -
+                                           properties["timestamp"].to_time) / 1.day.in_seconds).ceil
+        Fees::AmountsService::Deduction.new(
+          amount_cents: already_paid_amount_cents,
+          billed_days: current_period_duration_days,
+          period_days: already_paid_fee_prorated_days
+        ).prorated_amount_cents
+      end
+
+      Fees::AmountsService::Deduction.new(amount_cents:, billed_days: 1, period_days: 1)
+    end
+
+    def find_already_paid_fees_for_the_fixed_charge(current_fee_boundaries)
       prev_fixed_charge = fixed_charge.matching_fixed_charge_prev_subscription(subscription)
       Fee.where(
         organization: organization,
@@ -254,7 +263,7 @@ module Fees
         current_fee_boundaries[:fixed_charges_from_datetime],
         # in the DB we store timestamp with 3 digits of milliseconds, timestamp of boundaries has 9, so we need to floor it
         current_fee_boundaries[:fixed_charges_to_datetime].floor(3)
-      ).order(created_at: :desc).first
+      )
     end
   end
 end
