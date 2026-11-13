@@ -102,16 +102,17 @@ describe PlanWallets::CreateService do
       ["no currency", {currency: nil}, {currency: ["value_is_invalid"]}],
       ["no code", {code: nil}, {code: ["value_is_mandatory"]}],
       ["a code that is not URL safe", {code: "ai credits"}, {code: ["value_is_invalid"]}],
-      ["an unknown tax application", {tax_application: "tax_free"}, {tax_application: ["value_is_invalid"]}],
-      ["a priority below 1", {priority: 0}, {priority: ["value_is_invalid"]}],
-      ["a priority above 50", {priority: 51}, {priority: ["value_is_invalid"]}],
-      ["a negative top-up minimum", {top_up_min_amount_cents: -1}, {top_up_min_amount_cents: ["value_is_out_of_range"]}],
+      ["an unknown tax application", {tax_application: "tax_free"}, {tax_application: ["value_is_invalid"]}, {tax_application: {allowed_values: %w[tax_on_consumption tax_on_purchase]}}],
+      ["a priority below 1", {priority: 0}, {priority: ["value_is_out_of_range"]}, {priority: {min: 1}}],
+      ["a priority above 50", {priority: 51}, {priority: ["value_is_out_of_range"]}, {priority: {max: 50}}],
+      ["a priority that is not a number", {priority: "high"}, {priority: ["value_is_invalid"]}],
+      ["a negative top-up minimum", {top_up_min_amount_cents: -1}, {top_up_min_amount_cents: ["value_is_out_of_range"]}, {top_up_min_amount_cents: {min: 0}}],
       ["a fractional top-up maximum", {top_up_max_amount_cents: 60_000.5}, {top_up_max_amount_cents: ["value_is_invalid"]}],
       ["a top-up minimum that is not a number", {top_up_min_amount_cents: "ten"}, {top_up_min_amount_cents: ["value_is_invalid"]}],
-      ["a top-up minimum above the maximum", {top_up_min_amount_cents: 50_001}, {top_up_max_amount_cents: ["value_is_out_of_range"]}],
+      ["a top-up minimum above the maximum", {top_up_min_amount_cents: 50_001}, {top_up_max_amount_cents: ["value_is_out_of_range"]}, {top_up_max_amount_cents: {min: 50_001}}],
       ["an excluded scope", {applies_to: {exclude: [{type: "fee_type", code: "fixed"}]}}, {"applies_to.exclude": ["not_supported"]}],
       ["a selector that does not exist", {applies_to: {include: [{type: "product", code: "unknown"}]}}, {"applies_to.include[0].code": ["product_not_found"]}]
-    ].each do |description, overrides, messages|
+    ].each do |description, overrides, messages, meta|
       context "with #{description}" do
         let(:params) { super().merge(overrides) }
 
@@ -120,6 +121,7 @@ describe PlanWallets::CreateService do
 
           expect(result).not_to be_success
           expect(result.error.messages).to eq(messages)
+          expect(result.error.meta).to eq(meta || {})
         end
       end
     end
