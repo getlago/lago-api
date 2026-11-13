@@ -12,5 +12,13 @@ FactoryBot.define do
     refreshed_at { Time.current }
     usage { {} }
     usage_date { Date.yesterday }
+
+    trait :contract do
+      subscription { nil }
+      external_subscription_id { nil }
+      contract { association(:contract, organization:, customer:) }
+      contract_rate_card { association(:contract_rate_card, organization:, contract:) }
+      external_contract_id { contract.external_id }
+    end
   end
 end
