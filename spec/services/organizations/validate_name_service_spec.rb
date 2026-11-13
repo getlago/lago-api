@@ -79,6 +79,24 @@ RSpec.describe Organizations::ValidateNameService do
       .to eq(links.index_with { {name: ["value_contains_link"]} })
   end
 
+  context "when links are allowed" do
+    subject(:result) { described_class.call(name:, allow_links: true) }
+
+    let(:name) { "  Hooli.com " }
+
+    it "returns the name" do
+      expect(result.name).to eq("Hooli.com")
+    end
+
+    context "with 101 characters" do
+      let(:name) { "a" * 101 }
+
+      it "still refuses it as too long" do
+        expect(result.error.messages).to eq(name: ["value_is_too_long"])
+      end
+    end
+  end
+
   it "accepts names with dots that are not links" do
     names = ["Acme Inc.", "A.B. Consulting", "Node.js Labs", "Version 2.0", "Release 1.2.3", "Acme Co.Ltd", "Acme.Inc",
       "Acme Pty.Ltd", "Muster GmbH & Co.KG", "Metadata:Labs"]
