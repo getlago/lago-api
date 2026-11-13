@@ -60,6 +60,11 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       november_invoice = BillingOperations::ProcessService.call!(customer:, timestamp: effective_from).invoices.sole
       expect(november_invoice.total_amount_cents).to eq(1400) # $30 * 14/30 days through the rate boundary.
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+
+      BillingOperations::ScheduleService.call!(customer:, timestamp: Time.utc(2026, 12, 1))
+      december_invoice = BillingOperations::ProcessService.call!(customer:, timestamp: Time.utc(2026, 12, 1)).invoices.sole
+      expect(december_invoice.total_amount_cents).to eq(3200) # $60 * 16/30 remaining November days.
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
     end
   end
 

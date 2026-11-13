@@ -35,6 +35,33 @@ RSpec.describe BillingOperations::ScheduleJob, job: true do
     end
   end
 
+  context "when scheduling creates a due periodic operation" do
+    let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1)) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "arrears", currency: "USD", proration: true) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, next_billing_at: Time.utc(2026, 11, 15),
+        effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1))
+    end
+
+    before do
+      travel_to(Time.utc(2026, 11, 15))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 1), rate_properties: {"amount" => "31"})
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 15), rate_properties: {"amount" => "62"})
+      contract_rate_card
+    end
+
+    it "persists the periodic operation and then dispatches processing" do
+      expect { perform_job }.to have_enqueued_job(BillingOperations::ProcessJob).with(customer.id)
+
+      expect(contract_rate_card.billing_operations.sole).to have_attributes(
+        action_type: "close_fixed_arrears", causation_type: "periodic_continuation",
+        billing_at: Time.utc(2026, 11, 15), target_cycle_started_at: Time.utc(2026, 11, 1),
+        processed_at: nil
+      )
+    end
+  end
+
   context "when the customer has no due pending operations" do
     let(:future_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at: 1.day.from_now)
