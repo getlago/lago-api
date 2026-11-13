@@ -24,6 +24,13 @@ class CsAdminAuditLog < ApplicationRecord
   def rolled_back?
     rollback.present?
   end
+
+  # Whether a rollback can be asked for. A sandbox's settings follow its production's, so its entries (the mirrors of
+  # production's toggles) are rolled back through production's. A superseded entry still answers true: the rollback
+  # refuses it then.
+  def rollbackable?
+    TOGGLEABLE_FEATURE_TYPES.include?(feature_type) && !rollback? && !rolled_back? && !organization.sandbox?
+  end
 end
 
 # == Schema Information
