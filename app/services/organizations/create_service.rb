@@ -20,7 +20,8 @@ module Organizations
         organization.clickhouse_events_store = true
       end
 
-      ActiveRecord::Base.transaction do
+      # A savepoint inside a caller's transaction, so a failure rescued below leaves nothing behind.
+      ActiveRecord::Base.transaction(requires_new: true) do
         organization.save!
         organization.api_keys.create!
         BillingEntities::CreateService.call!(organization:, params: billing_entity_params(organization))
