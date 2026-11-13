@@ -40,33 +40,19 @@ module BillingOperations
     attr_reader :customer, :timestamp
 
     def due_operations
-      ContractRateCard.due_for_billing(timestamp)
-        .where(organization_id: customer.organization_id, contracts: {customer_id: customer.id})
-        .includes(:terms, contract: :customer, rate_card: {product: :billable_metric})
-        .filter_map do |contract_rate_card|
-          action_type = contract_rate_card.periodic_billing_action
-          next unless action_type
+      customer_contracts = customer.contracts.where(organization_id: customer.organization_id)
+      operations = customer.billing_operations.due_for_processing(timestamp)
+        .where(organization_id: customer.organization_id, action_type: ELIGIBLE_ACTION_TYPES)
+        .joins(:contract_rate_card)
+        .merge(ContractRateCard.kept.where(
+          organization_id: customer.organization_id,
+          contract_id: customer_contracts.select(:id)
+        ))
+        .earliest_per_contract_rate_card
 
-          billing_at = contract_rate_card.next_billing_at
-          activation_operation = BillingOperation.pending
-            .where(
-              organization_id: customer.organization_id, customer_id: customer.id, contract_rate_card:,
-              action_type:, causation_type: "contract_activation"
-            )
-            .order(:created_at, :id)
-            .first
-
-          if activation_operation
-            activation_operation.billing_at = billing_at
-            activation_operation
-          else
-            BillingOperation.new(
-              organization_id: customer.organization_id, customer:, contract_rate_card:, action_type:,
-              causation_type: "periodic_continuation", billing_at:
-            )
-          end
-        end
-        .sort_by { [it.billing_at, it.contract_rate_card_id] }
+      BillingOperation.from(operations, :billing_operations)
+        .includes(contract_rate_card: [:terms, {contract: :customer}, {rate_card: {product: :billable_metric}}])
+        .order(:billing_at, :contract_rate_card_id, :created_at, :id)
     end
 
     def invoice_kind(operation)
@@ -106,20 +92,12 @@ module BillingOperations
       invoice = nil
       ActiveRecord::Base.transaction(requires_new: true) do
         operations.select! do |operation|
-          if operation.persisted?
-            billing_at = operation.billing_at
-            operation.reload(lock: true)
-            operation.contract_rate_card.lock!
-            next false unless operation.contract_rate_card.next_billing_at == billing_at
+          billing_at = operation.billing_at
+          operation.reload(lock: true)
+          operation.contract_rate_card.lock!
+          next false unless operation.billing_at == billing_at
 
-            if operation.causation_type == "contract_activation"
-              operation.billing_at = billing_at
-            end
-            operation.due_for_processing?(timestamp:)
-          else
-            operation.contract_rate_card.lock!
-            operation.contract_rate_card.next_billing_at == operation.billing_at
-          end
+          operation.due_for_processing?(timestamp:)
         end
         next if operations.empty?
 
@@ -140,12 +118,7 @@ module BillingOperations
     end
 
     def resolve_operation(operation)
-      return unless eligible?(operation)
-
-      if obsolete_terminal_renewal?(operation)
-        operation.contract_rate_card.update!(next_billing_at: nil) if operation.new_record?
-        return
-      end
+      return if obsolete_terminal_renewal?(operation)
 
       ResolveSegmentsService.call!(operation:)
     end
@@ -154,11 +127,7 @@ module BillingOperations
       return false unless operation.action_type.in?(%w[renew_fixed_advance renew_recurring_metered_advance])
 
       ended_at = [operation.contract_rate_card.contract.ended_at, operation.contract_rate_card.contract.terminated_at].compact.min
-      ended_at && ended_at <= (operation.target_cycle_started_at || operation.billing_at)
-    end
-
-    def eligible?(operation)
-      ELIGIBLE_ACTION_TYPES.include?(operation.action_type)
+      ended_at && ended_at <= operation.target_cycle_started_at
     end
 
     def create_contract_invoice(segments, operation_segments)

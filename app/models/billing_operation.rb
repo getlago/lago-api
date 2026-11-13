@@ -42,6 +42,11 @@ class BillingOperation < ApplicationRecord
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
   scope :completed, -> { where.not(processed_at: nil) }
   scope :periodic, -> { where(action_type: PERIODIC_ACTIONS.keys).where.not(causation_type: :late_payment) }
+  scope :due_for_processing, ->(timestamp) { pending.where(billing_at: ..timestamp) }
+  scope :earliest_per_contract_rate_card, -> {
+    select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
+      .reorder(:contract_rate_card_id, :billing_at, :created_at, :id)
+  }
 
   def due_for_processing?(timestamp:)
     processed_at.nil? && cancelled_at.nil? && billing_at <= timestamp

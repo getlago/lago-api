@@ -23,10 +23,11 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   let(:new_rate) do
     create(:rate_card_rate, organization:, rate_card:, effective_from:, rate_properties: {"amount" => "60"})
   end
+  let(:november_closing_billing_at) { Time.utc(2026, 12, 1) }
   let(:november_closing_operation) do
     create(:billing_operation, organization:, customer:, contract_rate_card:,
       action_type: "close_fixed_arrears", causation_type: "contract_activation",
-      billing_at: Time.utc(2026, 12, 1), target_cycle_started_at: Time.utc(2026, 11, 1))
+      billing_at: november_closing_billing_at, target_cycle_started_at: Time.utc(2026, 11, 1))
   end
   let(:earlier_rates) { [] }
   let(:initialize_clock) do
@@ -46,6 +47,8 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   end
 
   context "with a persisted November closing operation" do
+    let(:november_closing_billing_at) { effective_from }
+
     before { november_closing_operation }
 
     it "resets to the new rate boundary and bills the November cycle" do
