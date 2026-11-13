@@ -172,6 +172,220 @@ RSpec.describe Api::V2::FeaturesController do
       end
     end
 
+    context "with expands[]=privileges" do
+      let(:params) { {expands: ["privileges"]} }
+
+      it "rejects the expansion, only the show action expands" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["privileges"]}}])
+      end
+    end
+
+    context "without product catalog", product_catalog: false do
+      it "returns feature unavailable" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+  end
+
+  describe "GET /api/v2/features/:code" do
+    subject { get_with_token(organization, "/api/v2/features/#{code}", params) }
+
+    let(:params) { {} }
+    let(:code) { "sso" }
+    let(:feature) do
+      create(
+        :feature,
+        organization:,
+        code: "sso",
+        name: "SSO",
+        description: "Single sign-on",
+        created_at: Time.zone.parse("2026-10-01T08:30:00.123456Z"),
+        updated_at: Time.zone.parse("2026-10-02T09:00:00.654321Z")
+      )
+    end
+
+    let(:privileges) { [create(:privilege, feature:, organization:, code: "provider", value_type: "string")] }
+
+    before do
+      feature
+      privileges
+    end
+
+    include_examples "requires API permission", "feature", "read"
+
+    it "returns the v2 feature without its privileges" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).to eq(
+        lago_id: feature.id,
+        code: "sso",
+        name: "SSO",
+        description: "Single sign-on",
+        created_at: "2026-10-01T08:30:00.123456Z",
+        updated_at: "2026-10-02T09:00:00.654321Z",
+        deleted_at: nil
+      )
+      expect(json[:feature]).not_to have_key(:privileges)
+    end
+
+    context "with expands[]=privileges", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:params) { {expands: ["privileges"]} }
+      let(:base_time) { Time.zone.parse("2026-10-03T10:00:00.000001Z") }
+
+      # Created out of order, and two of them at the same instant with ids against their insertion
+      # order, so only created_at then id gives this list.
+      let(:select_privilege) do
+        create(:privilege, feature:, organization:, code: "provider", name: "Provider", value_type: "select",
+          config: {"select_options" => %w[okta google]}, created_at: base_time + 3.hours, updated_at: base_time + 4.hours)
+      end
+      let(:boolean_privilege) do
+        create(:privilege, feature:, organization:, id: "ffffffff-0000-4000-8000-000000000002", code: "enforced",
+          name: "Enforced", value_type: "boolean", created_at: base_time + 2.hours, updated_at: base_time + 2.hours)
+      end
+      let(:string_privilege) do
+        create(:privilege, feature:, organization:, id: "00000000-0000-4000-8000-000000000001", code: "domain",
+          name: nil, value_type: "string", created_at: base_time + 2.hours, updated_at: base_time + 2.hours)
+      end
+      let(:integer_privilege) do
+        create(:privilege, feature:, organization:, code: "max_admins", name: "Max admins", value_type: "integer",
+          created_at: base_time, updated_at: base_time)
+      end
+
+      let(:deleted_privilege) do
+        create(:privilege, feature:, organization:, code: "legacy", deleted_at: Time.current, created_at: base_time - 1.day)
+      end
+      let(:privileges) { [select_privilege, boolean_privilege, string_privilege, integer_privilege, deleted_privilege] }
+
+      it "embeds the live privileges oldest first" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature]).to eq(
+          lago_id: feature.id,
+          code: "sso",
+          name: "SSO",
+          description: "Single sign-on",
+          created_at: "2026-10-01T08:30:00.123456Z",
+          updated_at: "2026-10-02T09:00:00.654321Z",
+          deleted_at: nil,
+          privileges: [
+            {
+              lago_id: integer_privilege.id,
+              feature_code: "sso",
+              code: "max_admins",
+              name: "Max admins",
+              value_type: "integer",
+              select_options: nil,
+              created_at: "2026-10-03T10:00:00.000001Z",
+              updated_at: "2026-10-03T10:00:00.000001Z",
+              deleted_at: nil
+            },
+            {
+              lago_id: "00000000-0000-4000-8000-000000000001",
+              feature_code: "sso",
+              code: "domain",
+              name: nil,
+              value_type: "string",
+              select_options: nil,
+              created_at: "2026-10-03T12:00:00.000001Z",
+              updated_at: "2026-10-03T12:00:00.000001Z",
+              deleted_at: nil
+            },
+            {
+              lago_id: "ffffffff-0000-4000-8000-000000000002",
+              feature_code: "sso",
+              code: "enforced",
+              name: "Enforced",
+              value_type: "boolean",
+              select_options: nil,
+              created_at: "2026-10-03T12:00:00.000001Z",
+              updated_at: "2026-10-03T12:00:00.000001Z",
+              deleted_at: nil
+            },
+            {
+              lago_id: select_privilege.id,
+              feature_code: "sso",
+              code: "provider",
+              name: "Provider",
+              value_type: "select",
+              select_options: %w[okta google],
+              created_at: "2026-10-03T13:00:00.000001Z",
+              updated_at: "2026-10-03T14:00:00.000001Z",
+              deleted_at: nil
+            }
+          ]
+        )
+      end
+    end
+
+    context "with expands[]=privileges on a feature without privileges" do
+      let(:params) { {expands: ["privileges"]} }
+      let(:privileges) { [] }
+
+      it "renders an empty list" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature][:privileges]).to eq([])
+      end
+    end
+
+    context "with an unknown expansion" do
+      let(:params) { {expands: ["foo"]} }
+
+      it "returns an invalid_expand error" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "invalid_expand",
+          details: [
+            {code: "invalid_expand", field: "expands", meta: {invalid_values: ["foo"], allowed_values: ["privileges"]}}
+          ]
+        )
+      end
+    end
+
+    context "when the feature does not exist" do
+      let(:code) { "unknown" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature belongs to another organization" do
+      let(:code) { "other_sso" }
+
+      before { create(:feature, organization: create(:organization), code: "other_sso") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature is deleted" do
+      let(:feature) { create(:feature, organization:, code: "sso", deleted_at: Time.current) }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
     context "without product catalog", product_catalog: false do
       it "returns feature unavailable" do
         subject
