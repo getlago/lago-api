@@ -150,7 +150,8 @@ RSpec.describe ::V1::InvoiceSerializer do
       target = create(:invoice, organization:, customer:)
 
       3.times do
-        subscription = create(:subscription, customer:, organization:, plan:, external_id: SecureRandom.uuid)
+        billing_entity = create(:billing_entity, organization:)
+        subscription = create(:subscription, customer:, organization:, plan:, billing_entity:, external_id: SecureRandom.uuid)
         create(:invoice_subscription, :boundaries, invoice: target, subscription:)
       end
 
@@ -180,6 +181,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       queries = capture_sql { serialize(target) }
 
       expect(queries.count { |sql| sql.include?("billing_object_connections") }).to eq(1)
+      expect(queries.count { |sql| sql.include?('FROM "billing_entities"') }).to eq(2)
       expect(queries.count { |sql| sql.include?("payment_provider_customers") }).to eq(1)
       expect(queries.count { |sql| sql.include?("integration_customers") }).to eq(1)
     end

@@ -30,6 +30,7 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "external_id" => subscription.external_id,
           "lago_customer_id" => subscription.customer_id,
           "external_customer_id" => subscription.customer.external_id,
+          "billing_entity_code" => subscription.billing_entity.code,
           "name" => subscription.name,
           "plan_code" => subscription.plan.code,
           "plan_amount_cents" => subscription.plan.amount_cents,
@@ -111,6 +112,19 @@ RSpec.describe ::V1::SubscriptionSerializer do
         expect(result["subscription"]["customer"]["lago_id"]).to be_present
         expect(result["subscription"]["plan"]["minimum_commitment"]).to be_nil
       end
+    end
+  end
+
+  context "when the subscription has an explicit billing entity" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:subscription) do
+      create(:subscription, customer:, plan:, billing_entity:, created_at: started_at, started_at:)
+    end
+
+    it "serializes the subscription billing entity code" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["subscription"]["billing_entity_code"]).to eq(billing_entity.code)
     end
   end
 

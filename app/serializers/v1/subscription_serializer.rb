@@ -8,6 +8,7 @@ module V1
         external_id: model.external_id,
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer.external_id,
+        billing_entity_code: model.billing_entity.code,
         name: model.name,
         plan_code: model.plan.code,
         plan_amount_cents: model.plan.amount_cents,
