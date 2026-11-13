@@ -615,6 +615,21 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when the customer only uses a shared payment token and kept its old default card" do
+      let(:provider_customer) do
+        create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token])
+      end
+
+      it "does not create a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(invoice.reload.payment_status).to eq("pending")
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
     context "when the stripe customer only uses customer_balance" do
       let(:default_payment_method) { nil }
       let(:provider_customer) do
@@ -628,6 +643,21 @@ RSpec.describe Invoices::Payments::CreateService do
         expect(result.payment).to be_present
         expect(result.payment.payment_method_id).to be_nil
         expect(provider_class).to have_received(:new)
+      end
+
+      context "when the customer only uses a shared payment token and the invoice has no token row" do
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token])
+        end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(invoice.reload.payment_attempts).to eq(0)
+          expect(provider_class).not_to have_received(:new)
+        end
       end
 
       context "when the customer only uses crypto" do
@@ -1204,6 +1234,21 @@ RSpec.describe Invoices::Payments::CreateService do
           expect(result).to be_success
           expect(result.payment_provider).to be_nil
         }.not_to have_enqueued_job(Invoices::Payments::CreateJob)
+      end
+    end
+
+    context "when the customer has no payment provider code and the organization has several stripe connections" do
+      let(:payment_provider_code) { nil }
+
+      before do
+        create(:stripe_provider, organization:, code: "stripe_a")
+        create(:stripe_provider, organization:, code: "stripe_b")
+      end
+
+      it "enqueues the payment" do
+        expect { ApplicationRecord.transaction { create_service.call_async } }
+          .to have_enqueued_job(Invoices::Payments::CreateJob)
+          .with(invoice:, payment_provider: :stripe, payment_method_params: {})
       end
     end
 

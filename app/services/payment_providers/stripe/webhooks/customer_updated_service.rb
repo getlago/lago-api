@@ -11,6 +11,7 @@ module PaymentProviders
             return result if deleted_stripe_customer.present?
             return handle_missing_customer
           end
+          return result if stripe_customer.shared_payment_token_only?
 
           PaymentProviderCustomers::Stripe::UpdatePaymentMethodService.call(
             stripe_customer:,
