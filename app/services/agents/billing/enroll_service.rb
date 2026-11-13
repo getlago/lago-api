@@ -32,6 +32,8 @@ module Agents
           if current && (current.plan.parent_id || current.plan_id) == plan.id
             result.subscription = current
           else
+            result.not_allowed_failure!(code: "too_many_requests").raise_if_error! if current && plan_change_throttled?
+
             # A new subscription on the agent's external id, or Lago's plan change when one is active.
             result.subscription = create_subscription(customer)
             apply_topup_limits if result.wallet
@@ -57,6 +59,10 @@ module Agents
 
       def plan
         @plan ||= storefront.plans_for_sale.find_by(code: plan_code)
+      end
+
+      def plan_change_throttled?
+        ::Auth::AttemptsThrottle.hit!(:agent_plan_change_per_registration, registration.id)
       end
 
       def create_customer

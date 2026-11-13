@@ -66,6 +66,27 @@ RSpec.describe Agents::Billing::EnrollService, :premium do
       expect(result.wallet).to eq(first.wallet)
       expect(result.wallet).to have_attributes(balance_cents: 1_200, paid_top_up_min_amount_cents: 500, paid_top_up_max_amount_cents: 10_000)
     end
+
+    context "when the agent changed plan three times in the hour" do
+      before do
+        Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new
+        first
+        [plan, other_plan, plan].each { |next_plan| described_class.call!(storefront:, registration:, plan_code: next_plan.code) }
+      end
+
+      it "refuses a fourth change and keeps the subscription" do
+        refused = described_class.call(storefront:, registration:, plan_code: other_plan.code)
+
+        expect(refused.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(refused.error.code).to eq("too_many_requests")
+        expect(registration.subscription.reload).to have_attributes(plan:, status: "active")
+      end
+
+      it "still answers an enrollment in the current plan" do
+        expect(result).to be_success
+        expect(result.subscription).to eq(registration.subscription)
+      end
+    end
   end
 
   context "when the registration is enrolled in a plan of another currency" do

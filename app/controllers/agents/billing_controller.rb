@@ -9,6 +9,8 @@ module Agents
 
       if result.success?
         render(json: billing_json(result.subscription, result.wallet))
+      elsif too_many_requests?(result)
+        render_too_many_requests
       else
         render_error_response(result)
       end

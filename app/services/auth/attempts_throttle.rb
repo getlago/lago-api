@@ -42,7 +42,10 @@ module Auth
       signup_email_per_hour: Rule.new(limit: 3, period: 1.hour, identifier: :email),
       agent_challenge_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
       agent_challenge_per_key: Rule.new(limit: 10, period: 1.minute, identifier: :public_key),
-      agent_proof_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip)
+      agent_proof_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
+      # Each change is a Lago plan change on the merchant's organization: a subscription, a termination invoice
+      # and webhooks. Enrolling again in the same plan is free and not counted.
+      agent_plan_change_per_registration: Rule.new(limit: 3, period: 1.hour, identifier: :registration)
     }.freeze
 
     # Built on first use only, and once per process.

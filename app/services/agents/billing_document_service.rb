@@ -23,7 +23,7 @@ module Agents
         ## Enroll
 
         1. Get a billing token. Request a challenge as described in `#{base}/AUTH.md`, with `purpose: "authenticate"` and `scope: "billing"`, sign it, and submit the proof to `#{base}/auth/token`. A billing token only works on the billing endpoints below, and your API token only works on the API.
-        2. POST `#{base}/billing/enroll` with JSON `plan_code` and `Authorization: Bearer <billing token>`. It creates your account, your subscription and an empty wallet. Enrolling again in the same plan returns the same records. Enrolling in another plan of the same currency moves you to it at once: your wallet and its credits stay, and its top-up limits become that plan's. A plan in another currency is refused.
+        2. POST `#{base}/billing/enroll` with JSON `plan_code` and `Authorization: Bearer <billing token>`. It creates your account, your subscription and an empty wallet. Enrolling again in the same plan returns the same records. Enrolling in another plan of the same currency moves you to it at once: your wallet and its credits stay, and its top-up limits become that plan's, at most 3 changes an hour. A plan in another currency is refused.
         3. GET `#{base}/billing` with the billing token for your plan, wallet and balance.
 
         Top-up limits are set when you enroll. A later change by #{storefront.name} applies to new enrollments.
