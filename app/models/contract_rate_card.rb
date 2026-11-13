@@ -51,7 +51,8 @@ class ContractRateCard < ApplicationRecord
       .starting_before_contract_end
       .joins(contract: {customer: :billing_entity})
       .where(next_billing_at: ..timestamp)
-      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
+      # Terminated contracts can still owe coverage until their final operation is processed.
+      .where(contracts: {status: %w[active terminated], started_at: ..timestamp})
       .where(customers: {deleted_at: nil})
   }
 
@@ -90,7 +91,7 @@ class ContractRateCard < ApplicationRecord
   def requires_termination_billing?(timestamp:)
     next_billing_at.present? && timestamp < next_billing_at &&
       periodic_billing_action.in?(TERMINATION_BILLING_ACTIONS) &&
-      effective_date.in_time_zone(contract.customer.applicable_timezone) < [contract.ended_at, contract.terminated_at, timestamp].compact.min
+      effective_date.in_time_zone(contract.customer.applicable_timezone) < [contract.billing_ends_at, timestamp].compact.min
   end
 
   def edit_error_code

@@ -160,22 +160,22 @@ RSpec.describe Billing::RateCards::Schedule do
 
     it "finds the current billing date before, at and after the resume point" do
       cycles[1..4].each do |cycle|
-        expected = full.billing_at(timestamp: cycle.started_at, target: "current")
+        expected = full.first_obligation(at: cycle.started_at)&.billing_at
 
         expect(expected).not_to be_nil
-        expect(resumed.billing_at(timestamp: cycle.started_at, target: "current")).to eq(expected)
+        expect(resumed.first_obligation(at: cycle.started_at)&.billing_at).to eq(expected)
       end
     end
 
     it "finds the billing instant of a cycle before the resume point" do
       at = cycles[1].started_at + 1.day
 
-      expect(resumed.billing_at(timestamp: at, target: "current")).to eq(cycles[1].ended_at)
-      expect(resumed.billing_at(timestamp: at, target: "next")).to eq(cycles[1].ended_at)
+      expect(resumed.first_obligation(at: at)&.billing_at).to eq(cycles[1].ended_at)
+      expect(resumed.next_obligation(after: at)&.billing_at).to eq(cycles[1].ended_at)
     end
 
     it "keeps the due listing resumed after answering a historical billing date query" do
-      resumed.billing_at(timestamp: cycles[1].started_at, target: "current")
+      resumed.first_obligation(at: cycles[1].started_at)&.billing_at
 
       expect(resumed.segments_due_by(cycles[4].ended_at).map(&:cycle_index)).to eq([3, 4])
     end
@@ -183,7 +183,7 @@ RSpec.describe Billing::RateCards::Schedule do
     it "finds the first billing date when asked before the card began" do
       at = shape[:starts_at] - 1.year
 
-      expect(resumed.billing_at(timestamp: at, target: "current")).to eq(cycles.first.ended_at)
+      expect(resumed.first_obligation(at: at)&.billing_at).to eq(cycles.first.ended_at)
     end
   end
 

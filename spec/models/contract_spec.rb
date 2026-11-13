@@ -222,6 +222,41 @@ RSpec.describe Contract do
     end
   end
 
+  describe "#billing_ends_at" do
+    subject(:contract) { build(:contract, ended_at:, terminated_at:) }
+
+    let(:ended_at) { nil }
+    let(:terminated_at) { nil }
+
+    it "is nil while the contract is open-ended" do
+      expect(contract.billing_ends_at).to be_nil
+    end
+
+    context "with a planned end" do
+      let(:ended_at) { Time.utc(2026, 6, 1) }
+
+      it "is the planned end" do
+        expect(contract.billing_ends_at).to eq(ended_at)
+      end
+
+      context "when terminated earlier" do
+        let(:terminated_at) { Time.utc(2026, 3, 15) }
+
+        it "is the termination" do
+          expect(contract.billing_ends_at).to eq(terminated_at)
+        end
+      end
+
+      context "when terminated later" do
+        let(:terminated_at) { Time.utc(2026, 7, 1) }
+
+        it "stays the planned end" do
+          expect(contract.billing_ends_at).to eq(ended_at)
+        end
+      end
+    end
+  end
+
   describe "#editable?" do
     it "is true only while the contract is pending" do
       expect(build(:contract, :pending).editable?).to be(true)

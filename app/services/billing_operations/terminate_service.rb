@@ -4,11 +4,12 @@ module BillingOperations
   # The caller holds the customer billing lock while future work is cancelled and final
   # termination obligations are persisted.
   class TerminateService < BaseService
-    Result = BaseResult
+    Result = BaseResult[:billing_operations]
 
     def initialize(contract:, timestamp:)
       @contract = contract
       @timestamp = timestamp
+      @billing_operations = []
       super
     end
 
@@ -19,8 +20,10 @@ module BillingOperations
 
         next unless contract_rate_card.requires_termination_billing?(timestamp:)
 
-        schedule_final_operation(contract_rate_card)
+        operation = schedule_final_operation(contract_rate_card)
+        billing_operations << operation if operation
       end
+      result.billing_operations = billing_operations
       result
     rescue ActiveRecord::RecordInvalid => error
       result.record_validation_failure!(record: error.record)
@@ -30,7 +33,7 @@ module BillingOperations
 
     private
 
-    attr_reader :contract, :timestamp
+    attr_reader :contract, :timestamp, :billing_operations
 
     def cancel_future_operations!(contract_rate_card)
       contract_rate_card.billing_operations.pending.where("billing_at > ?", timestamp).find_each do |operation|
@@ -46,8 +49,9 @@ module BillingOperations
       return unless build.success?
 
       schedule = build.schedule
+      planning_timestamp = BillingSegment.inclusive_end(effective_end)
       plan_result = BillingOperations::Schedule::BuildPlannedOperation.call!(
-        contract_rate_card:, schedule:, timestamp: BillingSegment.inclusive_end(effective_end)
+        contract_rate_card:, schedule:, timestamp: planning_timestamp
       )
       planned_operation = plan_result.planned_operation
       return unless planned_operation
@@ -55,16 +59,20 @@ module BillingOperations
       planned_operation = planned_operation.with(billing_at: timestamp)
       return if final_operation_exists?(contract_rate_card, planned_operation)
 
-      BillingOperations::CreateService.call!(
+      create_result = BillingOperations::CreateService.call!(
         contract_rate_card:,
         action_type: contract_rate_card.periodic_billing_action,
         causation_type: BillingOperation::CAUSATION_TYPES.fetch(:contract_termination),
         planned_operation:
       )
+      ContractRateCards::ResetBillingClockService.call!(
+        contract_rate_card:, timestamp: planning_timestamp, schedule:
+      )
+      create_result.operation
     end
 
     def effective_end
-      [contract.ended_at, contract.terminated_at, timestamp].compact.min
+      [contract.billing_ends_at, timestamp].compact.min
     end
 
     def final_operation_exists?(contract_rate_card, planned_operation)

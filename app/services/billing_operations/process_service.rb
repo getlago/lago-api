@@ -126,7 +126,7 @@ module BillingOperations
     def obsolete_terminal_renewal?(operation)
       return false unless operation.action_type.in?(%w[renew_fixed_advance renew_recurring_metered_advance])
 
-      ended_at = [operation.contract_rate_card.contract.ended_at, operation.contract_rate_card.contract.terminated_at].compact.min
+      ended_at = operation.contract_rate_card.contract.billing_ends_at
       ended_at && ended_at <= operation.target_cycle_started_at
     end
 

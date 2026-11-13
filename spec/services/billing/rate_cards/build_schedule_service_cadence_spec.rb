@@ -314,7 +314,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "stops producing cycles after the termination" do
-      expect(schedule.billing_at(timestamp: Time.utc(2027, 1, 1), target: "next")).to be_nil
+      expect(schedule.next_obligation(after: Time.utc(2027, 1, 1))&.billing_at).to be_nil
     end
   end
 end

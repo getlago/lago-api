@@ -41,44 +41,41 @@ module BillingOperations
       def owned_billable_segments
         return [] unless schedule && result.cycle
 
-        schedule.segments_due_by(operation.billing_at).select do |segment|
-          next false unless segment.cycle_started_at == result.cycle.started_at
-
-          due_at = billing_at_for(segment, action_type: operation.action_type)
-          (after.nil? || due_at > after) && due_at <= operation.billing_at
-        end
+        schedule.segments(from: resumed(result.cycle.started_at))
+          .take_while { it.cycle_started_at == result.cycle.started_at }
+          .select do |segment|
+            due_at = billing_at_for(segment, action_type: operation.action_type)
+            (after.nil? || due_at > after) && due_at <= operation.billing_at
+          end
+          .to_a
       end
 
       def build_planned_operation
         return unless schedule && timestamp
 
-        cycle = schedule.cycle_at(timestamp)
-
-        while cycle
-          schedule.segments_due_by(cycle.ended_at).each do |segment|
-            next unless segment.cycle_started_at == cycle.started_at
-
-            billing_at = billing_at_for(
-              segment,
-              action_type: contract_rate_card.periodic_billing_action
-            )
-
-            if after
-              billing_at = terminal_billing_at(billing_at)
-              next if billing_at <= after
-            elsif segment.ended_at <= timestamp && billing_at != timestamp
-              next
-            end
-
-            result.cycle = cycle
-            return PlannedOperation.new(
-              cycle_started_at: segment.cycle_started_at,
-              billing_at:
-            )
-          end
-
-          cycle = schedule.next_billable_cycle(after_cycle_started_at: cycle.started_at)
+        from = resumed(timestamp)
+        segment = if after
+          schedule.next_obligation(after:, from:) { planned_billing_at(it) }
+        else
+          schedule.first_obligation(at: timestamp, from:) { planned_billing_at(it) }
         end
+
+        if segment
+          result.cycle = schedule.cycle_at(segment.cycle_started_at)
+          PlannedOperation.new(cycle_started_at: segment.cycle_started_at, billing_at: planned_billing_at(segment))
+        end
+      end
+
+      # A resumed schedule never plans before its resume point.
+      def resumed(timestamp)
+        [timestamp, schedule.resume_at].compact.max
+      end
+
+      # A billing after a completed one can fall on the contract's end, which a termination moves.
+      def planned_billing_at(segment)
+        billing_at = billing_at_for(segment, action_type: contract_rate_card.periodic_billing_action)
+
+        after ? terminal_billing_at(billing_at) : billing_at
       end
 
       def billing_at_for(segment, action_type:)
@@ -91,9 +88,8 @@ module BillingOperations
 
       def terminal_billing_at(billing_at)
         contract = contract_rate_card.contract
-        natural_end = [contract.ended_at, contract.terminated_at].compact.min
 
-        if contract.terminated_at && billing_at == natural_end
+        if contract.terminated_at && billing_at == contract.billing_ends_at
           contract.terminated_at
         else
           billing_at

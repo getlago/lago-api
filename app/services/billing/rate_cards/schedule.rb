@@ -3,7 +3,7 @@
 module Billing
   module RateCards
     class Schedule
-      BILLING_TARGET = {current: "current", next: "next"}.freeze
+      attr_reader :resume_at
 
       def initialize(rates:, terms:, phases:, starts_at:, anchor_date:, timezone:, ends_at: nil, resume_at: nil)
         if resume_at && resume_at < starts_at.in_time_zone(timezone).beginning_of_day
@@ -30,29 +30,28 @@ module Billing
         walker.resume(timestamp)
       end
 
-      def next_billable_cycle(after_cycle_started_at:)
-        cycle = walker.resume(after_cycle_started_at)
-        cycle = walker.cycle_after(cycle) while cycle && cycle.started_at <= after_cycle_started_at
+      # Every priced slice in billing order, from the cycle containing `from`.
+      # Unpriced cycles yield nothing.
+      def segments(from: resume_at)
+        Enumerator.new do |yielder|
+          cycle = walker.resume(from)
 
-        while cycle
-          return cycle if priced_segments_for_cycle(cycle).any?
-
-          cycle = walker.cycle_after(cycle)
-        end
-
-        nil
+          while cycle
+            billable_segments_of([cycle]).each { yielder << it }
+            cycle = walker.cycle_after(cycle)
+          end
+        end.lazy
       end
 
-      # The current billing instant covers the time being served; the next is strictly later.
-      def billing_at(timestamp:, target:)
-        raise ArgumentError, "unknown billing target: #{target}" unless BILLING_TARGET.value?(target)
+      # The first slice still open at the instant, or falling due exactly on it.
+      # A block maps a slice to its due instant when the caller's differs from the terms'.
+      def first_obligation(at:, from: at)
+        segments(from:).find { it.ended_at > at || (block_given? ? yield(it) : it.billing_at) == at }
+      end
 
-        if target == BILLING_TARGET.fetch(:current)
-          segment = segment_covering(timestamp)
-          segment&.billing_at || find_billing_after(timestamp)
-        else
-          find_billing_after(timestamp)
-        end
+      # The first slice falling due strictly after a completed billing instant.
+      def next_obligation(after:, from: after)
+        segments(from:).find { (block_given? ? yield(it) : it.billing_at) > after }
       end
 
       # Find the priced slice serving this instant, regardless of which cycles
@@ -83,23 +82,7 @@ module Billing
 
       private
 
-      attr_reader :rates, :terms, :timezone, :resume_at, :walker
-
-      def find_billing_after(timestamp)
-        cycle = walker.resume(timestamp)
-
-        while cycle
-          segment = billable_segments_of([cycle]).find do |candidate|
-            candidate.billing_at > timestamp
-          end
-
-          return segment.billing_at if segment
-
-          cycle = walker.cycle_after(cycle)
-        end
-
-        nil
-      end
+      attr_reader :rates, :terms, :timezone, :walker
 
       def billable_segments_of(cycles)
         cycles.flat_map do |cycle|

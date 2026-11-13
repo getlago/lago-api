@@ -222,7 +222,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   end
 
   context "with an exhausted schedule" do
-    let(:schedule) { instance_double(Billing::RateCards::Schedule, cycle_at: nil) }
+    let(:schedule) { instance_double(Billing::RateCards::Schedule, resume_at: nil, first_obligation: nil) }
 
     it "returns no planned operation" do
       expect(result).to be_success

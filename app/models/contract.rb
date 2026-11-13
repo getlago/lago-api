@@ -49,8 +49,8 @@ class Contract < ApplicationRecord
 
   LIVE_STATUSES = %w[pending active].freeze
 
-  # Which contracts the billing clock may produce segments for. A terminated contract's
-  # final arrears period is the termination path's, so it is not billable from the clock.
+  # Live contracts accepting rate changes and usage billing. Terminated cards with owed
+  # coverage remain discoverable separately through their billing cursors.
   BILLABLE_STATUSES = %w[active].freeze
 
   # The live contracts for an external id: at most one per status (the partial
@@ -98,6 +98,11 @@ class Contract < ApplicationRecord
   # customer's midnight.
   def effective_billing_anchor_date
     billing_anchor_date || started_at&.in_time_zone(customer.applicable_timezone)&.to_date
+  end
+
+  # Billing stops at the planned end or the termination, whichever comes first.
+  def billing_ends_at
+    [ended_at, terminated_at].compact.min
   end
 
   # Rate cards are authored while pending only: once the agreement is active

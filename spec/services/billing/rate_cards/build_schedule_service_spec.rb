@@ -159,7 +159,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         .map { |at| schedule.consumed_ratio(segment:, at:) }
 
       expect(consumed).to eq([5.fdiv(17), 6.fdiv(17), 1.0])
-      expect(schedule.billing_at(timestamp: contract.ended_at, target: "next")).to be_nil
+      expect(schedule.next_obligation(after: contract.ended_at)&.billing_at).to be_nil
     end
   end
 
