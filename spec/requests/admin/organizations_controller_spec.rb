@@ -76,6 +76,14 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
           production_organization_id: production.id, sandbox_organization_id: nil)
       end
 
+      it "numbers both organizations per customer" do
+        admin_post("/admin/organizations", create_params.merge(self_serve: true), admin_headers)
+
+        production = Organization.find(json[:organization][:id])
+        expect([production, production.sandbox_organization].map { it.default_billing_entity.document_numbering })
+          .to eq(%w[per_customer per_customer])
+      end
+
       it "refuses a value that is not a boolean" do
         expect do
           admin_post("/admin/organizations", create_params.merge(self_serve: "no"), admin_headers)
