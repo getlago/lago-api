@@ -110,6 +110,26 @@ describe Api::V2::PlanWalletsController do
       expect(json[:wallet].keys).to eq(flat_keys)
     end
 
+    context "when the wallet template has selectors", :bullet do
+      before do
+        product = create(:product, organization:, code: "api_calls")
+        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product", fee_type: nil, product:)
+        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product", fee_type: nil,
+          product: create(:product, organization:, code: "storage"))
+        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product_category", fee_type: nil,
+          product_category: product.product_category)
+        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product_filters", fee_type: nil,
+          product_filter: create(:product_filter, organization:, product:))
+      end
+
+      it "renders its scope without a query per selector" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:applies_to][:include].map { it[:type] }).to match_array(%w[product product product_category product_filters])
+      end
+    end
+
     context "with the taxes and metadata expansions" do
       let(:query) { {expands: %w[taxes metadata]} }
       let(:tax) { create(:tax, organization:, code: "vat_20") }
