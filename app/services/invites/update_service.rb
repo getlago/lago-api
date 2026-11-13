@@ -14,19 +14,26 @@ module Invites
 
     def call
       return result.not_found_failure!(resource: "invite") unless invite
-      return result.forbidden_failure!(code: "sandbox_managed_by_production") if invite.organization.sandbox?
-      return result.forbidden_failure!(code: "cannot_update_accepted_invite") if invite.accepted?
-      return result.forbidden_failure!(code: "cannot_update_revoked_invite") if invite.revoked?
-      return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
-      return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
-      return result unless valid_roles?
 
-      invite.update!(roles: params[:roles])
+      ActiveRecord::Base.transaction do
+        # The order acceptance locks in: an acceptance committed while this waited is seen below.
+        Organizations::SandboxLockService.call!(organization: invite.organization)
+        invite.lock!
+        return result.forbidden_failure!(code: "cannot_update_accepted_invite") if invite.accepted?
+        return result.forbidden_failure!(code: "cannot_update_revoked_invite") if invite.revoked?
+        return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
+        return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
+        return result unless valid_roles?
+
+        invite.update!(roles: params[:roles])
+      end
 
       result.invite = invite
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
