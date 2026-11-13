@@ -74,6 +74,29 @@ RSpec.describe Agents::ClaimsController, :premium, cache: :memory do
     expect(json[:error]).to eq("invalid_token")
   end
 
+  it "lets the owner claim the agent again once the merchant deleted its customer" do
+    token("signup", "signup")
+    headers = {"Authorization" => "Bearer #{token("authenticate", "auth/token", scope: "billing")}"}
+    post("#{base}/billing/enroll", params: {plan_code: plan.code}, headers:, as: :json)
+    registration = storefront.agent_registrations.sole
+    create(:agent_claim, :verified, registration:)
+    registration.customer.update!(email: "owner@example.com")
+
+    Customers::DestroyService.call!(customer: registration.customer)
+
+    get("#{base}/claims", headers:)
+    expect(json).to include(status: "unclaimed", claimed_at: nil)
+
+    post("#{base}/billing/enroll", params: {plan_code: plan.code}, headers:, as: :json)
+    expect(response).to have_http_status(:ok)
+    expect(registration.customer.email).to be_nil
+
+    post("#{base}/claims/codes", headers:)
+    expect(response).to have_http_status(:ok)
+    expect(json).to include(status: "unclaimed")
+    expect(registration.claims.pluck(:status)).to eq(["issued"])
+  end
+
   it "filters the codes from the logged parameters" do
     post("#{base}/claims/start", params: {claim_code: "ABCD-2345", email: "owner@example.com"}, as: :json)
     expect(request.filtered_parameters["claim_code"]).to eq("[FILTERED]")

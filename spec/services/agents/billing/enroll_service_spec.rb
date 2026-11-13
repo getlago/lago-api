@@ -117,6 +117,22 @@ RSpec.describe Agents::Billing::EnrollService, :premium do
     end
   end
 
+  context "when the merchant deleted the agent's customer" do
+    let(:first) { described_class.call(storefront:, registration:, plan_code:) }
+
+    before do
+      create(:agent_claim, :verified, registration:)
+      Customers::DestroyService.call!(customer: first.wallet.customer)
+    end
+
+    it "creates a new customer that starts unclaimed" do
+      expect(result).to be_success
+      expect(result.wallet.customer).not_to eq(first.wallet.customer)
+      expect(result.wallet.customer.email).to be_nil
+      expect(registration.claims).to be_empty
+    end
+  end
+
   context "with a plan the storefront does not sell" do
     let(:plan_code) { create(:plan, organization:, amount_cents: 0).code }
 

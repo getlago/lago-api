@@ -15,7 +15,9 @@ module Agents
     end
 
     def show
-      render(json: claim_json(registration.claims.order(created_at: :desc).first))
+      # Without a customer there is nothing claimed: the merchant deleted it, and the next enrollment resets the claims.
+      claim = registration.claims.order(created_at: :desc).first if registration.customer
+      render(json: claim_json(claim))
     end
 
     # The two calls behind the claim page. No token: the claim code is what the owner holds.
