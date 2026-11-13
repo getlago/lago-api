@@ -55,7 +55,7 @@ module PlanWallets
         plan_wallet.updated_at = Time.current if RELATED_PARAMS.any? { params.key?(it) }
         plan_wallet.save!
 
-        Metadata::UpdateItemService.call!(owner: plan_wallet, value: params[:metadata]) if params.key?(:metadata)
+        replace_metadata! if params.key?(:metadata)
         CatalogWallets::ApplyTaxesService.call!(wallet: plan_wallet, tax_codes: params[:tax_codes]) unless params[:tax_codes].nil?
         CatalogWalletSelectors::ReplaceService.call!(wallet: plan_wallet, applies_to: params[:applies_to]) unless params[:applies_to].nil?
       end
@@ -78,6 +78,13 @@ module PlanWallets
 
     def code_change_requested?
       params.key?(:code) && params[:code] != plan_wallet.code
+    end
+
+    # The metadata record names its errors in sentences, on its own `value` column.
+    def replace_metadata!
+      unless Metadata::UpdateItemService.call(owner: plan_wallet, value: params[:metadata]).success?
+        result.single_validation_failure!(field: :metadata, error_code: "value_is_invalid").raise_if_error!
+      end
     end
 
     # The field whose value has another shape than its service reads: a metadata object, a list of tax codes.
