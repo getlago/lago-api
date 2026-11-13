@@ -58,6 +58,28 @@ RSpec.describe Payments::SetPaymentMethodDataService do
           expect(result.payment.provider_payment_method_id).to eq provider_payment_method_id
           expect(result.payment.provider_payment_method_data).to eq({"existing" => "data"})
         end
+
+        context "when the payment has a payment method" do
+          let(:payment_method) { create(:payment_method, organization:) }
+          let(:payment) do
+            create(
+              :payment,
+              payment_provider: create(:stripe_provider),
+              organization:,
+              payment_method:,
+              provider_payment_method_id:,
+              provider_payment_method_data: {type: "card", brand: "visa", last4: "4242"}
+            )
+          end
+
+          it "copies the stored data to the payment method details" do
+            result = service.call
+
+            expect(result.payment.payment_method.reload.details).to eq(
+              {"type" => "card", "brand" => "visa", "last4" => "4242"}
+            )
+          end
+        end
       end
     end
 
