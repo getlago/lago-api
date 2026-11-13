@@ -41,6 +41,36 @@ describe CatalogWalletSelectors::ReplaceService do
       .to eq([[organization.id, wallet.id, nil]])
   end
 
+  context "with several entries of one kind" do
+    let(:entries) do
+      [
+        {type: "product", code: "api_calls"},
+        {type: "product", code: "storage"},
+        {type: "product_filters", product_code: "api_calls", code: "premium_model"},
+        {type: "product_filters", product_code: "storage", code: "region"}
+      ]
+    end
+
+    before do
+      storage = create(:product, organization:, code: "storage")
+      create(:product_filter, organization:, product: storage, code: "region")
+    end
+
+    it "looks each kind up in one query" do
+      lookups = Hash.new(0)
+      counter = lambda do |_name, _start, _finish, _id, payload|
+        table = payload[:sql][/SELECT .* FROM "(products|product_filters)"/, 1]
+        lookups[table] += 1 if table
+      end
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { result }
+
+      expect(result).to be_success
+      expect(result.selectors.count).to eq(4)
+      expect(lookups).to eq({"products" => 1, "product_filters" => 1})
+    end
+  end
+
   context "when the wallet belongs to a contract" do
     let(:wallet) { create(:catalog_wallet, organization:) }
     let(:entries) { [{type: "fee_type", code: "fixed"}] }
