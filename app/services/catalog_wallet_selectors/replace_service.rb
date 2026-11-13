@@ -38,7 +38,7 @@ module CatalogWalletSelectors
 
     private
 
-    attr_reader :wallet, :applies_to
+    attr_reader :wallet, :applies_to, :entries
 
     delegate :organization, to: :wallet
 
@@ -48,7 +48,7 @@ module CatalogWalletSelectors
       scope = (applies_to || {}).with_indifferent_access
       refuse!(:"applies_to.exclude", "not_supported") if scope.key?(:exclude)
 
-      entries = scope[:include] || []
+      @entries = scope[:include] || []
       refuse!(:"applies_to.include", "value_is_invalid") unless entries.is_a?(Array)
 
       entries.each_with_index.with_object({}) do |(entry, index), targets|
@@ -86,14 +86,14 @@ module CatalogWalletSelectors
     end
 
     def product_category_target(entry, index)
-      product_category = organization.product_categories.find_by(code: entry[:code])
+      product_category = product_categories_by_code[entry[:code]]
       refuse_entry!(index, :code, "product_category_not_found") unless product_category
 
       {product_category_id: product_category.id}
     end
 
     def product_target(entry, index)
-      product = organization.products.find_by(code: entry[:code])
+      product = products_by_code[entry[:code]]
       refuse_entry!(index, :code, "product_not_found") unless product
 
       {product_id: product.id}
@@ -103,13 +103,41 @@ module CatalogWalletSelectors
     def product_filters_target(entry, index)
       refuse_entry!(index, :product_code, "value_is_mandatory") if entry[:product_code].blank?
 
-      product = organization.products.find_by(code: entry[:product_code].to_s)
+      product = products_by_code[entry[:product_code].to_s]
       refuse_entry!(index, :product_code, "product_not_found") unless product
 
-      product_filter = product.filters.find_by(code: entry[:code])
+      product_filter = product_filters_by_target[[product.id, entry[:code]]]
       refuse_entry!(index, :code, "product_filter_not_found") unless product_filter
 
       {product_filter_id: product_filter.id}
+    end
+
+    # One query per kind of record, whatever the number of entries.
+    def product_categories_by_code
+      @product_categories_by_code ||= organization.product_categories
+        .where(code: codes_of("product_category", :code))
+        .index_by(&:code)
+    end
+
+    def products_by_code
+      @products_by_code ||= organization.products
+        .where(code: codes_of("product", :code) + codes_of("product_filters", :product_code))
+        .index_by(&:code)
+    end
+
+    def product_filters_by_target
+      @product_filters_by_target ||= organization.product_filters
+        .where(product_id: products_by_code.values.map(&:id), code: codes_of("product_filters", :code))
+        .index_by { [it.product_id, it.code] }
+    end
+
+    def codes_of(type, key)
+      entries.filter_map do |entry|
+        next unless entry.is_a?(Hash)
+
+        entry = entry.with_indifferent_access
+        entry[key].to_s if entry[:type] == type && !entry[key].is_a?(Enumerable)
+      end
     end
 
     def refuse_entry!(index, field, error_code, **meta)
