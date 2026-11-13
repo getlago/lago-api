@@ -9,6 +9,7 @@ module Invoices
       @subscription_ids = invoice.subscriptions.pluck(:id)
       @context = context
       @invoice_subscriptions = invoice.invoice_subscriptions
+      @invoicing_reasons_by_subscription_id = invoice_subscriptions.pluck(:subscription_id, :invoicing_reason).to_h.compact
 
       # NOTE: Recurring status (meaning billed automatically from the recurring billing process)
       #       should be kept to prevent double billing on billing day
@@ -75,7 +76,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context, :invoice_subscriptions
+    attr_accessor :invoice, :subscription_ids, :invoicing_reason, :invoicing_reasons_by_subscription_id, :recurring, :context, :invoice_subscriptions
 
     def product_catalog_invoice?
       return @product_catalog_invoice if defined?(@product_catalog_invoice)
@@ -109,6 +110,7 @@ module Invoices
         subscriptions: Subscription.find(subscription_ids),
         timestamp: refresh_data[:timestamp],
         invoicing_reason:,
+        invoicing_reasons_by_subscription_id:,
         refresh: true
       ).raise_if_error!
 
