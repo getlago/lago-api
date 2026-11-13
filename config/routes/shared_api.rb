@@ -162,10 +162,6 @@ get "/organizations", to: "organizations#show"
 put "/organizations", to: "organizations#update"
 
 resources :webhook_endpoints, only: %i[create index show destroy update]
-resources :webhooks, only: %i[] do
-  get :public_key, on: :collection
-  get :json_public_key, on: :collection
-end
 
 resources :x402_connections, param: :code, code: /.*/, controller: "x402/connections", only: %i[index show create update destroy]
 

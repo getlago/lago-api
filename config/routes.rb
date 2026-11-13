@@ -23,6 +23,11 @@ Rails.application.routes.draw do
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
       resources :security_logs, param: :log_id, only: %i[index show]
+      # v1 only: the RSA public key verifies jwt webhooks, which native v2 endpoints do not use.
+      resources :webhooks, only: %i[] do
+        get :public_key, on: :collection
+        get :json_public_key, on: :collection
+      end
       draw(:shared_api)
     end
 
@@ -116,8 +121,6 @@ Rails.application.routes.draw do
       # Credit-note paths are native v2 only when explicitly routed above. Do not
       # let unsupported actions fall through to their v1 beta equivalents.
       match "credit_notes(/*path)", to: "/application#not_found", via: :all
-      # The RSA public key only verifies jwt webhooks, which native v2 endpoints do not use.
-      match "webhooks(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do

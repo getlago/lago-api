@@ -15,6 +15,7 @@ RSpec.describe "API v2 routing parity" do
   it "exposes every v1 endpoint under v2" do
     missing = api_routes("v1") - api_routes("v2")
     missing.reject! { |_, path| path.match?(%r{\A/credit_notes/[^/]+/download\z}) }
+    missing.reject! { |_, path| path.start_with?("/webhooks/") }
 
     expect(missing).to be_empty
   end
