@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   subject(:result) do
-    described_class.call(contract_rate_card:, schedule:, timestamp:, after:)
+    described_class.call(contract_rate_card:, schedule:, **planning)
   end
 
   let(:organization) { create(:organization) }
@@ -22,6 +22,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule }
   let(:timestamp) { Time.utc(2026, 11, 1) }
   let(:after) { nil }
+  let(:planning) { after ? {after:, from: timestamp} : {at: timestamp} }
   let(:rate_effective_from) { Time.utc(2026, 11, 1) }
 
   before do
@@ -30,11 +31,6 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
 
   it "returns the first planned segment using the customer's timezone" do
     expect(result).to be_success
-    expect(result.schedule).to be(schedule)
-    expect(result.cycle).to have_attributes(
-      started_at: Time.utc(2026, 11, 1, 7),
-      ended_at: Time.utc(2026, 12, 1, 8)
-    )
     expect(result.planned_operation).to have_attributes(
       cycle_started_at: Time.utc(2026, 11, 1, 7),
       billing_at: Time.utc(2026, 11, 1, 7)
@@ -170,12 +166,11 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     let(:timestamp) { Time.utc(2026, 11, 1, 7) }
     let(:after) { Time.utc(2026, 11, 1, 7) }
 
-    it "returns the next cycle and keeps the planned cycle aligned" do
+    it "returns the next cycle" do
       expect(result.planned_operation).to have_attributes(
         cycle_started_at: Time.utc(2026, 12, 1, 8),
         billing_at: Time.utc(2026, 12, 1, 8)
       )
-      expect(result.cycle.started_at).to eq(result.planned_operation.cycle_started_at)
     end
   end
 
@@ -207,118 +202,20 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     end
   end
 
-  context "with no schedule" do
-    let(:schedule) { nil }
-
-    before { allow(Billing::RateCards::BuildScheduleService).to receive(:call!) }
-
-    it "returns no planned operation" do
-      expect(result).to be_success
-      expect(result.planned_operation).to be_nil
-      expect(result.cycle).to be_nil
-      expect(result.schedule).to be_nil
-      expect(Billing::RateCards::BuildScheduleService).not_to have_received(:call!)
-    end
-  end
-
   context "with an exhausted schedule" do
-    let(:schedule) { instance_double(Billing::RateCards::Schedule, resume_at: nil, first_obligation: nil) }
+    let(:schedule) { instance_double(Billing::RateCards::Schedule, first_obligation: nil) }
 
     it "returns no planned operation" do
       expect(result).to be_success
       expect(result.planned_operation).to be_nil
-      expect(result.cycle).to be_nil
-      expect(result.schedule).to be(schedule)
     end
   end
 
-  context "when the rate card is missing" do
-    let(:contract_rate_card) { nil }
-    let(:schedule) { nil }
-
-    it "returns a not found failure" do
-      expect(result.error).to be_a(BaseService::NotFoundFailure)
-      expect(result.cycle).to be_nil
-    end
-  end
-
-  context "when schedule is omitted" do
-    subject(:result) { described_class.call(contract_rate_card:, timestamp:, after:) }
-
-    it "builds the schedule and returns the cycle for the planned operation" do
-      expect(result).to be_success
-      expect(result.planned_operation).to have_attributes(
-        cycle_started_at: Time.utc(2026, 11, 1, 7),
-        billing_at: Time.utc(2026, 11, 1, 7)
-      )
-      expect(result.cycle).to have_attributes(
-        started_at: Time.utc(2026, 11, 1, 7),
-        ended_at: Time.utc(2026, 12, 1, 8)
-      )
-      expect(result.schedule).to be_an_instance_of(Billing::RateCards::Schedule)
-    end
-
-    context "when given a resumed schedule" do
-      subject(:result) { described_class.call(contract_rate_card:, timestamp:, after:, schedule:) }
-
-      let(:resume_at) { Time.utc(2026, 12, 15) }
-      let(:schedule) do
-        Billing::RateCards::BuildScheduleService.call!(contract_rate_card:, resume_at:).schedule
-      end
-
-      it "respects the injected schedule's resume cycle" do
-        expect(result.planned_operation).to have_attributes(
-          cycle_started_at: Time.utc(2026, 12, 1, 8),
-          billing_at: Time.utc(2026, 12, 1, 8)
-        )
-        expect(result.cycle.started_at).to eq(result.planned_operation.cycle_started_at)
-        expect(result.schedule).to be(schedule)
-        expect(result.schedule.segments_due_by(Time.utc(2026, 12, 31, 23)).map(&:started_at))
-          .to eq([Time.utc(2026, 12, 1, 8)])
-      end
-    end
-
-    context "when the rate card is missing" do
-      let(:contract_rate_card) { nil }
-
-      before { allow(Billing::RateCards::BuildScheduleService).to receive(:call!) }
-
-      it "returns not found without trying to build a schedule" do
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(Billing::RateCards::BuildScheduleService).not_to have_received(:call!)
-      end
-    end
-  end
-
-  context "when resolving a persisted operation's owned segments" do
-    subject(:result) do
-      described_class.call(contract_rate_card:, timestamp:, after:, schedule:, operation:)
-    end
-
-    let(:billing_timing) { "arrears" }
-    let(:timestamp) { Time.utc(2026, 11, 1, 7) }
-    let(:after) { Time.utc(2026, 11, 15) }
-    let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:, resume_at: after).schedule }
-    let(:operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card:,
-        action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 12, 1, 8),
-        target_cycle_started_at: timestamp)
-    end
-
-    before do
-      create(:rate_card_rate, organization:, rate_card:, effective_from: after,
-        billing_interval_count: 1, billing_interval_unit: "month")
-    end
-
-    it "returns only the unpaid due segment in the operation's stored cycle" do
-      expect(result).to be_success
-      expect(result).to have_attributes(
-        cycle: have_attributes(started_at: timestamp, ended_at: Time.utc(2026, 12, 1, 8)),
-        planned_operation: nil
-      )
-      expect(result.billable_segments.map { [it.started_at, it.billing_at] }).to eq(
-        [[after, Time.utc(2026, 12, 1, 8)]]
-      )
+  context "when neither or both planning instants are given" do
+    it "refuses the call" do
+      expect { described_class.call(contract_rate_card:, schedule:) }.to raise_error(ArgumentError, /either at: or after:/)
+      expect { described_class.call(contract_rate_card:, schedule:, at: timestamp, after: timestamp) }
+        .to raise_error(ArgumentError, /either at: or after:/)
     end
   end
 end

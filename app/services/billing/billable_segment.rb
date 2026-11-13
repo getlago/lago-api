@@ -14,17 +14,19 @@ module Billing
     :rate,
     :rate_override,
     :proration_ratio,
-    :rate_phase_code
+    :rate_phase_code,
+    :due_at
   ) do
     # The calendar only builds a segment for a window it can price, so a segment without
     # either is a caller's mistake rather than a state to carry. Same guard as Terms and
     # Phase: the invariant belongs where the value is made, not where it is read.
-    def initialize(rate:, rate_override:, **attributes)
+    def initialize(rate:, rate_override:, due_at: nil, **attributes)
       if rate.nil? && rate_override.nil?
         raise ArgumentError, "a billable segment needs a rate or an override to price it"
       end
 
-      super(**attributes, rate:, rate_override:)
+      # A slice falls due when it is billed, unless its schedule closes coverage first.
+      super(**attributes, rate:, rate_override:, due_at: due_at || attributes[:billing_at])
     end
 
     # A phase override prices the segment; the rate card's own rate does otherwise.

@@ -187,6 +187,7 @@ RSpec.describe ContractRateCard do
       it do
         expect(card.periodic_billing_action).to eq("renew_fixed_advance")
         expect(card.needs_reconciliation?).to be(true)
+        expect(card.regroups_paid_fees?).to be(false)
       end
     end
 
@@ -218,6 +219,7 @@ RSpec.describe ContractRateCard do
         it do
           expect(card.periodic_billing_action).to eq("renew_recurring_metered_advance")
           expect(card.needs_reconciliation?).to be(false)
+          expect(card.regroups_paid_fees?).to be(false)
         end
       end
     end
@@ -228,6 +230,7 @@ RSpec.describe ContractRateCard do
       it do
         expect(card.periodic_billing_action).to eq("regroup_paid_fees")
         expect(card.needs_reconciliation?).to be(false)
+        expect(card.regroups_paid_fees?).to be(true)
       end
     end
 

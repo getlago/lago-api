@@ -5,10 +5,9 @@ module Billing
     class BuildScheduleService < BaseService
       Result = BaseResult[:schedule]
 
-      def initialize(contract_rate_card:, ends_at: nil, resume_at: nil)
+      def initialize(contract_rate_card:, ends_at: nil)
         @contract_rate_card = contract_rate_card
         @ends_at = ends_at
-        @resume_at = resume_at
         super
       end
 
@@ -29,7 +28,7 @@ module Billing
             rates:,
             terms:,
             phases:,
-            resume_at:,
+            due_on_coverage_end: contract_rate_card.regroups_paid_fees?,
             starts_at: contract_rate_card.effective_date.in_time_zone(timezone),
             ends_at: schedule_ends_at,
             anchor_date: contract_rate_card.billing_anchor_date,
@@ -44,7 +43,7 @@ module Billing
 
       private
 
-      attr_reader :contract_rate_card, :ends_at, :resume_at
+      attr_reader :contract_rate_card, :ends_at
 
       def timezone
         contract_rate_card.contract.customer.applicable_timezone

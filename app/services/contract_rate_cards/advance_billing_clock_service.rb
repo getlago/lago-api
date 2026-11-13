@@ -14,13 +14,7 @@ module ContractRateCards
       return result unless operation.advances_billing_clock?
 
       contract_rate_card = operation.contract_rate_card
-      plan_result = BillingOperations::Schedule::BuildPlannedOperation.call!(
-        contract_rate_card:,
-        schedule: resolution&.schedule,
-        timestamp: resolution&.cycle&.started_at,
-        after: operation.billing_at
-      )
-      contract_rate_card.update!(next_billing_at: plan_result.planned_operation&.billing_at)
+      contract_rate_card.update!(next_billing_at: next_planned_operation&.billing_at)
       result.contract_rate_card = contract_rate_card
       result
     end
@@ -28,5 +22,18 @@ module ContractRateCards
     private
 
     attr_reader :operation, :resolution
+
+    # Nothing follows an operation whose cycle the schedule no longer has.
+    def next_planned_operation
+      cycle = resolution&.cycle
+      return unless cycle
+
+      BillingOperations::Schedule::BuildPlannedOperation.call!(
+        contract_rate_card: operation.contract_rate_card,
+        schedule: resolution.schedule,
+        after: operation.billing_at,
+        from: cycle.started_at
+      ).planned_operation
+    end
   end
 end

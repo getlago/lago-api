@@ -20,12 +20,12 @@ RSpec.describe Billing::RateCards::Schedule do
       rate_override: count && override(count, unit))
   end
 
-  def build(shape, resume_at: nil)
+  def build(shape)
     described_class.new(
       anchor_date: shape[:anchor], starts_at: shape[:starts_at], timezone: shape[:timezone],
       phases: shape[:phase_args].map { |args| phase(*args) },
       rates: shape[:rate_args].map { |args| rate(*args) },
-      ends_at: shape[:ends_at], resume_at:,
+      ends_at: shape[:ends_at],
       terms: Billing::Terms.new(timing: shape[:timing], prorated: shape.fetch(:prorated, true))
     )
   end
@@ -152,50 +152,6 @@ RSpec.describe Billing::RateCards::Schedule do
       .to eq(fingerprint(full.drop(2)))
   end
 
-  context "when querying explicit dates on a resumed schedule" do
-    let(:shape) { shapes.first }
-    let(:full) { build(shape) }
-    let(:cycles) { walk(shape) }
-    let(:resumed) { build(shape, resume_at: cycles[3].started_at) }
-
-    it "finds the current billing date before, at and after the resume point" do
-      cycles[1..4].each do |cycle|
-        expected = full.first_obligation(at: cycle.started_at)&.billing_at
-
-        expect(expected).not_to be_nil
-        expect(resumed.first_obligation(at: cycle.started_at)&.billing_at).to eq(expected)
-      end
-    end
-
-    it "finds the billing instant of a cycle before the resume point" do
-      at = cycles[1].started_at + 1.day
-
-      expect(resumed.first_obligation(at: at)&.billing_at).to eq(cycles[1].ended_at)
-      expect(resumed.next_obligation(after: at)&.billing_at).to eq(cycles[1].ended_at)
-    end
-
-    it "keeps the due listing resumed after answering a historical billing date query" do
-      resumed.first_obligation(at: cycles[1].started_at)&.billing_at
-
-      expect(resumed.segments_due_by(cycles[4].ended_at).map(&:cycle_index)).to eq([3, 4])
-    end
-
-    it "finds the first billing date when asked before the card began" do
-      at = shape[:starts_at] - 1.year
-
-      expect(resumed.first_obligation(at: at)&.billing_at).to eq(cycles.first.ended_at)
-    end
-  end
-
-  # Reject invalid inputs during construction, before a caller checks result.success?
-  # and starts querying the schedule.
-  it "refuses an instant before the card's own start when it is built" do
-    shape = shapes.first
-
-    expect { build(shape, resume_at: shape[:starts_at] - 1.year) }
-      .to raise_error(ArgumentError, /precedes the card's start/)
-  end
-
   # The cross product above varies one dimension at a time and shares one plain shape. These are
   # the cases the engine's own specs are built on, each resumed at every cycle: if resuming holds
   # for the matrix but breaks a QA scenario or a terminated card, the matrix was the wrong shape.
@@ -266,12 +222,12 @@ RSpec.describe Billing::RateCards::Schedule do
 
       expect(full).not_to be_empty
 
+      schedule = build(shape)
       mismatches = full.each_index.flat_map do |n|
-        resumed = build(shape, resume_at: full[n].started_at)
+        jumped = schedule.segments_due_in_cycle(full[n].started_at, by: asked_at)
         [
           ((fingerprint(walk(shape, from: full[n].started_at)) == fingerprint(full.drop(n))) ? nil : "cycles at #{n}"),
-          ((segment_values(resumed.segments_due_by(asked_at)) ==
-            segments.select { |values| values.first >= full[n].index }) ? nil : "segments at #{n}")
+          ((segment_values(jumped) == segments.select { |values| values.first == full[n].index }) ? nil : "segments at #{n}")
         ].compact
       end
 
@@ -308,17 +264,18 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
-  it "produces the same segments whichever cycle it resumes at" do
+  it "produces the same segments whichever cycle it jumps to" do
     mismatches = shapes.flat_map do |shape|
       cycles = walk(shape)
-      full = segment_values(build(shape).segments_due_by(asked_at))
+      schedule = build(shape)
+      full = segment_values(schedule.segments_due_by(asked_at))
 
       cycles.filter_map do |cycle|
-        resumed = segment_values(build(shape, resume_at: cycle.started_at).segments_due_by(asked_at))
-        tail = full.select { |values| values.first >= cycle.index }
-        next if resumed == tail
+        jumped = segment_values(schedule.segments_due_in_cycle(cycle.started_at, by: asked_at))
+        walked = full.select { |values| values.first == cycle.index }
+        next if jumped == walked
 
-        "#{shape[:name]}: resuming at #{cycle.index} gave #{resumed.first(2)}, expected #{tail.first(2)}"
+        "#{shape[:name]}: jumping to #{cycle.index} gave #{jumped.first(2)}, expected #{walked.first(2)}"
       end
     end
 

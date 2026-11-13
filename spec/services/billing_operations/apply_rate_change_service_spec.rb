@@ -75,22 +75,13 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   end
 
   context "when resetting the arrears cursor" do
-    let(:planned_schedules) { [] }
+    before { allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original }
 
-    before do
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
-        original.call(**attributes).tap do |plan_result|
-          planned_schedules << plan_result.schedule unless attributes.key?(:schedule)
-        end
-      end
-      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original
-    end
-
-    it "passes the schedule from the plan to the reset service" do
+    it "resets the clock from the rate's effective date" do
       result
 
       expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(timestamp: effective_from, schedule: be(planned_schedules.sole))
+        contract_rate_card:, timestamp: effective_from, schedule: instance_of(Billing::RateCards::Schedule)
       )
     end
   end
@@ -108,7 +99,7 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       other_card
       calls = 0
       allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
-        if !attributes.key?(:schedule) && attributes[:timestamp] == new_rate.effective_from
+        if attributes[:at] == new_rate.effective_from
           calls += 1
           raise BaseService::FailedResult.new(failure, "cannot schedule") if calls == 2
         end
@@ -229,7 +220,8 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     it "resets the cursor to the rate date" do
       result
       expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!).with(hash_including(timestamp: effective_from)).at_least(:once)
+      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
+        .with(hash_including(at: effective_from)).at_least(:once)
       expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
         hash_including(contract_rate_card:, timestamp: effective_from)
       )
@@ -296,8 +288,8 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       interior_card
       before_window_card
       after_window_card
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
-        planned_card_ids << attributes[:contract_rate_card].id unless attributes.key?(:schedule)
+      allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_wrap_original do |original, **attributes|
+        planned_card_ids << attributes[:contract_rate_card].id
         original.call(**attributes)
       end
     end
@@ -334,8 +326,8 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     before do
       future_card
       canceled_card
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
-        planned_card_ids << attributes[:contract_rate_card].id unless attributes.key?(:schedule)
+      allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_wrap_original do |original, **attributes|
+        planned_card_ids << attributes[:contract_rate_card].id
         original.call(**attributes)
       end
     end
@@ -378,8 +370,8 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       before_end_card
       equal_end_card
       after_end_card
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
-        planned_card_ids << attributes[:contract_rate_card].id unless attributes.key?(:schedule)
+      allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_wrap_original do |original, **attributes|
+        planned_card_ids << attributes[:contract_rate_card].id
         original.call(**attributes)
       end
     end
@@ -416,8 +408,8 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       other_card
       before_window_card
       after_window_card
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
-        planned_card_ids << attributes[:contract_rate_card].id unless attributes.key?(:schedule)
+      allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_wrap_original do |original, **attributes|
+        planned_card_ids << attributes[:contract_rate_card].id
         original.call(**attributes)
       end
     end
@@ -456,7 +448,8 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       it "plans and resets the card through the schedule" do
         result
         expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-        expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!).with(hash_including(timestamp: effective_from)).at_least(:once)
+        expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
+          .with(hash_including(at: effective_from)).at_least(:once)
       end
     end
 
@@ -541,9 +534,10 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       expect(contract_rate_card.periodic_billing_action).to eq("close_metered_arrears")
       result
       expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!).with(hash_including(timestamp: effective_from)).at_least(:once)
+      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
+        .with(hash_including(at: effective_from)).at_least(:once)
       expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, schedule: instance_of(Billing::RateCards::Schedule))
+        hash_including(contract_rate_card:, timestamp: effective_from)
       )
     end
   end
@@ -565,9 +559,10 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       expect(contract_rate_card.periodic_billing_action).to eq("renew_recurring_metered_advance")
       result
       expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!).with(hash_including(timestamp: effective_from)).at_least(:once)
+      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
+        .with(hash_including(at: effective_from)).at_least(:once)
       expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, schedule: instance_of(Billing::RateCards::Schedule))
+        hash_including(contract_rate_card:, timestamp: effective_from)
       )
       expect(BillingOperation.count).to eq(0)
     end
@@ -588,9 +583,10 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       expect(contract_rate_card.periodic_billing_action).to eq("regroup_paid_fees")
       result
       expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!).with(hash_including(timestamp: effective_from)).at_least(:once)
+      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
+        .with(hash_including(at: effective_from)).at_least(:once)
       expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, schedule: instance_of(Billing::RateCards::Schedule))
+        hash_including(contract_rate_card:, timestamp: effective_from)
       )
       expect(BillingOperation.count).to eq(0)
     end
@@ -609,9 +605,10 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       expect(contract_rate_card.periodic_billing_action).to be_nil
       result
       expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!).with(hash_including(timestamp: effective_from)).at_least(:once)
+      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
+        .with(hash_including(at: effective_from)).at_least(:once)
       expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, schedule: instance_of(Billing::RateCards::Schedule))
+        hash_including(contract_rate_card:, timestamp: effective_from)
       )
     end
   end
@@ -635,7 +632,7 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     before do
       allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
         original.call(**attributes).tap do |plan_result|
-          planned_operations << plan_result.planned_operation unless attributes.key?(:schedule)
+          planned_operations << plan_result.planned_operation
         end
       end
     end

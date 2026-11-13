@@ -46,12 +46,13 @@ module BillingOperations
         .first
       cycle_started_at = previous_operation&.target_cycle_started_at ||
         contract_rate_card.effective_date.in_time_zone(customer.applicable_timezone)
-      schedule = Billing::RateCards::BuildScheduleService.call!(
-        contract_rate_card:, resume_at: cycle_started_at
-      ).schedule
-      planned_operation = Schedule::BuildPlannedOperation.call!(
-        contract_rate_card:, schedule:, timestamp: cycle_started_at, after: previous_operation&.billing_at
-      ).planned_operation
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
+      planning = if previous_operation
+        {after: previous_operation.billing_at, from: cycle_started_at}
+      else
+        {at: cycle_started_at}
+      end
+      planned_operation = Schedule::BuildPlannedOperation.call!(contract_rate_card:, schedule:, **planning).planned_operation
       return unless planned_operation && planned_operation.billing_at <= timestamp
 
       existing_operation = contract_rate_card.billing_operations.periodic.pending.exists?(

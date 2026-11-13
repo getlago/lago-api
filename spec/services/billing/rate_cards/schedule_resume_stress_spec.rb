@@ -46,10 +46,10 @@ RSpec.describe Billing::RateCards::Schedule do
 
   let(:asked_at) { Time.utc(2027, 7, 1) }
 
-  def build(timezone:, timing:, anchor:, resume_at: nil)
+  def build(timezone:, timing:, anchor:)
     described_class.new(
       anchor_date: anchor, starts_at: anchor.in_time_zone(timezone), timezone:,
-      phases:, rates:, resume_at:, terms: Billing::Terms.new(timing:, prorated: true)
+      phases:, rates:, terms: Billing::Terms.new(timing:, prorated: true)
     )
   end
 
@@ -138,16 +138,17 @@ RSpec.describe Billing::RateCards::Schedule do
         expect(mismatches).to be_empty
       end
 
-      it "answers the same segments whichever cycle it resumes at" do
+      it "answers the same segments whichever cycle it jumps to" do
         cycles = walk(**shape)
-        full = segment_values(build(**shape).segments_due_by(asked_at))
+        schedule = build(**shape)
+        full = segment_values(schedule.segments_due_by(asked_at))
 
         mismatches = cycles.filter_map do |cycle|
-          resumed = segment_values(build(**shape, resume_at: cycle.started_at).segments_due_by(asked_at))
-          tail = full.select { |values| values.first >= cycle.index }
-          next if resumed == tail
+          jumped = segment_values(schedule.segments_due_in_cycle(cycle.started_at, by: asked_at))
+          walked = full.select { |values| values.first == cycle.index }
+          next if jumped == walked
 
-          "resuming at #{cycle.index}: got #{resumed.size} segments, expected #{tail.size}"
+          "jumping to #{cycle.index}: got #{jumped.size} segments, expected #{walked.size}"
         end
 
         expect(mismatches).to be_empty

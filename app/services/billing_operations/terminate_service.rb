@@ -50,10 +50,9 @@ module BillingOperations
 
       schedule = build.schedule
       planning_timestamp = BillingSegment.inclusive_end(effective_end)
-      plan_result = BillingOperations::Schedule::BuildPlannedOperation.call!(
-        contract_rate_card:, schedule:, timestamp: planning_timestamp
-      )
-      planned_operation = plan_result.planned_operation
+      planned_operation = BillingOperations::Schedule::BuildPlannedOperation.call!(
+        contract_rate_card:, schedule:, at: planning_timestamp
+      ).planned_operation
       return unless planned_operation
 
       planned_operation = planned_operation.with(billing_at: timestamp)

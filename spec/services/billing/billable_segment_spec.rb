@@ -36,6 +36,22 @@ RSpec.describe Billing::BillableSegment do
     end
   end
 
+  describe "#due_at" do
+    it "falls due when it is billed by default" do
+      expect(segment.due_at).to eq(attributes[:billing_at])
+    end
+
+    context "when the schedule gives another due instant" do
+      let(:due_at) { Time.zone.parse("2026-02-15 00:00:00") }
+
+      it "keeps it apart from the billing instant" do
+        segment = described_class.new(**attributes, due_at:)
+
+        expect(segment).to have_attributes(due_at:, billing_at: attributes[:billing_at])
+      end
+    end
+  end
+
   describe "the pricing invariant" do
     let(:rate) { nil }
 

@@ -21,21 +21,10 @@ module BillingOperations
         return result
       end
 
-      resume_at = previous_billing_at
-      schedule = Billing::RateCards::BuildScheduleService.call!(
-        contract_rate_card: operation.contract_rate_card,
-        resume_at: resume_at || operation.target_cycle_started_at
-      ).schedule
-      plan_result = Schedule::BuildPlannedOperation.call!(
-        contract_rate_card: operation.contract_rate_card,
-        timestamp: operation.target_cycle_started_at,
-        schedule:,
-        after: resume_at,
-        operation:
-      )
-      result.schedule = plan_result.schedule
-      result.cycle = plan_result.cycle
-      result.segments = plan_result.billable_segments.map { build_billing_segment(it) }
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: operation.contract_rate_card).schedule
+      result.schedule = schedule
+      result.cycle = schedule.cycle_at(operation.target_cycle_started_at)
+      result.segments = owned_billable_segments(after: previous_billing_at).map { build_billing_segment(it) }
       result
     rescue BaseService::FailedResult => error
       result.fail_with_error!(error)
@@ -44,6 +33,17 @@ module BillingOperations
     private
 
     attr_reader :operation
+
+    # An operation whose cycle the schedule no longer has bills nothing.
+    def owned_billable_segments(after:)
+      cycle = result.cycle
+
+      if cycle
+        result.schedule.segments_due_in_cycle(cycle.started_at, by: operation.billing_at, after:)
+      else
+        []
+      end
+    end
 
     # Only completed billing owns coverage; a failed run leaves its cursor unchanged.
     def previous_billing_at

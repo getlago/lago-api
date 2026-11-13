@@ -30,6 +30,9 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
 
   it "sets the clock to the billing date of the current cadence" do
     expect(result).to be_success
+    expect(result.planned_operation).to have_attributes(
+      cycle_started_at: Time.zone.parse("2026-09-30"), billing_at: Time.zone.parse("2026-10-07")
+    )
     expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
   end
 
@@ -57,6 +60,7 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
       result = described_class.call!(contract_rate_card:, timestamp:, schedule: nil)
 
       expect(result).to be_success
+      expect(result.planned_operation).to be_nil
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-30"))
     end
   end

@@ -84,6 +84,11 @@ class ContractRateCard < ApplicationRecord
     end
   end
 
+  # Paid fees are regrouped when their coverage ends, whatever the terms' timing.
+  def regroups_paid_fees?
+    periodic_billing_action == BillingOperation::ACTION_TYPES.fetch(:regroup_paid_fees)
+  end
+
   def needs_reconciliation?
     periodic_billing_action == BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance)
   end

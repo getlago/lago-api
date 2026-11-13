@@ -43,22 +43,23 @@ module BillingOperations
     end
 
     def apply_rate_change(contract_rate_card, rate)
-      plan_result = Schedule::BuildPlannedOperation.call!(contract_rate_card:, timestamp: rate.effective_from)
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
 
       if contract_rate_card.needs_reconciliation?
-        return unless plan_result.planned_operation
+        planned_operation = Schedule::BuildPlannedOperation.call!(
+          contract_rate_card:, schedule:, at: rate.effective_from
+        ).planned_operation
+        return unless planned_operation
 
         reconciliation = CreateService.call!(
           contract_rate_card:,
           action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage),
           causation_type: BillingOperation::CAUSATION_TYPES.fetch(:rate_change),
-          planned_operation: plan_result.planned_operation
+          planned_operation:
         )
         result.billing_operations << reconciliation.operation
       else
-        ContractRateCards::ResetBillingClockService.call!(
-          contract_rate_card:, timestamp: rate.effective_from, schedule: plan_result.schedule
-        )
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp: rate.effective_from, schedule:)
       end
     end
   end

@@ -48,25 +48,6 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     expect(segment.billing_at).to eq(Time.utc(2026, 2, 1))
   end
 
-  context "when resuming the schedule at a timestamp" do
-    subject(:result) { described_class.call(contract_rate_card:, resume_at:) }
-
-    let(:resume_at) { Time.utc(2026, 2, 15) }
-
-    before do
-      create(:rate_card_rate, organization:, rate_card:, effective_from: resume_at)
-    end
-
-    it "includes the whole cycle containing the resume timestamp" do
-      segments = result.schedule.segments_due_by(Time.utc(2026, 3, 1))
-
-      expect(segments.map { [it.started_at, it.ended_at, it.billing_at] }).to eq([
-        [Time.utc(2026, 2, 1), resume_at, resume_at],
-        [resume_at, Time.utc(2026, 3, 1), Time.utc(2026, 3, 1)]
-      ])
-    end
-  end
-
   # Completed operations record prior billing without changing the card's schedule origin.
   context "when the card has already been billed for some cycles" do
     let(:successor) do
@@ -129,11 +110,6 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 20),
         target_cycle_started_at: Time.utc(2026, 1, 15), processed_at: Time.utc(2026, 1, 20))
     end
-    let(:segment) do
-      Billing::Segments::Segment.new(
-        started_at: Time.utc(2026, 1, 15), ended_at: Time.utc(2026, 2, 1), rate: rate_card.rates.order(:effective_from).first
-      )
-    end
 
     before do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "intro",
@@ -151,14 +127,10 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
           [0, Time.utc(2026, 1, 15), "intro"], [1, Time.utc(2026, 2, 1), nil]])
     end
 
-    it "measures consumption against an in-memory segment after the card terminates" do
+    it "has no further obligation after the card terminates" do
       contract.update!(ended_at: Time.utc(2026, 1, 20, 12))
       schedule = described_class.call!(contract_rate_card:).schedule
 
-      consumed = [Time.utc(2026, 1, 20), Time.utc(2026, 1, 20, 12), Time.utc(2026, 2, 1)]
-        .map { |at| schedule.consumed_ratio(segment:, at:) }
-
-      expect(consumed).to eq([5.fdiv(17), 6.fdiv(17), 1.0])
       expect(schedule.next_obligation(after: contract.ended_at)&.billing_at).to be_nil
     end
   end

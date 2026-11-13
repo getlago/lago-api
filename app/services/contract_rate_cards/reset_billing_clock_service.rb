@@ -5,7 +5,7 @@ module ContractRateCards
   # period around the timestamp. Built from the stored lifecycle and phases, so
   # a card whose schedule cannot be built, or has run out, keeps its clock.
   class ResetBillingClockService < BaseService
-    Result = BaseResult[:contract_rate_card]
+    Result = BaseResult[:contract_rate_card, :planned_operation]
 
     def initialize(
       contract_rate_card:,
@@ -19,10 +19,12 @@ module ContractRateCards
     end
 
     def call
-      plan_result = BillingOperations::Schedule::BuildPlannedOperation.call!(
-        contract_rate_card:, schedule:, timestamp:
-      )
-      planned_operation = plan_result.planned_operation
+      if schedule
+        result.planned_operation = BillingOperations::Schedule::BuildPlannedOperation.call!(
+          contract_rate_card:, schedule:, at: timestamp
+        ).planned_operation
+      end
+      planned_operation = result.planned_operation
 
       contract_rate_card.update!(next_billing_at: planned_operation.billing_at) if planned_operation
 
