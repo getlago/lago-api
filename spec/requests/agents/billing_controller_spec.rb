@@ -92,6 +92,10 @@ RSpec.describe Agents::BillingController, :premium, cache: :memory do
 
       post("#{base}/billing/payments", params: {amount_cents: 500, shared_payment_token: "spt_agent_1"}, headers:, as: :json)
       expect(json[:id]).to eq(payment_id)
+
+      post("#{base}/billing/payments", params: {amount_cents: 500, shared_payment_token: 123}, headers:, as: :json)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json[:error_details]).to eq(shared_payment_token: ["value_is_invalid"])
     end
 
     it "does not show granted credits as a payment" do

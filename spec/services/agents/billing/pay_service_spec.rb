@@ -57,19 +57,16 @@ RSpec.describe Agents::Billing::PayService, :premium do
   context "when the amount is outside the wallet's top-up limits" do
     let(:params) { {amount_cents: 100, shared_payment_token: "spt_agent_1"} }
 
-    it "returns the limit error without creating a top-up" do
+    it "returns the limit error on the amount without creating a top-up" do
       expect(result).not_to be_success
-      expect(result.error.messages).to eq(paid_credits: ["amount_below_minimum"])
+      expect(result.error.messages).to eq(amount_cents: ["amount_below_minimum"])
       expect(registration.wallet.wallet_transactions).to be_empty
     end
 
-    it "keeps the Stripe customer for the next attempt" do
-      result
-
-      retried = described_class.call(storefront:, registration:, params: {amount_cents: 500, shared_payment_token: "spt_agent_1"})
-
-      expect(retried).to be_success
-      expect(::Stripe::Customer).to have_received(:create).once
+    it "refuses before creating the Stripe customer" do
+      expect(result).not_to be_success
+      expect(::Stripe::Customer).not_to have_received(:create)
+      expect(storefront.agents_with_stripe_customer?).to be(false)
     end
   end
 
@@ -79,6 +76,50 @@ RSpec.describe Agents::Billing::PayService, :premium do
     it "returns the errors" do
       expect(result).not_to be_success
       expect(result.error.messages).to eq(amount_cents: ["value_is_invalid"], shared_payment_token: ["value_is_mandatory"])
+    end
+  end
+
+  context "when the token is malformed" do
+    let(:params) { {amount_cents: 500, shared_payment_token: "x"} }
+
+    it "refuses before creating the Stripe customer" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(shared_payment_token: ["value_is_invalid"])
+      expect(::Stripe::Customer).not_to have_received(:create)
+      expect(storefront.agents_with_stripe_customer?).to be(false)
+    end
+  end
+
+  context "when the token is a JSON number" do
+    let(:params) { {amount_cents: 500, shared_payment_token: 123} }
+
+    it "refuses it as malformed" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(shared_payment_token: ["value_is_invalid"])
+      expect(::Stripe::Customer).not_to have_received(:create)
+    end
+  end
+
+  context "when the same token comes back with another amount" do
+    it "refuses it instead of answering with the first payment" do
+      first = described_class.call(storefront:, registration:, params:)
+      second = described_class.call(storefront:, registration:, params: {amount_cents: 900, shared_payment_token: "spt_agent_1"})
+
+      expect(first).to be_success
+      expect(second).not_to be_success
+      expect(second.error.messages).to eq(shared_payment_token: ["value_already_exist"])
+      expect(registration.wallet.wallet_transactions.count).to eq(1)
+    end
+  end
+
+  context "when the seller profile is cleared after a payment" do
+    it "still answers a replay with the payment" do
+      first = described_class.call(storefront:, registration:, params:)
+      storefront.stripe_provider.update!(seller_profile: nil)
+
+      expect(result).to be_success
+      expect(result.replayed).to be(true)
+      expect(result.wallet_transaction).to eq(first.wallet_transaction)
     end
   end
 
@@ -107,7 +148,7 @@ RSpec.describe Agents::Billing::PayService, :premium do
 
     it "creates no top-up" do
       expect(result).not_to be_success
-      expect(result.error.messages).to eq(payment_method: ["stripe_customer_not_created"])
+      expect(result.error.messages).to eq(shared_payment_token: ["stripe_customer_not_created"])
       expect(registration.wallet.wallet_transactions).to be_empty
     end
 
