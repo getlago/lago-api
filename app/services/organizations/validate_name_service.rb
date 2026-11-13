@@ -2,7 +2,8 @@
 
 module Organizations
   # The rules on an organization name typed at self-serve signup: required, at most 100 characters, and no link, so
-  # the name shown in emails and invites cannot carry one.
+  # the name shown in emails and invites cannot carry one. `allow_links` keeps the other rules for a name typed by an
+  # admin, who may create an organization named after its domain.
   class ValidateNameService < BaseService
     Result = BaseResult[:name]
 
@@ -26,8 +27,9 @@ module Organizations
     KEPT_INVISIBLE = /[\u200C\u200D\uFE00-\uFE0F\u{E0100}-\u{E01EF}]/
     INVISIBLE = /(?!#{KEPT_INVISIBLE})\p{Default_Ignorable_Code_Point}/
 
-    def initialize(name:)
+    def initialize(name:, allow_links: false)
       @name = name
+      @allow_links = allow_links
       super
     end
 
@@ -39,7 +41,7 @@ module Organizations
       elsif normalized.length > NAME_MAX_LENGTH
         result.single_validation_failure!(field: :name, error_code: "value_is_too_long",
           meta: {max_length: NAME_MAX_LENGTH})
-      elsif contains_link?(normalized)
+      elsif !allow_links && contains_link?(normalized)
         result.single_validation_failure!(field: :name, error_code: "value_contains_link")
       else
         result.name = normalized
@@ -49,7 +51,7 @@ module Organizations
 
     private
 
-    attr_reader :name
+    attr_reader :name, :allow_links
 
     # Kept as typed (no NFKC), without invisible characters other than the kept ones, without control characters, with
     # spaces collapsed.

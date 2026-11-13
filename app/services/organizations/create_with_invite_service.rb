@@ -2,23 +2,42 @@
 
 module Organizations
   class CreateWithInviteService < BaseService
-    Result = BaseResult[:organization, :invite_url]
+    Result = BaseResult[:organization, :sandbox_organization, :invite_url]
 
-    def initialize(name:, owner_email:, document_numbering:, timezone: nil, premium_integrations: [])
+    def initialize(name:, owner_email:, document_numbering:, timezone: nil, premium_integrations: [], feature_flags: [],
+      self_serve: false)
       @name = name
       @owner_email = owner_email
       @document_numbering = document_numbering
       @timezone = timezone
       @premium_integrations = premium_integrations
+      @feature_flags = feature_flags
+      @self_serve = self_serve
       super()
     end
 
     def call
-      ActiveRecord::Base.transaction do
-        result.organization = CreateService.call!(
-          name:, timezone:, document_numbering:, premium_integrations:
-        ).organization
+      unless [true, false].include?(self_serve)
+        return result.single_validation_failure!(field: :self_serve, error_code: "value_is_invalid")
+      end
+      # Pairs exist only where the self-serve mirroring and login rules run.
+      return result.forbidden_failure!(code: "self_serve_disabled") if self_serve && !Lago::SelfServe.enabled?
 
+      ActiveRecord::Base.transaction do
+        if self_serve
+          # Named by an admin, who may name an organization after its domain, as without self_serve.
+          pair = CreateSelfServeService.call!(
+            name:, document_numbering:, timezone:, premium_integrations:, feature_flags:, allow_links_in_name: true
+          )
+          result.organization = pair.organization
+          result.sandbox_organization = pair.sandbox_organization
+        else
+          result.organization = CreateService.call!(
+            name:, timezone:, document_numbering:, premium_integrations:, feature_flags:
+          ).organization
+        end
+
+        # On production only: the sandbox gets the owner when the invite is accepted.
         result.invite_url = Invites::CreateService.call!(
           current_organization: result.organization,
           email: owner_email,
@@ -34,6 +53,6 @@ module Organizations
 
     private
 
-    attr_reader :name, :owner_email, :document_numbering, :timezone, :premium_integrations
+    attr_reader :name, :owner_email, :document_numbering, :timezone, :premium_integrations, :feature_flags, :self_serve
   end
 end

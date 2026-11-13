@@ -2,9 +2,9 @@
 
 module Admin
   class CreateOrganizationService < ::BaseService
-    Result = BaseResult[:organization, :invite_url]
+    Result = BaseResult[:organization, :sandbox_organization, :invite_url]
 
-    def initialize(actor:, name:, owner_email:, reason:, timezone: nil, premium_integrations: [], feature_flags: [])
+    def initialize(actor:, name:, owner_email:, reason:, timezone: nil, premium_integrations: [], feature_flags: [], self_serve: false)
       @actor = actor
       @name = name
       @owner_email = owner_email
@@ -12,6 +12,7 @@ module Admin
       @premium_integrations = (premium_integrations || []).uniq
       @feature_flags = (feature_flags || []).uniq
       @reason = reason
+      @self_serve = self_serve
       super()
     end
 
@@ -20,14 +21,16 @@ module Admin
 
       ActiveRecord::Base.transaction do
         creation = ::Organizations::CreateWithInviteService.call!(
-          name:, owner_email:, timezone:, premium_integrations:, document_numbering: "per_organization"
+          name:, owner_email:, timezone:, premium_integrations:, feature_flags:, document_numbering: "per_organization",
+          self_serve:
         )
         organization = creation.organization
-        organization.update!(feature_flags:) if feature_flags.any?
+        sandbox = creation.sandbox_organization
 
-        create_audit_logs!(organization)
+        create_audit_logs!(organization, sandbox)
 
         result.organization = organization
+        result.sandbox_organization = sandbox&.reload
         result.invite_url = creation.invite_url
       end
 
@@ -40,24 +43,27 @@ module Admin
 
     private
 
-    attr_reader :actor, :name, :owner_email, :timezone, :premium_integrations, :feature_flags, :reason
+    attr_reader :actor, :name, :owner_email, :timezone, :premium_integrations, :feature_flags, :reason, :self_serve
 
     def valid_feature_flags?
       feature_flags.all? { |flag| FeatureFlag.valid?(flag) }
     end
 
-    def create_audit_logs!(organization)
+    # The sandbox gets only its creation row: its settings are copies, and a row of their own would let a rollback
+    # toggle the sandbox alone.
+    def create_audit_logs!(organization, sandbox)
       batch_id = SecureRandom.uuid
-      entries = [["organization", "organization"]]
-      entries.concat(premium_integrations.map { |key| ["premium_integration", key] })
-      entries.concat(feature_flags.map { |key| ["feature_flag", key] })
+      entries = [[organization, "organization", "organization"]]
+      entries.concat(premium_integrations.map { |key| [organization, "premium_integration", key] })
+      entries.concat(feature_flags.map { |key| [organization, "feature_flag", key] })
+      entries << [sandbox, "organization", "organization"] if sandbox
 
-      entries.each do |feature_type, feature_key|
+      entries.each do |audited, feature_type, feature_key|
         audit_log = CsAdminAuditLog.create!(
           actor_user: actor,
           actor_email: actor.email,
           action: :org_created,
-          organization:,
+          organization: audited,
           feature_type:,
           feature_key:,
           before_value: (feature_type == "organization") ? nil : false,
