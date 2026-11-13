@@ -45,6 +45,18 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodSer
       end
     end
 
+    context "when the provider customer only uses a shared payment token" do
+      let(:provider_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: stripe_provider, provider_payment_methods: %w[shared_payment_token]) }
+
+      it "returns without looking Stripe up or creating a payment method" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(customer.payment_methods).to be_empty
+        expect(PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService).not_to have_received(:call!)
+      end
+    end
+
     context "when no payment method is found on Stripe" do
       let(:payment_method_id) { nil }
 
