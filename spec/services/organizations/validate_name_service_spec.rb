@@ -36,7 +36,15 @@ RSpec.describe Organizations::ValidateNameService do
     end
   end
 
-  ["", nil, "   ", "​­", "\u200C\u200D"].each do |blank|
+  context "with the variation selector of an emoji" do
+    let(:name) { "\u2764\uFE0F Love Co" }
+
+    it "keeps it" do
+      expect(result.name).to eq("\u2764\uFE0F Love Co")
+    end
+  end
+
+  ["", nil, "   ", "​­", "\u200C\u200D", "\uFE0F"].each do |blank|
     context "with #{blank.inspect}" do
       let(:name) { blank }
 
@@ -63,8 +71,9 @@ RSpec.describe Organizations::ValidateNameService do
 
   it "refuses names that carry a link" do
     links = ["https://acme.example", "Acme www.acme", "acme.com", "Visit acme.co.uk", "ａｃｍｅ．ｃｏｍ",
-      "contact@acme.io", "Visit 10.0.0.1", "acme。com", "acme\u200D.com", "acme.com.ltd", "acme.io", "booking.com",
-      "Dr.Ing Consulting", "javascript:alert(1)", "mailto:x@y", "Data:text/html,hi", "vbscript:x", "file:x"]
+      "contact@acme.io", "Visit 10.0.0.1", "acme。com", "acme\u200D.com", "acme\uFE0F.com", "acme.com.ltd", "acme.io",
+      "booking.com", "Dr.Ing Consulting", "javascript:alert(1)", "mailto:x@y", "Data:text/html,hi", "vbscript:x",
+      "file:x"]
 
     expect(links.index_with { described_class.call(name: it).error&.messages })
       .to eq(links.index_with { {name: ["value_contains_link"]} })
