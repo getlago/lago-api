@@ -70,6 +70,25 @@ describe V2::PlanWalletSerializer do
         {type: "product_filters", product_code: "api_calls", code: "premium_model"}
       ]}))
     end
+
+    context "when several selectors name a product" do
+      before do
+        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product", fee_type: nil,
+          product: create(:product, organization:, code: "storage"))
+      end
+
+      it "loads the products in one query" do
+        product_queries = 0
+        counter = lambda do |_name, _start, _finish, _id, payload|
+          product_queries += 1 if payload[:sql].include?('FROM "products"')
+        end
+
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { payload }
+
+        expect(payload[:applies_to][:include].count { it[:type] == "product" }).to eq(2)
+        expect(product_queries).to eq(1)
+      end
+    end
   end
 
   context "with the taxes expansion" do

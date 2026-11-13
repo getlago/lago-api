@@ -7,6 +7,8 @@ module V2
     expandable :taxes, serializer: ::V2::TaxSerializer
     expandable :metadata, serializer: ::V1::MetadataSerializer
 
+    SELECTOR_TARGETS = [:product_category, :product, {product_filter: :product}].freeze
+
     def serialize
       {
         lago_id: model.id,
@@ -26,8 +28,11 @@ module V2
     private
 
     # In the order they were added, sorted in memory so that a list reads its preloaded selectors.
+    # Their targets load in one query per kind, also for a wallet that no request preloaded.
     def selectors
-      model.selectors.sort_by { [it.created_at, it.id] }.map { selector(it) }
+      selectors = model.selectors.sort_by { [it.created_at, it.id] }
+      ActiveRecord::Associations::Preloader.new(records: selectors, associations: SELECTOR_TARGETS).call
+      selectors.map { selector(it) }
     end
 
     # Each selector as a request names it.
