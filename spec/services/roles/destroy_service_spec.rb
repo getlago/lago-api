@@ -44,6 +44,27 @@ RSpec.describe Roles::DestroyService do
       end
     end
 
+    context "when another request deleted the role and recreated its code after it was loaded" do
+      subject(:result) { described_class.call(role:, actor:) }
+
+      let(:actor) { create(:user) }
+      let(:production) { create(:organization, :with_sandbox) }
+      let(:role) { create(:role, organization: production, code: "auditor") }
+      let(:replacement_copy) { create(:role, organization: production.sandbox_organization, code: "auditor") }
+
+      before do
+        role
+        Role.find(role.id).discard!
+        create(:role, organization: production, code: "auditor")
+        replacement_copy
+      end
+
+      it "answers that the role is not found and keeps the replacement's sandbox copy" do
+        expect(result.error.error_code).to eq("role_not_found")
+        expect(replacement_copy.reload).not_to be_discarded
+      end
+    end
+
     context "when the role belongs to a sandbox" do
       let(:role) { create(:role, organization: create(:organization, :sandbox)) }
 
