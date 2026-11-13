@@ -60,6 +60,50 @@ describe PlanWallet do
       end
     end
 
+    describe "currency validation" do
+      subject(:plan_wallet) { build(:plan_wallet, catalog_plan:, currency:) }
+
+      let(:catalog_plan) { create(:catalog_plan, currency: "USD") }
+      let(:currency) { "USD" }
+
+      it "accepts the currency of the plan" do
+        expect(plan_wallet).to be_valid
+      end
+
+      context "with another currency" do
+        let(:currency) { "EUR" }
+
+        it "rejects it" do
+          expect(plan_wallet).not_to be_valid
+          expect(plan_wallet.errors.where(:currency, :currency_does_not_match)).to be_present
+        end
+      end
+
+      context "with an unknown currency" do
+        let(:currency) { "XXX" }
+
+        it "only reports the unknown currency" do
+          expect(plan_wallet).not_to be_valid
+          expect(plan_wallet.errors.details[:currency].map { it[:error] }).to eq([:inclusion])
+        end
+      end
+
+      context "when the currency of the plan changed after the wallet was saved" do
+        subject(:plan_wallet) { create(:plan_wallet, catalog_plan:, currency: "USD") }
+
+        before do
+          plan_wallet
+          catalog_plan.update!(currency: "EUR")
+        end
+
+        it "still accepts an edit of another field" do
+          plan_wallet.name = "Credits"
+
+          expect(plan_wallet).to be_valid
+        end
+      end
+    end
+
     describe "top-up limits" do
       it "accepts equal limits" do
         expect(build(:plan_wallet, top_up_min_amount_cents: 1000, top_up_max_amount_cents: 1000)).to be_valid

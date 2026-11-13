@@ -11,6 +11,7 @@ en:
         country_code_invalid: not_a_valid_country_code
         country_must_be_present: country_must_be_present
         country_not_supported: country_not_supported
+        currency_does_not_match: currency_does_not_match
         does_not_belong_to_product: does_not_belong_to_product
         environment_not_enabled: environment_not_enabled
         exactly_one_owner_required: exactly_one_owner_required
