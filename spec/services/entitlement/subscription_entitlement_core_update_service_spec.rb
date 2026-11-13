@@ -37,6 +37,9 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
     expect(ent_values).to eq privilege_params
   end
 
+  # The core service takes no lock: it relies on the subscription lock that its two callers,
+  # SubscriptionEntitlementsUpdateService and SubscriptionEntitlementUpdateService, take before they read
+  # plan_entitlement and sub_entitlement. Their specs cover the concurrent writes.
   describe "#call" do
     context "when plan has no feature" do
       context "when subscription has no feature" do

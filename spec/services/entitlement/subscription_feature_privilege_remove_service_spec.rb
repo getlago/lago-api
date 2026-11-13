@@ -5,10 +5,11 @@ require "rails_helper"
 RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
   subject(:result) { described_class.call(subscription:, feature_code:, privilege_code:) }
 
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:subscription) { create(:subscription, organization:, customer:, plan:) }
+  # let, not let_it_be: the concurrency examples commit their rows and empty the tables.
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:feature) { create(:feature, organization:, code: "test_feature") }
   let(:privilege) { create(:privilege, feature:, code: "max") }
   let(:feature_code) { feature.code }
@@ -113,6 +114,49 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
 
       it "does not discards the subscription entitlement" do
         expect { result }.not_to change { subscription_entitlement.reload.discarded? }
+      end
+    end
+
+    context "when another connection holds the subscription lock", transaction: false do
+      let(:subscription_entitlement) { create(:entitlement, feature:, subscription:, plan: nil) }
+      let(:entitlement_value) { create(:entitlement_value, entitlement: subscription_entitlement, privilege:, value: "10") }
+      let(:plan_entitlement) { create(:entitlement, feature:, plan:) }
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      before do
+        entitlement_value
+        plan_entitlement
+      end
+
+      # Frees the lock holder left waiting by a failed expectation.
+      after { release << true }
+
+      it "waits for the lock, then removes the privilege" do
+        holder = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              Subscription.lock("FOR NO KEY UPDATE").find(subscription.id)
+              locked << true
+              release.pop
+            end
+          end
+        end
+        locked.pop
+
+        remover = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(subscription: Subscription.find(subscription.id), feature_code:, privilege_code:)
+          end
+        end
+        expect(remover.join(0.5)).to be_nil
+
+        release << true
+        holder.join
+
+        expect(remover.value).to be_success
+        expect(entitlement_value.reload.deleted_at).to be_present
+        expect(Entitlement::SubscriptionFeatureRemoval.where(subscription:, privilege:).count).to eq(1)
       end
     end
   end

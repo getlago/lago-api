@@ -61,6 +61,21 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, :p
     end
   end
 
+  context "when a concurrent request creates the same entitlement" do
+    before do
+      allow(Entitlement::Entitlement).to receive(:create!).and_wrap_original do |original, **attributes|
+        original.call(**attributes)
+        original.call(**attributes)
+      end
+    end
+
+    it "returns a validation error and enqueues no webhook" do
+      expect_unprocessable_entity(subject, details: {feature: ["value_already_exist"]})
+      expect(subscription.entitlements).to be_empty
+      expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.updated", subscription)
+    end
+  end
+
   context "when feature is on plan but not the privilege" do
     let(:input) do
       {
