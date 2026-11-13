@@ -69,6 +69,34 @@ RSpec.describe Roles::UpdateService do
       end
     end
 
+    context "when another edit committed after the role was loaded" do
+      let(:params) { {name: "New Name"} }
+
+      before do
+        role
+        Role.find(role.id).update!(name: "Other Name", permissions: %w[customers:view])
+      end
+
+      it "logs the diff from the committed edit and keeps its other changes" do
+        expect(result).to be_success
+        expect(role.reload).to have_attributes(name: "New Name", permissions: %w[customers:view])
+        expect(security_logger).to have_received(:produce).with(organization:, log_type: "role",
+          log_event: "role.updated", resources: {role_code: "old_role", name: {deleted: "Other Name", added: "New Name"}})
+      end
+    end
+
+    context "when the role was deleted after it was loaded" do
+      before do
+        role
+        Role.find(role.id).discard!
+      end
+
+      it "answers that the role is not found" do
+        expect(result.error.error_code).to eq("role_not_found")
+        expect(Role.with_discarded.find(role.id).name).to eq("Old Name")
+      end
+    end
+
     context "when the role belongs to a sandbox" do
       let(:sandbox) { create(:organization, :sandbox) }
       let(:acting_membership) { create(:membership, organization: sandbox, roles: %i[admin]) }
