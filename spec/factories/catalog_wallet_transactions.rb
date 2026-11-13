@@ -17,6 +17,12 @@ FactoryBot.define do
       settled_at { nil }
     end
 
+    trait :failed do
+      status { "failed" }
+      settled_at { nil }
+      failed_at { Time.current }
+    end
+
     trait :billing_cycle_grant do
       reason { "credit_allocation" }
       allocation_type { "billing_cycle" }
