@@ -97,6 +97,15 @@ RSpec.describe Organizations::CreateSelfServeService do
     end
   end
 
+  context "when links are allowed in the name" do
+    let(:name) { "Hooli.com" }
+    let(:options) { {allow_links_in_name: true} }
+
+    it "creates the pair" do
+      expect([result.organization.name, result.sandbox_organization.name]).to eq(["Hooli.com", "Hooli.com Sandbox"])
+    end
+  end
+
   context "with a 100-character name" do
     let(:name) { "a" * 100 }
 

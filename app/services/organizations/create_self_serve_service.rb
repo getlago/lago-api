@@ -11,8 +11,10 @@ module Organizations
     # 32 characters of the production slug plus the suffix fill the 40-character slug cap.
     SANDBOX_SLUG_BASE_LENGTH = 32
 
-    def initialize(name:, document_numbering: "per_organization", timezone: nil, premium_integrations: [], feature_flags: [])
+    def initialize(name:, document_numbering: "per_organization", timezone: nil, premium_integrations: [], feature_flags: [],
+      allow_links_in_name: false)
       @name = name
+      @allow_links_in_name = allow_links_in_name
       @document_numbering = document_numbering
       @timezone = timezone
       @premium_integrations = premium_integrations
@@ -21,7 +23,7 @@ module Organizations
     end
 
     def call
-      name_result = ValidateNameService.call(name:)
+      name_result = ValidateNameService.call(name:, allow_links: allow_links_in_name)
       return result.fail_with_error!(name_result.error) unless name_result.success?
 
       unless Array(feature_flags).all? { FeatureFlag.valid?(it) }
@@ -54,7 +56,7 @@ module Organizations
 
     private
 
-    attr_reader :name, :document_numbering, :timezone, :premium_integrations, :feature_flags
+    attr_reader :name, :document_numbering, :timezone, :premium_integrations, :feature_flags, :allow_links_in_name
 
     def shared_attributes
       {document_numbering:, timezone:, premium_integrations: Array(premium_integrations),

@@ -62,6 +62,16 @@ RSpec.describe Admin::CreateOrganizationService do
         expect(sandbox_rows.sole.batch_id).to eq(CsAdminAuditLog.where(organization: result.organization).first.batch_id)
       end
 
+      context "with a name that reads as a domain" do
+        let(:name) { "Hooli.com" }
+
+        it "accepts it, as without self_serve" do
+          result = service.call
+
+          expect([result.organization.name, result.sandbox_organization.name]).to eq(["Hooli.com", "Hooli.com Sandbox"])
+        end
+      end
+
       context "when self-serve is off" do
         let(:self_serve_env) { {"LAGO_SELF_SERVE_ENABLED" => "false"} }
 
@@ -80,6 +90,14 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(organization).to be_a(Organization)
       expect(organization.name).to eq("Hooli Inc")
       expect(organization.reload.default_billing_entity.document_numbering).to eq("per_billing_entity")
+    end
+
+    context "with a name that reads as a domain" do
+      let(:name) { "Hooli.com" }
+
+      it "accepts it" do
+        expect(service.call.organization.name).to eq("Hooli.com")
+      end
     end
 
     context "when a timezone is provided", :premium do

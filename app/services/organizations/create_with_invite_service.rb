@@ -24,7 +24,8 @@ module Organizations
       ActiveRecord::Base.transaction do
         if self_serve
           # A pair takes the numbering of self-serve signup.
-          pair = CreateSelfServeService.call!(name:, timezone:, premium_integrations:)
+          # Named by an admin, who may name an organization after its domain, as without self_serve.
+          pair = CreateSelfServeService.call!(name:, timezone:, premium_integrations:, allow_links_in_name: true)
           result.organization = pair.organization
           result.sandbox_organization = pair.sandbox_organization
         else
