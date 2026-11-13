@@ -585,6 +585,138 @@ RSpec.describe BillingOperations::ProcessService do
       end
     end
 
+    context "with recurring aggregation snapshots" do
+      let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
+      let(:customer) { create(:customer, organization:, timezone: "UTC") }
+      let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 2, 1)) }
+      let(:metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "quantity") }
+      let(:product) { create(:product, :metered, organization:, billable_metric: metric) }
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: Date.new(2026, 2, 1), billing_anchor_date: Date.new(2026, 2, 1))
+      end
+      let(:rate) do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1), rate_model: "standard", rate_properties: {"amount" => "10"})
+      end
+      let(:schedule) { BillingOperations::BuildScheduleService.call!(contract_rate_card:).schedule }
+      let(:planned_operation) { first_planned_operation_for(schedule, Time.utc(2026, 2, 1), "close_metered_arrears") }
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_metered_arrears",
+          billing_at: planned_operation.billing_at, target_cycle_started_at: planned_operation.cycle_started_at)
+      end
+      let(:snapshots) { ContractRecurringAggregationSnapshot.where(contract:, product:).order(:to_datetime) }
+
+      def create_usage(quantity, timestamp)
+        # Ingested well before the watermark, so the closing snapshot counts it
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id, code: metric.code,
+          timestamp:, created_at: Time.utc(2026, 1, 1), properties: {quantity:})
+      end
+
+      before do
+        rate
+        create_usage(3, Time.utc(2026, 1, 20))
+        create_usage(2, Time.utc(2026, 2, 10))
+      end
+
+      it "persists the cumulative units at the close of the period" do
+        operation
+
+        invoice = described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)).invoices.sole
+
+        expect(invoice.fees.sole.units).to eq(5) # 3 from January + 2 from February, recurring
+        expect(snapshots.sole).to have_attributes(
+          to_datetime: BillingSegment.inclusive_end(Time.utc(2026, 3, 1)), units: 5, events_count: 2, priced_product_filter_ids: []
+        )
+      end
+
+      context "with a rate change inside the cycle" do
+        let(:later_rate) do
+          create(:rate_card_rate, organization:, rate_card:, code: "after-midcycle", effective_from: Time.utc(2026, 2, 15),
+            rate_model: "standard", rate_properties: {"amount" => "20"})
+        end
+
+        before do
+          later_rate
+          create_usage(5, Time.utc(2026, 2, 20))
+        end
+
+        it "persists a snapshot at the end of each slice, the second ending after the first" do
+          operation
+
+          first = described_class.call!(customer:, timestamp: Time.utc(2026, 2, 15)).invoices.sole
+          expect(first.fees.sole.units).to eq(5) # 3 + 2 up to the rate change
+          expect(snapshots.pluck(:to_datetime, :units)).to eq([[BillingSegment.inclusive_end(Time.utc(2026, 2, 15)), 5]])
+
+          second = described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)).invoices.sole
+          expect(second.fees.sole.units).to eq(10) # 5 + 5 from 20 Feb
+          expect(snapshots.pluck(:to_datetime, :units, :events_count)).to eq([
+            [BillingSegment.inclusive_end(Time.utc(2026, 2, 15)), 5, 2],
+            [BillingSegment.inclusive_end(Time.utc(2026, 3, 1)), 10, 3]
+          ])
+        end
+      end
+
+      context "with a grace period" do
+        let(:customer) { create(:customer, organization:, timezone: "UTC", invoice_grace_period: 3) }
+
+        it "rewrites the snapshot of the period when the draft is refreshed" do
+          operation
+          invoice = described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)).invoices.sole
+          expect(invoice).to be_draft
+          create_usage(4, Time.utc(2026, 2, 25))
+
+          Invoices::RefreshDraftService.call!(invoice:)
+
+          expect(invoice.reload.fees.sole.units).to eq(9) # 5 + 4 added before the refresh
+          expect(snapshots.sole).to have_attributes(to_datetime: BillingSegment.inclusive_end(Time.utc(2026, 3, 1)), units: 9)
+        end
+      end
+
+      context "when the invoice fails after the fees" do
+        before do
+          allow(Invoices::ApplyInvoiceCustomSectionsService).to receive(:call!).and_raise("custom sections failed")
+        end
+
+        it "rolls the snapshot back with the operation" do
+          operation
+
+          expect { described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)) }
+            .to raise_error(RuntimeError, "custom sections failed")
+          expect(operation.reload.processed_at).to be_nil
+          expect(snapshots).to be_empty
+        end
+      end
+
+      context "when the close prices no fee" do
+        before { Event.where(organization:).delete_all }
+
+        it "completes the operation without an invoice or a snapshot" do
+          operation
+
+          expect(described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)).invoices).to be_empty
+          expect(operation.reload.processed_at).to eq(Time.utc(2026, 3, 1))
+          expect(snapshots).to be_empty
+        end
+      end
+
+      context "with an advance rate card" do
+        let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD", display_on_invoice: true) }
+        let(:operation) do
+          create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_recurring_metered_advance",
+            billing_at: Time.utc(2026, 2, 1), target_cycle_started_at: Time.utc(2026, 2, 1))
+        end
+
+        it "bills the renewal without persisting a snapshot" do
+          operation
+
+          invoice = described_class.call!(customer:, timestamp: Time.utc(2026, 2, 1)).invoices.sole
+
+          expect(invoice.fees.sole.units).to eq(3) # only January, up to the segment start
+          expect(snapshots).to be_empty
+        end
+      end
+    end
+
     context "with paid advance fees to regroup" do
       let(:timestamp) { Time.utc(2026, 2, 1) }
       let(:customer) { create(:customer, organization:, timezone: "UTC") }

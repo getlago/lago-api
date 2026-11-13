@@ -592,12 +592,13 @@ module Fees
         # Only weighted sum reads its breakdowns back, and a sum's are not bounded by the watermark
         breakdowns_by_group = {} unless selected_metered_item.billable_metric.weighted_sum_agg?
 
-        results = snapshot_results(aggregation_results, default_bucket: selected_metered_item.charge_filter&.id.nil?)
+        filter = selected_metered_item.selected_filter
+        results = snapshot_results(aggregation_results, marker: recurring_snapshot_key.bucket_id(filter) == recurring_snapshot_key.marker_bucket_id)
 
         # A weighted sum has no events count: its read never counts the events of a closed period.
         # Blank group values ("" and " ") are stored as one null group, so their units add up.
         recurring_snapshots << {
-          filter: selected_metered_item.charge_filter,
+          filter:,
           values: results.group_by { it.grouped_by || {} }.map do |grouped_by, group_results|
             {
               grouped_by:,
@@ -611,11 +612,11 @@ module Fees
     end
 
     # Empty groups are not stored, as a charge can have hundreds of filters and groups.
-    # The default bucket keeps one row to mark the period closed, a missing row means a full scan.
-    def snapshot_results(aggregation_results, default_bucket:)
+    # The marker bucket keeps one row to mark the period closed, a missing row means a full scan.
+    def snapshot_results(aggregation_results, marker:)
       used_results = aggregation_results.reject { it.recurring_units.zero? && it.recurring_events_count.to_i.zero? }
 
-      if used_results.none? && default_bucket
+      if used_results.none? && marker
         aggregation_results.first(1)
       else
         used_results
@@ -631,6 +632,8 @@ module Fees
 
     def snapshot_recurring_units?(selected_metered_item)
       return false if options.current_usage? || options.invoice_preview?
+      # Units stopped at max_timestamp do not close the period written under its end
+      return false if options.advance_renewal? || selected_metered_item.boundaries.max_timestamp
       # A backfill is run by hand on the organizations its caller picked
       return false unless options.snapshot_backfill? || billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
 
@@ -670,16 +673,31 @@ module Fees
       @recurring_snapshots ||= []
     end
 
+    def recurring_snapshot_key
+      @recurring_snapshot_key ||= RecurringAggregationSnapshot.key(metered_item:, billing_context:)
+    end
+
     # All buckets or none: the marker of the default bucket stands for every filter of the charge
     def persist_recurring_snapshots
       return if recurring_snapshots.empty? || recurring_snapshots.size != metered_item.pricing_buckets.size
 
       RecurringAggregationSnapshots::PersistService.call!(
-        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge: metered_item.charge),
+        key: recurring_snapshot_key,
         to_datetime: metered_item.boundaries.charges_to_datetime,
         watermark: @recurring_watermark,
-        buckets: recurring_snapshots
+        buckets: recurring_snapshots,
+        period_attributes: recurring_period_attributes
       )
+    end
+
+    # Priced filters take precedence over the product's other filters, and the segment's set can change
+    # with no row changing, so the read compares it with the set the period was closed with.
+    def recurring_period_attributes
+      if metered_item.billing_segment
+        {priced_product_filter_ids: metered_item.billing_segment.priced_product_filter_ids.uniq.sort}
+      else
+        {}
+      end
     end
 
     def grouped_by_keys(selected_metered_item:)

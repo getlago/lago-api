@@ -306,6 +306,33 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
     end
   end
 
+  context "when the event resolves to a contract's billing segment of the charge's product" do
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:product) { create(:product, organization:, billable_metric:, charge:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+    let(:billing_segment) do
+      build(:billing_segment, organization:, customer:, contract:,
+        contract_rate_card: create(:contract_rate_card, organization:, contract:, rate_card:),
+        cycle_started_at: Time.zone.parse("2022-05-01"), started_at: Time.zone.parse("2022-05-01"),
+        ended_at: BillingSegment.inclusive_end(Time.zone.parse("2022-06-01")))
+    end
+
+    before do
+      allow(Events::PayInAdvanceMeteredItemsResolver).to receive(:call!).and_wrap_original do |original, event:|
+        selection = Events::PayInAdvanceMeteredItemsResolver::Selection.new(
+          metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event:),
+          billing_context: Billing::Context.from(contract:)
+        )
+        original.call(event:).tap { it.selections = [selection] }
+      end
+    end
+
+    it "does not count the event as read from a snapshot, as contract snapshots are not read" do
+      expect(result).to be_success
+      expect(result.rows.sole).to have_attributes(snapshot_read: false)
+    end
+  end
+
   context "with a charge that is not paid in advance" do
     let(:charge) { create(:standard_charge, plan:, billable_metric:) }
 
