@@ -69,6 +69,8 @@ module Organizations
 
       # Settings first: copying custom roles needs the sandbox's custom_roles integration.
       SyncSandboxSettingsService.call!(organization: production_organization, actor:)
+      # Every custom role, as the members below only copy the roles they hold.
+      production_organization.roles.find_each { Roles::SyncSandboxService.call!(role: it, actor:) }
       production_organization.active_memberships.includes(:user).find_each do |membership|
         Memberships::SyncSandboxService.call!(organization: production_organization, user: membership.user, actor:)
       end
