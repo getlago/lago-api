@@ -21,9 +21,10 @@ module Organizations
     ].to_set.freeze
     # Ideographic and full-width full stops read as dots.
     DOT_LOOKALIKES = "。．｡"
-    # Zero-width non-joiner and joiner: invisible, but part of Persian, Urdu and Indic spellings.
-    JOINERS = /[\u200C\u200D]/
-    INVISIBLE = /(?![\u200C\u200D])\p{Default_Ignorable_Code_Point}/
+    # Zero-width non-joiner and joiner (part of Persian, Urdu and Indic spellings) and variation selectors (part of
+    # emoji such as U+2764 U+FE0F): invisible, but kept.
+    KEPT_INVISIBLE = /[\u200C\u200D\uFE00-\uFE0F\u{E0100}-\u{E01EF}]/
+    INVISIBLE = /(?!#{KEPT_INVISIBLE})\p{Default_Ignorable_Code_Point}/
 
     def initialize(name:)
       @name = name
@@ -33,7 +34,7 @@ module Organizations
     def call
       normalized = normalize(name)
 
-      if normalized.gsub(JOINERS, "").strip.empty?
+      if normalized.gsub(KEPT_INVISIBLE, "").strip.empty?
         result.single_validation_failure!(field: :name, error_code: "value_is_mandatory")
       elsif normalized.length > NAME_MAX_LENGTH
         result.single_validation_failure!(field: :name, error_code: "value_is_too_long",
@@ -50,7 +51,7 @@ module Organizations
 
     attr_reader :name
 
-    # Kept as typed (no NFKC), without invisible characters other than the joiners, without control characters, with
+    # Kept as typed (no NFKC), without invisible characters other than the kept ones, without control characters, with
     # spaces collapsed.
     def normalize(value)
       value.to_s.scrub("")
@@ -60,9 +61,9 @@ module Organizations
         .strip
     end
 
-    # Every invisible character is dropped here, so a joiner cannot hide a link.
+    # Every invisible character is dropped here, so a kept one cannot hide a link.
     def contains_link?(value)
-      text = value.gsub(JOINERS, "").unicode_normalize(:nfkc).downcase.tr(DOT_LOOKALIKES, "...")
+      text = value.gsub(KEPT_INVISIBLE, "").unicode_normalize(:nfkc).downcase.tr(DOT_LOOKALIKES, "...")
       return true if [URL_SCHEME, BARE_SCHEME, WWW, IPV4].any? { it.match?(text) }
 
       text.scan(DOTTED_TOKEN).any? { domain?(it.delete_prefix("-")) }
