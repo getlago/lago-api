@@ -42,6 +42,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
         [
           RECURRING_SNAPSHOTS_AUDIT_CSV_HEADERS,
           [
+            "subscription",
             subscription.id,
             subscription.external_id,
             charge.id,
@@ -74,6 +75,59 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
       expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).once
       expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!)
         .with(subscription: satisfy { [subscription, other_subscription].include?(it) })
+    end
+  end
+
+  context "with contract snapshots" do
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:product) { create(:product, :metered, organization:, billable_metric:) }
+    let(:contract_answers) { ["", "5"] }
+    let(:contract_audit) do
+      RecurringAggregationSnapshots::ContractAuditService::Result.new.tap do |audit|
+        audit.rows = [
+          RecurringAggregationSnapshots::ContractAuditService::Row.new(
+            product_id: product.id, product_filter_id: nil, grouped_by: {}, to_datetime:, snapshot_units: 7,
+            fee_units: 5, snapshot_events_count: 2, fee_events_count: 2, watermark_gap: false
+          )
+        ]
+        audit.differences = audit.rows
+        audit.watermark_gap_rows = []
+        audit.periods_without_invoice = []
+      end
+    end
+
+    before do
+      create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, to_datetime:)
+      # Has no snapshot, so it is not audited
+      create(:contract, organization:, customer:)
+      stub_stdin(organization.id, "y", subscription.id, *contract_answers, csv_path)
+      allow(RecurringAggregationSnapshots::ContractAuditService).to receive(:call!).with(contract:).and_return(contract_audit)
+    end
+
+    it "samples the contracts with snapshots and writes their differing leaves" do
+      expect { task.invoke }.to output(
+        a_string_including(
+          "Organization has 1 contract(s) with snapshots.",
+          "Auditing 1 contract(s)",
+          "  Contract #{contract.id} (#{contract.external_id}): 1 leaf/leaves, 1 differing, " \
+            "0 explained by events ingested after the watermark, 0 period(s) without invoice",
+          "Differing leaves: 2, adjusted leaves: 0"
+        )
+      ).to_stdout
+
+      expect(CSV.read(csv_path).last).to eq(
+        ["contract", contract.id, contract.external_id, product.id, nil, "{}", "2026-09-30T23:59:59.000000Z", "7.0", "5.0", "2", "2"]
+      )
+    end
+
+    context "with listed contracts" do
+      let(:contract_answers) { ["#{contract.id},#{SecureRandom.uuid}"] }
+
+      it "audits them only" do
+        expect { task.invoke }.to output(/Not found in the organization or without snapshots, skipped: /).to_stdout
+
+        expect(RecurringAggregationSnapshots::ContractAuditService).to have_received(:call!).once
+      end
     end
   end
 

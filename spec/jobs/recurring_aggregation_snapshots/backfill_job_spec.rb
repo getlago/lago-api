@@ -52,4 +52,45 @@ RSpec.describe RecurringAggregationSnapshots::BackfillJob do
       expect { perform }.to raise_error(BaseService::ServiceFailure)
     end
   end
+
+  context "with a contract" do
+    subject(:perform) { described_class.perform_now(contract) }
+
+    let(:contract) { create(:contract) }
+    let(:contract_rate_card) { build_stubbed(:contract_rate_card) }
+    let(:failed_rate_cards) { [] }
+    let(:contract_backfill) do
+      RecurringAggregationSnapshots::ContractBackfillService::Result.new.tap { it.failed_rate_cards = failed_rate_cards }
+    end
+
+    before do
+      allow(RecurringAggregationSnapshots::ContractBackfillService).to receive(:call).with(contract:).and_return(contract_backfill)
+    end
+
+    it "backfills the contract" do
+      perform
+
+      expect(RecurringAggregationSnapshots::ContractBackfillService).to have_received(:call).with(contract:)
+      expect(RecurringAggregationSnapshots::BackfillService).not_to have_received(:call)
+    end
+
+    context "when a rate card failed" do
+      let(:failed_rate_cards) { [contract_rate_card] }
+
+      it "raises once the attempts are exhausted" do
+        assert_performed_jobs(3, only: [described_class]) do
+          expect { described_class.perform_later(contract) }
+            .to raise_error(described_class::ChargesFailedError, /Rate cards #{contract_rate_card.id} failed to backfill/)
+        end
+      end
+    end
+
+    context "when the contract is no longer active" do
+      let(:contract_backfill) { RecurringAggregationSnapshots::ContractBackfillService::Result.new.not_allowed_failure!(code: "contract_not_active") }
+
+      it "does nothing" do
+        expect { perform }.not_to raise_error
+      end
+    end
+  end
 end
