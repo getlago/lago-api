@@ -71,6 +71,44 @@ RSpec.describe ContractRateCard do
         end
       end
     end
+
+    describe ".due_for_billing" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, timezone: "UTC") }
+      let(:timestamp) { Time.utc(2026, 11, 15, 0, 17) }
+      let(:started_at) { Time.utc(2026, 11, 1) }
+      let(:rate_card) { create(:rate_card, organization:) }
+
+      let(:active_contract) { create(:contract, organization:, customer:, started_at:) }
+      let(:terminated_contract) do
+        create(:contract, organization:, customer:, started_at:, status: :terminated, terminated_at: Time.utc(2026, 11, 15))
+      end
+      let(:pending_contract) { create(:contract, organization:, customer:, started_at:, status: :pending) }
+      let(:canceled_contract) { create(:contract, organization:, customer:, started_at:, status: :canceled) }
+      let(:future_cursor_contract) { create(:contract, organization:, customer:, started_at:) }
+      let(:empty_cursor_contract) { create(:contract, organization:, customer:, started_at:) }
+
+      let(:active_card) { create(:contract_rate_card, organization:, contract: active_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
+      let(:terminated_card) { create(:contract_rate_card, organization:, contract: terminated_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
+      let(:pending_card) { create(:contract_rate_card, organization:, contract: pending_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
+      let(:canceled_card) { create(:contract_rate_card, organization:, contract: canceled_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
+      let(:future_cursor_card) { create(:contract_rate_card, organization:, contract: future_cursor_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp + 1.minute) }
+      let(:empty_cursor_card) { create(:contract_rate_card, organization:, contract: empty_cursor_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
+
+      around do |example|
+        travel_to(timestamp) { example.run }
+      end
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: started_at)
+        [active_card, terminated_card, pending_card, canceled_card, future_cursor_card]
+        empty_cursor_card.update!(next_billing_at: nil)
+      end
+
+      it "includes terminated cards with due coverage but excludes ineligible cursors and states" do
+        expect(described_class.due_for_billing(timestamp)).to match_array([active_card, terminated_card])
+      end
+    end
   end
 
   describe "validations" do

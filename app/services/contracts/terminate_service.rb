@@ -59,10 +59,10 @@ module Contracts
     def terminate
       contract.update!(status: :terminated, terminated_at: timestamp)
 
-      BillingOperations::TerminateService.call!(
+      termination_result = BillingOperations::TerminateService.call!(
         contract:, timestamp: contract.terminated_at
       )
-      if contract.applied_rate_cards.due_for_billing(Time.current).exists?
+      if termination_result.billing_operations.any? { it.due_for_processing?(timestamp: Time.current) }
         BillingOperations::ProcessJob.perform_after_commit(contract.customer_id)
       end
     end

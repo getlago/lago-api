@@ -56,10 +56,11 @@ RSpec.describe Contracts::TerminateService do
       end
     end
 
-    it "persists the final arrears operation without changing the cursor" do
-      expect { travel_to(terminated_at) { result } }.not_to change { arrears_card.reload.next_billing_at }
+    it "resets the cursor to the final arrears obligation" do
+      travel_to(terminated_at) { result }
 
       expect(result).to be_success
+      expect(arrears_card.reload.next_billing_at).to eq(terminated_at)
       expect(operations_of(arrears_card).sole).to have_attributes(
         action_type: "close_fixed_arrears", causation_type: "contract_termination",
         billing_at: contract.reload.terminated_at, target_cycle_started_at: started_at,
@@ -107,9 +108,9 @@ RSpec.describe Contracts::TerminateService do
     context "when only overdue advance work remains" do
       let(:arrears_card) { card(billing_timing: "arrears", priced: false) }
 
-      it "enqueues processing even though no new termination operation is created" do
+      it "does not enqueue processing when no new termination operation is created" do
         expect { travel_to(terminated_at) { result } }
-          .to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
+          .not_to have_enqueued_job(BillingOperations::ProcessJob)
         expect(advance_card.reload.next_billing_at).to eq(started_at)
         expect(advance_card.billing_operations).to be_empty
         expect(operations_of(arrears_card)).to be_empty
@@ -272,11 +273,88 @@ RSpec.describe Contracts::TerminateService do
 
       it_behaves_like "complete termination coverage"
 
-      it "enqueues the preserved overdue renewal after commit" do
+      it "does not enqueue the preserved overdue renewal when no operation is created" do
         expect { described_class.call(contract:, timestamp:) }
-          .to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
+          .not_to have_enqueued_job(BillingOperations::ProcessJob)
         expect(contract_rate_card.reload.next_billing_at).to eq(original_cursor)
       end
+    end
+  end
+
+  context "when a monthly arrears contract ends halfway through November" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:started_at) { Time.utc(2026, 11, 1) }
+    let(:terminated_at) { Time.utc(2026, 11, 15) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at:) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "arrears", proration: true, currency: "USD") }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, units: 1,
+        effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1))
+    end
+    let(:activation_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", causation_type: :contract_activation,
+        billing_at: Time.utc(2026, 12, 1), target_cycle_started_at: started_at)
+    end
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at,
+        rate_model: "standard", rate_properties: {"amount" => "30"},
+        billing_interval_count: 1, billing_interval_unit: "month")
+      contract_rate_card
+      ContractRateCards::ResetBillingClockService.call!(
+        contract_rate_card:, timestamp: started_at
+      )
+      activation_operation
+    end
+
+    it "dispatches the final operation after resetting the cursor" do
+      travel_to(terminated_at) do
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+        expect { described_class.call(contract:, timestamp: terminated_at) }
+          .to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
+
+        operation = contract_rate_card.billing_operations.pending.sole
+        expect(operation).to have_attributes(
+          action_type: "close_fixed_arrears", billing_at: terminated_at,
+          causation_type: "contract_termination", target_cycle_started_at: started_at,
+          processed_at: nil, invoice_id: nil
+        )
+        expect(activation_operation.reload).to have_attributes(
+          cancelled_at: terminated_at, cancelled_causation_type: "contract_termination"
+        )
+        expect(Invoice.where(customer:)).to be_empty
+        expect(contract_rate_card.reload.next_billing_at).to eq(terminated_at)
+
+        BillingOperations::ProcessService.call!(customer:, timestamp: terminated_at)
+
+        expect(operation.reload).to have_attributes(processed_at: terminated_at)
+        expect(Invoice.where(customer:).sum(:total_amount_cents)).to eq(1_400) # $30 * 14 / 30 days.
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+      end
+    end
+
+    it "discovers and processes the final operation when immediate dispatch is lost" do
+      travel_to(terminated_at) do
+        expect(described_class.call(contract:, timestamp: terminated_at)).to be_success
+      end
+      clear_enqueued_jobs
+
+      processing_at = terminated_at + 17.minutes
+      travel_to(processing_at) do
+        perform_enqueued_jobs(only: [BillingOperations::ScheduleJob, BillingOperations::ProcessJob]) do
+          Clock::ScheduleBillingOperationsJob.perform_now
+        end
+      end
+
+      operation = contract_rate_card.billing_operations.find_by!(causation_type: :contract_termination)
+      expect(activation_operation.reload).to have_attributes(
+        cancelled_at: terminated_at, cancelled_causation_type: "contract_termination"
+      )
+      expect(operation).to have_attributes(processed_at: processing_at, cancelled_at: nil)
+      expect(Invoice.where(customer:).sum(:total_amount_cents)).to eq(1_400) # $30 * 14 / 30 days.
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
     end
   end
 
