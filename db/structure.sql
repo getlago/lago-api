@@ -51,6 +51,7 @@ ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS fk_rails_e700a96826;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_e4a58fbcac;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
+ALTER TABLE IF EXISTS ONLY public.contract_recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_e3c68432ab;
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_e2dbfbb01e;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.product_categories DROP CONSTRAINT IF EXISTS fk_rails_e13d306a35;
@@ -69,6 +70,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY public.streaming_destinations DROP CONSTRAINT IF EXISTS fk_rails_d94733afa1;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_d9448a540b;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_d9342a8ca7;
+ALTER TABLE IF EXISTS ONLY public.contract_recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_d802032e75;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_d72a9877be;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
 ALTER TABLE IF EXISTS ONLY public.rate_card_rates DROP CONSTRAINT IF EXISTS fk_rails_d53feb5721;
@@ -79,6 +81,7 @@ ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_d3
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_d2d917b73a;
 ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rails_d0b1714507;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
+ALTER TABLE IF EXISTS ONLY public.contract_recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_ceb346b8b9;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_cdaf36dc89;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS fk_rails_cd99351ee3;
@@ -217,6 +220,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_745b4ca7dd;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_7418f461c3;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_73d83e23b6;
+ALTER TABLE IF EXISTS ONLY public.contract_recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_72d0416e96;
 ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_7286421039;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_710f37148d;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_7082696669;
@@ -288,6 +292,7 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sec
 ALTER TABLE IF EXISTS ONLY public.pending_signup_tokens DROP CONSTRAINT IF EXISTS fk_rails_49e3a9c4eb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49212d501e;
+ALTER TABLE IF EXISTS ONLY public.contract_recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_4834d896ab;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_47d8081062;
 ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_457dfe353b;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_45230f8485;
@@ -1143,6 +1148,12 @@ DROP INDEX IF EXISTS public.idx_cs_audit_org_created;
 DROP INDEX IF EXISTS public.idx_cs_audit_feature_created;
 DROP INDEX IF EXISTS public.idx_cs_audit_batch;
 DROP INDEX IF EXISTS public.idx_cs_audit_actor_created;
+DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_unique;
+DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_product_id;
+DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_product_filter_id;
+DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_organization_id;
+DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_billable_metric_id;
+DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_by_period;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_contract_lookup;
 DROP INDEX IF EXISTS public.idx_billable_metrics_id_agg_type;
@@ -1276,6 +1287,7 @@ ALTER TABLE IF EXISTS ONLY public.coupons DROP CONSTRAINT IF EXISTS coupons_pkey
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS coupon_targets_pkey;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS contracts_pkey;
 ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS contracts_invoice_custom_sections_pkey;
+ALTER TABLE IF EXISTS ONLY public.contract_recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS contract_recurring_aggregation_snapshots_pkey;
 ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS contract_rate_cards_pkey;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS commitments_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS commitments_pkey;
@@ -1468,6 +1480,7 @@ DROP TABLE IF EXISTS public.coupons;
 DROP TABLE IF EXISTS public.coupon_targets;
 DROP TABLE IF EXISTS public.contracts_invoice_custom_sections;
 DROP TABLE IF EXISTS public.contracts;
+DROP TABLE IF EXISTS public.contract_recurring_aggregation_snapshots;
 DROP TABLE IF EXISTS public.contract_rate_cards;
 DROP TABLE IF EXISTS public.commitments_taxes;
 DROP TABLE IF EXISTS public.commitments;
@@ -2858,6 +2871,29 @@ CREATE TABLE public.contract_rate_cards (
     effective_date date NOT NULL,
     units numeric,
     deleted_at timestamp without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: contract_recurring_aggregation_snapshots; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contract_recurring_aggregation_snapshots (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    contract_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    product_filter_id uuid,
+    billable_metric_id uuid NOT NULL,
+    grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
+    to_datetime timestamp(6) without time zone NOT NULL,
+    watermark timestamp(6) without time zone NOT NULL,
+    units numeric DEFAULT 0.0 NOT NULL,
+    events_count bigint DEFAULT 0 NOT NULL,
+    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL,
+    priced_product_filter_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -6814,6 +6850,14 @@ ALTER TABLE ONLY public.contract_rate_cards
 
 
 --
+-- Name: contract_recurring_aggregation_snapshots contract_recurring_aggregation_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_recurring_aggregation_snapshots
+    ADD CONSTRAINT contract_recurring_aggregation_snapshots_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: contracts_invoice_custom_sections contracts_invoice_custom_sections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7890,6 +7934,48 @@ CREATE INDEX idx_cached_aggregation_contract_lookup ON public.cached_aggregation
 --
 
 CREATE INDEX idx_cached_aggregation_filtered_lookup ON public.cached_aggregations USING btree (organization_id, external_subscription_id, charge_id, "timestamp" DESC, created_at DESC) INCLUDE (grouped_by, charge_filter_id, event_transaction_id);
+
+
+--
+-- Name: idx_contract_recurring_snapshots_by_period; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contract_recurring_snapshots_by_period ON public.contract_recurring_aggregation_snapshots USING btree (contract_id, product_id, product_filter_id, to_datetime);
+
+
+--
+-- Name: idx_contract_recurring_snapshots_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contract_recurring_snapshots_on_billable_metric_id ON public.contract_recurring_aggregation_snapshots USING btree (billable_metric_id);
+
+
+--
+-- Name: idx_contract_recurring_snapshots_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contract_recurring_snapshots_on_organization_id ON public.contract_recurring_aggregation_snapshots USING btree (organization_id);
+
+
+--
+-- Name: idx_contract_recurring_snapshots_on_product_filter_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contract_recurring_snapshots_on_product_filter_id ON public.contract_recurring_aggregation_snapshots USING btree (product_filter_id);
+
+
+--
+-- Name: idx_contract_recurring_snapshots_on_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contract_recurring_snapshots_on_product_id ON public.contract_recurring_aggregation_snapshots USING btree (product_id);
+
+
+--
+-- Name: idx_contract_recurring_snapshots_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_contract_recurring_snapshots_unique ON public.contract_recurring_aggregation_snapshots USING btree (contract_id, product_id, product_filter_id, grouped_by, to_datetime) NULLS NOT DISTINCT;
 
 
 --
@@ -13964,6 +14050,14 @@ ALTER TABLE ONLY public.integration_items
 
 
 --
+-- Name: contract_recurring_aggregation_snapshots fk_rails_4834d896ab; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_recurring_aggregation_snapshots
+    ADD CONSTRAINT fk_rails_4834d896ab FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
+
+
+--
 -- Name: webhooks fk_rails_49212d501e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14529,6 +14623,14 @@ ALTER TABLE ONLY public.usage_monitoring_alert_thresholds
 
 ALTER TABLE ONLY public.invoice_connections
     ADD CONSTRAINT fk_rails_7286421039 FOREIGN KEY (payment_provider_customer_id) REFERENCES public.payment_provider_customers(id);
+
+
+--
+-- Name: contract_recurring_aggregation_snapshots fk_rails_72d0416e96; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_recurring_aggregation_snapshots
+    ADD CONSTRAINT fk_rails_72d0416e96 FOREIGN KEY (product_filter_id) REFERENCES public.product_filters(id);
 
 
 --
@@ -15636,6 +15738,14 @@ ALTER TABLE ONLY public.integration_customers
 
 
 --
+-- Name: contract_recurring_aggregation_snapshots fk_rails_ceb346b8b9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_recurring_aggregation_snapshots
+    ADD CONSTRAINT fk_rails_ceb346b8b9 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: wallet_transactions fk_rails_d07bc24ce3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15713,6 +15823,14 @@ ALTER TABLE ONLY public.entitlement_privileges
 
 ALTER TABLE ONLY public.subscription_fixed_charge_units_overrides
     ADD CONSTRAINT fk_rails_d72a9877be FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
+-- Name: contract_recurring_aggregation_snapshots fk_rails_d802032e75; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_recurring_aggregation_snapshots
+    ADD CONSTRAINT fk_rails_d802032e75 FOREIGN KEY (product_id) REFERENCES public.products(id);
 
 
 --
@@ -15857,6 +15975,14 @@ ALTER TABLE ONLY public.integration_collection_mappings
 
 ALTER TABLE ONLY public.rate_cards_taxes
     ADD CONSTRAINT fk_rails_e2dbfbb01e FOREIGN KEY (rate_card_id) REFERENCES public.rate_cards(id);
+
+
+--
+-- Name: contract_recurring_aggregation_snapshots fk_rails_e3c68432ab; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_recurring_aggregation_snapshots
+    ADD CONSTRAINT fk_rails_e3c68432ab FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
 
 
 --
@@ -16202,6 +16328,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261112092027'),
 ('20261109122133'),
 ('20261109082523'),
 ('20261104134700'),
