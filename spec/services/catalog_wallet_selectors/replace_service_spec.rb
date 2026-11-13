@@ -140,10 +140,10 @@ describe CatalogWalletSelectors::ReplaceService do
 
   describe "refused entries" do
     [
-      ["an unknown type", {type: "rate_card", code: "api_calls"}, :type, "value_is_invalid"],
+      ["an unknown type", {type: "rate_card", code: "api_calls"}, :type, "value_is_invalid", {allowed_values: %w[fee_type product_category product product_filters]}],
       ["a missing code", {type: "product"}, :code, "value_is_mandatory"],
       ["a non scalar code", {type: "product", code: {a: 1}}, :code, "value_is_invalid"],
-      ["an unknown fee type", {type: "fee_type", code: "usage"}, :code, "value_is_invalid"],
+      ["an unknown fee type", {type: "fee_type", code: "usage"}, :code, "value_is_invalid", {allowed_values: %w[fixed metered]}],
       ["an unknown product category", {type: "product_category", code: "unknown"}, :code, "product_category_not_found"],
       ["an unknown product", {type: "product", code: "unknown"}, :code, "product_not_found"],
       ["a non boolean filters flag", {type: "product", code: "api_calls", with_product_filters: "yes"}, :with_product_filters, "value_is_invalid"],
@@ -151,13 +151,14 @@ describe CatalogWalletSelectors::ReplaceService do
       ["a product filter without its product", {type: "product_filters", code: "premium_model"}, :product_code, "value_is_mandatory"],
       ["a product filter of an unknown product", {type: "product_filters", product_code: "unknown", code: "premium_model"}, :product_code, "product_not_found"],
       ["an unknown product filter", {type: "product_filters", product_code: "api_calls", code: "unknown"}, :code, "product_filter_not_found"]
-    ].each do |description, entry, field, error_code|
+    ].each do |description, entry, field, error_code, meta|
       context "with #{description}" do
         let(:entries) { [{type: "fee_type", code: "metered"}, entry] }
 
         it "fails on that entry's #{field} and stores nothing" do
           expect(result).not_to be_success
           expect(result.error.messages).to eq({"applies_to.include[1].#{field}": [error_code]})
+          expect(result.error.meta).to eq({"applies_to.include[1].#{field}": meta}.compact)
           expect(wallet.selectors.reload).to be_empty
         end
       end
