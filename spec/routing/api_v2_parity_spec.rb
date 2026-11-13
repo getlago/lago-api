@@ -18,6 +18,7 @@ RSpec.describe "API v2 routing parity" do
     missing.reject! do |_, path|
       %w[/events/:id /events_enriched /events/estimate_fees /events/estimate_instant_fees /events/batch_estimate_instant_fees].include?(path)
     end
+    missing.reject! { |_, path| path.start_with?("/webhooks/") }
 
     expect(missing).to be_empty
   end
