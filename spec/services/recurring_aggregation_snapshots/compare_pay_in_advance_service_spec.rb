@@ -327,9 +327,22 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
       end
     end
 
-    it "does not count the event as read from a snapshot, as contract snapshots are not read" do
+    it "does not count the event as read from a snapshot without one of the contract" do
       expect(result).to be_success
       expect(result.rows.sole).to have_attributes(snapshot_read: false)
+    end
+
+    context "with a snapshot of the contract's previous segment" do
+      before do
+        create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:,
+          # Watermarked after the contract's rate card was created, so the card is not a change since the snapshot
+          to_datetime: BillingSegment.inclusive_end(billing_segment.started_at), watermark: Time.current)
+      end
+
+      it "counts the event as read from the contract's snapshot" do
+        expect(result).to be_success
+        expect(result.rows.sole).to have_attributes(snapshot_read: true)
+      end
     end
   end
 

@@ -113,6 +113,36 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
         expect(charge_period.period(filter: eu_filter)).to eq([])
       end
     end
+
+    context "with a contract key" do
+      subject(:charge_period) { described_class.new(key:, from_datetime:, period_attributes: {priced_product_filter_ids: priced_ids}) }
+
+      let(:contract) { create(:contract, organization:) }
+      let(:product) { create(:product, organization:) }
+      let(:product_filter) { create(:product_filter, organization:, product:, created_at: watermark - 1.month) }
+      let(:key) { RecurringAggregationSnapshots::ContractKey.new(contract:, product:, product_filter:) }
+      let(:priced_ids) { [product_filter.id] }
+
+      before do
+        create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, product_filter:, watermark:,
+          to_datetime: previous_to_datetime, units: 7, priced_product_filter_ids: [product_filter.id])
+      end
+
+      it "returns the period closed with the same period attributes" do
+        marker, records = charge_period.period(filter: product_filter)
+
+        expect(marker).to have_attributes(to_datetime: previous_to_datetime, units: 7)
+        expect(records.map(&:units)).to eq([7])
+      end
+
+      context "when the period was closed with other period attributes" do
+        let(:priced_ids) { [] }
+
+        it "returns no marker nor snapshot" do
+          expect(charge_period.period(filter: product_filter)).to eq([])
+        end
+      end
+    end
   end
 
   describe "#all_buckets?" do

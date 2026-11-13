@@ -120,18 +120,13 @@ module RecurringAggregationSnapshots
     end
 
     # RecurringAggregationSnapshot.readable?: with a period, the event group starts
-    # from its snapshot, or from zero without one. The subscription is the one the event resolves
-    # to, which an upgrade can make another one.
+    # from its snapshot, or from zero without one. The owner is the subscription or contract the event
+    # resolves to, which an upgrade can make another subscription.
     def snapshot_read?(metered_item, billing_context)
-      # Contract snapshots are only written for now
-      return false if metered_item.billing_segment
       return false unless RecurringAggregationSnapshot.eligible?(metered_item:, billing_context:)
 
       RecurringAggregationSnapshots::FetchService.call!(
-        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription: billing_context.subscription, charge: metered_item.charge),
-        filter: metered_item.charge_filter,
-        grouped_by_keys: metered_item.pricing_group_keys,
-        from_datetime: metered_item.boundaries.charges_from_datetime
+        **RecurringAggregationSnapshot.fetch_arguments(metered_item:, billing_context:)
       ).period.present?
     end
 

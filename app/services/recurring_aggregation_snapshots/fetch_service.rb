@@ -17,8 +17,10 @@ module RecurringAggregationSnapshots
     # grouped_by_values: returns only the snapshots of that group, as pay in advance reads one group
     # all_buckets: false loads only the filter's bucket, as pay in advance reads one. A charge_period
     # given carries its own choice, which the previous owner lookup follows too.
+    # period_attributes: what the period must have been closed with (RecurringAggregationSnapshot.period_attributes)
     def initialize(
-      key:, filter:, grouped_by_keys:, from_datetime:, charge_period: nil, grouped_by_values: nil, all_buckets: true
+      key:, filter:, grouped_by_keys:, from_datetime:, charge_period: nil, grouped_by_values: nil, all_buckets: true,
+      period_attributes: {}
     )
       @key = key
       @filter = filter
@@ -27,7 +29,7 @@ module RecurringAggregationSnapshots
       @grouped_by_values = grouped_by_values.presence && normalized_group(grouped_by_values)
       @charge_period = charge_period || ChargePeriod.new(
         key:, from_datetime:, grouped_by_values: @grouped_by_values, grouped_by_keys: Array(grouped_by_keys),
-        filter_ids: (all_buckets ? nil : [filter&.id].compact)
+        filter_ids: (all_buckets ? nil : [filter&.id].compact), period_attributes:
       )
 
       super
