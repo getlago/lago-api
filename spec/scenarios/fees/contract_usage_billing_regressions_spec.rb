@@ -56,7 +56,7 @@ RSpec.describe "Contract usage billing behavior" do
     rate
     card
     contract.applied_rate_cards.find_each do |contract_rate_card|
-      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp: contract.started_at)
+      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
     end
   end
 

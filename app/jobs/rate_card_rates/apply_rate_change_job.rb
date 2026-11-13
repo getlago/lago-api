@@ -6,7 +6,8 @@ module RateCardRates
     unique :until_executing, on_conflict: :log
 
     def perform(rate_card_rate_id)
-      rate = RateCardRate.find_by(id: rate_card_rate_id)
+      # A deleted rate still names the card whose schedule changed.
+      rate = RateCardRate.with_discarded.find_by(id: rate_card_rate_id)
       return unless rate
       return unless rate.rate_card.kept?
 

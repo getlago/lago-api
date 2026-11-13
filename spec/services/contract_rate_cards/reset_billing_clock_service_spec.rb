@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe ContractRateCards::ResetBillingClockService do
-  subject(:result) { described_class.call(contract_rate_card:, timestamp:) }
+  subject(:result) { described_class.call(contract_rate_card:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -21,14 +21,18 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
       next_billing_at: Time.zone.parse("2026-10-30")
     )
   end
-  let(:timestamp) { contract.started_at }
+
+  def complete_close(billing_at:, cycle_started_at:)
+    create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_metered_arrears",
+      billing_at:, target_cycle_started_at: cycle_started_at, processed_at: billing_at)
+  end
 
   before do
     create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-09-01"), billing_interval_unit: "week")
     create(:rate_phase, :contract_level, organization:, contract_rate_card:)
   end
 
-  it "sets the clock to the billing date of the current cadence" do
+  it "sets the clock to the first obligation when nothing was billed yet" do
     expect(result).to be_success
     expect(result.planned_operation).to have_attributes(
       cycle_started_at: Time.zone.parse("2026-09-30"), billing_at: Time.zone.parse("2026-10-07")
@@ -45,7 +49,7 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
     end
 
     it "uses it without rebuilding" do
-      result = described_class.call!(contract_rate_card:, timestamp:, schedule:)
+      result = described_class.call!(contract_rate_card:, schedule:)
 
       expect(result.contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
     end
@@ -57,7 +61,7 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
     end
 
     it "keeps the cursor without rebuilding" do
-      result = described_class.call!(contract_rate_card:, timestamp:, schedule: nil)
+      result = described_class.call!(contract_rate_card:, schedule: nil)
 
       expect(result).to be_success
       expect(result.planned_operation).to be_nil
@@ -76,35 +80,54 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
     end
   end
 
+  context "with a completed close" do
+    before { complete_close(billing_at: Time.zone.parse("2026-10-07"), cycle_started_at: Time.zone.parse("2026-09-30")) }
+
+    it "moves the clock to the next close" do
+      expect(result.planned_operation).to have_attributes(
+        cycle_started_at: Time.zone.parse("2026-10-07"), billing_at: Time.zone.parse("2026-10-14")
+      )
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-14"))
+    end
+
+    context "when a new rate starts on the boundary of the close still owed" do
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-10-14"),
+          billing_interval_unit: "week")
+      end
+
+      it "keeps the owed close rather than jumping to the cycle after the rate change" do
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-30"))
+        result
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-14"))
+      end
+    end
+
+    context "when a later operation was cancelled" do
+      before do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_metered_arrears",
+          billing_at: Time.zone.parse("2026-10-14"), target_cycle_started_at: Time.zone.parse("2026-10-07"),
+          cancelled_at: Time.zone.parse("2026-10-10"), cancelled_causation_type: :contract_termination)
+      end
+
+      it "plans from the last completed billing only" do
+        expect(result.planned_operation.billing_at).to eq(Time.zone.parse("2026-10-14"))
+      end
+    end
+  end
+
   context "when the schedule has run out" do
     let(:contract) do
       create(:contract, :pending, organization:, customer:, started_at: Time.zone.parse("2026-09-30"),
         ended_at: Time.zone.parse("2026-10-20"))
     end
-    let(:timestamp) { Time.zone.parse("2026-10-25") }
+
+    before { complete_close(billing_at: Time.zone.parse("2026-10-20"), cycle_started_at: Time.zone.parse("2026-10-14")) }
 
     it "clears the clock, as no obligation is left" do
       expect(result).to be_success
       expect(result.planned_operation).to be_nil
       expect(contract_rate_card.reload.next_billing_at).to be_nil
-    end
-  end
-
-  context "when the clock still holds a close owed before the timestamp" do
-    let(:contract) do
-      create(:contract, :pending, organization:, customer:, started_at: Time.zone.parse("2026-09-30"),
-        ended_at: Time.zone.parse("2026-10-20"))
-    end
-    let(:contract_rate_card) do
-      create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: Date.new(2026, 9, 30),
-        billing_anchor_date: Date.new(2026, 9, 30), next_billing_at: Time.zone.parse("2026-10-20"))
-    end
-    let(:timestamp) { Time.zone.parse("2026-10-25") }
-
-    it "keeps the clock" do
-      expect(result).to be_success
-      expect(result.planned_operation).to be_nil
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-20"))
     end
   end
 

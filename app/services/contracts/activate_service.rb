@@ -84,9 +84,8 @@ module Contracts
 
         schedule = build.schedule
 
-        planned_operation = ContractRateCards::ResetBillingClockService.call!(
-          contract_rate_card: card, timestamp: contract.started_at, schedule:
-        ).planned_operation
+        planned_operation = ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, schedule:)
+          .planned_operation
         action = card.periodic_billing_action
         # Event-only advance usage is billed by usage events, not periodic operations.
         next unless action && planned_operation

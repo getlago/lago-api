@@ -17,8 +17,8 @@ module BillingOperations
 
       # Re-read under the same lock and transaction as processing and termination.
       Customers::LockService.call!(customer:, scope: :billing_schedule) do
-        rate = RateCardRate.find_by(id: rate_card_rate_id, organization_id: customer.organization_id)
-        # A rate deleted before this job ran has nothing left to apply.
+        # A deleted rate still names the card whose schedule changed.
+        rate = RateCardRate.with_discarded.find_by(id: rate_card_rate_id, organization_id: customer.organization_id)
         next unless rate
 
         affected_contract_rate_cards(rate).find_each { apply_rate_change(it, rate) }
@@ -35,12 +35,11 @@ module BillingOperations
 
     attr_reader :customer, :rate_card_rate_id
 
+    # Replanning reads the billing history, not the rate's date, so every running card of the
+    # rate card is replanned, including one with no clock until this rate priced it.
     def affected_contract_rate_cards(rate)
-      timestamp = Time.current
-
       ContractRateCard.starting_before_contract_end.where(organization_id: customer.organization_id, rate_card_id: rate.rate_card_id)
-        .where(contracts: {customer_id: customer.id, status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
-        .where(next_billing_at: timestamp..rate.effective_from)
+        .where(contracts: {customer_id: customer.id, status: Contract::BILLABLE_STATUSES, started_at: ..Time.current})
         .includes(:rate_card, :terms, {rate_phases: :rate_override}, contract: :customer)
     end
 
@@ -48,6 +47,10 @@ module BillingOperations
       schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
 
       if contract_rate_card.needs_reconciliation?
+        # Renewed advance coverage is reconciled, not replanned, until a price change can tell
+        # what that coverage already paid for.
+        return unless contract_rate_card.next_billing_at&.between?(Time.current, rate.effective_from)
+
         planned_operation = Schedule::BuildPlannedOperation.call!(
           contract_rate_card:, schedule:, at: rate.effective_from
         ).planned_operation
@@ -61,7 +64,7 @@ module BillingOperations
         )
         result.billing_operations << reconciliation.operation
       else
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp: rate.effective_from, schedule:)
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, schedule:)
       end
     end
   end

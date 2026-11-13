@@ -38,33 +38,10 @@ module BillingOperations
 
     def schedule_card(contract_rate_card)
       action_type = contract_rate_card.periodic_billing_action
-      # A card with no periodic action has no next obligation. Resetting a clock seeded
-      # before that rule clears it, so the clock stops finding the card due on every run.
-      unless action_type
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp:)
-        return
-      end
-
-      previous_operation = contract_rate_card.billing_operations.periodic.completed
-        .where(organization_id: customer.organization_id, action_type:, cancelled_at: nil)
-        .order(billing_at: :desc, created_at: :desc, id: :desc)
-        .first
-      cycle_started_at = previous_operation&.target_cycle_started_at ||
-        contract_rate_card.effective_date.in_time_zone(customer.applicable_timezone)
-      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
-      planning = if previous_operation
-        {after: previous_operation.billing_at, from: cycle_started_at}
-      else
-        {at: cycle_started_at}
-      end
-      planned_operation = Schedule::BuildPlannedOperation.call!(contract_rate_card:, schedule:, **planning).planned_operation
-      # Nothing to persist yet: nothing falls due after the last billing (a terminated advance
-      # card has used its coverage), or the next obligation is still ahead. The reset clears
-      # the clock or moves it to that obligation, so the card is not found due until then.
-      if planned_operation.nil? || planned_operation.billing_at > timestamp
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp:, schedule:)
-        return
-      end
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule if action_type
+      # The reset moves the clock to the next obligation, or clears it when there is none.
+      planned_operation = ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, schedule:).planned_operation
+      return unless planned_operation && planned_operation.billing_at <= timestamp
 
       existing_operation = contract_rate_card.billing_operations.periodic.pending.exists?(
         organization_id: customer.organization_id, action_type:, billing_at: planned_operation.billing_at,

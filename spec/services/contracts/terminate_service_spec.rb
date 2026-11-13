@@ -12,6 +12,12 @@ RSpec.describe Contracts::TerminateService do
 
   before { allow(Utils::ActivityLog).to receive(:produce_after_commit) }
 
+  # Bills as the hourly clock does: due operations are persisted first, then processed.
+  def bill(timestamp)
+    BillingOperations::ScheduleService.call!(customer:, timestamp:)
+    BillingOperations::ProcessService.call!(customer:, timestamp:)
+  end
+
   it "terminates an active contract" do
     freeze_time do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.terminated", contract)
@@ -52,7 +58,7 @@ RSpec.describe Contracts::TerminateService do
       arrears_card
       advance_card
       contract.applied_rate_cards.find_each do |card|
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at)
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card)
       end
     end
 
@@ -84,7 +90,7 @@ RSpec.describe Contracts::TerminateService do
     end
 
     context "when the advance operation has already completed" do
-      before { BillingOperations::ProcessService.call!(customer:, timestamp: started_at) }
+      before { bill(started_at) }
 
       it "does not create another charge or change its completed operation" do
         previous = advance_card.billing_operations.sole.attributes
@@ -185,9 +191,9 @@ RSpec.describe Contracts::TerminateService do
         billing_interval_count: 1, billing_interval_unit: "month")
       contract_rate_card
       contract.applied_rate_cards.find_each do |card|
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at)
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card)
       end
-      BillingOperations::ProcessService.call!(customer:, timestamp: started_at)
+      bill(started_at)
     end
 
     it "clears the future renewal cursor without changing the issued invoice" do
@@ -198,7 +204,7 @@ RSpec.describe Contracts::TerminateService do
       termination = described_class.call(contract:, timestamp: terminated_at)
       expect(termination).to be_success
 
-      processed = BillingOperations::ProcessService.call!(customer:, timestamp: terminated_at)
+      processed = bill(terminated_at)
 
       expect(processed.invoices).to be_empty
       expect(contract_rate_card.reload.next_billing_at).to be_nil
@@ -232,7 +238,7 @@ RSpec.describe Contracts::TerminateService do
         billing_interval_count: 1, billing_interval_unit: "month")
       contract_rate_card
       contract.applied_rate_cards.find_each do |card|
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at)
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card)
       end
     end
 
@@ -242,17 +248,17 @@ RSpec.describe Contracts::TerminateService do
         expect(contract_rate_card.reload.next_billing_at).to eq(original_cursor)
         expect(contract_rate_card.billing_operations).to be_empty
 
-        BillingOperations::ProcessService.call!(customer:, timestamp: Time.current)
+        bill(Time.current)
         expect(Invoice.where(customer:).sum(:total_amount_cents)).to eq(amount_due_now)
         expect(contract_rate_card.billing_operations.count).to eq(1)
 
         travel_to(timestamp) do
-          3.times { BillingOperations::ProcessService.call!(customer:, timestamp:) }
+          3.times { bill(timestamp) }
           expect(Invoice.where(customer:).sum(:total_amount_cents)).to eq(30_000 + (10_000.to_d * 14 / 30).round)
           # Three full months plus April 1–15 (14 of April's 30 days).
           expect(contract_rate_card.billing_operations.pending).to be_empty
           expect(contract_rate_card.billing_operations.count).to eq(4)
-          expect(BillingOperations::ProcessService.call!(customer:, timestamp:).invoices).to be_empty
+          expect(bill(timestamp).invoices).to be_empty
         end
       end
     end
@@ -303,9 +309,7 @@ RSpec.describe Contracts::TerminateService do
         rate_model: "standard", rate_properties: {"amount" => "30"},
         billing_interval_count: 1, billing_interval_unit: "month")
       contract_rate_card
-      ContractRateCards::ResetBillingClockService.call!(
-        contract_rate_card:, timestamp: started_at
-      )
+      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
       activation_operation
     end
 

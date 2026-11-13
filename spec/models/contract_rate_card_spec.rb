@@ -346,52 +346,6 @@ RSpec.describe ContractRateCard do
     end
   end
 
-  describe "#owes_billing_before?" do
-    subject(:owes_billing) { card.owes_billing_before?(timestamp) }
-
-    let(:card) { described_class.new(next_billing_at:, contract:) }
-    let(:contract) { build_stubbed(:contract, ended_at:, terminated_at:) }
-    let(:ended_at) { Time.utc(2026, 11, 15) }
-    let(:terminated_at) { nil }
-    let(:timestamp) { Time.utc(2026, 11, 20) }
-    let(:next_billing_at) { Time.utc(2026, 11, 15) }
-
-    it "is true when the contract ended by then and the clock holds its final close" do
-      expect(owes_billing).to be(true)
-    end
-
-    context "when the timestamp is before the contract end" do
-      let(:timestamp) { Time.utc(2026, 11, 10) }
-
-      it { is_expected.to be(false) }
-    end
-
-    context "when the clock is after the contract end" do
-      let(:next_billing_at) { Time.utc(2026, 12, 1) }
-
-      it { is_expected.to be(false) }
-    end
-
-    context "when the contract is terminated before its planned end" do
-      let(:terminated_at) { Time.utc(2026, 11, 10) }
-      let(:next_billing_at) { Time.utc(2026, 11, 10) }
-
-      it { is_expected.to be(true) }
-    end
-
-    context "when the contract has no end" do
-      let(:ended_at) { nil }
-
-      it { is_expected.to be(false) }
-    end
-
-    context "without a clock" do
-      let(:next_billing_at) { nil }
-
-      it { is_expected.to be(false) }
-    end
-  end
-
   describe "#requires_termination_billing?" do
     subject(:requires_termination_billing) { card.requires_termination_billing?(timestamp:) }
 

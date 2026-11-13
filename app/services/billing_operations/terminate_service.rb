@@ -18,10 +18,13 @@ module BillingOperations
         cancel_future_operations!(contract_rate_card)
         next if contract_rate_card.discarded?
 
-        next unless contract_rate_card.requires_termination_billing?(timestamp:)
-
-        operation = schedule_final_operation(contract_rate_card)
-        billing_operations << operation if operation
+        if contract_rate_card.requires_termination_billing?(timestamp:)
+          operation = schedule_final_operation(contract_rate_card)
+          billing_operations << operation if operation
+        end
+        # The termination can end coverage early. Replanning from the billing history keeps
+        # overdue work and clears a clock with nothing left to bill, such as a later renewal.
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
       end
       result.billing_operations = billing_operations
       result
@@ -58,16 +61,12 @@ module BillingOperations
       planned_operation = planned_operation.with(billing_at: timestamp)
       return if final_operation_exists?(contract_rate_card, planned_operation)
 
-      create_result = BillingOperations::CreateService.call!(
+      BillingOperations::CreateService.call!(
         contract_rate_card:,
         action_type: contract_rate_card.periodic_billing_action,
         causation_type: BillingOperation::CAUSATION_TYPES.fetch(:contract_termination),
         planned_operation:
-      )
-      ContractRateCards::ResetBillingClockService.call!(
-        contract_rate_card:, timestamp: planning_timestamp, schedule:
-      )
-      create_result.operation
+      ).operation
     end
 
     def effective_end

@@ -19,20 +19,14 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 1), rate_properties: {"amount" => "30"})
   end
   let(:effective_from) { Time.utc(2026, 11, 15) }
-  let(:initial_cursor) { effective_from }
+  # Set only by the reconciliation contexts, whose path still reads the clock.
+  let(:initial_cursor) { nil }
   let(:new_rate) do
     create(:rate_card_rate, organization:, rate_card:, effective_from:, rate_properties: {"amount" => "60"})
   end
-  let(:november_closing_billing_at) { Time.utc(2026, 12, 1) }
-  let(:november_closing_operation) do
-    create(:billing_operation, organization:, customer:, contract_rate_card:,
-      action_type: "close_fixed_arrears", causation_type: "contract_activation",
-      billing_at: november_closing_billing_at, target_cycle_started_at: Time.utc(2026, 11, 1))
-  end
-  let(:earlier_rates) { [] }
   let(:initialize_clock) do
-    ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp: contract.started_at)
-      .tap { contract_rate_card.update!(next_billing_at: initial_cursor) }
+    ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
+    contract_rate_card.update!(next_billing_at: initial_cursor) if initial_cursor
   end
 
   around do |example|
@@ -42,47 +36,77 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   before do
     old_rate
     initialize_clock
-    earlier_rates
     new_rate
   end
 
-  context "with a persisted November closing operation" do
-    let(:november_closing_billing_at) { effective_from }
-
-    before { november_closing_operation }
-
-    it "resets to the new rate boundary and bills the November cycle" do
-      expect { result }.not_to change(BillingOperation, :count)
-      expect(result).to be_success
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
-
-      november_invoice = BillingOperations::ProcessService.call!(customer:, timestamp: effective_from).invoices.sole
-      expect(november_invoice.total_amount_cents).to eq(1400) # $30 * 14/30 days through the rate boundary.
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
-
-      BillingOperations::ScheduleService.call!(customer:, timestamp: Time.utc(2026, 12, 1))
-      december_invoice = BillingOperations::ProcessService.call!(customer:, timestamp: Time.utc(2026, 12, 1)).invoices.sole
-      expect(december_invoice.total_amount_cents).to eq(3200) # $60 * 16/30 remaining November days.
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
-    end
+  def bill(timestamp)
+    BillingOperations::ScheduleService.call!(customer:, timestamp:)
+    BillingOperations::ProcessService.call!(customer:, timestamp:).invoices
   end
 
-  it "keeps the same cursor on repeated delivery" do
+  it "moves the clock to the close at the rate change and bills each slice at its price" do
+    expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+
+    expect(result).to be_success
+    expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
+    expect(BillingOperation.count).to eq(0)
+    expect(BillingOperations::ProcessJob).not_to have_been_enqueued
+
+    expect(bill(effective_from).sole.total_amount_cents).to eq(1400) # $30 * 14/30 days before the change.
+    expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+    expect(bill(Time.utc(2026, 12, 1)).sole.total_amount_cents).to eq(3200) # $60 * 16/30 days after it.
+    expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
+  end
+
+  it "keeps the same clock on repeated delivery" do
     result
     expect { described_class.call!(customer:, rate_card_rate_id: new_rate.id) }.not_to change(BillingOperation, :count)
     expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
   end
 
-  context "when resetting the arrears cursor" do
-    before { allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original }
+  context "when the rate starts on the boundary of the close still owed" do
+    let(:effective_from) { Time.utc(2026, 12, 1) }
 
-    it "resets the clock from the rate's effective date" do
+    it "keeps November due on its boundary, at the old price" do
       result
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+      expect(bill(Time.utc(2026, 12, 1)).sole.total_amount_cents).to eq(3000) # $30 for the whole of November.
+    end
+  end
 
-      expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        contract_rate_card:, timestamp: effective_from, schedule: instance_of(Billing::RateCards::Schedule)
-      )
+  context "when an earlier close is still owed" do
+    let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 10, 1)) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: Date.new(2026, 10, 1), billing_anchor_date: Date.new(2026, 10, 1), units: 1)
+    end
+    let(:old_rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 10, 1), rate_properties: {"amount" => "30"})
+    end
+
+    it "keeps the clock on the owed close" do
+      result
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 1))
+    end
+  end
+
+  context "when November was already billed" do
+    let(:effective_from) { Time.utc(2026, 12, 15) }
+
+    before { bill(Time.utc(2026, 12, 1)) }
+
+    it "plans from the last billing without reopening it" do
+      expect { result }.not_to change(BillingOperation, :count)
+      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
+    end
+  end
+
+  context "when the card has no clock" do
+    before { contract_rate_card.update!(next_billing_at: nil) }
+
+    it "gives it one from its billing history" do
+      result
+      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
     end
   end
 
@@ -91,34 +115,30 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     let(:other_card) do
       create(:contract_rate_card, organization:, contract: other_contract, rate_card:,
         effective_date: contract_rate_card.effective_date, billing_anchor_date: contract_rate_card.billing_anchor_date,
-        next_billing_at: effective_from)
+        next_billing_at: Time.utc(2026, 12, 1))
     end
     let(:failure) { BaseService::Result.new.single_validation_failure!(field: :base, error_code: "cannot_schedule") }
 
     before do
       other_card
-      calls = 0
       allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
-        if attributes[:at] == new_rate.effective_from
-          calls += 1
-          raise BaseService::FailedResult.new(failure, "cannot schedule") if calls == 2
-        end
+        raise BaseService::FailedResult.new(failure, "cannot schedule") if attributes[:contract_rate_card] == other_card
 
         original.call(**attributes)
       end
     end
 
-    it "returns the failure without enqueueing processing" do
+    it "returns the failure and rolls back the clocks already moved" do
       expect(result).to be_failure
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(other_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperation.count).to eq(0)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+      expect(other_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
       expect(BillingOperations::ProcessJob).not_to have_been_enqueued
     end
   end
 
   context "when reconciliation creation fails on the second card", transaction: false do
     let(:billing_timing) { "advance" }
+    let(:initial_cursor) { effective_from }
     let(:other_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
     let(:other_card) do
       create(:contract_rate_card, organization:, contract: other_contract, rate_card:,
@@ -147,160 +167,6 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       expect(operation_counts_during_creation).to eq([1, 1])
       expect(BillingOperation.where(contract_rate_card_id: [contract_rate_card.id, other_card.id])).to be_empty
       expect(BillingOperations::ProcessJob).not_to have_been_enqueued
-    end
-  end
-
-  context "with an out-of-order rate job" do
-    let(:earlier_rates) do
-      [create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 10), rate_properties: {"amount" => "45"})]
-    end
-
-    it "ignores a rate older than the current time without moving the cursor" do
-      result
-      described_class.call!(customer:, rate_card_rate_id: earlier_rates.sole.id)
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-    end
-  end
-
-  context "with an earlier unpaid cursor" do
-    before { contract_rate_card.update!(next_billing_at: Time.utc(2026, 11, 10)) }
-
-    it "preserves the owed work" do
-      result
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 10))
-    end
-  end
-
-  context "with a completed November cycle" do
-    before do
-      november_closing_operation
-      contract_rate_card.update!(next_billing_at: Time.utc(2026, 12, 1))
-      BillingOperations::ProcessService.call!(customer:, timestamp: Time.utc(2026, 12, 1))
-    end
-
-    it "does not reopen billed coverage" do
-      expect { result }.not_to change(BillingOperation, :count)
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
-    end
-  end
-
-  context "with no cursor" do
-    let(:initialize_clock) { contract_rate_card.update!(next_billing_at: nil) }
-
-    it "does not seed an initial chain" do
-      result
-      expect(contract_rate_card.reload.next_billing_at).to be_nil
-      expect(contract_rate_card.billing_operations).to be_empty
-    end
-  end
-
-  context "when the rate starts at an exact cycle boundary" do
-    let(:effective_from) { Time.utc(2026, 12, 1) }
-
-    before { allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original }
-
-    it "uses the reset path at an exact cycle boundary" do
-      result
-      expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, timestamp: effective_from)
-      )
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
-    end
-  end
-
-  context "with a rate after the cursor but inside the effective window" do
-    let(:effective_from) { Time.utc(2026, 12, 15) }
-    let(:initial_cursor) { Time.utc(2026, 12, 1) }
-
-    before do
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original
-      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original
-    end
-
-    it "resets the cursor to the rate date" do
-      result
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
-        .with(hash_including(at: effective_from)).at_least(:once)
-      expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, timestamp: effective_from)
-      )
-    end
-
-    it "preserves the earlier unpaid closing boundary" do
-      pending "Resetting from the rate date can skip an earlier unpaid closing cycle."
-
-      result
-      expect(contract_rate_card.reload.next_billing_at).to eq(initial_cursor)
-    end
-  end
-
-  context "with a rate before the cursor but after the current time" do
-    let(:effective_from) { Time.utc(2026, 11, 20) }
-    let(:initial_cursor) { Time.utc(2026, 12, 1) }
-
-    before { allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original }
-
-    it "leaves the outside-window cursor unchanged without enqueueing processing" do
-      result
-      expect(contract_rate_card.reload.next_billing_at).to eq(initial_cursor)
-      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
-      expect(BillingOperations::Schedule::BuildPlannedOperation).not_to have_received(:call!)
-    end
-  end
-
-  context "with a rate effective in the future but before the cursor" do
-    let(:initial_cursor) { Time.utc(2026, 12, 1) }
-
-    before { allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original }
-
-    it "leaves the outside-window cursor unchanged without enqueueing processing" do
-      result
-
-      expect(contract_rate_card.reload.next_billing_at).to eq(initial_cursor)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).not_to have_received(:call!)
-      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
-    end
-  end
-
-  context "when the cursor overlaps the current time through the rate date" do
-    let(:interior_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
-    let(:interior_card) do
-      create(:contract_rate_card, organization:, contract: interior_contract, rate_card:,
-        effective_date: contract_rate_card.effective_date, billing_anchor_date: contract_rate_card.billing_anchor_date,
-        next_billing_at: Time.utc(2026, 11, 14))
-    end
-    let(:before_window_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
-    let(:before_window_card) do
-      create(:contract_rate_card, organization:, contract: before_window_contract, rate_card:,
-        effective_date: contract_rate_card.effective_date, billing_anchor_date: contract_rate_card.billing_anchor_date,
-        next_billing_at: Time.utc(2026, 11, 10))
-    end
-    let(:after_window_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
-    let(:after_window_card) do
-      create(:contract_rate_card, organization:, contract: after_window_contract, rate_card:,
-        effective_date: contract_rate_card.effective_date, billing_anchor_date: contract_rate_card.billing_anchor_date,
-        next_billing_at: Time.utc(2026, 11, 16))
-    end
-    let(:planned_card_ids) { [] }
-
-    before do
-      interior_card
-      before_window_card
-      after_window_card
-      allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_wrap_original do |original, **attributes|
-        planned_card_ids << attributes[:contract_rate_card].id
-        original.call(**attributes)
-      end
-    end
-
-    it "plans only cards with a cursor in the inclusive window" do
-      result
-
-      expect(planned_card_ids).to match_array([contract_rate_card.id, interior_card.id])
-      expect(interior_card.reload.next_billing_at).to eq(effective_from)
-      expect(before_window_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 10))
-      expect(after_window_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 16))
     end
   end
 
@@ -383,89 +249,9 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     end
   end
 
-  context "when the changed cursor is due and other cards are eligible", billing_time: Time.utc(2026, 11, 15) do
-    let(:planned_card_ids) { [] }
-    let(:other_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
-    let(:other_card) do
-      create(:contract_rate_card, organization:, contract: other_contract, rate_card:,
-        effective_date: contract_rate_card.effective_date, billing_anchor_date: contract_rate_card.billing_anchor_date,
-        next_billing_at: effective_from)
-    end
-    let(:before_window_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
-    let(:before_window_card) do
-      create(:contract_rate_card, organization:, contract: before_window_contract, rate_card:,
-        effective_date: contract_rate_card.effective_date, billing_anchor_date: contract_rate_card.billing_anchor_date,
-        next_billing_at: Time.utc(2026, 11, 14))
-    end
-    let(:after_window_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
-    let(:after_window_card) do
-      create(:contract_rate_card, organization:, contract: after_window_contract, rate_card:,
-        effective_date: contract_rate_card.effective_date, billing_anchor_date: contract_rate_card.billing_anchor_date,
-        next_billing_at: Time.utc(2026, 11, 16))
-    end
-
-    before do
-      other_card
-      before_window_card
-      after_window_card
-      allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_wrap_original do |original, **attributes|
-        planned_card_ids << attributes[:contract_rate_card].id
-        original.call(**attributes)
-      end
-    end
-
-    it "reschedules endpoint cursors and excludes outside cursors" do
-      result
-
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(other_card.reload.next_billing_at).to eq(effective_from)
-      expect(before_window_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 14))
-      expect(after_window_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 16))
-      expect(planned_card_ids).to match_array([contract_rate_card.id, other_card.id])
-      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
-    end
-  end
-
-  context "when checking cursor boundaries" do
-    before do
-      contract_rate_card.update!(next_billing_at: cursor)
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original
-    end
-
-    context "with no cursor" do
-      let(:cursor) { nil }
-
-      it "does not plan a change" do
-        result
-        expect(contract_rate_card.reload.next_billing_at).to be_nil
-        expect(BillingOperations::Schedule::BuildPlannedOperation).not_to have_received(:call!)
-      end
-    end
-
-    context "with a cursor equal to the effective date" do
-      let(:cursor) { effective_from }
-
-      it "plans and resets the card through the schedule" do
-        result
-        expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-        expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
-          .with(hash_including(at: effective_from)).at_least(:once)
-      end
-    end
-
-    context "with a cursor before the effective date" do
-      let(:cursor) { Time.utc(2026, 11, 10) }
-
-      it "preserves the overdue cursor without planning" do
-        result
-        expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
-        expect(BillingOperations::Schedule::BuildPlannedOperation).not_to have_received(:call!)
-      end
-    end
-  end
-
   context "when a fixed-advance schedule has no planned operation" do
     let(:billing_timing) { "advance" }
+    let(:initial_cursor) { effective_from }
     let(:contract) do
       create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1), ended_at: Time.utc(2026, 11, 15))
     end
@@ -494,7 +280,6 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1), ended_at: Time.utc(2026, 11, 15))
     end
     let(:effective_from) { Time.utc(2026, 11, 20) }
-    let(:initial_cursor) { Time.utc(2026, 11, 15) }
 
     it "keeps the final close on the clock" do
       expect(result).to be_success
@@ -510,20 +295,22 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       end
     end
 
-    it "leaves the cursor to termination planning" do
+    it "leaves the clock to termination planning" do
       result
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
     end
   end
 
-  context "when the rate was deleted before the job ran" do
-    before { new_rate.discard! }
+  context "when the rate was deleted after its creation was applied" do
+    before do
+      described_class.call!(customer:, rate_card_rate_id: new_rate.id)
+      new_rate.discard!
+    end
 
-    it "succeeds without touching the card" do
+    it "replans from the remaining rates" do
+      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
       expect(result).to be_success
-      expect(result.billing_operations).to be_empty
-      expect(contract_rate_card.reload.next_billing_at).to eq(initial_cursor)
-      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
     end
   end
 
@@ -531,70 +318,10 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     let(:product) { create(:product, organization:) }
     let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:, proration: false) }
 
-    before do
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original
-      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original
-    end
-
-    it "reschedules metered arrears when its rate changes" do
+    it "moves the metered close to the rate change" do
       expect(contract_rate_card.periodic_billing_action).to eq("close_metered_arrears")
       result
       expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
-        .with(hash_including(at: effective_from)).at_least(:once)
-      expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, timestamp: effective_from)
-      )
-    end
-  end
-
-  context "when recurring metered advance is periodic" do
-    let(:effective_from) { Time.utc(2026, 12, 15) }
-    let(:initial_cursor) { Time.utc(2026, 12, 1) }
-    let(:product) do
-      create(:product, organization:, billable_metric: create(:sum_billable_metric, :recurring, organization:))
-    end
-    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance", display_on_invoice: true) }
-
-    before do
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original
-      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original
-    end
-
-    it "reschedules recurring metered advance through the planned schedule" do
-      expect(contract_rate_card.periodic_billing_action).to eq("renew_recurring_metered_advance")
-      result
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
-        .with(hash_including(at: effective_from)).at_least(:once)
-      expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, timestamp: effective_from)
-      )
-      expect(BillingOperation.count).to eq(0)
-    end
-  end
-
-  context "when grouping paid advance fees is periodic" do
-    let(:product) { create(:product, organization:) }
-    let(:rate_card) do
-      create(:rate_card, organization:, product:, billing_timing: "advance", regroup_paid_fees: :invoice, display_on_invoice: false)
-    end
-
-    before do
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original
-      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original
-    end
-
-    it "reschedules grouped advance fees through the planned schedule" do
-      expect(contract_rate_card.periodic_billing_action).to eq("regroup_paid_fees")
-      result
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
-        .with(hash_including(at: effective_from)).at_least(:once)
-      expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, timestamp: effective_from)
-      )
-      expect(BillingOperation.count).to eq(0)
     end
   end
 
@@ -619,11 +346,9 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
         billing_at: contract.started_at, target_cycle_started_at: contract.started_at)
     end
     let(:initialize_clock) do
-      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp: contract.started_at).tap do
-        advance_activation_operation
-        BillingOperations::ProcessService.call!(customer:, timestamp: Time.utc(2026, 11, 1))
-        contract_rate_card.update!(next_billing_at: effective_from)
-      end
+      advance_activation_operation
+      BillingOperations::ProcessService.call!(customer:, timestamp: Time.utc(2026, 11, 1))
+      contract_rate_card.update!(next_billing_at: effective_from)
     end
 
     before do

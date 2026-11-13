@@ -36,6 +36,14 @@ RSpec.describe RateCardRates::ApplyRateChangeJob do
   context "when the rate was deleted" do
     before { rate.discard! }
 
+    it "still fans out, so the cards that used it are replanned" do
+      expect { perform_job }.to have_enqueued_job(BillingOperations::ApplyRateChangeJob).exactly(2).times
+    end
+  end
+
+  context "when the rate does not exist" do
+    subject(:perform_job) { described_class.perform_now(SecureRandom.uuid) }
+
     it "does nothing" do
       expect { perform_job }.not_to have_enqueued_job(BillingOperations::ApplyRateChangeJob)
     end

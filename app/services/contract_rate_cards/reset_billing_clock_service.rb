@@ -1,32 +1,28 @@
 # frozen_string_literal: true
 
 module ContractRateCards
-  # Sets a card's clock to the billing date its current schedule gives the
-  # period around the timestamp. Built from the stored lifecycle and phases, so
-  # a card whose schedule cannot be built keeps its clock, and so does a card still
-  # owing an obligation before the timestamp (ContractRateCard#owes_billing_before?).
-  # A card with no periodic action, or whose schedule has run out, has no next
-  # obligation: its clock is cleared.
+  # Moves a card's clock to its next obligation: the first falling due after the last
+  # completed billing, or the card's first one when nothing was billed yet. Owed work is
+  # never skipped, whatever changed in the schedule since. A card whose schedule cannot be
+  # built keeps its clock; one with no periodic action, or nothing left to bill, has none.
   class ResetBillingClockService < BaseService
     Result = BaseResult[:contract_rate_card, :planned_operation]
 
     def initialize(
       contract_rate_card:,
-      timestamp: Time.current,
       schedule: Billing::RateCards::BuildScheduleService.call(contract_rate_card:).schedule
     )
       @contract_rate_card = contract_rate_card
-      @timestamp = timestamp
       @schedule = schedule
       super
     end
 
     def call
-      if contract_rate_card.periodic_billing_action.nil?
+      if action_type.nil?
         contract_rate_card.update!(next_billing_at: nil)
-      elsif schedule && !contract_rate_card.owes_billing_before?(timestamp)
+      elsif schedule
         result.planned_operation = BillingOperations::Schedule::BuildPlannedOperation.call!(
-          contract_rate_card:, schedule:, at: timestamp
+          contract_rate_card:, schedule:, **planning
         ).planned_operation
         contract_rate_card.update!(next_billing_at: result.planned_operation&.billing_at)
       end
@@ -39,6 +35,29 @@ module ContractRateCards
 
     private
 
-    attr_reader :contract_rate_card, :timestamp, :schedule
+    attr_reader :contract_rate_card, :schedule
+
+    def action_type
+      @action_type ||= contract_rate_card.periodic_billing_action
+    end
+
+    # A billing can belong to an earlier cycle than its instant, so planning walks from
+    # the cycle it billed.
+    def planning
+      if last_billing
+        {after: last_billing.billing_at, from: last_billing.target_cycle_started_at}
+      else
+        {at: contract_rate_card.effective_date.in_time_zone(contract_rate_card.contract.customer.applicable_timezone)}
+      end
+    end
+
+    def last_billing
+      return @last_billing if defined?(@last_billing)
+
+      @last_billing = contract_rate_card.billing_operations.periodic.completed
+        .where(organization_id: contract_rate_card.organization_id, action_type:, cancelled_at: nil)
+        .order(billing_at: :desc, created_at: :desc, id: :desc)
+        .first
+    end
   end
 end
