@@ -102,7 +102,7 @@ module BillingOperations
         next if operations.empty?
 
         preload_schedule_inputs(operations)
-        operation_segments = operations.index_with { |operation| resolve_operation(operation) }.compact
+        operation_segments = operations.index_with { |operation| resolve_operation(operation) }
         segments = operation_segments.values.flat_map(&:segments)
         invoice = if segments.any?
           if regroup_batch?(operations)
@@ -131,10 +131,13 @@ module BillingOperations
       ).call
     end
 
+    # An obsolete terminal renewal bills nothing, but still completes and clears its clock.
     def resolve_operation(operation)
-      return if obsolete_terminal_renewal?(operation)
-
-      ResolveSegmentsService.call!(operation:)
+      if obsolete_terminal_renewal?(operation)
+        ResolveSegmentsService::Result.new.tap { it.segments = [] }
+      else
+        ResolveSegmentsService.call!(operation:)
+      end
     end
 
     def obsolete_terminal_renewal?(operation)
@@ -222,12 +225,25 @@ module BillingOperations
       end
     end
 
+    # The clock moves to the obligation after this one, in the same transaction as the billing.
     def complete_operations(operation_segments)
       operation_segments.each do |operation, resolution|
         operation.update!(processed_at: timestamp)
-
-        ContractRateCards::AdvanceBillingClockService.call!(operation:, resolution:)
+        operation.contract_rate_card.update!(next_billing_at: next_planned_operation(operation, resolution)&.billing_at)
       end
+    end
+
+    # Nothing follows an operation whose cycle the schedule no longer has.
+    def next_planned_operation(operation, resolution)
+      cycle = resolution.cycle
+      return unless cycle
+
+      Schedule::BuildPlannedOperation.call!(
+        contract_rate_card: operation.contract_rate_card,
+        schedule: resolution.schedule,
+        after: operation.billing_at,
+        from: cycle.started_at
+      ).planned_operation
     end
 
     def finalize_generating_invoices(invoice_ids)

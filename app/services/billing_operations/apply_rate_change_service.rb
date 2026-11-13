@@ -18,6 +18,8 @@ module BillingOperations
       # Re-read under the same lock and transaction as processing and termination.
       Customers::LockService.call!(customer:, scope: :billing_schedule) do
         rate = RateCardRate.find_by(id: rate_card_rate_id, organization_id: customer.organization_id)
+        # A rate deleted before this job ran has nothing left to apply.
+        next unless rate
 
         affected_contract_rate_cards(rate).find_each { apply_rate_change(it, rate) }
         ProcessJob.perform_after_commit(customer.id) if result.billing_operations.any?

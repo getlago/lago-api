@@ -76,6 +76,38 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
     end
   end
 
+  context "when the schedule has run out" do
+    let(:contract) do
+      create(:contract, :pending, organization:, customer:, started_at: Time.zone.parse("2026-09-30"),
+        ended_at: Time.zone.parse("2026-10-20"))
+    end
+    let(:timestamp) { Time.zone.parse("2026-10-25") }
+
+    it "clears the clock, as no obligation is left" do
+      expect(result).to be_success
+      expect(result.planned_operation).to be_nil
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+    end
+  end
+
+  context "when the clock still holds a close owed before the timestamp" do
+    let(:contract) do
+      create(:contract, :pending, organization:, customer:, started_at: Time.zone.parse("2026-09-30"),
+        ended_at: Time.zone.parse("2026-10-20"))
+    end
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: Date.new(2026, 9, 30),
+        billing_anchor_date: Date.new(2026, 9, 30), next_billing_at: Time.zone.parse("2026-10-20"))
+    end
+    let(:timestamp) { Time.zone.parse("2026-10-25") }
+
+    it "keeps the clock" do
+      expect(result).to be_success
+      expect(result.planned_operation).to be_nil
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-20"))
+    end
+  end
+
   context "when paid fees are regrouped after service" do
     let(:billable_metric) do
       create(:billable_metric, organization:, aggregation_type: :sum_agg, recurring: false, field_name: "units")

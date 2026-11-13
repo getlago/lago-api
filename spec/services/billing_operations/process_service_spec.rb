@@ -398,7 +398,9 @@ RSpec.describe BillingOperations::ProcessService do
   end
 
   context "when advancing the cursor fails" do
-    before { allow(ContractRateCards::AdvanceBillingClockService).to receive(:call!).and_raise("cursor failed") }
+    before do
+      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_raise("cursor failed")
+    end
 
     it "rolls back billing output and completed history" do
       expect { result }.to raise_error("cursor failed")
@@ -406,6 +408,84 @@ RSpec.describe BillingOperations::ProcessService do
       expect(contract_rate_card.billing_operations).to eq([operation])
       expect(Invoice.where(customer:)).to be_empty
       expect(contract_rate_card.fees).to be_empty
+    end
+  end
+
+  context "when the contract ends or is terminated" do
+    let(:contract) do
+      create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1), consolidate_invoice:, **contract_end)
+    end
+
+    context "with a planned end at the billing date" do
+      let(:contract_end) { {ended_at: Time.utc(2026, 2, 1)} }
+
+      it "clears the cursor" do
+        result
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+      end
+    end
+
+    context "with a termination inside the next cycle" do
+      let(:contract_end) { {status: :terminated, terminated_at: Time.utc(2026, 2, 15)} }
+
+      it "moves the cursor to the close of the remaining partial cycle" do
+        result
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 15))
+      end
+    end
+
+    context "with a termination after the planned end" do
+      let(:contract_end) { {status: :terminated, ended_at: Time.utc(2026, 2, 10), terminated_at: Time.utc(2026, 2, 15)} }
+
+      it "moves the cursor to the final close at the termination" do
+        result
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 15))
+      end
+
+      context "when the close at the planned end is processed" do
+        let(:cursor) { Time.utc(2026, 2, 10) }
+        let(:operation) do
+          create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+            causation_type: "periodic_continuation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
+        end
+
+        it "still moves the cursor to the termination" do
+          result
+          expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 15))
+        end
+      end
+
+      context "when the final close is processed" do
+        let(:cursor) { Time.utc(2026, 2, 15) }
+        let(:operation) do
+          create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+            causation_type: "contract_termination", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
+        end
+
+        it "clears the cursor" do
+          result
+          expect(contract_rate_card.reload.next_billing_at).to be_nil
+        end
+      end
+    end
+  end
+
+  context "with an advance renewal whose cycle starts after the contract end" do
+    let(:billing_timing) { "advance" }
+    let(:contract) do
+      create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1), consolidate_invoice:,
+        ended_at: Time.utc(2026, 2, 1))
+    end
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
+        causation_type: "periodic_continuation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
+    end
+
+    it "completes the obsolete renewal without billing and clears the cursor" do
+      expect(result.invoices).to be_empty
+      expect(operation.reload).to have_attributes(processed_at: timestamp, invoice_id: nil)
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+      expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
     end
   end
 

@@ -58,7 +58,13 @@ module BillingOperations
         {at: cycle_started_at}
       end
       planned_operation = Schedule::BuildPlannedOperation.call!(contract_rate_card:, schedule:, **planning).planned_operation
-      return unless planned_operation && planned_operation.billing_at <= timestamp
+      # Nothing to persist yet: nothing falls due after the last billing (a terminated advance
+      # card has used its coverage), or the next obligation is still ahead. The reset clears
+      # the clock or moves it to that obligation, so the card is not found due until then.
+      if planned_operation.nil? || planned_operation.billing_at > timestamp
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp:, schedule:)
+        return
+      end
 
       existing_operation = contract_rate_card.billing_operations.periodic.pending.exists?(
         organization_id: customer.organization_id, action_type:, billing_at: planned_operation.billing_at,

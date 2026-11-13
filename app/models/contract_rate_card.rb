@@ -93,6 +93,15 @@ class ContractRateCard < ApplicationRecord
     periodic_billing_action == BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance)
   end
 
+  # Whether the contract has ended by the timestamp while the clock still holds an
+  # obligation of its lifetime, such as an unbilled final close. Replanning from the
+  # timestamp would find nothing left and drop that obligation.
+  def owes_billing_before?(timestamp)
+    ends_at = contract.billing_ends_at
+
+    ends_at.present? && ends_at <= timestamp && next_billing_at.present? && next_billing_at <= ends_at
+  end
+
   def requires_termination_billing?(timestamp:)
     next_billing_at.present? && timestamp < next_billing_at &&
       periodic_billing_action.in?(TERMINATION_BILLING_ACTIONS) &&

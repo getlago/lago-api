@@ -489,6 +489,19 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     end
   end
 
+  context "when an arrears card still owes its final close and the rate starts after the contract end" do
+    let(:contract) do
+      create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1), ended_at: Time.utc(2026, 11, 15))
+    end
+    let(:effective_from) { Time.utc(2026, 11, 20) }
+    let(:initial_cursor) { Time.utc(2026, 11, 15) }
+
+    it "keeps the final close on the clock" do
+      expect(result).to be_success
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 15))
+    end
+  end
+
   context "when termination wins the customer lock" do
     before do
       allow(Customers::LockService).to receive(:call!).and_wrap_original do |original, **kwargs, &block|
@@ -503,21 +516,14 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     end
   end
 
-  context "when the rate belongs to another organization" do
-    let(:new_rate) { create(:rate_card_rate) }
-
-    it "raises because the scoped rate lookup has no result" do
-      expect { result }.to raise_error(NoMethodError)
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-    end
-  end
-
-  context "when the rate was deleted" do
+  context "when the rate was deleted before the job ran" do
     before { new_rate.discard! }
 
-    it "raises because the discarded rate is not returned by the scoped lookup" do
-      expect { result }.to raise_error(NoMethodError)
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
+    it "succeeds without touching the card" do
+      expect(result).to be_success
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to eq(initial_cursor)
+      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
     end
   end
 
@@ -596,20 +602,11 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     let(:product) { create(:product, organization:) }
     let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance", display_on_invoice: true) }
 
-    before do
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original
-      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_call_original
-    end
-
-    it "uses the reset path when no reconciliation is needed" do
+    it "clears the billing date, as no obligation falls due" do
       expect(contract_rate_card.periodic_billing_action).to be_nil
       result
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
-      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
-        .with(hash_including(at: effective_from)).at_least(:once)
-      expect(ContractRateCards::ResetBillingClockService).to have_received(:call!).with(
-        hash_including(contract_rate_card:, timestamp: effective_from)
-      )
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+      expect(BillingOperation.count).to eq(0)
     end
   end
 

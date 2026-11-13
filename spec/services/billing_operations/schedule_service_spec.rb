@@ -106,6 +106,37 @@ RSpec.describe BillingOperations::ScheduleService do
     end
   end
 
+  context "when an advance card was terminated after its last renewal" do
+    let(:contract) do
+      create(:contract, :terminated, organization:, customer:, started_at:, terminated_at: Time.utc(2026, 1, 20))
+    end
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+    let(:cursor) { Time.utc(2026, 2, 1) }
+
+    before do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
+        causation_type: "contract_activation", billing_at: started_at,
+        target_cycle_started_at: started_at, processed_at: started_at)
+    end
+
+    it "clears the clock, as no coverage is left to bill" do
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+      expect(ContractRateCard.due_for_billing(timestamp)).not_to include(contract_rate_card)
+    end
+  end
+
+  context "when the schedule has no obligation at all" do
+    let(:contract) { create(:contract, organization:, customer:, started_at:, ended_at: Time.utc(2026, 1, 20)) }
+    let(:rate_effective_from) { Time.utc(2026, 1, 25) }
+    let(:cursor) { started_at }
+
+    it "clears the clock without persisting an operation" do
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+    end
+  end
+
   context "with a future activation and a new rate in the current cycle" do
     let(:started_at) { Time.utc(2026, 11, 1) }
     let(:effective_date) { Date.new(2026, 11, 1) }
@@ -204,10 +235,10 @@ RSpec.describe BillingOperations::ScheduleService do
   context "when the next planned operation is after the timestamp" do
     let(:rate_effective_from) { Time.utc(2026, 2, 15) }
 
-    it "does not persist a future plan or move the cursor" do
+    it "does not persist a future plan, and moves the cursor to it" do
       expect(result.billing_operations).to be_empty
       expect(contract_rate_card.billing_operations).to be_empty
-      expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
     end
   end
 
