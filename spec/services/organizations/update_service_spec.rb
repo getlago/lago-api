@@ -776,5 +776,22 @@ RSpec.describe Organizations::UpdateService do
         end
       end
     end
+
+    context "when the same authentication_methods are resubmitted in another order" do
+      subject { described_class.new(organization:, params:, user:) }
+
+      let(:params) { {authentication_methods: %w[google_oauth email_password]} }
+      let(:user) { create(:user) }
+
+      before { create(:membership, organization:, roles: %i[admin], user:) }
+
+      it "does not produce a security log nor send an email" do
+        expect { subject.call }.not_to have_enqueued_mail(OrganizationMailer, :authentication_methods_updated)
+
+        expect(organization.reload.authentication_methods).to eq(%w[email_password google_oauth])
+        expect(security_logger).not_to have_received(:produce)
+          .with(hash_including(log_event: "organization.authentication_methods_updated"))
+      end
+    end
   end
 end

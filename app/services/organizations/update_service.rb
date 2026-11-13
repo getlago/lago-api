@@ -97,7 +97,8 @@ module Organizations
       if params.key?(:customer_portal_locked_fields)
         organization.customer_portal_locked_fields = params[:customer_portal_locked_fields]&.uniq
       end
-      if params.key?(:authentication_methods)
+      # A reordered resubmission of the same set is no change: assigning it would log and email one.
+      if params.key?(:authentication_methods) && params[:authentication_methods].to_a.sort != organization.authentication_methods.sort
         deletions = organization.authentication_methods - params[:authentication_methods]
         additions = params[:authentication_methods] - organization.authentication_methods
         organization.authentication_methods = params[:authentication_methods]
