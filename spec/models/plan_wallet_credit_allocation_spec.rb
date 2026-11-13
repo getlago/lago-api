@@ -50,8 +50,10 @@ describe PlanWalletCreditAllocation do
 
     describe "billing cycle source" do
       it "rejects a rule with no source" do
-        expect(build(:plan_wallet_credit_allocation, product: nil).tap(&:valid?).errors)
-          .to be_added(:base, :exactly_one_source_required)
+        errors = build(:plan_wallet_credit_allocation, product: nil).tap(&:valid?).errors
+
+        expect(errors).to be_added(:base, :exactly_one_source_required)
+        expect(errors.messages[:base]).to eq(["exactly_one_source_required"])
       end
 
       it "rejects a rule with two sources" do
