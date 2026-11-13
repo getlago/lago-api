@@ -651,22 +651,19 @@ module Fees
       return unless RecurringAggregationSnapshot.readable?(metered_item: selected_metered_item, billing_context:)
       return if options.usage_filters.filter_by_group.present?
 
-      arguments = RecurringAggregationSnapshot.fetch_arguments(
-        metered_item: selected_metered_item, billing_context:, grouped_by_keys: grouped_by_keys(selected_metered_item:)
-      )
-
       lambda do
-        RecurringAggregationSnapshots::FetchService.call!(
-          **arguments,
-          charge_period: recurring_charge_period(arguments[:key], arguments[:from_datetime])
+        arguments = RecurringAggregationSnapshot.fetch_arguments(
+          metered_item: selected_metered_item, billing_context:, grouped_by_keys: grouped_by_keys(selected_metered_item:)
         )
+        RecurringAggregationSnapshots::FetchService.call!(**arguments, charge_period: recurring_charge_period(arguments))
       end
     end
 
     # One per key, as the marker and the filter check are the same for all its buckets
-    def recurring_charge_period(key, from_datetime)
+    def recurring_charge_period(arguments)
+      period_arguments = arguments.slice(:key, :from_datetime, :period_attributes)
       @recurring_charge_periods ||= {}
-      @recurring_charge_periods[[key, from_datetime]] ||= RecurringAggregationSnapshots::ChargePeriod.new(key:, from_datetime:)
+      @recurring_charge_periods[period_arguments] ||= RecurringAggregationSnapshots::ChargePeriod.new(**period_arguments)
     end
 
     def recurring_snapshots
@@ -686,18 +683,8 @@ module Fees
         to_datetime: metered_item.boundaries.charges_to_datetime,
         watermark: @recurring_watermark,
         buckets: recurring_snapshots,
-        period_attributes: recurring_period_attributes
+        period_attributes: RecurringAggregationSnapshot.period_attributes(metered_item:)
       )
-    end
-
-    # Priced filters take precedence over the product's other filters, and the segment's set can change
-    # with no row changing, so the read compares it with the set the period was closed with.
-    def recurring_period_attributes
-      if metered_item.billing_segment
-        {priced_product_filter_ids: metered_item.billing_segment.priced_product_filter_ids.uniq.sort}
-      else
-        {}
-      end
     end
 
     def grouped_by_keys(selected_metered_item:)
