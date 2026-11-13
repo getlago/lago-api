@@ -33,6 +33,11 @@ module CatalogPlans
         return result.single_validation_failure!(field: :currency, error_code: "not_editable_with_applied_rate_cards")
       end
 
+      # Wallet templates share the plan currency, checked when they are added.
+      if currency_change_requested? && catalog_plan.wallets.exists?
+        return result.single_validation_failure!(field: :currency, error_code: "not_editable_with_wallets")
+      end
+
       ActiveRecord::Base.transaction do
         catalog_plan.name = params[:name] if params.key?(:name)
         catalog_plan.code = params[:code] if params.key?(:code)
