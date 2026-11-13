@@ -10,6 +10,8 @@ module RecurringAggregationSnapshots
   # reads as a full scan, so it is reported even when its rows match. A subscription moved to a plan
   # override after its invoice was billed on the parent charge, so its fees are matched there too.
   class AuditService < BaseService
+    include AuditComparison
+
     Result = BaseResult[:rows, :differences, :adjusted_rows, :watermark_gap_rows, :periods_without_invoice, :periods_without_marker]
 
     Row = Data.define(
@@ -96,7 +98,7 @@ module RecurringAggregationSnapshots
 
         # Without any fee, no event ingested late can explain the snapshot
         if row.different? && billable_metric.sum_agg? && fees.any?
-          ingested_late[charge_filter_id] ||= ingested_after_watermark(snapshots.first, charge_filter_id, fees)
+          ingested_late[charge_filter_id] ||= ingested_after_snapshot(snapshots.first, charge_filter_id, fees)
           late_units, late_events_count = ingested_late[charge_filter_id].fetch(grouped_by, [0, 0])
 
           row = row.with(
@@ -111,32 +113,11 @@ module RecurringAggregationSnapshots
 
     # Per group, the units and events count of the period ingested after the snapshot's watermark,
     # up to the creation of its fees
-    def ingested_after_watermark(snapshot, charge_filter_id, fees)
+    def ingested_after_snapshot(snapshot, charge_filter_id, fees)
       store = event_store(snapshot, charge_filter_id)
       return {} unless store
 
-      until_fees = recurring_sums(store, fees.map(&:created_at).max)
-      until_watermark = recurring_sums(store, snapshot.watermark)
-
-      until_fees.to_h do |grouped_by, (units, events_count)|
-        units_before, events_count_before = until_watermark.fetch(grouped_by, [0, 0])
-        [grouped_by, [units - units_before, events_count - events_count_before]]
-      end
-    end
-
-    def recurring_sums(store, watermark)
-      results = if store.grouped_by.present?
-        store.grouped_recurring_sum(watermark:)
-      else
-        [store.recurring_sum(watermark:)]
-      end
-
-      # Blank group values share the null group of the snapshot
-      results.each_with_object({}) do |aggregation, sums|
-        grouped_by = aggregation.respond_to?(:groups) ? aggregation.groups.compact.transform_values(&:to_s) : {}
-        units, events_count = sums.fetch(grouped_by, [0, 0])
-        sums[grouped_by] = [units + aggregation.snapshot_value, events_count + aggregation.snapshot_events_count]
-      end
+      ingested_after_watermark(store, watermark: snapshot.watermark, until_time: fees.map(&:created_at).max)
     end
 
     # Reads the events of the bucket as Fees::ChargeService does, with the filters the charge has now
@@ -203,16 +184,6 @@ module RecurringAggregationSnapshots
       end
     end
 
-    # A sum fee bills its units rounded and clamped at zero (see Fees::ChargeService#init_fee),
-    # a weighted sum fee keeps them raw in total_aggregated_units
-    def billed_units(billable_metric, units)
-      if billable_metric.weighted_sum_agg?
-        units
-      else
-        [BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric:, units:).units, 0].max
-      end
-    end
-
     def adjusted?(fee)
       fee&.adjusted_fee.present? && !fee.adjusted_fee.adjusted_display_name?
     end
@@ -238,10 +209,9 @@ module RecurringAggregationSnapshots
         .to_h
     end
 
-    # Group values come back from JSON on both sides, the zero-unit marker with nil values
     def key(record, override_filter_ids = {})
       charge_filter_id = override_filter_ids.fetch(record.charge_filter_id, record.charge_filter_id)
-      [charge_filter_id, record.grouped_by.compact.transform_values(&:to_s)]
+      [charge_filter_id, group_key(record.grouped_by)]
     end
   end
 end
