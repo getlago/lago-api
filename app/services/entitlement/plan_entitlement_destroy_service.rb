@@ -2,6 +2,8 @@
 
 module Entitlement
   class PlanEntitlementDestroyService < BaseService
+    include ::Entitlement::Concerns::OwnerLockConcern
+
     Result = BaseResult[:entitlement]
 
     def initialize(entitlement:)
@@ -17,7 +19,9 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "entitlement") unless entitlement
 
+      # NOTE: The entitlement is not re-read under the lock: a concurrent delete of the same entitlement still succeeds.
       ActiveRecord::Base.transaction do
+        lock_plan!(entitlement.plan)
         entitlement.values.discard_all!
         entitlement.discard!
       end
@@ -26,6 +30,8 @@ module Entitlement
 
       result.entitlement = entitlement
       result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private

@@ -378,6 +378,22 @@ RSpec.describe Api::V1::Plans::EntitlementsController do
         new_privilege
       end
 
+      context "when a concurrent request creates the same entitlement" do
+        before do
+          allow(Entitlement::Entitlement).to receive(:create!).and_wrap_original do |original, **attributes|
+            original.call(**attributes)
+            original.call(**attributes)
+          end
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details]).to eq(feature: ["value_already_exist"])
+        end
+      end
+
       it "creates new entitlement" do
         expect {
           subject

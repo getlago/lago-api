@@ -545,6 +545,32 @@ RSpec.describe Mutations::Plans::Update do
 
         expect(::Plans::UpdateService).to have_received(:call).with(plan:, params: anything, send_webhook: false)
       end
+
+      context "when a concurrent request creates the same entitlement" do
+        let(:input_with_entitlements) do
+          base_input.merge(entitlements: [{featureCode: feature2.code, privileges: []}])
+        end
+
+        before do
+          allow(Entitlement::Entitlement).to receive(:create!).and_wrap_original do |original, **attributes|
+            original.call(**attributes)
+            original.call(**attributes)
+          end
+        end
+
+        it "returns a validation error and enqueues no webhook" do
+          result = execute_graphql(
+            current_user: membership.user,
+            current_organization: organization,
+            permissions: required_permission,
+            query: mutation,
+            variables: {input: input_with_entitlements}
+          )
+
+          expect_unprocessable_entity(result, details: {feature: ["value_already_exist"]})
+          expect(SendWebhookJob).not_to have_been_enqueued.with("plan.updated", plan)
+        end
+      end
     end
   end
 
