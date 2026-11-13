@@ -46,10 +46,6 @@ module PlanWallets
           return result.single_validation_failure!(field: :code, error_code: "plan_locked")
         end
 
-        if params[:currency].present? && params[:currency] != catalog_plan.currency
-          return result.single_validation_failure!(field: :currency, error_code: "currency_does_not_match")
-        end
-
         plan_wallet.assign_attributes(params.slice(*ATTRIBUTES))
         # Taxes, scope and metadata are part of the template's body, so their edit dates it too.
         plan_wallet.updated_at = Time.current if RELATED_PARAMS.any? { params.key?(it) }
