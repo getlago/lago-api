@@ -17,12 +17,15 @@ module Organizations
 
     def call
       result.changes = {}
-      return result unless organization.production?
 
       ActiveRecord::Base.transaction do
         # A fresh instance read under the lock: the caller's object can predate a toggle committed meanwhile, and
-        # copying from it would undo that toggle on the sandbox.
-        locked = SandboxLockService.call!(organization: Organization.find(organization.id), lock_sandbox: true)
+        # copying from it would undo that toggle on the sandbox. Its environment is read there too, as a link can
+        # have made it a sandbox since the caller loaded it.
+        locked = SandboxLockService.call!(organization: Organization.find(organization.id), allow_sandbox: true,
+          lock_sandbox: true)
+        next unless locked.organization.production?
+
         sandbox = locked.sandbox_organization
         next unless sandbox
 
