@@ -21,14 +21,11 @@ module Admin
 
       ActiveRecord::Base.transaction do
         creation = ::Organizations::CreateWithInviteService.call!(
-          name:, owner_email:, timezone:, premium_integrations:, document_numbering: "per_organization", self_serve:
+          name:, owner_email:, timezone:, premium_integrations:, feature_flags:, document_numbering: "per_organization",
+          self_serve:
         )
         organization = creation.organization
         sandbox = creation.sandbox_organization
-        if feature_flags.any?
-          organization.update!(feature_flags:)
-          ::Organizations::SyncSandboxSettingsService.call!(organization:, actor:) if sandbox
-        end
 
         create_audit_logs!(organization, sandbox)
 
