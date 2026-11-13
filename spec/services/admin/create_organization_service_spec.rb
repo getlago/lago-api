@@ -47,6 +47,14 @@ RSpec.describe Admin::CreateOrganizationService do
           feature_flags: ["order_forms"])
       end
 
+      it "copies the settings to the sandbox once" do
+        allow(Organizations::SyncSandboxSettingsService).to receive(:call!).and_call_original
+
+        service.call
+
+        expect(Organizations::SyncSandboxSettingsService).to have_received(:call!).once
+      end
+
       it "invites the owner to the production organization only" do
         result = service.call
 
