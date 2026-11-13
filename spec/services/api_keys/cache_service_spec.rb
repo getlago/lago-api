@@ -148,6 +148,28 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
           expect(cache_service.call).to eq([nil, nil])
         end
       end
+
+      context "when the cached value was written by a release without member keys" do
+        let(:membership) { create(:membership, organization:) }
+        let(:api_key) { ApiKeys::CreateMemberKeyService.call!(membership:).api_key }
+
+        before do
+          Rails.cache.write(cache_service.cache_key, {
+            api_key: api_key.attributes.except("membership_id"),
+            organization: organization.attributes
+          }.to_json)
+        end
+
+        it "reads the key from the database, with its membership" do
+          expect(cache_service.call.first.membership_id).to eq(membership.id)
+        end
+
+        it "caches it again with its membership" do
+          cache_service.call
+
+          expect(JSON.parse(Rails.cache.read(cache_service.cache_key))["api_key"]["membership_id"]).to eq(membership.id)
+        end
+      end
     end
   end
 end
