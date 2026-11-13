@@ -161,10 +161,9 @@ end
 # Contracts are asked only when the organization has active contracts with snapshots: one without
 # snapshots compares nothing, and an ended one has no open segment to price
 def recurring_snapshots_compared_contracts(organization)
-  compared = organization.contracts.where(
-    status: Contract::BILLABLE_STATUSES,
-    id: ContractRecurringAggregationSnapshot.where(organization_id: organization.id).select(:contract_id)
-  )
+  # Correlated on the contract, so the contract-led snapshot index serves it
+  snapshots = ContractRecurringAggregationSnapshot.where("contract_recurring_aggregation_snapshots.contract_id = contracts.id")
+  compared = organization.contracts.where(status: Contract::BILLABLE_STATUSES).where(snapshots.arel.exists)
   return [] unless compared.exists?
 
   input = TaskPrompt.ask("Contract IDs to compare (comma or space separated, leave blank to sample the organization, none to skip contracts): ")
