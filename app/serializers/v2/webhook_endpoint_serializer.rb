@@ -4,6 +4,9 @@ module V2
   class WebhookEndpointSerializer < ModelSerializer
     timestamps :created_at, :updated_at
 
+    # Never `webhooks: true`: the keys must not reach a webhook body.
+    expandable :signing_keys, serializer: ::V2::WebhookEndpointSigningKeySerializer
+
     def serialize
       {
         lago_id: model.id,
@@ -13,5 +16,9 @@ module V2
         event_types: model.event_types
       }
     end
+
+    private
+
+    def signing_keys = model.exposed_signing_keys
   end
 end
