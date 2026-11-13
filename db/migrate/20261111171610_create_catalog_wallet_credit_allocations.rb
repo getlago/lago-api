@@ -32,6 +32,8 @@ class CreateCatalogWalletCreditAllocations < ActiveRecord::Migration[8.1]
         where: "trigger = 'ongoing_balance' AND deleted_at IS NULL",
         name: "index_catalog_wallet_credit_allocations_one_ongoing_balance"
 
+      t.check_constraint "billing_cycles >= 1", name: "catalog_wallet_credit_allocations_billing_cycles_positive"
+      t.check_constraint "credit_amount_cents > 0", name: "catalog_wallet_credit_allocations_credit_amount_positive"
       t.check_constraint <<~SQL.squish, name: "catalog_wallet_credit_allocations_trigger_fields"
         CASE trigger
           WHEN 'billing_cycle' THEN num_nonnulls(product_id, product_filter_id) = 1

@@ -60,9 +60,74 @@ describe CatalogWalletCreditAllocation do
           .to be_added(:base, :exactly_one_source_required)
       end
     end
+
+    describe "ongoing balance fields" do
+      it "requires them on an ongoing balance rule" do
+        rule = build(
+          :catalog_wallet_credit_allocation,
+          :ongoing_balance,
+          threshold_amount_cents: nil,
+          purchase_amount_cents: nil,
+          invoice_requires_successful_payment: nil
+        )
+
+        expect(rule.tap(&:valid?).errors.to_hash).to eq(
+          threshold_amount_cents: ["value_is_mandatory"],
+          purchase_amount_cents: ["value_is_mandatory"],
+          invoice_requires_successful_payment: ["value_is_invalid"]
+        )
+      end
+
+      it "refuses them on a billing cycle rule" do
+        rule = build(
+          :catalog_wallet_credit_allocation,
+          threshold_amount_cents: 0,
+          purchase_amount_cents: 0,
+          invoice_requires_successful_payment: false
+        )
+
+        expect(rule.tap(&:valid?).errors.to_hash).to eq(
+          threshold_amount_cents: ["value_must_be_blank"],
+          purchase_amount_cents: ["value_must_be_blank"],
+          invoice_requires_successful_payment: ["value_must_be_blank"]
+        )
+      end
+    end
+
+    describe "billing cycle fields" do
+      it "refuses them on an ongoing balance rule" do
+        rule = build(
+          :catalog_wallet_credit_allocation,
+          :ongoing_balance,
+          product: create(:product),
+          product_filter: create(:product_filter),
+          billing_cycles: 3
+        )
+
+        expect(rule.tap(&:valid?).errors.to_hash).to eq(
+          product: ["value_must_be_blank"],
+          product_filter: ["value_must_be_blank"],
+          billing_cycles: ["value_must_be_blank"]
+        )
+      end
+    end
   end
 
   describe "database constraints" do
+    it "refuses a rule capped at zero billing cycles" do
+      rule = build(:catalog_wallet_credit_allocation, billing_cycles: 0)
+
+      expect { rule.save!(validate: false) }
+        .to raise_error(ActiveRecord::StatementInvalid, /catalog_wallet_credit_allocations_billing_cycles_positive/)
+    end
+
+    it "refuses a rule that adds no credit" do
+      rule = build(:catalog_wallet_credit_allocation, credit_amount_cents: 0)
+
+      expect { rule.save!(validate: false) }
+        .to raise_error(ActiveRecord::StatementInvalid, /catalog_wallet_credit_allocations_credit_amount_positive/)
+    end
+
     it "refuses a billing cycle rule with a threshold" do
       rule = build(:catalog_wallet_credit_allocation, threshold_amount_cents: 0)
 
