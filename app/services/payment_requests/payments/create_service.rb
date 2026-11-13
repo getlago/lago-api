@@ -92,6 +92,10 @@ module PaymentRequests
         result
       rescue BaseService::ServiceFailure => e
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later
+        # A failure raised before any payment was saved (the provider lookup) is not a payment failure:
+        # it sends no payment failure webhook and leaves the payment status unchanged.
+        raise unless result.payment
+
         result.payment = e.result.payment
         deliver_error_webhook(e.result)
         update_payable_payment_status(payment_status: e.result.payment.payable_payment_status)
@@ -123,6 +127,7 @@ module PaymentRequests
 
       def should_process_payment?
         return false if payable.payment_succeeded?
+        return false if customer.payment_provider.blank?
         return false if current_payment_provider.blank?
         return false unless current_payment_provider_customer&.provider_customer_id
 
