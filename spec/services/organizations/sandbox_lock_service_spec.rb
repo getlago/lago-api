@@ -48,8 +48,9 @@ RSpec.describe Organizations::SandboxLockService do
     context "when sandboxes are allowed" do
       let(:options) { {allow_sandbox: true} }
 
-      it "returns it" do
+      it "returns it with its production" do
         expect(result.organization).to eq(organization)
+        expect(result.production_organization).to eq(organization.production_organization)
       end
     end
   end
@@ -65,6 +66,51 @@ RSpec.describe Organizations::SandboxLockService do
   context "without a transaction", transaction: false do
     it "raises" do
       expect { described_class.call(organization:) }.to raise_error(ArgumentError, /inside a transaction/)
+    end
+  end
+
+  context "with an allowed sandbox whose production another transaction holds", transaction: false do
+    let(:organization) { create(:organization, :sandbox) }
+
+    it "waits for the production before it locks the sandbox" do
+      production_id = organization.production_organization_id
+      locked = Queue.new
+      release = Queue.new
+
+      holder = Thread.new do
+        ApplicationRecord.connection_pool.with_connection do
+          ApplicationRecord.transaction do
+            Organization.lock.find(production_id)
+            locked << true
+            release.pop
+          end
+        end
+      end
+      Timeout.timeout(10) { locked.pop }
+
+      waiter = Thread.new do
+        ApplicationRecord.connection_pool.with_connection do
+          ApplicationRecord.transaction do
+            described_class.call(organization: Organization.find(organization.id), allow_sandbox: true)
+          end
+        end
+      end
+      begin
+        Timeout.timeout(10) do
+          sleep(0.01) until ApplicationRecord.connection.select_value(
+            "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
+          ).positive?
+        end
+
+        sandbox_free = ApplicationRecord.transaction { Organization.lock("FOR UPDATE NOWAIT").find(organization.id) }
+      ensure
+        release << true
+      end
+      Timeout.timeout(10) { holder.join }
+      waiter_result = Timeout.timeout(10) { waiter.value }
+
+      expect(sandbox_free).to eq(organization)
+      expect(waiter_result.production_organization.id).to eq(production_id)
     end
   end
 
