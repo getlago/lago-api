@@ -49,7 +49,7 @@ module Memberships
 
     def add(sandbox, source)
       membership = Membership.create!(user:, organization: sandbox)
-      roles = sandbox_roles(source)
+      roles = sandbox_roles(sandbox, source)
       roles.each { MembershipRole.create!(organization: sandbox, membership:, role: it) }
 
       result.sandbox_membership = membership
@@ -57,7 +57,7 @@ module Memberships
     end
 
     def sync_roles(sandbox, source, target)
-      wanted = sandbox_roles(source)
+      wanted = sandbox_roles(sandbox, source)
       current = target.roles.to_a
       added = wanted - current
       deleted = current - wanted
@@ -74,10 +74,16 @@ module Memberships
       log(sandbox, "user.role_edited", email: user.email, roles:)
     end
 
-    # A predefined role is the same row in both organizations; a custom role has its own copy in the sandbox.
-    def sandbox_roles(source)
-      source.roles.map do |role|
-        role.organization_id.nil? ? role : Roles::SyncSandboxService.call!(role:, actor:).sandbox_role
+    # A predefined role is the same row in both organizations; a custom role has its own copy in the sandbox, which the
+    # role services keep in sync, so it is only synced here when it is missing.
+    def sandbox_roles(sandbox, source)
+      roles = source.roles.to_a
+      copies = sandbox.roles.where(code: roles.select(&:organization_id).map(&:code)).index_by(&:code)
+
+      roles.map do |role|
+        next role if role.organization_id.nil?
+
+        copies[role.code] || Roles::SyncSandboxService.call!(role:, actor:).sandbox_role
       end.compact
     end
 

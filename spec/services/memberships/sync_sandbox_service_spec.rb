@@ -64,6 +64,20 @@ RSpec.describe Memberships::SyncSandboxService do
     def sandbox_membership_role_after(result)
       result.sandbox_membership.roles.sole
     end
+
+    context "when the sandbox copy exists" do
+      let(:copy) { create(:role, organization: sandbox, code: "auditor", name: "Auditor", permissions: %w[organization:view]) }
+
+      before do
+        copy
+        allow(Roles::SyncSandboxService).to receive(:call!).and_call_original
+      end
+
+      it "grants it without syncing the role again" do
+        expect(sandbox_membership_role_after(result)).to eq(copy)
+        expect(Roles::SyncSandboxService).not_to have_received(:call!)
+      end
+    end
   end
 
   context "when the production membership was revoked" do
