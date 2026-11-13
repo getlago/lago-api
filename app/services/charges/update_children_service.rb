@@ -4,6 +4,8 @@ module Charges
   class UpdateChildrenService < BaseService
     Result = BaseResult[:charge]
 
+    LOCK_TIMEOUT_SECONDS = 5
+
     def initialize(charge:, params:, old_parent_attrs:, old_parent_applied_pricing_unit_attrs:, child_ids:)
       @charge = charge
       @params = params
@@ -20,25 +22,11 @@ module Charges
     def call
       return result unless charge
 
-      # Acquire an advisory lock on the parent charge to prevent concurrent
-      # cascades from overlapping (e.g. parent updated twice in quick succession).
-      # timeout_seconds: 0 fails immediately if another cascade is running;
-      # the job's retry_on will pick it up later.
-      Charge.with_advisory_lock!("update_children_charge_#{charge.id}", timeout_seconds: 0) do
-        # skip touching to avoid deadlocks and redundant cascading updates
-        Charge.no_touching do
-          Plan.no_touching do
-            charge.children.where(id: child_ids).find_each do |child_charge|
-              Charges::UpdateService.call!(
-                charge: child_charge,
-                params:,
-                cascade_options: {
-                  cascade: true,
-                  equal_properties: old_parent.equal_properties?(child_charge),
-                  equal_applied_pricing_unit_rate: old_parent.equal_applied_pricing_unit_rate?(child_charge)
-                }
-              )
-            end
+      # skip touching to avoid deadlocks and redundant cascading updates
+      Charge.no_touching do
+        Plan.no_touching do
+          charge.children.where(id: child_ids).find_each do |child_charge|
+            update_child(child_charge)
           end
         end
       end
@@ -50,5 +38,30 @@ module Charges
     private
 
     attr_reader :charge, :params, :old_parent, :child_ids
+
+    # Locked per child rather than per parent: the batches of one cascade hold disjoint children and run
+    # in parallel, while two cascades of the same parent still never update the same child concurrently.
+    def update_child(child_charge)
+      Charge.transaction do
+        Charge.with_advisory_lock!(
+          "cascade_update_charge_#{child_charge.id}",
+          transaction: true,
+          timeout_seconds: LOCK_TIMEOUT_SECONDS
+        ) do
+          # Another cascade may have updated the child while this one waited for the lock.
+          child_charge.reload
+
+          Charges::UpdateService.call!(
+            charge: child_charge,
+            params:,
+            cascade_options: {
+              cascade: true,
+              equal_properties: old_parent.equal_properties?(child_charge),
+              equal_applied_pricing_unit_rate: old_parent.equal_applied_pricing_unit_rate?(child_charge)
+            }
+          )
+        end
+      end
+    end
   end
 end
