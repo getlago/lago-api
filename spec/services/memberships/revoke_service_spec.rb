@@ -69,6 +69,56 @@ RSpec.describe Memberships::RevokeService do
       end
     end
 
+    context "when another request revoked the membership after it was loaded" do
+      before do
+        create(:membership_role, membership: other_membership, role: admin_role)
+        Membership.find(membership.id).mark_as_revoked!
+      end
+
+      it "succeeds without revoking or logging it again" do
+        result = revoke_service.call
+
+        expect(result).to be_success
+        expect(result.membership).to be_revoked
+        expect(security_logger).not_to have_received(:produce)
+      end
+    end
+
+    context "when the organization has a sandbox" do
+      let(:organization) { create(:organization, :with_sandbox) }
+      let(:membership) { create(:membership, organization:, roles: %i[finance]) }
+      let(:sandbox) { organization.sandbox_organization }
+
+      before do
+        create(:membership, user:, organization:, roles: %i[admin])
+        create(:membership, user: membership.user, organization: sandbox, roles: %i[finance])
+      end
+
+      it "revokes the sandbox membership too" do
+        expect(revoke_service.call).to be_success
+        expect(sandbox.memberships.active.where(user: membership.user)).to be_empty
+      end
+
+      it "keeps both memberships when the sandbox cannot be synced" do
+        allow(Memberships::SyncSandboxService).to receive(:call!)
+          .and_raise(BaseResult.new.forbidden_failure!(code: "sandbox_managed_by_production").error)
+
+        expect(revoke_service.call).to be_failure
+        expect(membership.reload).to be_active
+      end
+    end
+
+    context "when the membership belongs to a sandbox" do
+      let(:membership) { create(:membership, organization: create(:organization, :sandbox)) }
+
+      it "refuses it" do
+        result = revoke_service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(membership.reload).to be_active
+      end
+    end
+
     context "when removing the last admin" do
       before do
         create(:membership_role, membership:, role: admin_role)

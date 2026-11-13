@@ -14,17 +14,28 @@ module Roles
     def call
       return result.not_found_failure!(resource: "role") unless role
       return result.forbidden_failure!(code: "predefined_role") if predefined_role?
-      return result.forbidden_failure!(code: "cannot_grant_permissions") unless acting_membership.can_grant_roles?([role])
-      return result.forbidden_failure!(code: "cannot_grant_permissions") if adding_permissions_not_held?
 
-      role.update!(params.slice(:name, :description, :permissions).compact)
+      ActiveRecord::Base.transaction do
+        Organizations::SandboxLockService.call!(organization: role.organization)
+        # Every role write takes the lock: reloaded, the checks and the logged diff see the last committed edit.
+        role.reload
+        return result.not_found_failure!(resource: "role") if role.discarded?
+        return result.forbidden_failure!(code: "cannot_grant_permissions") unless acting_membership.can_grant_roles?([role])
+        return result.forbidden_failure!(code: "cannot_grant_permissions") if adding_permissions_not_held?
 
-      register_security_log
+        role.update!(params.slice(:name, :description, :permissions).compact)
+        Roles::SyncSandboxService.call!(role:, actor: acting_membership.user)
+
+        changes = role.previous_changes
+        after_commit { register_security_log(changes) }
+      end
 
       result.role = role
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
@@ -42,13 +53,14 @@ module Roles
       role.organization_id.nil?
     end
 
-    def register_security_log
-      diff = role.previous_changes.slice("name", "description").to_h
+    # Takes the changes of the update: the sync reloads nothing, but logs run after commit.
+    def register_security_log(changes)
+      diff = changes.slice("name", "description").to_h
         .transform_keys(&:to_sym)
         .transform_values { |v| {deleted: v[0], added: v[1]}.compact }
 
-      if role.previous_changes.key?("permissions")
-        old_perms, new_perms = role.previous_changes["permissions"]
+      if changes.key?("permissions")
+        old_perms, new_perms = changes["permissions"]
         entry = {}
         deleted = old_perms - new_perms
         added = new_perms - old_perms

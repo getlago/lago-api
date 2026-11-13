@@ -58,6 +58,56 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       expect(decoded["sso_issuer"]).to eq("foo.okta.com")
     end
 
+    context "with the organization lock" do
+      before { allow(Organizations::SandboxLockService).to receive(:call!).and_call_original }
+
+      it "adds the new member under it" do
+        service.call
+
+        expect(Organizations::SandboxLockService).to have_received(:call!).with(organization: okta_integration.organization)
+      end
+    end
+
+    context "when the integration organization has a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: okta_integration.organization) }
+
+      before { sandbox }
+
+      it "adds the new member to the sandbox too" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(sandbox.memberships.active.where(user: result.user)).to exist
+      end
+    end
+
+    context "when the integration organization is a sandbox" do
+      let(:okta_integration) do
+        create(:okta_integration, domain: "bar.com", organization_name: "foo", organization: create(:organization, :sandbox))
+      end
+
+      it "refuses the sign-in without creating the user" do
+        result = service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(User.where(email: "foo@bar.com")).to be_empty
+        expect(Membership.where(organization: okta_integration.organization)).to be_empty
+      end
+
+      context "when the user is already a member of it" do
+        let(:user) { create(:user, email: "foo@bar.com") }
+
+        before { create(:membership, user:, organization: okta_integration.organization) }
+
+        it "signs them in" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.user).to eq(user)
+        end
+      end
+    end
+
     context "when code is not provided" do
       let(:code) { nil }
 

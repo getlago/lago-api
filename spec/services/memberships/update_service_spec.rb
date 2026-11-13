@@ -34,6 +34,29 @@ RSpec.describe Memberships::UpdateService do
       end
     end
 
+    context "when the organization has a sandbox" do
+      let(:production) { create(:organization, :with_sandbox) }
+      let(:sandbox) { production.sandbox_organization }
+      let(:membership) { create(:membership, organization: production, roles: %i[finance]) }
+      let(:acting_user) { create(:membership, organization: production, roles: %i[admin]).user }
+
+      before { create(:membership, user: membership.user, organization: sandbox, roles: %i[finance]) }
+
+      it "gives the sandbox membership the same roles" do
+        expect(result).to be_success
+        expect(sandbox.memberships.active.find_by(user: membership.user).roles).to eq([manager_role])
+      end
+    end
+
+    context "when the membership belongs to a sandbox" do
+      let(:membership) { create(:membership, organization: create(:organization, :sandbox), roles: %i[finance]) }
+
+      it "refuses it" do
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(membership.reload.roles.map(&:code)).to eq(%w[finance])
+      end
+    end
+
     context "when admin grants admin role to another member" do
       let_it_be(:acting_membership) { create(:membership, organization:) }
       let(:acting_user) { acting_membership.user }
