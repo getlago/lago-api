@@ -6,22 +6,11 @@ module RecurringAggregationSnapshots
   # (charge, charge filter, group). Both runs share one timestamp and skip the charge caches, so
   # only the two read paths can explain a difference, and the values are compared exactly.
   class CompareUsageService < BaseService
-    Result = BaseResult[:rows, :differences, :compared_charges_count, :snapshot_charges_count, :rechecked]
+    include UsageComparison
+
+    Result = BaseResult[:rows, :differences, :compared_items_count, :snapshot_items_count, :rechecked]
 
     RECHECK_DELAY = 5.seconds
-
-    Totals = Data.define(:units, :total_aggregated_units, :amount_cents, :events_count, :presentation_breakdowns)
-    EMPTY_TOTALS = Totals.new(
-      units: BigDecimal(0), total_aggregated_units: BigDecimal(0), amount_cents: 0, events_count: 0, presentation_breakdowns: {}
-    )
-
-    Row = Data.define(:charge_id, :billable_metric_code, :charge_filter_id, :grouped_by, :snapshot_read, :snapshot, :full_scan) do
-      # Without a snapshot both runs scan the full history: a difference there is an event ingested
-      # between them, never a snapshot bug.
-      def different?
-        snapshot_read && snapshot != full_scan
-      end
-    end
 
     def initialize(subscription:, timestamp: Time.current)
       @subscription = subscription
@@ -34,8 +23,8 @@ module RecurringAggregationSnapshots
     # once, after the ingestion had time to settle, and only one that persists is reported.
     def call
       result.rechecked = false
-      result.compared_charges_count = compared_charges.size
-      result.snapshot_charges_count = snapshot_keys.map(&:first).uniq.size
+      result.compared_items_count = compared_charges.size
+      result.snapshot_items_count = snapshot_keys.map(&:first).uniq.size
       compare
 
       if result.differences.any?
@@ -61,7 +50,7 @@ module RecurringAggregationSnapshots
       snapshot_usage = RecurringAggregationSnapshots.with_forced_read(true) { compute_usage }
       full_scan_usage = RecurringAggregationSnapshots.with_forced_read(false) { compute_usage }
 
-      result.rows = build_rows(snapshot_usage:, full_scan_usage:)
+      result.rows = build_rows(snapshot_leaves: leaves(snapshot_usage), full_scan_leaves: leaves(full_scan_usage))
       result.differences = result.rows.select(&:different?)
     end
 
@@ -78,57 +67,12 @@ module RecurringAggregationSnapshots
       ).usage
     end
 
-    def build_rows(snapshot_usage:, full_scan_usage:)
-      snapshot_totals = totals_by_key(snapshot_usage)
-      full_scan_totals = totals_by_key(full_scan_usage)
-
-      (snapshot_totals.keys | full_scan_totals.keys).map do |key|
-        charge_id, charge_filter_id, grouped_by = key
-
-        Row.new(
-          charge_id:,
-          billable_metric_code: charges_by_id[charge_id].billable_metric.code,
-          charge_filter_id:,
-          grouped_by:,
-          snapshot_read: snapshot_keys.include?([charge_id, charge_filter_id]),
-          snapshot: snapshot_totals[key] || EMPTY_TOTALS,
-          full_scan: full_scan_totals[key] || EMPTY_TOTALS
-        )
-      end
+    def leaves(usage)
+      (usage&.fees || []).map { [it.charge_id, it.charge_filter_id, it] }
     end
 
-    def totals_by_key(usage)
-      (usage&.fees || []).each_with_object({}) do |fee, totals|
-        key = [fee.charge_id, fee.charge_filter_id, normalized_groups(fee)]
-        current = totals[key] || EMPTY_TOTALS
-        totals[key] = Totals.new(
-          units: current.units + fee.units.to_d,
-          total_aggregated_units: current.total_aggregated_units + fee.total_aggregated_units.to_d,
-          amount_cents: current.amount_cents + fee.amount_cents.to_i,
-          events_count: current.events_count + fee.events_count.to_i,
-          presentation_breakdowns: add_breakdowns(current.presentation_breakdowns, fee)
-        )
-      end
-    end
-
-    # Zero lines are skipped: a group closing a period at zero keeps no snapshot row, so the snapshot
-    # run drops the zero lines the full scan carries from the cached aggregation.
-    def add_breakdowns(breakdowns, fee)
-      fee.presentation_breakdowns.each_with_object(breakdowns.dup) do |breakdown, sums|
-        next if breakdown.units.to_d.zero?
-
-        presentation_by = normalized_values(breakdown.presentation_by)
-        sums[presentation_by] = sums.fetch(presentation_by, BigDecimal(0)) + breakdown.units.to_d
-      end
-    end
-
-    def normalized_groups(fee)
-      normalized_values(fee.grouped_by)
-    end
-
-    # The snapshot path reads group values back from JSON, the full scan from the events.
-    def normalized_values(values)
-      (values || {}).transform_values { it&.to_s }
+    def billable_metric_code(charge_id)
+      charges_by_id[charge_id].billable_metric.code
     end
 
     # The (charge, charge filter) pairs the snapshot run starts from a snapshot, rejected as the
@@ -152,9 +96,7 @@ module RecurringAggregationSnapshots
       ).period
       return false unless period
 
-      # BillableMetrics::Aggregations::WeightedSumService#latest_snapshots, SumService#delta_period
-      from_datetime = date_service.charges_from_datetime
-      !bucket.billable_metric.weighted_sum_agg? || period.to_datetime.between?(from_datetime - 1.second, from_datetime)
+      starts_from_period?(bucket.billable_metric, period, date_service.charges_from_datetime)
     end
 
     def compared_charges
