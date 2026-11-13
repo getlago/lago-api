@@ -9,6 +9,10 @@ RSpec.describe DunningCampaigns::ProcessCustomerJob do
     allow(DunningCampaigns::ProcessCustomerService).to receive(:call!)
   end
 
+  it "uses the low_priority queue" do
+    expect(described_class.new(customer).queue_name).to eq("low_priority")
+  end
+
   it "calls DunningCampaigns::ProcessCustomerService" do
     described_class.perform_now(customer)
 
