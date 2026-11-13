@@ -671,6 +671,7 @@ DROP INDEX IF EXISTS public.index_plans_on_created_at;
 DROP INDEX IF EXISTS public.index_plans_on_bill_fixed_charges_monthly;
 DROP INDEX IF EXISTS public.index_plan_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_plan_wallets_on_catalog_plan_id_and_code;
+DROP INDEX IF EXISTS public.index_plan_wallets_by_cursor;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_one_ongoing_balance;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_on_wallet_and_code;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_on_organization_id;
@@ -12112,6 +12113,13 @@ CREATE UNIQUE INDEX index_plan_wallet_credit_allocations_one_ongoing_balance ON 
 
 
 --
+-- Name: index_plan_wallets_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_wallets_by_cursor ON public.plan_wallets USING btree (catalog_plan_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_plan_wallets_on_catalog_plan_id_and_code; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -17144,6 +17152,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261113162250'),
 ('20261111172228'),
 ('20261111172225'),
 ('20261111172221'),
