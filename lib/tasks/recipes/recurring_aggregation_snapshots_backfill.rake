@@ -13,7 +13,18 @@ namespace :recipes do
 
       organization = TaskPrompt.ask_for_organization
       recurring_snapshots_backfill_warn_writes_off(organization)
-      subscription_ids = TaskPrompt.ask_for_subscription_ids
+      # Contracts are asked only when the organization has some, so organizations without contracts keep the
+      # same prompts. Listing IDs at either prompt then limits the run to the listed ones.
+      contracts = RecurringAggregationSnapshots::ContractBackfillService.backfillable_contracts(organization)
+      with_contracts = contracts.exists?
+      subscription_ids = if with_contracts
+        TaskPrompt.ask_for_ids(
+          "Subscription IDs to refill (comma or space separated, leave blank to fill every subscription of the organization, " \
+          "or none when contract IDs are listed next): "
+        )
+      else
+        TaskPrompt.ask_for_subscription_ids
+      end
 
       subscriptions = RecurringAggregationSnapshots::BackfillService.backfillable_subscriptions(organization)
       if subscription_ids.any?
@@ -22,10 +33,8 @@ namespace :recipes do
         recurring_snapshots_backfill_list("Skipped, not found or without a recurring sum charge or an invoiced period", left_out_ids)
       end
 
-      # Asked only when the organization has some, so organizations without contracts keep the same prompts
-      contracts = RecurringAggregationSnapshots::ContractBackfillService.backfillable_contracts(organization)
       contract_ids = []
-      if contracts.exists?
+      if with_contracts
         contract_ids = TaskPrompt.ask_for_ids(
           "Contract IDs to refill (comma or space separated, leave blank to fill every contract of the organization, " \
           "or none when subscription IDs were listed): "
@@ -37,7 +46,6 @@ namespace :recipes do
         end
       end
 
-      # Listing IDs at either prompt limits the run to the listed ones
       listed = subscription_ids.any? || contract_ids.any?
       subscriptions = subscriptions.none if listed && subscription_ids.empty?
       contracts = contracts.none if listed && contract_ids.empty?
