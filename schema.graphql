@@ -7362,7 +7362,12 @@ type Fee implements InvoiceItem {
   preciseUnitAmount: Float!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
+  product: Product
+  productFilter: ProductFilter
   properties: FeeProperties
+  rateCardRate: RateCardRate
+  rateModel: RateCardRateModelEnum
+  rateOverride: RateOverride
   subTotalExcludingTaxesAmountCents: BigInt!
   subTotalExcludingTaxesPreciseAmountCents: Float!
   subscription: Subscription
@@ -8135,6 +8140,7 @@ type Invoice {
   prepaidCreditAmountCents: BigInt!
   prepaidGrantedCreditAmountCents: BigInt
   prepaidPurchasedCreditAmountCents: BigInt
+  productCatalogContracts: [InvoiceProductCatalogContract!]
   progressiveBillingCreditAmountCents: BigInt!
   purchaseOrderNumber: String
   readyForPaymentProcessing: Boolean!
@@ -8313,6 +8319,29 @@ enum InvoicePaymentStatusTypeEnum {
   failed
   pending
   succeeded
+}
+
+type InvoiceProductCatalogContract {
+  contract: Contract!
+  productCatalogSections: [InvoiceProductCatalogSection!]!
+}
+
+type InvoiceProductCatalogFilterGroup {
+  amountCents: BigInt!
+  feesCount: Int!
+  productFilter: ProductFilter!
+}
+
+type InvoiceProductCatalogProductGroup {
+  amountCents: BigInt!
+  feesCount: Int!
+  filters: [InvoiceProductCatalogFilterGroup!]!
+  product: Product!
+}
+
+type InvoiceProductCatalogSection {
+  productCategory: ProductCategory
+  products: [InvoiceProductCatalogProductGroup!]!
 }
 
 enum InvoiceSettlementTypeEnum {
