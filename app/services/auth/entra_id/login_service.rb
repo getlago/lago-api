@@ -21,6 +21,7 @@ module Auth
         check_userinfo(result.email)
 
         return login_method_not_authorized_failure unless integration_organization_allows_login_method?
+        return result.forbidden_failure!(code: "sandbox_managed_by_production") if sandbox_refuses_new_member?
 
         find_or_create_user
         return login_method_not_authorized_failure unless user_trusted_by_integration?(result.user)
@@ -77,20 +78,6 @@ module Auth
           Signups::CloseAttemptsService.call!(normalized_email: PendingSignup.normalize_email(result.email))
           user
         end.value
-      end
-
-      # A membership of any status is kept as is, so a revoked member is not added back.
-      def find_or_create_membership
-        organization = result.entra_id_integration.organization
-        return if result.user.memberships.exists?(organization_id: organization.id)
-
-        ActiveRecord::Base.transaction do
-          Organizations::SandboxLockService.call!(organization:)
-          membership = result.user.memberships.find_or_create_by!(organization_id: organization.id)
-          next unless membership.previously_new_record?
-
-          Memberships::SyncSandboxService.call!(organization:, user: result.user, actor: result.user)
-        end
       end
     end
   end
