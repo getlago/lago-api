@@ -21,6 +21,7 @@ module Auth
         query_okta_access_token
         check_userinfo(result.email)
         return login_method_not_authorized_failure unless integration_organization_allows_login_method?
+        return login_method_not_authorized_failure unless user_trusted_by_integration?(result.invite.existing_user)
 
         Invites::AcceptService.new.call(
           invite: result.invite,
@@ -29,7 +30,7 @@ module Auth
           password: SecureRandom.hex,
           login_method: Organizations::AuthenticationMethods::OKTA,
           token_claims: sso_token_claims
-        )
+        ) { |user| user_trusted_by_integration?(user) }
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)
       rescue LagoHttpClient::HttpError
