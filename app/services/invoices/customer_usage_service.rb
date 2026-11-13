@@ -17,7 +17,8 @@ module Invoices
       with_zero_units_filters: true,
       usage_filters: UsageFilters::NONE,
       use_usage_buckets: false,
-      cache_prefilter: false
+      cache_prefilter: false,
+      raise_on_server_error: false
     )
       super
 
@@ -31,6 +32,7 @@ module Invoices
       @usage_filters = usage_filters
       @use_usage_buckets = use_usage_buckets
       @cache_prefilter = cache_prefilter
+      @raise_on_server_error = raise_on_server_error
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
@@ -69,7 +71,7 @@ module Invoices
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :with_projection, :with_zero_units_filters
-    attr_reader :usage_filters, :use_usage_buckets, :cache_prefilter
+    attr_reader :usage_filters, :use_usage_buckets, :cache_prefilter, :raise_on_server_error
 
     delegate :plan, to: :subscription
     delegate :billing_entity, to: :customer
@@ -259,7 +261,7 @@ module Invoices
       #       count-based branch, which would dilute the rate with the excluded non-taxable fees.
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
 
-      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: taxable_fees)
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: taxable_fees, raise_on_server_error:)
 
       return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
 
