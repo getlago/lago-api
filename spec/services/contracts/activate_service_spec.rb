@@ -95,9 +95,10 @@ RSpec.describe Contracts::ActivateService do
       create(:rate_card_rate, organization:, rate_card:, effective_from: started_at, billing_interval_count: 1, billing_interval_unit: "month")
     end
 
-    it "does not create a periodic operation" do
+    it "does not create a periodic operation and clears the billing date" do
       expect(contract_rate_card.periodic_billing_action).to be_nil
       expect { result }.not_to change(BillingOperation, :count)
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
     end
   end
 

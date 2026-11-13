@@ -27,7 +27,8 @@ RSpec.describe "Graduated flat fees and filter buckets across a rate change" do
           }, perform_jobs: false)
           perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
         else
-          BillingOperations::ProcessJob.perform_now(customer.id)
+          BillingOperations::ScheduleJob.perform_now(customer.id)
+          perform_all_enqueued_jobs(only: [BillingOperations::ProcessJob])
         end
       end
     end

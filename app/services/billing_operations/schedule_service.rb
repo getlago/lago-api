@@ -38,7 +38,12 @@ module BillingOperations
 
     def schedule_card(contract_rate_card)
       action_type = contract_rate_card.periodic_billing_action
-      return unless action_type
+      # A card with no periodic action has no next obligation. Resetting a clock seeded
+      # before that rule clears it, so the clock stops finding the card due on every run.
+      unless action_type
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp:)
+        return
+      end
 
       previous_operation = contract_rate_card.billing_operations.periodic.completed
         .where(organization_id: customer.organization_id, action_type:, cancelled_at: nil)

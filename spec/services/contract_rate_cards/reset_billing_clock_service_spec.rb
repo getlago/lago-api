@@ -90,4 +90,18 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
     end
   end
+
+  context "when the card has no periodic action" do
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: :sum_agg, recurring: false, field_name: "units")
+    end
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance", display_on_invoice: false) }
+
+    it "clears the clock, as no obligation falls due" do
+      expect(result).to be_success
+      expect(result.planned_operation).to be_nil
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+    end
+  end
 end

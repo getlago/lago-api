@@ -35,7 +35,7 @@ describe "Billing operations discovered by the clocks and invoiced" do
 
   def run_billing_clocks
     perform_enqueued_jobs do
-      Clock::ProcessBillingOperationsJob.perform_now
+      Clock::ScheduleBillingOperationsJob.perform_now
     end
   end
 

@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe "Contract usage billing behavior" do
+  # Bills as the hourly clock does: due operations are persisted first, then processed.
+  def bill_due_operations(timestamp)
+    BillingOperations::ScheduleService.call!(customer:, timestamp:)
+    BillingOperations::ProcessService.call!(customer:, timestamp:)
+  end
+
   let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
   let(:customer) { create(:customer, organization:, currency: "USD", timezone: "UTC") }
   let(:started_at) { Time.zone.parse("2026-10-06 00:00:00") }
@@ -390,7 +396,7 @@ RSpec.describe "Contract usage billing behavior" do
 
   describe "recurring weighted SUM" do
     subject(:billing_result) do
-      BillingOperations::ProcessService.call!(customer:, timestamp: boundary)
+      bill_due_operations(boundary)
     end
 
     let(:started_at) { Time.zone.parse("2026-10-02 00:00:00") }
@@ -410,7 +416,7 @@ RSpec.describe "Contract usage billing behavior" do
 
     context "when manually billing the monthly contract" do
       subject(:manual_billing) do
-        BillingOperations::ProcessService.call!(customer:, timestamp: end_on)
+        bill_due_operations(end_on)
       end
 
       let(:end_on) { Time.zone.parse("2026-11-02 00:00:00") }
@@ -428,9 +434,9 @@ RSpec.describe "Contract usage billing behavior" do
         it "creates finalized invoices for both periods in separate processing runs" do
           first_run = manual_billing
           expect(first_run.invoices.map(&:total_amount_cents)).to eq([1000])
-          expect(card.billing_operations.pending.sole.billing_at).to be <= end_on
+          expect(card.reload.next_billing_at).to be <= end_on
 
-          second_run = BillingOperations::ProcessService.call!(customer:, timestamp: end_on)
+          second_run = bill_due_operations(end_on)
           invoices = first_run.invoices + second_run.invoices
 
           expect(invoices.map { |invoice| [invoice.status, invoice.total_amount_cents] })
@@ -443,7 +449,7 @@ RSpec.describe "Contract usage billing behavior" do
 
     it "carries ten units into an eventless second period" do
       billing_result
-      second_period = BillingOperations::ProcessService.call!(customer:, timestamp: boundary + 1.month)
+      second_period = bill_due_operations(boundary + 1.month)
 
       expect(second_period.invoices.sole.fees.sole).to have_attributes(units: 10, amount_cents: 1000)
     end
@@ -505,7 +511,7 @@ RSpec.describe "Contract usage billing behavior" do
     context "when catching up through separate processing runs" do
       subject(:invoices) do
         Array.new(3) do
-          BillingOperations::ProcessService.call!(customer:, timestamp: boundary + 2.months).invoices
+          bill_due_operations(boundary + 2.months).invoices
         end.flatten
       end
 
@@ -530,8 +536,8 @@ RSpec.describe "Contract usage billing behavior" do
 
     context "when billing runs naturally on a three-day cadence" do
       subject(:natural_invoice) do
-        Clock::ProcessBillingOperationsJob.perform_now
-        perform_all_enqueued_jobs(only: [BillingOperations::ProcessJob])
+        Clock::ScheduleBillingOperationsJob.perform_now
+        perform_all_enqueued_jobs(only: [BillingOperations::ScheduleJob, BillingOperations::ProcessJob])
         Invoice.where(customer:).sole
       end
 
@@ -566,7 +572,7 @@ RSpec.describe "Contract usage billing behavior" do
     subject(:natural_invoices) do
       [boundary, observed_at].each do |timestamp|
         travel_to(timestamp)
-        Clock::ProcessBillingOperationsJob.perform_now
+        Clock::ScheduleBillingOperationsJob.perform_now
         perform_all_enqueued_jobs(only: billing_jobs)
       end
       Invoice.where(customer:).to_a
@@ -578,7 +584,7 @@ RSpec.describe "Contract usage billing behavior" do
     let(:billing_interval_unit) { :day }
     let(:boundary) { started_at + 1.day }
     let(:observed_at) { boundary + 8.hours + 11.minutes }
-    let(:billing_jobs) { [BillingOperations::ProcessJob] }
+    let(:billing_jobs) { [BillingOperations::ScheduleJob, BillingOperations::ProcessJob] }
     let(:fees) { Fee.where(contract:, fee_type: :product).order(:created_at).to_a }
 
     before do
@@ -626,9 +632,9 @@ RSpec.describe "Contract usage billing behavior" do
     context "without paid-fee regrouping" do
       let(:regroup) { nil }
 
-      it "advances the daily billing date without invoicing any fees" do
+      it "clears the billing date without invoicing any fees" do
         expect(natural_invoices).to eq([])
-        expect(card.reload.next_billing_at).to eq(boundary + 1.day)
+        expect(card.reload.next_billing_at).to be_nil
         expect(contract.reload).to be_active
         expect(fees.map { |fee| fee.reload.invoice_id }).to eq([nil] * 5)
         expect(fees.map(&:amount_cents)).to eq([300, 700, 100, 100, 100])
@@ -644,7 +650,7 @@ RSpec.describe "Contract usage billing behavior" do
 
     context "when manually billing a separate monthly fixture early" do
       subject(:manual_billing) do
-        BillingOperations::ProcessService.call!(customer:, timestamp: boundary)
+        bill_due_operations(boundary)
       end
 
       let(:billing_interval_unit) { :month }
@@ -663,7 +669,7 @@ RSpec.describe "Contract usage billing behavior" do
         manual_billing
 
         expect do
-          retry_result = BillingOperations::ProcessService.call!(customer:, timestamp: boundary)
+          retry_result = bill_due_operations(boundary)
           expect(retry_result.invoices).to eq([])
         end.not_to change(Invoice, :count)
       end

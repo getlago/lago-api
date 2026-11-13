@@ -42,6 +42,22 @@ RSpec.describe BillingOperations::ScheduleService do
     expect(contract_rate_card.billing_operations.count).to eq(1)
   end
 
+  context "when a due card has no periodic action" do
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: :sum_agg, recurring: false, field_name: "units")
+    end
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:rate_card) do
+      create(:rate_card, organization:, product:, billing_timing: "advance", display_on_invoice: false, currency: "USD")
+    end
+
+    it "clears the clock without persisting an operation" do
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+      expect(ContractRateCard.due_for_billing(timestamp)).not_to include(contract_rate_card)
+    end
+  end
+
   context "with fixed advance billing" do
     let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
     let(:cursor) { started_at }
