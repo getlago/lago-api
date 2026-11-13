@@ -60,7 +60,9 @@ module Admin
     def mirrored_text
       return "" if audit_log.batch_id.blank?
 
-      sandbox = CsAdminAuditLog.where(batch_id: audit_log.batch_id).where.not(organization_id: audit_log.organization_id)
+      # A rollback shares the batch of the entry it reverts: only the sandbox rows written with this one count.
+      sandbox = CsAdminAuditLog.where(batch_id: audit_log.batch_id, created_at: audit_log.created_at..)
+        .where(organization_id: Organization.where(production_organization_id: audit_log.organization_id).select(:id))
         .first&.organization
       sandbox ? " (mirrored to *#{escape_mrkdwn(sandbox.name)}*)" : ""
     end

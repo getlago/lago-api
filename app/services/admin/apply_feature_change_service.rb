@@ -40,15 +40,18 @@ module Admin
           after_value: enabled,
           reason:,
           rollback_of:,
-          # Shared with the rows of the sandbox copy, which the Slack message names.
-          batch_id: rollback_of&.batch_id || (SecureRandom.uuid if Organization.exists?(production_organization_id: organization.id))
+          batch_id: rollback_of&.batch_id
         )
         audit_log.validate!
 
         update_feature!
+        sync = ::Organizations::SyncSandboxSettingsService.call!(organization:, actor:)
+        mirrored = mirrored_changes(sync)
+        # Shared with the rows of the sandbox copy, which the Slack message names: set from what the sync changed.
+        audit_log.batch_id ||= SecureRandom.uuid if mirrored.any?
         audit_log.save!
         result.audit_log = audit_log
-        mirror_to_sandbox(audit_log)
+        mirrored.each { |type, key, added| mirror_audit_log(sync.sandbox_organization, audit_log, type, key, added:) }
 
         after_commit do
           Admin::SlackNotificationJob.perform_later(audit_log.id)
@@ -68,15 +71,13 @@ module Admin
 
     attr_reader :actor, :organization, :feature_type, :feature_key, :enabled, :reason, :notify_org_admin, :rollback_of
 
-    # One audit row per setting the sandbox gained or lost, in the batch of the production row.
-    def mirror_to_sandbox(audit_log)
-      sync = ::Organizations::SyncSandboxSettingsService.call!(organization:, actor:)
-      return unless sync.sandbox_organization
+    # One [type, key, added] per feature the sandbox gained or lost, each logged in the batch of the production row.
+    def mirrored_changes(sync)
+      {premium_integrations: "premium_integration", feature_flags: "feature_flag"}.flat_map do |setting, type|
+        change = sync.changes[setting]
+        next [] unless change
 
-      {premium_integrations: "premium_integration", feature_flags: "feature_flag"}.each do |setting, type|
-        change = sync.changes[setting] || next
-        change[:added].each { mirror_audit_log(sync.sandbox_organization, audit_log, type, it, added: true) }
-        change[:removed].each { mirror_audit_log(sync.sandbox_organization, audit_log, type, it, added: false) }
+        change[:added].map { [type, it, true] } + change[:removed].map { [type, it, false] }
       end
     end
 
