@@ -155,16 +155,19 @@ describe PlanWallets::UpdateService do
       ["a null currency", {currency: nil}, {currency: ["value_is_invalid"]}],
       ["a null code", {code: nil}, {code: ["value_is_mandatory"]}],
       ["a null priority", {priority: nil}, {priority: ["value_is_invalid"]}],
-      ["a priority above 50", {priority: 51}, {priority: ["value_is_invalid"]}],
-      ["a top-up maximum below the minimum", {top_up_min_amount_cents: 1000, top_up_max_amount_cents: 999}, {top_up_max_amount_cents: ["value_is_out_of_range"]}],
+      ["a priority above 50", {priority: 51}, {priority: ["value_is_out_of_range"]}, {priority: {max: 50}}],
+      ["an unknown tax application", {tax_application: "tax_free"}, {tax_application: ["value_is_invalid"]}, {tax_application: {allowed_values: %w[tax_on_consumption tax_on_purchase]}}],
+      ["a null tax application", {tax_application: nil}, {tax_application: ["value_is_invalid"]}, {tax_application: {allowed_values: %w[tax_on_consumption tax_on_purchase]}}],
+      ["a top-up maximum below the minimum", {top_up_min_amount_cents: 1000, top_up_max_amount_cents: 999}, {top_up_max_amount_cents: ["value_is_out_of_range"]}, {top_up_max_amount_cents: {min: 1000}}],
       ["an excluded scope", {applies_to: {exclude: []}}, {"applies_to.exclude": ["not_supported"]}]
-    ].each do |description, overrides, messages|
+    ].each do |description, overrides, messages, meta|
       context "with #{description}" do
         let(:params) { {name: "Credits"}.merge(overrides) }
 
         it "fails on that field and changes nothing" do
           expect(result).not_to be_success
           expect(result.error.messages).to eq(messages)
+          expect(result.error.meta).to eq(meta || {})
           expect(plan_wallet.reload).to have_attributes(name: "Prepaid credits", code: "ai_credits", currency: "USD", priority: 10)
         end
       end
