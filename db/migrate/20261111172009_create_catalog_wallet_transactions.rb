@@ -69,6 +69,8 @@ class CreateCatalogWalletTransactions < ActiveRecord::Migration[8.1]
       SQL
       t.check_constraint "(status = 'settled') = (settled_at IS NOT NULL)",
         name: "catalog_wallet_transactions_settled_at_with_status"
+      t.check_constraint "(status = 'failed') = (failed_at IS NOT NULL)",
+        name: "catalog_wallet_transactions_failed_at_with_status"
       t.check_constraint "request_digest ~ '^[0-9a-f]{64}$'",
         name: "catalog_wallet_transactions_request_digest_format"
     end

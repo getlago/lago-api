@@ -39,7 +39,7 @@ class CatalogWalletTransaction < ApplicationRecord
     numericality: {only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: :credit_amount_cents},
     allow_nil: true
 
-  scope :in_spending_order, -> { order(:priority, Arel.sql("purchase_amount_cents > 0"), :created_at, :id) }
+  scope :in_spending_order, -> { order(:priority, arel_table[:purchase_amount_cents].gt(0), :created_at, :id) }
 end
 
 # == Schema Information

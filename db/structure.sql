@@ -3038,6 +3038,7 @@ CASE direction
     WHEN 'outbound'::public.catalog_wallet_transaction_direction THEN ((reason = ANY (ARRAY['invoice_application'::public.catalog_wallet_transaction_reason, 'void'::public.catalog_wallet_transaction_reason])) AND (num_nonnulls(purchase_amount_cents, remaining_credit_amount_cents) = 0))
     ELSE NULL::boolean
 END),
+    CONSTRAINT catalog_wallet_transactions_failed_at_with_status CHECK (((status = 'failed'::public.catalog_wallet_transaction_status) = (failed_at IS NOT NULL))),
     CONSTRAINT catalog_wallet_transactions_remaining_non_negative CHECK ((remaining_credit_amount_cents >= 0)),
     CONSTRAINT catalog_wallet_transactions_remaining_within_credit CHECK ((remaining_credit_amount_cents <= credit_amount_cents)),
     CONSTRAINT catalog_wallet_transactions_request_digest_format CHECK (((request_digest)::text ~ '^[0-9a-f]{64}$'::text)),
