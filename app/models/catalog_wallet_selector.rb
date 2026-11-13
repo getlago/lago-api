@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class CatalogWalletSelector < ApplicationRecord
+  include PaperTrailTraceable
+
   SELECTOR_TYPES = {
     fee_type: "fee_type",
     product_category: "product_category",
@@ -23,6 +25,15 @@ class CatalogWalletSelector < ApplicationRecord
   enum :selector_type, SELECTOR_TYPES, validate: true, prefix: true
   enum :fee_type, FEE_TYPES, validate: {allow_nil: true}, prefix: true
 
+  validates :fee_type, presence: true, if: :selector_type_fee_type?
+  validates :product_category, presence: true, if: :selector_type_product_category?
+  validates :product, presence: true, if: :selector_type_product?
+  validates :product_filter, presence: true, if: :selector_type_product_filters?
+  validates :fee_type, absence: true, unless: :selector_type_fee_type?
+  validates :product_category, absence: true, unless: :selector_type_product_category?
+  validates :product, absence: true, unless: :selector_type_product?
+  validates :product_filter, absence: true, unless: :selector_type_product_filters?
+  validates :with_product_filters, exclusion: {in: [true], message: :present}, unless: :selector_type_product?
   validates_with ParentPresenceValidator, parents: %i[plan_wallet catalog_wallet], error: :exactly_one_owner_required
 end
 
