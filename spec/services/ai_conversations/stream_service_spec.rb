@@ -153,6 +153,35 @@ RSpec.describe AiConversations::StreamService do
       end
     end
 
+    context "with the key the agent calls the API with" do
+      let(:membership) { create(:membership, role: create(:role, :finance)) }
+      let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:) }
+
+      it "calls the MCP server with a key minted for the member, then expires it" do
+        api_key = nil
+        allow(LagoMcpClient::Config).to receive(:new) do |lago_api_key:, **|
+          api_key = ApiKey.find_by(value: lago_api_key)
+          instance_double(LagoMcpClient::Config)
+        end
+        allow(mistral_agent_mock).to receive(:chat) { expect(api_key).to be_present }
+
+        service.call
+
+        expect(api_key.membership).to eq(membership)
+        expect(api_key.permissions).to eq(ApiKeys::MemberPermissions.for(membership))
+        expect(ApiKey.unscoped.find(api_key.id)).to be_expired
+      end
+
+      it "expires the key when the turn fails" do
+        allow(mistral_agent_mock).to receive(:chat).and_raise(StandardError.new("Connection timeout"))
+
+        service.call
+
+        expect(ApiKey.unscoped.where(membership:)).to all(be_expired)
+        expect(ApiKey.unscoped.where(membership:)).to exist
+      end
+    end
+
     context "when an error occurs during streaming" do
       it "logs the error and sends it to frontend" do
         error = StandardError.new("Connection timeout")

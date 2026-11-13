@@ -372,6 +372,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_attribution_types DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_189f2a3949;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_1811b32fcd;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_173327f0dc;
+ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS fk_rails_15f2e97278;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
@@ -1048,6 +1049,7 @@ DROP INDEX IF EXISTS public.index_applied_add_ons_on_add_on_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_applied_add_ons_on_add_on_id;
 DROP INDEX IF EXISTS public.index_api_keys_on_value;
 DROP INDEX IF EXISTS public.index_api_keys_on_organization_id;
+DROP INDEX IF EXISTS public.index_api_keys_on_membership_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_membership_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
@@ -2417,7 +2419,8 @@ CREATE TABLE public.api_keys (
     expires_at timestamp(6) without time zone,
     last_used_at timestamp(6) without time zone,
     name character varying,
-    permissions jsonb NOT NULL
+    permissions jsonb NOT NULL,
+    membership_id uuid
 );
 
 
@@ -8618,6 +8621,13 @@ CREATE INDEX index_ai_conversations_on_organization_id ON public.ai_conversation
 
 
 --
+-- Name: index_api_keys_on_membership_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_api_keys_on_membership_id ON public.api_keys USING btree (membership_id);
+
+
+--
 -- Name: index_api_keys_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13350,6 +13360,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 
 --
+-- Name: api_keys fk_rails_15f2e97278; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT fk_rails_15f2e97278 FOREIGN KEY (membership_id) REFERENCES public.memberships(id);
+
+
+--
 -- Name: entitlement_entitlements fk_rails_173327f0dc; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16263,6 +16281,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261109122133'),
 ('20261109082523'),
 ('20261106220629'),
+('20261106100001'),
+('20261106100000'),
 ('20261104134700'),
 ('20261104133620'),
 ('20261103084714'),

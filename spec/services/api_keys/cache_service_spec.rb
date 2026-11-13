@@ -46,6 +46,16 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
         .with(anything, described_class::INVALIDATED_MARKER, expires_in: described_class::INVALIDATED_MARKER_TTL)
         .exactly(3).times
     end
+
+    it "also invalidates the keys minted for the AI agent" do
+      member_key = ApiKeys::CreateMemberKeyService.call!(membership: create(:membership, organization:)).api_key
+      allow(Rails.cache).to receive(:write)
+
+      described_class.expire_all_cache(organization)
+
+      expect(Rails.cache).to have_received(:write)
+        .with("api_key/#{described_class::CACHE_KEY_VERSION}/#{member_key.value}", described_class::INVALIDATED_MARKER, anything)
+    end
   end
 
   describe "#call" do
@@ -136,6 +146,28 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
 
         it "does not return the cache key and organization" do
           expect(cache_service.call).to eq([nil, nil])
+        end
+      end
+
+      context "when the cached value was written by a release without member keys" do
+        let(:membership) { create(:membership, organization:) }
+        let(:api_key) { ApiKeys::CreateMemberKeyService.call!(membership:).api_key }
+
+        before do
+          Rails.cache.write(cache_service.cache_key, {
+            api_key: api_key.attributes.except("membership_id"),
+            organization: organization.attributes
+          }.to_json)
+        end
+
+        it "reads the key from the database, with its membership" do
+          expect(cache_service.call.first.membership_id).to eq(membership.id)
+        end
+
+        it "caches it again with its membership" do
+          cache_service.call
+
+          expect(JSON.parse(Rails.cache.read(cache_service.cache_key))["api_key"]["membership_id"]).to eq(membership.id)
         end
       end
     end

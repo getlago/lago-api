@@ -19,7 +19,8 @@ module ApiKeys
     end
 
     def self.expire_all_cache(organization)
-      organization.api_keys.each { expire_cache(it.value) }
+      # Not organization.api_keys, which leaves out the keys minted for the AI agent.
+      ApiKey.where(organization:).find_each { expire_cache(it.value) }
     end
 
     def expire_cache
@@ -36,10 +37,16 @@ module ApiKeys
         cache_json = JSON.parse(cache)
         api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
 
-        # Avoid returning an expired API key
-        unless api_key.expired?
-          organization = Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))
-          return api_key, organization
+        # An entry cached by a release that predates member keys has no membership_id: it is dropped
+        # and read again from the database, rather than taken for an organization key.
+        if cache_json["api_key"].key?("membership_id")
+          # Avoid returning an expired API key
+          unless api_key.expired?
+            organization = Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))
+            return api_key, organization
+          end
+        else
+          Rails.cache.delete(cache_key)
         end
       end
 

@@ -16,6 +16,8 @@ class ApiKey < ApplicationRecord
   attribute :permissions, default: -> { default_permissions }
 
   belongs_to :organization
+  # Set on the short-lived keys minted for the AI agent, which act with the member's permissions.
+  belongs_to :membership, optional: true
 
   before_create :set_value
 
@@ -37,13 +39,18 @@ class ApiKey < ApplicationRecord
   end
 
   def permit?(resource, mode)
-    return true unless organization.api_permissions_enabled?
+    # A member key stands in for a member of the dashboard: its permissions apply whatever the plan.
+    return true unless member_key? || organization.api_permissions_enabled?
 
     Array(permissions[resource]).include?(mode)
   end
 
   def self.default_permissions
     RESOURCES.index_with { MODES.dup }
+  end
+
+  def member_key?
+    membership_id.present?
   end
 
   def expired?(time = Time.current)
@@ -93,14 +100,17 @@ end
 #  value           :string           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
+#  membership_id   :uuid
 #  organization_id :uuid             not null
 #
 # Indexes
 #
+#  index_api_keys_on_membership_id    (membership_id)
 #  index_api_keys_on_organization_id  (organization_id)
 #  index_api_keys_on_value            (value) UNIQUE
 #
 # Foreign Keys
 #
+#  fk_rails_...  (membership_id => memberships.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #
