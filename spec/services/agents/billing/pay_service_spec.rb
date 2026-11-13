@@ -168,6 +168,55 @@ RSpec.describe Agents::Billing::PayService, :premium do
     end
   end
 
+  context "when the merchant changes the Stripe connection during the agent's first payment", transaction: false do
+    let(:connection_b) { create(:stripe_provider, organization:, code: "stripe_b", seller_profile: "profile_b") }
+    let(:paused) { Queue.new }
+    let(:resume) { Queue.new }
+
+    let(:payment) do
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          described_class.call(storefront: storefront.class.find(storefront.id), registration: registration.class.find(registration.id), params:)
+        end
+      end
+    end
+
+    let(:switch_to_b) do
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          Integrations::AgentStorefront::UpdateService.call(integration: storefront.class.find(storefront.id), params: {payment_provider_code: connection_b.code})
+        end
+      end
+    end
+
+    before do
+      registration
+      connection_b
+      storefront.stripe_provider.update!(seller_profile: "profile_test_123")
+
+      # Pauses the agent's first payment while Stripe creates its customer.
+      allow(::Stripe::Customer).to receive(:create) do
+        paused << true
+        resume.pop
+        ::Stripe::Customer.construct_from(id: "cus_agent")
+      end
+    end
+
+    it "makes the change wait for the payment, then refuses it" do
+      payment
+      paused.pop
+      switch_to_b
+      expect(switch_to_b.join(1)).to be_nil
+
+      resume << true
+      expect(payment.value).to be_success
+      expect(switch_to_b.value.error.messages).to eq(payment_provider_code: ["agent_storefront_has_enrolled_agents"])
+
+      expect(storefront.reload.stripe_provider.code).not_to eq("stripe_b")
+      expect(customer.stripe_customer.payment_provider).to eq(storefront.stripe_provider)
+    end
+  end
+
   context "when the same token is sent twice at once", transaction: false do
     it "pays once and answers the second request with the same top-up" do
       registration

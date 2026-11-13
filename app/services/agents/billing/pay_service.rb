@@ -103,6 +103,8 @@ module Agents
         registration.with_lock do
           next if customer.reload.stripe_customer&.provider_customer_id.present?
 
+          # Waits for a connection change in progress, and holds the next one until this customer is committed.
+          storefront.lock!("FOR SHARE")
           customer.update!(payment_provider: "stripe", payment_provider_code: storefront.payment_provider_code)
           PaymentProviders::Stripe::Customers::CreateService.call!(
             customer:,
