@@ -10,27 +10,30 @@ module Invites
     end
 
     def call
-      # First, so skip_admin_check cannot bypass it. Acceptance checks again under the lock.
-      if args[:current_organization].sandbox?
-        return result.forbidden_failure!(code: "sandbox_managed_by_production")
+      ActiveRecord::Base.transaction do
+        # First, so skip_admin_check cannot bypass it, and locked, so no invite lands on an organization being linked as
+        # a sandbox. Acceptance checks again under the lock.
+        Organizations::SandboxLockService.call!(organization: args[:current_organization])
+        return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
+        return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
+        return result unless valid?(args)
+
+        result.invite = Invite.create!(
+          organization_id: args[:current_organization].id,
+          email: args[:email],
+          token: generate_token,
+          roles: args[:roles]
+        )
+
+        result.invite_url = build_invite_url(result.invite.token)
+        after_commit { register_security_log }
       end
-      return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
-      return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
-      return result unless valid?(args)
-
-      result.invite = Invite.create!(
-        organization_id: args[:current_organization].id,
-        email: args[:email],
-        token: generate_token,
-        roles: args[:roles]
-      )
-
-      result.invite_url = build_invite_url(result.invite.token)
-      after_commit { register_security_log }
 
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
