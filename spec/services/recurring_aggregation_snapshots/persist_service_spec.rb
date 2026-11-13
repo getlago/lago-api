@@ -69,6 +69,20 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
         )
       end
 
+      context "with period attributes" do
+        subject(:result) { described_class.call(key:, to_datetime:, watermark:, buckets:, period_attributes:) }
+
+        let(:period_attributes) { {priced_product_filter_ids: [product_filter.id]} }
+        let(:values) { [{grouped_by: {"region" => "eu"}, units: 12}, {grouped_by: {"region" => "us"}, units: 3}] }
+
+        it "stores them on every row of the period" do
+          expect(result).to be_success
+          expect(contract_snapshots.where(to_datetime:).pluck(:grouped_by, :priced_product_filter_ids)).to contain_exactly(
+            [{"region" => "eu"}, [product_filter.id]], [{"region" => "us"}, [product_filter.id]]
+          )
+        end
+      end
+
       context "when another filter of the product holds a later run of the period" do
         before do
           create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:,

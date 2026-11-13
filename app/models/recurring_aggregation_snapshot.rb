@@ -12,18 +12,32 @@ class RecurringAggregationSnapshot < ApplicationRecord
   # The default bucket keeps a row for every closed period, which marks the period for all buckets
   scope :period_markers, -> { where(charge_filter_id: nil) }
 
-  # Snapshots are keyed on a subscription, which billing segments do not bill
+  # A charge is snapshotted under its subscription, a billing segment under its contract
   def self.eligible?(metered_item:, billing_context:)
-    metered_item.billing_segment.nil? &&
-      billing_context.subscription? &&
-      AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
+    owner_context = metered_item.billing_segment ? billing_context.contract? : billing_context.subscription?
+
+    owner_context && AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
   end
 
-  # Invoicing and pay in advance both check it, so they start the same charge from the same units
+  # Invoicing and pay in advance both check it, so they start the same charge from the same units.
+  # Contract snapshots are only written for now.
   def self.readable?(metered_item:, billing_context:)
     metered_item.billable_metric.recurring? &&
+      metered_item.billing_segment.nil? &&
       eligible?(metered_item:, billing_context:) &&
       RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
+  end
+
+  def self.key(metered_item:, billing_context:)
+    if metered_item.billing_segment
+      RecurringAggregationSnapshots::ContractKey.new(
+        contract: billing_context.contract,
+        product: metered_item.invoiceable,
+        product_filter: metered_item.contract_rate_card.rate_card.product_filter
+      )
+    else
+      RecurringAggregationSnapshots::SubscriptionKey.new(subscription: billing_context.subscription, charge: metered_item.charge)
+    end
   end
 
   # Arguments of RecurringAggregationSnapshots::FetchService shared by invoicing and pay in advance,
