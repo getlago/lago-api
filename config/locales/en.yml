@@ -13,7 +13,9 @@ en:
         country_not_supported: country_not_supported
         does_not_belong_to_product: does_not_belong_to_product
         environment_not_enabled: environment_not_enabled
+        exactly_one_owner_required: exactly_one_owner_required
         exactly_one_plan_required: exactly_one_plan_required
+        exactly_one_source_required: exactly_one_source_required
         exclusion: value_is_reserved
         feature_unavailable: feature_unavailable
         file_size_not_less_than: file_too_large
