@@ -5,6 +5,8 @@ class PlanWallet < ApplicationRecord
 
   belongs_to :catalog_plan, -> { with_discarded }
 
+  has_many :credit_allocations, class_name: "PlanWalletCreditAllocation"
+
   validates :code, uniqueness: {scope: :catalog_plan_id, conditions: -> { where(deleted_at: nil) }}
 end
 
