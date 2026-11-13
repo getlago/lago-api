@@ -20,8 +20,9 @@ RSpec.describe Subscriptions::DatesService do
     )
   end
 
-  let(:plan) { create_default(:plan, interval:, pay_in_advance:) }
+  let(:plan) { create_default(:plan, interval:, pay_in_advance:, bill_charges_monthly:) }
   let(:pay_in_advance) { false }
+  let(:bill_charges_monthly) { nil }
 
   let(:subscription_at) { DateTime.parse("02 Feb 2021") }
   let(:billing_date) { Time.zone.parse("2022-03-07 04:20:46.011") }
@@ -192,6 +193,20 @@ RSpec.describe Subscriptions::DatesService do
           fixed_charges_duration: 365
         )
       end
+
+      context "with charges billed monthly and a timestamp outside the first month" do
+        let(:bill_charges_monthly) { true }
+        let(:subscription_at) { DateTime.parse("06 Jul 2026") }
+        let(:timestamp) { Time.zone.parse("2026-10-15 10:00:00").to_i }
+
+        it "returns the yearly fixed charge period" do
+          expect(result).to eq(
+            fixed_charges_from_datetime: Time.parse("2026-07-06").utc.beginning_of_day,
+            fixed_charges_to_datetime: Time.parse("2027-07-05").utc.end_of_day,
+            fixed_charges_duration: 365
+          )
+        end
+      end
     end
 
     context "when interval is semiannual" do
@@ -203,6 +218,20 @@ RSpec.describe Subscriptions::DatesService do
           fixed_charges_to_datetime: Time.parse("2022-08-01").utc.end_of_day,
           fixed_charges_duration: 181
         )
+      end
+
+      context "with charges billed monthly and a timestamp outside the first month" do
+        let(:bill_charges_monthly) { true }
+        let(:subscription_at) { DateTime.parse("06 Jul 2026") }
+        let(:timestamp) { Time.zone.parse("2026-09-15 10:00:00").to_i }
+
+        it "returns the semiannual fixed charge period" do
+          expect(result).to eq(
+            fixed_charges_from_datetime: Time.parse("2026-07-06").utc.beginning_of_day,
+            fixed_charges_to_datetime: Time.parse("2027-01-05").utc.end_of_day,
+            fixed_charges_duration: 184
+          )
+        end
       end
     end
 
