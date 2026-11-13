@@ -48,6 +48,59 @@ RSpec.describe Resolvers::Admin::OrganizationsResolver do
     expect(organizations["collection"].map { |org| org["id"] }).to eq([hooli.id, acme.id])
   end
 
+  context "with a production organization and its sandbox" do
+    let(:query) do
+      <<~GQL
+        query {
+          adminOrganizations {
+            collection { id environment selfServe productionOrganization { id } sandboxOrganization { id } }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:production) { create(:organization, :self_serve, created_at: 4.hours.ago) }
+    let(:sandbox) do
+      create(:organization, :self_serve, :sandbox, production_organization: production, created_at: 3.hours.ago)
+    end
+
+    let(:standalone) do
+      {"environment" => "production", "selfServe" => false, "productionOrganization" => nil,
+       "sandboxOrganization" => nil}
+    end
+
+    before { sandbox }
+
+    context "with self-serve enabled" do
+      include_context "with self-serve enabled"
+
+      it "shows the environment and the pair of each organization, without membership", :premium do
+        result = fetch
+
+        expect(result["metadata"]["totalCount"]).to eq(4)
+        expect(result["collection"]).to eq([
+          {"id" => sandbox.id, "environment" => "sandbox", "selfServe" => true,
+           "productionOrganization" => {"id" => production.id}, "sandboxOrganization" => nil},
+          {"id" => production.id, "environment" => "production", "selfServe" => true, "productionOrganization" => nil,
+           "sandboxOrganization" => {"id" => sandbox.id}},
+          {"id" => hooli.id, **standalone},
+          {"id" => acme.id, **standalone}
+        ])
+      end
+    end
+
+    context "with self-serve disabled" do
+      include_context "with self-serve enabled"
+
+      let(:self_serve_env) { {"LAGO_SELF_SERVE_ENABLED" => "false"} }
+
+      it "shows every organization as a standalone production one", :premium do
+        expect(fetch["collection"]).to eq([sandbox, production, hooli, acme].map { {"id" => it.id, **standalone} })
+      end
+    end
+  end
+
   it "filters by name with the search term", :premium do
     organizations = fetch(searchTerm: "acme")
 

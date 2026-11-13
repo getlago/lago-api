@@ -101,6 +101,116 @@ RSpec.describe Resolvers::CurrentUserResolver do
     end
   end
 
+  describe "with a production organization and its sandbox" do
+    include_context "with self-serve enabled"
+
+    let(:query) do
+      <<~GRAPHQL
+        query {
+          currentUser {
+            memberships {
+              organization {
+                id selfServe environment
+                productionOrganization { id name slug }
+                sandboxOrganization { id name slug }
+              }
+            }
+            organizations { id }
+          }
+        }
+      GRAPHQL
+    end
+
+    let(:user) { create(:user) }
+    let(:production) { create(:organization, :self_serve) }
+    let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: production) }
+    let(:other) { create(:organization) }
+
+    def organizations_of(result)
+      result["data"]["currentUser"]["memberships"].map { it["organization"] }
+    end
+
+    def linked(organization)
+      {"id" => organization.id, "name" => organization.name, "slug" => organization.slug}
+    end
+
+    it "shows the pair, each sandbox right after its production organization, oldest membership first" do
+      create(:membership, user:, organization: other, created_at: 3.days.ago)
+      create(:membership, user:, organization: sandbox, created_at: 2.days.ago)
+      create(:membership, user:, organization: production, created_at: 1.day.ago)
+
+      result = execute_graphql(current_user: user, query:)
+
+      expect(organizations_of(result)).to eq([
+        {"id" => other.id, "selfServe" => false, "environment" => "production", "productionOrganization" => nil,
+         "sandboxOrganization" => nil},
+        {"id" => production.id, "selfServe" => true, "environment" => "production", "productionOrganization" => nil,
+         "sandboxOrganization" => linked(sandbox)},
+        {"id" => sandbox.id, "selfServe" => true, "environment" => "sandbox",
+         "productionOrganization" => linked(production), "sandboxOrganization" => nil}
+      ])
+      expect(result["data"]["currentUser"]["organizations"].pluck("id")).to eq([other.id, production.id, sandbox.id])
+    end
+
+    it "keeps a pair together when another membership falls between them" do
+      create(:membership, user:, organization: production, created_at: 3.days.ago)
+      create(:membership, user:, organization: other, created_at: 2.days.ago)
+      create(:membership, user:, organization: sandbox, created_at: 1.day.ago)
+
+      result = execute_graphql(current_user: user, query:)
+
+      expect(organizations_of(result).pluck("id")).to eq([production.id, sandbox.id, other.id])
+    end
+
+    it "hides a sandbox whose membership is revoked, and the link to it" do
+      create(:membership, user:, organization: production)
+      create(:membership, :revoked, user:, organization: sandbox)
+
+      result = execute_graphql(current_user: user, query:)
+
+      expect(organizations_of(result).pluck("id", "sandboxOrganization")).to eq([[production.id, nil]])
+    end
+
+    it "loads the links with the same number of queries whatever the number of pairs" do
+      pair_queries = lambda do
+        count = 0
+        counter = ->(*, payload) { count += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { execute_graphql(current_user: user, query:) }
+        count
+      end
+
+      create(:membership, user:, organization: production)
+      create(:membership, user:, organization: sandbox)
+      one_pair = pair_queries.call
+
+      2.times do
+        pair_production = create(:organization, :self_serve)
+        create(:membership, user:, organization: pair_production)
+        create(:membership, user:, organization: create(:organization, :sandbox, production_organization: pair_production))
+      end
+
+      expect(pair_queries.call).to eq(one_pair)
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "shows each organization of the pair as a standalone production one" do
+        create(:membership, user:, organization: production)
+        create(:membership, user:, organization: sandbox)
+
+        result = execute_graphql(current_user: user, query:)
+
+        expect(organizations_of(result)).to eq([
+          {"id" => production.id, "selfServe" => false, "environment" => "production",
+           "productionOrganization" => nil, "sandboxOrganization" => nil},
+          {"id" => sandbox.id, "selfServe" => false, "environment" => "production",
+           "productionOrganization" => nil, "sandboxOrganization" => nil}
+        ])
+      end
+    end
+  end
+
   context "with no current_user" do
     it "returns an error" do
       result = execute_graphql(query:)

@@ -12,6 +12,35 @@ module Types
           eu_tax_management: object&.eu_tax_management
         }
       end
+
+      # With self-serve off, every organization answers as a standalone production one, whatever its columns say.
+      def environment
+        Lago::SelfServe.enabled? ? object.environment : "production"
+      end
+
+      def self_serve
+        Lago::SelfServe.enabled? && object.self_serve
+      end
+
+      def production_organization
+        linked_organization(:production_organization) if Lago::SelfServe.enabled? && object.sandbox?
+      end
+
+      def sandbox_organization
+        linked_organization(:sandbox_organization) if Lago::SelfServe.enabled? && object.production?
+      end
+
+      private
+
+      # These types are reachable from the public invite query and from other members' memberships, so a linked
+      # organization is shown only to a viewer who is an active member of it.
+      def linked_organization(association)
+        viewer = context[:current_user]
+        return if viewer.nil?
+
+        linked = dataloader.with(Sources::ActiveRecordAssociation, association).load(object)
+        linked if linked && dataloader.with(Sources::UserActiveMembership, viewer.id).load(linked.id)
+      end
     end
   end
 end
