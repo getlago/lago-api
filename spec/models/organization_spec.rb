@@ -12,8 +12,19 @@ RSpec.describe Organization do
     )
   end
 
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:environment).backed_by_column_of_type(:enum).validating
+        .with_values(production: "production", sandbox: "sandbox")
+    end
+  end
+
   describe "associations" do
     it do
+      expect(subject).to belong_to(:production_organization).class_name("Organization").optional
+        .inverse_of(:sandbox_organization)
+      expect(subject).to have_one(:sandbox_organization).class_name("Organization")
+        .with_foreign_key(:production_organization_id).inverse_of(:production_organization).dependent(:restrict_with_error)
       expect(subject).to have_many(:stripe_payment_providers)
       expect(subject).to have_many(:gocardless_payment_providers)
       expect(subject).to have_many(:adyen_payment_providers)
@@ -277,6 +288,120 @@ RSpec.describe Organization do
         persisted_org = create(:organization)
         persisted_org.slug = nil
         expect(persisted_org).not_to be_valid
+      end
+    end
+
+    describe "of the defaults" do
+      subject(:organization) { create(:organization) }
+
+      it "is a production organization, not self-serve and unlinked" do
+        expect(organization.reload).to have_attributes(self_serve: false, environment: "production",
+          production_organization_id: nil)
+      end
+    end
+
+    describe "of self_serve" do
+      it "is invalid without a value" do
+        organization.self_serve = nil
+
+        expect(organization).not_to be_valid
+        expect(organization.errors.to_hash).to eq(self_serve: ["value_is_invalid"])
+      end
+    end
+
+    describe "of the sandbox link" do
+      let(:production) { create(:organization) }
+
+      context "with a sandbox linked to a production organization" do
+        subject(:organization) { build(:organization, :sandbox, production_organization: production) }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "with a sandbox without a production organization" do
+        subject(:organization) { build(:organization, environment: "sandbox") }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_is_mandatory"])
+        end
+      end
+
+      context "with a production organization with a link" do
+        subject(:organization) { build(:organization, production_organization: production) }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_must_be_blank"])
+        end
+      end
+
+      context "with a sandbox linked to another sandbox" do
+        subject(:organization) { build(:organization, :sandbox, production_organization: other_sandbox) }
+
+        let(:other_sandbox) { create(:organization, :sandbox, production_organization: production) }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_is_invalid"])
+        end
+      end
+
+      context "with a sandbox linked to itself" do
+        subject(:organization) { create(:organization, :sandbox, production_organization: production) }
+
+        before { organization.production_organization_id = organization.id }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_is_invalid"])
+        end
+      end
+
+      context "with an organization that owns a sandbox turned into a sandbox" do
+        subject(:organization) { production }
+
+        before do
+          create(:organization, :sandbox, production_organization: production)
+          production.assign_attributes(environment: "sandbox", production_organization: create(:organization))
+        end
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(environment: ["value_is_invalid"])
+        end
+      end
+
+      context "with a second sandbox of the same production organization" do
+        subject(:organization) { build(:organization, :sandbox, production_organization: production) }
+
+        before { create(:organization, :sandbox, production_organization: production) }
+
+        it "is invalid, and refused by the unique index" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_already_exist"])
+          expect { organization.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+      end
+
+      context "when destroying a production organization that owns a sandbox" do
+        before { create(:organization, :sandbox, production_organization: production) }
+
+        it "refuses with an error and keeps both organizations" do
+          expect(production.destroy).to be(false)
+          expect(production.errors.details[:base]).to eq([{error: :"restrict_dependent_destroy.has_one", record: "sandbox organization"}])
+          expect(described_class.where(id: production.id)).to exist
+        end
+      end
+
+      it "refuses a sandbox without a link in the database, for writes that skip validations" do
+        expect { production.update_columns(environment: "sandbox") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_environment_link/)
+      end
+
+      it "refuses a self link in the database, for writes that skip validations" do
+        expect { production.update_columns(environment: "sandbox", production_organization_id: production.id) } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_production_organization_not_self/)
       end
     end
 

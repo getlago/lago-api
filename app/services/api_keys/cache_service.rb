@@ -30,18 +30,8 @@ module ApiKeys
       # When no cache, just return the values from the database
       return fetch_from_database unless with_cache
 
-      # Fetch API key and organization from the cache
-      cache = Rails.cache.read(cache_key)
-      if cache && cache != INVALIDATED_MARKER
-        cache_json = JSON.parse(cache)
-        api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
-
-        # Avoid returning an expired API key
-        unless api_key.expired?
-          organization = Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))
-          return api_key, organization
-        end
-      end
+      cached = read_from_cache
+      return cached if cached
 
       # In last resort, fetch from the database and write to the cache
       api_key, organization = fetch_from_database
@@ -65,6 +55,25 @@ module ApiKeys
     def fetch_from_database
       api_key = ApiKey.includes(:organization).find_by(value: auth_token)
       [api_key, api_key&.organization]
+    end
+
+    def read_from_cache
+      cache = Rails.cache.read(cache_key)
+      return if cache.nil? || cache == INVALIDATED_MARKER
+
+      cache_json = JSON.parse(cache)
+      # An entry written before a column was added lacks it and would raise: use the database until it expires, as
+      # `write_to_cache` keeps existing entries. Unlike a CACHE_KEY_VERSION bump, this keeps one key across a deploy.
+      return unless complete?(cache_json["api_key"], ApiKey) && complete?(cache_json["organization"], Organization)
+
+      api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
+
+      # Avoid returning an expired API key
+      [api_key, Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))] unless api_key.expired?
+    end
+
+    def complete?(attributes, model)
+      (model.column_names - attributes.keys).empty?
     end
 
     def write_to_cache(api_key)

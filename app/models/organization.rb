@@ -144,11 +144,21 @@ class Organization < ApplicationRecord
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
 
+  belongs_to :production_organization, class_name: "Organization", optional: true, inverse_of: :sandbox_organization
+  # No path deletes an organization today; a future one gets an error instead of the foreign key's exception.
+  has_one :sandbox_organization, class_name: "Organization", foreign_key: :production_organization_id,
+    inverse_of: :production_organization, dependent: :restrict_with_error
+
   has_many :invoice_custom_sections
   has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"
   has_many :system_generated_invoice_custom_sections, -> { where(section_type: "system_generated") }, class_name: "InvoiceCustomSection"
 
   has_one_attached :logo
+
+  ENVIRONMENTS = {
+    production: "production",
+    sandbox: "sandbox"
+  }.freeze
 
   EVENTS_STORES = {
     clickhouse: "clickhouse",
@@ -202,6 +212,9 @@ class Organization < ApplicationRecord
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
+  # Declared, so the model loads in older migrations that run before the column exists.
+  attribute :environment, :string
+  enum :environment, ENVIRONMENTS, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
@@ -224,10 +237,18 @@ class Organization < ApplicationRecord
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
   validates :hmac_key, uniqueness: true
   validates :hmac_key, presence: true, on: :update
+  validates :self_serve, inclusion: {in: [true, false]}
+  validates :production_organization_id, presence: true, if: :sandbox?
+  validates :production_organization_id, absence: true, if: :production?
+  # The unique index is the race guard; this gives the same answer before the write.
+  validates :production_organization_id, uniqueness: true, allow_nil: true,
+    if: :will_save_change_to_production_organization_id?
 
   validate :validate_premium_integrations
   validate :validate_email_settings
   validate :validate_customer_portal_locked_fields
+  validate :validate_environment_link,
+    if: -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -386,6 +407,16 @@ class Organization < ApplicationRecord
     errors.add(:premium_integrations, :inclusion, value: premium_integrations)
   end
 
+  # A sandbox belongs to a production organization, never to itself or to another sandbox, and owns no sandbox.
+  def validate_environment_link
+    if production_organization_id.present? &&
+        (production_organization_id == id || production_organization&.sandbox?)
+      errors.add(:production_organization_id, :invalid)
+    end
+
+    errors.add(:environment, :invalid) if sandbox? && persisted? && sandbox_organization.present?
+  end
+
   def set_hmac_key
     loop do
       self.hmac_key = SecureRandom.uuid
@@ -424,6 +455,7 @@ end
 #  document_url_expiration_days  :integer          default(30), not null
 #  email                         :string
 #  email_settings                :string           default([]), not null, is an Array
+#  environment                   :enum             default("production"), not null
 #  eu_tax_management             :boolean          default(FALSE)
 #  feature_flags                 :string           default([]), not null, is an Array
 #  finalize_zero_amount_invoice  :boolean          default(TRUE), not null
@@ -438,6 +470,7 @@ end
 #  net_payment_term              :integer          default(0), not null
 #  pagination_max_page_size      :integer
 #  premium_integrations          :string           default([]), not null, is an Array
+#  self_serve                    :boolean          default(FALSE), not null
 #  slug                          :string           not null
 #  state                         :string
 #  tax_identification_number     :string
@@ -447,10 +480,16 @@ end
 #  zipcode                       :string
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
+#  production_organization_id    :uuid
 #
 # Indexes
 #
-#  index_organizations_on_api_key   (api_key) UNIQUE
-#  index_organizations_on_hmac_key  (hmac_key) UNIQUE
-#  index_organizations_on_slug      (slug) UNIQUE
+#  index_organizations_on_api_key                     (api_key) UNIQUE
+#  index_organizations_on_hmac_key                    (hmac_key) UNIQUE
+#  index_organizations_on_production_organization_id  (production_organization_id) UNIQUE
+#  index_organizations_on_slug                        (slug) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (production_organization_id => organizations.id)
 #
