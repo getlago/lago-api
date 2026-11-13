@@ -91,6 +91,17 @@ RSpec.describe Admin::OrganizationsController, type: [:request, :admin] do
 
         expect(response).to have_http_status(:unprocessable_entity)
       end
+
+      [["true"], {value: true}].each do |value|
+        it "refuses #{value.inspect}" do
+          expect do
+            admin_post("/admin/organizations", create_params.merge(self_serve: value), admin_headers)
+          end.not_to change(Organization, :count)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details]).to eq(self_serve: ["value_is_invalid"])
+        end
+      end
     end
 
     context "without self_serve" do
