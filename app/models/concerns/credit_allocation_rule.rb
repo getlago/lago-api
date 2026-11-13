@@ -28,6 +28,11 @@ module CreditAllocationRule
     validates :threshold_amount_cents, :purchase_amount_cents,
       numericality: {only_integer: true, greater_than_or_equal_to: 0},
       allow_nil: true
+    validates :threshold_amount_cents, :purchase_amount_cents, presence: true, if: :ongoing_balance?
+    validates :invoice_requires_successful_payment, inclusion: {in: [true, false]}, if: :ongoing_balance?
+    validates :product, :product_filter, :billing_cycles, absence: true, if: :ongoing_balance?
+    validates :threshold_amount_cents, :purchase_amount_cents, absence: true, if: :billing_cycle?
+    validates :invoice_requires_successful_payment, exclusion: {in: [true, false], message: :present}, if: :billing_cycle?
     validates_with ParentPresenceValidator,
       parents: %i[product product_filter],
       error: :exactly_one_source_required,
