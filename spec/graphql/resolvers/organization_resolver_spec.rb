@@ -38,6 +38,8 @@ RSpec.describe Resolvers::OrganizationResolver do
   end
 
   context "with a production organization and its sandbox" do
+    include_context "with self-serve enabled"
+
     let(:query) do
       <<~GQL
         query {
@@ -78,6 +80,21 @@ RSpec.describe Resolvers::OrganizationResolver do
       create(:membership, :revoked, user:, organization: sandbox)
 
       expect(fetch(production)["sandboxOrganization"]).to be_nil
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "shows each organization as a standalone production one" do
+        create(:membership, user:, organization: sandbox)
+        standalone = {
+          "selfServe" => false, "environment" => "production", "productionOrganization" => nil,
+          "sandboxOrganization" => nil
+        }
+
+        expect(fetch(production)).to eq(standalone)
+        expect(fetch(sandbox)).to eq(standalone)
+      end
     end
   end
 

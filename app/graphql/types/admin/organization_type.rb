@@ -16,11 +16,30 @@ module Types
       field :sandbox_organization, Types::Organizations::LinkedOrganizationType
       field :self_serve, Boolean, null: false
 
-      # Admin-only type: the pair is shown without the membership gate of the user-facing types.
-      dataload_association :production_organization, :sandbox_organization
-
       def feature_flags
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }
+      end
+
+      # As in the user-facing types, every organization answers as a standalone production one with self-serve off.
+      def environment
+        Lago::SelfServe.enabled? ? object.environment : "production"
+      end
+
+      def self_serve
+        Lago::SelfServe.enabled? && object.self_serve
+      end
+
+      # Admin-only type: the pair is shown without the membership gate of the user-facing types.
+      def production_organization
+        if Lago::SelfServe.enabled? && object.sandbox?
+          dataloader.with(Sources::ActiveRecordAssociation, :production_organization).load(object)
+        end
+      end
+
+      def sandbox_organization
+        if Lago::SelfServe.enabled? && object.production?
+          dataloader.with(Sources::ActiveRecordAssociation, :sandbox_organization).load(object)
+        end
       end
     end
   end
