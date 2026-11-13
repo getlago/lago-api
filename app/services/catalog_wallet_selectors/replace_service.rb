@@ -62,7 +62,9 @@ module CatalogWalletSelectors
 
       entry = entry.with_indifferent_access
       type = entry[:type]
-      refuse_entry!(index, :type, "value_is_invalid") unless CatalogWalletSelector.selector_types.key?(type)
+      unless CatalogWalletSelector.selector_types.key?(type)
+        refuse_entry!(index, :type, "value_is_invalid", allowed_values: CatalogWalletSelector.selector_types.keys)
+      end
       refuse_entry!(index, :code, "value_is_mandatory") if entry[:code].blank?
       refuse_entry!(index, :code, "value_is_invalid") unless entry[:code].is_a?(String)
 
@@ -76,7 +78,9 @@ module CatalogWalletSelectors
     end
 
     def fee_type_target(entry, index)
-      refuse_entry!(index, :code, "value_is_invalid") unless CatalogWalletSelector.fee_types.key?(entry[:code])
+      unless CatalogWalletSelector.fee_types.key?(entry[:code])
+        refuse_entry!(index, :code, "value_is_invalid", allowed_values: CatalogWalletSelector.fee_types.keys)
+      end
 
       {fee_type: entry[:code]}
     end
@@ -108,12 +112,12 @@ module CatalogWalletSelectors
       {product_filter_id: product_filter.id}
     end
 
-    def refuse_entry!(index, field, error_code)
-      refuse!(ValidationFailure.item_field("applies_to.include", index, field), error_code)
+    def refuse_entry!(index, field, error_code, **meta)
+      refuse!(ValidationFailure.item_field("applies_to.include", index, field), error_code, **meta)
     end
 
-    def refuse!(field, error_code)
-      result.single_validation_failure!(field:, error_code:).raise_if_error!
+    def refuse!(field, error_code, **meta)
+      result.single_validation_failure!(field:, error_code:, meta:).raise_if_error!
     end
   end
 end
