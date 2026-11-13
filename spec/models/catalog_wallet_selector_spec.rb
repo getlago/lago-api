@@ -5,6 +5,8 @@ require "rails_helper"
 describe CatalogWalletSelector do
   subject(:selector) { build(:catalog_wallet_selector) }
 
+  it_behaves_like "paper_trail traceable"
+
   describe "enums" do
     it do
       expect(selector).to define_enum_for(:selector_type)
@@ -41,6 +43,35 @@ describe CatalogWalletSelector do
 
       expect(errors).to be_added(:base, :exactly_one_owner_required)
       expect(errors.messages[:base]).to eq(["exactly_one_owner_required"])
+    end
+
+    describe "target validation" do
+      it "requires the target of the selector type" do
+        selector = build(:catalog_wallet_selector, selector_type: "product", fee_type: nil)
+
+        expect(selector.tap(&:valid?).errors.to_hash).to eq(product: ["value_is_mandatory"])
+      end
+
+      it "refuses the targets of other types" do
+        selector = build(:catalog_wallet_selector, product_category: create(:product_category), product_filter: create(:product_filter))
+
+        expect(selector.tap(&:valid?).errors.to_hash).to eq(
+          product_category: ["value_must_be_blank"],
+          product_filter: ["value_must_be_blank"]
+        )
+      end
+
+      it "refuses product filters on a selector that is not a product" do
+        selector = build(:catalog_wallet_selector, with_product_filters: true)
+
+        expect(selector.tap(&:valid?).errors.to_hash).to eq(with_product_filters: ["value_must_be_blank"])
+      end
+
+      it "accepts product filters on a product selector" do
+        selector = build(:catalog_wallet_selector, selector_type: "product", fee_type: nil, product: create(:product), with_product_filters: true)
+
+        expect(selector).to be_valid
+      end
     end
   end
 

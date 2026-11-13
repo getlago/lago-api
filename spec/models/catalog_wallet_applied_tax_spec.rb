@@ -33,7 +33,8 @@ describe CatalogWalletAppliedTax do
       existing = create(:catalog_wallet_applied_tax)
       duplicate = build(:catalog_wallet_applied_tax, catalog_wallet: existing.catalog_wallet, tax: existing.tax)
 
-      expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+      expect { duplicate.save!(validate: false) }
+        .to raise_error(ActiveRecord::RecordNotUnique, /index_catalog_wallet_applied_taxes_on_catalog_wallet_and_tax/)
     end
   end
 end

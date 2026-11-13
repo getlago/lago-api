@@ -1052,7 +1052,9 @@ DROP INDEX IF EXISTS public.index_catalog_wallet_consumptions_on_organization_id
 DROP INDEX IF EXISTS public.index_catalog_wallet_consumptions_on_inbound_transaction_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_consumptions_on_fee_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_applied_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_catalog_wallet_applied_taxes_on_plan_wallet_and_tax;
 DROP INDEX IF EXISTS public.index_catalog_wallet_applied_taxes_on_organization_id;
+DROP INDEX IF EXISTS public.index_catalog_wallet_applied_taxes_on_catalog_wallet_and_tax;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_code_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_and_code;
@@ -1156,7 +1158,6 @@ DROP INDEX IF EXISTS public.idx_on_subscription_id_type_8feb7b9623;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_bd763c5aa3;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_recurring_transaction_rule_id_fba3d39cca;
-DROP INDEX IF EXISTS public.idx_on_plan_wallet_id_tax_id_d82685b30a;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_payment_provider_customer_id_ed5e6793bd;
 DROP INDEX IF EXISTS public.idx_on_owner_type_owner_id_category_937f7f9880;
@@ -1189,7 +1190,6 @@ DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_821ae72311;
 DROP INDEX IF EXISTS public.idx_on_entitlement_entitlement_id_48c0b3356a;
 DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
 DROP INDEX IF EXISTS public.idx_on_contract_id_billing_at_status_3588bfae7a;
-DROP INDEX IF EXISTS public.idx_on_catalog_wallet_id_tax_id_95501fdc40;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d3;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_customer_id_invoice_custom_e7aada65cb;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655;
@@ -8483,13 +8483,6 @@ CREATE UNIQUE INDEX idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d
 
 
 --
--- Name: idx_on_catalog_wallet_id_tax_id_95501fdc40; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_on_catalog_wallet_id_tax_id_95501fdc40 ON public.catalog_wallet_applied_taxes USING btree (catalog_wallet_id, tax_id) WHERE (catalog_wallet_id IS NOT NULL);
-
-
---
 -- Name: idx_on_contract_id_billing_at_status_3588bfae7a; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8711,13 +8704,6 @@ CREATE INDEX idx_on_payment_provider_customer_id_ed5e6793bd ON public.billing_ob
 --
 
 CREATE INDEX idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb ON public.charges USING btree (plan_id, billable_metric_id, pay_in_advance) WHERE (deleted_at IS NULL);
-
-
---
--- Name: idx_on_plan_wallet_id_tax_id_d82685b30a; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_on_plan_wallet_id_tax_id_d82685b30a ON public.catalog_wallet_applied_taxes USING btree (plan_wallet_id, tax_id) WHERE (plan_wallet_id IS NOT NULL);
 
 
 --
@@ -9446,10 +9432,24 @@ CREATE INDEX index_catalog_plans_on_organization_id_name_gin_trgm_ops ON public.
 
 
 --
+-- Name: index_catalog_wallet_applied_taxes_on_catalog_wallet_and_tax; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_catalog_wallet_applied_taxes_on_catalog_wallet_and_tax ON public.catalog_wallet_applied_taxes USING btree (catalog_wallet_id, tax_id) WHERE (catalog_wallet_id IS NOT NULL);
+
+
+--
 -- Name: index_catalog_wallet_applied_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_catalog_wallet_applied_taxes_on_organization_id ON public.catalog_wallet_applied_taxes USING btree (organization_id);
+
+
+--
+-- Name: index_catalog_wallet_applied_taxes_on_plan_wallet_and_tax; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_catalog_wallet_applied_taxes_on_plan_wallet_and_tax ON public.catalog_wallet_applied_taxes USING btree (plan_wallet_id, tax_id) WHERE (plan_wallet_id IS NOT NULL);
 
 
 --
