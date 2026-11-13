@@ -19,7 +19,6 @@ class CreateCatalogWallets < ActiveRecord::Migration[8.1]
       t.bigint :top_up_max_amount_cents
       t.bigint :balance_cents, null: false, default: 0
       t.bigint :ongoing_balance_cents, null: false, default: 0
-      t.boolean :ready_to_be_refreshed, null: false, default: false
       t.datetime :last_ongoing_balance_sync_at
 
       t.datetime :terminated_at
@@ -28,7 +27,6 @@ class CreateCatalogWallets < ActiveRecord::Migration[8.1]
       t.timestamps
 
       t.index %i[contract_id code], unique: true, where: "deleted_at IS NULL"
-      t.index :ready_to_be_refreshed, where: "ready_to_be_refreshed"
 
       t.check_constraint "top_up_min_amount_cents <= top_up_max_amount_cents",
         name: "catalog_wallets_top_up_min_not_above_max"
