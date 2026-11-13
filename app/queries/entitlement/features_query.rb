@@ -3,13 +3,16 @@
 module Entitlement
   class FeaturesQuery < BaseQuery
     Result = BaseResult[:features]
+    Filters = BaseFilters[:created_at_from, :created_at_to]
 
     def call
       features = base_scope.result
-      features = paginate(features)
       features = apply_consistent_ordering(features)
+      features = with_date_range(features, :created_at)
 
-      result.features = features
+      result.features = paginate(features)
+      result
+    rescue BaseService::FailedResult
       result
     end
 
