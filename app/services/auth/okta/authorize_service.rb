@@ -17,7 +17,7 @@ module Auth
 
       def call
         check_invite(email) if invite_token.present?
-        check_okta_integration(email)
+        check_okta_integration(email, organization_id: result.invite&.organization_id)
 
         params = {
           client_id: result.okta_integration.client_id,
