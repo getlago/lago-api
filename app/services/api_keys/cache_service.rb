@@ -2,9 +2,7 @@
 
 module ApiKeys
   class CacheService < ::CacheService
-    # Bumped when a cached key gains an attribute its permissions depend on (membership_id), so
-    # entries written by a previous release are never read without it.
-    CACHE_KEY_VERSION = "2"
+    CACHE_KEY_VERSION = "1"
 
     # Written in place of the cached key when it is invalidated. It only needs to outlive a request
     # that read the key from the database just before the change, see `write_to_cache`. Keep it short:
@@ -39,10 +37,16 @@ module ApiKeys
         cache_json = JSON.parse(cache)
         api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
 
-        # Avoid returning an expired API key
-        unless api_key.expired?
-          organization = Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))
-          return api_key, organization
+        # An entry cached by a release that predates member keys has no membership_id: it is dropped
+        # and read again from the database, rather than taken for an organization key.
+        if cache_json["api_key"].key?("membership_id")
+          # Avoid returning an expired API key
+          unless api_key.expired?
+            organization = Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))
+            return api_key, organization
+          end
+        else
+          Rails.cache.delete(cache_key)
         end
       end
 
