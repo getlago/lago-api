@@ -73,6 +73,27 @@ RSpec.describe BillableMetrics::UpdateService do
       end
     end
 
+    context "when a stored filter value has surrounding whitespace" do
+      let(:params) do
+        {
+          name: "Updated metric",
+          filters: [{key: "region", values: ["  space  "]}]
+        }
+      end
+
+      before do
+        create(:billable_metric_filter, billable_metric:, key: "region", values: ["  space  "])
+      end
+
+      it "updates the metric when the existing filter value is resubmitted" do
+        result = described_class.call(billable_metric:, params:)
+
+        expect(result).to be_success
+        expect(billable_metric.reload.name).to eq("Updated metric")
+        expect(billable_metric.filters.find_by(key: "region").values).to eq(["  space  "])
+      end
+    end
+
     context "with validation errors" do
       let(:params) do
         {

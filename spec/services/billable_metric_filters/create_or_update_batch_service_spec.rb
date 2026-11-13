@@ -116,6 +116,31 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       end
     end
 
+    context "when a filter value has leading or trailing whitespace" do
+      let(:filters_params) do
+        [{key: "region", values: ["  space  "]}]
+      end
+
+      it "returns a validation failure without creating the filter" do
+        result = nil
+        expect { result = service }.not_to change(BillableMetricFilter, :count)
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:"filters[0].values[0]"]).to eq(["value_is_invalid"])
+      end
+    end
+
+    context "when a filter value has internal whitespace" do
+      let(:filters_params) do
+        [{key: "region", values: ["s p a c e"]}]
+      end
+
+      it "stores the value unchanged" do
+        expect(service).to be_success
+        expect(billable_metric.filters.find_by(key: "region").values).to eq(["s p a c e"])
+      end
+    end
+
     context "when any of multiple filter params has blank values" do
       let(:filters_params) do
         [
@@ -172,6 +197,35 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
       it "leaves the filter values unchanged" do
         expect { service }.not_to change(BillableMetricFilter, :count)
         expect(filter.reload.values).to eq(%w[Europe US Asia])
+      end
+    end
+
+    context "when a submitted value has leading or trailing whitespace" do
+      let(:filters_params) do
+        [{key: "region", values: ["Europe", " US "]}]
+      end
+
+      it "returns a validation failure without updating the filter" do
+        result = service
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:"filters[0].values[1]"]).to eq(["value_is_invalid"])
+        expect(filter.reload.values).to eq(%w[Europe US Asia])
+      end
+    end
+
+    context "when an existing value has leading or trailing whitespace" do
+      let(:filter) do
+        create(:billable_metric_filter, billable_metric:, key: "region", values: ["  Europe  ", "US"])
+      end
+
+      let(:filters_params) do
+        [{key: "region", values: ["  Europe  ", "US", "Asia"]}]
+      end
+
+      it "allows the existing value to be resubmitted unchanged" do
+        expect(service).to be_success
+        expect(filter.reload.values).to eq(["  Europe  ", "US", "Asia"])
       end
     end
 
