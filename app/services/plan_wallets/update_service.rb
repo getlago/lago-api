@@ -26,6 +26,14 @@ module PlanWallets
         return result.single_validation_failure!(field: :rate_amount, error_code: "not_supported")
       end
 
+      if params.key?(:tax_application) && !PlanWallet.tax_applications.key?(params[:tax_application])
+        return result.single_validation_failure!(
+          field: :tax_application,
+          error_code: "value_is_invalid",
+          meta: {allowed_values: PlanWallet.tax_applications.keys}
+        )
+      end
+
       plan_wallet.with_lock do
         return result.not_found_failure!(resource: "wallet") if plan_wallet.discarded?
 

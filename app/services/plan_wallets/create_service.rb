@@ -28,6 +28,14 @@ module PlanWallets
       end
 
       # A contract is invoiced in its plan's currency, so a wallet in another one could never pay.
+      unless params[:tax_application].nil? || PlanWallet.tax_applications.key?(params[:tax_application])
+        return result.single_validation_failure!(
+          field: :tax_application,
+          error_code: "value_is_invalid",
+          meta: {allowed_values: PlanWallet.tax_applications.keys}
+        )
+      end
+
       if params[:currency].present? && params[:currency] != catalog_plan.currency
         return result.single_validation_failure!(field: :currency, error_code: "currency_does_not_match")
       end
