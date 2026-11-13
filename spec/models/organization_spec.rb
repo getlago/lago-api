@@ -439,7 +439,7 @@ RSpec.describe Organization do
         subject
 
         expect(organization.document_number_prefix)
-          .to eq "#{organization.name.first(3).upcase}-#{organization.id.last(4).upcase}"
+          .to eq "#{organization.name.first(3).delete(" ").upcase}-#{organization.id.last(4).upcase}"
       end
 
       it "sets unique hmac key" do
@@ -453,6 +453,16 @@ RSpec.describe Organization do
           subject
 
           expect(organization.document_number_prefix).to eq("SSS-#{organization.id.last(4).upcase}")
+        end
+      end
+
+      context "with a name of two characters before a space" do
+        let(:organization) { build(:organization, name: "ab Sandbox") }
+
+        it "leaves the space out of the prefix" do
+          subject
+
+          expect(organization.document_number_prefix).to eq("AB-#{organization.id.last(4).upcase}")
         end
       end
 

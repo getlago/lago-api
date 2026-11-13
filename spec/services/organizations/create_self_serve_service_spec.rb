@@ -34,6 +34,17 @@ RSpec.describe Organizations::CreateSelfServeService do
     expect { result }.to have_enqueued_job_after_commit(SegmentTrackJob).twice
   end
 
+  context "with a two-character name" do
+    let(:name) { "ab" }
+
+    it "gives the sandbox and its billing entity a prefix without a space" do
+      sandbox = result.sandbox_organization
+
+      expect([sandbox.document_number_prefix, sandbox.billing_entities.sole.document_number_prefix])
+        .to eq(["AB-#{sandbox.id.last(4).upcase}"] * 2)
+    end
+  end
+
   context "with per_customer numbering" do
     let(:options) { {document_numbering: "per_customer"} }
 
