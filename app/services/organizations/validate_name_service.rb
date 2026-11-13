@@ -8,6 +8,8 @@ module Organizations
 
     NAME_MAX_LENGTH = 100
     URL_SCHEME = %r{[a-z][a-z0-9+.-]*://}
+    # Schemes that work without slashes.
+    BARE_SCHEME = /(?<![\p{L}\p{N}])(?:javascript|vbscript|data|mailto|file):\S/
     WWW = /(?<![\p{L}\p{N}])www\./
     IPV4 = /(?<![\d.])\d{1,3}(?:\.\d{1,3}){3}(?!\.?\d)/
     DOTTED_TOKEN = /[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+/
@@ -61,7 +63,7 @@ module Organizations
     # Every invisible character is dropped here, so a joiner cannot hide a link.
     def contains_link?(value)
       text = value.gsub(JOINERS, "").unicode_normalize(:nfkc).downcase.tr(DOT_LOOKALIKES, "...")
-      return true if URL_SCHEME.match?(text) || WWW.match?(text) || IPV4.match?(text)
+      return true if [URL_SCHEME, BARE_SCHEME, WWW, IPV4].any? { it.match?(text) }
 
       text.scan(DOTTED_TOKEN).any? { domain?(it.delete_prefix("-")) }
     end

@@ -64,7 +64,7 @@ RSpec.describe Organizations::ValidateNameService do
   it "refuses names that carry a link" do
     links = ["https://acme.example", "Acme www.acme", "acme.com", "Visit acme.co.uk", "ａｃｍｅ．ｃｏｍ",
       "contact@acme.io", "Visit 10.0.0.1", "acme。com", "acme\u200D.com", "acme.com.ltd", "acme.io", "booking.com",
-      "Dr.Ing Consulting"]
+      "Dr.Ing Consulting", "javascript:alert(1)", "mailto:x@y", "Data:text/html,hi", "vbscript:x", "file:x"]
 
     expect(links.index_with { described_class.call(name: it).error&.messages })
       .to eq(links.index_with { {name: ["value_contains_link"]} })
@@ -72,7 +72,7 @@ RSpec.describe Organizations::ValidateNameService do
 
   it "accepts names with dots that are not links" do
     names = ["Acme Inc.", "A.B. Consulting", "Node.js Labs", "Version 2.0", "Release 1.2.3", "Acme Co.Ltd", "Acme.Inc",
-      "Acme Pty.Ltd", "Muster GmbH & Co.KG"]
+      "Acme Pty.Ltd", "Muster GmbH & Co.KG", "Metadata:Labs"]
 
     expect(names.index_with { described_class.call(name: it).name }).to eq(names.index_with { it })
   end
