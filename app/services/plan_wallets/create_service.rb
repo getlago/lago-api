@@ -47,7 +47,7 @@ module PlanWallets
       ActiveRecord::Base.transaction do
         plan_wallet = catalog_plan.wallets.create!(organization:, **params.slice(*ATTRIBUTES).compact.symbolize_keys)
 
-        Metadata::UpdateItemService.call!(owner: plan_wallet, value: params[:metadata]) unless params[:metadata].nil?
+        replace_metadata!(plan_wallet) unless params[:metadata].nil?
         CatalogWallets::ApplyTaxesService.call!(wallet: plan_wallet, tax_codes: params[:tax_codes]) unless params[:tax_codes].nil?
         CatalogWalletSelectors::ReplaceService.call!(wallet: plan_wallet, applies_to: params[:applies_to]) unless params[:applies_to].nil?
 
@@ -68,6 +68,13 @@ module PlanWallets
     attr_reader :catalog_plan, :params
 
     delegate :organization, to: :catalog_plan
+
+    # The metadata record names its errors in sentences, on its own `value` column.
+    def replace_metadata!(plan_wallet)
+      unless Metadata::UpdateItemService.call(owner: plan_wallet, value: params[:metadata]).success?
+        result.single_validation_failure!(field: :metadata, error_code: "value_is_invalid").raise_if_error!
+      end
+    end
 
     # The field whose value has another shape than its service reads: a metadata object, a list of tax codes.
     def malformed_param
