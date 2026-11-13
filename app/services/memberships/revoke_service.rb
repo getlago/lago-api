@@ -17,6 +17,12 @@ module Memberships
       ActiveRecord::Base.transaction do
         # Under the lock, so the last admin check holds until the revoke commits.
         Organizations::SandboxLockService.call!(organization: membership.organization)
+        # Every revoke takes the lock: reloaded, a second revoke of the same membership finds it done.
+        membership.reload
+        if membership.revoked?
+          result.membership = membership
+          return result
+        end
         return result.forbidden_failure!(code: "cannot_revoke_own_membership") if user.id == membership.user.id
         return result.not_allowed_failure!(code: "last_admin") if membership.admin? && membership.organization.admin_membership_roles.count == 1
 

@@ -69,6 +69,21 @@ RSpec.describe Memberships::RevokeService do
       end
     end
 
+    context "when another request revoked the membership after it was loaded" do
+      before do
+        create(:membership_role, membership: other_membership, role: admin_role)
+        Membership.find(membership.id).mark_as_revoked!
+      end
+
+      it "succeeds without revoking or logging it again" do
+        result = revoke_service.call
+
+        expect(result).to be_success
+        expect(result.membership).to be_revoked
+        expect(security_logger).not_to have_received(:produce)
+      end
+    end
+
     context "when the organization has a sandbox" do
       let(:organization) { create(:organization, :with_sandbox) }
       let(:membership) { create(:membership, organization:, roles: %i[finance]) }
