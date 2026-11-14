@@ -79,7 +79,7 @@ module UsageMonitoring
     end
 
     def record_trigger(crossed_threshold_values, current, now)
-      triggered_alert = TriggeredAlert.create!(
+      triggered_alert = alert.all_triggered_alerts.klass.create!(
         alert:,
         organization: alert.organization,
         alertable:,
@@ -100,7 +100,7 @@ module UsageMonitoring
       announced = alert.opted_in_thresholds.filter { recovered_values.include?(it.value) && recorded.include?(it.code) }
       return if announced.empty?
 
-      resolved_alert = TriggeredAlert.create!(
+      resolved_alert = alert.all_triggered_alerts.klass.create!(
         alert:,
         organization: alert.organization,
         alertable:,
