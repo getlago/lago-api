@@ -71,6 +71,9 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
+        # Ahead of the legacy nested routes: only the replace is native, the other entitlement
+        # routes still reach the v1 controller.
+        resources :entitlements, only: :create, controller: "plans/entitlements"
         draw(:plan_nested_api)
       end
       # The constraint mirrors v1: without it, an external id containing a
