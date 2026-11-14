@@ -11,6 +11,7 @@ RSpec.describe Resolvers::EventTypesResolver do
       rate_card.created rate_card.updated rate_card.deleted
       rate_card_rate.created rate_card_rate.updated rate_card_rate.deleted
       plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted
+      plan.entitlements_updated
       contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
       contract.created contract.updated contract.started contract.terminated contract.canceled
     ]

@@ -78,6 +78,7 @@ class SendWebhookJob < ApplicationJob
     "payment_request.payment_status_updated" => Webhooks::PaymentRequests::PaymentStatusUpdatedService,
     "plan.created" => Webhooks::Plans::CreatedService,
     "plan.deleted" => Webhooks::Plans::DeletedService,
+    "plan.entitlements_updated" => Webhooks::Plans::EntitlementsUpdatedService,
     "plan.updated" => Webhooks::Plans::UpdatedService,
     "product_category.created" => Webhooks::ProductCategories::CreatedService,
     "product_category.updated" => Webhooks::ProductCategories::UpdatedService,
