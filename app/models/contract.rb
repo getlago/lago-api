@@ -36,6 +36,8 @@ class Contract < ApplicationRecord
   has_many :applied_rate_cards, class_name: "ContractRateCard"
   has_many :billing_segments
   has_many :fees
+  has_many :entitlements, class_name: "Entitlement::Entitlement"
+  has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
   has_many :invoices, -> { distinct }, through: :billing_segments
   has_many :applied_invoice_custom_sections,
     class_name: "Contract::AppliedInvoiceCustomSection",
@@ -74,6 +76,14 @@ class Contract < ApplicationRecord
     # then breaks ties deterministically within a status.
     live.where(external_id:)
       .order(Arel.sql("status = 'pending' DESC"), started_at: :desc, created_at: :desc)
+      .first
+  end
+
+  # The history read: the latest contract of one status for an external id.
+  # Callers check status against STATUSES first, as the column is a PostgreSQL enum.
+  def self.latest_by_external_id(external_id, status:)
+    where(external_id:, status:)
+      .order(started_at: :desc, created_at: :desc, id: :desc)
       .first
   end
 

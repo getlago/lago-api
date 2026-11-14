@@ -3,13 +3,19 @@
 module Entitlement
   class SubscriptionEntitlementQuery < BaseQuery
     Result = BaseResult[:entitlements]
-    Filters = BaseFilters[:subscription_id, :plan_id]
+    Filters = BaseFilters[:subscription_id, :plan_id, :contract_id, :catalog_plan_id]
+
+    # Owner columns interpolated into the SQL. They only come from this list, never from input.
+    OWNERS = {
+      subscription: {plan: "plan_id", override: "subscription_id"}.freeze,
+      contract: {plan: "catalog_plan_id", override: "contract_id"}.freeze
+    }.freeze
 
     def call
       features_result = ActiveRecord::Base.connection.exec_query(
         feature_sql,
         "subscription_entitlement_features",
-        [filters.plan_id, filters.subscription_id]
+        [plan_owner_value, override_owner_value]
       )
 
       features = features_result.map do |row|
@@ -22,7 +28,7 @@ module Entitlement
       privileges_result = ActiveRecord::Base.connection.exec_query(
         privilege_sql,
         "subscription_entitlement_privileges",
-        [prepare_ids(plan_entitlement_ids), prepare_ids(sub_entitlement_ids), filters.subscription_id]
+        [prepare_ids(plan_entitlement_ids), prepare_ids(sub_entitlement_ids), override_owner_value]
       )
 
       privileges_by_feature_id = privileges_result.map do |row|
@@ -38,6 +44,28 @@ module Entitlement
 
     private
 
+    def contract_owner?
+      if filters.subscription_id.present? && filters.contract_id.present?
+        raise ArgumentError, "subscription_id and contract_id are mutually exclusive"
+      else
+        filters.contract_id.present?
+      end
+    end
+
+    def owner
+      OWNERS.fetch(contract_owner? ? :contract : :subscription)
+    end
+
+    def plan_owner_value
+      contract_owner? ? filters.catalog_plan_id : filters.plan_id
+    end
+
+    def override_owner_value
+      contract_owner? ? filters.contract_id : filters.subscription_id
+    end
+
+    # The output aliases keep their subscription names (plan_id, subscription_id, sub_entitlement_id)
+    # for every owner, because the v1 serializer and services read them.
     def feature_sql
       <<~SQL
         WITH
@@ -47,7 +75,7 @@ module Entitlement
                 FROM
                     entitlement_entitlements
                 WHERE
-                    plan_id = $1
+                    #{owner[:plan]} = $1
                     AND deleted_at IS NULL
             ),
             sub_entitlements AS (
@@ -56,7 +84,7 @@ module Entitlement
                 FROM
                     entitlement_entitlements
                 WHERE
-                    subscription_id = $2
+                    #{owner[:override]} = $2
                     AND deleted_at IS NULL
             )
         SELECT
@@ -67,8 +95,8 @@ module Entitlement
             f.description,
             pe.id AS plan_entitlement_id,
             se.id AS sub_entitlement_id,
-            pe.plan_id AS plan_id,
-            se.subscription_id AS subscription_id,
+            pe.#{owner[:plan]} AS plan_id,
+            se.#{owner[:override]} AS subscription_id,
             COALESCE(pe.created_at, se.created_at) AS ordering_date
         FROM
             plan_entitlements pe
@@ -84,7 +112,7 @@ module Entitlement
                     FROM
                         entitlement_subscription_feature_removals
                     WHERE
-                        subscription_id = $2
+                        #{owner[:override]} = $2
                         AND entitlement_feature_id IS NOT NULL
                         AND deleted_at IS NULL
                 )
@@ -147,7 +175,7 @@ module Entitlement
                     FROM
                         entitlement_subscription_feature_removals
                     WHERE
-                        subscription_id = $3
+                        #{owner[:override]} = $3
                         AND entitlement_privilege_id IS NOT NULL
                         AND deleted_at IS NULL
                 )

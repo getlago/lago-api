@@ -9,9 +9,14 @@ module Entitlement
     default_scope -> { kept }
 
     belongs_to :organization
-    belongs_to :subscription
+    belongs_to :subscription, optional: true
+    belongs_to :contract, optional: true
     belongs_to :feature, optional: true, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
     belongs_to :privilege, optional: true, class_name: "Entitlement::Privilege", foreign_key: :entitlement_privilege_id
+
+    validates_with ParentPresenceValidator,
+      parents: %i[subscription contract],
+      error: "one_of_subscription_or_contract_required"
   end
 end
 
@@ -24,10 +29,11 @@ end
 #  deleted_at               :datetime
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
+#  contract_id              :uuid
 #  entitlement_feature_id   :uuid
 #  entitlement_privilege_id :uuid
 #  organization_id          :uuid             not null
-#  subscription_id          :uuid             not null
+#  subscription_id          :uuid
 #
 # Indexes
 #
@@ -37,10 +43,12 @@ end
 #  idx_on_subscription_id_295edd8bb3                              (subscription_id)
 #  idx_unique_feature_removal_per_subscription                    (subscription_id,entitlement_feature_id) UNIQUE WHERE (deleted_at IS NULL)
 #  idx_unique_privilege_removal_per_subscription                  (subscription_id,entitlement_privilege_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_entitlement_removals_on_contract_id                      (contract_id)
 #  index_entitlement_subscription_feature_removals_on_deleted_at  (deleted_at)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (contract_id => contracts.id)
 #  fk_rails_...  (entitlement_feature_id => entitlement_features.id)
 #  fk_rails_...  (entitlement_privilege_id => entitlement_privileges.id)
 #  fk_rails_...  (organization_id => organizations.id)

@@ -13,10 +13,11 @@ module Entitlement
     belongs_to :plan, optional: true
     belongs_to :catalog_plan, optional: true
     belongs_to :subscription, optional: true
+    belongs_to :contract, optional: true
     has_many :values, class_name: "Entitlement::EntitlementValue", foreign_key: :entitlement_entitlement_id, dependent: :destroy
 
     validates_with ParentPresenceValidator,
-      parents: %i[plan catalog_plan subscription],
+      parents: %i[plan catalog_plan subscription contract],
       error: "one_of_plan_or_subscription_required"
   end
 end
@@ -31,6 +32,7 @@ end
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  catalog_plan_id        :uuid
+#  contract_id            :uuid
 #  entitlement_feature_id :uuid             not null
 #  organization_id        :uuid             not null
 #  plan_id                :uuid
@@ -42,6 +44,7 @@ end
 #  idx_unique_feature_per_plan                               (entitlement_feature_id,plan_id) UNIQUE WHERE (deleted_at IS NULL)
 #  idx_unique_feature_per_subscription                       (entitlement_feature_id,subscription_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_entitlement_entitlements_on_catalog_plan_id         (catalog_plan_id)
+#  index_entitlement_entitlements_on_contract_id             (contract_id)
 #  index_entitlement_entitlements_on_entitlement_feature_id  (entitlement_feature_id)
 #  index_entitlement_entitlements_on_organization_id         (organization_id)
 #  index_entitlement_entitlements_on_plan_id                 (plan_id)
@@ -50,6 +53,7 @@ end
 # Foreign Keys
 #
 #  fk_rails_...  (catalog_plan_id => catalog_plans.id)
+#  fk_rails_...  (contract_id => contracts.id)
 #  fk_rails_...  (entitlement_feature_id => entitlement_features.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (plan_id => plans.id)
