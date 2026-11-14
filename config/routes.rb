@@ -62,8 +62,8 @@ Rails.application.routes.draw do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end
       resources :product_categories, param: :code, code: /.*/, only: %i[index show create update destroy]
-      # No features catch-all: the other features actions fall through to v1 until they are native.
-      resources :features, param: :code, code: /.*/, only: %i[index]
+      # No features catch-all: show, update and destroy fall through to v1 until they are native.
+      resources :features, param: :code, code: /.*/, only: %i[index create]
       resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
