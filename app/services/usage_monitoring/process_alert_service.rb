@@ -16,6 +16,9 @@ module UsageMonitoring
       now = Time.current
 
       alert.with_lock do
+        # NOTE: the lock reloads the alert past its default scope, so an alert deleted since the caller loaded it shows up here
+        next if alert.discarded?
+
         # NOTE: the caller measured usage for one metric, so a metric changed since then makes that usage
         # unrelated to the configuration now held under the lock
         next if stale_metric?
