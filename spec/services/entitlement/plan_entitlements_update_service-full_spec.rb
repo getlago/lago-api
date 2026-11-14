@@ -150,6 +150,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "returns not found failure" do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("feature_not_found")
+        expect(result.failed_field).to eq(:"entitlements.nonexistent_feature")
       end
     end
 
@@ -165,6 +166,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "returns not found failure" do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("privilege_not_found")
+        expect(result.failed_field).to eq(:"entitlements.seats.nonexistent_privilege")
       end
     end
 
@@ -174,6 +176,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "returns not found failure" do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("plan_not_found")
+        expect(result.failed_field).to be_nil
       end
     end
 
@@ -235,7 +238,62 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "returns validation failure" do
         expect(result).not_to be_success
         expect(result.error).to be_a BaseService::ValidationFailure
-        expect(result.error.messages[:max_privilege_value]).to eq(["value_is_invalid"])
+        expect(result.error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
+        expect(result.error.codes).to eq({"entitlements.seats.max": ["value_is_invalid"]})
+        expect(result.error.meta).to eq({})
+        expect(result.failed_field).to eq(:"entitlements.seats.max")
+      end
+    end
+
+    context "when two features share a privilege code and the second value is invalid" do
+      let(:other_feature) { create(:feature, organization:, code: "storage") }
+      let(:other_privilege) { create(:privilege, organization:, feature: other_feature, code: "max", value_type: "integer") }
+      let(:entitlements_params) do
+        {
+          "seats" => {"max" => 25},
+          "storage" => {"max" => "lots"}
+        }
+      end
+
+      before { other_privilege }
+
+      it "records the second feature and its privilege as the failing entry and writes nothing" do
+        expect { result }.not_to change(Entitlement::Entitlement, :count)
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
+        expect(result.error.codes).to eq({"entitlements.storage.max": ["value_is_invalid"]})
+        expect(result.failed_field).to eq(:"entitlements.storage.max")
+      end
+    end
+
+    context "when the failing feature has no privilege after a feature with privileges" do
+      let(:other_feature) { create(:feature, organization:, code: "storage") }
+      let(:entitlements_params) do
+        {
+          "seats" => {"max" => 25},
+          "storage" => {"unknown" => 1}
+        }
+      end
+
+      before { other_feature }
+
+      it "records the privilege of the failing feature, not the one of the previous feature" do
+        expect(result.error.error_code).to eq("privilege_not_found")
+        expect(result.failed_field).to eq(:"entitlements.storage.unknown")
+      end
+    end
+
+    context "when an unknown feature follows a feature with privileges" do
+      let(:entitlements_params) do
+        {
+          "seats" => {"max" => 25},
+          "unknown" => {"max" => 1}
+        }
+      end
+
+      it "records no privilege code" do
+        expect(result.error.error_code).to eq("feature_not_found")
+        expect(result.failed_field).to eq(:"entitlements.unknown")
       end
     end
 
@@ -252,6 +310,8 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages).to eq({"privilege.value": ["value_is_mandatory"]})
+        expect(result.error.codes).to eq({"entitlements.seats.max": ["value_is_mandatory"]})
+        expect(result.failed_field).to eq(:"entitlements.seats.max")
       end
     end
 
@@ -268,7 +328,108 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "returns validation failure" do
         expect(result).not_to be_success
         expect(result.error).to be_a BaseService::ValidationFailure
-        expect(result.error.messages[:invitation_privilege_value]).to eq(["value_not_in_select_options"])
+        expect(result.error.messages).to eq({invitation_privilege_value: ["value_not_in_select_options"]})
+        expect(result.error.codes).to eq({"entitlements.seats.invitation": ["value_not_in_select_options"]})
+        expect(result.error.meta).to eq({"entitlements.seats.invitation": {allowed_values: ["email", "phone", "slack"]}})
+        expect(result.failed_field).to eq(:"entitlements.seats.invitation")
+      end
+    end
+
+    context "with a catalog plan" do
+      let(:plan) { create(:catalog_plan, organization:) }
+      let(:other_plan) { create(:catalog_plan, organization:) }
+      let(:old_feature) { create(:feature, organization:, code: "sso") }
+      let(:old_privilege) { create(:privilege, organization:, feature: old_feature, code: "provider", value_type: "string") }
+      let(:old_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature: old_feature) }
+      let(:old_value) { create(:entitlement_value, organization:, entitlement: old_entitlement, privilege: old_privilege, value: "okta") }
+      let(:other_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: other_plan, feature: old_feature) }
+      let(:other_value) { create(:entitlement_value, organization:, entitlement: other_entitlement, privilege: old_privilege, value: "okta") }
+      let(:string_privilege) { create(:privilege, organization:, feature:, code: "provider", value_type: "string") }
+      let(:boolean_privilege) { create(:privilege, organization:, feature:, code: "enabled", value_type: "boolean") }
+      let(:select_privilege) do
+        create(:privilege, organization:, feature:, code: "invitation", value_type: "select", config: {select_options: %w[email phone]})
+      end
+      let(:entitlements_params) do
+        {"seats" => {"max" => "25", "provider" => "okta", "enabled" => true, "invitation" => "phone"}}
+      end
+
+      before do
+        string_privilege
+        boolean_privilege
+        select_privilege
+        old_value
+        other_value
+      end
+
+      it "replaces the entitlements of the catalog plan" do
+        expect(result).to be_success
+
+        entitlement = plan.entitlements.sole
+        expect(entitlement.feature).to eq(feature)
+        expect(entitlement.catalog_plan_id).to eq(plan.id)
+        expect(entitlement.plan_id).to be_nil
+        expect(entitlement.values.to_h { [it.privilege.code, it.value] })
+          .to eq("max" => "25", "provider" => "okta", "enabled" => "t", "invitation" => "phone")
+        expect(old_entitlement.reload).to be_discarded
+        expect(old_value.reload).to be_discarded
+        expect(result.entitlements).to eq([entitlement])
+      end
+
+      it "leaves the entitlements of another catalog plan untouched" do
+        result
+
+        expect(other_entitlement.reload).not_to be_discarded
+        expect(other_value.reload).not_to be_discarded
+        expect(other_plan.entitlements.sole.values.sole.value).to eq("okta")
+      end
+
+      it "produces one plan.updated activity log and no plan.updated webhook" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+        expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated", after_commit: true).once
+      end
+
+      context "when the replace changes nothing" do
+        let(:old_value) { nil }
+        let(:other_value) { nil }
+        let(:entitlements_params) { {} }
+
+        it "still produces one plan.updated activity log" do
+          expect(result).to be_success
+          expect(result.entitlements).to be_empty
+          expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated", after_commit: true).once
+        end
+      end
+
+      context "when entitlements are kept" do
+        let(:storage_feature) { create(:feature, organization:, code: "storage") }
+        let(:recent_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature: storage_feature) }
+        let(:older_entitlement) do
+          create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature:, created_at: 1.day.ago)
+        end
+        let(:entitlements_params) { {"storage" => {}, "seats" => {}} }
+
+        before do
+          # Inserted first but created later, so the result order comes from created_at, not from the table.
+          recent_entitlement
+          older_entitlement
+        end
+
+        it "returns them oldest first" do
+          expect(result.entitlements).to eq([older_entitlement, recent_entitlement])
+        end
+      end
+
+      context "when the catalog plan is discarded" do
+        let(:plan) { create(:catalog_plan, organization:, deleted_at: Time.current) }
+
+        it "returns not found failure and writes nothing" do
+          expect { result }.not_to change(Entitlement::Entitlement, :count)
+
+          expect(result).not_to be_success
+          expect(result.error.error_code).to eq("plan_not_found")
+          expect(old_entitlement.reload).not_to be_discarded
+          expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+        end
       end
     end
 

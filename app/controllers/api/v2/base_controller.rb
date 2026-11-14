@@ -62,6 +62,16 @@ module Api
         ::CursorPagination::Cursor.reject_offset_params!(params, reason: "not_paginated")
       end
 
+      # For a non-list action, such as a write that answers with records: it rejects the cursor
+      # parameters too, which it would otherwise ignore.
+      def reject_pagination!
+        ::CursorPagination::Cursor.reject_offset_params!(
+          params,
+          reason: "not_paginated",
+          names: ::CursorPagination::Cursor::OFFSET_PARAMS + ::CursorPagination::Cursor::CURSOR_PARAMS
+        )
+      end
+
       def missing_parameter_error(error)
         invalid_request_error(code: "missing_parameter", error_details: {error.param => {reason: "missing"}})
       end

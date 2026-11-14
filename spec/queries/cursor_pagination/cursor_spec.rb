@@ -157,6 +157,24 @@ RSpec.describe CursorPagination::Cursor do
     it_behaves_like "a pagination error", "invalid_pagination_parameter", {page: {reason: "replaced_by_cursor"}}
   end
 
+  context "with cursor parameters refused by name" do
+    subject(:cursor) do
+      described_class.reject_offset_params!(params, reason: "not_paginated", names: described_class::OFFSET_PARAMS + described_class::CURSOR_PARAMS)
+    end
+
+    let(:params) { {limit: "1", after: "a", before: "b", include_total_count: "true", page: "1", other: "x"} }
+
+    it_behaves_like "a pagination error",
+      "invalid_pagination_parameter",
+      {
+        page: {reason: "not_paginated"},
+        limit: {reason: "not_paginated"},
+        after: {reason: "not_paginated"},
+        before: {reason: "not_paginated"},
+        include_total_count: {reason: "not_paginated"}
+      }
+  end
+
   context "with an after cursor" do
     let(:params) { {after: token} }
 

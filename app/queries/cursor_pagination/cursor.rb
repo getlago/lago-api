@@ -10,6 +10,8 @@ module CursorPagination
     # Offset pagination parameters. Ignoring them would hand the first page back for
     # every page number, and a client paging until an empty page would never stop.
     OFFSET_PARAMS = %i[page per_page].freeze
+    # Cursor pagination parameters, refused with the offset ones by an action that returns no list.
+    CURSOR_PARAMS = %i[limit after before include_total_count].freeze
     # Longest `limit` echoed back in an error: anything longer is not a limit anyway.
     MAX_ECHOED_LIMIT_LENGTH = 20
 
@@ -29,8 +31,9 @@ module CursorPagination
     end
 
     # Also called by the v2 lists that are not paginated anymore, with their own reason.
-    def self.reject_offset_params!(params, reason: "replaced_by_cursor")
-      offset_params = OFFSET_PARAMS.select { params.key?(it) }
+    # `names` widens the refused parameters, for an action that is no list at all.
+    def self.reject_offset_params!(params, reason: "replaced_by_cursor", names: OFFSET_PARAMS)
+      offset_params = names.select { params.key?(it) }
 
       if offset_params.any?
         raise Error.new(code: Error::INVALID_PARAMETER, details: offset_params.index_with { {reason:} })
