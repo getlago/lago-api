@@ -61,6 +61,35 @@ module UsageMonitoring
         )
       end
 
+      # Without an alertable there is no observed value to seed or resolve against: only the thresholds change.
+      def replace_thresholds(alert, alertable, thresholds)
+        lines_before = alertable ? announced_lines_in_alarm(alert) : []
+        alert.thresholds.delete_all
+        alert.thresholds.create!(prepare_thresholds(thresholds, alert.organization_id))
+        alert.reload_thresholds
+        seed_alarms_already_past(alert, alertable)
+        resolve_alarms_closed_by_edit(alert, alertable, lines_before)
+      end
+
+      # Thresholds are replaced wholesale, so an update that leaves notify_on out would otherwise
+      # revert an opted-in threshold to the column default and silently stop the resolved webhook
+      def keep_previous_notify_on(alert, thresholds)
+        previous_notify_on = alert.thresholds.where.not(code: nil).pluck(:code, :notify_on).to_h
+        incoming_codes = thresholds.map { it.to_h.with_indifferent_access[:code].to_s }
+
+        thresholds.map { with_previous_notify_on(it.to_h.with_indifferent_access, previous_notify_on, incoming_codes) }
+      end
+
+      def with_previous_notify_on(threshold, previous_notify_on, incoming_codes)
+        return threshold if threshold.key?(:notify_on)
+        return threshold if recurring_param?(threshold)
+        # A code sent twice cannot tell which threshold the stored opt-in belongs to
+        return threshold if incoming_codes.count(threshold[:code].to_s) > 1
+
+        previous = previous_notify_on[threshold[:code].to_s]
+        previous.blank? ? threshold : threshold.merge(notify_on: previous)
+      end
+
       # The opted-in lines in alarm before an edit, as they were announced, so their alarm can be closed afterwards.
       def announced_lines_in_alarm(alert)
         alert.thresholds_in_alarm(alert.previous_value).map { {code: it.code, value: it.value, recurring: false} }
