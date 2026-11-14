@@ -168,3 +168,7 @@ namespace :x402 do
   resources :gate_checks, only: :create
   resources :credit_purchases, only: :create
 end
+
+namespace :agents do
+  resources :gate_checks, only: :create
+end
