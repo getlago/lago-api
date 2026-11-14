@@ -44,6 +44,10 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan)
     end
 
+    it "does not send the `plan.entitlements_updated` webhook" do
+      expect { subject }.not_to have_enqueued_job(SendWebhookJob).with("plan.entitlements_updated", plan)
+    end
+
     it "produces an activity log" do
       subject
       expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
@@ -384,8 +388,21 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       end
 
       it "produces one plan.updated activity log and no plan.updated webhook" do
-        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+        expect { result }.not_to have_enqueued_job(SendWebhookJob).with("plan.updated", plan)
         expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated", after_commit: true).once
+      end
+
+      it "sends one `plan.entitlements_updated` webhook after commit" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.entitlements_updated", plan).exactly(:once)
+      end
+
+      context "when send_webhook is false" do
+        subject(:result) { described_class.call(organization:, plan:, entitlements_params:, partial: false, send_webhook: false) }
+
+        it "does not send the `plan.entitlements_updated` webhook" do
+          expect(result).to be_success
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
       end
 
       context "when the replace changes nothing" do
@@ -397,6 +414,30 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect(result).to be_success
           expect(result.entitlements).to be_empty
           expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated", after_commit: true).once
+        end
+
+        it "still sends one `plan.entitlements_updated` webhook" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.entitlements_updated", plan).exactly(:once)
+        end
+      end
+
+      context "with an unknown feature" do
+        let(:entitlements_params) { {"seats" => {"max" => "25"}, "unknown" => {}} }
+
+        it "sends no webhook" do
+          expect(result).not_to be_success
+          expect(result.error.error_code).to eq("feature_not_found")
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+
+      context "with an invalid value" do
+        let(:entitlements_params) { {"seats" => {"max" => "many"}} }
+
+        it "sends no webhook" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
 
@@ -419,6 +460,62 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         end
       end
 
+      context "when only the values of an entitlement change" do
+        let(:updated_at) { Time.zone.parse("2026-09-01T10:00:00Z") }
+        let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature:, updated_at:) }
+        let(:max_value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: "50") }
+        let(:provider_value) { create(:entitlement_value, organization:, entitlement:, privilege: string_privilege, value: "okta") }
+
+        before do
+          max_value
+          provider_value
+          entitlement.update_column(:updated_at, updated_at) # rubocop:disable Rails/SkipsModelValidations
+        end
+
+        context "when a value changes" do
+          let(:entitlements_params) { {"seats" => {"max" => "100", "provider" => "okta"}} }
+
+          it "moves the updated_at of the entitlement" do
+            freeze_time do
+              expect(result).to be_success
+              expect(entitlement.reload.updated_at).to eq(Time.current)
+            end
+          end
+        end
+
+        context "when a value is removed" do
+          let(:entitlements_params) { {"seats" => {"max" => "50"}} }
+
+          it "moves the updated_at of the entitlement" do
+            freeze_time do
+              expect(result).to be_success
+              expect(provider_value.reload).to be_discarded
+              expect(entitlement.reload.updated_at).to eq(Time.current)
+            end
+          end
+        end
+
+        context "when a value is added" do
+          let(:entitlements_params) { {"seats" => {"max" => "50", "provider" => "okta", "enabled" => true}} }
+
+          it "moves the updated_at of the entitlement" do
+            freeze_time do
+              expect(result).to be_success
+              expect(entitlement.reload.updated_at).to eq(Time.current)
+            end
+          end
+        end
+
+        context "when no value changes" do
+          let(:entitlements_params) { {"seats" => {"max" => "50", "provider" => "okta"}} }
+
+          it "keeps the updated_at of the entitlement" do
+            expect(result).to be_success
+            expect(entitlement.reload.updated_at).to eq(updated_at)
+          end
+        end
+      end
+
       context "when the catalog plan is discarded" do
         let(:plan) { create(:catalog_plan, organization:, deleted_at: Time.current) }
 
@@ -429,6 +526,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect(result.error.error_code).to eq("plan_not_found")
           expect(old_entitlement.reload).not_to be_discarded
           expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
     end

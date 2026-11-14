@@ -323,6 +323,12 @@ plan_deleted:
   description: A plan has been deleted
   category: Plans
   deprecated: false
+plan_entitlements_updated:
+  name: plan.entitlements_updated
+  description: The entitlements of a plan have been updated
+  category: Plans
+  deprecated: false
+  product_catalog_only: true
 product_category_created:
   name: product_category.created
   description: A new product category has been created

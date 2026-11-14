@@ -18,6 +18,8 @@ module Entitlement
     validates_with ParentPresenceValidator,
       parents: %i[plan catalog_plan subscription],
       error: "one_of_plan_or_subscription_required"
+
+    scope :oldest_first, -> { order(:created_at, :id) }
   end
 end
 

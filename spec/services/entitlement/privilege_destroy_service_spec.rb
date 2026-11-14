@@ -64,6 +64,18 @@ RSpec.describe Entitlement::PrivilegeDestroyService do
         expect { subject }.to change(Entitlement::EntitlementValue, :count).by(-1)
       end
 
+      context "when the entitlement was last updated earlier" do
+        before { entitlement.update_column(:updated_at, 1.day.ago) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "moves the updated_at of the entitlement" do
+          freeze_time do
+            subject
+
+            expect(entitlement.reload.updated_at).to eq(Time.current)
+          end
+        end
+      end
+
       it "sends `plan.updated` webhook" do
         expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
       end
