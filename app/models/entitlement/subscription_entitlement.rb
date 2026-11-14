@@ -28,6 +28,17 @@ module Entitlement
       )
     end
 
+    # Catalog plans have no parent, so there is no fallback as for subscriptions.
+    def self.for_contract(contract)
+      SubscriptionEntitlementQuery.call(
+        organization: contract.organization,
+        filters: {
+          contract_id: contract.id,
+          catalog_plan_id: contract.catalog_plan_id
+        }
+      )
+    end
+
     def to_h
       h = attributes
       h["privileges"] = (h["privileges"] || []).map(&:to_h).index_by { |p| p[:code] }

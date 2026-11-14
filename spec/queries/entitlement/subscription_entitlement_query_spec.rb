@@ -357,6 +357,150 @@ RSpec.describe Entitlement::SubscriptionEntitlementQuery do
       end
     end
 
+    context "when the owner is a contract" do
+      subject do
+        described_class.call(organization:, filters: {contract_id: contract.id, catalog_plan_id: catalog_plan&.id})
+      end
+
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:contract) { create(:contract, organization:, catalog_plan:) }
+
+      def create_owned_entitlement(feature:, values: {}, **owner)
+        entitlement = create(:entitlement, feature:, plan: nil, **owner)
+        values.each { |privilege, value| create(:entitlement_value, entitlement:, privilege:, value:) }
+        entitlement
+      end
+
+      # code => [plan_id, subscription_id, {privilege code => [value, plan_value, subscription_value]}]
+      def summary
+        subject.to_h do |entitlement|
+          privileges = entitlement.privileges.to_h { [it.code, [it.value, it.plan_value, it.subscription_value]] }
+          [entitlement.code, [entitlement.plan_id, entitlement.subscription_id, privileges]]
+        end
+      end
+
+      context "when the catalog plan grants a value" do
+        before { create_owned_entitlement(catalog_plan:, feature: seats, values: {seats_max => 50}) }
+
+        it "returns the catalog plan value without override" do
+          expect(summary).to eq("seats" => [catalog_plan.id, nil, {"max" => ["50", "50", nil]}])
+        end
+      end
+
+      context "when the contract overrides a catalog plan value" do
+        before do
+          create_owned_entitlement(catalog_plan:, feature: seats, values: {seats_max => 50})
+          create_owned_entitlement(contract:, feature: seats, values: {seats_max => 60})
+        end
+
+        it "returns the contract value as override" do
+          expect(summary).to eq("seats" => [catalog_plan.id, contract.id, {"max" => ["60", "50", "60"]}])
+        end
+      end
+
+      context "when the contract override is deleted" do
+        before do
+          create_owned_entitlement(catalog_plan:, feature: seats, values: {seats_max => 50})
+          create(:entitlement, :contract, contract:, feature: seats, deleted_at: Time.current).tap do |entitlement|
+            create(:entitlement_value, entitlement:, privilege: seats_max, value: 60)
+          end
+        end
+
+        it "returns the catalog plan value" do
+          expect(summary).to eq("seats" => [catalog_plan.id, nil, {"max" => ["50", "50", nil]}])
+        end
+      end
+
+      context "when the contract removes a catalog plan feature" do
+        before do
+          create_owned_entitlement(catalog_plan:, feature: seats, values: {seats_max => 50})
+          create_owned_entitlement(catalog_plan:, feature: storage)
+          create(:subscription_feature_removal, :contract, contract:, feature: storage)
+        end
+
+        it "leaves the removed feature out" do
+          expect(summary).to eq("seats" => [catalog_plan.id, nil, {"max" => ["50", "50", nil]}])
+        end
+      end
+
+      context "when the contract removes a catalog plan privilege" do
+        before do
+          create_owned_entitlement(catalog_plan:, feature: seats, values: {seats_max => 50, seats_reset => "true"})
+          create(:subscription_feature_removal, :contract, contract:, privilege: seats_reset)
+        end
+
+        it "leaves the removed privilege out" do
+          expect(summary).to eq("seats" => [catalog_plan.id, nil, {"max" => ["50", "50", nil]}])
+        end
+      end
+
+      context "when the contract removals are deleted" do
+        before do
+          create_owned_entitlement(catalog_plan:, feature: seats, values: {seats_max => 50, seats_reset => "true"})
+          create_owned_entitlement(catalog_plan:, feature: storage)
+          create(:subscription_feature_removal, :contract, contract:, feature: storage, deleted_at: Time.current)
+          create(:subscription_feature_removal, :contract, contract:, privilege: seats_reset, deleted_at: Time.current)
+        end
+
+        it "returns the feature and the privilege" do
+          expect(summary).to eq(
+            "seats" => [catalog_plan.id, nil, {"max" => ["50", "50", nil], "reset" => ["true", "true", nil]}],
+            "storage" => [catalog_plan.id, nil, {}]
+          )
+        end
+      end
+
+      context "when the contract has no catalog plan" do
+        let(:catalog_plan) { nil }
+
+        before do
+          # A catalog plan row must not match the NULL catalog_plan_id of the contract
+          create_owned_entitlement(catalog_plan: create(:catalog_plan, organization:), feature: storage)
+        end
+
+        it "returns an empty list" do
+          expect(subject).to eq([])
+        end
+
+        context "with rows of its own" do
+          before { create_owned_entitlement(contract:, feature: seats, values: {seats_max => 60}) }
+
+          it "returns only its own rows" do
+            expect(summary).to eq("seats" => [nil, contract.id, {"max" => ["60", nil, "60"]}])
+          end
+        end
+      end
+
+      context "when other owners have rows for the same feature" do
+        before do
+          create_owned_entitlement(catalog_plan:, feature: seats, values: {seats_max => 50, seats_reset => "true"})
+
+          other_contract = create(:contract, organization:, customer: contract.customer, catalog_plan:)
+          create_owned_entitlement(contract: other_contract, feature: seats, values: {seats_max => 70})
+          create(:subscription_feature_removal, :contract, contract: other_contract, privilege: seats_reset)
+
+          other_subscription = create(:subscription, organization:, customer: contract.customer)
+          create_owned_entitlement(subscription: other_subscription, feature: seats, values: {seats_max => 80})
+          create_owned_entitlement(subscription: other_subscription, feature: storage)
+          create(:subscription_feature_removal, subscription: other_subscription, feature: seats)
+        end
+
+        it "returns only the rows of the contract and its catalog plan" do
+          expect(summary).to eq("seats" => [catalog_plan.id, nil, {"max" => ["50", "50", nil], "reset" => ["true", "true", nil]}])
+        end
+      end
+    end
+
+    context "when both a subscription and a contract are given" do
+      subject do
+        described_class.call(organization:, filters: {subscription_id: SecureRandom.uuid, contract_id: SecureRandom.uuid})
+      end
+
+      it "raises an ArgumentError" do
+        expect { subject }.to raise_error(ArgumentError, "subscription_id and contract_id are mutually exclusive")
+      end
+    end
+
     describe "ordering_date" do
       before do
         seats_plan_ent = Entitlement::Entitlement.create!(created_at: 1.day.ago, organization:, plan:, feature: seats)

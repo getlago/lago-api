@@ -36,6 +36,8 @@ RSpec.describe Contract do
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
       expect(contract).to have_many(:billing_segments)
       expect(contract).to have_many(:fees)
+      expect(contract).to have_many(:entitlements).class_name("Entitlement::Entitlement")
+      expect(contract).to have_many(:entitlement_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
       expect(contract).to have_many(:invoices).through(:billing_segments)
       expect(contract).to have_many(:applied_invoice_custom_sections).class_name("Contract::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(contract).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
@@ -377,6 +379,62 @@ RSpec.describe Contract do
 
         expect(organization.contracts.terminatable_by_external_id("reused")).to eq(active)
         expect(pending.reload.status).to eq("pending")
+      end
+    end
+
+    describe ".latest_by_external_id" do
+      subject(:latest) { organization.contracts.latest_by_external_id("reused", status: "terminated") }
+
+      let(:organization) { create(:organization) }
+      let(:started_at) { Time.zone.parse("2026-01-01T00:00:00Z") }
+      let(:low_id) { "00000000-0000-0000-0000-000000000001" }
+      let(:high_id) { "ffffffff-ffff-ffff-ffff-ffffffffffff" }
+
+      # Each case gives the expected contract the lower values of the later
+      # sort keys, so only the key under test can pick it.
+      it "returns the contract that started last" do
+        expected = travel_to(Time.zone.parse("2026-02-01T00:00:00Z")) do
+          create(:contract, :terminated, organization:, external_id: "reused", started_at:, id: low_id)
+        end
+        travel_to(Time.zone.parse("2026-02-02T00:00:00Z")) do
+          create(:contract, :terminated, organization:, external_id: "reused", started_at: started_at - 1.month, id: high_id)
+        end
+
+        expect(latest).to eq(expected)
+      end
+
+      it "returns the contract created last when both started at the same time" do
+        travel_to(Time.zone.parse("2026-02-01T00:00:00Z")) do
+          create(:contract, :terminated, organization:, external_id: "reused", started_at:, id: high_id)
+        end
+        expected = travel_to(Time.zone.parse("2026-02-02T00:00:00Z")) do
+          create(:contract, :terminated, organization:, external_id: "reused", started_at:, id: low_id)
+        end
+
+        expect(latest).to eq(expected)
+      end
+
+      it "returns the higher id when started_at and created_at are equal" do
+        travel_to(Time.zone.parse("2026-02-01T00:00:00Z")) do
+          create(:contract, :terminated, organization:, external_id: "reused", started_at:, id: low_id)
+          create(:contract, :terminated, organization:, external_id: "reused", started_at:, id: high_id)
+        end
+
+        expect(latest.id).to eq(high_id)
+      end
+
+      it "ignores contracts of another status or another external id" do
+        expected = create(:contract, :terminated, organization:, external_id: "reused", started_at: started_at - 1.month)
+        create(:contract, :canceled, organization:, external_id: "reused", started_at:)
+        create(:contract, :terminated, organization:, external_id: "other", started_at:)
+
+        expect(latest).to eq(expected)
+      end
+
+      it "returns nil when no contract has the status" do
+        create(:contract, organization:, external_id: "reused", started_at:)
+
+        expect(latest).to be_nil
       end
     end
   end

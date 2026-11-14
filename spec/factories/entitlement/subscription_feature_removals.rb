@@ -7,5 +7,10 @@ FactoryBot.define do
 
     entitlement_feature_id { nil }
     entitlement_privilege_id { nil }
+
+    trait :contract do
+      subscription { nil }
+      contract { association(:contract, organization:) }
+    end
   end
 end
