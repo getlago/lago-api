@@ -5,7 +5,7 @@ module Entitlement
     include ::Entitlement::Concerns::CreateOrUpdateConcern
     include ::Entitlement::Concerns::OwnerLockConcern
 
-    Result = BaseResult[:entitlements]
+    Result = BaseResult[:entitlements, :failed_field]
 
     def initialize(organization:, plan:, entitlements_params:, partial:, send_webhook: true)
       @organization = organization
@@ -19,6 +19,7 @@ module Entitlement
     # NOTE: send_webhook gates the activity log too: both represent the same plan.updated event.
     #       It is set to false when invoked from the plan create/update mutations, where the plan
     #       service already emits the plan event, to avoid duplicates.
+    #       A catalog plan only gets the activity log: its entitlement changes get their own webhook.
     activity_loggable(
       action: "plan.updated",
       record: -> { plan },
@@ -33,21 +34,27 @@ module Entitlement
       end
 
       # NOTE: The webhook is sent even if no changes were made to the plan
-      SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook
+      SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook && !plan.is_a?(CatalogPlan)
 
-      result.entitlements = plan.entitlements.includes(:feature, values: :privilege).reload
+      result.entitlements = plan.entitlements.includes(:feature, values: :privilege).order(:created_at, :id).reload
       result
+    rescue BaseService::ValidationFailure => e
+      record_failing_entry
+      result.fail_with_error!(at_entry_path(e, :"#{@current_privilege_code}_privilege_value"))
     rescue BaseService::FailedResult => e
+      record_failing_entry
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordNotUnique => e
-      unique_index_failure!(e, PLAN_UNIQUE_INDEXES)
+      unique_index_failure!(e, plan_unique_indexes(plan))
     rescue ActiveRecord::RecordInvalid => e
+      record_failing_entry
       if e.record.is_a?(EntitlementValue)
-        result.record_validation_failure!(record: e.record) { :"privilege.#{it}" }
+        result.fail_with_error!(entitlement_value_failure(e.record))
       else
         result.record_validation_failure!(record: e.record)
       end
     rescue ActiveRecord::RecordNotFound => e
+      record_failing_entry
       if e.message.include?("Entitlement::Feature")
         result.not_found_failure!(resource: "feature")
       elsif e.message.include?("Entitlement::Privilege")
@@ -61,6 +68,42 @@ module Entitlement
 
     attr_reader :organization, :plan, :entitlements_params, :partial, :send_webhook
     alias_method :partial?, :partial
+
+    # NOTE: The failures keep the keys that v1 and GraphQL clients read. The path of the failing entry
+    #       lets the v2 controller point an unknown feature or privilege at entitlements.<feature>[.<privilege>].
+    def record_failing_entry
+      result.failed_field = entitlement_entry_field(@current_feature_code, @current_privilege_code) if @current_feature_code
+    end
+
+    # The path of an entry in the entitlements map of a request, which native v2 renders as the field.
+    def entitlement_entry_field(feature_code, privilege_code = nil)
+      privilege_code.nil? ? :"entitlements.#{feature_code}" : :"entitlements.#{feature_code}.#{privilege_code}"
+    end
+
+    # The failure with the codes and meta of v1_field on the path of the failing entry, which native v2
+    # renders. Its messages keep the keys that v1 and GraphQL clients read.
+    def at_entry_path(failure, v1_field)
+      entry_path = entitlement_entry_field(@current_feature_code, @current_privilege_code)
+      v2_field = ->(field) { (field.to_sym == v1_field) ? entry_path : field }
+
+      BaseService::ValidationFailure.new(
+        result,
+        messages: failure.messages,
+        codes: failure.codes.transform_keys(&v2_field),
+        meta: failure.meta.transform_keys(&v2_field)
+      )
+    end
+
+    # v1 and GraphQL clients read privilege.<attribute>.
+    def entitlement_value_failure(entitlement_value)
+      failure = BaseService::ValidationFailure.from_errors(result, entitlement_value.errors).remap(result) { :"privilege.#{it}" }
+
+      at_entry_path(failure, :"privilege.value")
+    end
+
+    def owner_attributes
+      plan.is_a?(CatalogPlan) ? {catalog_plan: plan} : {plan:}
+    end
 
     def delete_missing_entitlements
       missing = plan.entitlements.joins(:feature).where.not(feature: {code: entitlements_params.keys})
@@ -88,6 +131,8 @@ module Entitlement
         .index_by(&:entitlement_feature_id)
 
       entitlements_params.each do |feature_code, privilege_values|
+        @current_feature_code = feature_code
+        @current_privilege_code = nil
         feature = features_by_code[feature_code]
 
         raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
@@ -96,11 +141,7 @@ module Entitlement
         entitlement = entitlements_by_feature_id[feature.id]
 
         if entitlement.nil?
-          entitlement = Entitlement.create!(
-            organization: organization,
-            feature: feature,
-            plan: plan
-          )
+          entitlement = Entitlement.create!(organization:, feature:, **owner_attributes)
         elsif !partial?
           delete_missing_entitlement_values(entitlement, privilege_values)
         end
@@ -111,6 +152,7 @@ module Entitlement
 
     def create_entitlement_values(entitlement, feature, privilege_values)
       privilege_values.each do |privilege_code, value|
+        @current_privilege_code = privilege_code
         privilege = feature.privileges.find { it.code == privilege_code }
 
         raise ActiveRecord::RecordNotFound.new("Entitlement::Privilege") unless privilege
@@ -123,6 +165,7 @@ module Entitlement
       return if privilege_values.blank?
 
       privilege_values.each do |privilege_code, value|
+        @current_privilege_code = privilege_code
         privilege = feature.privileges.find { it.code == privilege_code }
 
         raise ActiveRecord::RecordNotFound.new("Entitlement::Privilege") unless privilege

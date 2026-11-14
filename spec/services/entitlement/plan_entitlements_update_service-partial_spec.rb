@@ -139,6 +139,22 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "returns both entitlements in the result" do
         expect(result.entitlements).to include(entitlement, entitlement2)
       end
+
+      context "when the existing value of the second feature is set to null" do
+        let(:entitlements_params) do
+          {
+            feature.code => {privilege.code => 60},
+            feature2.code => {privilege3.code => nil}
+          }
+        end
+
+        it "records the second feature and its privilege as the failing entry and writes nothing" do
+          expect { result }.not_to change { entitlement_value.reload.value }
+
+          expect(result.error.messages).to eq({"privilege.value": ["value_is_mandatory"]})
+          expect(result.failed_field).to eq(:"entitlements.#{feature2.code}.max_storage")
+        end
+      end
     end
 
     context "when plan is nil" do
@@ -180,6 +196,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages).to eq(feature: ["value_already_exist"])
+        expect(result.failed_field).to be_nil
         expect(SendWebhookJob).not_to have_been_enqueued
         expect(Utils::ActivityLog).not_to have_produced("plan.updated")
       end
@@ -199,6 +216,61 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result).not_to be_success
         expect(result.error.messages).to eq(privilege: ["value_already_exist"])
         expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    context "with a catalog plan" do
+      let(:plan) { create(:catalog_plan, organization:) }
+      let(:entitlement) { create(:entitlement, :catalog_plan, catalog_plan: plan, feature:) }
+      let(:new_feature) { create(:feature, organization:, code: "storage") }
+      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb", value_type: "integer") }
+      let(:entitlements_params) { {new_feature.code => {new_privilege.code => "100"}} }
+
+      it "adds the feature and keeps the other ones" do
+        expect(result).to be_success
+
+        new_entitlement = plan.entitlements.find_by!(feature: new_feature)
+        expect(new_entitlement.catalog_plan_id).to eq(plan.id)
+        expect(new_entitlement.plan_id).to be_nil
+        expect(new_entitlement.values.sole.value).to eq("100")
+        expect(entitlement_value.reload.value).to eq("10")
+        expect(result.entitlements).to eq([entitlement, new_entitlement])
+      end
+
+      context "when a concurrent request creates the same entitlement" do
+        before do
+          # The concurrent request inserts its row after this one read the plan entitlements.
+          allow(Entitlement::Entitlement).to receive(:create!).and_wrap_original do |original, **attributes|
+            original.call(**attributes)
+            original.call(**attributes)
+          end
+        end
+
+        it "returns the validation error of a taken feature" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq(feature: ["value_already_exist"])
+          expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+        end
+      end
+
+      context "when a concurrent request creates the same entitlement value" do
+        let(:entitlements_params) { {feature.code => {privilege2.code => 5}} }
+
+        before do
+          allow(Entitlement::EntitlementValue).to receive(:create!).and_wrap_original do |original, **attributes|
+            original.call(**attributes)
+            original.call(**attributes)
+          end
+        end
+
+        it "returns the validation error of a taken privilege" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq(privilege: ["value_already_exist"])
+          expect(entitlement.values.where(privilege: privilege2)).to be_empty
+          expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+        end
       end
     end
 

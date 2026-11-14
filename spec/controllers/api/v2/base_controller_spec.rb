@@ -27,6 +27,11 @@ RSpec.describe Api::V2::BaseController, type: :controller do
       head(:ok)
     end
 
+    def update
+      reject_pagination!
+      head(:ok)
+    end
+
     private
 
     def resource_name
@@ -187,6 +192,33 @@ RSpec.describe Api::V2::BaseController, type: :controller do
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:details]).to eq([{code: "not_paginated", field: "page", meta: {}}])
+    end
+  end
+
+  context "with cursor pagination parameters on a non-list action" do
+    subject(:update) { put(:update, params: {id: "1", limit: "1", after: "x"}) }
+
+    it "returns a bad request error" do
+      update
+
+      expect(response).to have_http_status(:bad_request)
+      expect(json).to eq(
+        code: "invalid_pagination_parameter",
+        details: [
+          {code: "not_paginated", field: "limit", meta: {}},
+          {code: "not_paginated", field: "after", meta: {}}
+        ]
+      )
+    end
+  end
+
+  context "without pagination parameters on a non-list action" do
+    subject(:update) { put(:update, params: {id: "1"}) }
+
+    it "runs the action" do
+      update
+
+      expect(response).to have_http_status(:ok)
     end
   end
 end
