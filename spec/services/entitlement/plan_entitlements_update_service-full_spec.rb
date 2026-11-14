@@ -431,6 +431,255 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect(Utils::ActivityLog).not_to have_produced("plan.updated")
         end
       end
+
+      context "with the catalog plan limits" do
+        let(:string_privilege) { nil }
+        let(:boolean_privilege) { nil }
+        let(:select_privilege) { nil }
+        let(:bulk_feature_count) { 0 }
+        let(:planned_feature_count) { 0 }
+        # Inserted in bulk: hundreds of factory calls would make these examples slow. {code => id}
+        # rubocop:disable Rails/SkipsModelValidations
+        let(:bulk_features) do
+          now = Time.current
+          rows = Array.new(bulk_feature_count) do |i|
+            {organization_id: organization.id, code: "bulk_#{i}", name: "Bulk #{i}", created_at: now, updated_at: now}
+          end
+          rows.empty? ? {} : Entitlement::Feature.insert_all!(rows, returning: %w[code id]).rows.to_h
+        end
+        # The entitlements the plan holds before the write: the first planned_feature_count bulk features.
+        let(:planned_entitlements) do
+          now = Time.current
+          rows = bulk_features.values.first(planned_feature_count).map do |feature_id|
+            {organization_id: organization.id, catalog_plan_id: plan.id, entitlement_feature_id: feature_id, created_at: now, updated_at: now}
+          end
+          Entitlement::Entitlement.insert_all!(rows) if rows.any?
+        end
+        # rubocop:enable Rails/SkipsModelValidations
+        # max and 50 more integer privileges: 51 privileges on seats.
+        let(:more_privileges) { create_list(:privilege, 50, organization:, feature:, value_type: "integer") }
+        let(:seats_privileges) { [privilege, *more_privileges] }
+        let(:seats_value_count) { 0 }
+        let(:seats_params) { seats_privileges.first(seats_value_count).to_h { [it.code, 1] } }
+        let(:entitlements_params) do
+          params = bulk_features.keys.index_with { {} }
+          (seats_value_count > 0) ? params.merge("seats" => seats_params) : params
+        end
+
+        before do
+          bulk_features
+          planned_entitlements
+          more_privileges
+        end
+
+        shared_examples "a refused write" do
+          it "writes nothing and logs no activity" do
+            expect { result }
+              .to not_change(Entitlement::Entitlement.with_discarded, :count)
+              .and not_change(Entitlement::EntitlementValue.with_discarded, :count)
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.failed_field).to be_nil
+            expect(old_entitlement.reload).not_to be_discarded
+            expect(old_value.reload).to have_attributes(value: "okta", deleted_at: nil)
+            expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          end
+        end
+
+        context "with 500 entitlements after the replace" do
+          let(:bulk_feature_count) { 500 }
+
+          it "accepts them" do
+            expect(result).to be_success
+            expect(plan.entitlements.count).to eq(500) # 500 features of the body, sso dropped
+            expect(old_entitlement.reload).to be_discarded
+          end
+        end
+
+        context "with 501 entitlements after the replace" do
+          let(:bulk_feature_count) { 501 }
+
+          it_behaves_like "a refused write"
+
+          it "returns too_many_entitlements on base" do
+            expect(result.error.messages).to eq(base: ["too_many_entitlements"])
+            expect(result.error.codes).to eq(base: ["too_many_entitlements"])
+            expect(result.error.meta).to eq(base: {max_items: 500})
+          end
+        end
+
+        context "with 50 values on an entitlement" do
+          let(:seats_value_count) { 50 }
+
+          it "accepts them" do
+            expect(result).to be_success
+            expect(plan.entitlements.sole.values.count).to eq(50)
+          end
+        end
+
+        context "with 51 values on an entitlement" do
+          let(:seats_value_count) { 51 }
+
+          it_behaves_like "a refused write"
+
+          it "returns too_many_values on the entitlement" do
+            expect(result.error.messages).to eq("entitlements.seats": ["too_many_values"])
+            expect(result.error.codes).to eq("entitlements.seats": ["too_many_values"])
+            expect(result.error.meta).to eq("entitlements.seats": {max_items: 50})
+          end
+        end
+
+        context "with both limits crossed" do
+          let(:bulk_feature_count) { 501 }
+          let(:seats_value_count) { 51 }
+
+          it_behaves_like "a refused write"
+
+          it "returns too_many_entitlements on base first, then too_many_values" do
+            expect(result.error.messages).to eq(base: ["too_many_entitlements"], "entitlements.seats": ["too_many_values"])
+            expect(result.error.messages.keys).to eq([:base, :"entitlements.seats"])
+            expect(result.error.meta).to eq(base: {max_items: 500}, "entitlements.seats": {max_items: 50})
+          end
+        end
+
+        context "with several entitlements over 50 values" do
+          let(:storage_feature) { create(:feature, organization:, code: "storage") }
+          let(:storage_privileges) { create_list(:privilege, 51, organization:, feature: storage_feature, value_type: "integer") }
+          let(:seats_value_count) { 51 }
+          let(:entitlements_params) do
+            {"storage" => storage_privileges.to_h { [it.code, 1] }, "api" => {}, "seats" => seats_params}
+          end
+
+          before { create(:feature, organization:, code: "api") }
+
+          it "returns too_many_values on each of them, in the order of the request" do
+            expect(result.error.messages).to eq("entitlements.storage": ["too_many_values"], "entitlements.seats": ["too_many_values"])
+            expect(result.error.messages.keys).to eq([:"entitlements.storage", :"entitlements.seats"])
+          end
+        end
+
+        context "when the plan already holds more than 500 entitlements" do
+          let(:old_value) { nil }
+          let(:bulk_feature_count) { 502 }
+          let(:planned_feature_count) { 501 }
+
+          context "when the replace keeps them" do
+            let(:entitlements_params) { bulk_features.keys.first(501).index_with { {} } }
+
+            it "accepts it" do
+              expect(result).to be_success
+              expect(plan.entitlements.count).to eq(501)
+            end
+          end
+
+          context "when the replace adds one" do
+            it "refuses it" do
+              expect { result }.not_to change(Entitlement::Entitlement.with_discarded, :count)
+
+              expect(result.error.messages).to eq(base: ["too_many_entitlements"])
+            end
+          end
+
+          context "when the replace drops entitlements but stays above 500" do
+            let(:planned_feature_count) { 502 }
+            let(:entitlements_params) { bulk_features.keys.first(501).index_with { {} } }
+
+            it "accepts it" do
+              expect(plan.entitlements.count).to eq(502)
+
+              expect(result).to be_success
+              expect(plan.entitlements.count).to eq(501) # 502 held - bulk_501 dropped
+            end
+          end
+        end
+
+        context "when the entitlement already holds 50 values and the replace rewrites them" do
+          let(:old_value) { nil }
+          let(:seats_owner) { plan }
+          let(:seats_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: seats_owner, feature:) }
+          let(:seats_value_count) { 50 }
+
+          before do
+            now = Time.current
+            rows = seats_privileges.first(50).map do |seats_privilege|
+              {organization_id: organization.id, entitlement_entitlement_id: seats_entitlement.id,
+               entitlement_privilege_id: seats_privilege.id, value: "1", created_at: now, updated_at: now}
+            end
+            Entitlement::EntitlementValue.insert_all!(rows) # rubocop:disable Rails/SkipsModelValidations
+          end
+
+          it "accepts the same 50 values" do
+            expect(result).to be_success
+            expect(seats_entitlement.values.count).to eq(50)
+          end
+
+          context "when the replace swaps one value for another" do
+            # Drops the value of the first privilege and adds the 51st: 50 kept values and 1 discarded.
+            let(:seats_params) { seats_privileges.drop(1).to_h { [it.code, 1] } }
+
+            it "accepts it" do
+              expect(result).to be_success
+              expect(seats_entitlement.values.count).to eq(50)
+              expect(Entitlement::EntitlementValue.with_discarded.where(entitlement: seats_entitlement).count).to eq(51)
+            end
+          end
+
+          context "when another catalog plan holds the 50 values" do
+            let(:seats_owner) { other_plan }
+            let(:seats_value_count) { 1 }
+
+            it "accepts a value on the plan" do
+              expect(result).to be_success
+              expect(plan.entitlements.sole.values.count).to eq(1)
+            end
+          end
+        end
+
+        context "when an entitlement already holds more than 50 values" do
+          let(:old_value) { nil }
+          let(:seats_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature:) }
+          let(:seats_value_count) { 51 }
+
+          before do
+            now = Time.current
+            rows = seats_privileges.map do |seats_privilege|
+              {organization_id: organization.id, entitlement_entitlement_id: seats_entitlement.id,
+               entitlement_privilege_id: seats_privilege.id, value: "1", created_at: now, updated_at: now}
+            end
+            Entitlement::EntitlementValue.insert_all!(rows) # rubocop:disable Rails/SkipsModelValidations
+          end
+
+          it "accepts a replace that keeps them" do
+            expect(result).to be_success
+            expect(seats_entitlement.values.count).to eq(51)
+          end
+
+          context "when the replace adds one" do
+            let(:extra_privilege) { create(:privilege, organization:, feature:, code: "extra", value_type: "integer") }
+            let(:entitlements_params) { {"seats" => seats_params.merge(extra_privilege.code => 1)} }
+
+            it "refuses it" do
+              expect { result }.not_to change(Entitlement::EntitlementValue.with_discarded, :count)
+
+              expect(result.error.messages).to eq("entitlements.seats": ["too_many_values"])
+            end
+          end
+        end
+
+        context "with a legacy plan" do
+          let(:plan) { create(:plan, organization:) }
+          let(:old_value) { nil }
+          let(:bulk_feature_count) { 501 }
+          let(:seats_value_count) { 51 }
+
+          it "has no limit" do
+            expect(result).to be_success
+            expect(plan.entitlements.count).to eq(502) # 501 bulk features + seats
+            expect(plan.entitlements.joins(:feature).find_by!(feature: {code: "seats"}).values.count).to eq(51)
+          end
+        end
+      end
     end
 
     context "with bullet gem to detect N+1 queries", bullet: {unused_eager_loading: false} do

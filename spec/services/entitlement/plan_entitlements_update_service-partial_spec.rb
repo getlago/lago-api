@@ -272,6 +272,81 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect(Utils::ActivityLog).not_to have_produced("plan.updated")
         end
       end
+
+      context "when the plan already holds more than 500 entitlements" do
+        # rubocop:disable Rails/SkipsModelValidations
+        before do
+          now = Time.current
+          feature_ids = Entitlement::Feature.insert_all!(
+            Array.new(500) { {organization_id: organization.id, code: "bulk_#{it}", created_at: now, updated_at: now} },
+            returning: :id
+          ).rows.flatten
+          Entitlement::Entitlement.insert_all!(
+            feature_ids.map { {organization_id: organization.id, catalog_plan_id: plan.id, entitlement_feature_id: it, created_at: now, updated_at: now} }
+          )
+        end
+        # rubocop:enable Rails/SkipsModelValidations
+
+        context "when the write updates an existing value" do
+          let(:entitlements_params) { {feature.code => {privilege.code => 60}} }
+
+          it "accepts it" do
+            expect(result).to be_success
+            expect(plan.entitlements.count).to eq(501) # 500 bulk + the entitlement of feature
+            expect(entitlement_value.reload.value).to eq("60")
+          end
+        end
+
+        context "when the write adds a feature" do
+          it "refuses it and writes nothing" do
+            expect { result }.not_to change(Entitlement::Entitlement.with_discarded, :count)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(base: ["too_many_entitlements"])
+            expect(result.error.meta).to eq(base: {max_items: 500})
+            expect(result.failed_field).to be_nil
+            expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          end
+        end
+      end
+
+      context "when the plan already holds 50 values on an entitlement" do
+        # The value of privilege and 49 more: privilege2 has no value yet.
+        let(:more_privileges) { create_list(:privilege, 49, organization:, feature:, value_type: "integer") }
+
+        before do
+          now = Time.current
+          rows = more_privileges.map do |more_privilege|
+            {organization_id: organization.id, entitlement_entitlement_id: entitlement.id,
+             entitlement_privilege_id: more_privilege.id, value: "1", created_at: now, updated_at: now}
+          end
+          Entitlement::EntitlementValue.insert_all!(rows) # rubocop:disable Rails/SkipsModelValidations
+        end
+
+        context "when the write updates an existing value" do
+          let(:entitlements_params) { {feature.code => {privilege.code => 60}} }
+
+          it "accepts it" do
+            expect(result).to be_success
+            expect(entitlement.values.count).to eq(50)
+            expect(entitlement_value.reload.value).to eq("60")
+          end
+        end
+
+        context "when the write adds one" do
+          let(:entitlements_params) { {feature.code => {privilege2.code => 5}} }
+
+          it "refuses it and writes nothing" do
+            expect { result }.not_to change(Entitlement::EntitlementValue.with_discarded, :count)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq("entitlements.#{feature.code}": ["too_many_values"])
+            expect(result.error.meta).to eq("entitlements.#{feature.code}": {max_items: 50})
+            expect(result.failed_field).to be_nil
+            expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          end
+        end
+      end
     end
 
     context "when another unique index refuses the write" do
