@@ -142,15 +142,17 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     end
 
     context "when an error occurs during TriggeredAlert creation" do
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 15) }
+
       before do
-        allow(UsageMonitoring::TriggeredAlert).to receive(:new).and_raise(StandardError)
+        allow(UsageMonitoring::TriggeredAlert).to receive(:new).and_raise(StandardError, "history write failed")
       end
 
       it "does not update alert last_processed_at or previous_value" do
-        expect(SendWebhookJob).not_to have_been_enqueued
-        expect { result }.to raise_error(StandardError)
+        expect { result }.to raise_error(StandardError, "history write failed")
         expect(alert.reload.last_processed_at).to be_nil
         expect(alert.previous_value).to eq 4
+        expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
 
