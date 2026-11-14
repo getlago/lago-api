@@ -55,14 +55,7 @@ module UsageMonitoring
         alert.billable_metric = billable_metric if billable_metric
         alert.save!
 
-        if thresholds_params.present?
-          lines_before = announced_lines_in_alarm(alert)
-          alert.thresholds.delete_all
-          alert.thresholds.create!(prepare_thresholds(thresholds_params, alert.organization_id))
-          alert.reload_thresholds
-          seed_alarms_already_past(alert, alertable)
-          resolve_alarms_closed_by_edit(alert, alertable, lines_before)
-        end
+        replace_thresholds(alert, alertable, thresholds_params) if thresholds_params.present?
       end
 
       track_subscription_activity if alert.subscription_external_id?
@@ -91,30 +84,8 @@ module UsageMonitoring
       @thresholds_params = if params[:thresholds].blank?
         params[:thresholds]
       else
-        params[:thresholds].map { keep_previous_notify_on(it.to_h.with_indifferent_access) }
+        keep_previous_notify_on(alert, params[:thresholds])
       end
-    end
-
-    # Thresholds are replaced wholesale, so an update that leaves notify_on out would otherwise
-    # revert an opted-in threshold to the column default and silently stop the resolved webhook
-    def keep_previous_notify_on(threshold)
-      return threshold if threshold.key?(:notify_on)
-      return threshold if recurring_param?(threshold)
-      # A code sent twice cannot tell which threshold the stored opt-in belongs to
-      return threshold if incoming_code_count(threshold[:code]) > 1
-
-      previous = previous_notify_on[threshold[:code].to_s]
-      return threshold if previous.blank?
-
-      threshold.merge(notify_on: previous)
-    end
-
-    def incoming_code_count(code)
-      params[:thresholds].count { it.to_h.with_indifferent_access[:code].to_s == code.to_s }
-    end
-
-    def previous_notify_on
-      @previous_notify_on ||= alert.thresholds.where.not(code: nil).pluck(:code, :notify_on).to_h
     end
 
     def alertable
