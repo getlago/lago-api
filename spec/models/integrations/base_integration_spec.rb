@@ -105,6 +105,12 @@ RSpec.describe Integrations::BaseIntegration do
       end
     end
 
+    context "when type is agent_storefront" do
+      it "returns the correct class name" do
+        expect(described_class.integration_type("agent_storefront")).to eq("Integrations::AgentStorefrontIntegration")
+      end
+    end
+
     context "when type is unknown" do
       it "raises a NotImplementedError" do
         expect { described_class.integration_type("unknown") }.to raise_error(NotImplementedError)

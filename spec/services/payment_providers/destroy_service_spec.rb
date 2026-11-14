@@ -47,6 +47,18 @@ RSpec.describe PaymentProviders::DestroyService do
       end
     end
 
+    context "when an agent storefront uses the Stripe connection" do
+      before { create(:agent_storefront_integration, organization:, stripe_provider: payment_provider) }
+
+      it "returns an error and keeps the payment provider" do
+        result = destroy_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("payment_provider_used_by_agent_storefront")
+        expect(payment_provider.reload).not_to be_discarded
+      end
+    end
+
     context "when payment provider is not found" do
       let(:payment_provider) { nil }
 
