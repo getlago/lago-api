@@ -61,6 +61,7 @@ module UsageMonitoring
         )
       end
 
+      # Callers pass validated thresholds and hold the alert's lock: the current thresholds are deleted before the new ones exist.
       # Without an alertable there is no observed value to seed or resolve against: only the thresholds change.
       def replace_thresholds(alert, alertable, thresholds)
         lines_before = alertable ? announced_lines_in_alarm(alert) : []
