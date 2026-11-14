@@ -237,6 +237,11 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result.entitlements).to eq([entitlement, new_entitlement])
       end
 
+      it "sends one `plan.entitlements_updated` webhook after commit and no `plan.updated` one" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.entitlements_updated", plan).exactly(:once)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("plan.updated", plan)
+      end
+
       context "when a concurrent request creates the same entitlement" do
         before do
           # The concurrent request inserts its row after this one read the plan entitlements.

@@ -18,6 +18,26 @@ RSpec.describe Entitlement::Entitlement do
     end
   end
 
+  describe "Scopes" do
+    describe ".oldest_first" do
+      let(:organization) { create(:organization) }
+      let(:created_at) { Time.zone.parse("2026-09-04T10:00:00Z") }
+      let(:recent) { create(:entitlement, organization:, created_at: created_at + 1.day) }
+      let(:same_time_higher_id) { create(:entitlement, organization:, id: "00000000-0000-0000-0000-000000000002", created_at:) }
+      let(:same_time_lower_id) { create(:entitlement, organization:, id: "00000000-0000-0000-0000-000000000001", created_at:) }
+
+      before do
+        recent
+        same_time_higher_id
+        same_time_lower_id
+      end
+
+      it "orders by creation, then by id" do
+        expect(described_class.where(organization:).oldest_first).to eq([same_time_lower_id, same_time_higher_id, recent])
+      end
+    end
+  end
+
   describe "validations" do
     describe "exactly_one_parent_present validation" do
       let_it_be(:organization) { create_default(:organization) }

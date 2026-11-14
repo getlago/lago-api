@@ -7187,6 +7187,7 @@ enum EventTypeEnum {
   payment_succeeded
   plan_created
   plan_deleted
+  plan_entitlements_updated
   plan_rate_card_created
   plan_rate_card_deleted
   plan_rate_card_updated

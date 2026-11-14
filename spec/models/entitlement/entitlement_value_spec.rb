@@ -14,7 +14,7 @@ RSpec.describe Entitlement::EntitlementValue do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:privilege).class_name("Entitlement::Privilege")
-      expect(subject).to belong_to(:entitlement).class_name("Entitlement::Entitlement")
+      expect(subject).to belong_to(:entitlement).class_name("Entitlement::Entitlement").touch(true)
     end
   end
 

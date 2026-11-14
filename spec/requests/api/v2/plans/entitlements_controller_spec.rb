@@ -41,10 +41,26 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
     end
 
     it "produces the plan.updated activity log once and no plan.updated webhook" do
-      expect { request }.not_to have_enqueued_job(SendWebhookJob)
+      expect { request }.not_to have_enqueued_job(SendWebhookJob).with("plan.updated", catalog_plan)
 
       expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(catalog_plan)
       expect(Utils::ActivityLog).to have_received(:produce).with(catalog_plan, "plan.updated", after_commit: true).once
+    end
+
+    context "with several features" do
+      let(:request_params) { {entitlements: {seats: {max: 50}, sso: {enabled: true}}} }
+
+      before do
+        sso = create(:feature, organization:, code: "sso")
+        create(:privilege, organization:, feature: sso, code: "enabled", value_type: "boolean")
+      end
+
+      it "sends one plan.entitlements_updated webhook after commit" do
+        expect { request }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.entitlements_updated", catalog_plan).exactly(:once)
+
+        expect(response).to have_http_status(:success)
+        expect(SendWebhookJob).to have_been_enqueued.exactly(:once)
+      end
     end
 
     context "with an entitlement left out of the body" do
@@ -258,6 +274,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
           expect(json).to eq(code: "validation_errors", details:)
           expect(entitlement.reload).not_to be_discarded
           expect(value.reload).to have_attributes(value: "10", deleted_at: nil)
+          expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
 
@@ -367,6 +384,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
         request
 
         expect(response).to be_v2_not_found_error("plan")
+        expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
 
