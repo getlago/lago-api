@@ -47,6 +47,19 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
     end
 
+    context "when the alert is deleted after the caller loaded it" do
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 15) }
+
+      before { UsageMonitoring::Alert.find(alert.id).discard! }
+
+      it "skips the evaluation" do
+        expect(result).to be_success
+        expect(organization.triggered_alerts.count).to eq 0
+        expect(SendWebhookJob).not_to have_been_enqueued
+        expect(alert.reload).to have_attributes(last_processed_at: nil, previous_value: 4)
+      end
+    end
+
     context "when no thresholds are crossed" do
       let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 5) }
 
