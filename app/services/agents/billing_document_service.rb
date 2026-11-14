@@ -27,6 +27,10 @@ module Agents
         3. GET `#{base}/billing` with the billing token for your plan, wallet and balance.
 
         Top-up limits are set when you enroll. A later change by #{storefront.name} applies to new enrollments.
+
+        ## Add credits
+
+        #{seller_profile ? add_credits(base) : "#{storefront.name} does not accept payments from agents yet.\n"}
       MARKDOWN
 
       result
@@ -35,6 +39,21 @@ module Agents
     private
 
     attr_reader :storefront
+
+    def seller_profile
+      storefront.stripe_provider&.seller_profile
+    end
+
+    def add_credits(base)
+      <<~MARKDOWN
+        You pay with a Stripe shared payment token granted from your own Stripe account. A token pays one top-up only.
+
+        1. GET `#{base}/billing` with the billing token. `funding` gives the seller profile, the currency and your top-up limits.
+        2. Grant a shared payment token from your Stripe account with `seller_details[network_business_profile]` set to `#{seller_profile}`, `usage_limits[currency]` set to the wallet's currency and `usage_limits[max_amount]` at least the amount, in cents.
+        3. POST `#{base}/billing/payments` with JSON `amount_cents` and `shared_payment_token`, and the billing token. Sending the same token again returns the same payment.
+        4. GET `#{base}/billing/payments/<id>` until `status` is `settled`: the credits are in your wallet. If it is `failed`, the token was refused: grant a new token and pay again.
+      MARKDOWN
+    end
 
     def sold_plans
       @sold_plans ||= begin

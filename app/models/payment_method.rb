@@ -19,11 +19,17 @@ class PaymentMethod < ApplicationRecord
     manual: "manual"
   }.freeze
 
+  SHARED_PAYMENT_TOKEN_FORMAT = /\Aspt_[A-Za-z0-9_]+\z/
+
   validates :provider_method_id, presence: true
   validates :is_default, inclusion: {in: [true, false]}
 
   def payment_provider_type
     payment_provider&.payment_type
+  end
+
+  def shared_payment_token?
+    provider_method_type == "shared_payment_token"
   end
 end
 

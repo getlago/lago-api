@@ -17,6 +17,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
           successRedirectUrl
           supports3ds
           requireTermsOfServiceConsent
+          sellerProfile
         }
       }
     GQL
@@ -46,7 +47,8 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
           name:,
           successRedirectUrl: success_redirect_url,
           supports3ds: true,
-          requireTermsOfServiceConsent: true
+          requireTermsOfServiceConsent: true,
+          sellerProfile: "profile_test_123"
         }
       }
     )
@@ -60,5 +62,6 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
     expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
     expect(result_data["supports3ds"]).to eq(true)
     expect(result_data["requireTermsOfServiceConsent"]).to eq(true)
+    expect(result_data["sellerProfile"]).to eq("profile_test_123")
   end
 end
