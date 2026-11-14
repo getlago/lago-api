@@ -7,6 +7,10 @@ module Entitlement
 
     Result = BaseResult[:entitlements, :failed_field]
 
+    # Catalog plans only: legacy plans keep no limit.
+    MAX_CATALOG_PLAN_ENTITLEMENTS = 500
+    MAX_CATALOG_PLAN_ENTITLEMENT_VALUES = 50
+
     def initialize(organization:, plan:, entitlements_params:, partial:, send_webhook: true)
       @organization = organization
       @plan = plan
@@ -30,10 +34,12 @@ module Entitlement
     def call
       ActiveRecord::Base.transaction do
         lock_plan!(plan)
+        baseline = catalog_plan_counts if catalog_plan?
         stored_before = stored_values_by_entitlement_id if catalog_plan?
         rendered_before = rendered_values_by_entitlement_id if render_entitlement_changes?
         delete_missing_entitlements unless partial?
         update_entitlements
+        check_catalog_plan_limits!(baseline) if catalog_plan?
         track_entitlement_changes(stored_before, rendered_before) if catalog_plan?
       end
 
@@ -176,6 +182,43 @@ module Entitlement
       end
 
       after_commit { ApplicationJob.perform_all_later(webhook_jobs) } if webhook_jobs.any?
+    end
+
+    # The kept entitlements of the plan and the kept values of each, by feature code, read in SQL.
+    def catalog_plan_counts
+      values = EntitlementValue
+        .where(entitlement_entitlement_id: plan.entitlements.select(:id))
+        .joins(entitlement: :feature)
+        .group("#{Feature.table_name}.code")
+        .count
+
+      {entitlements: plan.entitlements.count, values:}
+    end
+
+    # Counts the state after the write. A count already over its limit before the write is refused
+    # only when the write raises it, so that a plan over the limit can still be edited.
+    def check_catalog_plan_limits!(baseline)
+      after = catalog_plan_counts
+      errors = {}
+      meta = {}
+
+      if after[:entitlements] > MAX_CATALOG_PLAN_ENTITLEMENTS && after[:entitlements] > baseline[:entitlements]
+        errors[:base] = ["too_many_entitlements"]
+        meta[:base] = {max_items: MAX_CATALOG_PLAN_ENTITLEMENTS}
+      end
+
+      # Only the features of the body can gain values.
+      entitlements_params.each_key do |feature_code|
+        count = after[:values].fetch(feature_code, 0)
+        next unless count > MAX_CATALOG_PLAN_ENTITLEMENT_VALUES && count > baseline[:values].fetch(feature_code, 0)
+
+        field = :"entitlements.#{feature_code}"
+        errors[field] = ["too_many_values"]
+        meta[field] = {max_items: MAX_CATALOG_PLAN_ENTITLEMENT_VALUES}
+      end
+      return if errors.empty?
+
+      result.validation_failure!(errors:, meta:).raise_if_error!
     end
 
     def delete_missing_entitlements
