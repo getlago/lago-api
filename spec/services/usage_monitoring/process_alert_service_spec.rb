@@ -143,7 +143,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
     context "when an error occurs during TriggeredAlert creation" do
       before do
-        allow(UsageMonitoring::TriggeredAlert).to receive(:create!).and_raise(StandardError)
+        allow(UsageMonitoring::TriggeredAlert).to receive(:new).and_raise(StandardError)
       end
 
       it "does not update alert last_processed_at or previous_value" do
