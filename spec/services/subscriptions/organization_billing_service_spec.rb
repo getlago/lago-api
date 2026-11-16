@@ -995,6 +995,84 @@ RSpec.describe Subscriptions::OrganizationBillingService do
       end
     end
 
+    context "when grouping subscriptions by connections" do
+      let(:interval) { :monthly }
+      let(:billing_time) { :anniversary }
+      let(:current_date) { subscription_at.next_month }
+
+      let(:subscription1) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+      let(:subscription2) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          subscription_at:,
+          started_at: current_date - 10.days,
+          billing_time:,
+          created_at:
+        )
+      end
+
+      before do
+        subscription.destroy
+
+        create(
+          :billing_object_connection,
+          owner: subscription1,
+          organization:,
+          category: "accounting",
+          behavior: "specific",
+          integration_customer: create(:netsuite_customer, customer:)
+        )
+        create(
+          :billing_object_connection,
+          owner: subscription2,
+          organization:,
+          category: "accounting",
+          behavior: "specific",
+          integration_customer: create(:xero_customer, customer:)
+        )
+      end
+
+      context "when the multi_connection feature flag is disabled" do
+        it "ignores connections and groups the subscriptions together" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(subscription1, subscription2),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+        end
+      end
+
+      context "when the multi_connection feature flag is enabled" do
+        let(:organization) { create(:organization, feature_flags: [:multi_connection]) }
+
+        it "produces separate billing jobs per connection" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription1], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription2], current_date.to_i, invoicing_reason: :subscription_periodic)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription1], current_date)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription2], current_date)
+        end
+      end
+    end
+
     context "when grouping subscriptions by purchase order number" do
       let(:interval) { :monthly }
       let(:billing_time) { :anniversary }
