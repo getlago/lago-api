@@ -7,6 +7,7 @@ class ContractRateCard < ApplicationRecord
   self.discard_column = :deleted_at
   # The contract end date is the only end of a card; drop once released.
   self.ignored_columns += %w[ended_date]
+  self.ignored_columns += %w[units]
 
   belongs_to :organization
   belongs_to :contract
@@ -15,6 +16,7 @@ class ContractRateCard < ApplicationRecord
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
+  has_many :terms, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardTerm", inverse_of: :contract_rate_card
   has_many :billing_segments
   has_many :fees
 
@@ -22,7 +24,6 @@ class ContractRateCard < ApplicationRecord
   # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
   validates :next_billing_at, presence: true, on: :create
   validates :effective_date, presence: true
-  validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 
   default_scope -> { kept }
@@ -72,7 +73,6 @@ end
 #  deleted_at          :datetime
 #  effective_date      :date             not null
 #  next_billing_at     :datetime
-#  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  contract_id         :uuid             not null
