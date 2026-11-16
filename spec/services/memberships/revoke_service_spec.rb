@@ -64,6 +64,14 @@ RSpec.describe Memberships::RevokeService do
         end
       end
 
+      it "expires the keys the AI agent holds for the member" do
+        api_key = ApiKeys::CreateMemberKeyService.call!(membership:).api_key
+
+        revoke_service.call
+
+        expect(ApiKey.unscoped.find(api_key.id)).to be_expired
+      end
+
       it_behaves_like "produces a security log", "user.deleted" do
         before { revoke_service.call }
       end

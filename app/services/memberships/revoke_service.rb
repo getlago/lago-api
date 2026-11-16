@@ -17,6 +17,7 @@ module Memberships
       return result.not_allowed_failure!(code: "last_admin") if membership.admin? && membership.organization.admin_membership_roles.count == 1
 
       membership.mark_as_revoked!
+      ApiKeys::ExpireMemberKeyService.expire_all(membership)
       register_security_log
 
       result.membership = membership

@@ -25,6 +25,8 @@ module Memberships
         MembershipRole.where(membership:, role: roles_to_remove).discard_all! if roles_to_remove.present?
       end
 
+      # A running agent turn must not keep the permissions the member had.
+      ApiKeys::ExpireMemberKeyService.expire_all(membership)
       register_security_log
 
       result.membership = membership.reload

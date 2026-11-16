@@ -49,7 +49,10 @@ class Organization < ApplicationRecord
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :ai_conversations
   has_many :api_logs, class_name: "Clickhouse::ApiLog"
-  has_many :api_keys
+  # The keys of the organization. The short-lived keys minted for the AI agent are kept apart,
+  # so they never show in the dashboard or replace the organization's own keys.
+  has_many :api_keys, -> { where(membership_id: nil) }
+  has_many :member_api_keys, -> { where.not(membership_id: nil) }, class_name: "ApiKey"
   has_many :security_logs, class_name: "Clickhouse::SecurityLog"
   has_many :billing_entities, -> { active }
   has_many :all_billing_entities, class_name: "BillingEntity"
