@@ -326,7 +326,10 @@ RSpec.describe Auth::GoogleService do
     end
 
     context "when tracking the registration" do
-      before { allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com") }
+      before do
+        allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
+        stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "false"))
+      end
 
       it "tracks the organization as a non self-serve registration, without the front host on a self-hosted install" do
         result = described_class.call(:register_user, "code", "Foobar")
