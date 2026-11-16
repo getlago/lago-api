@@ -432,6 +432,12 @@ RSpec.describe Organization do
 
         it { is_expected.to be_valid }
       end
+
+      context "when it includes quickbooks" do
+        subject(:organization) { build(:organization, premium_integrations: ["quickbooks"]) }
+
+        it { is_expected.to be_valid }
+      end
     end
   end
 

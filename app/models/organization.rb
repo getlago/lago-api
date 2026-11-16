@@ -187,6 +187,7 @@ class Organization < ApplicationRecord
     entra_id
     avalara
     xero
+    quickbooks
     progressive_billing
     lifetime_usage
     hubspot

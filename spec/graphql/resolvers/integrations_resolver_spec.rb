@@ -72,4 +72,39 @@ RSpec.describe Resolvers::IntegrationsResolver do
       expect(integrations_response["metadata"]["totalCount"]).to eq(1)
     end
   end
+
+  context "when types is quickbooks" do
+    let(:query) do
+      <<~GQL
+        query {
+          integrations(limit: 5, types: [quickbooks]) {
+            collection {
+              ... on NetsuiteIntegration {
+                id
+                code
+                __typename
+              }
+            }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "accepts the type and returns no integration" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["errors"]).to be_nil
+
+      integrations_response = result["data"]["integrations"]
+
+      expect(integrations_response["collection"]).to be_empty
+      expect(integrations_response["metadata"]["totalCount"]).to eq(0)
+    end
+  end
 end
