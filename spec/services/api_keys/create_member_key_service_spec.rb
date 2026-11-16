@@ -24,6 +24,16 @@ RSpec.describe ApiKeys::CreateMemberKeyService do
     end
   end
 
+  context "when the membership is revoked" do
+    let(:membership) { create(:membership, :revoked, organization:, role:) }
+
+    it "creates no key" do
+      expect(result).to be_failure
+      expect(result.error.code).to eq("membership_revoked")
+      expect(ApiKey.unscoped.where(membership:)).not_to exist
+    end
+  end
+
   it "keeps the key out of the organization's keys" do
     api_key = result.api_key
 

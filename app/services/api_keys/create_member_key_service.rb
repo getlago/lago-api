@@ -15,6 +15,9 @@ module ApiKeys
     end
 
     def call
+      # A turn queued before the member was revoked must not act for them.
+      return result.forbidden_failure!(code: "membership_revoked") unless membership.active?
+
       result.api_key = membership.organization.member_api_keys.create!(
         membership:,
         name: "AI agent",
