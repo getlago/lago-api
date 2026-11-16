@@ -21,7 +21,9 @@ ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXISTS fk_rails_f99eb07174;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_f98413d404;
 ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_f94f882198;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alerts DROP CONSTRAINT IF EXISTS fk_rails_f7fa47366d;
 ALTER TABLE IF EXISTS ONLY public.usage_attribution_types DROP CONSTRAINT IF EXISTS fk_rails_f7f094fe3a;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_f764e06875;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
@@ -48,8 +50,10 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
 ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_e7b1c26689;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_e744efbe51;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_activities DROP CONSTRAINT IF EXISTS fk_rails_e71a6fcf7d;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
 ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS fk_rails_e700a96826;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_e5c43b6c94;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_e4a58fbcac;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
 ALTER TABLE IF EXISTS ONLY public.contract_recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_e3c68432ab;
@@ -243,6 +247,7 @@ ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_699cd1384f;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_68754484c0;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_67d4eb3c92;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alerts DROP CONSTRAINT IF EXISTS fk_rails_67092ad352;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_66eb6b32c1;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_665ae33492;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_651eadaaa4;
@@ -271,6 +276,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_rails_59357d1f82;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_57c1288849;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_56b3626631;
 ALTER TABLE IF EXISTS ONLY public.x402_connections DROP CONSTRAINT IF EXISTS fk_rails_56763cd4b5;
@@ -298,6 +304,7 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sec
 ALTER TABLE IF EXISTS ONLY public.pending_signup_tokens DROP CONSTRAINT IF EXISTS fk_rails_49e3a9c4eb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49212d501e;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_48895417bb;
 ALTER TABLE IF EXISTS ONLY public.contract_recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_4834d896ab;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_47d8081062;
 ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_457dfe353b;
@@ -307,6 +314,7 @@ ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_41088c7d45;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_40fb23816d;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_3fa1567854;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_3f7be5debc;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_3ec3563cf3;
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS fk_rails_3e812b1fc3;
@@ -363,6 +371,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS fk_rails_23975f5a47;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_22bb2c0770;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_22af6c6d28;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_activities DROP CONSTRAINT IF EXISTS fk_rails_22a7209239;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_2259c88f26;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_21eb389927;
 ALTER TABLE IF EXISTS ONLY public.plan_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_21cbfc2122;
@@ -383,6 +392,7 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_1811b32fcd;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_173327f0dc;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS fk_rails_15f2e97278;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alerts DROP CONSTRAINT IF EXISTS fk_rails_15945195e4;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
@@ -1136,9 +1146,11 @@ DROP INDEX IF EXISTS public.idx_on_organization_id_e742f77454;
 DROP INDEX IF EXISTS public.idx_on_organization_id_e73219f079;
 DROP INDEX IF EXISTS public.idx_on_organization_id_deleted_at_225e3f789d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_ccdf05cbfe;
+DROP INDEX IF EXISTS public.idx_on_organization_id_902d09b6f8;
 DROP INDEX IF EXISTS public.idx_on_organization_id_83703a45f4;
 DROP INDEX IF EXISTS public.idx_on_organization_id_7020c3c43a;
 DROP INDEX IF EXISTS public.idx_on_organization_id_376a587b04;
+DROP INDEX IF EXISTS public.idx_on_organization_id_018fe27a33;
 DROP INDEX IF EXISTS public.idx_on_invoice_id_payment_request_id_aa550779a4;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_d8b9068730;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_ccb39e9622;
@@ -1155,6 +1167,9 @@ DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_821ae72311;
 DROP INDEX IF EXISTS public.idx_on_entitlement_entitlement_id_48c0b3356a;
 DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
 DROP INDEX IF EXISTS public.idx_on_contract_id_billing_at_status_3588bfae7a;
+DROP INDEX IF EXISTS public.idx_on_contract_alert_id_recurring_fd386586d1;
+DROP INDEX IF EXISTS public.idx_on_contract_alert_id_b9d4b2ca0c;
+DROP INDEX IF EXISTS public.idx_on_contract_alert_id_57bb7b1808;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d3;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_customer_id_invoice_custom_e7aada65cb;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655;
@@ -1176,6 +1191,10 @@ DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_product_filter_i
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_organization_id;
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_billable_metric_id;
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_by_period;
+DROP INDEX IF EXISTS public.idx_contract_alerts_scope_unique;
+DROP INDEX IF EXISTS public.idx_contract_alerts_code_unique;
+DROP INDEX IF EXISTS public.idx_contract_activity_unique;
+DROP INDEX IF EXISTS public.idx_contract_activities_enqueued_per_org;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_contract_lookup;
 DROP INDEX IF EXISTS public.idx_billable_metrics_id_agg_type;
@@ -1207,6 +1226,10 @@ ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS user_de
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_triggered_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS usage_monitoring_subscription_activities_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_triggered_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_contract_triggered_alerts_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_contract_alerts_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alert_thresholds DROP CONSTRAINT IF EXISTS usage_monitoring_contract_alert_thresholds_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_activities DROP CONSTRAINT IF EXISTS usage_monitoring_contract_activities_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS usage_monitoring_alert_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_attribution_values DROP CONSTRAINT IF EXISTS usage_attribution_values_pkey;
@@ -1346,6 +1369,7 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_blobs DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS active_storage_attachments_pkey;
 ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.usage_monitoring_subscription_activities ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.usage_monitoring_contract_activities ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.quote_owners ALTER COLUMN id DROP DEFAULT;
 DROP TABLE IF EXISTS public.x402_sign_in_nonces;
 DROP TABLE IF EXISTS public.x402_settlements;
@@ -1362,6 +1386,11 @@ DROP TABLE IF EXISTS public.users;
 DROP TABLE IF EXISTS public.user_devices;
 DROP SEQUENCE IF EXISTS public.usage_monitoring_subscription_activities_id_seq;
 DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
+DROP TABLE IF EXISTS public.usage_monitoring_contract_triggered_alerts;
+DROP TABLE IF EXISTS public.usage_monitoring_contract_alerts;
+DROP TABLE IF EXISTS public.usage_monitoring_contract_alert_thresholds;
+DROP SEQUENCE IF EXISTS public.usage_monitoring_contract_activities_id_seq;
+DROP TABLE IF EXISTS public.usage_monitoring_contract_activities;
 DROP TABLE IF EXISTS public.usage_monitoring_alerts;
 DROP TABLE IF EXISTS public.usage_attribution_values;
 DROP TABLE IF EXISTS public.usage_attribution_types;
@@ -1551,6 +1580,7 @@ DROP TYPE IF EXISTS public.x402_facilitator;
 DROP TYPE IF EXISTS public.x402_asset;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_resolution_reasons;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
+DROP TYPE IF EXISTS public.usage_monitoring_contract_alert_alert_type;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
 DROP TYPE IF EXISTS public.usage_attribution_type_role;
@@ -2197,6 +2227,16 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'wallet_ongoing_balance_amount',
     'wallet_credits_ongoing_balance',
     'billable_metric_lifetime_usage_units'
+);
+
+
+--
+-- Name: usage_monitoring_contract_alert_alert_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_contract_alert_alert_type AS ENUM (
+    'usage_amount',
+    'usage_units'
 );
 
 
@@ -6430,6 +6470,101 @@ CREATE TABLE public.usage_monitoring_alerts (
 
 
 --
+-- Name: usage_monitoring_contract_activities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_contract_activities (
+    id bigint NOT NULL,
+    organization_id uuid NOT NULL,
+    contract_id uuid NOT NULL,
+    enqueued boolean DEFAULT false NOT NULL,
+    inserted_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    enqueued_at timestamp(6) without time zone
+);
+
+
+--
+-- Name: usage_monitoring_contract_activities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.usage_monitoring_contract_activities_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: usage_monitoring_contract_activities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.usage_monitoring_contract_activities_id_seq OWNED BY public.usage_monitoring_contract_activities.id;
+
+
+--
+-- Name: usage_monitoring_contract_alert_thresholds; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_contract_alert_thresholds (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    contract_alert_id uuid NOT NULL,
+    value numeric(30,5) NOT NULL,
+    code character varying,
+    recurring boolean DEFAULT false NOT NULL,
+    notify_on character varying[] DEFAULT '{triggered}'::character varying[] NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: usage_monitoring_contract_alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_contract_alerts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    contract_external_id character varying NOT NULL,
+    product_id uuid,
+    product_filter_id uuid,
+    alert_type public.usage_monitoring_contract_alert_alert_type NOT NULL,
+    direction public.usage_monitoring_alert_direction DEFAULT 'increasing'::public.usage_monitoring_alert_direction NOT NULL,
+    code character varying NOT NULL,
+    name character varying,
+    previous_value numeric(30,5) DEFAULT 0.0 NOT NULL,
+    previous_windows jsonb DEFAULT '{}'::jsonb NOT NULL,
+    last_processed_at timestamp(6) without time zone,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: usage_monitoring_contract_triggered_alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_contract_triggered_alerts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    contract_alert_id uuid NOT NULL,
+    contract_id uuid NOT NULL,
+    kind public.usage_monitoring_triggered_alert_kinds DEFAULT 'triggered'::public.usage_monitoring_triggered_alert_kinds NOT NULL,
+    resolution_reason public.usage_monitoring_triggered_alert_resolution_reasons,
+    current_value numeric(30,5) NOT NULL,
+    previous_value numeric(30,5) NOT NULL,
+    crossed_thresholds jsonb NOT NULL,
+    in_alarm_thresholds jsonb,
+    fully_resolved boolean,
+    triggered_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: usage_monitoring_subscription_activities; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6719,6 +6854,13 @@ ALTER TABLE ONLY public.enriched_events ATTACH PARTITION public.enriched_events_
 --
 
 ALTER TABLE ONLY public.quote_owners ALTER COLUMN id SET DEFAULT nextval('public.quote_owners_id_seq'::regclass);
+
+
+--
+-- Name: usage_monitoring_contract_activities id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_activities ALTER COLUMN id SET DEFAULT nextval('public.usage_monitoring_contract_activities_id_seq'::regclass);
 
 
 --
@@ -7832,6 +7974,38 @@ ALTER TABLE ONLY public.usage_monitoring_alerts
 
 
 --
+-- Name: usage_monitoring_contract_activities usage_monitoring_contract_activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_activities
+    ADD CONSTRAINT usage_monitoring_contract_activities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: usage_monitoring_contract_alert_thresholds usage_monitoring_contract_alert_thresholds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_alert_thresholds
+    ADD CONSTRAINT usage_monitoring_contract_alert_thresholds_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: usage_monitoring_contract_alerts usage_monitoring_contract_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_alerts
+    ADD CONSTRAINT usage_monitoring_contract_alerts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: usage_monitoring_contract_triggered_alerts usage_monitoring_contract_triggered_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_triggered_alerts
+    ADD CONSTRAINT usage_monitoring_contract_triggered_alerts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: usage_monitoring_subscription_activities usage_monitoring_subscription_activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8095,6 +8269,34 @@ CREATE INDEX idx_cached_aggregation_filtered_lookup ON public.cached_aggregation
 
 
 --
+-- Name: idx_contract_activities_enqueued_per_org; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_contract_activities_enqueued_per_org ON public.usage_monitoring_contract_activities USING btree (organization_id, enqueued);
+
+
+--
+-- Name: idx_contract_activity_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_contract_activity_unique ON public.usage_monitoring_contract_activities USING btree (contract_id);
+
+
+--
+-- Name: idx_contract_alerts_code_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_contract_alerts_code_unique ON public.usage_monitoring_contract_alerts USING btree (organization_id, contract_external_id, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_contract_alerts_scope_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_contract_alerts_scope_unique ON public.usage_monitoring_contract_alerts USING btree (organization_id, contract_external_id, alert_type, product_id, product_filter_id) NULLS NOT DISTINCT WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: idx_contract_recurring_snapshots_by_period; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8242,6 +8444,27 @@ CREATE UNIQUE INDEX idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d
 
 
 --
+-- Name: idx_on_contract_alert_id_57bb7b1808; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_contract_alert_id_57bb7b1808 ON public.usage_monitoring_contract_triggered_alerts USING btree (contract_alert_id);
+
+
+--
+-- Name: idx_on_contract_alert_id_b9d4b2ca0c; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_contract_alert_id_b9d4b2ca0c ON public.usage_monitoring_contract_alert_thresholds USING btree (contract_alert_id);
+
+
+--
+-- Name: idx_on_contract_alert_id_recurring_fd386586d1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_contract_alert_id_recurring_fd386586d1 ON public.usage_monitoring_contract_alert_thresholds USING btree (contract_alert_id, recurring) WHERE (recurring IS TRUE);
+
+
+--
 -- Name: idx_on_contract_id_billing_at_status_3588bfae7a; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8354,6 +8577,13 @@ CREATE UNIQUE INDEX idx_on_invoice_id_payment_request_id_aa550779a4 ON public.in
 
 
 --
+-- Name: idx_on_organization_id_018fe27a33; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_018fe27a33 ON public.usage_monitoring_contract_triggered_alerts USING btree (organization_id);
+
+
+--
 -- Name: idx_on_organization_id_376a587b04; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8372,6 +8602,13 @@ CREATE INDEX idx_on_organization_id_7020c3c43a ON public.entitlement_subscriptio
 --
 
 CREATE INDEX idx_on_organization_id_83703a45f4 ON public.billing_entities_invoice_custom_sections USING btree (organization_id);
+
+
+--
+-- Name: idx_on_organization_id_902d09b6f8; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_902d09b6f8 ON public.usage_monitoring_contract_alert_thresholds USING btree (organization_id);
 
 
 --
@@ -13652,6 +13889,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 
 --
+-- Name: usage_monitoring_contract_alerts fk_rails_15945195e4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_alerts
+    ADD CONSTRAINT fk_rails_15945195e4 FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
 -- Name: api_keys fk_rails_15f2e97278; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13809,6 +14054,14 @@ ALTER TABLE ONLY public.cached_aggregations
 
 ALTER TABLE ONLY public.commitments_taxes
     ADD CONSTRAINT fk_rails_2259c88f26 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: usage_monitoring_contract_activities fk_rails_22a7209239; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_activities
+    ADD CONSTRAINT fk_rails_22a7209239 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -14260,6 +14513,14 @@ ALTER TABLE ONLY public.refunds
 
 
 --
+-- Name: usage_monitoring_contract_triggered_alerts fk_rails_3fa1567854; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_triggered_alerts
+    ADD CONSTRAINT fk_rails_3fa1567854 FOREIGN KEY (contract_alert_id) REFERENCES public.usage_monitoring_contract_alerts(id);
+
+
+--
 -- Name: charges_taxes fk_rails_3ff27d7624; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14329,6 +14590,14 @@ ALTER TABLE ONLY public.integration_items
 
 ALTER TABLE ONLY public.contract_recurring_aggregation_snapshots
     ADD CONSTRAINT fk_rails_4834d896ab FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
+
+
+--
+-- Name: usage_monitoring_contract_alert_thresholds fk_rails_48895417bb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_alert_thresholds
+    ADD CONSTRAINT fk_rails_48895417bb FOREIGN KEY (contract_alert_id) REFERENCES public.usage_monitoring_contract_alerts(id);
 
 
 --
@@ -14545,6 +14814,14 @@ ALTER TABLE ONLY public.subscriptions
 
 ALTER TABLE ONLY public.charges_taxes
     ADD CONSTRAINT fk_rails_56b7167125 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: usage_monitoring_contract_triggered_alerts fk_rails_57c1288849; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_triggered_alerts
+    ADD CONSTRAINT fk_rails_57c1288849 FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --
@@ -14769,6 +15046,14 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 
 ALTER TABLE ONLY public.subscriptions
     ADD CONSTRAINT fk_rails_66eb6b32c1 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: usage_monitoring_contract_alerts fk_rails_67092ad352; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_alerts
+    ADD CONSTRAINT fk_rails_67092ad352 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -16316,6 +16601,14 @@ ALTER TABLE ONLY public.integration_mappings
 
 
 --
+-- Name: usage_monitoring_contract_alert_thresholds fk_rails_e5c43b6c94; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_alert_thresholds
+    ADD CONSTRAINT fk_rails_e5c43b6c94 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: user_devices fk_rails_e700a96826; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16329,6 +16622,14 @@ ALTER TABLE ONLY public.user_devices
 
 ALTER TABLE ONLY public.charge_filters
     ADD CONSTRAINT fk_rails_e711e8089e FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: usage_monitoring_contract_activities fk_rails_e71a6fcf7d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_activities
+    ADD CONSTRAINT fk_rails_e71a6fcf7d FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --
@@ -16540,11 +16841,27 @@ ALTER TABLE ONLY public.billing_entities
 
 
 --
+-- Name: usage_monitoring_contract_triggered_alerts fk_rails_f764e06875; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_triggered_alerts
+    ADD CONSTRAINT fk_rails_f764e06875 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_attribution_types fk_rails_f7f094fe3a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.usage_attribution_types
     ADD CONSTRAINT fk_rails_f7f094fe3a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: usage_monitoring_contract_alerts fk_rails_f7fa47366d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_contract_alerts
+    ADD CONSTRAINT fk_rails_f7fa47366d FOREIGN KEY (product_filter_id) REFERENCES public.product_filters(id);
 
 
 --
@@ -16650,6 +16967,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261116121445'),
+('20261116121442'),
+('20261116121439'),
+('20261116121436'),
 ('20261112092027'),
 ('20261109151633'),
 ('20261109122133'),
