@@ -6555,7 +6555,7 @@ CREATE TABLE public.usage_monitoring_contract_triggered_alerts (
     resolution_reason public.usage_monitoring_triggered_alert_resolution_reasons,
     current_value numeric(30,5) NOT NULL,
     previous_value numeric(30,5) NOT NULL,
-    crossed_thresholds jsonb DEFAULT '{}'::jsonb,
+    crossed_thresholds jsonb NOT NULL,
     in_alarm_thresholds jsonb,
     fully_resolved boolean,
     triggered_at timestamp(6) without time zone NOT NULL,

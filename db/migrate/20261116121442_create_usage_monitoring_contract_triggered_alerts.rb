@@ -10,7 +10,7 @@ class CreateUsageMonitoringContractTriggeredAlerts < ActiveRecord::Migration[8.1
       t.enum :resolution_reason, enum_type: "usage_monitoring_triggered_alert_resolution_reasons"
       t.decimal :current_value, precision: 30, scale: 5, null: false
       t.decimal :previous_value, precision: 30, scale: 5, null: false
-      t.jsonb :crossed_thresholds, default: {}
+      t.jsonb :crossed_thresholds, null: false
       t.jsonb :in_alarm_thresholds
       t.boolean :fully_resolved
       t.datetime :triggered_at, null: false
