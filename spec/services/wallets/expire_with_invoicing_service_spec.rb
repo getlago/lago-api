@@ -133,15 +133,18 @@ RSpec.describe Wallets::ExpireWithInvoicingService, :premium, transaction: false
     end
   end
 
-  context "when the subscription already has an expiration invoice for this wallet" do
+  context "when the expiration of the wallet was already invoiced" do
+    let(:subscription_without_invoice) { create(:subscription, plan:, customer:, started_at: 1.week.ago) }
+
     before do
+      subscription_without_invoice
       invoice = create(:invoice, organization:, customer:, invoice_type: :progressive_billing, status: :failed)
       create(:invoice_subscription, invoice:, subscription:)
       create(:applied_wallet_expiration, wallet:, invoice:)
       allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call).and_call_original
     end
 
-    it "does not compute its usage again" do
+    it "does not compute the usage of any subscription again" do
       expect(result).to be_success
 
       expect(Invoices::ProgressiveBilling::WalletExpirationService).not_to have_received(:call)
@@ -201,8 +204,6 @@ RSpec.describe Wallets::ExpireWithInvoicingService, :premium, transaction: false
         tax_status: :pending
       )
       create(:applied_wallet_expiration, wallet:, invoice: pending_invoice)
-      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call)
-        .and_return(BaseService::Result.new.fail_with_error!(Idempotency::IdempotencyError.new("already invoiced")))
     end
 
     it "keeps the wallet active so the invoice can spend it once its taxes are applied" do
@@ -235,8 +236,6 @@ RSpec.describe Wallets::ExpireWithInvoicingService, :premium, transaction: false
 
     before do
       create(:applied_wallet_expiration, wallet:, invoice: failed_invoice)
-      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call)
-        .and_return(BaseService::Result.new.fail_with_error!(Idempotency::IdempotencyError.new("already invoiced")))
     end
 
     it "keeps the wallet active so the retried invoice can spend it" do
@@ -253,8 +252,6 @@ RSpec.describe Wallets::ExpireWithInvoicingService, :premium, transaction: false
 
     before do
       create(:applied_wallet_expiration, wallet:, invoice: retried_invoice)
-      allow(Invoices::ProgressiveBilling::WalletExpirationService).to receive(:call)
-        .and_return(BaseService::Result.new.fail_with_error!(Idempotency::IdempotencyError.new("already invoiced")))
     end
 
     it "terminates the wallet" do

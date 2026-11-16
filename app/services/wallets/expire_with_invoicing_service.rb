@@ -13,7 +13,7 @@ module Wallets
     # The expiration can be pushed back after the clock enqueued the job.
     def call
       if wallet.expired?
-        invoice_usage if wallet.active? && wallet.expiration_invoicing_enabled?
+        invoice_usage if invoice_usage?
 
         # Applying the wallet credits updates its row, which bumps lock_version.
         Wallets::TerminateService.call!(wallet: wallet.reload) unless expiration_invoice_unsettled?
@@ -32,21 +32,19 @@ module Wallets
       AppliedWalletExpiration.where(wallet_id: wallet.id).with_unsettled_invoice.exists?
     end
 
+    # The usage is invoiced once: later runs only wait for the expiration invoices to settle.
+    def invoice_usage?
+      wallet.active? && wallet.expiration_invoicing_enabled? && !wallet.reserved_for_expiration_invoice?
+    end
+
     def invoice_usage
-      subscriptions.where.not(id: invoiced_subscription_ids).find_each do |subscription|
+      subscriptions.find_each do |subscription|
         invoice_subscription_usage(subscription)
       end
     end
 
     def subscriptions
       wallet.customer.subscriptions.active.joins(:plan).where(plans: {amount_currency: wallet.currency})
-    end
-
-    def invoiced_subscription_ids
-      InvoiceSubscription
-        .joins(invoice: :applied_wallet_expiration)
-        .where(applied_wallet_expirations: {wallet_id: wallet.id})
-        .select(:subscription_id)
     end
 
     def invoice_subscription_usage(subscription)
