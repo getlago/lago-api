@@ -899,6 +899,19 @@ RSpec.describe Api::V2::FeaturesController do
       end
     end
 
+    context "with expands[]=privileges" do
+      subject { delete_with_token(organization, "/api/v2/features/#{code}", {expands: ["privileges"]}) }
+
+      it "rejects the expansion and keeps the feature" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["privileges"]}}])
+        expect(feature.reload).not_to be_discarded
+      end
+    end
+
     context "without product catalog", product_catalog: false do
       it "returns feature unavailable and keeps the feature" do
         subject
