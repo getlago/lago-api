@@ -9,6 +9,7 @@ module Organizations
     Result = BaseResult[:organization, :sandbox_organization, :settings_changes]
 
     LOCK_KEY = "organization_sandbox_link"
+    LOCK_TIMEOUT_SECONDS = 5
 
     def initialize(production_organization:, sandbox_organization:, actor: nil)
       @production_organization = production_organization
@@ -27,7 +28,8 @@ module Organizations
 
       ActiveRecord::Base.transaction do
         # Links are rare: serializing them all means two links never wait on each other's rows.
-        Organization.with_advisory_lock!(LOCK_KEY, transaction: true, timeout_seconds: 5, disable_query_cache: true) do
+        Organization.with_advisory_lock!(LOCK_KEY, transaction: true, timeout_seconds: LOCK_TIMEOUT_SECONDS,
+          disable_query_cache: true) do
           # Refused on committed state before any row lock, so a pair already linked either way is never locked, and
           # the link cannot form a cycle with the production-then-sandbox locks of the mirrors.
           production_organization.reload

@@ -272,5 +272,41 @@ RSpec.describe Organizations::LinkSandboxService do
       expect(Timeout.timeout(10) { link.value }).to be_success
     end
 
+    context "when a second link starts" do
+      let(:other_production) { create(:organization) }
+      let(:other_target) { create(:organization) }
+
+      before do
+        other_production
+        other_target
+        stub_const("#{described_class}::LOCK_TIMEOUT_SECONDS", 0.5)
+      end
+
+      it "waits for the first link's transaction, then gives up without linking" do
+        syncing = Queue.new
+        release = Queue.new
+        allow(Memberships::SyncSandboxService).to receive(:call!) do
+          syncing << true
+          release.pop
+        end
+
+        link = Thread.new do
+          ApplicationRecord.connection_pool.with_connection do
+            described_class.call(production_organization: production, sandbox_organization: target, actor:)
+          end
+        end
+
+        begin
+          Timeout.timeout(10) { syncing.pop }
+          second = described_class.call(production_organization: other_production, sandbox_organization: other_target)
+        ensure
+          release << true
+        end
+
+        expect(second.error.code).to eq("lock_acquisition_failed")
+        expect(other_target.reload).to be_production
+        expect(Timeout.timeout(10) { link.value }).to be_success
+      end
+    end
   end
 end
