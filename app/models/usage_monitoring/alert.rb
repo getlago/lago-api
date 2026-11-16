@@ -37,7 +37,8 @@ module UsageMonitoring
     has_many :thresholds,
       foreign_key: :usage_monitoring_alert_id,
       class_name: "UsageMonitoring::AlertThreshold",
-      dependent: :delete_all
+      dependent: :delete_all,
+      inverse_of: :alert
 
     has_many :triggered_alerts,
       -> { triggered },
