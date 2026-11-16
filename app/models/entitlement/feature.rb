@@ -25,9 +25,10 @@ module Entitlement
       %w[code name description]
     end
 
-    # Creation order, as the association has none, for the v2 privileges list.
+    # Newest first, then by id, as the association has none. The v2 privileges list uses it, and the
+    # feature expansion sorts the same way in memory.
     def ordered_privileges
-      privileges.reorder(:created_at, :id)
+      privileges.reorder(created_at: :desc, id: :asc)
     end
 
     def subscriptions_count

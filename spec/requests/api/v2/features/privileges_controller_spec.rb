@@ -391,23 +391,12 @@ RSpec.describe Api::V2::Features::PrivilegesController do
         create(:privilege, feature: create(:feature, organization: create(:organization), code: "seats"))
       end
 
-      it "returns the kept privileges of the feature, oldest first, without meta", :bullet do
+      it "returns the kept privileges of the feature, newest first, without meta", :bullet do
         request
 
         expect(response).to have_http_status(:success)
         expect(json).to eq(
           privileges: [
-            {
-              lago_id: older.id,
-              feature_code: "seats",
-              code: "max_admins",
-              name: "Maximum admins",
-              value_type: "integer",
-              select_options: nil,
-              created_at: "2026-11-14T10:00:00.123456Z",
-              updated_at: "2026-11-14T10:00:00.123456Z",
-              deleted_at: nil
-            },
             {
               lago_id: newer.id,
               feature_code: "seats",
@@ -417,6 +406,17 @@ RSpec.describe Api::V2::Features::PrivilegesController do
               select_options: %w[a b],
               created_at: "2026-11-14T11:00:00.654321Z",
               updated_at: "2026-11-14T12:00:00.111111Z",
+              deleted_at: nil
+            },
+            {
+              lago_id: older.id,
+              feature_code: "seats",
+              code: "max_admins",
+              name: "Maximum admins",
+              value_type: "integer",
+              select_options: nil,
+              created_at: "2026-11-14T10:00:00.123456Z",
+              updated_at: "2026-11-14T10:00:00.123456Z",
               deleted_at: nil
             }
           ]

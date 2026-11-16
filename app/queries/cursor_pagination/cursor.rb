@@ -30,7 +30,7 @@ module CursorPagination
       )
     end
 
-    # Also called by the v2 lists that are not paginated anymore, with their own reason.
+    # The offset parameters are replaced by the cursor on a paginated list.
     def self.reject_offset_params!(params, reason: "replaced_by_cursor")
       reject_params!(params, OFFSET_PARAMS, reason:)
     end

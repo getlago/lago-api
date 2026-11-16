@@ -55,8 +55,8 @@ RSpec.describe Entitlement::Feature do
       create(:privilege, feature:, deleted_at: Time.current)
     end
 
-    it "returns the kept privileges of the feature by creation, then by id" do
-      expect(feature.ordered_privileges).to eq([oldest, tie_low, tie_high, newest])
+    it "returns the kept privileges of the feature newest first, then by id" do
+      expect(feature.ordered_privileges).to eq([newest, tie_low, tie_high, oldest])
     end
   end
 
