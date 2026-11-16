@@ -148,6 +148,16 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
         end
       end
 
+      context "with an entry whose organization is null" do
+        before do
+          Rails.cache.write(cache_service.cache_key, {api_key: api_key.attributes, organization: nil}.to_json)
+        end
+
+        it "reads the api_key and the organization from the database" do
+          expect(cache_service.call).to eq([api_key, organization])
+        end
+      end
+
       context "when an instance running the previous code revokes the cached api key" do
         include_context "with mocked security logger"
 
