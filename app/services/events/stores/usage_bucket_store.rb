@@ -11,12 +11,15 @@ module Events
 
       # `recurring` charges sum every period since the subscription started: the buckets only answer
       # the window opening at `charges_from_datetime`, on top of the snapshot of the period before it.
-      def initialize(store, usage_buckets:, charge_id:, charge_filter_id:, recurring: false, charges_from_datetime: nil)
+      # `late_events_scan` reads the late events of every filter of the charge at once (see ChargeFiltersScan).
+      def initialize(store, usage_buckets:, charge_id:, charge_filter_id:, recurring: false, charges_from_datetime: nil,
+        late_events_scan: nil)
         @usage_buckets = usage_buckets
         @charge_id = charge_id
         @charge_filter_id = charge_filter_id
         @recurring = recurring
         @charges_from_datetime = charges_from_datetime
+        @late_events_scan = late_events_scan
 
         super(store)
       end
@@ -87,13 +90,18 @@ module Events
       # Asked again by the recurring reads of the same period
       def late_ingestion?(period)
         @late_ingestion ||= {}
-        @late_ingestion.fetch(period) { @late_ingestion[period] = super }
+        @late_ingestion.fetch(period) do
+          @late_ingestion[period] = late_events_scanned? ? late_events_scan.late_ingestion?(__getobj__, period) : super
+        end
       end
 
       # Asked again by the recurring reads of the same period
       def resent_after_watermark?(period)
         @resent_after_watermark ||= {}
-        @resent_after_watermark.fetch(period) { @resent_after_watermark[period] = super }
+        @resent_after_watermark.fetch(period) do
+          @resent_after_watermark[period] =
+            late_events_scanned? ? late_events_scan.resent_after_watermark?(__getobj__, period) : super
+        end
       end
 
       def max(with_count: true)
@@ -142,7 +150,11 @@ module Events
 
       private
 
-      attr_reader :usage_buckets, :charge_id, :charge_filter_id, :recurring, :charges_from_datetime
+      attr_reader :usage_buckets, :charge_id, :charge_filter_id, :recurring, :charges_from_datetime, :late_events_scan
+
+      def late_events_scanned?
+        late_events_scan.present? && !grouped_by_values? && late_events_scan.covers_late_events?(__getobj__)
+      end
 
       # The parity comparison would otherwise compare the events with themselves and report a match:
       # its decision and its bucket run read the buckets apart, so a late ingestion can land between.

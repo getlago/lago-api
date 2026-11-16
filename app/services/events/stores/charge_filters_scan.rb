@@ -61,6 +61,10 @@ module Events
       # watermark of the snapshot the computation persists (see BaseStore#recurring_sum).
       RecurringRow = Data.define(:groups, :value, :snapshot_value, :events_count, :snapshot_events_count)
 
+      # The filters of a batch holding an event dated in a snapshot period and ingested after its watermark,
+      # and whether one of those re-sends an event the snapshots hold.
+      LateEvents = Data.define(:filter_keys, :resent)
+
       # A charge without filters only has the default bucket, which its own store reads as cheaply.
       # The scan only takes one when it keeps its rows between computations (see IncrementalCache).
       def self.supported_charge?(charge, incremental: false)
@@ -107,14 +111,22 @@ module Events
       def covers?(store, operation = :count)
         return false unless OPERATIONS.fetch(aggregation_type, []).include?(operation)
 
-        key = filter_key(store.charge_filter_id)
-        return false unless batch_index.key?(key)
+        same_conditions?(store) && (store.grouped_by || []).all? { group_keys.include?(it) }
+      end
 
-        bucket = bucket(key)
+      # The late events of a filter do not depend on its groups or on the aggregation type.
+      def covers_late_events?(store)
+        same_conditions?(store)
+      end
 
-        bucket.matching_filters == store.matching_filters &&
-          bucket.ignored_filters == store.ignored_filters &&
-          (store.grouped_by || []).all? { group_keys.include?(it) }
+      # ClickhouseStore#late_ingestion? of the filter's store, from one read of the late events of its batch.
+      def late_ingestion?(store, period)
+        late_events(store, period).filter_keys.include?(filter_key(store.charge_filter_id))
+      end
+
+      # ClickhouseStore#resent_after_watermark?, which does not depend on the filter: the same read answers it.
+      def resent_after_watermark?(store, period)
+        late_events(store, period).resent
       end
 
       def incremental?
@@ -226,6 +238,15 @@ module Events
         charge_filter_id || DEFAULT_FILTER_KEY
       end
 
+      def same_conditions?(store)
+        key = filter_key(store.charge_filter_id)
+        return false unless batch_index.key?(key)
+
+        bucket = bucket(key)
+
+        bucket.matching_filters == store.matching_filters && bucket.ignored_filters == store.ignored_filters
+      end
+
       # The pricing buckets Fees::ChargeService computes the charge fees for, keyed by filter, down
       # to the ones to aggregate. The conditions of those still ignore the events of every filter
       # they rank behind, aggregated or not.
@@ -313,6 +334,34 @@ module Events
           read_recurring_rows(store, batch, to_datetime:, watermark:)
 
         @rows[[:recurring, batch, to_datetime, watermark]].fetch(key, [])
+      end
+
+      # Asked by every recurring read the buckets serve (see UsageBucketStore#recurring_fallback_reason): one read
+      # per batch instead of two per filter.
+      def late_events(store, period)
+        batch = batch_index.fetch(filter_key(store.charge_filter_id))
+
+        @rows[[:late, batch, store.applicable_to_datetime, period]] ||= read_late_events(store, batch, period)
+      end
+
+      # The late events are those ClickhouseStore#late_ingestion? reads, attributed to the filters of the batch.
+      # Without any, the re-send lookup reads no granule of events_raw.
+      def read_late_events(store, batch, period)
+        sql = <<~SQL
+          SELECT
+            groupUniqArrayArray(#{filter_positions_sql(store, batch)}),
+            (SELECT count() FROM (#{store.resent_after_watermark_sql(period)}))
+          FROM (#{store.late_events_sql(period, deduplicated_columns: [])}) AS events_enriched
+        SQL
+
+        positions, resent = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          connection.select_rows(sql).first
+        end
+
+        LateEvents.new(
+          filter_keys: positions.to_set { batch_keys(batch).fetch(it.to_i - 1) },
+          resent: resent.to_i.positive?
+        )
       end
 
       # One read per batch and window: the stores of the batch share it, and recurring metrics

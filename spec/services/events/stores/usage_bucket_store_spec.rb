@@ -166,6 +166,41 @@ RSpec.describe Events::Stores::UsageBucketStore do
         expect(delegated_store).to have_received(:late_ingestion?).with(period).once
         expect(delegated_store).to have_received(:resent_after_watermark?).with(period).once
       end
+
+      context "with a scan reading the late events of the charge" do
+        subject(:store) do
+          described_class.new(
+            delegated_store, usage_buckets:, charge_id: charge.id, charge_filter_id:, recurring: true, charges_from_datetime:,
+            late_events_scan:
+          )
+        end
+
+        let(:late_events_scan) do
+          instance_double(
+            Events::Stores::ChargeFiltersScan,
+            covers_late_events?: covered, late_ingestion?: false, resent_after_watermark?: true
+          )
+        end
+        let(:covered) { true }
+
+        it "asks the scan rather than the store it wraps" do
+          expect(store.recurring_fallback_reason(period)).to eq("resent_after_watermark")
+          expect(late_events_scan).to have_received(:late_ingestion?).with(delegated_store, period)
+          expect(late_events_scan).to have_received(:resent_after_watermark?).with(delegated_store, period)
+          expect(delegated_store).not_to have_received(:late_ingestion?)
+          expect(delegated_store).not_to have_received(:resent_after_watermark?)
+        end
+
+        context "when the scan does not cover the store" do
+          let(:covered) { false }
+
+          it "asks the store it wraps" do
+            expect(store.recurring_fallback_reason(period)).to be_nil
+            expect(late_events_scan).not_to have_received(:late_ingestion?)
+            expect(delegated_store).to have_received(:late_ingestion?).with(period)
+          end
+        end
+      end
     end
 
     describe "#recurring_sum" do
