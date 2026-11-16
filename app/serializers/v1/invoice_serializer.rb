@@ -22,7 +22,7 @@ module V1
         fees_amount_cents: model.fees_amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
         progressive_billing_credit_amount_cents: model.progressive_billing_credit_amount_cents,
-        progressive_billing_trigger: model.progressive_billing_trigger,
+        progressive_billing_trigger:,
         coupons_amount_cents: model.coupons_amount_cents,
         credit_notes_amount_cents: model.credit_notes_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents,
@@ -146,6 +146,11 @@ module V1
         ::V1::ErrorDetailSerializer,
         collection_name: "error_details"
       ).serialize
+    end
+
+    # Progressive billing invoices issued before the trigger was recorded were all triggered by usage thresholds.
+    def progressive_billing_trigger
+      model.progressive_billing_trigger || ("usage_threshold" if model.progressive_billing?)
     end
 
     def applied_usage_thresholds
