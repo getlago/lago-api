@@ -49,8 +49,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     expect(segment.billing_at).to eq(Time.utc(2026, 2, 1))
   end
 
-  # The service is what knows a card has been billed before, so the walk it hands back starts at
-  # the last billed cycle rather than replaying the card.
+  # Persisted billing history does not change the schedule: callers replay from the card's start.
   context "when the card has already been billed for some cycles" do
     # The card's own first three cycles: anchored Jan 1 and attached Jan 15, the first is a stub
     # running to the anchor's next boundary rather than a whole month.
@@ -68,27 +67,16 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       end
     end
 
-    it "resumes at the last billed cycle instead of walking from the card's start" do
+    it "replays every cycle from the card's start" do
       cycles = result.schedule.segments_due_by(Time.utc(2026, 6, 1))
 
-      expect(cycles.map(&:cycle_index)).to eq([2, 3, 4])
-      expect(cycles.first.started_at).to eq(Time.utc(2026, 3, 1))
-    end
-
-    it "can build a schedule without reading the stored cycle cursor" do
-      schedule = described_class.call!(contract_rate_card:, resume_from_billing_segments: false).schedule
-
-      expect(schedule.segments_due_by(Time.utc(2026, 6, 1)).first.cycle_index).to eq(0)
-    end
-
-    it "answers the same cycles the full walk would have" do
-      resumed = result.schedule.segments_due_by(Time.utc(2026, 6, 1))
-      contract_rate_card.billing_segments.destroy_all
-      full = described_class.call(contract_rate_card:).schedule.segments_due_by(Time.utc(2026, 6, 1))
-
-      expect(full.size).to be > resumed.size
-      expect(full.map { [it.cycle_index, it.started_at, it.ended_at] })
-        .to end_with(*resumed.map { [it.cycle_index, it.started_at, it.ended_at] })
+      expect(cycles.map { [it.cycle_index, it.started_at, it.ended_at] }).to eq(
+        [[0, Time.utc(2026, 1, 15), Time.utc(2026, 2, 1)],
+          [1, Time.utc(2026, 2, 1), Time.utc(2026, 3, 1)],
+          [2, Time.utc(2026, 3, 1), Time.utc(2026, 4, 1)],
+          [3, Time.utc(2026, 4, 1), Time.utc(2026, 5, 1)],
+          [4, Time.utc(2026, 5, 1), Time.utc(2026, 6, 1)]]
+      )
     end
 
     it "does not carry billing history into a separate attachment of the same rate card" do
@@ -101,7 +89,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
   end
 
-  context "when resuming the first cycle of an attachment" do
+  context "when the first cycle of an attachment is persisted" do
     before do
       create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
         rate_card_rate: rate_card.rates.sole,
@@ -109,7 +97,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         ended_at: BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), billing_at: Time.utc(2026, 2, 1))
     end
 
-    it "resumes at midnight of the card's effective date" do
+    it "still replays from midnight of the card's effective date" do
       expect(result).to be_success
       expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).sole.cycle_started_at)
         .to eq(Time.utc(2026, 1, 15))
@@ -126,7 +114,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         ended_at: BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), billing_at: Time.utc(2026, 1, 15))
     end
 
-    it "resumes from the cycle start when the persisted segment is only its last slice" do
+    it "replays the whole cycle when only its last slice is persisted" do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "intro", billing_interval_cycle_count: 1)
       new_rate = create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 20))
       create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
