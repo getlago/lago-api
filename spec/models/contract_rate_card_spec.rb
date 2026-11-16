@@ -100,9 +100,6 @@ RSpec.describe ContractRateCard do
         expect(described_class.due_for_billing(timestamp)).to be_empty
       end
 
-      # Bringing a termination forward can leave a card starting after the contract ends. It
-      # has no window to owe anything in, so it is not due — and the calendar is never asked
-      # to build a schedule that ends before it starts.
       it "leaves out a card of a draft contract" do
         draft = create(:contract, :draft, organization:, started_at: 1.year.ago)
         card(contract: draft, next_billing_at: timestamp)
@@ -110,6 +107,9 @@ RSpec.describe ContractRateCard do
         expect(described_class.due_for_billing(timestamp)).to be_empty
       end
 
+      # Bringing a termination forward can leave a card starting after the contract ends. It
+      # has no window to owe anything in, so it is not due — and the calendar is never asked
+      # to build a schedule that ends before it starts.
       it "leaves out a card that starts after its contract ends" do
         ending_early = create(:contract, organization:, started_at: 1.year.ago, ended_at: 1.month.ago)
         card(contract: ending_early, next_billing_at: timestamp, effective_date: 1.week.ago.to_date)

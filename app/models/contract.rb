@@ -49,8 +49,8 @@ class Contract < ApplicationRecord
   enum :billing_time, BILLING_TIMES, validate: true
   enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
 
-  # A draft is live (addressable, editable, cancellable) but never billable: only
-  # an explicit confirmation moves it on.
+  # A draft is live (it holds its external id and its rate cards are editable)
+  # but never billable.
   LIVE_STATUSES = %w[draft pending active].freeze
 
   # Which contracts the billing clock may produce segments for. A terminated contract's
