@@ -18,6 +18,9 @@ module Memberships
 
         # Under the lock, so the last admin check holds until the write commits.
         Organizations::SandboxLockService.call!(organization:)
+        # Every membership write takes the lock: reloaded, an update loaded before a revoke finds it revoked.
+        membership.reload
+        return result.not_found_failure!(resource: "membership") unless membership.active?
         return result.not_found_failure!(resource: "role") if new_roles.blank?
         return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
         return result.not_allowed_failure!(code: "last_admin") if last_admin_demotion?

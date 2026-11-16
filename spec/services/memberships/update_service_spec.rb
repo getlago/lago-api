@@ -42,6 +42,26 @@ RSpec.describe Memberships::UpdateService do
       end
     end
 
+    context "when another request revoked the membership after it was loaded" do
+      let(:other_membership) { create(:membership, organization:) }
+      let(:acting_user) { other_membership.user }
+
+      before do
+        create(:membership_role, membership:, role: admin_role)
+        create(:membership_role, membership: other_membership, role: admin_role)
+        Membership.find(membership.id).mark_as_revoked!
+      end
+
+      it "answers that the membership is not found and grants no role" do
+        expect(result.error.error_code).to eq("membership_not_found")
+        expect(MembershipRole.where(membership:, role: manager_role)).to be_empty
+      end
+
+      it_behaves_like "does not produce a security log" do
+        before { result }
+      end
+    end
+
     context "when the organization has a sandbox" do
       let(:production) { create(:organization, :with_sandbox) }
       let(:sandbox) { production.sandbox_organization }
