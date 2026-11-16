@@ -59,7 +59,7 @@ RSpec.describe ConcurrencyThrottlable do
 
   # NOTE: ActiveSupport::Rescuable picks the most recently declared handler matching the error class.
   def handled_error_class(job_class, error)
-    job_class.rescue_handlers.reverse_each.find { |class_name, _| error.is_a?(class_name.constantize) }&.first
+    job_class.rescue_handlers.rfind { |class_name, _| error.is_a?(class_name.constantize) }&.first
   end
 
   [

@@ -35,9 +35,16 @@ RSpec.describe Integrations::Aggregator::BaseService do
     let(:limiter) { instance_double(Throttling::Base, check: allowed) }
     let(:allowed) { false }
 
+    let(:service) do
+      throttled_provider = provider_name.to_s
+
+      Class.new(described_class) do
+        define_method(:provider) { throttled_provider }
+        define_method(:throttle_key) { "throttle-key" }
+      end.new(integration:)
+    end
+
     before do
-      allow(sync_service).to receive(:provider).and_return(provider_name.to_s)
-      allow(sync_service).to receive(:throttle_key).and_return("throttle-key")
       allow(Throttling).to receive(:for).with(provider_name).and_return(limiter)
     end
 
@@ -46,7 +53,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
         let(:provider_name) { existing_provider }
 
         it "raises the regular throttling error" do
-          expect { sync_service.send(:throttle!, provider_name) }
+          expect { service.send(:throttle!, provider_name) }
             .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(provider_name) }
         end
       end
@@ -56,7 +63,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
       let(:provider_name) { :quickbooks }
 
       it "raises the next window throttling error" do
-        expect { sync_service.send(:throttle!, provider_name) }
+        expect { service.send(:throttle!, provider_name) }
           .to raise_error(BaseService::NextWindowThrottlingError) do |error|
             expect(error.provider_name).to eq(:quickbooks)
             expect(error.retry_after).to eq(60.seconds)
@@ -73,7 +80,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
       let(:allowed) { true }
 
       it "does not raise" do
-        expect { sync_service.send(:throttle!, provider_name) }.not_to raise_error
+        expect { service.send(:throttle!, provider_name) }.not_to raise_error
       end
     end
   end
