@@ -2,7 +2,7 @@
 
 module Signups
   # Signup Step 3: creates the production organization of a self-serve user who has none yet, with its sandbox, and
-  # makes the user admin of both. The role and source answers go to analytics only and are never stored.
+  # makes the user admin of both. The role and source answers go to analytics only and are never saved in the database.
   class CreateOrganizationService < BaseService
     Result = BaseResult[:organization, :sandbox_organization, :user]
 
@@ -25,6 +25,9 @@ module Signups
         return result.single_validation_failure!(field: :source, error_code: "value_is_invalid")
       end
 
+      # Read before the transaction, so nothing in the analytics can fail once the organizations are committed.
+      region = Lago::SelfServe.front_host
+
       ActiveRecord::Base.transaction do
         # Checked again on the locked user, so two submissions of Step 3 create a single pair.
         user.lock!
@@ -36,7 +39,7 @@ module Signups
 
         result.organization = pair.organization
         result.sandbox_organization = pair.sandbox_organization
-        after_commit { announce(membership, pair.sandbox_organization) }
+        after_commit { announce(membership, pair.sandbox_organization, region) }
       end
       return result if result.failure?
 
@@ -64,7 +67,7 @@ module Signups
       membership
     end
 
-    def announce(membership, sandbox)
+    def announce(membership, sandbox, region)
       Utils::SecurityLog.produce(
         organization: membership.organization,
         log_type: "user",
@@ -77,7 +80,8 @@ module Signups
       SegmentTrackJob.perform_later(
         membership_id: "membership/#{membership.id}",
         event: "organization_registered",
-        # The only place the Step 3 answers go: Lago stores neither, and the job does not log its arguments.
+        # The only place the Step 3 answers go: not in the database, and not in the job logs. The job's arguments still
+        # reach Redis (the queue, then the dead set if it fails) and error reports.
         properties: {
           organization_name: membership.organization.name,
           organization_id: membership.organization_id,
@@ -86,7 +90,7 @@ module Signups
           sandbox_organization_id: sandbox.id,
           role:,
           source: referral_source,
-          region: URI(Rails.application.config.lago_front_url).host
+          region:
         }
       )
     end

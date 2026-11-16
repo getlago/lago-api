@@ -44,6 +44,17 @@ RSpec.describe Lago::SelfServe do
     end
   end
 
+  describe ".front_host" do
+    it "is the downcased host of the front URL" do
+      expect(described_class.front_host(url: "https://App.EU.getlago.com")).to eq("app.eu.getlago.com")
+    end
+
+    it "is nil for a URL without a scheme or a malformed one" do
+      expect(["app.eu.getlago.com", "https://exa mple.com", nil].map { described_class.front_host(url: it) })
+        .to eq([nil, nil, nil])
+    end
+  end
+
   describe ".validate!" do
     let(:front_url) { "https://app.getlago.com" }
 

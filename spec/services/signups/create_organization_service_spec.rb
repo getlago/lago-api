@@ -14,7 +14,10 @@ RSpec.describe Signups::CreateOrganizationService do
   let(:source) { "github" }
   let(:admin_role) { create(:role, :admin) }
 
-  before { admin_role }
+  before do
+    admin_role
+    allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
+  end
 
   it "creates the production organization and its sandbox, with the user admin of both" do
     expect { result }.to change(Organization, :count).by(2)
@@ -56,9 +59,19 @@ RSpec.describe Signups::CreateOrganizationService do
         sandbox_organization_id: result.sandbox_organization.id,
         role: "engineering",
         source: "github",
-        region: URI(Rails.application.config.lago_front_url).host
+        region: "app.eu.getlago.com"
       }
     )
+  end
+
+  context "when LAGO_FRONT_URL cannot be parsed" do
+    before { allow(Rails.application.config).to receive(:lago_front_url).and_return("https://exa mple.com") }
+
+    it "creates the pair and sends no region" do
+      expect(result).to be_success
+      expect(SegmentTrackJob).to have_been_enqueued
+        .with(hash_including(event: "organization_registered", properties: hash_including(region: nil)))
+    end
   end
 
   context "without a source" do

@@ -72,7 +72,7 @@ module Signups
     end
 
     def expected_hostname
-      URI(Rails.application.config.lago_front_url).host.to_s.downcase
+      Lago::SelfServe.front_host.to_s
     end
 
     # Short timeouts and no retry: a slow Google must not hold one of the few Puma threads.
