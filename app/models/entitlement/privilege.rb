@@ -16,7 +16,7 @@ module Entitlement
     has_many :entitlements, through: :values, class_name: "Entitlement::Entitlement"
 
     validates :code, presence: true, string: true, length: {maximum: 255}
-    validates :name, length: {maximum: 255}
+    validates :name, string: true, length: {maximum: 255}
     validates :value_type, presence: true, inclusion: {in: VALUE_TYPES}
 
     validate :validate_config

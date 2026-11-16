@@ -177,6 +177,14 @@ RSpec.describe Entitlement::PrivilegeCreateService do
       end
     end
 
+    [["a number", 123], ["a boolean", true]].each do |label, name|
+      context "when name is #{label}" do
+        let(:params) { {code: "max_admins", name:} }
+
+        it_behaves_like "a validation failure", {name: ["value_is_invalid"]}
+      end
+    end
+
     context "when code is blank" do
       let(:params) { {code: "  "} }
 

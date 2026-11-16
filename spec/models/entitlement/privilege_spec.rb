@@ -36,6 +36,21 @@ RSpec.describe Entitlement::Privilege do
       end
     end
 
+    describe "name validation" do
+      [123, true, false, ["a"]].each do |name|
+        it "refuses #{name.inspect}, which the cast would turn into a string" do
+          privilege = build(:privilege, name:)
+
+          expect(privilege).not_to be_valid
+          expect(privilege.errors.details[:name]).to include({error: :invalid})
+        end
+      end
+
+      it "accepts nil" do
+        expect(build(:privilege, name: nil)).to be_valid
+      end
+    end
+
     describe "#validate_config" do
       before do
         subject.value_type = "select"
