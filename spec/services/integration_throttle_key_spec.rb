@@ -225,6 +225,20 @@ RSpec.describe IntegrationThrottleKey do
         it "returns no limit and the constant suffix" do
           expect(resolved).to eq([nil, described_class::NO_CONNECTION_SUFFIX])
         end
+
+        it "logs one warning without ids and still returns no limit and the constant suffix" do
+          allow(Rails.logger).to receive(:warn)
+
+          expect(resolved).to eq([nil, described_class::NO_CONNECTION_SUFFIX])
+          expect(Rails.logger).to have_received(:warn)
+            .with("IntegrationThrottleKey fail open: ActiveRecord::StatementInvalid").once
+        end
+
+        it "returns no limit and the constant suffix when the logger raises" do
+          allow(Rails.logger).to receive(:warn).and_raise(StandardError)
+
+          expect(resolved).to eq([nil, described_class::NO_CONNECTION_SUFFIX])
+        end
       end
 
       context "when the cache raises" do
@@ -317,10 +331,14 @@ RSpec.describe IntegrationThrottleKey do
         }
       end
 
-      it "returns no limit and the constant suffix without raising" do
+      it "returns no limit and the constant suffix without raising or logging" do
+        allow(Rails.logger).to receive(:warn)
+
         malformed.each do |name, args|
           expect(resolve(args)).to eq([nil, described_class::NO_CONNECTION_SUFFIX]), name
         end
+
+        expect(Rails.logger).not_to have_received(:warn)
       end
     end
   end

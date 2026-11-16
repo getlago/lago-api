@@ -30,18 +30,34 @@ module IntegrationThrottleKey
     id ? Digest::SHA256.hexdigest(id) : NO_CONNECTION_SUFFIX
   end
 
-  # A payload of any other shape (no argument, not a hash, malformed global id) raises here and
-  # resolves to nil, like a database or cache error.
+  # A payload of any other shape (no argument, not a hash, no global id) is expected and resolves to
+  # nil in silence. A database or cache error resolves to nil too, with one warning without ids:
+  # the gem only logs when this rule raises, so a permanent failure would turn the cap off unseen.
   def self.integration_id(args)
-    payload = args.first.with_indifferent_access
+    payload = args.first
+    return unless payload.is_a?(Hash)
 
-    if payload.key?(:integration)
-      gid = GlobalID.parse(payload[:integration][:_aj_globalid])
+    payload = payload.with_indifferent_access
+    from_integration = payload.key?(:integration)
+    entry = from_integration ? payload[:integration] : payload.values_at(*RECORD_KEYS).compact.first
+    return unless entry.is_a?(Hash) && entry[:_aj_globalid].is_a?(String)
+
+    gid = GlobalID.parse(entry[:_aj_globalid])
+    return unless gid
+
+    if from_integration
       (gid.model_name == QUICKBOOKS_TYPE) ? gid.model_id : nil
     else
-      gid = GlobalID.parse(payload.values_at(*RECORD_KEYS).compact.first[:_aj_globalid])
       cached_integration_id(gid)
     end
+  rescue => e
+    warn_fail_open(e)
+    nil
+  end
+
+  # The logger cannot break the never-raise contract.
+  def self.warn_fail_open(error)
+    Rails.logger.warn("IntegrationThrottleKey fail open: #{error.class}")
   rescue
     nil
   end
@@ -71,5 +87,5 @@ module IntegrationThrottleKey
       .pick("integrations.id")
   end
 
-  private_class_method :integration_id, :cached_integration_id, :lookup
+  private_class_method :integration_id, :warn_fail_open, :cached_integration_id, :lookup
 end
