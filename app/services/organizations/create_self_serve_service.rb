@@ -33,15 +33,18 @@ module Organizations
         production = CreateService.call!(**shared_attributes, name: name_result.name, environment: "production")
           .organization
         sandbox = CreateService.call!(
-          **shared_attributes,
+          **shared_attributes.except(:premium_integrations, :feature_flags),
           name: "#{name_result.name}#{SANDBOX_NAME_SUFFIX}",
           slug: sandbox_slug(production),
           environment: "sandbox",
           production_organization_id: production.id
         ).organization
 
+        # One service owns the copied settings, at creation as on every later production change.
+        SyncSandboxSettingsService.call!(organization: production)
+
         result.organization = production
-        result.sandbox_organization = sandbox
+        result.sandbox_organization = sandbox.reload
       end
 
       result
