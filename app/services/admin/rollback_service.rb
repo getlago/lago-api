@@ -16,7 +16,7 @@ module Admin
 
       unless CsAdminAuditLog::TOGGLEABLE_FEATURE_TYPES.include?(audit_log.feature_type)
         return result.single_validation_failure!(
-          error_code: "cannot_rollback_organization_creation",
+          error_code: audit_log.org_renamed? ? "cannot_rollback_organization_rename" : "cannot_rollback_organization_creation",
           field: :feature_type
         )
       end

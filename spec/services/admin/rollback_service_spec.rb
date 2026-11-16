@@ -191,6 +191,37 @@ RSpec.describe Admin::RollbackService do
       end
     end
 
+    context "when the audit log is an organization rename" do
+      subject(:service) do
+        described_class.new(
+          actor: actor,
+          audit_log: original_log,
+          reason: "Trying to roll back an organization rename"
+        )
+      end
+
+      let(:original_log) do
+        create(
+          :cs_admin_audit_log,
+          actor_user: actor,
+          action: :org_renamed,
+          organization: organization,
+          feature_type: :organization,
+          feature_key: "name",
+          before_value: nil,
+          after_value: true,
+          reason: "Renamed from \"Old\" to \"New\". Customer rebranded"
+        )
+      end
+
+      it "returns a rename-specific validation failure" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:feature_type]).to eq(["cannot_rollback_organization_rename"])
+      end
+    end
+
     context "when the audit log was already rolled back" do
       subject(:service) do
         described_class.new(
