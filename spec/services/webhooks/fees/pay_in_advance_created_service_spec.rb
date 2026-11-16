@@ -24,7 +24,7 @@ RSpec.describe Webhooks::Fees::PayInAdvanceCreatedService do
 
       payload = Webhook.order(created_at: :desc).first.payload["fee"]
       expect(payload).to eq(JSON.parse(V1::FeeSerializer.new(fee, root_name: "fee").to_json)["fee"])
-      expect(payload).to include("lago_id" => fee.id, "lago_subscription_id" => subscription.id)
+      expect(payload).to include("lago_id" => fee.id, "lago_subscription_id" => subscription.id, "progressive_billing_credit_amount_cents" => 0)
     end
 
     context "with a product fee" do

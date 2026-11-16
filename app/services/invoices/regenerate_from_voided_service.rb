@@ -240,6 +240,7 @@ module Invoices
       dup_fee.taxes_amount_cents = 0
       dup_fee.taxes_precise_amount_cents = 0
       dup_fee.precise_coupons_amount_cents = 0
+      dup_fee.progressive_billing_credit_amount_cents = 0
       dup_fee.taxes_base_rate = 0
       dup_fee.taxes_rate = 0
       dup_fee.original_fee = voided_fee.original_fee || voided_fee

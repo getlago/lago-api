@@ -28,13 +28,31 @@ RSpec.describe Api::V1::FeesController do
         units: fee.units.to_s,
         events_count: fee.events_count,
         applied_taxes: [],
-        self_billed: false
+        self_billed: false,
+        progressive_billing_credit_amount_cents: 0
       )
       expect(json[:fee][:item]).to include(
         type: fee.fee_type,
         code: fee.item_code,
         name: fee.item_name
       )
+    end
+
+    context "when a progressive billing credit was applied to the fee" do
+      let(:fee) do
+        create(:charge_fee, subscription:, invoice: nil, precise_coupons_amount_cents: 2000, progressive_billing_credit_amount_cents: 1500)
+      end
+
+      it "returns the progressive billing credit amount" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:fee]).to include(
+          lago_id: fee.id,
+          precise_coupons_amount_cents: "2000.0",
+          progressive_billing_credit_amount_cents: 1500
+        )
+      end
     end
 
     context "when fee is an add-on fee" do

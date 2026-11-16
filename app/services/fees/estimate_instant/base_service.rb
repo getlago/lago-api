@@ -77,6 +77,7 @@ module Fees
           description: nil,
           precise_unit_amount: unit_amount_cents,
           precise_coupons_amount_cents: "0.0",
+          progressive_billing_credit_amount_cents: 0,
           events_count: 1,
           payment_status: "pending",
           created_at: nil,

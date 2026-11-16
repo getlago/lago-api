@@ -4011,6 +4011,7 @@ CREATE TABLE public.fees (
     product_filter_id uuid,
     contract_id uuid,
     contract_rate_card_id uuid,
+    progressive_billing_credit_amount_cents bigint DEFAULT 0 NOT NULL,
     CONSTRAINT fees_contract_provenance_present_together CHECK (((contract_id IS NULL) = (contract_rate_card_id IS NULL)))
 );
 
@@ -16260,6 +16261,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261113163757'),
 ('20261109122133'),
 ('20261109082523'),
 ('20261106220629'),

@@ -73,6 +73,7 @@ module Credits
         if fee
           amount = [remaining_amount, available_amount, fee.amount_cents - fee.precise_coupons_amount_cents].min.clamp(0, remaining_amount)
           fee.precise_coupons_amount_cents += amount
+          fee.progressive_billing_credit_amount_cents += amount
           fee.save!
           remaining_amount -= amount
           available_amount -= amount

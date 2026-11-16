@@ -85,7 +85,9 @@ Rspec.describe Credits::ProgressiveBillingService do
         expect(credit.amount_cents).to eq(20)
         expect(invoice.progressive_billing_credit_amount_cents).to eq(20)
         expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(20)
+        expect(subscription_fee1.progressive_billing_credit_amount_cents).to eq(20)
         expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(0)
+        expect(subscription_fee2.progressive_billing_credit_amount_cents).to eq(0)
       end
 
       it "applies the credit to the already-loaded fees association without a reload" do
@@ -95,6 +97,7 @@ Rspec.describe Credits::ProgressiveBillingService do
 
         cached_fee = invoice.fees.find { |fee| fee.id == subscription_fee1.id }
         expect(cached_fee.precise_coupons_amount_cents).to eq(20)
+        expect(cached_fee.progressive_billing_credit_amount_cents).to eq(20)
         expect(cached_fee.sub_total_excluding_taxes_amount_cents).to eq(cached_fee.amount_cents - 20)
       end
 
@@ -108,7 +111,9 @@ Rspec.describe Credits::ProgressiveBillingService do
           expect(credit.amount_cents).to eq(19)
           expect(invoice.progressive_billing_credit_amount_cents).to eq(19)
           expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(19)
+          expect(subscription_fee1.progressive_billing_credit_amount_cents).to eq(19)
           expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(0)
+          expect(subscription_fee2.progressive_billing_credit_amount_cents).to eq(0)
         end
       end
 
@@ -127,8 +132,11 @@ Rspec.describe Credits::ProgressiveBillingService do
           expect(invoice.progressive_billing_credit_amount_cents).to eq(20)
 
           expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(20)
+          expect(subscription_fee1.progressive_billing_credit_amount_cents).to eq(20)
           expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(0)
+          expect(subscription_fee2.progressive_billing_credit_amount_cents).to eq(0)
           expect(subscription_fee3.reload.precise_coupons_amount_cents).to eq(0)
+          expect(subscription_fee3.progressive_billing_credit_amount_cents).to eq(0)
         end
       end
 
@@ -164,7 +172,52 @@ Rspec.describe Credits::ProgressiveBillingService do
           expect(credit.amount_cents).to eq(40)
           expect(invoice.progressive_billing_credit_amount_cents).to eq(40)
           expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(20)
+          expect(subscription_fee1.progressive_billing_credit_amount_cents).to eq(20)
           expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(20)
+          expect(subscription_fee2.progressive_billing_credit_amount_cents).to eq(20)
+          expect(invoice.fees.sum(:progressive_billing_credit_amount_cents)).to eq(invoice.progressive_billing_credit_amount_cents)
+        end
+      end
+
+      context "when the progressive billing fees are on two filters of one charge" do
+        let(:charge) { create(:standard_charge) }
+        let(:charge_filter1) { create(:charge_filter, charge:) }
+        let(:charge_filter2) { create(:charge_filter, charge:) }
+        let(:subscription_fee1) { create(:charge_fee, invoice:, subscription:, charge:, charge_filter: charge_filter1, amount_cents: 500) }
+        let(:subscription_fee2) { create(:charge_fee, invoice:, subscription:, charge:, charge_filter: charge_filter2, amount_cents: 500) }
+
+        let(:progressive_billing_invoice) do
+          create(
+            :invoice,
+            :with_subscriptions,
+            organization:,
+            customer:,
+            status: "finalized",
+            invoice_type: :progressive_billing,
+            subscriptions: [subscription],
+            issuing_date: invoice.issuing_date - 1.day,
+            created_at: invoice.issuing_date - 1.day,
+            fees_amount_cents: 50
+          )
+        end
+
+        let(:progressive_billing_fee) do
+          create(:charge_fee, amount_cents: 30, charge:, charge_filter: charge_filter1, invoice: progressive_billing_invoice)
+        end
+
+        let(:progressive_billing_fee2) do
+          create(:charge_fee, amount_cents: 20, charge:, charge_filter: charge_filter2, invoice: progressive_billing_invoice)
+        end
+
+        before { progressive_billing_fee2 }
+
+        it "sets on each filter fee the amount of its own progressive fee" do
+          result = credit_service.call
+
+          expect(result.credits.sole.amount_cents).to eq(50) # 30 (filter 1) + 20 (filter 2)
+          expect(subscription_fee1.reload.progressive_billing_credit_amount_cents).to eq(30)
+          expect(subscription_fee2.reload.progressive_billing_credit_amount_cents).to eq(20)
+          expect(invoice.fees.sum(:progressive_billing_credit_amount_cents)).to eq(invoice.progressive_billing_credit_amount_cents)
         end
       end
     end
@@ -414,6 +467,15 @@ Rspec.describe Credits::ProgressiveBillingService do
         first = progressive_billing_invoice3.credit_notes.sole
         expect(first.credit_amount_cents).to eq(1_500) # 2000 - 500 - targeting specific fee
       end
+
+      it "sets on the invoice fee only the applied part, not the part sent to the credit note" do
+        credit_service.call
+
+        # 500: the whole fee amount, the remaining 2000 - 500 goes to the credit note
+        expect(subscription_fee1.reload.progressive_billing_credit_amount_cents).to eq(500)
+        expect(subscription_fee2.reload.progressive_billing_credit_amount_cents).to eq(0)
+        expect(invoice.fees.sum(:progressive_billing_credit_amount_cents)).to eq(invoice.progressive_billing_credit_amount_cents)
+      end
     end
   end
 
@@ -466,7 +528,61 @@ Rspec.describe Credits::ProgressiveBillingService do
         expect(credit.amount_cents).to eq(20)
         expect(credit.progressive_billing_invoice).to eq(progressive_billing_invoice)
         expect(invoice.progressive_billing_credit_amount_cents).to eq(20)
+        expect(subscription_fee1.reload.progressive_billing_credit_amount_cents).to eq(20)
+        expect(subscription2_fee1.reload.progressive_billing_credit_amount_cents).to eq(0)
+        expect(subscription2_fee2.reload.progressive_billing_credit_amount_cents).to eq(0)
       end
+    end
+  end
+
+  context "with one progressive billing invoice for each of two subscriptions" do
+    let(:subscription2) { create(:subscription, customer_id: customer.id) }
+    let(:subscriptions) { [subscription, subscription2] }
+
+    let(:subscription_fees) { [subscription_fee1, subscription_fee2, subscription2_fee1, subscription2_fee2] }
+    let(:subscription2_fee1) { create(:charge_fee, invoice:, subscription: subscription2, amount_cents: 500) }
+    let(:subscription2_fee2) { create(:charge_fee, invoice:, subscription: subscription2, amount_cents: 500) }
+
+    let(:progressive_billing_invoice) do
+      create(:invoice, :with_subscriptions, organization:, customer:, subscriptions: [subscription],
+        status: "finalized", invoice_type: :progressive_billing, issuing_date: invoice.issuing_date - 1.day,
+        created_at: invoice.issuing_date - 1.day, fees_amount_cents: 20)
+    end
+    let(:progressive_billing_invoice2) do
+      create(:invoice, :with_subscriptions, organization:, customer:, subscriptions: [subscription2],
+        status: "finalized", invoice_type: :progressive_billing, issuing_date: invoice.issuing_date - 1.day,
+        created_at: invoice.issuing_date - 1.day, fees_amount_cents: 70)
+    end
+    let(:progressive_billing_fee) do
+      create(:charge_fee, amount_cents: 20, subscription:, charge: subscription_fee1.charge, invoice: progressive_billing_invoice)
+    end
+    let(:progressive_billing_fee2) do
+      create(:charge_fee, amount_cents: 70, subscription: subscription2, charge: subscription2_fee2.charge,
+        invoice: progressive_billing_invoice2)
+    end
+
+    before do
+      progressive_billing_fee
+      progressive_billing_fee2
+      [progressive_billing_invoice, progressive_billing_invoice2].each do |progressive_invoice|
+        progressive_invoice.invoice_subscriptions.sole.update!(
+          charges_from_datetime: progressive_invoice.issuing_date - 1.month,
+          charges_to_datetime: progressive_invoice.issuing_date,
+          timestamp: progressive_invoice.issuing_date
+        )
+      end
+    end
+
+    it "sets on each subscription's fee the amount billed for it, summing to the invoice credit" do
+      result = credit_service.call
+
+      expect(result.credits.map(&:amount_cents)).to match_array([20, 70])
+      expect(invoice.progressive_billing_credit_amount_cents).to eq(90) # 20 (subscription) + 70 (subscription2)
+      expect(subscription_fee1.reload.progressive_billing_credit_amount_cents).to eq(20)
+      expect(subscription_fee2.reload.progressive_billing_credit_amount_cents).to eq(0)
+      expect(subscription2_fee1.reload.progressive_billing_credit_amount_cents).to eq(0)
+      expect(subscription2_fee2.reload.progressive_billing_credit_amount_cents).to eq(70)
+      expect(invoice.fees.sum(:progressive_billing_credit_amount_cents)).to eq(90)
     end
   end
 
@@ -540,6 +656,7 @@ Rspec.describe Credits::ProgressiveBillingService do
       expect(result.credits.sole.amount_cents).to eq(75_00)
       expect(invoice.progressive_billing_credit_amount_cents).to eq(75_00)
       expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(75_00)
+      expect(subscription_fee1.progressive_billing_credit_amount_cents).to eq(75_00)
       expect(progressive_billing_invoice.credit_notes.count).to eq(1)
     end
   end
@@ -575,6 +692,7 @@ Rspec.describe Credits::ProgressiveBillingService do
       expect(result.credits.sole.amount_cents).to eq(40_00)
       expect(invoice.progressive_billing_credit_amount_cents).to eq(40_00)
       expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(40_00)
+      expect(subscription_fee1.progressive_billing_credit_amount_cents).to eq(40_00)
       expect(progressive_billing_invoice.credit_notes).to be_empty
     end
   end
@@ -633,7 +751,9 @@ Rspec.describe Credits::ProgressiveBillingService do
         expect(invoice.progressive_billing_credit_amount_cents).to eq(20)
 
         expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(20)
+        expect(subscription_fee1.progressive_billing_credit_amount_cents).to eq(20)
         expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(0)
+        expect(subscription_fee2.progressive_billing_credit_amount_cents).to eq(0)
       end
     end
   end

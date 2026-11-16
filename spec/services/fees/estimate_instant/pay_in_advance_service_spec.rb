@@ -54,6 +54,7 @@ RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
         pay_in_advance: true,
         invoiceable: charge.invoiceable,
         events_count: 1,
+        progressive_billing_credit_amount_cents: 0,
         event_transaction_id: transaction_id
       )
     end
@@ -105,6 +106,7 @@ RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
           pay_in_advance: true,
           invoiceable: charge.invoiceable,
           events_count: 1,
+          progressive_billing_credit_amount_cents: 0,
           event_transaction_id: transaction_id
         )
       end

@@ -25,7 +25,7 @@ RSpec.describe Resolvers::InvoiceResolver do
     })
   end
   let(:charge_fee) do
-    create(:charge_fee, charge: charge_with_display_keys, subscription:, invoice:, amount_cents: 10, properties: {
+    create(:charge_fee, charge: charge_with_display_keys, subscription:, invoice:, amount_cents: 10, progressive_billing_credit_amount_cents: 7, properties: {
       from_datetime: Time.current.beginning_of_month,
       to_datetime: Time.current.end_of_month,
       charges_from_datetime: Time.current.beginning_of_month - 1.month,
@@ -93,6 +93,7 @@ RSpec.describe Resolvers::InvoiceResolver do
               trueUpParentFee { id }
               units
               preciseUnitAmount
+              progressiveBillingCreditAmountCents
               chargeFilter { invoiceDisplayName values }
               presentationBreakdowns { presentationBy units }
               appliedTaxes {
@@ -199,9 +200,11 @@ RSpec.describe Resolvers::InvoiceResolver do
     expect(subscription_fee["properties"]["fromDatetime"]).to eq(Time.current.beginning_of_month.to_datetime.iso8601)
     expect(subscription_fee["properties"]["toDatetime"]).to eq(Time.current.end_of_month.to_datetime.iso8601)
     expect(subscription_fee["presentationBreakdowns"]).to eq([])
+    expect(subscription_fee["progressiveBillingCreditAmountCents"]).to eq("0")
 
     charge_fee_result = data["invoiceSubscriptions"][0]["fees"].find { |f| f["itemType"] == "charge" }
     expect(charge_fee_result["id"]).to eq(charge_fee.id)
+    expect(charge_fee_result["progressiveBillingCreditAmountCents"]).to eq("7")
     expect(charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month - 1.month).to_datetime.iso8601)
     expect(charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month - 1.month).to_datetime.iso8601)
     expect(charge_fee_result["presentationBreakdowns"]).to eq([
@@ -213,6 +216,7 @@ RSpec.describe Resolvers::InvoiceResolver do
     expect(fixed_charge_fee_result["properties"]["fromDatetime"]).to eq((Time.current.beginning_of_month + 1.month).to_datetime.iso8601)
     expect(fixed_charge_fee_result["properties"]["toDatetime"]).to eq((Time.current.end_of_month + 1.month).to_datetime.iso8601)
     expect(fixed_charge_fee_result["presentationBreakdowns"]).to eq([])
+    expect(fixed_charge_fee_result["progressiveBillingCreditAmountCents"]).to eq("0")
   end
 
   it "includes filters for the fee" do

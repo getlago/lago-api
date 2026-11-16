@@ -419,6 +419,37 @@ describe "Coupons breakdown Spec", :premium do
       include_examples "matrix case", coupon: "forever", paid: 10_00, refund: 0
       include_examples "matrix case", coupon: "forever", percentage: true, paid: 17_50, refund: 0
       include_examples "matrix case", coupon: "forever", percentage: true, limited_to_metrics: true, paid: 17_50, refund: 0
+
+      shared_examples "a per-fee coupon and progressive billing breakdown" do |percentage:, coupon_cents:|
+        it "keeps both in precise_coupons_amount_cents and the progressive billing part on its own" do
+          plan = setup_pb_plan(thresholds)
+          apply_matrix_coupon("forever", percentage:, limited_to_metrics: false)
+          sub = create_sub(plan)
+          trigger_usage(sub)
+          end_of_month_billing
+
+          invoice = sub.invoices.subscription.sole
+          fee = invoice.fees.charge.sole
+          expect(invoice).to have_attributes(
+            fees_amount_cents: 35_00, progressive_billing_credit_amount_cents: 5_00, coupons_amount_cents: coupon_cents
+          )
+          expect(fee).to have_attributes(
+            amount_cents: 35_00,
+            progressive_billing_credit_amount_cents: 5_00, # usage already billed by the PB invoice
+            precise_coupons_amount_cents: 5_00 + coupon_cents
+          )
+          fees = invoice.fees.charge
+          expect(fees.sum(:progressive_billing_credit_amount_cents)).to eq(invoice.progressive_billing_credit_amount_cents)
+          # The coupon part of a fee is decimal while the invoice field is rounded.
+          expect(fees.sum { |f| f.precise_coupons_amount_cents - f.progressive_billing_credit_amount_cents }.round)
+            .to eq(invoice.coupons_amount_cents)
+        end
+      end
+
+      # $20 fixed coupon on the 35.00 - 5.00 (PB) = 30.00 left: 20.00
+      include_examples "a per-fee coupon and progressive billing breakdown", percentage: false, coupon_cents: 20_00
+      # 50% coupon on the 35.00 - 5.00 (PB) = 30.00 left: 15.00
+      include_examples "a per-fee coupon and progressive billing breakdown", percentage: true, coupon_cents: 15_00
     end
 
     context "with Sc2: 1 PB at $30, period total $35" do

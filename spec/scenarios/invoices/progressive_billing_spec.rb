@@ -56,6 +56,75 @@ describe "Progressive billing invoices", :premium, transaction: false do
     end
   end
 
+  context "with several charges" do
+    let(:billable_metric2) { create(:billable_metric, organization:, field_name: "total", aggregation_type: "sum_agg") }
+    let(:charge2) { create(:charge, plan:, billable_metric: billable_metric2, charge_model: "standard", properties: {"amount" => "0.0001"}) }
+
+    before { charge2 }
+
+    it "renders on each final invoice fee the progressive billing credit applied to it" do
+      time_0 = DateTime.new(2022, 12, 1)
+      travel_to time_0 do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+      end
+      subscription = customer.subscriptions.first
+
+      travel_to time_0 + 5.days do
+        ingest_event(subscription, billable_metric, 600_000) # 600_000 * 0.0002 = 120.00
+        ingest_event(subscription, billable_metric2, 1_000_000) # 1_000_000 * 0.0001 = 100.00
+        expect(Invoice.count).to eq(1)
+        expect(Invoice.last.total_amount_cents).to eq(12_000 + 10_000)
+      end
+
+      travel_to time_0 + 15.days do
+        ingest_event(subscription, billable_metric, 1_000_000) # 1_000_000 * 0.0002 = 200.00
+        expect(Invoice.count).to eq(1)
+      end
+
+      progressive_billing_invoice = subscription.invoices.first
+
+      travel_to time_0 + 1.month do
+        perform_billing
+        expect(Invoice.count).to eq(2)
+      end
+
+      recurring_invoice = subscription.invoices.order(:created_at).last
+      expect(recurring_invoice.progressive_billing_credit_amount_cents).to eq(12_000 + 10_000)
+
+      invoice_json = api_call(perform_jobs: false) { get_with_token(organization, "/api/v1/invoices/#{recurring_invoice.id}") }[:invoice]
+      fees = invoice_json[:fees]
+      charge_fees = fees.select { |fee| fee[:item][:type] == "charge" }.index_by { |fee| fee[:item][:code] }
+      subscription_fee = fees.find { |fee| fee[:item][:type] == "subscription" }
+
+      # charge: 120.00 + 200.00 billed, 120.00 already billed on the progressive billing invoice
+      expect(charge_fees[billable_metric.code][:amount_cents]).to eq(12_000 + 20_000)
+      expect(charge_fees[billable_metric.code][:progressive_billing_credit_amount_cents]).to eq(12_000)
+      # charge2: 100.00 billed, all of it already billed on the progressive billing invoice
+      expect(charge_fees[billable_metric2.code][:amount_cents]).to eq(10_000)
+      expect(charge_fees[billable_metric2.code][:progressive_billing_credit_amount_cents]).to eq(10_000)
+      expect(subscription_fee[:progressive_billing_credit_amount_cents]).to eq(0)
+      expect(fees.sum { |fee| fee[:progressive_billing_credit_amount_cents] })
+        .to eq(invoice_json[:progressive_billing_credit_amount_cents])
+      expect(invoice_json[:progressive_billing_credit_amount_cents]).to eq(12_000 + 10_000)
+
+      fee_json = api_call(perform_jobs: false) do
+        get_with_token(organization, "/api/v1/fees/#{charge_fees[billable_metric.code][:lago_id]}")
+      end[:fee]
+      expect(fee_json[:progressive_billing_credit_amount_cents]).to eq(12_000)
+
+      progressive_invoice_json = api_call(perform_jobs: false) do
+        get_with_token(organization, "/api/v1/invoices/#{progressive_billing_invoice.id}")
+      end[:invoice]
+      expect(progressive_invoice_json[:fees].map { |fee| fee[:progressive_billing_credit_amount_cents] }).to eq([0, 0])
+    end
+  end
+
   context "with grace period enabled" do
     let(:invoice_grace_period) { 2 }
 

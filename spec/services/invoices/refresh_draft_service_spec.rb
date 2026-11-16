@@ -217,6 +217,67 @@ RSpec.describe Invoices::RefreshDraftService do
         .to change { invoice.reload.progressive_billing_credit_amount_cents }.from(1239000).to(0)
     end
 
+    context "when a progressive billing invoice was finalized in the period" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, organization:, billable_metric:, properties: {"amount" => "1"})
+      end
+      let(:invoice_subscription) do
+        create(:invoice_subscription, invoice:, subscription:, recurring: true, timestamp: started_at + 1.month)
+      end
+      let(:progressive_billing_invoice) do
+        create(
+          :invoice,
+          :progressive_billing_invoice,
+          organization:,
+          customer:,
+          status: :finalized,
+          fees_amount_cents: 200,
+          issuing_date: started_at + 10.days,
+          subscriptions: [subscription]
+        ).tap do |pb_invoice|
+          pb_invoice.invoice_subscriptions.sole.update!(
+            charges_from_datetime: started_at,
+            charges_to_datetime: started_at.end_of_month,
+            timestamp: started_at + 10.days
+          )
+        end
+      end
+
+      before do
+        create_list(
+          :event, 3,
+          organization:,
+          subscription:,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: started_at + 5.days
+        )
+        create(:charge_fee, invoice: progressive_billing_invoice, subscription:, charge:, amount_cents: 200)
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          amount_cents: 300,
+          precise_coupons_amount_cents: 200,
+          progressive_billing_credit_amount_cents: 200
+        )
+      end
+
+      it "recreates the charge fee with the recomputed progressive billing credit" do
+        refresh_service.call
+
+        charge_fee = invoice.reload.fees.charge.sole
+        # 3 events x 1.00 = 300 cents of usage, of which 200 were already billed by the progressive billing invoice
+        expect(charge_fee.amount_cents).to eq(300)
+        expect(charge_fee.progressive_billing_credit_amount_cents).to eq(200)
+        expect(charge_fee.precise_coupons_amount_cents).to eq(200)
+        expect(invoice.progressive_billing_credit_amount_cents).to eq(200)
+        expect(invoice.fees.sum(:progressive_billing_credit_amount_cents)).to eq(200)
+      end
+    end
+
     context "when the subscription purchase order number changed after draft creation" do
       let(:subscription) do
         create(
