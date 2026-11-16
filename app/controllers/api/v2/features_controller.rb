@@ -45,6 +45,24 @@ module Api
         end
       end
 
+      def update
+        attributes = params.expect(feature: [:name, :description])
+
+        result = ::Entitlement::FeatureUpdateService.call(
+          # The service answers not found for an unknown or discarded code.
+          feature: current_organization.features.find_by(code: params[:code]),
+          params: attributes.to_h.symbolize_keys,
+          # PUT included: with partial: false the service discards every privilege missing from the params.
+          partial: true
+        )
+
+        if result.success?
+          render_feature(result.feature)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def resource_name

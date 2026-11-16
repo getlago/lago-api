@@ -588,4 +588,220 @@ RSpec.describe Api::V2::FeaturesController do
       end
     end
   end
+
+  describe "PUT /api/v2/features/:code" do
+    subject(:request) { send("#{verb}_with_token", organization, "/api/v2/features/#{code}", params) }
+
+    let(:verb) { :put }
+    let(:code) { "seats" }
+    let(:feature_params) { {name: "Renamed", description: "Number of user seats"} }
+    let(:params) { {feature: feature_params} }
+    let(:feature) do
+      travel_to(Time.zone.parse("2026-11-01T08:00:00.654321Z"), with_usec: true) do
+        create(:feature, organization:, code: "seats", name: "Seats", description: "Number of seats")
+      end
+    end
+
+    before { feature }
+
+    include_examples "requires API permission", "feature", "write"
+
+    it "updates the name and the description and renders the v2 body" do
+      travel_to(Time.zone.parse("2026-11-14T10:00:00.123456Z"), with_usec: true) do
+        expect { request }
+          .to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", instance_of(Entitlement::Feature)) # exactly once by default
+      end
+
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).to eq(
+        lago_id: feature.id,
+        code: "seats",
+        name: "Renamed",
+        description: "Number of user seats",
+        created_at: "2026-11-01T08:00:00.654321Z",
+        updated_at: "2026-11-14T10:00:00.123456Z",
+        deleted_at: nil
+      )
+      expect(feature.reload).to have_attributes(name: "Renamed", description: "Number of user seats")
+      expect(Utils::ActivityLog).to have_produced("feature.updated").after_commit.with(feature)
+    end
+
+    %i[put patch].each do |http_verb|
+      context "with #{http_verb.upcase} and only the description" do
+        let(:verb) { http_verb }
+        let(:feature_params) { {description: "Number of user seats"} }
+
+        it "updates only the description" do
+          travel_to(Time.zone.parse("2026-11-14T10:00:00.123456Z"), with_usec: true) do
+            expect { request }
+              .to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", instance_of(Entitlement::Feature))
+          end
+
+          expect(response).to have_http_status(:success)
+          expect(json[:feature]).to eq(
+            lago_id: feature.id,
+            code: "seats",
+            name: "Seats",
+            description: "Number of user seats",
+            created_at: "2026-11-01T08:00:00.654321Z",
+            updated_at: "2026-11-14T10:00:00.123456Z",
+            deleted_at: nil
+          )
+        end
+      end
+
+      context "with #{http_verb.upcase} on a feature with privileges and entitlement values" do
+        let(:verb) { http_verb }
+        let(:feature_params) { {name: "Renamed"} }
+        let(:privilege) { create(:privilege, feature:, organization:, code: "max", value_type: "integer") }
+        let(:entitlement_value) do
+          create(:entitlement_value, privilege:, entitlement: create(:entitlement, feature:, organization:), organization:, value: "10")
+        end
+
+        before { entitlement_value }
+
+        it "keeps the privileges and their values" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:feature][:name]).to eq("Renamed")
+          expect(feature.reload.privileges).to eq([privilege])
+          expect(privilege.reload.deleted_at).to be_nil
+          expect(entitlement_value.reload.deleted_at).to be_nil
+        end
+      end
+    end
+
+    context "with a code in the body" do
+      let(:feature_params) { super().merge(code: "other") }
+
+      it "ignores the code" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature]).to include(lago_id: feature.id, code: "seats", name: "Renamed")
+        expect(feature.reload.code).to eq("seats")
+      end
+    end
+
+    context "with a null name" do
+      let(:feature_params) { {name: nil} }
+
+      it "clears the name" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature]).to include(name: nil, description: "Number of seats")
+        expect(feature.reload.name).to be_nil
+      end
+    end
+
+    context "with privileges in the body" do
+      let(:feature_params) { super().merge(privileges: []) }
+      let(:privilege) { create(:privilege, feature:, organization:, code: "max", value_type: "integer") }
+
+      before { privilege }
+
+      it "ignores them and updates the feature" do
+        expect { request }.not_to change(Entitlement::Privilege, :count)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature]).to include(name: "Renamed")
+        expect(privilege.reload.deleted_at).to be_nil
+      end
+    end
+
+    context "when the feature root is missing" do
+      let(:params) { feature_params }
+
+      it "returns the v2 missing parameter error" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "feature", meta: {}}])
+        expect(feature.reload.name).to eq("Seats")
+      end
+    end
+
+    context "when the feature root is a string" do
+      let(:params) { {feature: "Renamed"} }
+
+      it "returns the v2 missing parameter error" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "feature", meta: {}}])
+        expect(feature.reload.name).to eq("Seats")
+      end
+    end
+
+    context "with a name over 255 characters" do
+      let(:feature_params) { {name: "b" * 256} }
+
+      it "returns a validation error with the maximum length" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_too_long", field: "name", meta: {max_length: 255}}]
+        )
+      end
+    end
+
+    context "with a description over 600 characters" do
+      let(:feature_params) { {description: "c" * 601} }
+
+      it "returns a validation error with the maximum length" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_too_long", field: "description", meta: {max_length: 600}}]
+        )
+      end
+    end
+
+    context "with an unknown code" do
+      let(:code) { "unknown" }
+
+      it "returns a not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "with a feature of another organization" do
+      let(:feature) { create(:feature, organization: create(:organization), code: "seats", name: "Seats") }
+
+      it "returns a not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+        expect(feature.reload.name).to eq("Seats")
+      end
+    end
+
+    context "with a discarded feature" do
+      let(:feature) { create(:feature, organization:, code: "seats", name: "Seats", deleted_at: Time.current) }
+
+      it "returns a not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "without product catalog", product_catalog: false do
+      it "returns feature unavailable" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+        expect(feature.reload.name).to eq("Seats")
+      end
+    end
+  end
 end
