@@ -198,13 +198,11 @@ RSpec.describe Api::V2::RateCards::RatesController do
     context "with cursor pagination parameters" do
       subject { get_with_token(organization, "/api/v2/rate_cards/#{rate_card.code}/rates", {limit: 1, after: "x"}) }
 
-      before { create(:rate_card_rate, organization:, rate_card:, effective_from: rate.effective_from + 1.day) }
-
-      it "ignores them and returns every rate, since only page and per_page are refused" do
+      it "returns a bad request error for each parameter" do
         subject
 
-        expect(response).to have_http_status(:success)
-        expect(json[:rates].count).to eq(2)
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details]).to eq([{code: "not_paginated", field: "limit", meta: {}}, {code: "not_paginated", field: "after", meta: {}}])
       end
     end
 

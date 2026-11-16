@@ -7,7 +7,7 @@ module Api
         serializable_with ::V2::RateCardRateSerializer
 
         # Before the lookups, like the cursor of the paginated lists.
-        before_action :reject_offset_pagination!, only: :index
+        before_action :reject_pagination!, only: :index
         before_action :find_rate_card
         before_action :find_rate, only: %i[show update destroy]
 

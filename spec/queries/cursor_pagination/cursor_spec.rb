@@ -240,9 +240,7 @@ RSpec.describe CursorPagination::Cursor do
   end
 
   describe ".reject_offset_params!" do
-    subject(:reject) { described_class.reject_offset_params!(params, **options) }
-
-    let(:options) { {} }
+    subject(:reject) { described_class.reject_offset_params!(params) }
 
     context "with cursor parameters only" do
       let(:params) { {limit: "1"} }
@@ -262,34 +260,35 @@ RSpec.describe CursorPagination::Cursor do
         }
       end
     end
+  end
 
-    context "when the cursor parameters are refused too" do
-      let(:options) { {reason: "not_paginated", cursor_params: true} }
+  describe ".reject_pagination_params!" do
+    subject(:reject) { described_class.reject_pagination_params!(params) }
 
-      context "with every pagination parameter" do
-        let(:params) { {include_total_count: "true", before: "b", after: "a", limit: "1", per_page: "5", page: "2"} }
+    context "with every pagination parameter" do
+      let(:params) { {include_total_count: "true", before: "b", after: "a", cursor: "c", limit: "1", per_page: "5", page: "2"} }
 
-        it "refuses each one, in a fixed order" do
-          expect { reject }.to raise_error(CursorPagination::Error) { |error|
-            expect(error.code).to eq("invalid_pagination_parameter")
-            expect(error.details.to_a).to eq([
-              [:page, {reason: "not_paginated"}],
-              [:per_page, {reason: "not_paginated"}],
-              [:limit, {reason: "not_paginated"}],
-              [:after, {reason: "not_paginated"}],
-              [:before, {reason: "not_paginated"}],
-              [:include_total_count, {reason: "not_paginated"}]
-            ])
-          }
-        end
+      it "refuses each one, in a fixed order" do
+        expect { reject }.to raise_error(CursorPagination::Error) { |error|
+          expect(error.code).to eq("invalid_pagination_parameter")
+          expect(error.details.to_a).to eq([
+            [:page, {reason: "not_paginated"}],
+            [:per_page, {reason: "not_paginated"}],
+            [:limit, {reason: "not_paginated"}],
+            [:cursor, {reason: "not_paginated"}],
+            [:after, {reason: "not_paginated"}],
+            [:before, {reason: "not_paginated"}],
+            [:include_total_count, {reason: "not_paginated"}]
+          ])
+        }
       end
+    end
 
-      context "without pagination parameters" do
-        let(:params) { {search_term: "seats"} }
+    context "without pagination parameters" do
+      let(:params) { {search_term: "seats"} }
 
-        it "accepts the request" do
-          expect { reject }.not_to raise_error
-        end
+      it "accepts the request" do
+        expect { reject }.not_to raise_error
       end
     end
   end

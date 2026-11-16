@@ -8,7 +8,7 @@ module Api
 
         # Bounded by their feature and returned whole: every pagination param is refused, before
         # the lookup like the cursor of the paginated lists.
-        before_action(only: :index) { reject_offset_pagination!(cursor_params: true) }
+        before_action :reject_pagination!, only: :index
 
         def index
           feature = current_organization.features.find_by(code: params[:feature_code])
