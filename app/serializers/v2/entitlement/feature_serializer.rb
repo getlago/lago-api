@@ -19,10 +19,9 @@ module V2
 
       private
 
-      # Creation order, as the association has none. It has no inverse either, so each privilege gets
-      # its feature here rather than loading it again for feature_code.
+      # Creation order, as the association has none.
       def privileges
-        model.privileges.reorder(:created_at, :id).to_a.each { it.association(:feature).inversed_from(model) }
+        model.privileges.reorder(:created_at, :id)
       end
     end
   end

@@ -276,7 +276,12 @@ RSpec.describe Api::V2::FeaturesController do
       let(:deleted_privilege) do
         create(:privilege, feature:, organization:, code: "legacy", deleted_at: Time.current, created_at: base_time - 1.day)
       end
-      let(:privileges) { [select_privilege, boolean_privilege, string_privilege, integer_privilege, deleted_privilege] }
+      let(:other_privilege) do
+        create(:privilege, feature: create(:feature, organization:, code: "other"), organization:, code: "other_priv")
+      end
+      let(:privileges) do
+        [select_privilege, boolean_privilege, string_privilege, integer_privilege, deleted_privilege, other_privilege]
+      end
 
       it "embeds the live privileges oldest first" do
         subject

@@ -84,11 +84,15 @@ RSpec.describe V2::Entitlement::FeatureSerializer do
     let(:discarded_privilege) do
       create(:privilege, feature:, code: "old", created_at: first_at - 1.day, deleted_at: first_at)
     end
+    let(:other_privilege) do
+      create(:privilege, feature: create(:feature, organization: feature.organization, code: "other"), code: "other_priv")
+    end
 
     before do
       select_privilege
       tied_privileges
       discarded_privilege
+      other_privilege
     end
 
     it "renders the live privileges oldest first, then by id" do
