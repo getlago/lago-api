@@ -9,6 +9,7 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
   before do
     contract = create(:contract, organization:, customer:, started_at: 1.month.ago)
     card = create(:contract_rate_card, organization:, contract:)
+    create(:rate_card_rate, organization:, rate_card: card.rate_card)
     create(
       :billing_operation,
       organization:,

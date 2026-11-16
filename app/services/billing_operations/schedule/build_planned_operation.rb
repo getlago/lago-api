@@ -47,13 +47,12 @@ module BillingOperations
 
       attr_reader :contract_rate_card, :schedule, :at, :after, :from
 
-      # A contract terminated after its planned end closes its last slice at the termination,
-      # not at the planned end. Only applied after a completed billing, as the first plan of a
-      # termination sets its own billing instant.
+      # Outstanding final coverage closes at termination. Coverage already billed at the
+      # planned end must not become due again when termination happens later.
       def final_due_at(segment)
         contract = contract_rate_card.contract
 
-        if contract.terminated_at && segment.due_at == contract.billing_ends_at
+        if contract.terminated_at && segment.due_at == contract.billing_ends_at && segment.due_at > after
           contract.terminated_at
         else
           segment.due_at

@@ -36,20 +36,29 @@ describe Clock::ProcessBillingOperationsJob, job: true do
     let(:customer) { create(:customer, organization:) }
     let(:future_customer) { create(:customer, organization:) }
     let(:pending_customer) { create(:customer, organization:) }
+    let(:deleted_customer) { create(:customer, organization:, deleted_at: 1.day.ago) }
     let(:terminated_contract) { create(:contract, :terminated, organization:, customer:) }
     let(:future_contract) { create(:contract, organization:, customer: future_customer) }
-    let(:pending_contract) { create(:contract, :pending, organization:, customer: pending_customer) }
+    let(:pending_contract) { create(:contract, :pending, organization:, customer: pending_customer, started_at: 1.month.ago) }
+    let(:deleted_contract) { create(:contract, organization:, customer: deleted_customer) }
 
     before do
-      create(:contract_rate_card, organization:, contract: terminated_contract, next_billing_at: 1.day.ago)
-      create(:contract_rate_card, organization:, contract: future_contract, next_billing_at: 1.day.from_now)
-      create(:contract_rate_card, organization:, contract: pending_contract, next_billing_at: 1.day.ago)
+      [
+        [terminated_contract, 1.day.ago],
+        [future_contract, 1.day.from_now],
+        [pending_contract, 1.day.ago],
+        [deleted_contract, 1.day.ago]
+      ].each do |contract, next_billing_at|
+        card = create(:contract_rate_card, organization:, contract:, next_billing_at:, effective_date: 1.month.ago.to_date)
+        create(:rate_card_rate, organization:, rate_card: card.rate_card)
+      end
     end
 
     it "dispatches owed work even after termination, but excludes future and pending contracts" do
       expect { perform_job }.to have_enqueued_job(BillingOperations::ProcessJob).with(customer.id).exactly(1).times
       expect(BillingOperations::ProcessJob).not_to have_been_enqueued.with(future_customer.id)
       expect(BillingOperations::ProcessJob).not_to have_been_enqueued.with(pending_customer.id)
+      expect(BillingOperations::ProcessJob).not_to have_been_enqueued.with(deleted_customer.id)
     end
   end
 

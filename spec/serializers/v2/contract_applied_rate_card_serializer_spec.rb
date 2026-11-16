@@ -92,7 +92,10 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
 
   # An exhausted chain must not fall back to computing a new cycle.
   context "when the billing schedule has run out" do
-    let(:next_billing_at) { nil }
+    before do
+      contract_rate_card
+      travel_to(Time.zone.parse("2026-10-01T09:30:00Z")) { contract_rate_card.update!(next_billing_at: nil) }
+    end
 
     it "renders a null next billing time" do
       expect(payload).to eq(flat_payload.merge(next_billing_at: nil))

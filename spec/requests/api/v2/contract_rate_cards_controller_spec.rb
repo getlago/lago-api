@@ -196,8 +196,9 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:applied_rate_card].keys).to eq(flat_keys)
     end
 
-    # The schema keeps the field even when the card has no billable schedule.
-    context "when the card has no priced schedule" do
+    context "when the stored clock is blank" do
+      before { contract_rate_card.update!(next_billing_at: nil) }
+
       it "serializes a blank clock as null" do
         contract_rate_card
         subject

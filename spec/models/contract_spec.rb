@@ -296,7 +296,7 @@ RSpec.describe Contract do
 
       expect(lifecycle[:effective_date]).to eq(Date.new(2026, 9, 30))
       expect(lifecycle[:billing_anchor_date]).to eq(contract.effective_billing_anchor_date)
-      expect(lifecycle).not_to have_key(:next_billing_at)
+      expect(lifecycle[:next_billing_at]).to eq(contract.started_at)
     end
 
     it "prefers an explicit anchor" do
@@ -331,9 +331,9 @@ RSpec.describe Contract do
           ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
         end
 
-        # Fresh statistics: without them the planner costs every partial index on
-        # status alike and may settle on the live external id one.
-        before { ActiveRecord::Base.connection.execute("ANALYZE contracts") }
+        # Refresh both joined tables so statistics left by earlier specs do not
+        # make a customer-first plan look cheaper than the pending-start index.
+        before { ActiveRecord::Base.connection.execute("ANALYZE contracts, customers") }
 
         # The relation the activation clock batches over.
         it "reads the pending start index" do

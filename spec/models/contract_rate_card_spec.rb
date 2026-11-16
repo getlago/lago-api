@@ -289,7 +289,7 @@ RSpec.describe ContractRateCard do
         billing_interval_unit: :day,
         billing_interval_count: 1
       )
-      card
+      card.update!(next_billing_at: nil)
     end
 
     around do |example|

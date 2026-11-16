@@ -111,7 +111,20 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
       amount_cents: 4_000, units: 40, pay_in_advance: true, payment_status: "succeeded", invoice_id: nil
     )
     expect(timeline.fetch(:active_period).fetch(:next_billing_at)).to eq(period_ended_at)
-    expect(timeline.fetch(:active_period).fetch(:operations)).to be_empty
+    expect(timeline.fetch(:active_period).fetch(:operations).sole).to have_attributes(
+      id: timeline.fetch(:operation).id,
+      organization_id: organization.id,
+      customer_id: customer.id,
+      contract_rate_card_id: contract.applied_rate_cards.sole.id,
+      action_type: "regroup_paid_fees",
+      reason: "contract_activation",
+      target_cycle_started_at: period_started_at,
+      billing_at: period_ended_at,
+      processed_at: nil,
+      cancelled_at: nil,
+      cancellation_reason: nil,
+      invoice_id: nil
+    )
     expect(timeline.fetch(:active_period).fetch(:invoices)).to be_empty
     expect(timeline.fetch(:operation)).to have_attributes(processed_at: period_ended_at + 5.minutes, invoice_id: invoice.id)
     expect(LegacyBillingSegment.where(customer_id: customer.id)).to be_empty

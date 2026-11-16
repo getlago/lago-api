@@ -129,6 +129,19 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
       expect(result.planned_operation).to be_nil
       expect(contract_rate_card.reload.next_billing_at).to be_nil
     end
+
+    context "when termination follows the completed natural end" do
+      let(:contract) do
+        create(:contract, :terminated, organization:, customer:, started_at: Time.zone.parse("2026-09-30"),
+          ended_at: Time.zone.parse("2026-10-20"), terminated_at: Time.zone.parse("2026-10-25"))
+      end
+
+      it "keeps the completed final close exhausted" do
+        expect(result).to be_success
+        expect(result.planned_operation).to be_nil
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+      end
+    end
   end
 
   context "when paid fees are regrouped after service" do

@@ -99,9 +99,8 @@ RSpec.describe Resolvers::ContractResolver do
     expect(queries.except("customers").values.map(&:size)).to all(be <= 1)
   end
 
-  # An unpriced card has no billable period, so the nullable field answers null.
-  it "answers null for a card whose schedule has run out" do
-    create(:contract_rate_card, organization:, contract:)
+  it "answers null for a card whose stored cursor has been cleared" do
+    create(:contract_rate_card, organization:, contract:).update!(next_billing_at: nil)
 
     expect(execution["data"]["contract"]["appliedRateCards"].sole["nextBillingAt"]).to be_nil
   end

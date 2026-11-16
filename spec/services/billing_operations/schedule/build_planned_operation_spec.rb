@@ -191,6 +191,38 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     end
   end
 
+  context "when termination follows the planned end" do
+    let(:billing_timing) { "arrears" }
+    let(:timestamp) { Time.utc(2026, 11, 1, 7) }
+    let(:ended_at) { Time.utc(2026, 11, 10, 8) }
+    let(:terminated_at) { Time.utc(2026, 11, 15) }
+    let(:contract) do
+      create(:contract, :terminated, organization:, customer:, started_at: timestamp, ended_at:, terminated_at:)
+    end
+    let(:after) { Time.utc(2026, 11, 5) }
+
+    it "plans the outstanding final close at termination" do
+      expect(result.planned_operation).to have_attributes(cycle_started_at: timestamp, billing_at: terminated_at)
+    end
+
+    context "when the close at the planned end was completed" do
+      let(:after) { ended_at }
+
+      it "does not reopen the completed coverage at termination" do
+        expect(result).to be_success
+        expect(result.planned_operation).to be_nil
+      end
+    end
+
+    context "when the close at termination was completed" do
+      let(:after) { terminated_at }
+
+      it "returns no further obligation" do
+        expect(result.planned_operation).to be_nil
+      end
+    end
+  end
+
   context "when the first price starts after the current cycle" do
     let(:rate_effective_from) { Time.utc(2026, 12, 15) }
 

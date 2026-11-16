@@ -449,9 +449,12 @@ RSpec.describe BillingOperations::ProcessService do
             reason: "periodic_continuation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
         end
 
-        it "still moves the cursor to the termination" do
+        it "clears the cursor without scheduling the completed coverage again" do
           result
-          expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 15))
+          expect(contract_rate_card.reload.next_billing_at).to be_nil
+          expect(BillingOperations::ScheduleService.call!(customer:, timestamp:).billing_operations).to be_empty
+          expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
+          expect(contract_rate_card.fees.count).to eq(1)
         end
       end
 
