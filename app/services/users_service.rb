@@ -155,7 +155,10 @@ class UsersService < BaseService
       properties: {
         organization_name: organization.name,
         organization_id: organization.id,
-        email: membership.user.email
+        email: membership.user.email,
+        # Same shape as the self-serve signup event, so a report split by these keys counts every new organization.
+        self_serve: false,
+        region: Lago::SelfServe.front_host
       }
     )
   end

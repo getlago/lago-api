@@ -325,6 +325,23 @@ RSpec.describe Auth::GoogleService do
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
     end
 
+    it "tracks the organization as a non self-serve registration" do
+      allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
+      result = described_class.call(:register_user, "code", "Foobar")
+
+      expect(SegmentTrackJob).to have_been_enqueued.with(
+        membership_id: "membership/#{result.membership.id}",
+        event: "organization_registered",
+        properties: {
+          organization_name: "Foobar",
+          organization_id: result.organization.id,
+          email: "foo@bar.com",
+          self_serve: false,
+          region: "app.eu.getlago.com"
+        }
+      )
+    end
+
     it "answers invalid_google_token for an ID token that fails verification" do
       [Google::Auth::IDTokens::ExpiredTokenError, Google::Auth::IDTokens::AudienceMismatchError].each do |error|
         allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_raise(error)

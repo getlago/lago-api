@@ -25,6 +25,7 @@ RSpec.describe UsersService do
     end
 
     it "calls SegmentTrackJob" do
+      allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
       result = described_class.call(:register, "user@email.com", "password", "organization_name")
 
       expect(SegmentTrackJob).to have_been_enqueued.with(
@@ -33,7 +34,9 @@ RSpec.describe UsersService do
         properties: {
           organization_name: result.organization.name,
           organization_id: result.organization.id,
-          email: result.user.email
+          email: result.user.email,
+          self_serve: false,
+          region: "app.eu.getlago.com"
         }
       )
     end
