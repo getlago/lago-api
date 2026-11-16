@@ -17,6 +17,7 @@ RSpec.describe Signups::CreateOrganizationService do
   before do
     admin_role
     allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
+    stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "true"))
   end
 
   it "creates the production organization and its sandbox, with the user admin of both" do

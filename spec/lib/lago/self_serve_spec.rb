@@ -55,6 +55,21 @@ RSpec.describe Lago::SelfServe do
     end
   end
 
+  describe ".region" do
+    before { allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com") }
+
+    it "returns the front host on Lago Cloud only" do
+      expect(described_class.region(cloud: true)).to eq("app.eu.getlago.com")
+      expect(described_class.region(cloud: false)).to be_nil
+    end
+
+    it "reads LAGO_CLOUD" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "true"))
+
+      expect(described_class.region).to eq("app.eu.getlago.com")
+    end
+  end
+
   describe ".validate!" do
     let(:front_url) { "https://app.getlago.com" }
 

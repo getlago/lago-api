@@ -325,21 +325,44 @@ RSpec.describe Auth::GoogleService do
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
     end
 
-    it "tracks the organization as a non self-serve registration" do
-      allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
-      result = described_class.call(:register_user, "code", "Foobar")
+    context "when tracking the registration" do
+      before { allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com") }
 
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: "membership/#{result.membership.id}",
-        event: "organization_registered",
-        properties: {
-          organization_name: "Foobar",
-          organization_id: result.organization.id,
-          email: "foo@bar.com",
-          self_serve: false,
-          region: "app.eu.getlago.com"
-        }
-      )
+      it "tracks the organization as a non self-serve registration, without the front host on a self-hosted install" do
+        result = described_class.call(:register_user, "code", "Foobar")
+
+        expect(SegmentTrackJob).to have_been_enqueued.with(
+          membership_id: "membership/#{result.membership.id}",
+          event: "organization_registered",
+          properties: {
+            organization_name: "Foobar",
+            organization_id: result.organization.id,
+            email: "foo@bar.com",
+            self_serve: false,
+            region: nil
+          }
+        )
+      end
+
+      context "when on Lago Cloud" do
+        before { stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "true")) }
+
+        it "sends the front host as the region" do
+          result = described_class.call(:register_user, "code", "Foobar")
+
+          expect(SegmentTrackJob).to have_been_enqueued.with(
+            membership_id: "membership/#{result.membership.id}",
+            event: "organization_registered",
+            properties: {
+              organization_name: "Foobar",
+              organization_id: result.organization.id,
+              email: "foo@bar.com",
+              self_serve: false,
+              region: "app.eu.getlago.com"
+            }
+          )
+        end
+      end
     end
 
     it "answers invalid_google_token for an ID token that fails verification" do

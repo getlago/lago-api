@@ -26,7 +26,7 @@ module Signups
       end
 
       # Read before the transaction, so nothing in the analytics can fail once the organizations are committed.
-      region = Lago::SelfServe.front_host
+      region = Lago::SelfServe.region
 
       ActiveRecord::Base.transaction do
         # Checked again on the locked user, so two submissions of Step 3 create a single pair.

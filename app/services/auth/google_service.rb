@@ -187,7 +187,7 @@ module Auth
           email: membership.user.email,
           # Same shape as the self-serve signup event, so a report split by these keys counts every new organization.
           self_serve: false,
-          region: Lago::SelfServe.front_host
+          region: Lago::SelfServe.region
         }
       )
     end

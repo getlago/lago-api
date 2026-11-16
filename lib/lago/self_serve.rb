@@ -27,6 +27,12 @@ module Lago
         nil
       end
 
+      # The region analytics events carry: this front's host on Lago Cloud, nil on a self-hosted install, whose host
+      # stays out of Lago's analytics.
+      def region(cloud: ENV["LAGO_CLOUD"] == "true")
+        front_host if cloud
+      end
+
       # Run at boot: a malformed value stops the deploy instead of leaving the gate off, and a region never
       # sends verification links, Google redirects or captcha checks to the default US front.
       def validate!(

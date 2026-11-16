@@ -24,21 +24,44 @@ RSpec.describe UsersService do
       )
     end
 
-    it "calls SegmentTrackJob" do
-      allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
-      result = described_class.call(:register, "user@email.com", "password", "organization_name")
+    context "when tracking the registration" do
+      before { allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com") }
 
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: "membership/#{result.membership.id}",
-        event: "organization_registered",
-        properties: {
-          organization_name: result.organization.name,
-          organization_id: result.organization.id,
-          email: result.user.email,
-          self_serve: false,
-          region: "app.eu.getlago.com"
-        }
-      )
+      it "calls SegmentTrackJob without the front host on a self-hosted install" do
+        result = described_class.call(:register, "user@email.com", "password", "organization_name")
+
+        expect(SegmentTrackJob).to have_been_enqueued.with(
+          membership_id: "membership/#{result.membership.id}",
+          event: "organization_registered",
+          properties: {
+            organization_name: result.organization.name,
+            organization_id: result.organization.id,
+            email: result.user.email,
+            self_serve: false,
+            region: nil
+          }
+        )
+      end
+
+      context "when on Lago Cloud" do
+        before { stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "true")) }
+
+        it "calls SegmentTrackJob with the front host as the region" do
+          result = described_class.call(:register, "user@email.com", "password", "organization_name")
+
+          expect(SegmentTrackJob).to have_been_enqueued.with(
+            membership_id: "membership/#{result.membership.id}",
+            event: "organization_registered",
+            properties: {
+              organization_name: result.organization.name,
+              organization_id: result.organization.id,
+              email: result.user.email,
+              self_serve: false,
+              region: "app.eu.getlago.com"
+            }
+          )
+        end
+      end
     end
 
     it_behaves_like "produces a security log", "user.signed_up" do
