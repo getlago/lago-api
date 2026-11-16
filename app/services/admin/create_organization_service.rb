@@ -30,7 +30,7 @@ module Admin
         create_audit_logs!(organization, sandbox)
 
         result.organization = organization
-        result.sandbox_organization = sandbox&.reload
+        result.sandbox_organization = sandbox
         result.invite_url = creation.invite_url
       end
 
