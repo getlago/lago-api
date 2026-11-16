@@ -16,6 +16,8 @@ module Mutations
       type Types::WebhookEndpoints::Object
 
       def resolve(**args)
+        context.scoped_set!(:expose_webhook_signing_keys, true)
+
         result = ::WebhookEndpoints::UpdateService.call(
           id: args[:id],
           organization: current_organization,

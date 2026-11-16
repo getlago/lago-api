@@ -491,6 +491,18 @@ RSpec.describe Customers::UpdateService do
       end
     end
 
+    context "with a provider customer id but no payment provider" do
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:update_args) { {name: "Foo Bar", provider_customer: {provider_customer_id: "cus_12345"}} }
+
+      it "updates the customer without a provider customer" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(result.customer).to have_attributes(name: "Foo Bar", payment_provider: nil, provider_customer: nil)
+      end
+    end
+
     context "when removing payment provider" do
       let(:stripe_provider) { create(:stripe_provider, organization:, code: payment_provider_code) }
       let(:customer) do

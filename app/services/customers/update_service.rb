@@ -209,7 +209,8 @@ module Customers
           create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
         end
 
-        if args.dig(:provider_customer, :provider_customer_id)
+        # Without a payment provider there is no provider customer to update, as on create.
+        if args.dig(:provider_customer, :provider_customer_id) && customer.provider_customer
           update_result = PaymentProviderCustomers::UpdateService.call(customer)
           update_result.raise_if_error!
         end

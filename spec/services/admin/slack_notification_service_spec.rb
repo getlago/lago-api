@@ -189,6 +189,17 @@ RSpec.describe Admin::SlackNotificationService do
       end
     end
 
+    context "when the Slack host does not resolve" do
+      before do
+        stub_const("ENV", ENV.to_h.merge("CS_ADMIN_SLACK_WEBHOOK_URL" => webhook_url))
+        stub_request(:post, webhook_url).to_raise(Socket::ResolutionError.new("getaddrinfo: Temporary failure in name resolution"))
+      end
+
+      it "raises a retryable error" do
+        expect { service.call }.to raise_error(described_class::DeliveryError)
+      end
+    end
+
     context "when Slack rejects the payload" do
       before do
         stub_const("ENV", ENV.to_h.merge("CS_ADMIN_SLACK_WEBHOOK_URL" => webhook_url))

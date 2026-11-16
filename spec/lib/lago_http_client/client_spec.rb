@@ -633,6 +633,24 @@ RSpec.describe LagoHttpClient::Client do
         end
       end
 
+      context "when DNS resolution fails then succeeds" do
+        before do
+          call_count = 0
+          stub_request(:post, url).to_return do
+            call_count += 1
+            if call_count == 1
+              raise Socket::ResolutionError, "getaddrinfo: Temporary failure in name resolution"
+            else
+              {body: "{}", status: 200}
+            end
+          end
+        end
+
+        it "retries and returns the parsed body" do
+          expect(client.post({}, [])).to eq({})
+        end
+      end
+
       context "when an SSL error occurs then succeeds" do
         before do
           call_count = 0
