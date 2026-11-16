@@ -349,6 +349,15 @@ RSpec.describe Organization do
         end
       end
 
+      context "with a sandbox linked to an organization that does not exist" do
+        subject(:organization) { build(:organization, environment: "sandbox", production_organization_id: SecureRandom.uuid) }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_is_invalid"])
+        end
+      end
+
       context "with a sandbox linked to itself" do
         subject(:organization) { create(:organization, :sandbox, production_organization: production) }
 

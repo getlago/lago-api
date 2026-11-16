@@ -217,7 +217,8 @@ class Organization < ApplicationRecord
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
-  # Declared, so the model loads in older migrations that run before the column exists.
+  # Declared, so the model loads in older migrations that run before the column exists. Saving still fails there:
+  # the validations read `self_serve` and `production_organization_id`, which do not exist yet either.
   attribute :environment, :string
   enum :environment, ENVIRONMENTS, validate: true
 
@@ -412,10 +413,11 @@ class Organization < ApplicationRecord
     errors.add(:premium_integrations, :inclusion, value: premium_integrations)
   end
 
-  # A sandbox belongs to a production organization, never to itself or to another sandbox, and owns no sandbox.
+  # A sandbox belongs to an existing production organization, never to itself or to another sandbox, and owns no
+  # sandbox. A missing one is refused here, or saving would raise on the foreign key.
   def validate_environment_link
     if production_organization_id.present? &&
-        (production_organization_id == id || production_organization&.sandbox?)
+        (production_organization_id == id || production_organization.nil? || production_organization.sandbox?)
       errors.add(:production_organization_id, :invalid)
     end
 
