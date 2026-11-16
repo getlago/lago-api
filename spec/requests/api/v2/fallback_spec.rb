@@ -29,11 +29,13 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
     expect(json).not_to have_key(:details)
   end
 
-  # The features index, show, create and update are native: destroy stays on v1 until it is.
+  # Every features action is native: only the privilege delete stays on v1.
   context "with the features actions v2 does not serve natively" do
     let(:feature) { create(:feature, organization:, code: "seats", name: "Seats", description: "Number of seats") }
 
-    before { create(:privilege, feature:, code: "max", name: "Maximum", value_type: "integer") }
+    let(:privilege) { create(:privilege, feature:, code: "max", name: "Maximum", value_type: "integer") }
+
+    before { privilege }
 
     it "serves the index and the show natively" do
       get_with_token(organization, "/api/v2/features")
@@ -50,26 +52,26 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
       expect(json[:feature]).not_to have_key(:privileges)
     end
 
-    it "deletes a feature with the v1 body" do
-      delete_with_token(organization, "/api/v2/features/seats")
+    it "deletes a privilege of a feature with the v1 body" do
+      delete_with_token(organization, "/api/v2/features/seats/privileges/max")
 
       expect(response).to have_http_status(:success)
       expect(json[:feature]).not_to have_key(:lago_id)
-      expect(json[:feature]).to include(code: "seats")
-      expect(feature.reload.deleted_at).to be_present
+      expect(json[:feature]).to include(code: "seats", privileges: [])
+      expect(privilege.reload.deleted_at).to be_present
+      expect(feature.reload.deleted_at).to be_nil
     end
 
-    it "ignores an expansion on a delete and answers with the v1 body" do
-      delete_with_token(organization, "/api/v2/features/seats?expands[]=privileges")
+    it "ignores an expansion on a privilege delete and answers with the v1 body" do
+      delete_with_token(organization, "/api/v2/features/seats/privileges/max?expands[]=privileges")
 
       expect(response).to have_http_status(:success)
       expect(json[:feature]).not_to have_key(:lago_id)
-      # v1 renders the privileges it discarded with the feature as an empty list.
       expect(json[:feature]).to include(code: "seats", privileges: [])
     end
 
     it "renders the v1 not found error for an unknown feature" do
-      delete_with_token(organization, "/api/v2/features/unknown")
+      delete_with_token(organization, "/api/v2/features/unknown/privileges/max")
 
       expect(response).to be_not_found_error("feature")
       expect(json).not_to have_key(:details)

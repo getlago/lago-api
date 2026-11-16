@@ -807,4 +807,106 @@ RSpec.describe Api::V2::FeaturesController do
       end
     end
   end
+
+  describe "DELETE /api/v2/features/:code" do
+    subject { delete_with_token(organization, "/api/v2/features/#{code}") }
+
+    let(:code) { "seats" }
+    let(:feature) do
+      create(
+        :feature,
+        organization:,
+        code: "seats",
+        name: "Seats",
+        description: "Number of seats",
+        created_at: Time.zone.parse("2026-10-01T08:30:00.123456Z"),
+        updated_at: Time.zone.parse("2026-10-02T09:00:00.654321Z")
+      )
+    end
+
+    before { feature }
+
+    include_examples "requires API permission", "feature", "write"
+
+    it "discards the feature and renders it with the v2 body" do
+      travel_to(Time.zone.parse("2026-11-16T10:00:00Z")) { subject }
+
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).to eq(
+        lago_id: feature.id,
+        code: "seats",
+        name: "Seats",
+        description: "Number of seats",
+        created_at: "2026-10-01T08:30:00.123456Z",
+        updated_at: "2026-11-16T10:00:00.000000Z",
+        deleted_at: "2026-11-16T10:00:00.000000Z"
+      )
+      expect(feature.reload).to be_discarded
+    end
+
+    it "answers the v2 not found error on a later show and a second delete" do
+      subject
+      expect(response).to have_http_status(:success)
+
+      get_with_token(organization, "/api/v2/features/seats")
+      expect(response).to be_v2_not_found_error("feature")
+
+      delete_with_token(organization, "/api/v2/features/seats")
+      expect(response).to be_v2_not_found_error("feature")
+    end
+
+    context "when the feature has privileges and is granted by plans" do
+      let(:privilege) { create(:privilege, feature:, organization:, code: "max", value_type: "integer") }
+      let(:plan_entitlement) { create(:entitlement, feature:, organization:, plan: create(:plan, organization:)) }
+      let(:plan_value) { create(:entitlement_value, entitlement: plan_entitlement, privilege:, organization:, value: 10) }
+      let(:catalog_entitlement) do
+        create(:entitlement, :catalog_plan, feature:, organization:, catalog_plan: create(:catalog_plan, organization:))
+      end
+      let(:catalog_value) { create(:entitlement_value, entitlement: catalog_entitlement, privilege:, organization:, value: 5) }
+
+      before do
+        plan_value
+        catalog_value
+      end
+
+      it "discards the privileges, entitlements and values, and sends feature.deleted once" do
+        expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.deleted", feature).exactly(:once)
+
+        expect(response).to have_http_status(:success)
+        expect(Utils::ActivityLog).to have_produced("feature.deleted").after_commit.with(feature)
+        expect([privilege, plan_entitlement, plan_value, catalog_entitlement, catalog_value].map { it.reload.deleted_at }).to all(be_present)
+      end
+    end
+
+    context "when the feature does not exist" do
+      let(:code) { "unknown" }
+
+      it "returns the v2 not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature belongs to another organization" do
+      let(:feature) { create(:feature, organization: create(:organization), code: "seats") }
+
+      it "returns the v2 not found error and keeps the feature" do
+        subject
+
+        expect(response).to be_v2_not_found_error("feature")
+        expect(feature.reload).not_to be_discarded
+      end
+    end
+
+    context "without product catalog", product_catalog: false do
+      it "returns feature unavailable and keeps the feature" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+        expect(feature.reload).not_to be_discarded
+      end
+    end
+  end
 end

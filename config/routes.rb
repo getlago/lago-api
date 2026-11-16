@@ -67,8 +67,10 @@ Rails.application.routes.draw do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end
       resources :product_categories, param: :code, code: /.*/, only: %i[index show create update destroy]
-      # No features catch-all: destroy falls through to v1 until it is native.
-      resources :features, param: :code, code: /.*/, only: %i[index show create update]
+      # The privilege delete stays on v1, nested here so the greedy feature code does not swallow it.
+      resources :features, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        resources :privileges, only: %i[destroy], param: :code, controller: "/api/v1/features/privileges"
+      end
       resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
