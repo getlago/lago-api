@@ -75,6 +75,21 @@ RSpec.describe Integrations::Okta::CreateService do
         end
       end
 
+      context "when okta is turned off after the organization was loaded" do
+        before do
+          organization.update!(premium_integrations: ["okta"])
+          stale = Organization.find(organization.id)
+          Organization.find(organization.id).update!(premium_integrations: [])
+          allow(Organization).to receive(:find_by).and_call_original
+          allow(Organization).to receive(:find_by).with(id: organization.id).and_return(stale)
+        end
+
+        it "reads the premium integrations under the lock and creates nothing" do
+          expect(service_call.error.code).to eq("premium_integration_missing")
+          expect(Integrations::OktaIntegration.count).to eq(0)
+        end
+      end
+
       context "with okta premium integration present" do
         before { organization.update!(premium_integrations: ["okta"]) }
 

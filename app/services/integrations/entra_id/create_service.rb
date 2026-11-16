@@ -6,10 +6,6 @@ module Integrations
       def call(**args) # rubocop:disable Cops/ServiceCallCop
         organization = Organization.find_by(id: args[:organization_id])
 
-        unless organization.entra_id_enabled?
-          return result.forbidden_failure!(code: "premium_integration_missing")
-        end
-
         integration = Integrations::EntraIdIntegration.new(
           organization:,
           name: "Entra ID Integration",
@@ -25,12 +21,15 @@ module Integrations
         ActiveRecord::Base.transaction do
           # A sandbox has no SSO integration of its own: it accepts the sessions of its production's.
           ::Organizations::SandboxLockService.call!(organization:)
+          # Read on the row the lock reloaded, so the premium integration cannot be turned off meanwhile.
+          next result.forbidden_failure!(code: "premium_integration_missing") unless organization.entra_id_enabled?
+
           integration.save!
           organization.enable_entra_id_authentication!
           ::Organizations::SyncSandboxSettingsService.call!(organization:)
+          result.integration = integration
         end
 
-        result.integration = integration
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
