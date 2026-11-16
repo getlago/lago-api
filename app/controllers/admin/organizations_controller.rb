@@ -23,12 +23,14 @@ module Admin
         name: create_params[:name],
         owner_email: create_params[:email],
         document_numbering: "per_customer",
-        premium_integrations: create_params[:premium_integrations] || []
+        premium_integrations: create_params[:premium_integrations] || [],
+        self_serve: self_serve_param
       )
 
       if result.success?
         render json: {
           organization: ::Admin::OrganizationSerializer.new(result.organization).serialize,
+          sandbox_organization: result.sandbox_organization && ::Admin::OrganizationSerializer.new(result.sandbox_organization).serialize,
           invite_url: result.invite_url
         }, status: :created
       else
@@ -48,6 +50,17 @@ module Admin
 
     def create_params
       params.permit(:name, :email, premium_integrations: [])
+    end
+
+    # Strict: ActiveModel's boolean cast would read "no" as true. Anything else reaches the service, which refuses it.
+    # Read unpermitted, as `permit` would turn a list or an object into nil, read as false.
+    def self_serve_param
+      value = params[:self_serve]
+      case value
+      when nil, false, "false" then false
+      when true, "true" then true
+      else value
+      end
     end
   end
 end

@@ -48,6 +48,23 @@ RSpec.describe Admin::SlackNotificationService do
         }).to have_been_made.once
       end
 
+      context "when a sandbox was created" do
+        let(:audit_log) do
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME Corp Sandbox")
+          create(:cs_admin_audit_log, organization: sandbox, action: :org_created, feature_type: "organization",
+            feature_key: "organization", before_value: nil, actor_email: "admin@lago.com",
+            reason: "Enabling for customer onboarding POC")
+        end
+
+        it "names the sandbox and its production organization" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("Sandbox created] *ACME Corp Sandbox* for *ACME Corp*")
+          }).to have_been_made.once
+        end
+      end
+
       context "when the change was mirrored to a sandbox" do
         let(:batch_id) { SecureRandom.uuid }
         let(:audit_log) do
@@ -91,6 +108,30 @@ RSpec.describe Admin::SlackNotificationService do
           expect(a_request(:post, webhook_url).with { |req|
             JSON.parse(req.body)["blocks"].first["text"]["text"].include?("mirrored")
           }).not_to have_been_made
+        end
+      end
+
+      context "when a setting is set on a new pair" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :org_created, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "New customer", batch_id:)
+        end
+
+        before do
+          audit_log
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME Sandbox")
+          create(:cs_admin_audit_log, organization: sandbox, action: :org_created, feature_type: :organization,
+            feature_key: "organization", before_value: nil, actor_email: "admin@lago.com", reason: "New customer", batch_id:)
+        end
+
+        it "names the sandbox created with it" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"]
+              .start_with?("[✅ netsuite set on new org] on *ACME Corp* (mirrored to *ACME Sandbox*) by admin@lago.com")
+          }).to have_been_made.once
         end
       end
 
