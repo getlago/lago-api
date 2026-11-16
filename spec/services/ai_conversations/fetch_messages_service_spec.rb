@@ -43,6 +43,44 @@ RSpec.describe AiConversations::FetchMessagesService do
         .with(headers: {"Authorization" => "Bearer #{ENV.fetch("MISTRAL_API_KEY")}"})
     end
 
+    context "when the content is structured" do
+      let(:response_body) do
+        {
+          "messages" => [
+            {
+              "type" => "message.input",
+              "content" => "List my invoices",
+              "created_at" => "2024-01-01T12:00:00Z"
+            },
+            {
+              "type" => "message.output",
+              "content" => [{"type" => "thinking", "thinking" => [{"type" => "text", "text" => "I will call list_invoices"}]}],
+              "created_at" => "2024-01-01T12:00:01Z"
+            },
+            {
+              "type" => "message.output",
+              "content" => [
+                {"type" => "thinking", "thinking" => [{"type" => "text", "text" => "Summarize them"}]},
+                {"type" => "text", "text" => "Here are your invoices."}
+              ],
+              "created_at" => "2024-01-01T12:00:02Z"
+            }
+          ]
+        }
+      end
+
+      it "keeps only the text and drops messages without any" do
+        result = service.call
+
+        expect(result.messages).to eq(
+          [
+            {"type" => "message.input", "content" => "List my invoices", "created_at" => "2024-01-01T12:00:00Z"},
+            {"type" => "message.output", "content" => "Here are your invoices.", "created_at" => "2024-01-01T12:00:02Z"}
+          ]
+        )
+      end
+    end
+
     context "when API request fails" do
       let(:http_error) do
         LagoHttpClient::HttpError.new(
