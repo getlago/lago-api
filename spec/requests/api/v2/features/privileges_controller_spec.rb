@@ -891,16 +891,16 @@ RSpec.describe Api::V2::Features::PrivilegesController do
       end
     end
 
-    context "with another code" do
-      let(:privilege_params) { {code: "other"} }
+    context "with another code and value_type" do
+      let(:privilege_params) { {code: "other", value_type: "string", name: "SSO provider"} }
 
-      include_examples "a refused update on", "value_is_immutable", "code"
-    end
+      it "ignores them and updates the name" do
+        request
 
-    context "with another value_type" do
-      let(:privilege_params) { {value_type: "string"} }
-
-      include_examples "a refused update on", "value_is_immutable", "value_type"
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(code: "provider", value_type: "select", name: "SSO provider")
+        expect(privilege.reload).to have_attributes(code: "provider", value_type: "select")
+      end
     end
 
     context "with select_options empty on a select privilege" do

@@ -27,14 +27,6 @@ module Entitlement
         privilege = feature.privileges.find_by(code: privilege_code)
         return result.not_found_failure!(resource: "privilege") unless privilege
 
-        if params.key?(:code) && stripped(params[:code]) != privilege.code
-          return result.single_validation_failure!(field: :code, error_code: "value_is_immutable")
-        end
-
-        if params.key?(:value_type) && params[:value_type] != privilege.value_type
-          return result.single_validation_failure!(field: :value_type, error_code: "value_is_immutable")
-        end
-
         # select_options only belong to the select type, and are ignored for the other types.
         if privilege.value_type == "select" && params.key?(:select_options)
           # v2 replaces the list instead of merging it, so every current option must be sent again.
@@ -69,9 +61,5 @@ module Entitlement
     private
 
     attr_reader :feature, :privilege_code, :params
-
-    def stripped(value)
-      value.is_a?(String) ? value.strip : value
-    end
   end
 end

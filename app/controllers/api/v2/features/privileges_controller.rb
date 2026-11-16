@@ -50,7 +50,7 @@ module Api
         end
 
         def update
-          attributes = params.expect(privilege: [:code, :name, :value_type, select_options: []])
+          attributes = params.expect(privilege: [:name, select_options: []])
 
           result = ::Entitlement::PrivilegeUpdateService.call(
             # The service looks the privilege up under the feature lock, so it is not loaded here.

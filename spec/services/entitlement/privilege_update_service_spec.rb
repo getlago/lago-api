@@ -208,52 +208,13 @@ RSpec.describe Entitlement::PrivilegeUpdateService do
       end
     end
 
-    context "when the code differs" do
-      let(:params) { {code: "other"} }
+    context "when code and value_type are sent" do
+      let(:params) { {code: "other", value_type: "string", name: "SSO provider"} }
 
-      it_behaves_like "a validation failure", {code: ["value_is_immutable"]}
-    end
-
-    context "when the code is null" do
-      let(:params) { {code: nil} }
-
-      it_behaves_like "a validation failure", {code: ["value_is_immutable"]}
-    end
-
-    context "when the code is the current one with surrounding spaces" do
-      let(:params) { {code: "  provider  ", name: "SSO provider"} }
-
-      it "updates the privilege" do
+      it "ignores them and updates the name" do
         expect(result).to be_success
-        expect(privilege.reload).to have_attributes(code: "provider", name: "SSO provider")
+        expect(privilege.reload).to have_attributes(code: "provider", value_type: "select", name: "SSO provider")
       end
-    end
-
-    context "when the value_type differs" do
-      let(:params) { {value_type: "string"} }
-
-      it_behaves_like "a validation failure", {value_type: ["value_is_immutable"]}
-    end
-
-    context "when the value_type is unknown" do
-      let(:params) { {value_type: "float"} }
-
-      it_behaves_like "a validation failure", {value_type: ["value_is_immutable"]}
-    end
-
-    context "when the value_type is the current one" do
-      let(:params) { {value_type: "select", name: "SSO provider"} }
-
-      it "updates the privilege" do
-        expect(result).to be_success
-        expect(privilege.reload).to have_attributes(value_type: "select", name: "SSO provider")
-      end
-    end
-
-    context "when both code and value_type differ" do
-      let(:params) { {code: "other", value_type: "string"} }
-
-      it_behaves_like "a validation failure", {code: ["value_is_immutable"]}
     end
 
     context "when select_options are null" do
@@ -310,16 +271,6 @@ RSpec.describe Entitlement::PrivilegeUpdateService do
         let(:params) { {name: value} }
 
         it_behaves_like "a validation failure", {name: ["value_is_invalid"]}
-      end
-    end
-
-    [["a number", 123], ["a boolean", true]].each do |label, value|
-      %i[code value_type].each do |field|
-        context "when #{field} is #{label}" do
-          let(:params) { {field => value} }
-
-          it_behaves_like "a validation failure", {field => ["value_is_immutable"]}
-        end
       end
     end
 
