@@ -14,14 +14,14 @@ RSpec.describe BillingOperation do
 
   describe "enums" do
     it do
-      expect(operation).to define_enum_for(:causation_type)
+      expect(operation).to define_enum_for(:reason)
         .backed_by_column_of_type(:enum)
         .validating
-        .with_values(described_class::CAUSATION_TYPES)
-      expect(operation).to define_enum_for(:cancelled_causation_type)
+        .with_values(described_class::REASONS)
+      expect(operation).to define_enum_for(:cancellation_reason)
         .backed_by_column_of_type(:enum)
         .validating(allowing_nil: true)
-        .with_values(described_class::CANCELLED_CAUSATION_TYPES)
+        .with_values(described_class::CANCELLATION_REASONS)
         .with_prefix
     end
   end
@@ -42,7 +42,7 @@ RSpec.describe BillingOperation do
         create(
           :billing_operation,
           cancelled_at: Time.current,
-          cancelled_causation_type: :contract_termination
+          cancellation_reason: :contract_termination
         )
       end
 
@@ -57,7 +57,7 @@ RSpec.describe BillingOperation do
       end
 
       it "persists cancellation without marking the operation processed" do
-        expect(cancelled_operation.reload.cancelled_causation_type).to eq("contract_termination")
+        expect(cancelled_operation.reload.cancellation_reason).to eq("contract_termination")
         expect(cancelled_operation.processed_at).to be_nil
       end
     end
@@ -254,7 +254,7 @@ RSpec.describe BillingOperation do
       end
 
       context "with a cancelled operation" do
-        let(:operation) { build(:billing_operation, cancelled_at: Time.current, cancelled_causation_type: :contract_termination) }
+        let(:operation) { build(:billing_operation, cancelled_at: Time.current, cancellation_reason: :contract_termination) }
 
         it { expect(operation).to be_valid }
       end
@@ -269,7 +269,7 @@ RSpec.describe BillingOperation do
       end
 
       context "with a cause but no cancellation time" do
-        let(:operation) { build(:billing_operation, cancelled_causation_type: :contract_termination) }
+        let(:operation) { build(:billing_operation, cancellation_reason: :contract_termination) }
 
         it do
           expect(operation).not_to be_valid
@@ -279,7 +279,7 @@ RSpec.describe BillingOperation do
 
       context "with a cancelled and processed operation" do
         let(:operation) do
-          build(:billing_operation, cancelled_at: Time.current, cancelled_causation_type: :contract_termination, processed_at: Time.current)
+          build(:billing_operation, cancelled_at: Time.current, cancellation_reason: :contract_termination, processed_at: Time.current)
         end
 
         it do

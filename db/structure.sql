@@ -1577,8 +1577,8 @@ DROP TYPE IF EXISTS public.contract_payment_method_type;
 DROP TYPE IF EXISTS public.contract_billing_time;
 DROP TYPE IF EXISTS public.connection_category;
 DROP TYPE IF EXISTS public.billing_segment_status;
-DROP TYPE IF EXISTS public.billing_operation_causation_type;
-DROP TYPE IF EXISTS public.billing_operation_cancelled_causation_type;
+DROP TYPE IF EXISTS public.billing_operation_reason;
+DROP TYPE IF EXISTS public.billing_operation_cancellation_reason;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
@@ -1669,19 +1669,19 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 
 
 --
--- Name: billing_operation_cancelled_causation_type; Type: TYPE; Schema: public; Owner: -
+-- Name: billing_operation_cancellation_reason; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.billing_operation_cancelled_causation_type AS ENUM (
+CREATE TYPE public.billing_operation_cancellation_reason AS ENUM (
     'contract_termination'
 );
 
 
 --
--- Name: billing_operation_causation_type; Type: TYPE; Schema: public; Owner: -
+-- Name: billing_operation_reason; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.billing_operation_causation_type AS ENUM (
+CREATE TYPE public.billing_operation_reason AS ENUM (
     'contract_activation',
     'periodic_continuation',
     'contract_units_change',
@@ -2735,10 +2735,10 @@ CREATE TABLE public.billing_operations (
     contract_rate_card_id uuid NOT NULL,
     invoice_id uuid,
     action_type character varying NOT NULL,
-    causation_type public.billing_operation_causation_type NOT NULL,
+    reason public.billing_operation_reason NOT NULL,
     billing_at timestamp(6) without time zone NOT NULL,
     cancelled_at timestamp(6) without time zone,
-    cancelled_causation_type public.billing_operation_cancelled_causation_type,
+    cancellation_reason public.billing_operation_cancellation_reason,
     target_cycle_started_at timestamp(6) without time zone NOT NULL,
     processed_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
