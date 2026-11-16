@@ -66,6 +66,22 @@ module Api
           end
         end
 
+        def destroy
+          feature = current_organization.features.find_by(code: params[:feature_code])
+          return not_found_error(resource: "feature") unless feature
+
+          result = ::Entitlement::PrivilegeDestroyService.call(
+            # The service answers not found for an unknown or discarded code.
+            privilege: feature.privileges.find_by(code: params[:code])
+          )
+
+          if result.success?
+            render_privilege(result.privilege)
+          else
+            render_error_response(result)
+          end
+        end
+
         private
 
         def resource_name
