@@ -60,13 +60,15 @@ RSpec.describe Resolvers::InviteResolver do
       GQL
     end
 
-    before { create(:organization, :sandbox, production_organization: organization) }
+    let(:organization) { create(:organization, :self_serve) }
 
-    it "does not show the sandbox to an anonymous caller" do
+    before { create(:organization, :self_serve, :sandbox, production_organization: organization) }
+
+    it "shows the environment but not the sandbox to an anonymous caller" do
       result = execute_graphql(query:, variables: {token: invite.token})
 
       expect(result["data"]["invite"]["organization"]).to eq(
-        "selfServe" => false, "environment" => "production", "sandboxOrganization" => nil
+        "selfServe" => true, "environment" => "production", "sandboxOrganization" => nil
       )
     end
   end
