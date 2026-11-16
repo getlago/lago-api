@@ -577,6 +577,25 @@ module Events
         end
       end
 
+      # The first copy is read from events_raw, which keeps every insert: events_enriched can have merged it away.
+      # The late copies are not filtered: a re-send can move an event out of the bucket whose snapshot holds it.
+      def resent_after_watermark?(period)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          sql = <<~SQL
+            SELECT 1
+            FROM #{raw_events_table}
+            WHERE #{deduplicated_events_where_sql(from_datetime: nil, to_datetime: period.to_datetime)}
+              AND #{sql_condition("ingested_at <= ?", period.watermark)}
+              AND (transaction_id, timestamp) IN (
+                SELECT transaction_id, timestamp FROM (#{late_events_sql(period, deduplicated_columns: [])})
+              )
+            LIMIT 1
+          SQL
+
+          connection.select_value(sql).present?
+        end
+      end
+
       def grouped_recurring_sum(watermark:, period: nil)
         groups, column_names = grouped_arel_columns
 
@@ -1013,6 +1032,10 @@ module Events
 
       def events_table
         product_events? ? "product_events_enriched" : "events_enriched"
+      end
+
+      def raw_events_table
+        product_events? ? "product_events_raw" : "events_raw"
       end
 
       def scope_column

@@ -370,6 +370,35 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       end
     end
 
+    context "when a late event re-sends one the snapshot holds" do
+      let(:initial_value) { [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)] }
+
+      before do
+        allow(event_store_class).to receive(:new).and_wrap_original do |original, **args|
+          original.call(**args).tap { allow(it).to receive(:resent_after_watermark?).and_return(true) }
+        end
+      end
+
+      it "reads the full scan, which counts it once, and persists it" do
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first))
+
+        # every event up to the second period, without the snapshot units
+        expect(totals(result)).to eq([nil, 3 + 10 + 7 + 20, 4, 3 + 10 + 7 + 20, 4])
+      end
+
+      it "reads the full scan for the current usage" do
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {recurring_watermark: nil, is_current_usage: true})
+
+        expect(result.aggregation).to eq(3 + 10 + 7 + 20)
+      end
+
+      it "reads the full scan for a charge paid in advance" do
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {recurring_watermark: nil, is_pay_in_advance: true, is_current_usage: true})
+
+        expect(result.current_usage_units).to eq(3 + 10 + 7 + 20)
+      end
+    end
+
     context "with current usage" do
       let(:initial_value) { [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)] }
       let(:options) { {recurring_watermark: nil, is_current_usage: true} }

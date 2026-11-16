@@ -332,6 +332,11 @@ module Events
         ).exists?
       end
 
+      # The unique index on the transaction_id rejects a re-sent event
+      def resent_after_watermark?(period)
+        false
+      end
+
       def grouped_recurring_sum(watermark:, period: nil)
         sql = recurring_events(period)
           .group(sanitized_grouped_by)

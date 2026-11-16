@@ -277,6 +277,125 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
+  describe "#resent_after_watermark?" do
+    subject(:resent) { event_store.resent_after_watermark?(period) }
+
+    let(:event_store) do
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries:, filters:)
+    end
+    let(:filters) { {} }
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", recurring: true) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {from_datetime: subscription.started_at.beginning_of_day, to_datetime: subscription.started_at.end_of_month.end_of_day, charges_duration: 31}
+    end
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: subscription.started_at + 3.days, watermark: (Time.current - 1.hour).floor(3))
+    end
+    let(:transaction_id) { SecureRandom.uuid }
+    let(:timestamp) { subscription.started_at + 1.day }
+
+    # events_raw keeps each insert, while FINAL reads the latest one from events_enriched
+    def ingest(ingested_at:, region: "eu")
+      Clickhouse::EventsRaw.create!(
+        organization_id: organization.id,
+        external_customer_id: customer.external_id,
+        external_subscription_id: subscription.external_id,
+        transaction_id:,
+        timestamp:,
+        code: billable_metric.code,
+        properties: {"value" => "1", "region" => region},
+        ingested_at:
+      )
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: {"value" => "1", "region" => region},
+        value: "1",
+        decimal_value: 1,
+        enriched_at: ingested_at
+      )
+    end
+
+    before do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+      event_store.use_from_boundary = false
+    end
+
+    it { is_expected.to be(false) }
+
+    context "with an event ingested by the watermark and re-sent after it" do
+      before do
+        ingest(ingested_at: period.watermark)
+        ingest(ingested_at: period.watermark + 10.minutes)
+      end
+
+      it { is_expected.to be(true) }
+
+      context "when the filters leave both copies out" do
+        let(:filters) { {matching_filters: {"region" => ["us"]}} }
+
+        it { is_expected.to be(true) }
+      end
+
+      context "when the event is dated after the period" do
+        let(:timestamp) { period.to_datetime + 1.second }
+
+        it { is_expected.to be(false) }
+      end
+    end
+
+    context "with an event re-sent after the watermark out of the filter of its first copy" do
+      let(:filters) { {matching_filters: {"region" => ["eu"]}} }
+
+      before do
+        ingest(ingested_at: period.watermark, region: "eu")
+        ingest(ingested_at: period.watermark + 10.minutes, region: "us")
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with an event first ingested after the watermark" do
+      before { ingest(ingested_at: period.watermark + 10.minutes) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with an event ingested twice by the watermark" do
+      before do
+        ingest(ingested_at: period.watermark - 10.minutes)
+        ingest(ingested_at: period.watermark)
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a copy ingested by the watermark for another subscription" do
+      before do
+        Clickhouse::EventsRaw.create!(
+          organization_id: organization.id,
+          external_customer_id: customer.external_id,
+          external_subscription_id: "other-subscription",
+          transaction_id:,
+          timestamp:,
+          code: billable_metric.code,
+          properties: {"value" => "1"},
+          ingested_at: period.watermark
+        )
+        ingest(ingested_at: period.watermark + 10.minutes)
+      end
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "string values containing a backslash or a quote" do
     subject(:event_store) do
       described_class.new(
