@@ -98,7 +98,8 @@ module Api
 
         ::Invoices::GeneratePdfJob.perform_later(invoice)
 
-        head(:ok)
+        # The file is not ready yet, so there is no invoice to return.
+        head(:accepted)
       end
 
       def resend_email

@@ -82,7 +82,7 @@ module Types
       end
 
       def webhook_url
-        object.webhook_endpoints.map(&:webhook_url).first
+        object.default_webhook_endpoint&.webhook_url
       end
 
       def api_key

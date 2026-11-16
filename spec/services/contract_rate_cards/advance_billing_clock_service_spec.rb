@@ -31,7 +31,7 @@ RSpec.describe ContractRateCards::AdvanceBillingClockService do
 
         expect(schedule).to have_received(:billing_at).with(
           timestamp:,
-          target: Billing::RateCards::Schedule::BILLING_TARGET.fetch(:next)
+          target: Billing::RateCards::Schedule::BILLING_TARGETS.fetch(:next)
         )
       end
     end

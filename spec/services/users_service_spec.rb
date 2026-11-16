@@ -300,6 +300,7 @@ RSpec.describe UsersService do
             expect(result).to be_a(BaseResult)
             expect(result).to be_success
             expect(result.user).to eq user
+            expect(result.needs_organization).to be(false)
             expect(result.token).to be_present
           end
 
@@ -440,6 +441,88 @@ RSpec.describe UsersService do
       it "logs in the existing user" do
         expect(result).to be_success
         expect(result.user).to eq(mixed_case_user)
+      end
+    end
+
+    context "with a self-serve user who never had an organization" do
+      let(:orgless_user) { create(:user, :self_serve, email: "jane@getlago.com", password: "Lago-Passw0rd") }
+      let(:email) { orgless_user.email }
+      let(:password) { "Lago-Passw0rd" }
+
+      before { allow(UserDevices::RegisterService).to receive(:call!) }
+
+      context "when self-serve is on" do
+        include_context "with self-serve enabled"
+
+        it "opens a password session that needs an organization" do
+          expect(result).to be_success
+          expect(result.needs_organization).to be(true)
+          expect(Utils::AuthToken.decode(token: result.token)["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+          expect(SegmentIdentifyJob).not_to have_been_enqueued
+          expect(UserDevices::RegisterService).to have_received(:call!).with(user: orgless_user)
+        end
+
+        context "with a wrong password" do
+          let(:password) { "Wrong-Passw0rd" }
+
+          it "gives the usual answer" do
+            expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+            expect(result.token).to be_nil
+          end
+        end
+
+        context "when the user is a CS admin" do
+          let(:orgless_user) { create(:user, :self_serve, cs_admin: true, password: "Lago-Passw0rd") }
+
+          it "gives the usual answer" do
+            expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          end
+        end
+
+        context "when the user did not come from a self-serve signup" do
+          let(:orgless_user) { create(:user, password: "Lago-Passw0rd") }
+
+          it "gives the usual answer" do
+            expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          end
+        end
+
+        context "when the user's memberships were all revoked" do
+          before { create(:membership, :revoked, user: orgless_user) }
+
+          it "gives the usual answer" do
+            expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          end
+        end
+      end
+
+      context "when self-serve is off" do
+        it "gives the usual answer" do
+          expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+        end
+      end
+    end
+
+    context "with an unknown email" do
+      let(:email) { "nobody@getlago.com" }
+      let(:password) { "Lago-Passw0rd" }
+
+      before { allow(described_class::DUMMY_PASSWORD.value).to receive(:is_password?).and_call_original }
+
+      context "when self-serve is on" do
+        include_context "with self-serve enabled"
+
+        it "still compares a password, so timing reveals nothing" do
+          expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          expect(described_class::DUMMY_PASSWORD.value).to have_received(:is_password?).with("Lago-Passw0rd")
+        end
+      end
+
+      context "when self-serve is off" do
+        it "answers without comparing a password, as before" do
+          expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          expect(described_class::DUMMY_PASSWORD.value).not_to have_received(:is_password?)
+        end
       end
     end
   end

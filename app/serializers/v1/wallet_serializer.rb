@@ -13,6 +13,7 @@ module V1
         name: model.name,
         code: model.code,
         purchase_order_number: model.purchase_order_number,
+        payment_term: model.payment_term,
         rate_amount: model.rate_amount,
         credits_balance: model.credits_balance,
         credits_ongoing_balance: model.credits_ongoing_balance,

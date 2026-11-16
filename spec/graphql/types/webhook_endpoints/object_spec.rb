@@ -12,6 +12,7 @@ RSpec.describe Types::WebhookEndpoints::Object do
     expect(subject).to have_field(:signature_algo).of_type("WebhookEndpointSignatureAlgoEnum")
     expect(subject).to have_field(:name).of_type("String")
     expect(subject).to have_field(:event_types).of_type("[EventTypeEnum!]")
+    expect(subject).to have_field(:signing_keys).of_type("[WebhookEndpointSigningKey!]").with_permission("developers:keys:manage")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
   end

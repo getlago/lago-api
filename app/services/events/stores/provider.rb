@@ -29,11 +29,19 @@ module Events
           filters:
         )
         if served_from_buckets?(metered_item:, boundaries:, filters:)
+          recurring = RealtimeUsage.recurring_charge?(metered_item.charge)
+          # A recurring charge falls back to events per snapshot period, through the same scan as today.
+          if recurring && (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
+            store = ChargeFiltersScanStore.new(store, scan:)
+          end
+
           UsageBucketStore.new(
             store,
             usage_buckets:,
             charge_id: metered_item.charge.id,
-            charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
+            charge_filter_id: filters[:charge_filter]&.id || "", # clickhouse stores an empty string instead of nil
+            recurring:,
+            charges_from_datetime: boundaries[:from_datetime]
           )
         elsif (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
           ChargeFiltersScanStore.new(store, scan:)
@@ -48,12 +56,14 @@ module Events
 
         @may_precompute = serve_current_usage_from_buckets &&
           whole_charge_read? &&
-          RealtimeUsage.enabled?(organization)
+          RealtimeUsage.enabled?(organization) &&
+          !product_events?
       end
 
       # Every gate a charge can be ruled out by before an aggregator and a store exist, so that
-      # a charge the buckets cannot answer costs nothing to skip.
-      def may_precompute_charge?(metered_item:, boundaries:)
+      # a charge the buckets cannot answer costs nothing to skip. The parity task skips the
+      # recurring refusal to ask it last, so a refused charge is counted under one reason.
+      def may_precompute_charge?(metered_item:, boundaries:, refuse_recurring: true)
         return false unless may_precompute?
         # The buckets are keyed by charge, and a billing segment is priced from its product
         # rather than from the optional legacy charge that product may carry.
@@ -63,16 +73,28 @@ module Events
         return false if charge.nil?
         return false if boundaries[:max_timestamp].present?
         return false unless same_window_as_prefetch?(boundaries)
+        return false if wallet_charge_changed_in_window?(charge)
+        return false unless RealtimeUsage.supported_charge?(charge)
 
-        RealtimeUsage.supported_charge?(charge)
+        !refuse_recurring || !RealtimeUsage.recurring_charge?(charge) || recurring_refusal_reason(metered_item).nil?
+      end
+
+      # Why the buckets can never complete the snapshot of a recurring charge: they only add the
+      # window to a snapshot of this subscription, and a dynamic charge also reads its precise
+      # amounts over the whole history.
+      def recurring_refusal_reason(metered_item)
+        return "dynamic" if metered_item.charge.dynamic?
+        return "no_snapshot_read" unless RecurringAggregationSnapshot.readable?(metered_item:, billing_context:)
+
+        "has_predecessor" if billing_context.previous_subscription_id?
       end
 
       # Charge-wide counterpart of `served_from_buckets?`: true only when every pricing bucket of
       # the charge will be served.
-      def serves_whole_charge_from_buckets?(metered_item:, boundaries:)
+      def serves_whole_charge_from_buckets?(metered_item:, boundaries:, refuse_recurring: true)
         return false if requested_presentation_by(metered_item).present?
 
-        served_from_buckets?(metered_item:, boundaries:)
+        served_from_buckets?(metered_item:, boundaries:, refuse_recurring:)
       end
 
       # The charge filters the buckets hold usage for, the default bucket being nil as in the
@@ -96,8 +118,8 @@ module Events
         !usage_filters.full_usage && usage_filters.filter_by_group.blank?
       end
 
-      def served_from_buckets?(metered_item:, boundaries:, filters: {})
-        return false unless may_precompute_charge?(metered_item:, boundaries:)
+      def served_from_buckets?(metered_item:, boundaries:, filters: {}, refuse_recurring: true)
+        return false unless may_precompute_charge?(metered_item:, boundaries:, refuse_recurring:)
         return false unless filters[:grouped_by_values].blank? &&
           filters[:event].blank? &&
           filters[:presentation_by].blank?
@@ -105,7 +127,12 @@ module Events
         # Asked last so the ClickHouse read is skipped when no charge of the plan could use it.
         # An empty set is no proof the pipeline wrote this window, so it falls back to the events
         # store rather than serving a zero a lagging pipeline cannot be told apart from.
-        usage_buckets.present?
+        # A recurring charge takes it as zero: most are polled without a new event.
+        if RealtimeUsage.recurring_charge?(metered_item.charge)
+          !usage_buckets.nil?
+        else
+          usage_buckets.present?
+        end
       end
 
       # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A
@@ -155,13 +182,26 @@ module Events
         return @scan_available if defined?(@scan_available)
 
         @scan_available = Events::Stores::StoreFactory.override.nil? &&
-          store_class == Events::Stores::ClickhouseStore
+          store_class == Events::Stores::ClickhouseStore &&
+          !product_events?
+      end
+
+      # The usage buckets and the scan's incremental cache are built from events_enriched, which
+      # the product events pipeline does not write to: its organizations read the plain store.
+      def product_events?
+        return @product_events if defined?(@product_events)
+
+        @product_events = organization.product_events_pipeline?
       end
 
       def charge_filters_single_scan?
         return @charge_filters_single_scan if defined?(@charge_filters_single_scan)
 
         @charge_filters_single_scan = organization.feature_flag_enabled?(:charge_filters_single_scan)
+      end
+
+      def wallet_charge_changed_in_window?(charge)
+        RealtimeUsage.wallet_charge_changed_since?(charge, boundaries.charges_from_datetime)
       end
 
       def same_window_as_prefetch?(window)

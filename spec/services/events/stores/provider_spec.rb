@@ -139,6 +139,21 @@ RSpec.describe Events::Stores::Provider do
         expect(provider.may_precompute?).to be(true)
       end
     end
+
+    # The buckets are built from events_enriched, which the product events pipeline does not
+    # write to.
+    context "when the organization is on the product events pipeline" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: %w[realtime_usage product_catalog])
+      end
+
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "is false" do
+        expect(provider.may_precompute?).to be(false)
+      end
+    end
   end
 
   describe "#store_for, with the usage buckets" do
@@ -241,6 +256,102 @@ RSpec.describe Events::Stores::Provider do
 
       it "reads events, because the units carry over from before this window" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+
+      context "when recurring sums are served from the buckets" do
+        let(:organization) do
+          create(
+            :organization,
+            clickhouse_events_store: true,
+            feature_flags: %w[realtime_usage realtime_usage_recurring_sum persisted_recurring_values]
+          )
+        end
+        let(:period) do
+          RecurringAggregationSnapshots::FetchService::Period.new(
+            to_datetime: billing_boundaries.charges_from_datetime - 1.second,
+            watermark: billing_boundaries.charges_from_datetime + 1.hour
+          )
+        end
+
+        it "wraps the store in a bucket-backed one answering the delta from the window", clickhouse: true do
+          expect(store).to be_a(Events::Stores::UsageBucketStore)
+          expect(store.recurring_fallback_reason(period)).to be_nil
+          expect(provider.recurring_refusal_reason(metered_item)).to be_nil
+        end
+
+        context "when the aggregator reads the sum without a snapshot" do
+          before { allow(store.__getobj__).to receive(:sum).and_return(:events_sum) }
+
+          it "reads it from the events, as the window alone is not the recurring total" do
+            expect(store.sum).to eq(:events_sum)
+          end
+        end
+
+        context "when the window holds no bucket at all" do
+          let(:bucket_set) { Events::Stores::UsageBucketSet.new }
+
+          it "serves it, as most recurring charges are polled without a new event" do
+            expect(store).to be_a(Events::Stores::UsageBucketStore)
+          end
+        end
+
+        context "when the prefetch refused the window" do
+          before do
+            allow(RealtimeUsage::FetchBucketsService).to receive(:call)
+              .and_return(RealtimeUsage::FetchBucketsService::Result.new)
+          end
+
+          it "reads events, as nothing was fetched to serve from" do
+            expect(store).to be_a(Events::Stores::ClickhouseStore)
+          end
+        end
+
+        context "when the organization does not read the snapshots" do
+          let(:organization) do
+            create(:organization, clickhouse_events_store: true, feature_flags: %w[realtime_usage realtime_usage_recurring_sum])
+          end
+
+          it "reads events, as the buckets have no snapshot to add the window to" do
+            expect(store).to be_a(Events::Stores::ClickhouseStore)
+            expect(provider.recurring_refusal_reason(metered_item)).to eq("no_snapshot_read")
+          end
+        end
+
+        context "with a dynamic charge" do
+          let(:charge) { create(:dynamic_charge, plan: subscription.plan, billable_metric:) }
+
+          it "reads events, as its precise amounts span the whole history" do
+            expect(store).to be_a(Events::Stores::ClickhouseStore)
+            expect(provider.recurring_refusal_reason(metered_item)).to eq("dynamic")
+          end
+        end
+
+        context "with the incremental charge cache" do
+          subject(:provider) do
+            described_class.new(
+              organization:,
+              billing_context:,
+              serve_current_usage_from_buckets: true,
+              boundaries: billing_boundaries,
+              charges: [charge],
+              incremental_charge_cache: true
+            )
+          end
+
+          it "wraps the scan store, which a fallback to events reads through" do
+            expect(store).to be_a(Events::Stores::UsageBucketStore)
+            expect(store.__getobj__).to be_a(Events::Stores::ChargeFiltersScanStore)
+          end
+        end
+
+        context "when the subscription is the upgrade of another" do
+          let(:subscription) { create(:subscription, :with_previous_subscription, organization:) }
+
+          it "reads events, as the snapshots hold usage bucketed under the previous subscription" do
+            expect(store).to be_a(Events::Stores::ClickhouseStore)
+            expect(provider.recurring_refusal_reason(metered_item)).to eq("has_predecessor")
+          end
+        end
       end
     end
 
@@ -430,6 +541,55 @@ RSpec.describe Events::Stores::Provider do
 
       it "reads events, having no window to have fetched buckets for" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with wallet targeting enabled", :premium do
+      let(:organization) do
+        create(
+          :organization,
+          clickhouse_events_store: true,
+          feature_flags: ["realtime_usage"],
+          premium_integrations: ["events_targeting_wallets"]
+        )
+      end
+
+      context "with a charge accepting a target wallet, last edited before the window" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan, billable_metric:, accepts_target_wallet: true,
+            updated_at: boundaries[:from_datetime] - 1.second
+          )
+        end
+
+        it "wraps the store in the bucket-backed one" do
+          expect(store).to be_a(Events::Stores::UsageBucketStore)
+        end
+      end
+
+      context "with a charge accepting a target wallet, edited inside the window" do
+        let(:charge) do
+          create(
+            :standard_charge,
+            plan: subscription.plan, billable_metric:, accepts_target_wallet: true,
+            updated_at: boundaries[:from_datetime] + 1.second
+          )
+        end
+
+        it "reads events, because buckets written before it accepted the wallet hold no wallet code" do
+          expect(store).to be_a(Events::Stores::ClickhouseStore)
+        end
+      end
+
+      context "with a charge not accepting a target wallet, edited inside the window" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, updated_at: boundaries[:from_datetime] + 1.second)
+        end
+
+        it "wraps the store in the bucket-backed one" do
+          expect(store).to be_a(Events::Stores::UsageBucketStore)
+        end
       end
     end
 
@@ -648,6 +808,21 @@ RSpec.describe Events::Stores::Provider do
 
     context "without the feature flag" do
       let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    # The scan's incremental cache reads events_enriched, which the product events pipeline
+    # does not write to.
+    context "when the organization is on the product events pipeline" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: %w[charge_filters_single_scan product_catalog])
+      end
+
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
 
       it "returns the store" do
         expect(store).to be_a(Events::Stores::ClickhouseStore)

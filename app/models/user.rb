@@ -23,12 +23,38 @@ class User < ApplicationRecord
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
+  # The key of the user lookups and the per-email throttles: sanitized, lowercased and composed, so the case and Unicode
+  # spelling variants of one address share it.
+  def self.email_lookup_key(email)
+    normalize_value_for(:email, email.to_s).to_s.downcase.unicode_normalize(:nfc)
+  end
+
+  # One query whether or not the email exists, so login timing does not reveal accounts. The exact spelling wins, then
+  # the typed one ignoring case, then either Unicode spelling (signups store emails composed, older rows may be
+  # decomposed); the oldest first. Every term compares LOWER(email), which index_users_on_lower_email serves; LOWER(?)
+  # keeps the exact spelling.
+  def self.lookup_by_email(email)
+    normalized = normalize_value_for(:email, email.to_s).to_s
+    typed = [normalized.downcase, email.to_s.downcase].uniq
+    composed = email_lookup_key(normalized)
+
+    where("LOWER(email) IN (LOWER(?), ?)", normalized, (typed + [composed, composed.unicode_normalize(:nfd)]).uniq)
+      .order(Arel.sql(sanitize_sql_array(["email = ? DESC, LOWER(email) IN (?) DESC", normalized, typed])), :created_at)
+      .first
+  end
+
   def can?(permission, organization:)
     memberships.find { |m| m.organization_id == organization.id }&.can?(permission)
   end
 
   def login_method_allowed?(login_method)
     active_organizations.pluck(:authentication_methods).flatten.uniq.include?(login_method)
+  end
+
+  # Only a user created by a self-serve signup (confirmed email link or company Google account) who never belonged
+  # to an organization may log in without one: a removed member regains access only through an invitation.
+  def needs_organization?
+    Lago::SelfServe.enabled? && self_serve_verified_at? && !cs_admin? && memberships.empty?
   end
 
   private
