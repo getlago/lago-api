@@ -3,6 +3,8 @@
 module Types
   module Organizations
     class CurrentOrganizationType < BaseOrganizationType
+      include EnvironmentFields
+
       description "Current Organization Type"
 
       field :id, ID, null: false
@@ -65,11 +67,6 @@ module Types
       field :accessible_by_current_session, Boolean, null: false
       field :authenticated_method, Types::Organizations::AuthenticationMethodsEnum, null: false
       field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
-
-      field :environment, Types::Organizations::EnvironmentEnum, null: false
-      field :production_organization, Types::Organizations::LinkedOrganizationType
-      field :sandbox_organization, Types::Organizations::LinkedOrganizationType
-      field :self_serve, Boolean, null: false
 
       def feature_flags
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }

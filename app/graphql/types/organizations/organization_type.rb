@@ -12,6 +12,8 @@ module Types
     # Ex: current organization > memberships > another member > organizations can lead to an organization
     #     the current user is not supposed to have access to
     class OrganizationType < BaseOrganizationType
+      include EnvironmentFields
+
       description "Safe Organization Type"
 
       field :id, ID, null: false
@@ -27,11 +29,6 @@ module Types
       field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
 
       field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
-
-      field :environment, Types::Organizations::EnvironmentEnum, null: false
-      field :production_organization, Types::Organizations::LinkedOrganizationType
-      field :sandbox_organization, Types::Organizations::LinkedOrganizationType
-      field :self_serve, Boolean, null: false
 
       def accessible_by_current_session
         return false if context[:current_user].nil?
