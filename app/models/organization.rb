@@ -144,6 +144,7 @@ class Organization < ApplicationRecord
   has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
   has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
+  has_many :quickbooks_integrations, class_name: "Integrations::QuickbooksIntegration"
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
