@@ -57,9 +57,11 @@ module Api
       end
 
       # For a list returned whole: it still rejects `page` and `per_page`, which a
-      # client paging until an empty page would otherwise send forever.
-      def reject_offset_pagination!
-        ::CursorPagination::Cursor.reject_offset_params!(params, reason: "not_paginated")
+      # client paging until an empty page would otherwise send forever. `cursor_params: true`
+      # also rejects `limit`, `after`, `before` and `include_total_count`, for a list that
+      # never had a cursor.
+      def reject_offset_pagination!(cursor_params: false)
+        ::CursorPagination::Cursor.reject_offset_params!(params, reason: "not_paginated", cursor_params:)
       end
 
       def missing_parameter_error(error)

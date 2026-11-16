@@ -362,6 +362,186 @@ RSpec.describe Api::V2::Features::PrivilegesController do
     end
   end
 
+  describe "GET /api/v2/features/:feature_code/privileges" do
+    subject(:request) { get_with_token(organization, "/api/v2/features/#{feature_code}/privileges", params) }
+
+    let(:feature_code) { "seats" }
+    let(:params) { {} }
+    let(:feature) { create(:feature, organization:, code: "seats") }
+
+    before { feature }
+
+    include_examples "requires API permission", "feature", "read"
+
+    context "with privileges on the feature and on others" do
+      let(:newer) do
+        create(:privilege, feature:, organization:, code: "tier", name: "Tier", value_type: "select", config: {select_options: %w[a b]},
+          created_at: Time.zone.parse("2026-11-14T11:00:00.654321Z"), updated_at: Time.zone.parse("2026-11-14T12:00:00.111111Z"))
+      end
+      let(:older) do
+        create(:privilege, feature:, organization:, code: "max_admins", name: "Maximum admins", value_type: "integer",
+          created_at: Time.zone.parse("2026-11-14T10:00:00.123456Z"), updated_at: Time.zone.parse("2026-11-14T10:00:00.123456Z"))
+      end
+
+      before do
+        newer
+        older
+        create(:privilege, feature:, organization:, code: "gone", deleted_at: Time.current)
+        create(:privilege, organization:, feature: create(:feature, organization:, code: "storage"))
+        create(:privilege, feature: create(:feature, organization: create(:organization), code: "seats"))
+      end
+
+      it "returns the kept privileges of the feature, oldest first, without meta", :bullet do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(
+          privileges: [
+            {
+              lago_id: older.id,
+              feature_code: "seats",
+              code: "max_admins",
+              name: "Maximum admins",
+              value_type: "integer",
+              select_options: nil,
+              created_at: "2026-11-14T10:00:00.123456Z",
+              updated_at: "2026-11-14T10:00:00.123456Z",
+              deleted_at: nil
+            },
+            {
+              lago_id: newer.id,
+              feature_code: "seats",
+              code: "tier",
+              name: "Tier",
+              value_type: "select",
+              select_options: %w[a b],
+              created_at: "2026-11-14T11:00:00.654321Z",
+              updated_at: "2026-11-14T12:00:00.111111Z",
+              deleted_at: nil
+            }
+          ]
+        )
+      end
+    end
+
+    context "with privileges created at the same time" do
+      let(:created_at) { Time.zone.parse("2026-11-14T10:00:00.123456Z") }
+      let(:second) { create(:privilege, feature:, organization:, id: "ffffffff-ffff-4fff-bfff-ffffffffffff", created_at:) }
+      let(:first) { create(:privilege, feature:, organization:, id: "00000000-0000-4000-8000-000000000000", created_at:) }
+
+      before do
+        second
+        first
+      end
+
+      it "orders them by id" do
+        request
+
+        expect(json[:privileges].pluck(:lago_id)).to eq([first.id, second.id])
+      end
+    end
+
+    context "when the feature has no privileges" do
+      it "returns an empty list" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(privileges: [])
+      end
+    end
+
+    context "with limit" do
+      let(:params) { {limit: 1} }
+
+      it "returns not_paginated on limit" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: "limit", meta: {}}])
+      end
+    end
+
+    context "with every pagination param" do
+      let(:params) { {include_total_count: true, before: "x", after: "y", limit: 1, per_page: 10, page: 2} }
+
+      it "returns not_paginated on each of them" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "invalid_pagination_parameter",
+          details: %w[page per_page limit after before include_total_count].map { {code: "not_paginated", field: it, meta: {}} }
+        )
+      end
+    end
+
+    context "with a pagination param on an unknown feature" do
+      let(:feature_code) { "unknown" }
+      let(:params) { {page: 2} }
+
+      it "refuses the param before the lookup" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: "page", meta: {}}])
+      end
+    end
+
+    context "when the feature does not exist" do
+      let(:feature_code) { "unknown" }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature is discarded" do
+      let(:feature) { create(:feature, organization:, code: "seats", deleted_at: Time.current) }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature belongs to another organization" do
+      let(:feature) { create(:feature, organization: create(:organization), code: "seats") }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "without product catalog", product_catalog: false do
+      it "returns feature_unavailable" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
+    context "when the feature code contains a slash" do
+      let(:feature) { create(:feature, organization:, code: "seats/eu") }
+      let(:feature_code) { "seats/eu" }
+      let(:privilege) { create(:privilege, feature:, organization:) }
+
+      before { privilege }
+
+      it "lists the privileges of that feature" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privileges]).to contain_exactly(include(lago_id: privilege.id, feature_code: "seats/eu"))
+      end
+    end
+  end
+
   describe "DELETE /api/v2/features/:feature_code/privileges/:code", v2_timestamps: false do
     subject(:request) { delete_with_token(organization, "/api/v2/features/seats/privileges/max") }
 

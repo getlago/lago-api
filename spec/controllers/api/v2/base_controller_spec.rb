@@ -22,6 +22,11 @@ RSpec.describe Api::V2::BaseController, type: :controller do
       head(:ok)
     end
 
+    def update
+      reject_offset_pagination!(cursor_params: true)
+      head(:ok)
+    end
+
     def create
       params.require(:product)
       head(:ok)
@@ -187,6 +192,45 @@ RSpec.describe Api::V2::BaseController, type: :controller do
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:details]).to eq([{code: "not_paginated", field: "page", meta: {}}])
+    end
+
+    context "with cursor pagination parameters" do
+      subject(:show) { get(:show, params: {id: "1", limit: "1"}) }
+
+      it "accepts them, since only the offset parameters are refused by default" do
+        show
+
+        expect(response).to have_http_status(:ok)
+      end
+    end
+  end
+
+  context "with cursor pagination parameters on a list that refuses them" do
+    subject(:update) { put(:update, params: {id: "1", **pagination_params}) }
+
+    let(:pagination_params) { {limit: "1", after: "x"} }
+
+    it "returns a bad request error for each parameter" do
+      update
+
+      expect(response).to have_http_status(:bad_request)
+      expect(json).to eq(
+        code: "invalid_pagination_parameter",
+        details: [
+          {code: "not_paginated", field: "limit", meta: {}},
+          {code: "not_paginated", field: "after", meta: {}}
+        ]
+      )
+    end
+
+    context "without pagination parameters" do
+      let(:pagination_params) { {} }
+
+      it "accepts the request" do
+        update
+
+        expect(response).to have_http_status(:ok)
+      end
     end
   end
 end

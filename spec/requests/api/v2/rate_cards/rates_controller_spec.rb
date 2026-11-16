@@ -195,6 +195,19 @@ RSpec.describe Api::V2::RateCards::RatesController do
       end
     end
 
+    context "with cursor pagination parameters" do
+      subject { get_with_token(organization, "/api/v2/rate_cards/#{rate_card.code}/rates", {limit: 1, after: "x"}) }
+
+      before { create(:rate_card_rate, organization:, rate_card:, effective_from: rate.effective_from + 1.day) }
+
+      it "ignores them and returns every rate, since only page and per_page are refused" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rates].count).to eq(2)
+      end
+    end
+
     context "with offset pagination parameters and an unknown rate card" do
       subject { get_with_token(organization, "/api/v2/rate_cards/unknown/rates", {page: 2}) }
 

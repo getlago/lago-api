@@ -36,6 +36,30 @@ RSpec.describe Entitlement::Feature do
     end
   end
 
+  describe "#ordered_privileges" do
+    subject(:feature) { create(:feature) }
+
+    let(:other_feature) { create(:feature, organization: feature.organization) }
+    let(:newest) { create(:privilege, feature:, created_at: 1.day.ago) }
+    let(:oldest) { create(:privilege, feature:, created_at: 3.days.ago) }
+    let(:same_time_ids) { Array.new(2) { SecureRandom.uuid }.sort }
+    let(:tie_high) { create(:privilege, feature:, id: same_time_ids.last, created_at: 2.days.ago.beginning_of_minute) }
+    let(:tie_low) { create(:privilege, feature:, id: same_time_ids.first, created_at: tie_high.created_at) }
+
+    before do
+      newest
+      oldest
+      tie_high
+      tie_low
+      create(:privilege, feature: other_feature)
+      create(:privilege, feature:, deleted_at: Time.current)
+    end
+
+    it "returns the kept privileges of the feature by creation, then by id" do
+      expect(feature.ordered_privileges).to eq([oldest, tie_low, tie_high, newest])
+    end
+  end
+
   describe "#subscriptions_count" do
     context "when subscriptions_count is not preloaded" do
       it "calculates the number of subscriptions" do

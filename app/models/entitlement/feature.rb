@@ -25,6 +25,11 @@ module Entitlement
       %w[code name description]
     end
 
+    # Creation order, as the association has none, for the v2 privileges list.
+    def ordered_privileges
+      privileges.reorder(:created_at, :id)
+    end
+
     def subscriptions_count
       return @subscriptions_count if defined?(@subscriptions_count)
 
