@@ -1197,6 +1197,33 @@ RSpec.describe Subscription do
     end
   end
 
+  describe "#ended_without_next_subscription?" do
+    subject { subscription.ended_without_next_subscription? }
+
+    let(:subscription) { build(:subscription, :terminated, next_subscriptions:, organization: plan.organization) }
+    let(:next_subscriptions) { [] }
+
+    it { is_expected.to be(true) }
+
+    context "with a canceled next subscription" do
+      let(:next_subscriptions) { [build(:subscription, :canceled, organization: plan.organization)] }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with a pending next subscription" do
+      let(:next_subscriptions) { [build(:subscription, :pending, organization: plan.organization)] }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the subscription is active" do
+      let(:subscription) { build(:subscription, next_subscriptions:, organization: plan.organization) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "#has_progressive_billing?" do
     let(:plan) { create(:plan) }
 

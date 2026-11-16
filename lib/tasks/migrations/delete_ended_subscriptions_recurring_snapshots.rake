@@ -4,8 +4,8 @@
 #
 # Only a subscription and the one following it (an upgrade or a downgrade) read its snapshots, and the
 # pruning of older periods runs on the next write of the same subscription, which never comes after a
-# termination. Fees::ChargeService deletes them on the termination invoice from now on: this task removes
-# the rows written before. A terminated subscription never gets a next one later, so the task is idempotent.
+# termination. The termination invoice or Subscriptions::TerminateService deletes them from now on: this task
+# removes the rows written before. A terminated subscription never gets a next one later, so the task is idempotent.
 #
 # Usage:
 #   # 1. Preview for a single organization (no writes):
@@ -44,17 +44,18 @@ class DeleteEndedSubscriptionsRecurringSnapshots
 
   def subscriptions
     snapshots = RecurringAggregationSnapshot.all
-    snapshots = snapshots.where(organization_id:) if organization_id
-
-    scope = Subscription.terminated
-      .where(id: snapshots.select(:subscription_id))
-      .where.not(id: Subscription.where.not(status: :canceled).where.not(previous_subscription_id: nil).select(:previous_subscription_id))
+    next_subscriptions = Subscription.where.not(status: :canceled).where.not(previous_subscription_id: nil)
+    subscriptions = Subscription.terminated
 
     if organization_id
-      scope.where(organization_id:)
-    else
-      scope
+      snapshots = snapshots.where(organization_id:)
+      next_subscriptions = next_subscriptions.where(organization_id:)
+      subscriptions = subscriptions.where(organization_id:)
     end
+
+    subscriptions
+      .where(id: snapshots.select(:subscription_id))
+      .where.not(id: next_subscriptions.select(:previous_subscription_id))
   end
 end
 

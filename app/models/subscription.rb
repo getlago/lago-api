@@ -227,6 +227,11 @@ class Subscription < ApplicationRecord
     next_subscriptions.reject(&:canceled?).max_by(&:created_at)
   end
 
+  # Terminated without an upgrade or a downgrade to follow it
+  def ended_without_next_subscription?
+    terminated? && next_subscription.nil?
+  end
+
   def already_billed?
     fees.subscription.any?
   end

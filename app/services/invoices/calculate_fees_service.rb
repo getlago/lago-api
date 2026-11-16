@@ -44,6 +44,9 @@ module Invoices
           create_fixed_charge_fees(subscription, boundaries) if should_create_fixed_charge_fees?(subscription, boundaries)
           create_recurring_non_invoiceable_fees(subscription, boundaries) if should_create_recurring_non_invoiceable_fees?(subscription)
           create_minimum_commitment_true_up_fee(invoice_subscription) if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
+
+          # Read by the fees above, then by nothing: only the subscription and the one following it read them
+          RecurringAggregationSnapshots::DeleteService.call!(subscription:) if subscription.ended_without_next_subscription?
         end
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)

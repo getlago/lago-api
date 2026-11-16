@@ -635,14 +635,9 @@ module Fees
       return false unless options.snapshot_backfill? || billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
 
       # A progressive billing invoice stops mid-period, its units do not close the period
-      !invoice&.progressive_billing? && snapshot_eligible?(selected_metered_item) && !ended_without_next_subscription?
-    end
-
-    # Only the subscription and the one following it (an upgrade or a downgrade) read its snapshots
-    def ended_without_next_subscription?
-      return @ended_without_next_subscription if defined?(@ended_without_next_subscription)
-
-      @ended_without_next_subscription = subscription.terminated? && subscription.next_subscription.nil?
+      # Only the subscription and the one following it read its snapshots: the invoice deletes them instead
+      !invoice&.progressive_billing? && snapshot_eligible?(selected_metered_item) &&
+        !subscription.ended_without_next_subscription?
     end
 
     def snapshot_eligible?(selected_metered_item)
@@ -679,27 +674,17 @@ module Fees
       @recurring_snapshots ||= []
     end
 
-    # All buckets or none: the marker of the default bucket stands for every filter of the charge.
-    # The snapshots of a subscription ended without a next one are deleted, as nothing reads them anymore.
+    # All buckets or none: the marker of the default bucket stands for every filter of the charge
     def persist_recurring_snapshots
-      if delete_recurring_snapshots?
-        RecurringAggregationSnapshots::DeleteService.call!(subscription:, charge: metered_item.charge)
-      elsif recurring_snapshots.any? && recurring_snapshots.size == metered_item.pricing_buckets.size
-        RecurringAggregationSnapshots::PersistService.call!(
-          subscription:,
-          charge: metered_item.charge,
-          to_datetime: metered_item.boundaries.charges_to_datetime,
-          watermark: @recurring_watermark,
-          buckets: recurring_snapshots
-        )
-      end
-    end
+      return if recurring_snapshots.empty? || recurring_snapshots.size != metered_item.pricing_buckets.size
 
-    def delete_recurring_snapshots?
-      !options.snapshot_backfill? &&
-        metered_item.billable_metric.recurring? &&
-        snapshot_eligible?(metered_item) &&
-        ended_without_next_subscription?
+      RecurringAggregationSnapshots::PersistService.call!(
+        subscription:,
+        charge: metered_item.charge,
+        to_datetime: metered_item.boundaries.charges_to_datetime,
+        watermark: @recurring_watermark,
+        buckets: recurring_snapshots
+      )
     end
 
     def grouped_by_keys(selected_metered_item:)

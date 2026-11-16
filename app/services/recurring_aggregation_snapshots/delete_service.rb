@@ -4,9 +4,8 @@ module RecurringAggregationSnapshots
   class DeleteService < BaseService
     Result = BaseResult
 
-    def initialize(subscription:, charge:)
+    def initialize(subscription:)
       @subscription = subscription
-      @charge = charge
 
       super
     end
@@ -14,17 +13,13 @@ module RecurringAggregationSnapshots
     # Only the subscription and the one following it read its snapshots: once it ends without a next
     # one, nothing reads them, and the pruning of a later write never comes.
     def call
-      RecurringAggregationSnapshot.where(
-        organization_id: subscription.organization_id,
-        subscription_id: subscription.id,
-        charge_id: charge.id
-      ).delete_all
+      RecurringAggregationSnapshot.where(organization_id: subscription.organization_id, subscription_id: subscription.id).delete_all
 
       result
     end
 
     private
 
-    attr_reader :subscription, :charge
+    attr_reader :subscription
   end
 end

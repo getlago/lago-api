@@ -663,6 +663,45 @@ RSpec.describe Invoices::CalculateFeesService do
       end
     end
 
+    context "with recurring snapshots" do
+      let(:timestamp) { Time.zone.parse("2022-03-07") }
+      let(:started_at) { Time.zone.parse("2021-06-06") }
+      let(:snapshots) { RecurringAggregationSnapshot.where(subscription:) }
+
+      before { create(:recurring_aggregation_snapshot, subscription:, charge:) }
+
+      it "keeps them for the next period" do
+        expect(invoice_service.call).to be_success
+
+        expect(snapshots.count).to eq(1)
+      end
+
+      context "when the subscription is terminated without a next subscription" do
+        let(:status) { :terminated }
+        let(:terminated_at) { timestamp - 1.day }
+
+        it "deletes them once its fees are computed" do
+          expect(invoice_service.call).to be_success
+
+          expect(invoice.fees.charge.count).to eq(1)
+          expect(snapshots).to be_empty
+        end
+      end
+
+      context "when the subscription is terminated with a next subscription" do
+        let(:status) { :terminated }
+        let(:terminated_at) { timestamp - 1.day }
+
+        before { create(:subscription, organization:, customer:, plan:, previous_subscription: subscription) }
+
+        it "keeps them for the next subscription" do
+          expect(invoice_service.call).to be_success
+
+          expect(snapshots.count).to eq(1)
+        end
+      end
+    end
+
     context "when billed for the first time" do
       let(:timestamp) { Time.zone.now.beginning_of_month }
       let(:started_at) { timestamp - 3.days }

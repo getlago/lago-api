@@ -4798,39 +4798,12 @@ RSpec.describe Fees::ChargeService, :premium do
         create(:subscription, :terminated, organization:, customer:,
           started_at: Time.zone.parse("2022-03-15"), terminated_at: Time.zone.parse("2022-03-31T12:00:00"))
       end
-      let(:other_charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
-      let!(:other_charge_snapshot) { create(:recurring_aggregation_snapshot, subscription:, charge: other_charge) }
 
-      before do
-        create(:recurring_aggregation_snapshot, subscription:, charge:, to_datetime: Time.zone.parse("2022-02-28T23:59:59"), units: 3)
-      end
-
-      it "bills the units, writes no snapshot and deletes the charge's earlier ones" do
+      it "bills the units without persisting snapshots, which nothing would read" do
         result = charge_subscription_service.call
 
         expect(result.fees.sole).to have_attributes(units: 15, events_count: 2)
         expect(snapshots).to be_empty
-        expect(RecurringAggregationSnapshot.all).to eq([other_charge_snapshot])
-      end
-
-      context "without the recurring_aggregation_snapshots feature flag" do
-        let(:organization) { create_default(:organization) }
-
-        it "still deletes the charge's snapshots" do
-          charge_subscription_service.call
-
-          expect(snapshots).to be_empty
-        end
-      end
-
-      context "with an invoice preview" do
-        let(:context) { :invoice_preview }
-
-        it "keeps the snapshots" do
-          charge_subscription_service.call
-
-          expect(snapshots.sole.units).to eq(3)
-        end
       end
 
       context "with a next subscription" do
@@ -4839,10 +4812,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "persists the snapshots, which the next subscription reads" do
           charge_subscription_service.call
 
-          expect(snapshots.map { [it.to_datetime, it.units] }).to match_array([
-            [Time.zone.parse("2022-02-28T23:59:59"), 3],
-            [boundaries.charges_to_datetime.floor(6), 15]
-          ])
+          expect(snapshots.sole).to have_attributes(to_datetime: boundaries.charges_to_datetime.floor(6), units: 15)
         end
       end
 
@@ -4854,7 +4824,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "persists the snapshots" do
           charge_subscription_service.call
 
-          expect(snapshots.count).to eq(2)
+          expect(snapshots.sole.units).to eq(15)
         end
       end
 
@@ -4863,7 +4833,7 @@ RSpec.describe Fees::ChargeService, :premium do
           create(:subscription, :canceled, organization:, customer:, previous_subscription: subscription, plan: subscription.plan)
         end
 
-        it "deletes the charge's snapshots" do
+        it "persists no snapshot" do
           charge_subscription_service.call
 
           expect(snapshots).to be_empty
