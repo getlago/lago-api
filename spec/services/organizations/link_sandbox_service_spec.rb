@@ -27,8 +27,8 @@ RSpec.describe Organizations::LinkSandboxService do
     expect(result.sandbox_organization).to have_attributes(environment: "sandbox", premium_integrations: %w[okta])
   end
 
-  it "keeps the target's members that production also has, with production's roles" do
-    create(:membership, user: member, organization: target, roles: %i[finance])
+  it "keeps the target's members that production also has, with the same roles" do
+    create(:membership, user: member, organization: target, roles: %i[admin])
 
     expect(result).to be_success
     expect(target.memberships.active.sole.roles.map(&:code)).to eq(%w[admin])
@@ -128,6 +128,19 @@ RSpec.describe Organizations::LinkSandboxService do
       create(:membership, organization: target)
 
       expect(refusal).to eq("sandbox_has_other_members")
+    end
+
+    it "refuses a target whose member holds other roles than on production" do
+      create(:membership, user: member, organization: target, roles: %i[finance])
+
+      expect(refusal).to eq("sandbox_has_other_member_roles")
+      expect(target.memberships.active.sole.roles.map(&:code)).to eq(%w[finance])
+    end
+
+    it "refuses a target whose member holds a role more than on production" do
+      create(:membership, user: member, organization: target, roles: %i[admin finance])
+
+      expect(refusal).to eq("sandbox_has_other_member_roles")
     end
 
     it "refuses a target with a custom role production lacks" do
@@ -258,5 +271,6 @@ RSpec.describe Organizations::LinkSandboxService do
       expect(customer).to be_persisted
       expect(Timeout.timeout(10) { link.value }).to be_success
     end
+
   end
 end
