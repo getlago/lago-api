@@ -9,7 +9,9 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
   let(:organization) { create(:organization) }
 
   # A QuickBooks row is a NetSuite row whose type is rewritten: the type has no model yet,
-  # so the row is never loaded again and only its id is used.
+  # so the row is never loaded again and only its id is used. The link of the customer gets
+  # a type outside accounting_kind the same way.
+  let(:quickbooks_customer_type) { "IntegrationCustomers::QuickbooksCustomer" }
   let(:integration_a) { create(:netsuite_integration, organization:) }
   let(:integration_b) { create(:netsuite_integration, organization:) }
   let(:customer_a) { create(:customer, organization:) }
@@ -49,20 +51,14 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
     [admitted, refused]
   end
 
-  # The cache metadata swaps Rails.cache and nothing puts the null store of the test env back.
-  around do |example|
-    cache = Rails.cache
-    example.run
-  ensure
-    Rails.cache = cache
-  end
-
   before do
     clear_throttle_keys
+    # The resolution of the last limit stays on the thread: each example starts without one.
+    Thread.current[IntegrationThrottleKey::THREAD_KEY] = nil
 
-    create(:netsuite_customer, integration: integration_a, customer: customer_a)
-    create(:netsuite_customer, integration: integration_b, customer: customer_b)
-    [integration_a, integration_b].each do |integration|
+    {integration_a => customer_a, integration_b => customer_b}.each do |integration, customer|
+      create(:netsuite_customer, integration:, customer:)
+        .update_column(:type, quickbooks_customer_type) # rubocop:disable Rails/SkipsModelValidations
       integration.update_column(:type, quickbooks_type) # rubocop:disable Rails/SkipsModelValidations
     end
   end
@@ -128,6 +124,7 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
       expect(refused.size).to eq(1)
 
       Rails.cache.clear
+      Thread.current[IntegrationThrottleKey::THREAD_KEY] = nil
       strategy.finalize!(admitted.first, *args_a)
 
       expect(jids_in(key_a)).to match_array(admitted.drop(1))
@@ -136,6 +133,33 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
       readmitted, refused_again = fetch(2, args_a)
       expect(readmitted.size).to eq(1)
       expect(refused_again.size).to eq(1)
+    end
+  end
+
+  describe "a resolution that fails after the limit was returned" do
+    before do
+      args_a
+      calls = 0
+      allow(Rails.cache).to receive(:fetch).and_wrap_original do |original, *fetch_args, **options, &block|
+        calls += 1
+        raise StandardError if calls > 1
+
+        original.call(*fetch_args, **options, &block)
+      end
+    end
+
+    it "counts the job under its connection and writes no key ending in :none" do
+      admitted, refused = fetch(1, args_a)
+
+      expect(admitted.size).to eq(1)
+      expect(refused).to be_empty
+      expect(throttle_keys).to contain_exactly(shared_key, key_a)
+      expect(throttle_keys.grep(/:none\z/)).to be_empty
+
+      strategy.finalize!(admitted.first, *args_a)
+
+      expect(jids_in(key_a)).to be_empty
+      expect(jids_in(shared_key)).to be_empty
     end
   end
 

@@ -9,6 +9,9 @@ require "sidekiq/throttled/web"
 # All integration jobs share a limit of 5 concurrent API calls.
 # The first rule caps one QuickBooks connection at 3 of them and sets no limit for the other providers.
 # It comes first because a job refused by a later rule keeps the slot it took in an earlier one.
+# The lambdas make the entry dynamic, so it no longer appears in the "Throttled" tab of Sidekiq Web.
+# The shared pool is read with `ZCARD throttled:concurrency_limit:concurrency.v2`.
+# The per-connection sets (same key, `:<sha256>` suffix) expire after 900 s.
 Sidekiq::Throttled::Registry.add(
   :concurrency_limit,
   concurrency: [
