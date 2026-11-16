@@ -686,6 +686,28 @@ RSpec.describe Invoices::CalculateFeesService do
           expect(invoice.fees.charge.count).to eq(1)
           expect(snapshots).to be_empty
         end
+
+        context "when the invoice is a draft of the grace period" do
+          let(:invoice) do
+            create(:invoice, :draft, organization:, currency: "EUR", issuing_date: Time.zone.at(timestamp).to_date, customer:)
+          end
+
+          it "keeps them for the refreshes of the draft" do
+            expect(invoice_service.call).to be_success
+
+            expect(snapshots.count).to eq(1)
+          end
+
+          context "when the draft is finalized" do
+            let(:context) { :finalize }
+
+            it "deletes them" do
+              expect(invoice_service.call).to be_success
+
+              expect(snapshots).to be_empty
+            end
+          end
+        end
       end
 
       context "when the subscription is terminated with a next subscription" do

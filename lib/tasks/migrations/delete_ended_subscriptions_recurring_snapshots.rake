@@ -44,18 +44,21 @@ class DeleteEndedSubscriptionsRecurringSnapshots
 
   def subscriptions
     snapshots = RecurringAggregationSnapshot.all
-    next_subscriptions = Subscription.where.not(status: :canceled).where.not(previous_subscription_id: nil)
     subscriptions = Subscription.terminated
 
     if organization_id
       snapshots = snapshots.where(organization_id:)
-      next_subscriptions = next_subscriptions.where(organization_id:)
       subscriptions = subscriptions.where(organization_id:)
     end
 
+    # Correlated, so the (previous_subscription_id, status) index serves each subscription
+    next_subscriptions = Subscription.unscoped.from("subscriptions next_subscriptions")
+      .where("next_subscriptions.previous_subscription_id = subscriptions.id")
+      .where.not("next_subscriptions.status" => Subscription.statuses[:canceled])
+
     subscriptions
       .where(id: snapshots.select(:subscription_id))
-      .where.not(id: next_subscriptions.select(:previous_subscription_id))
+      .where.not(next_subscriptions.arel.exists)
   end
 end
 
