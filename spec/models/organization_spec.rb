@@ -33,6 +33,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:contracts)
       expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
       expect(subject).to have_many(:credit_notes)
+      expect(subject).to have_many(:billing_operations)
       expect(subject).to have_many(:invoices)
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:applied_coupons)
