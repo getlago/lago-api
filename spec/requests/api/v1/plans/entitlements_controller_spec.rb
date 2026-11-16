@@ -391,6 +391,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController do
 
           expect(response).to have_http_status(:unprocessable_entity)
           expect(json[:error_details]).to eq(feature: ["value_already_exist"])
+          expect(plan.entitlements.where(feature: new_feature)).to be_empty
         end
       end
 

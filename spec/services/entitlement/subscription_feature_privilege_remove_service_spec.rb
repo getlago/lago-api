@@ -118,27 +118,26 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
     end
 
     context "when another connection holds the subscription lock", transaction: false do
-      let(:subscription_entitlement) { create(:entitlement, feature:, subscription:, plan: nil) }
-      let(:entitlement_value) { create(:entitlement_value, entitlement: subscription_entitlement, privilege:, value: "10") }
       let(:plan_entitlement) { create(:entitlement, feature:, plan:) }
       let(:locked) { Queue.new }
       let(:release) { Queue.new }
 
       before do
-        entitlement_value
+        subscription
+        privilege
         plan_entitlement
       end
 
       # Frees the lock holder left waiting by a failed expectation.
-      after { release << true }
+      after { release << -> {} }
 
-      it "waits for the lock, then removes the privilege" do
+      it "waits for the lock, then removes the privilege and the value written under it" do
         holder = Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
             ActiveRecord::Base.transaction do
               Subscription.lock("FOR NO KEY UPDATE").find(subscription.id)
               locked << true
-              release.pop
+              release.pop.call
             end
           end
         end
@@ -151,11 +150,15 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
         end
         expect(remover.join(0.5)).to be_nil
 
-        release << true
+        # The holder commits an entitlement value that the remover can only see once it has the lock.
+        release << lambda {
+          sub_entitlement = create(:entitlement, organization:, feature:, subscription:, plan: nil)
+          create(:entitlement_value, entitlement: sub_entitlement, privilege:, value: "10")
+        }
         holder.join
 
         expect(remover.value).to be_success
-        expect(entitlement_value.reload.deleted_at).to be_present
+        expect(Entitlement::EntitlementValue.unscoped.where(entitlement_privilege_id: privilege.id).sole.deleted_at).to be_present
         expect(Entitlement::SubscriptionFeatureRemoval.where(subscription:, privilege:).count).to eq(1)
       end
     end

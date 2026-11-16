@@ -180,6 +180,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages).to eq(feature: ["value_already_exist"])
+        expect(plan.entitlements.where(feature: new_feature)).to be_empty
         expect(SendWebhookJob).not_to have_been_enqueued
         expect(Utils::ActivityLog).not_to have_produced("plan.updated")
       end
@@ -198,6 +199,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "returns the validation error of a taken privilege" do
         expect(result).not_to be_success
         expect(result.error.messages).to eq(privilege: ["value_already_exist"])
+        expect(Entitlement::EntitlementValue.where(privilege: privilege2)).to be_empty
         expect(SendWebhookJob).not_to have_been_enqueued
       end
     end

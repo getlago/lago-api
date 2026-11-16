@@ -159,26 +159,25 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
     end
 
     context "when another connection holds the subscription lock", transaction: false do
-      let(:subscription_entitlement) { create(:entitlement, feature:, subscription:, plan: nil) }
       let(:plan_entitlement) { create(:entitlement, feature:, plan:) }
       let(:locked) { Queue.new }
       let(:release) { Queue.new }
 
       before do
-        subscription_entitlement
+        subscription
         plan_entitlement
       end
 
       # Frees the lock holder left waiting by a failed expectation.
-      after { release << true }
+      after { release << -> {} }
 
-      it "waits for the lock, then removes the feature" do
+      it "waits for the lock, then removes the feature and the entitlement written under it" do
         holder = Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
             ActiveRecord::Base.transaction do
               Subscription.lock("FOR NO KEY UPDATE").find(subscription.id)
               locked << true
-              release.pop
+              release.pop.call
             end
           end
         end
@@ -191,11 +190,12 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
         end
         expect(remover.join(0.5)).to be_nil
 
-        release << true
+        # The holder commits an entitlement that the remover can only see once it has the lock.
+        release << -> { create(:entitlement, organization:, feature:, subscription:, plan: nil) }
         holder.join
 
         expect(remover.value).to be_success
-        expect(subscription_entitlement.reload).to be_discarded
+        expect(Entitlement::Entitlement.unscoped.where(subscription_id: subscription.id, entitlement_feature_id: feature.id).sole).to be_discarded
         expect(Entitlement::SubscriptionFeatureRemoval.where(subscription:, feature:).count).to eq(1)
       end
     end

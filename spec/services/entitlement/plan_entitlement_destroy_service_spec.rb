@@ -115,7 +115,7 @@ RSpec.describe Entitlement::PlanEntitlementDestroyService do
         expect(Entitlement::EntitlementValue.where(id: entitlement_value.id)).not_to exist
       end
 
-      it "answers success to two concurrent deletes of one entitlement" do
+      it "deletes once and answers not found to the second of two concurrent deletes" do
         holder = hold_plan_lock(plan.id)
         locked.pop
 
@@ -124,8 +124,14 @@ RSpec.describe Entitlement::PlanEntitlementDestroyService do
 
         release << ->(_) {}
         holder.join
-        expect(destroyers.map(&:value)).to all(be_success)
-        expect(Entitlement::Entitlement.where(id: entitlement.id)).not_to exist
+        results = destroyers.map(&:value)
+
+        expect(results.count(&:success?)).to eq(1)
+        failure = results.find(&:failure?)
+        expect(failure.error).to be_a(BaseService::NotFoundFailure)
+        expect(failure.error.resource).to eq("entitlement")
+        expect(Entitlement::Entitlement.unscoped.where(id: entitlement.id).pick(:deleted_at)).to be_present
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", plan).once
       end
 
       it "refuses a delete on a plan discarded while it waits for the lock" do
@@ -152,8 +158,14 @@ RSpec.describe Entitlement::PlanEntitlementDestroyService do
         entitlement.discard!
       end
 
-      it "still soft deletes the entitlement values" do
-        expect { result }.to raise_error(Discard::RecordNotDiscarded)
+      it "returns a not found failure and keeps the first deletion" do
+        deleted_at = entitlement.reload.deleted_at
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("entitlement")
+        expect(entitlement.reload.deleted_at).to eq(deleted_at)
+        expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
   end

@@ -23,9 +23,12 @@ module Entitlement
       entitlement_value = find_entitlement_value
       return result.not_found_failure!(resource: "privilege") unless entitlement_value
 
-      # NOTE: The value is read before the lock: a concurrent delete of the same value still succeeds.
       ActiveRecord::Base.transaction do
         lock_plan!(entitlement.plan)
+
+        # The value was loaded before the lock: a concurrent delete may have discarded it since.
+        result.not_found_failure!(resource: "privilege").raise_if_error! if entitlement_value.reload.discarded?
+
         entitlement_value.discard!
       end
 

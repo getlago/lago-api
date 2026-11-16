@@ -133,7 +133,7 @@ RSpec.describe Entitlement::PlanEntitlementPrivilegeDestroyService do
         expect(Entitlement::EntitlementValue.where(entitlement:).pluck(:id)).to eq([entitlement_value2.id])
       end
 
-      it "answers success to two concurrent deletes of one privilege value" do
+      it "deletes once and answers not found to the second of two concurrent deletes" do
         holder = hold_plan_lock(plan.id)
         locked.pop
 
@@ -142,8 +142,14 @@ RSpec.describe Entitlement::PlanEntitlementPrivilegeDestroyService do
 
         release << ->(_) {}
         holder.join
-        expect(destroyers.map(&:value)).to all(be_success)
+        results = destroyers.map(&:value)
+
+        expect(results.count(&:success?)).to eq(1)
+        failure = results.find(&:failure?)
+        expect(failure.error).to be_a(BaseService::NotFoundFailure)
+        expect(failure.error.resource).to eq("privilege")
         expect(Entitlement::EntitlementValue.where(entitlement:).pluck(:id)).to eq([entitlement_value2.id])
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", plan).once
       end
 
       it "refuses a delete on a plan discarded while it waits for the lock" do
