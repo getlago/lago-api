@@ -99,6 +99,67 @@ RSpec.describe IntegrationThrottleKey do
       end
     end
 
+    context "when the customer is linked to two QuickBooks integrations" do
+      let(:integration_ids) { [SecureRandom.uuid, SecureRandom.uuid].sort }
+      # The first link created points to the highest id, so the insertion order is not the answer.
+      let(:integration) { create(:netsuite_integration, organization:, id: integration_ids.last) }
+      let(:lowest_integration) { create(:xero_integration, organization:, id: integration_ids.first) }
+
+      before do
+        create(:xero_customer, integration: lowest_integration, customer:)
+        lowest_integration.update_column(:type, quickbooks_type) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      it "returns the digest of the lowest integration id on every call" do
+        expected = Digest::SHA256.hexdigest(integration_ids.first)
+
+        3.times { expect(described_class.key_suffix(*invoice_args)).to eq(expected) }
+        expect(resolve(credit_note_args)).to eq([3, expected])
+        expect(resolve(payment_args)).to eq([3, expected])
+      end
+    end
+
+    context "when the payload holds an integration entry and a record entry" do
+      let(:unlinked_customer) { create(:customer, organization:) }
+      let(:unlinked_invoice) { create(:invoice, customer: unlinked_customer, organization:) }
+      let(:args) do
+        [{
+          "invoice" => {"_aj_globalid" => unlinked_invoice.to_gid.to_s},
+          "integration" => {"_aj_globalid" => integration_gid}
+        }]
+      end
+
+      it "resolves from the integration entry without a query" do
+        args
+        resolved = nil
+
+        expect(capture_sql { resolved = resolve(args) }).to be_empty
+        expect(resolved).to eq([3, quickbooks_suffix])
+      end
+    end
+
+    context "when the payload holds several record entries" do
+      let(:unlinked_customer) { create(:customer, organization:) }
+      let(:unlinked_invoice) { create(:invoice, customer: unlinked_customer, organization:) }
+      let(:unlinked_credit_note) { create(:credit_note, customer: unlinked_customer, invoice: unlinked_invoice) }
+      let(:linked) { {"_aj_globalid" => invoice.to_gid.to_s} }
+      let(:linked_credit_note) { {"_aj_globalid" => credit_note.to_gid.to_s} }
+      let(:linked_payment) { {"_aj_globalid" => payment.to_gid.to_s} }
+      let(:unlinked) { {"_aj_globalid" => unlinked_invoice.to_gid.to_s} }
+      let(:unlinked_credit_note_entry) { {"_aj_globalid" => unlinked_credit_note.to_gid.to_s} }
+
+      it "resolves from the invoice first, then the credit note, then the payment" do
+        expect(resolve([{"payment" => linked_payment, "credit_note" => unlinked_credit_note_entry, "invoice" => linked}]))
+          .to eq([3, quickbooks_suffix])
+        expect(resolve([{"payment" => linked_payment, "credit_note" => linked_credit_note, "invoice" => unlinked}]))
+          .to eq([nil, described_class::NO_CONNECTION_SUFFIX])
+        expect(resolve([{"payment" => linked_payment, "credit_note" => unlinked_credit_note_entry}]))
+          .to eq([nil, described_class::NO_CONNECTION_SUFFIX])
+        expect(resolve([{"payment" => unlinked, "credit_note" => linked_credit_note}]))
+          .to eq([3, quickbooks_suffix])
+      end
+    end
+
     context "when the record is of a class outside the allow-list" do
       let(:subscription) { create(:subscription, customer:) }
       let(:args) { [{"invoice" => {"_aj_globalid" => subscription.to_gid.to_s}}] }
