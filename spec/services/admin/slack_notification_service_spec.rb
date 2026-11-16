@@ -94,6 +94,31 @@ RSpec.describe Admin::SlackNotificationService do
         end
       end
 
+      context "when another rollback of the same batch was mirrored after this one" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :rollback, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Rolling back the onboarding POC", batch_id:)
+        end
+
+        before do
+          audit_log
+          sandbox = create(:organization, :sandbox, production_organization: organization)
+          create(:cs_admin_audit_log, organization:, action: :rollback, feature_key: "xero",
+            actor_email: "admin@lago.com", reason: "Rolling back the onboarding POC", batch_id:)
+          create(:cs_admin_audit_log, organization: sandbox, action: :toggle_off, feature_key: "xero",
+            actor_email: "admin@lago.com", reason: "Rolling back the onboarding POC", batch_id:)
+        end
+
+        it "does not say it was mirrored" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("mirrored")
+          }).not_to have_been_made
+        end
+      end
+
       context "when action is toggle_off" do
         let(:audit_log) do
           create(:cs_admin_audit_log,
