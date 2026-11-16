@@ -29,8 +29,11 @@ RSpec.describe Admin::LinkSandboxOrganizationService do
   context "with a reason that is too short" do
     let(:reason) { "short" }
 
-    it "rolls the link back" do
+    before { allow(Organizations::LinkSandboxService).to receive(:call!).and_call_original }
+
+    it "refuses it before linking anything" do
       expect(result.error.messages).to eq(reason: ["value_is_too_short"])
+      expect(Organizations::LinkSandboxService).not_to have_received(:call!)
       expect(target.reload).to be_production
     end
   end

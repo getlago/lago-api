@@ -14,6 +14,11 @@ module Admin
     end
 
     def call
+      # Checked before the link takes its locks and copies anything, as the rows are written last.
+      if production_organization && sandbox_organization
+        audit_log(sandbox_organization, production_organization.id, nil).validate!
+      end
+
       ActiveRecord::Base.transaction do
         link = ::Organizations::LinkSandboxService.call!(production_organization:, sandbox_organization:, actor:)
         create_audit_logs!(link.organization, link.sandbox_organization)
@@ -36,14 +41,15 @@ module Admin
     # Two rows, so the link shows in the history of both organizations.
     def create_audit_logs!(production, sandbox)
       batch_id = SecureRandom.uuid
-      sandbox_row = audit_log!(sandbox, production.id, batch_id)
-      audit_log!(production, sandbox.id, batch_id)
+      sandbox_row = audit_log(sandbox, production.id, batch_id)
+      sandbox_row.save!
+      audit_log(production, sandbox.id, batch_id).save!
 
       after_commit { Admin::SlackNotificationJob.perform_later(sandbox_row.id) }
     end
 
-    def audit_log!(organization, feature_key, batch_id)
-      CsAdminAuditLog.create!(
+    def audit_log(organization, feature_key, batch_id)
+      CsAdminAuditLog.new(
         actor_user: actor,
         actor_email: actor.email,
         action: :sandbox_linked,
