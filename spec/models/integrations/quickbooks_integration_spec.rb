@@ -94,6 +94,30 @@ RSpec.describe Integrations::QuickbooksIntegration do
     end
   end
 
+  describe "#sandbox?" do
+    [true, "true"].each do |value|
+      it "returns true when sandbox is #{value.inspect}" do
+        quickbooks_integration.sandbox = value
+
+        expect(quickbooks_integration.sandbox?).to eq(true)
+      end
+    end
+
+    [false, "false", nil, "False", "no", 1].each do |value|
+      it "returns false when sandbox is #{value.inspect}" do
+        quickbooks_integration.sandbox = value
+
+        expect(quickbooks_integration.sandbox?).to eq(false)
+      end
+    end
+
+    it "returns false when sandbox is absent from the settings" do
+      quickbooks_integration.settings = {realm_id: "1234567890"}
+
+      expect(quickbooks_integration.sandbox?).to eq(false)
+    end
+  end
+
   describe "#external_id_key" do
     it "returns id" do
       expect(quickbooks_integration.external_id_key).to eq("id")

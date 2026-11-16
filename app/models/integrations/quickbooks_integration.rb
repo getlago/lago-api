@@ -6,6 +6,11 @@ module Integrations
 
     settings_accessors :sync_invoices, :sync_credit_notes, :sync_payments, :realm_id, :sandbox
     secrets_accessors :connection_id
+
+    # The setting is stored uncast: only true and "true" select the sandbox
+    def sandbox?
+      sandbox.to_s == "true"
+    end
   end
 end
 

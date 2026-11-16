@@ -71,8 +71,7 @@ module Integrations
         when "Integrations::HubspotIntegration"
           "hubspot"
         when "Integrations::QuickbooksIntegration"
-          # The sandbox setting is stored uncast, so the string "false" must not select the sandbox
-          ActiveModel::Type::Boolean.new.cast(integration.sandbox) ? "quickbooks-sandbox" : "quickbooks"
+          integration.sandbox? ? "quickbooks-sandbox" : "quickbooks"
         end
       end
 
