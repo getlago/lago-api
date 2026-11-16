@@ -1,21 +1,11 @@
 # frozen_string_literal: true
 
 class RecurringAggregationSnapshot < ApplicationRecord
-  # An event ingested just before the aggregation may not be readable yet, so the next period counts it.
-  # Same margin as the other enriched_at readers (ChargeFiltersScan::IncrementalCache::INGESTION_MARGIN).
-  WATERMARK_LAG = 5.minutes
+  include RecurringAggregationSnapshotRecord
 
-  AGGREGATION_TYPES = %w[sum_agg weighted_sum_agg].freeze
-
-  belongs_to :organization
   belongs_to :subscription
   belongs_to :charge, -> { with_discarded }
   belongs_to :charge_filter, -> { with_discarded }, optional: true
-  belongs_to :billable_metric, -> { with_discarded }
-
-  validates :to_datetime, presence: true
-  validates :watermark, presence: true
-  validates :units, numericality: true
 
   # Compared to a scalar subquery: the period index then serves to_datetime, which an IN subquery does not
   scope :of_period, ->(to_datetime_query) { where(arel_table[:to_datetime].eq(Arel::Nodes::Grouping.new(to_datetime_query.arel))) }
