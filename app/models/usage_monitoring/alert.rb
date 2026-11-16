@@ -46,7 +46,8 @@ module UsageMonitoring
 
     has_many :all_triggered_alerts,
       foreign_key: :usage_monitoring_alert_id,
-      class_name: "UsageMonitoring::TriggeredAlert"
+      class_name: "UsageMonitoring::TriggeredAlert",
+      inverse_of: :alert
 
     validates :alert_type, presence: true, inclusion: {in: STI_MAPPING.keys}
     validates :code, presence: true
