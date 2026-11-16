@@ -111,6 +111,30 @@ RSpec.describe Admin::SlackNotificationService do
         end
       end
 
+      context "when a setting is set on a new pair" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :org_created, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "New customer", batch_id:)
+        end
+
+        before do
+          audit_log
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME Sandbox")
+          create(:cs_admin_audit_log, organization: sandbox, action: :org_created, feature_type: :organization,
+            feature_key: "organization", before_value: nil, actor_email: "admin@lago.com", reason: "New customer", batch_id:)
+        end
+
+        it "names the sandbox created with it" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"]
+              .start_with?("[✅ netsuite set on new org] on *ACME Corp* (mirrored to *ACME Sandbox*) by admin@lago.com")
+          }).to have_been_made.once
+        end
+      end
+
       context "when another rollback of the same batch was mirrored after this one" do
         let(:batch_id) { SecureRandom.uuid }
         let(:audit_log) do
