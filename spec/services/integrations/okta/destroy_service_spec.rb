@@ -85,6 +85,18 @@ RSpec.describe Integrations::Okta::DestroyService do
         expect(destroy_service.call).to be_success
         expect(sandbox.reload.authentication_methods).to eq(["email_password"])
       end
+
+      context "when the sandbox fails a validation" do
+        before { sandbox.update_column(:document_url_expiration_days, 5) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "answers a validation error and keeps the integration" do
+          result = destroy_service.call
+
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to eq([:document_url_expiration_days])
+          expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
+        end
+      end
     end
 
     context "when the sandbox sync fails" do

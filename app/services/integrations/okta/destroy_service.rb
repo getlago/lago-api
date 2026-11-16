@@ -21,6 +21,9 @@ module Integrations
 
           result
         end
+      rescue ActiveRecord::RecordInvalid => e
+        # The sandbox copy runs every validation of the sandbox.
+        result.record_validation_failure!(record: e.record)
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
       end
