@@ -18,6 +18,31 @@ RSpec.describe ::BaseService do
 
   it { is_expected.to use_middleware(Middlewares::LogTracerMiddleware) }
 
+  describe BaseService::NextWindowThrottlingError do
+    subject(:error) { described_class.new(provider_name: :quickbooks) }
+
+    it "is not a regular throttling error" do
+      expect(error).not_to be_a(BaseService::ThrottlingError)
+    end
+
+    it "carries the provider name and waits 60 seconds by default" do
+      expect(error.provider_name).to eq(:quickbooks)
+      expect(error.retry_after).to eq(60.seconds)
+    end
+
+    it "says the provider is rate limited" do
+      expect(error.message).to eq("Service quickbooks is rate limited. Retrying at the next window.")
+    end
+
+    context "with a retry delay" do
+      subject(:error) { described_class.new(provider_name: :quickbooks, retry_after: 5.minutes) }
+
+      it "carries it" do
+        expect(error.retry_after).to eq(5.minutes)
+      end
+    end
+  end
+
   context "with activity_loggable" do
     let(:service_class) do
       action = activity_loggable_action

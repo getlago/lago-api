@@ -32,6 +32,8 @@ RSpec.describe Integrations::Aggregator::BaseService do
   end
 
   describe "#throttle!" do
+    subject(:throttle) { service.send(:throttle!, provider_name) }
+
     let(:limiter) { instance_double(Throttling::Base, check: allowed) }
     let(:allowed) { false }
 
@@ -53,7 +55,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
         let(:provider_name) { existing_provider }
 
         it "raises the regular throttling error" do
-          expect { service.send(:throttle!, provider_name) }
+          expect { throttle }
             .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(provider_name) }
         end
       end
@@ -63,15 +65,11 @@ RSpec.describe Integrations::Aggregator::BaseService do
       let(:provider_name) { :quickbooks }
 
       it "raises the next window throttling error" do
-        expect { service.send(:throttle!, provider_name) }
+        expect { throttle }
           .to raise_error(BaseService::NextWindowThrottlingError) do |error|
             expect(error.provider_name).to eq(:quickbooks)
             expect(error.retry_after).to eq(60.seconds)
           end
-      end
-
-      it "is not a regular throttling error" do
-        expect(BaseService::NextWindowThrottlingError.ancestors).not_to include(BaseService::ThrottlingError)
       end
     end
 
@@ -80,7 +78,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
       let(:allowed) { true }
 
       it "does not raise" do
-        expect { service.send(:throttle!, provider_name) }.not_to raise_error
+        expect { throttle }.not_to raise_error
       end
     end
   end
