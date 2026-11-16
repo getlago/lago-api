@@ -31,6 +31,19 @@ RSpec.describe RecurringAggregationSnapshot do
       end
     end
 
+    describe ".period_markers" do
+      let(:marker) { create(:recurring_aggregation_snapshot) }
+
+      before do
+        create(:recurring_aggregation_snapshot, organization: marker.organization, subscription: marker.subscription,
+          charge: marker.charge, to_datetime: marker.to_datetime, charge_filter: create(:charge_filter, charge: marker.charge))
+      end
+
+      it "returns the snapshots of the default bucket only" do
+        expect(described_class.period_markers).to eq([marker])
+      end
+    end
+
     describe ".latest_period" do
       let(:marker) { create(:recurring_aggregation_snapshot, to_datetime: Time.zone.parse("2026-09-30T23:59:59")) }
       let(:charge_filter) { create(:charge_filter, charge: marker.charge) }

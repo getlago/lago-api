@@ -22,7 +22,7 @@ module RecurringAggregationSnapshots
       if filters_changed?
         []
       else
-        [marker, records.fetch(filter&.id, [])]
+        [marker, records.fetch(key.bucket_id(filter), [])]
       end
     end
 

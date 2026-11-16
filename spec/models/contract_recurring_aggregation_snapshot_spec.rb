@@ -48,6 +48,26 @@ RSpec.describe ContractRecurringAggregationSnapshot do
         product: marker.product, product_filter: marker.product_filter, **attributes)
     end
 
+    describe ".of_period" do
+      before { create_snapshot(to_datetime: Time.zone.parse("2026-08-31T23:59:59")) }
+
+      it "returns the snapshots of the period the query selects" do
+        latest_to_datetime = described_class.order(to_datetime: :desc).limit(1).select(:to_datetime)
+
+        expect(described_class.of_period(latest_to_datetime)).to eq([marker])
+      end
+    end
+
+    describe ".period_markers" do
+      let(:unfiltered_snapshot) { create_snapshot(to_datetime: marker.to_datetime, product_filter: nil) }
+
+      before { unfiltered_snapshot }
+
+      it "returns the snapshots of every bucket, as each one marks its own periods" do
+        expect(described_class.period_markers).to match_array([marker, unfiltered_snapshot])
+      end
+    end
+
     describe ".latest_period" do
       let(:older_snapshot) { create_snapshot(to_datetime: Time.zone.parse("2026-08-31T23:59:59")) }
       let(:group_snapshot) { create_snapshot(to_datetime: marker.to_datetime, grouped_by: {"region" => "eu"}) }

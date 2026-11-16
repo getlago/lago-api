@@ -49,6 +49,14 @@ RSpec.describe RecurringAggregationSnapshots::ContractKey do
     it "returns the product filter's bucket" do
       expect(key.marker_bucket_id).to eq(product_filter.id)
     end
+
+    context "without product filter" do
+      let(:product_filter) { nil }
+
+      it "returns the bucket without filter" do
+        expect(key.marker_bucket_id).to be_nil
+      end
+    end
   end
 
   describe "#bucket_id" do
@@ -58,6 +66,15 @@ RSpec.describe RecurringAggregationSnapshots::ContractKey do
 
     it "refuses another filter's bucket" do
       expect { key.bucket_id(nil) }.to raise_error(ArgumentError)
+    end
+
+    context "without product filter" do
+      let(:product_filter) { nil }
+
+      it "returns the bucket without filter and refuses a filter's bucket" do
+        expect(key.bucket_id(nil)).to be_nil
+        expect { key.bucket_id(create(:product_filter, organization:, product:)) }.to raise_error(ArgumentError)
+      end
     end
   end
 

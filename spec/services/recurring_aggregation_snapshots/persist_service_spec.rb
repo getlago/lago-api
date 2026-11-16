@@ -96,6 +96,29 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
       end
     end
 
+    context "with a contract key without product filter" do
+      let(:contract) { create(:contract, organization:, customer: create(:customer, organization:)) }
+      let(:product) { create(:product, organization:) }
+      let(:key) { RecurringAggregationSnapshots::ContractKey.new(contract:, product:, product_filter: nil) }
+      let(:contract_snapshots) { ContractRecurringAggregationSnapshot.where(contract:) }
+
+      it "persists the snapshot in the bucket without filter, which marks the period" do
+        expect(result).to be_success
+
+        expect(contract_snapshots.pluck(:product_filter_id, :to_datetime, :units)).to eq([[nil, to_datetime, 12]])
+        expect(RecurringAggregationSnapshots::FetchService.call(key:, filter: nil, grouped_by_keys: [], from_datetime: to_datetime + 1.second))
+          .to have_attributes(period: have_attributes(to_datetime:, watermark:), snapshots: [have_attributes(units: 12, events_count: 4)])
+      end
+
+      context "with a product filter's bucket" do
+        let(:buckets) { [{filter: create(:product_filter, organization:, product:), values:}] }
+
+        it "refuses it" do
+          expect { result }.to raise_error(ArgumentError)
+        end
+      end
+    end
+
     context "with groups" do
       let(:values) do
         [

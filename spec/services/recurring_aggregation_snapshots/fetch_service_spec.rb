@@ -101,6 +101,25 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
           expect(fetch_service.call.period).to be_nil
         end
       end
+
+      context "without product filter" do
+        let(:product_filter) { nil }
+
+        it "returns the latest period of the bucket without filter, marked by its own snapshot" do
+          result = fetch_service.call
+
+          expect(result.period).to eq(described_class::Period.new(to_datetime: previous_to_datetime, watermark:))
+          expect(result.snapshots.map(&:units)).to eq([10])
+        end
+      end
+
+      context "when read with another filter's bucket" do
+        let(:charge_filter) { create(:product_filter, organization:, product:, created_at: watermark - 1.month) }
+
+        it "refuses it rather than read the key's period with no snapshot" do
+          expect { fetch_service.call }.to raise_error(ArgumentError)
+        end
+      end
     end
 
     context "with a snapshot of another organization" do
