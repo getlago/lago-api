@@ -119,7 +119,8 @@ module Organizations
 
       target.roles.any? do |role|
         source = production_roles[role.code]
-        source.nil? || source.name != role.name || source.permissions.sort != role.permissions.sort
+        source.nil? || source.name != role.name || source.description != role.description ||
+          source.permissions.sort != role.permissions.sort
       end
     end
   end

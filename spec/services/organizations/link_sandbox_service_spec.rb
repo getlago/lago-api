@@ -151,6 +151,14 @@ RSpec.describe Organizations::LinkSandboxService do
       expect(refusal).to eq("sandbox_has_other_roles")
     end
 
+    it "refuses a target with a custom role production describes differently" do
+      create(:role, organization: production, code: "ops", name: "Ops", description: "Runs ops", permissions: %w[organization:view])
+      create(:role, organization: target, code: "ops", name: "Ops", description: "On call", permissions: %w[organization:view])
+
+      expect(refusal).to eq("sandbox_has_other_roles")
+      expect(target.roles.sole.description).to eq("On call")
+    end
+
     it "writes nothing when it refuses" do
       create(:membership, organization: target)
 
