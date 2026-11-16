@@ -6,7 +6,7 @@ module Api
       def create
         result = WalletTransactions::CreateFromParamsService.call(
           organization: current_organization,
-          params: input_params
+          params: input_params.to_h.deep_symbolize_keys
         )
 
         if result.success?

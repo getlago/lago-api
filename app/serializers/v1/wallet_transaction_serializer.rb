@@ -68,7 +68,7 @@ module V1
     def connections
       {
         connections: model.connection_routing.index_by { it.category }.transform_values do |routing|
-          { behavior: routing.behavior, code: routing.code }
+          {behavior: routing.behavior, code: routing.code}
         end
       }
     end
