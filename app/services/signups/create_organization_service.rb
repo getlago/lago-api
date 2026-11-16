@@ -55,9 +55,9 @@ module Signups
     # Not `source`: BaseService already names the caller (GraphQL, API) that way.
     attr_reader :user, :name, :role, :referral_source
 
-    # Admin of production, then the sandbox mirrors it, as for every member.
+    # Admin of production, then the sandbox mirrors it, as for every member. No lock first: no other transaction can
+    # see the organization yet, and the sync locks the pair before it reads.
     def create_admin_membership(organization)
-      Organizations::SandboxLockService.call!(organization:)
       membership = Membership.create!(user:, organization:)
       MembershipRole.create!(organization:, membership:, role: Role.admins.find_by!(organization_id: nil))
       Memberships::SyncSandboxService.call!(organization:, user:, actor: user)
