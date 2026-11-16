@@ -9,7 +9,7 @@ FactoryBot.define do
     end
     customer { contract_rate_card.contract.customer }
     action_type { "renew_fixed_advance" }
-    causation_type { :contract_activation }
+    reason { :contract_activation }
     billing_at { Time.current }
     target_cycle_started_at { Time.current.beginning_of_month }
   end

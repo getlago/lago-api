@@ -317,7 +317,7 @@ RSpec.describe ContractRateCard do
           :billing_operation, organization:, customer:, contract_rate_card: card,
           billing_at: Time.utc(2026, 10, 7), target_cycle_started_at: Time.utc(2026, 10, 7),
           cancelled_at: Time.utc(2026, 10, 7),
-          cancelled_causation_type: :contract_termination
+          cancellation_reason: :contract_termination
         )
       end
 

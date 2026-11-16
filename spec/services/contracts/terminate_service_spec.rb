@@ -68,7 +68,7 @@ RSpec.describe Contracts::TerminateService do
       expect(result).to be_success
       expect(arrears_card.reload.next_billing_at).to eq(terminated_at)
       expect(operations_of(arrears_card).sole).to have_attributes(
-        action_type: "close_fixed_arrears", causation_type: "contract_termination",
+        action_type: "close_fixed_arrears", reason: "contract_termination",
         billing_at: contract.reload.terminated_at, target_cycle_started_at: started_at,
         processed_at: nil, invoice_id: nil
       )
@@ -83,7 +83,7 @@ RSpec.describe Contracts::TerminateService do
 
         expect(result).to be_success
         expect(operations_of(arrears_card).sole).to have_attributes(
-          action_type: "close_fixed_arrears", causation_type: "contract_termination",
+          action_type: "close_fixed_arrears", reason: "contract_termination",
           billing_at: contract.reload.terminated_at, target_cycle_started_at: started_at
         )
       end
@@ -208,7 +208,7 @@ RSpec.describe Contracts::TerminateService do
 
       expect(processed.invoices).to be_empty
       expect(contract_rate_card.reload.next_billing_at).to be_nil
-      expect(contract_rate_card.billing_operations.where(causation_type: "contract_termination")).to be_empty
+      expect(contract_rate_card.billing_operations.where(reason: "contract_termination")).to be_empty
       expect(contract_rate_card.billing_operations.pending).to be_empty
       expect(contract_rate_card.billing_operations.count).to eq(1)
       expect(Invoice.where(customer:).pluck(:id)).to eq([invoice.id])
@@ -300,7 +300,7 @@ RSpec.describe Contracts::TerminateService do
     end
     let(:activation_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:,
-        action_type: "close_fixed_arrears", causation_type: :contract_activation,
+        action_type: "close_fixed_arrears", reason: :contract_activation,
         billing_at: Time.utc(2026, 12, 1), target_cycle_started_at: started_at)
     end
 
@@ -322,11 +322,11 @@ RSpec.describe Contracts::TerminateService do
         operation = contract_rate_card.billing_operations.pending.sole
         expect(operation).to have_attributes(
           action_type: "close_fixed_arrears", billing_at: terminated_at,
-          causation_type: "contract_termination", target_cycle_started_at: started_at,
+          reason: "contract_termination", target_cycle_started_at: started_at,
           processed_at: nil, invoice_id: nil
         )
         expect(activation_operation.reload).to have_attributes(
-          cancelled_at: terminated_at, cancelled_causation_type: "contract_termination"
+          cancelled_at: terminated_at, cancellation_reason: "contract_termination"
         )
         expect(Invoice.where(customer:)).to be_empty
         expect(contract_rate_card.reload.next_billing_at).to eq(terminated_at)
@@ -352,9 +352,9 @@ RSpec.describe Contracts::TerminateService do
         end
       end
 
-      operation = contract_rate_card.billing_operations.find_by!(causation_type: :contract_termination)
+      operation = contract_rate_card.billing_operations.find_by!(reason: :contract_termination)
       expect(activation_operation.reload).to have_attributes(
-        cancelled_at: terminated_at, cancelled_causation_type: "contract_termination"
+        cancelled_at: terminated_at, cancellation_reason: "contract_termination"
       )
       expect(operation).to have_attributes(processed_at: processing_at, cancelled_at: nil)
       expect(Invoice.where(customer:).sum(:total_amount_cents)).to eq(1_400) # $30 * 14 / 30 days.

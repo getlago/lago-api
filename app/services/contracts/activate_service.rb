@@ -93,7 +93,7 @@ module Contracts
         BillingOperations::CreateService.call!(
           contract_rate_card: card,
           action_type: action,
-          causation_type: BillingOperation::CAUSATION_TYPES.fetch(:contract_activation),
+          reason: BillingOperation::REASONS.fetch(:contract_activation),
           planned_operation:
         )
       end

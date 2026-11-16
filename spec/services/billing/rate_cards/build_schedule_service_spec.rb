@@ -49,7 +49,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   end
 
   # Completed operations record prior billing without changing the card's schedule origin.
-  context "when the card has already been billed for some cycles" do
+  context "when billing operations have already been completed for some cycles" do
     let(:successor) do
       create(:contract_rate_card, organization:, contract:, rate_card:,
         effective_date: Date.new(2026, 7, 1), billing_anchor_date: Date.new(2026, 1, 1))

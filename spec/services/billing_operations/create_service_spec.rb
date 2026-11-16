@@ -19,7 +19,7 @@ RSpec.describe BillingOperations::CreateService do
     {
       contract_rate_card:,
       action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage),
-      causation_type: BillingOperation::CAUSATION_TYPES.fetch(:rate_change),
+      reason: BillingOperation::REASONS.fetch(:rate_change),
       planned_operation:
     }
   end
@@ -28,7 +28,7 @@ RSpec.describe BillingOperations::CreateService do
     expect(result).to be_success
     expect(result.operation).to have_attributes(
       organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
-      causation_type: "rate_change", billing_at: started_at,
+      reason: "rate_change", billing_at: started_at,
       target_cycle_started_at: started_at, processed_at: nil
     )
   end
@@ -53,7 +53,7 @@ RSpec.describe BillingOperations::CreateService do
 
   [
     [:action_type, "invalid_action"],
-    [:causation_type, "invalid_causation"],
+    [:reason, "invalid_causation"],
     [:billing_at, nil],
     [:cycle_started_at, nil]
   ].each do |attribute, value|

@@ -1,22 +1,12 @@
 # frozen_string_literal: true
 
 class UsageMonitoring::AlertThreshold < ApplicationRecord
-  SOFT_LIMIT = 20
-  NOTIFY_ON_TRIGGERED = "triggered"
-  NOTIFY_ON_RESOLVED = "resolved"
-  NOTIFY_ON_VALUES = [NOTIFY_ON_TRIGGERED, NOTIFY_ON_RESOLVED].freeze
+  include UsageMonitoring::ThresholdRecord
 
   belongs_to :organization
   belongs_to :alert,
     foreign_key: "usage_monitoring_alert_id",
     class_name: "UsageMonitoring::Alert"
-
-  # notify_on is a set: duplicates are dropped and the values kept in one order, whatever order was sent
-  normalizes :notify_on, with: ->(values) { NOTIFY_ON_VALUES & values }
-
-  def notify_on_resolved?
-    notify_on.include?(NOTIFY_ON_RESOLVED)
-  end
 end
 
 # == Schema Information

@@ -56,6 +56,33 @@ RSpec.describe Api::V1::SecurityLogsController, clickhouse: true do
         end
       end
 
+      context "when a log has NULL map values" do
+        let(:null_value_log) do
+          create(
+            :clickhouse_security_log,
+            organization:,
+            logged_at: 30.minutes.ago,
+            created_at: 30.minutes.ago,
+            log_type: "api_key",
+            log_event: "api_key.rotated",
+            api_key:,
+            resources: {"name" => nil, "value_ending" => '{"deleted":"A","added":"B"}'},
+            device_info: {"os" => nil, "browser" => "Chrome"}
+          )
+        end
+
+        before { null_value_log }
+
+        it "returns the log with null for the NULL values" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          entry = json[:security_logs].find { |l| l[:log_id] == null_value_log.log_id }
+          expect(entry[:resources]).to eq({name: nil, value_ending: {deleted: "A", added: "B"}})
+          expect(entry[:device_info]).to eq({os: nil, browser: "Chrome"})
+        end
+      end
+
       context "when to_date is missing" do
         let(:params) { {} }
 

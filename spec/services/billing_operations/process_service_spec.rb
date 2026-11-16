@@ -23,7 +23,7 @@ RSpec.describe BillingOperations::ProcessService do
   end
   let(:operation) do
     create(:billing_operation, organization:, customer:, contract_rate_card:,
-      action_type: contract_rate_card.periodic_billing_action, causation_type: "periodic_continuation",
+      action_type: contract_rate_card.periodic_billing_action, reason: "periodic_continuation",
       billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
   end
 
@@ -66,7 +66,7 @@ RSpec.describe BillingOperations::ProcessService do
     let(:operation) { nil }
     let(:activation_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "contract_activation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
+        reason: "contract_activation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
     before { activation_operation }
@@ -163,19 +163,19 @@ RSpec.describe BillingOperations::ProcessService do
     let(:operation) { nil }
     let(:future_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "periodic_continuation", billing_at: cursor + 1.day,
+        reason: "periodic_continuation", billing_at: cursor + 1.day,
         target_cycle_started_at: Time.utc(2026, 1, 1))
     end
     let(:completed_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "periodic_continuation", billing_at: cursor - 1.day,
+        reason: "periodic_continuation", billing_at: cursor - 1.day,
         target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: cursor - 1.day)
     end
     let(:cancelled_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "periodic_continuation", billing_at: cursor - 1.day,
+        reason: "periodic_continuation", billing_at: cursor - 1.day,
         target_cycle_started_at: Time.utc(2026, 1, 1), cancelled_at: cursor - 1.day,
-        cancelled_causation_type: BillingOperation::CANCELLED_CAUSATION_TYPES.fetch(:contract_termination))
+        cancellation_reason: BillingOperation::CANCELLATION_REASONS.fetch(:contract_termination))
     end
 
     before do
@@ -199,7 +199,7 @@ RSpec.describe BillingOperations::ProcessService do
     let(:timestamp) { Time.utc(2026, 4, 1) }
     let(:later_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:,
-        action_type: "close_fixed_arrears", causation_type: "periodic_continuation",
+        action_type: "close_fixed_arrears", reason: "periodic_continuation",
         billing_at: cursor + 12.hours, target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
@@ -232,7 +232,7 @@ RSpec.describe BillingOperations::ProcessService do
 
     before do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "periodic_continuation", billing_at: Time.utc(2026, 3, 1),
+        reason: "periodic_continuation", billing_at: Time.utc(2026, 3, 1),
         target_cycle_started_at: Time.utc(2026, 2, 1))
     end
 
@@ -254,7 +254,7 @@ RSpec.describe BillingOperations::ProcessService do
     before do
       other_card
       create(:billing_operation, organization:, customer: other_customer, contract_rate_card: other_card,
-        action_type: "close_fixed_arrears", causation_type: "periodic_continuation", billing_at: cursor,
+        action_type: "close_fixed_arrears", reason: "periodic_continuation", billing_at: cursor,
         target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
@@ -268,7 +268,7 @@ RSpec.describe BillingOperations::ProcessService do
   context "with a due reconciliation" do
     let(:reconciliation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:,
-        action_type: "reconcile_advance_coverage", causation_type: "rate_change",
+        action_type: "reconcile_advance_coverage", reason: "rate_change",
         billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
@@ -286,7 +286,7 @@ RSpec.describe BillingOperations::ProcessService do
     let(:cursor) { Time.utc(2026, 3, 1) }
     let(:reconciliation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:,
-        action_type: "reconcile_advance_coverage", causation_type: "rate_change",
+        action_type: "reconcile_advance_coverage", reason: "rate_change",
         billing_at: Time.utc(2026, 2, 1), target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
@@ -331,7 +331,7 @@ RSpec.describe BillingOperations::ProcessService do
     let(:operation_changes) do
       {
         cancelled_at: timestamp,
-        cancelled_causation_type: BillingOperation::CANCELLED_CAUSATION_TYPES.fetch(:contract_termination)
+        cancellation_reason: BillingOperation::CANCELLATION_REASONS.fetch(:contract_termination)
       }
     end
 
@@ -446,7 +446,7 @@ RSpec.describe BillingOperations::ProcessService do
         let(:cursor) { Time.utc(2026, 2, 10) }
         let(:operation) do
           create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-            causation_type: "periodic_continuation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
+            reason: "periodic_continuation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
         end
 
         it "still moves the cursor to the termination" do
@@ -459,7 +459,7 @@ RSpec.describe BillingOperations::ProcessService do
         let(:cursor) { Time.utc(2026, 2, 15) }
         let(:operation) do
           create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-            causation_type: "contract_termination", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
+            reason: "contract_termination", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
         end
 
         it "clears the cursor" do
@@ -478,7 +478,7 @@ RSpec.describe BillingOperations::ProcessService do
     end
     let(:operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
-        causation_type: "periodic_continuation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
+        reason: "periodic_continuation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
     end
 
     it "completes the obsolete renewal without billing and clears the cursor" do
@@ -538,7 +538,7 @@ RSpec.describe BillingOperations::ProcessService do
     before do
       other_card
       create(:billing_operation, organization:, customer:, contract_rate_card: other_card,
-        action_type: "close_fixed_arrears", causation_type: "periodic_continuation", billing_at: cursor,
+        action_type: "close_fixed_arrears", reason: "periodic_continuation", billing_at: cursor,
         target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
@@ -570,7 +570,7 @@ RSpec.describe BillingOperations::ProcessService do
     before do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15), rate_properties: {"amount" => "62"})
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "periodic_continuation", billing_at: Time.utc(2026, 2, 1),
+        reason: "periodic_continuation", billing_at: Time.utc(2026, 2, 1),
         target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
@@ -587,7 +587,7 @@ RSpec.describe BillingOperations::ProcessService do
 
       before do
         create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
-          causation_type: "periodic_continuation", billing_at: Time.utc(2026, 1, 15),
+          reason: "periodic_continuation", billing_at: Time.utc(2026, 1, 15),
           target_cycle_started_at: Time.utc(2026, 1, 1))
       end
 

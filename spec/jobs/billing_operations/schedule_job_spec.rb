@@ -55,7 +55,7 @@ RSpec.describe BillingOperations::ScheduleJob, job: true do
       expect { perform_job }.to have_enqueued_job(BillingOperations::ProcessJob).with(customer.id)
 
       expect(contract_rate_card.billing_operations.sole).to have_attributes(
-        action_type: "close_fixed_arrears", causation_type: "periodic_continuation",
+        action_type: "close_fixed_arrears", reason: "periodic_continuation",
         billing_at: Time.utc(2026, 11, 15), target_cycle_started_at: Time.utc(2026, 11, 1),
         processed_at: nil
       )
@@ -88,7 +88,7 @@ RSpec.describe BillingOperations::ScheduleJob, job: true do
     end
     let(:cancelled_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at: 1.minute.ago,
-        cancelled_at: Time.current, cancelled_causation_type: :rate_change)
+        cancelled_at: Time.current, cancellation_reason: :rate_change)
     end
     let(:other_customer) { create(:customer, organization:) }
     let(:other_contract) { create(:contract, organization:, customer: other_customer) }

@@ -251,6 +251,32 @@ describe "Recurring aggregation snapshots", transaction: false do
     end
   end
 
+  describe "with more billed periods than kept snapshots" do
+    let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+    let(:may_snapshot) { Time.utc(2026, 5, 31).end_of_day.floor(6) }
+    let(:june_snapshot) { Time.utc(2026, 6, 30).end_of_day.floor(6) }
+
+    def bill
+      billed = super
+      send_event(6, at: Time.utc(2026, 6, 10))
+      billed[:june_invoice] = bill_at(Time.utc(2026, 7, 1, 1))
+      billed.merge(july_usage: usage_at(Time.utc(2026, 7, 20)))
+    end
+
+    it "keeps the latest periods and bills from them" do
+      # 32 units and 7 events up to May, plus the June event
+      expect(bill.slice(:june_invoice, :july_usage)).to eq(
+        june_invoice: [{amount_cents: 3800, units: 38, events_count: 8}],
+        july_usage: {amount_cents: 3800, units: 38, events_count: 8}
+      )
+      expect(written_snapshots.pluck(:to)).to match_array([Date.new(2026, 4, 30), Date.new(2026, 5, 31), Date.new(2026, 6, 30)])
+      expect(read_periods).to eq(
+        invoice: [nil, march_snapshot, april_snapshot, may_snapshot],
+        usage: [march_snapshot, april_snapshot, june_snapshot]
+      )
+    end
+  end
+
   shared_examples "a prorated recurring sum" do
     let(:charge) { create(:standard_charge, prorated: true, plan:, billable_metric:, properties: {amount: "1"}) }
     let(:billed) do
@@ -519,13 +545,8 @@ describe "Recurring aggregation snapshots", transaction: false do
         termination_invoice: [{amount_cents: 3200, units: 32, events_count: 7}]
       }
     end
-    let(:snapshots) do
-      [
-        {to: Date.new(2026, 3, 31), units: 15, events_count: 3},
-        {to: Date.new(2026, 4, 30), units: 28, events_count: 6},
-        {to: Date.new(2026, 5, 15), units: 32, events_count: 7}
-      ]
-    end
+    # Nothing follows the subscription, so the termination invoice deletes its snapshots rather than writing one
+    let(:snapshots) { [] }
     let(:usage_reads) { [] }
 
     def bill

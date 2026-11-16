@@ -50,7 +50,7 @@ module BillingOperations
       return if existing_operation
 
       CreateService.call!(
-        contract_rate_card:, action_type:, causation_type: "periodic_continuation", planned_operation:
+        contract_rate_card:, action_type:, reason: "periodic_continuation", planned_operation:
       ).operation
     end
   end

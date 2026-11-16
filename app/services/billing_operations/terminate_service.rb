@@ -42,7 +42,7 @@ module BillingOperations
       contract_rate_card.billing_operations.pending.where("billing_at > ?", timestamp).find_each do |operation|
         operation.update!(
           cancelled_at: timestamp,
-          cancelled_causation_type: BillingOperation::CANCELLED_CAUSATION_TYPES.fetch(:contract_termination)
+          cancellation_reason: BillingOperation::CANCELLATION_REASONS.fetch(:contract_termination)
         )
       end
     end
@@ -64,7 +64,7 @@ module BillingOperations
       BillingOperations::CreateService.call!(
         contract_rate_card:,
         action_type: contract_rate_card.periodic_billing_action,
-        causation_type: BillingOperation::CAUSATION_TYPES.fetch(:contract_termination),
+        reason: BillingOperation::REASONS.fetch(:contract_termination),
         planned_operation:
       ).operation
     end
@@ -76,7 +76,7 @@ module BillingOperations
     def final_operation_exists?(contract_rate_card, planned_operation)
       contract_rate_card.billing_operations.where(
         action_type: contract_rate_card.periodic_billing_action,
-        causation_type: BillingOperation::CAUSATION_TYPES.fetch(:contract_termination),
+        reason: BillingOperation::REASONS.fetch(:contract_termination),
         billing_at: timestamp,
         target_cycle_started_at: planned_operation.cycle_started_at,
         cancelled_at: nil

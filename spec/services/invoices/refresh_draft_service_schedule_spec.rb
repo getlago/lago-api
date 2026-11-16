@@ -84,7 +84,7 @@ RSpec.describe Invoices::RefreshDraftService do
     let(:operation_attributes) do
       {
         action_type: "renew_fixed_advance",
-        causation_type: :periodic_continuation,
+        reason: :periodic_continuation,
         billing_at: Time.utc(2026, 3, 1),
         target_cycle_started_at: Time.utc(2026, 3, 1)
       }
@@ -113,7 +113,7 @@ RSpec.describe Invoices::RefreshDraftService do
       let(:operation_attributes) do
         {
           action_type: "close_fixed_arrears",
-          causation_type: :periodic_continuation,
+          reason: :periodic_continuation,
           billing_at: Time.utc(2026, 2, 1),
           target_cycle_started_at: Time.utc(2026, 1, 1)
         }
@@ -142,7 +142,7 @@ RSpec.describe Invoices::RefreshDraftService do
       context "when an earlier operation of the cycle owns the first slice" do
         before do
           create(:billing_operation, organization:, customer:, contract_rate_card:,
-            action_type: "close_fixed_arrears", causation_type: :periodic_continuation,
+            action_type: "close_fixed_arrears", reason: :periodic_continuation,
             billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1),
             processed_at: Time.utc(2026, 1, 15))
         end
@@ -177,7 +177,7 @@ RSpec.describe Invoices::RefreshDraftService do
         )
         create(
           :billing_operation, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
-          action_type: "renew_fixed_advance", causation_type: :periodic_continuation,
+          action_type: "renew_fixed_advance", reason: :periodic_continuation,
           billing_at: Time.utc(2026, 3, 1), target_cycle_started_at: Time.utc(2026, 3, 1)
         )
       end

@@ -70,7 +70,7 @@ describe "A contract billed in advance invoices on creation" do
 
       expect(Invoice.where(customer:)).to be_empty
       expect(BillingOperation.where(customer:)).to contain_exactly(have_attributes(
-        action_type: "close_fixed_arrears", causation_type: "contract_activation",
+        action_type: "close_fixed_arrears", reason: "contract_activation",
         billing_at: Time.zone.parse("2026-02-15"), target_cycle_started_at: Time.zone.parse("2026-01-15"),
         processed_at: nil
       ))

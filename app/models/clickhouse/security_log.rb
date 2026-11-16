@@ -68,7 +68,10 @@ module Clickhouse
     def deep_parse_map_values(hash)
       return hash unless hash.is_a?(Hash)
 
+      # ClickHouse map values are Nullable, and JSON.parse(nil) raises a TypeError.
       hash.transform_values do |v|
+        next if v.nil?
+
         JSON.parse(v)
       rescue JSON::ParserError
         v

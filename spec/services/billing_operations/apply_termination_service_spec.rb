@@ -31,7 +31,7 @@ RSpec.describe BillingOperations::ApplyTerminationService do
     expect(contract_rate_card.reload.next_billing_at).to eq(timestamp)
     invoice = BillingOperations::ProcessService.call!(customer:, timestamp:).invoices.sole
     expect(invoice.total_amount_cents).to eq(1400) # $31 * 14 / 31 days.
-    expect(invoice.billing_operations.sole).to have_attributes(causation_type: "contract_termination", processed_at: timestamp)
+    expect(invoice.billing_operations.sole).to have_attributes(reason: "contract_termination", processed_at: timestamp)
     expect(contract_rate_card.reload.next_billing_at).to be_nil
     expect(BillingOperations::ProcessService.call!(customer:, timestamp:).invoices).to be_empty
   end
@@ -150,7 +150,7 @@ RSpec.describe BillingOperations::ApplyTerminationService do
     it "preserves due adjustments and cancels future ones" do
       result
       expect(due_reconciliation.reload.cancelled_at).to be_nil
-      expect(future_reconciliation.reload).to have_attributes(cancelled_at: timestamp, cancelled_causation_type: "contract_termination")
+      expect(future_reconciliation.reload).to have_attributes(cancelled_at: timestamp, cancellation_reason: "contract_termination")
     end
 
     context "when the card was discarded" do
@@ -158,7 +158,7 @@ RSpec.describe BillingOperations::ApplyTerminationService do
 
       it "still cancels future adjustments without restarting periodic billing" do
         result
-        expect(future_reconciliation.reload).to have_attributes(cancelled_at: timestamp, cancelled_causation_type: "contract_termination")
+        expect(future_reconciliation.reload).to have_attributes(cancelled_at: timestamp, cancellation_reason: "contract_termination")
         expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
       end
     end

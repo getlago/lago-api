@@ -128,9 +128,15 @@ module BillableMetrics
       end
 
       # Without snapshots, the period still bounds the delta: the bucket starts from zero.
-      # Current usage served by the incremental scan keeps its own read.
+      # Current usage served by the incremental scan keeps its own read, unless the buckets serve it.
       def delta_period(options)
-        initial_period unless options[:is_current_usage] && event_store.incremental_sum?
+        initial_period if delta_from_buckets? || !(options[:is_current_usage] && event_store.incremental_sum?)
+      end
+
+      # A fallback stays `precomputed?`, so it still bypasses the charge cache: the pre-filtering skips
+      # charges the buckets serve, leaving no ingestion timestamp to invalidate a cached fee.
+      def delta_from_buckets?
+        precomputed? && event_store.recurring_fallback_reason(initial_period).nil?
       end
 
       # Current usage persists no snapshot: its delta needs no watermark of its own.

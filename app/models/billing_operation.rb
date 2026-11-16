@@ -11,7 +11,7 @@ class BillingOperation < ApplicationRecord
 
   ACTION_TYPES = (PERIODIC_ACTIONS.keys + ["reconcile_advance_coverage"]).index_by(&:to_sym).freeze
 
-  CAUSATION_TYPES = {
+  REASONS = {
     contract_activation: "contract_activation",
     periodic_continuation: "periodic_continuation",
     contract_units_change: "contract_units_change",
@@ -21,7 +21,7 @@ class BillingOperation < ApplicationRecord
     contract_termination: "contract_termination"
   }.freeze
 
-  CANCELLED_CAUSATION_TYPES = {
+  CANCELLATION_REASONS = {
     rate_change: "rate_change",
     contract_termination: "contract_termination"
   }.freeze
@@ -31,8 +31,8 @@ class BillingOperation < ApplicationRecord
   belongs_to :contract_rate_card, -> { with_discarded }
   belongs_to :invoice, optional: true
 
-  enum :causation_type, CAUSATION_TYPES, validate: true
-  enum :cancelled_causation_type, CANCELLED_CAUSATION_TYPES, prefix: true, validate: {allow_nil: true}
+  enum :reason, REASONS, validate: true
+  enum :cancellation_reason, CANCELLATION_REASONS, prefix: true, validate: {allow_nil: true}
 
   validates :action_type, inclusion: {in: ACTION_TYPES.values}
   validates :billing_at, :target_cycle_started_at, presence: true
@@ -41,7 +41,7 @@ class BillingOperation < ApplicationRecord
 
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
   scope :completed, -> { where.not(processed_at: nil) }
-  scope :periodic, -> { where(action_type: PERIODIC_ACTIONS.keys).where.not(causation_type: :late_payment) }
+  scope :periodic, -> { where(action_type: PERIODIC_ACTIONS.keys).where.not(reason: :late_payment) }
   scope :due_for_processing, ->(timestamp) { pending.where(billing_at: ..timestamp) }
   scope :earliest_per_contract_rate_card, -> {
     select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
@@ -86,7 +86,7 @@ class BillingOperation < ApplicationRecord
   end
 
   def validate_state
-    if cancelled_at.present? != cancelled_causation_type.present?
+    if cancelled_at.present? != cancellation_reason.present?
       errors.add(:cancelled_at, :invalid)
     end
 
@@ -101,20 +101,20 @@ end
 # Table name: billing_operations
 # Database name: primary
 #
-#  id                       :uuid             not null, primary key
-#  action_type              :string           not null
-#  billing_at               :datetime         not null
-#  cancelled_at             :datetime
-#  cancelled_causation_type :enum
-#  causation_type           :enum             not null
-#  processed_at             :datetime
-#  target_cycle_started_at  :datetime         not null
-#  created_at               :datetime         not null
-#  updated_at               :datetime         not null
-#  contract_rate_card_id    :uuid             not null
-#  customer_id              :uuid             not null
-#  invoice_id               :uuid
-#  organization_id          :uuid             not null
+#  id                      :uuid             not null, primary key
+#  action_type             :string           not null
+#  billing_at              :datetime         not null
+#  cancellation_reason     :enum
+#  cancelled_at            :datetime
+#  processed_at            :datetime
+#  reason                  :enum             not null
+#  target_cycle_started_at :datetime         not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  contract_rate_card_id   :uuid             not null
+#  customer_id             :uuid             not null
+#  invoice_id              :uuid
+#  organization_id         :uuid             not null
 #
 # Indexes
 #

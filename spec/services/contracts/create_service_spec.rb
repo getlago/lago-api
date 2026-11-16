@@ -56,7 +56,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     it "persists the initial operation and cursor atomically without predicted segments" do
       expect { result }.to change(BillingOperation, :count).by(1)
       expect(result.contract.applied_rate_cards.sole.next_billing_at).to be_present
-      expect(result.contract.applied_rate_cards.sole.billing_operations.sole.causation_type).to eq("contract_activation")
+      expect(result.contract.applied_rate_cards.sole.billing_operations.sole.reason).to eq("contract_activation")
       expect(LegacyBillingSegment.count).to eq(0)
     end
   end

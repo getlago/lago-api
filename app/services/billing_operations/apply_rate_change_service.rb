@@ -59,7 +59,7 @@ module BillingOperations
         reconciliation = CreateService.call!(
           contract_rate_card:,
           action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage),
-          causation_type: BillingOperation::CAUSATION_TYPES.fetch(:rate_change),
+          reason: BillingOperation::REASONS.fetch(:rate_change),
           planned_operation:
         )
         result.billing_operations << reconciliation.operation

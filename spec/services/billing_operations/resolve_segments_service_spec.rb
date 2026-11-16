@@ -165,7 +165,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
 
           context "when the previous operation was cancelled" do
             before do
-              operation.update!(processed_at: nil, cancelled_at: Time.utc(2026, 1, 10), cancelled_causation_type: :contract_termination)
+              operation.update!(processed_at: nil, cancelled_at: Time.utc(2026, 1, 10), cancellation_reason: :contract_termination)
             end
 
             it "returns every slice of the cycle" do
@@ -243,7 +243,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           expect(operation).not_to be_changed
           expect(operation.reload).to have_attributes(
             action_type: "renew_fixed_advance",
-            causation_type: "contract_activation",
+            reason: "contract_activation",
             billing_at: Time.utc(2026, 1, 1),
             target_cycle_started_at: Time.utc(2026, 1, 1),
             processed_at: nil,
@@ -356,7 +356,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       end
       let(:operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card:,
-          action_type: "close_fixed_arrears", causation_type: "contract_termination",
+          action_type: "close_fixed_arrears", reason: "contract_termination",
           billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1))
       end
 
@@ -409,7 +409,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
         let(:operation) do
           create(:billing_operation, organization:, customer:, contract_rate_card:,
-            action_type: "reconcile_advance_coverage", causation_type: "rate_change",
+            action_type: "reconcile_advance_coverage", reason: "rate_change",
             billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1))
         end
 
@@ -422,7 +422,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
     context "when resolving a supported rate-change reconciliation" do
       let(:operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card:,
-          action_type: "reconcile_advance_coverage", causation_type: "rate_change",
+          action_type: "reconcile_advance_coverage", reason: "rate_change",
           billing_at: Time.utc(2026, 1, 15), target_cycle_started_at: Time.utc(2026, 1, 1))
       end
 

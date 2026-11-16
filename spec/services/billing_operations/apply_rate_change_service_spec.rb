@@ -342,7 +342,7 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     let(:planned_operations) { [] }
     let(:advance_activation_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:,
-        action_type: "renew_fixed_advance", causation_type: "contract_activation",
+        action_type: "renew_fixed_advance", reason: "contract_activation",
         billing_at: contract.started_at, target_cycle_started_at: contract.started_at)
     end
     let(:initialize_clock) do

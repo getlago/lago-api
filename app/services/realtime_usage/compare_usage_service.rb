@@ -13,6 +13,9 @@ module RealtimeUsage
       :cutover_risks,
       :eligible_charges_count,
       :served_charges_count,
+      :recurring_eligible_charges_count,
+      :recurring_served_charges_count,
+      :recurring_fallback_reasons,
       :duplicate_events_count,
       :declined_reason,
       :rechecked
@@ -80,45 +83,66 @@ module RealtimeUsage
     def call
       result.rechecked = false
       started_at = Time.current
-      compare
+      compare_again_on_late_ingestion
 
       if result.differences.any? && events_received_since?(started_at - CLOCK_SKEW_MARGIN)
         sleep(RECHECK_DELAY)
         result.rechecked = true
-        compare
+        compare_again_on_late_ingestion
       end
 
       result
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e.result.error)
+    rescue RecurringFallbackError => e
+      result.service_failure!(code: "recurring_fallback_during_comparison", message: e.message)
     end
 
     private
 
-    attr_reader :subscription, :timestamp, :duplicate_events_by_code
+    attr_reader :subscription, :timestamp, :duplicate_events_by_code, :eligible_charges, :compared_codes,
+      :recurring_compared_codes
+
+    # A late ingestion landing between the decision and the bucket run makes the buckets fall back
+    # there. The next decision sees it and counts the charge under late_ingestion instead.
+    def compare_again_on_late_ingestion
+      compare
+    rescue RecurringFallbackError
+      compare
+    end
 
     # The charges the buckets serve are known before any usage is computed, so both runs are
     # narrowed to them: a charge that cannot be compared is worth computing on neither side.
     def compare
-      served_charges = RealtimeUsage.with_forced_gate { fetch_served_charges }
-
       result.rows = []
       result.differences = []
       result.cutover_risks = []
       result.duplicate_events_count = 0
+      result.recurring_fallback_reasons = Hash.new(0)
+      @charge_periods = {}
+
+      served_charges = RealtimeUsage.with_forced_gate do
+        # Under the gate, which opens the recurring charges to the comparison.
+        @eligible_charges = charges.select { RealtimeUsage.supported_charge?(it) }
+        with_snapshot_read { fetch_served_charges }
+      end
+
       result.eligible_charges_count = eligible_charges.size
       result.served_charges_count = served_charges.size
+      result.recurring_eligible_charges_count = eligible_charges.count { RealtimeUsage.recurring_charge?(it) }
+      result.recurring_served_charges_count = served_charges.count { RealtimeUsage.recurring_charge?(it) }
       result.declined_reason = served_charges.empty? ? decline_reason : nil
       return if served_charges.empty?
 
       @compared_codes = served_charges.map { it.billable_metric.code }.uniq
+      @recurring_compared_codes = served_charges.select { RealtimeUsage.recurring_charge?(it) }.map { it.billable_metric.code }.to_set
       served_charge_ids = served_charges.map(&:id).to_set
       # A bucket read failing under the forced gate raises rather than falling back to the events
       # store, so a usage the buckets did not serve never reaches the comparison.
       bucket_usage = RealtimeUsage.with_forced_gate do
-        compute_usage(use_usage_buckets: true, charge_ids: served_charge_ids.to_a)
+        with_snapshot_read { compute_usage(use_usage_buckets: true, charge_ids: served_charge_ids.to_a) }
       end
-      events_usage = compute_usage(use_usage_buckets: false, charge_ids: served_charge_ids.to_a)
+      events_usage = with_snapshot_read { compute_usage(use_usage_buckets: false, charge_ids: served_charge_ids.to_a) }
 
       @duplicate_events_by_code = fetch_duplicate_events_by_code(served_charges)
 
@@ -152,15 +176,68 @@ module RealtimeUsage
         serve_current_usage_from_buckets: true,
         charges:
       )
-      return [] unless provider.may_precompute?
+      unless provider.may_precompute?
+        # Counted so the reasons still add up to the eligible recurring charges.
+        result.recurring_fallback_reasons["declined"] += eligible_charges.count { RealtimeUsage.recurring_charge?(it) }
+        return []
+      end
 
       eligible_charges.select do |charge|
         metered_item = Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:)
-        provider.serves_whole_charge_from_buckets?(
+        recurring = RealtimeUsage.recurring_charge?(charge)
+        served = provider.serves_whole_charge_from_buckets?(
           metered_item:,
-          boundaries: metered_item.aggregation_boundaries
+          boundaries: metered_item.aggregation_boundaries,
+          refuse_recurring: false
         )
+        result.recurring_fallback_reasons["declined"] += 1 if recurring && !served
+        next false unless served
+
+        !recurring || recurring_delta_from_buckets?(provider, metered_item)
       end
+    end
+
+    # Both runs read the snapshots, so only the source of the delta differs between them.
+    def with_snapshot_read(&)
+      RecurringAggregationSnapshots.with_forced_read(true, &)
+    end
+
+    # A pricing bucket whose delta falls back reads the events on both runs, which would compare
+    # the events store with itself. Counted once per charge, under the first reason met, so the
+    # reasons and the served recurring charges add up to the eligible ones.
+    def recurring_delta_from_buckets?(provider, metered_item)
+      reason = provider.recurring_refusal_reason(metered_item) ||
+        metered_item.pricing_buckets.lazy.filter_map { recurring_fallback_reason(provider, it) }.first
+      result.recurring_fallback_reasons[reason] += 1 if reason
+
+      reason.nil?
+    end
+
+    def recurring_fallback_reason(provider, bucket)
+      store = provider.store_for(
+        metered_item: bucket,
+        boundaries: bucket.aggregation_boundaries,
+        filters: {charge_filter: bucket.charge_filter}.compact
+      )
+
+      store.recurring_fallback_reason(snapshot_period(bucket))
+    end
+
+    # The period the aggregation starts from, fetched as Fees::ChargeService#recurring_initial_snapshots does.
+    def snapshot_period(bucket)
+      RecurringAggregationSnapshots::FetchService.call!(
+        **RecurringAggregationSnapshot.fetch_arguments(
+          metered_item: bucket, billing_context:, grouped_by_keys: bucket.pricing_group_keys.presence
+        ),
+        charge_period: charge_period(bucket.charge)
+      ).period
+    end
+
+    # One per charge, as the marker is the same for all its charge filters.
+    def charge_period(charge)
+      @charge_periods[charge.id] ||= RecurringAggregationSnapshots::ChargePeriod.new(
+        subscription:, charge:, from_datetime: boundaries.charges_from_datetime
+      )
     end
 
     def build_rows(bucket_usage:, events_usage:, served_charge_ids:)
@@ -231,8 +308,14 @@ module RealtimeUsage
       return "not_premium" unless License.premium?
       return "clickhouse_disabled" unless Events::Stores::StoreFactory.supports_clickhouse?
       return "postgres_events_store" unless organization.clickhouse_events_store?
+      return "product_events_pipeline" if organization.product_events_pipeline?
 
-      "no_buckets"
+      # A charge only declined fell back on nothing: its buckets were missing or refused.
+      if eligible_charges.all? { RealtimeUsage.recurring_charge?(it) } && result.recurring_fallback_reasons.except("declined").any?
+        "recurring_fallback"
+      else
+        "no_buckets"
+      end
     end
 
     def fetch_duplicate_events_by_code(served_charges)
@@ -250,14 +333,24 @@ module RealtimeUsage
     # An event only moves the compared usage from inside the billing window, so the event
     # timestamps are read over that window, which also keeps the read on the primary key of the
     # table together with the metric codes. The ingestion time then tells whether the event landed
-    # while the two runs were going, which a backdated timestamp would never show.
+    # while the two runs were going, which a backdated timestamp would never show. A recurring
+    # charge also moves with a late event of a closed period, so its codes read from the start.
     def events_received_since?(since)
+      recurring_codes, codes = compared_codes.partition { recurring_compared_codes.include?(it) }
+
+      events_received_in?(codes, from: boundaries.charges_from_datetime, since:) ||
+        events_received_in?(recurring_codes, from: nil, since:)
+    end
+
+    def events_received_in?(codes, from:, since:)
+      return false if codes.empty?
+
       Clickhouse::EventsEnriched
         .where(
           organization_id: subscription.organization_id,
           external_subscription_id: subscription.external_id,
-          code: @compared_codes,
-          timestamp: boundaries.charges_from_datetime..boundaries.charges_to_datetime,
+          code: codes,
+          timestamp: from..boundaries.charges_to_datetime,
           enriched_at: since..
         )
         .exists?
@@ -277,10 +370,6 @@ module RealtimeUsage
 
     def charges_by_id
       @charges_by_id ||= charges.index_by(&:id)
-    end
-
-    def eligible_charges
-      @eligible_charges ||= charges.select { RealtimeUsage.supported_charge?(it) }
     end
 
     def boundaries

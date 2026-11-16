@@ -71,7 +71,7 @@ RSpec.describe Contracts::ActivateService do
       expect { result }.to change(BillingOperation, :count).by(1)
       expect(contract_rate_card.reload.next_billing_at).to eq(started_at)
       expect(contract_rate_card.billing_operations.sole).to have_attributes(
-        action_type: "renew_fixed_advance", causation_type: "contract_activation",
+        action_type: "renew_fixed_advance", reason: "contract_activation",
         billing_at: started_at, target_cycle_started_at: started_at
       )
     end
@@ -122,7 +122,7 @@ RSpec.describe Contracts::ActivateService do
       expect { result }.to change(BillingOperation, :count).by(1)
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
       expect(contract_rate_card.billing_operations.sole).to have_attributes(
-        action_type: "close_fixed_arrears", causation_type: "contract_activation",
+        action_type: "close_fixed_arrears", reason: "contract_activation",
         billing_at: Time.utc(2026, 10, 30), target_cycle_started_at: started_at
       )
       expect(LegacyBillingSegment.count).to eq(0)
@@ -169,7 +169,7 @@ RSpec.describe Contracts::ActivateService do
         expect(contract.reload).to be_active
         expect(failed_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 30))
         expect(failed_card.billing_operations).to be_empty
-        expect(contract_rate_card.billing_operations.sole).to have_attributes(causation_type: "contract_activation")
+        expect(contract_rate_card.billing_operations.sole).to have_attributes(reason: "contract_activation")
       end
     end
 
@@ -192,7 +192,7 @@ RSpec.describe Contracts::ActivateService do
         result
 
         expect(contract_rate_card.billing_operations.sole).to have_attributes(
-          causation_type: "contract_activation", billing_at: Time.utc(2026, 10, 30),
+          reason: "contract_activation", billing_at: Time.utc(2026, 10, 30),
           target_cycle_started_at: started_at
         )
       end
@@ -214,7 +214,7 @@ RSpec.describe Contracts::ActivateService do
         expect { result }.to change(BillingOperation, :count).by(1)
 
         expect(contract_rate_card.billing_operations.sole).to have_attributes(
-          action_type: "renew_fixed_advance", causation_type: "contract_activation",
+          action_type: "renew_fixed_advance", reason: "contract_activation",
           billing_at: started_at, target_cycle_started_at: started_at
         )
       end
@@ -379,7 +379,7 @@ RSpec.describe Contracts::ActivateService do
 
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
       expect(contract_rate_card.billing_operations.sole).to have_attributes(
-        action_type: "close_metered_arrears", causation_type: "contract_activation",
+        action_type: "close_metered_arrears", reason: "contract_activation",
         billing_at: Time.zone.parse("2026-10-07"), target_cycle_started_at: Time.zone.parse("2026-09-30")
       )
     end

@@ -33,7 +33,7 @@ RSpec.describe BillingOperations::ScheduleService do
     expect(result).to be_success
     expect(result.billing_operations.sole).to have_attributes(
       organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-      causation_type: "periodic_continuation", billing_at: cursor,
+      reason: "periodic_continuation", billing_at: cursor,
       target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: nil, cancelled_at: nil
     )
     expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
@@ -72,7 +72,7 @@ RSpec.describe BillingOperations::ScheduleService do
   context "with a completed operation in the current cycle" do
     let(:completed_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "contract_activation", billing_at: Time.utc(2026, 1, 15),
+        reason: "contract_activation", billing_at: Time.utc(2026, 1, 15),
         target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 1, 15))
     end
 
@@ -93,7 +93,7 @@ RSpec.describe BillingOperations::ScheduleService do
     let(:cursor) { Time.utc(2026, 3, 1) }
     let(:completed_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "periodic_continuation", billing_at: Time.utc(2026, 2, 1),
+        reason: "periodic_continuation", billing_at: Time.utc(2026, 2, 1),
         target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 2, 1))
     end
 
@@ -115,7 +115,7 @@ RSpec.describe BillingOperations::ScheduleService do
 
     before do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
-        causation_type: "contract_activation", billing_at: started_at,
+        reason: "contract_activation", billing_at: started_at,
         target_cycle_started_at: started_at, processed_at: started_at)
     end
 
@@ -143,7 +143,7 @@ RSpec.describe BillingOperations::ScheduleService do
     let(:cursor) { Time.utc(2026, 11, 15) }
     let(:pending_activation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "contract_activation", billing_at: Time.utc(2026, 12, 1),
+        reason: "contract_activation", billing_at: Time.utc(2026, 12, 1),
         target_cycle_started_at: Time.utc(2026, 11, 1))
     end
 
@@ -155,10 +155,10 @@ RSpec.describe BillingOperations::ScheduleService do
     it "schedules the new due obligation without retiming the activation" do
       expect(result.billing_operations.sole).to have_attributes(
         billing_at: Time.utc(2026, 11, 15), target_cycle_started_at: Time.utc(2026, 11, 1),
-        causation_type: "periodic_continuation"
+        reason: "periodic_continuation"
       )
       expect(pending_activation.reload).to have_attributes(
-        billing_at: Time.utc(2026, 12, 1), processed_at: nil, causation_type: "contract_activation"
+        billing_at: Time.utc(2026, 12, 1), processed_at: nil, reason: "contract_activation"
       )
     end
   end
@@ -166,7 +166,7 @@ RSpec.describe BillingOperations::ScheduleService do
   context "with an activation already matching the planned operation" do
     let(:pending_activation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        causation_type: "contract_activation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
+        reason: "contract_activation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
     before { pending_activation }

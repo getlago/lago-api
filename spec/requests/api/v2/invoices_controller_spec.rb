@@ -442,7 +442,7 @@ RSpec.describe Api::V2::InvoicesController do
     it "generates the pdf asynchronously" do
       subject
 
-      expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:accepted)
       expect(response.body).to be_empty
       expect(Invoices::GeneratePdfJob).to have_been_enqueued.with(invoice)
     end
@@ -459,7 +459,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns the invoice without regenerating it" do
         subject
 
-        expect(response).to have_http_status(:success)
+        expect(response).to have_http_status(:ok)
         expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract")
         expect(json[:invoice][:pdf_url]).to be_present
         expect(json[:invoice]).not_to have_key(:fees)

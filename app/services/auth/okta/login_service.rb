@@ -59,8 +59,7 @@ module Auth
       end
 
       def find_user
-        User.find_by(email: result.email) ||
-          User.where("LOWER(email) = ?", result.email.downcase).order(:created_at).first
+        User.lookup_by_email(result.email)
       end
 
       # Under the email lock, as every user creation, which also ends the address's open self-serve signups.

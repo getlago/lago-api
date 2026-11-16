@@ -12,7 +12,7 @@ module BillingOperations
 
     def call
       if operation.action_type == "reconcile_advance_coverage"
-        unless operation.causation_type == "rate_change" && operation.contract_rate_card.periodic_billing_action == "renew_fixed_advance"
+        unless operation.reason == "rate_change" && operation.contract_rate_card.periodic_billing_action == "renew_fixed_advance"
           return result.single_validation_failure!(field: :operation, error_code: "fixed_advance_reconciliation_unsupported")
         end
 

@@ -5,12 +5,20 @@ module Billing
     # Answers when a rate card bills. Cycles come from the walker; each cycle is cut at rate
     # changes into priced slices, and every question below is asked of those slices.
     class Schedule
+      BILLING_TARGETS = {current: "current", next: "next"}.freeze
+
       # `due_on_coverage_end` makes every slice fall due when its coverage ends, whatever the
       # terms' timing. Cards that regroup paid advance fees use it (see BillableSegment).
       def initialize(
         rates:, terms:, phases:, starts_at:, anchor_date:, timezone:,
-        ends_at: nil, due_on_coverage_end: false
+        ends_at: nil, due_on_coverage_end: false, resume_at: nil
       )
+        if resume_at && resume_at < starts_at.in_time_zone(timezone).beginning_of_day
+          raise ArgumentError, "resume_at #{resume_at} precedes the card's start"
+        end
+
+        @timezone = timezone
+        @resume_at = resume_at
         @rates = rates
         @terms = terms
         @due_on_coverage_end = due_on_coverage_end
@@ -21,7 +29,7 @@ module Billing
       # `billing_at`, not `due_at`: it lists what is billed, not what an operation picks up.
       # A rate change can make a slice billable before its cycle ends.
       def segments_due_by(timestamp)
-        cycles = walker.walk_to(timestamp)
+        cycles = walker.walk_to(timestamp, from: resume_at)
 
         billable_segments_of(cycles).select do |segment|
           segment.billing_at <= timestamp
@@ -31,6 +39,36 @@ module Billing
       # The cycle containing the instant, or nil once the schedule has ended.
       def cycle_at(timestamp)
         walker.resume(timestamp)
+      end
+
+      def billable_segments_for_cycle(cycle)
+        billable_segments_of([cycle])
+      end
+
+      def next_billable_cycle(after_cycle_started_at:)
+        cycle = walker.resume(after_cycle_started_at)
+        # Both resume and cycle_after return nil once the schedule has ended.
+        cycle = walker.cycle_after(cycle) while cycle && cycle.started_at <= after_cycle_started_at
+
+        while cycle
+          return cycle if priced_segments_for_cycle(cycle).any?
+
+          cycle = walker.cycle_after(cycle)
+        end
+
+        nil
+      end
+
+      # The current billing instant covers the time being served; the next is strictly later.
+      def billing_at(timestamp:, target:)
+        raise ArgumentError, "unknown billing target: #{target}" unless BILLING_TARGETS.value?(target)
+
+        if target == BILLING_TARGETS.fetch(:current)
+          segment = segment_covering(timestamp)
+          segment&.billing_at || find_billing_after(timestamp)
+        else
+          find_billing_after(timestamp)
+        end
       end
 
       # The first slice still open at the instant, or falling due exactly on it. The second
@@ -70,9 +108,27 @@ module Billing
         end
       end
 
+      # Measure consumption against the original billed segment, whose end is exclusive.
+      def consumed_ratio(segment:, at:)
+        segment_days = Days.between(segment.started_at, segment.ended_at, timezone:)
+
+        if segment_days.zero?
+          1.0
+        else
+          consumed_until = at.clamp(segment.started_at, segment.ended_at)
+          consumed_days = Days.between(segment.started_at, consumed_until, timezone:)
+
+          consumed_days.fdiv(segment_days)
+        end
+      end
+
       private
 
-      attr_reader :rates, :terms, :due_on_coverage_end, :walker
+      attr_reader :rates, :terms, :due_on_coverage_end, :timezone, :resume_at, :walker
+
+      def find_billing_after(timestamp)
+        segments(from: timestamp).find { it.billing_at > timestamp }&.billing_at
+      end
 
       # Every priced slice in billing order, from the cycle containing `from`. Lazy, because an
       # open-ended card has no last cycle: callers stop at the first slice that answers them.
@@ -91,8 +147,12 @@ module Billing
       # Unpriced periods of a cycle are not billable.
       def billable_segments_of(cycles)
         cycles.flat_map do |cycle|
-          Segments.within(cycle, rates:).select(&:rate).map { build_billable_segment(cycle:, segment: it) }
+          priced_segments_for_cycle(cycle).map { build_billable_segment(cycle:, segment: it) }
         end
+      end
+
+      def priced_segments_for_cycle(cycle)
+        Segments.within(cycle, rates:).select(&:rate)
       end
 
       def build_billable_segment(cycle:, segment:)

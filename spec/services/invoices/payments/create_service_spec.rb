@@ -25,6 +25,50 @@ RSpec.describe Invoices::Payments::CreateService do
     let(:provider_class) { PaymentProviders::Stripe::Payments::CreateService }
     let(:provider_service) { instance_double(provider_class) }
 
+    shared_examples "a refused payment that runs its follow-up" do
+      it "enqueues one payment failure webhook and the fees payment status update" do
+        create_service.call
+
+        expect(SendWebhookJob).to have_been_enqueued
+          .with("invoice.payment_failure", invoice, any_args).exactly(:once)
+        expect(Invoices::UpdateFeesPaymentStatusJob).to have_been_enqueued.with(invoice)
+      end
+
+      context "when the invoice is a credit invoice" do
+        let(:invoice) { create(:invoice, :credit, :open, customer:, organization:, total_amount_cents: 100) }
+        let(:wallet) { create(:wallet, customer:, organization:) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, source: :manual, status: :pending) }
+
+        before { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
+
+        it "fails the prepaid credits" do
+          create_service.call
+
+          expect(invoice.reload).to be_payment_failed
+          expect(Invoices::PrepaidCreditJob).to have_been_enqueued.with(invoice, :failed)
+        end
+      end
+
+      context "when the invoice is payment-gated" do
+        let(:subscription) do
+          create(:subscription, :incomplete, :with_activation_rules,
+            activation_rules_config: [{type: "payment", timeout_hours: 48, status: "pending"}],
+            customer:, organization:)
+        end
+        let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100, status: :open) }
+
+        before { create(:invoice_subscription, invoice:, subscription:) }
+
+        it "resolves the payment activation rule as failed" do
+          create_service.call
+
+          expect(invoice.reload).to be_payment_failed
+          expect(Subscriptions::ActivationRules::Payment::ResolveJob)
+            .to have_been_enqueued.with(subscription, invoice, :failed)
+        end
+      end
+    end
+
     before do
       provider_customer
       default_payment_method
@@ -58,6 +102,7 @@ RSpec.describe Invoices::Payments::CreateService do
       expect(payment.amount_cents).to eq(invoice.total_amount_cents)
       expect(payment.amount_currency).to eq(invoice.currency)
       expect(payment.payable).to eq(invoice)
+      expect(payment.status).to eq("pending")
 
       expect(provider_class).to have_received(:new)
       expect(provider_service).to have_received(:call!)
@@ -117,6 +162,38 @@ RSpec.describe Invoices::Payments::CreateService do
         expect(provider_class).to have_received(:new)
         expect(provider_service).to have_received(:call!)
       end
+
+      context "when gocardless refuses the payment with a validation error" do
+        before do
+          allow(provider_class).to receive(:new).and_call_original
+          stub_gocardless_error(:post, "/payments", status: 422, type: "validation_failed")
+        end
+
+        it "marks the invoice payment as failed without raising" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment.payable_payment_status).to eq("failed")
+          expect(invoice.reload).to be_payment_failed
+          expect(invoice.ready_for_payment_processing).to be(true)
+        end
+
+        it_behaves_like "a refused payment that runs its follow-up"
+      end
+
+      context "when gocardless refuses the payment with an error to investigate" do
+        before do
+          allow(provider_class).to receive(:new).and_call_original
+          stub_gocardless_error(:post, "/payments", status: 401, type: "invalid_api_usage")
+        end
+
+        it "re-raises the provider failure and marks the invoice payment as failed" do
+          expect { create_service.call }.to raise_error(BaseService::ServiceFailure)
+
+          expect(invoice.reload).to be_payment_failed
+          expect(invoice.ready_for_payment_processing).to be(true)
+        end
+      end
     end
 
     context "with adyen payment provider" do
@@ -130,6 +207,41 @@ RSpec.describe Invoices::Payments::CreateService do
 
         expect(provider_class).to have_received(:new)
         expect(provider_service).to have_received(:call!)
+      end
+
+      context "when adyen refuses the payment" do
+        before do
+          allow(provider_class).to receive(:new).and_call_original
+          stub_adyen_checkout("paymentMethods", body: {storedPaymentMethods: []})
+        end
+
+        context "with a validation error" do
+          before do
+            stub_adyen_checkout("payments", status: 422, body: {errorType: "validation", message: "Invalid card number"})
+          end
+
+          it "marks the invoice payment as failed without raising" do
+            result = create_service.call
+
+            expect(result).to be_success
+            expect(result.payment.payable_payment_status).to eq("failed")
+            expect(invoice.reload).to be_payment_failed
+            expect(invoice.ready_for_payment_processing).to be(true)
+          end
+
+          it_behaves_like "a refused payment that runs its follow-up"
+        end
+
+        context "with an error to investigate" do
+          before { stub_adyen_checkout("payments", status: 403) }
+
+          it "re-raises the provider failure and marks the invoice payment as failed" do
+            expect { create_service.call }.to raise_error(BaseService::ServiceFailure)
+
+            expect(invoice.reload).to be_payment_failed
+            expect(invoice.ready_for_payment_processing).to be(true)
+          end
+        end
       end
     end
 
@@ -461,6 +573,22 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when the customer has no payment provider type and the organization has a single provider" do
+      subject(:create_service) { described_class.new(invoice:, payment_method_params:) }
+
+      let(:customer) { create(:customer, organization:, payment_provider: nil, payment_provider_code: nil) }
+
+      it "charges the payment through the provider of the provider customer" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment.payment_provider).to eq(payment_provider)
+        expect(result.payment.payment_provider_customer).to eq(provider_customer)
+        expect(provider_class).to have_received(:new)
+        expect(provider_service).to have_received(:call!)
+      end
+    end
+
     context "with missing payment provider" do
       let(:payment_provider) { nil }
 
@@ -751,6 +879,39 @@ RSpec.describe Invoices::Payments::CreateService do
         end
       end
 
+      Customer::PAYMENT_PROVIDERS.filter_map { PaymentProviders::CreatePaymentFactory.service_class(provider: it) }.each do |refusing_service|
+        context "when #{refusing_service.module_parent.module_parent.name.demodulize} refuses the payment" do
+          let(:result) do
+            refusing_service::Result.new.tap do |r|
+              r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
+              r.error_message = "error"
+              r.error_code = "code"
+              r.reraise = reraise
+            end
+          end
+
+          context "when the refusal is re-raised" do
+            let(:reraise) { true }
+
+            it "re-raises the provider failure and marks the invoice payment as failed" do
+              expect { create_service.call }.to raise_error(BaseService::ServiceFailure)
+
+              expect(invoice.reload).to be_payment_failed
+            end
+          end
+
+          context "when the refusal is not re-raised" do
+            let(:reraise) { false }
+
+            it "marks the invoice payment as failed without raising" do
+              expect(create_service.call).to be_success
+
+              expect(invoice.reload).to be_payment_failed
+            end
+          end
+        end
+      end
+
       context "when payable_payment_status is pending" do
         let(:result) do
           PaymentProviders::Stripe::Payments::CreateService::Result.new.tap do |r|
@@ -840,6 +1001,149 @@ RSpec.describe Invoices::Payments::CreateService do
         expect(provider_service).to have_received(:call!)
       end
 
+      context "when the provider customer of the pending payment was discarded" do
+        let(:current_provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
+
+        before do
+          provider_customer.discard!
+          current_provider_customer
+        end
+
+        it "sends the payment to the provider with the current provider customer" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to eq(payment)
+
+          expect(payment.reload.payment_provider_id).to eq(payment_provider.id)
+          expect(payment.payment_provider_customer_id).to eq(current_provider_customer.id)
+          expect(payment.payment_provider_customer).to eq(current_provider_customer)
+          expect(payment.amount_cents).to eq(invoice.total_due_amount_cents)
+
+          expect(provider_class).to have_received(:new)
+            .with(hash_including(payment: having_attributes(payment_provider_customer_id: current_provider_customer.id)))
+          expect(provider_service).to have_received(:call!)
+        end
+
+        context "when the invoice was partially paid after the pending payment was stored" do
+          let(:invoice) do
+            create(:invoice, customer:, organization:, invoice_type: :one_off, total_amount_cents: 10_000, total_paid_amount_cents: 3_000)
+          end
+
+          it "charges the due amount of the invoice to the current provider customer" do
+            create_service.call
+
+            # total 10_000 - paid 3_000 - offset 0
+            expect(payment.reload.amount_cents).to eq(10_000 - 3_000)
+            expect(provider_class).to have_received(:new)
+              .with(hash_including(payment: having_attributes(amount_cents: 7_000, payment_provider_customer_id: current_provider_customer.id)))
+          end
+        end
+      end
+
+      context "when the reused pending payment has a provider status" do
+        before { payment.update!(status: "requires_payment_method") }
+
+        it "keeps the provider status of the payment" do
+          create_service.call
+
+          expect(payment.reload.status).to eq("requires_payment_method")
+          expect(payment.payable_payment_status).to eq("pending")
+        end
+      end
+
+      context "when the stored payment method of the pending payment is outdated" do
+        let(:old_payment_method) { create(:payment_method, customer:, is_default: false) }
+
+        before { payment.update!(payment_method_id: old_payment_method.id) }
+
+        it "charges the payment with the current default payment method" do
+          create_service.call
+
+          expect(payment.reload.payment_method_id).to eq(default_payment_method.id)
+        end
+
+        context "when a payment method is passed in params" do
+          let(:other_payment_method) { create(:payment_method, customer:, is_default: false) }
+          let(:payment_method_params) { {payment_method_id: other_payment_method.id} }
+
+          it "charges the payment with the passed payment method" do
+            create_service.call
+
+            expect(payment.reload.payment_method_id).to eq(other_payment_method.id)
+          end
+        end
+      end
+
+      context "when the customer moved to another payment provider" do
+        subject(:create_service) { described_class.new(invoice:, payment_provider: :stripe, payment_method_params:) }
+
+        let(:customer) { create(:customer, organization:, payment_provider: "gocardless", payment_provider_code: "gocardless_1") }
+        let(:gocardless_provider) { create(:gocardless_provider, code: "gocardless_1", organization:) }
+        let(:gocardless_customer) { create(:gocardless_customer, payment_provider: gocardless_provider, customer:) }
+        let(:gocardless_class) { PaymentProviders::Gocardless::Payments::CreateService }
+
+        before do
+          gocardless_customer
+
+          allow(gocardless_class).to receive(:new).and_return(provider_service)
+        end
+
+        it "charges the reused payment through the current provider" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to eq(payment)
+
+          expect(payment.reload.payment_provider_id).to eq(gocardless_provider.id)
+          expect(payment.payment_provider_customer_id).to eq(gocardless_customer.id)
+
+          expect(gocardless_class).to have_received(:new)
+            .with(hash_including(payment: having_attributes(payment_provider_customer_id: gocardless_customer.id)))
+          expect(provider_class).not_to have_received(:new)
+          expect(provider_service).to have_received(:call!)
+        end
+      end
+
+      context "when the invoice was partially paid after the pending payment was stored" do
+        let(:invoice) do
+          create(:invoice, customer:, organization:, invoice_type: :one_off, total_amount_cents: 10_000, total_paid_amount_cents: 3_000)
+        end
+
+        it "keeps the stored amount sent under the same idempotency key" do
+          create_service.call
+
+          expect(payment.reload.amount_cents).to eq(10_000)
+          expect(provider_class).to have_received(:new)
+            .with(hash_including(payment: having_attributes(amount_cents: 10_000)))
+        end
+      end
+
+      context "when a credit note offset the invoice after the pending payment was stored" do
+        let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :one_off, total_amount_cents: 10_000) }
+
+        before { create(:credit_note, invoice:, customer:, organization:, status: :finalized, offset_amount_cents: 2_500) }
+
+        it "keeps the stored amount sent under the same idempotency key" do
+          create_service.call
+
+          expect(payment.reload.amount_cents).to eq(10_000)
+        end
+      end
+
+      context "when the customer no longer has a provider customer id" do
+        before { provider_customer.update!(provider_customer_id: nil) }
+
+        it "skips the payment and leaves the pending payment untouched" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(payment.reload.payment_provider_customer_id).to eq(provider_customer.id)
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+
       context "when payment is already processing" do
         let(:payment_status) { "processing" }
 
@@ -849,6 +1153,10 @@ RSpec.describe Invoices::Payments::CreateService do
           expect(result).to be_success
           expect(result.invoice).to eq(invoice)
           expect(result.payment).to eq(payment)
+
+          expect(payment.reload.payment_provider_customer_id).to eq(provider_customer.id)
+          expect(payment.amount_cents).to eq(invoice.total_amount_cents)
+          expect(invoice.payments.count).to eq(1)
 
           expect(provider_class).not_to have_received(:new)
           expect(provider_service).not_to have_received(:call!)
@@ -914,12 +1222,23 @@ RSpec.describe Invoices::Payments::CreateService do
       context "when the organization skips the credit invoice auto-payment delay" do
         before { organization.enable_feature_flag!(:skip_credit_invoice_auto_payment_delay) }
 
-        it "still delays a non-credit invoice" do
-          freeze_time do
-            expect { ApplicationRecord.transaction { create_service.call_async } }
-              .to have_enqueued_job(Invoices::Payments::CreateJob)
-              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
-              .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+        it "enqueues the payment of a one-off invoice immediately" do
+          expect { ApplicationRecord.transaction { create_service.call_async } }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            .at(:no_wait)
+        end
+
+        context "when the invoice is a subscription invoice" do
+          let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 100, invoice_type: :subscription) }
+
+          it "still delays the first auto-payment" do
+            freeze_time do
+              expect { ApplicationRecord.transaction { create_service.call_async } }
+                .to have_enqueued_job(Invoices::Payments::CreateJob)
+                .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+                .at(described_class::CHECKOUT_AUTO_PAYMENT_DELAY.from_now)
+            end
           end
         end
       end

@@ -107,7 +107,7 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
       before do
         create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_metered_arrears",
           billing_at: Time.zone.parse("2026-10-14"), target_cycle_started_at: Time.zone.parse("2026-10-07"),
-          cancelled_at: Time.zone.parse("2026-10-10"), cancelled_causation_type: :contract_termination)
+          cancelled_at: Time.zone.parse("2026-10-10"), cancellation_reason: :contract_termination)
       end
 
       it "plans from the last completed billing only" do

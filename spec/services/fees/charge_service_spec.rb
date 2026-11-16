@@ -4793,6 +4793,54 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
+    context "when the subscription is terminated" do
+      let(:subscription) do
+        create(:subscription, :terminated, organization:, customer:,
+          started_at: Time.zone.parse("2022-03-15"), terminated_at: Time.zone.parse("2022-03-31T12:00:00"))
+      end
+
+      it "bills the units without persisting snapshots, which nothing would read" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole).to have_attributes(units: 15, events_count: 2)
+        expect(snapshots).to be_empty
+      end
+
+      context "with a next subscription" do
+        before { create(:subscription, organization:, customer:, previous_subscription: subscription, plan: subscription.plan) }
+
+        it "persists the snapshots, which the next subscription reads" do
+          charge_subscription_service.call
+
+          expect(snapshots.sole).to have_attributes(to_datetime: boundaries.charges_to_datetime.floor(6), units: 15)
+        end
+      end
+
+      context "with a pending next subscription, as a downgrade starting at the end of the period" do
+        before do
+          create(:subscription, :pending, organization:, customer:, previous_subscription: subscription, plan: subscription.plan)
+        end
+
+        it "persists the snapshots" do
+          charge_subscription_service.call
+
+          expect(snapshots.sole.units).to eq(15)
+        end
+      end
+
+      context "with a canceled next subscription" do
+        before do
+          create(:subscription, :canceled, organization:, customer:, previous_subscription: subscription, plan: subscription.plan)
+        end
+
+        it "persists no snapshot" do
+          charge_subscription_service.call
+
+          expect(snapshots).to be_empty
+        end
+      end
+    end
+
     context "with the snapshot_backfill context" do
       let(:organization) { create_default(:organization) }
       let(:context) { :snapshot_backfill }
@@ -5740,6 +5788,39 @@ RSpec.describe Fees::ChargeService, :premium do
       charge_subscription_service.call
 
       expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
+    end
+
+    # The pre-filtering skips a charge the buckets serve, so no ingestion timestamp would ever
+    # invalidate a fee cached while the buckets fall back to events.
+    context "with a recurring charge the buckets fall back on" do
+      let(:organization) do
+        create(
+          :organization,
+          clickhouse_events_store: true,
+          feature_flags: %w[realtime_usage realtime_usage_recurring_sum persisted_recurring_values]
+        )
+      end
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          value: "4.0",
+          decimal_value: 4.0
+        )
+      end
+
+      it "reads the events, as no snapshot period precedes the window, and bypasses the charge cache" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first.units).to eq(4)
+        expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
+      end
     end
 
     context "when the provider was never asked to serve a precomputed source" do
