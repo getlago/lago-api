@@ -44,6 +44,7 @@ module Memberships
 
     def revoke(sandbox, target)
       target.mark_as_revoked!
+      ApiKeys::ExpireMemberKeyService.expire_all(target)
       log(sandbox, "user.deleted", email: user.email)
     end
 
@@ -70,6 +71,8 @@ module Memberships
       result.sandbox_membership = target
       return if added.empty? && deleted.empty?
 
+      # As on production: a running agent turn must not keep the permissions the member had.
+      ApiKeys::ExpireMemberKeyService.expire_all(target)
       roles = {added: added.map(&:code), deleted: deleted.map(&:code)}.reject { |_, codes| codes.empty? }
       log(sandbox, "user.role_edited", email: user.email, roles:)
     end

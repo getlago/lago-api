@@ -28,24 +28,35 @@ RSpec.describe Memberships::SyncSandboxService do
         log_event: "user.added", user: actor, resources: {email: user.email, roles: ["finance"]})
     end
 
-    it "changes nothing the second time" do
+    it "changes nothing the second time, and keeps the keys the AI agent holds for the sandbox member" do
       described_class.call!(organization: production, user:, actor:)
+      api_key = ApiKeys::CreateMemberKeyService.call!(membership: sandbox_membership).api_key
 
       expect { result }.not_to change { sandbox.memberships.count + MembershipRole.count }
       expect(security_logger).to have_received(:produce).once
+      expect(ApiKey.unscoped.find(api_key.id)).not_to be_expired
     end
   end
 
   context "when the user's roles changed on production" do
+    let(:agent_key) { ApiKeys::CreateMemberKeyService.call!(membership: sandbox_membership).api_key }
+
     before do
       create(:membership, user:, organization: production, roles: %i[admin])
       create(:membership, user:, organization: sandbox, roles: %i[finance])
+      agent_key
     end
 
     it "gives the sandbox membership the same roles" do
       expect(result.sandbox_membership.roles.reload).to eq([admin])
       expect(security_logger).to have_received(:produce).with(organization: sandbox, log_type: "user",
         log_event: "user.role_edited", user: actor, resources: {email: user.email, roles: {added: ["admin"], deleted: ["finance"]}})
+    end
+
+    it "expires the keys the AI agent holds for the sandbox member" do
+      result
+
+      expect(ApiKey.unscoped.find(agent_key.id)).to be_expired
     end
   end
 
@@ -81,9 +92,12 @@ RSpec.describe Memberships::SyncSandboxService do
   end
 
   context "when the production membership was revoked" do
+    let(:agent_key) { ApiKeys::CreateMemberKeyService.call!(membership: sandbox_membership).api_key }
+
     before do
       create(:membership, :revoked, user:, organization: production)
       create(:membership, user:, organization: sandbox, roles: %i[admin])
+      agent_key
     end
 
     it "revokes the sandbox membership, even when it holds the sandbox's last admin role" do
@@ -92,6 +106,12 @@ RSpec.describe Memberships::SyncSandboxService do
       expect(sandbox_membership).to be_nil
       expect(security_logger).to have_received(:produce).with(organization: sandbox, log_type: "user",
         log_event: "user.deleted", user: actor, resources: {email: user.email})
+    end
+
+    it "expires the keys the AI agent holds for the sandbox member" do
+      result
+
+      expect(ApiKey.unscoped.find(agent_key.id)).to be_expired
     end
   end
 
