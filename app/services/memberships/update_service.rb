@@ -15,6 +15,12 @@ module Memberships
     def call
       ActiveRecord::Base.transaction do
         return result.not_found_failure!(resource: "membership") unless membership
+
+        # Under the lock, so the last admin check holds until the write commits.
+        Organizations::SandboxLockService.call!(organization:)
+        # Every membership write takes the lock: reloaded, an update loaded before a revoke finds it revoked.
+        membership.reload
+        return result.not_found_failure!(resource: "membership") unless membership.active?
         return result.not_found_failure!(resource: "role") if new_roles.blank?
         return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
         return result.not_allowed_failure!(code: "last_admin") if last_admin_demotion?
@@ -23,6 +29,7 @@ module Memberships
         roles_to_remove = old_roles - new_roles
         (new_roles - old_roles).each { |role| MembershipRole.create!(organization:, membership:, role:) }
         MembershipRole.where(membership:, role: roles_to_remove).discard_all! if roles_to_remove.present?
+        Memberships::SyncSandboxService.call!(organization:, user: membership.user, actor: user)
       end
 
       # A running agent turn must not keep the permissions the member had.
@@ -33,6 +40,8 @@ module Memberships
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
