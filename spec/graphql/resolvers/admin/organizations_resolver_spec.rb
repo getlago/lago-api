@@ -49,6 +49,8 @@ RSpec.describe Resolvers::Admin::OrganizationsResolver do
   end
 
   context "with a production organization and its sandbox" do
+    include_context "with self-serve enabled"
+
     let(:query) do
       <<~GQL
         query {
@@ -73,8 +75,6 @@ RSpec.describe Resolvers::Admin::OrganizationsResolver do
     before { sandbox }
 
     context "with self-serve enabled" do
-      include_context "with self-serve enabled"
-
       it "shows the environment and the pair of each organization, without membership", :premium do
         result = fetch
 
@@ -91,9 +91,7 @@ RSpec.describe Resolvers::Admin::OrganizationsResolver do
     end
 
     context "with self-serve disabled" do
-      include_context "with self-serve enabled"
-
-      let(:self_serve_env) { {"LAGO_SELF_SERVE_ENABLED" => "false"} }
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
 
       it "shows every organization as a standalone production one", :premium do
         expect(fetch["collection"]).to eq([sandbox, production, hooli, acme].map { {"id" => it.id, **standalone} })

@@ -55,17 +55,20 @@ RSpec.describe Resolvers::OrganizationResolver do
     let(:user) { create(:user) }
     let(:production) { create(:organization, :self_serve) }
     let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: production) }
+    # The user's membership status in the sandbox, nil for none.
+    let(:sandbox_membership_status) { :active }
 
     def fetch(current_organization)
       current_membership = user.memberships.active.find_by!(organization: current_organization)
       execute_graphql(current_user: user, current_organization:, current_membership:, query:)["data"]["organization"]
     end
 
-    before { create(:membership, user:, organization: production) }
+    before do
+      create(:membership, user:, organization: production)
+      create(:membership, user:, organization: sandbox, status: sandbox_membership_status) if sandbox_membership_status
+    end
 
     it "links each organization to the other one for a member of both" do
-      create(:membership, user:, organization: sandbox)
-
       expect(fetch(production)).to eq(
         "selfServe" => true, "environment" => "production", "productionOrganization" => nil,
         "sandboxOrganization" => {"id" => sandbox.id, "name" => sandbox.name, "slug" => sandbox.slug}
@@ -76,22 +79,21 @@ RSpec.describe Resolvers::OrganizationResolver do
       )
     end
 
-    it "hides the sandbox from a user who is not an active member of it" do
-      create(:membership, :revoked, user:, organization: sandbox)
+    context "when the sandbox membership is revoked" do
+      let(:sandbox_membership_status) { :revoked }
 
-      expect(fetch(production)["sandboxOrganization"]).to be_nil
+      it "hides the sandbox from the user" do
+        expect(fetch(production)["sandboxOrganization"]).to be_nil
+      end
     end
 
     context "with self-serve disabled" do
       let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+      let(:standalone) do
+        {"selfServe" => false, "environment" => "production", "productionOrganization" => nil, "sandboxOrganization" => nil}
+      end
 
       it "shows each organization as a standalone production one" do
-        create(:membership, user:, organization: sandbox)
-        standalone = {
-          "selfServe" => false, "environment" => "production", "productionOrganization" => nil,
-          "sandboxOrganization" => nil
-        }
-
         expect(fetch(production)).to eq(standalone)
         expect(fetch(sandbox)).to eq(standalone)
       end
