@@ -53,6 +53,8 @@ module Integrations
           "avalara"
         when "Integrations::HubspotIntegration"
           "hubspot"
+        when "Integrations::QuickbooksIntegration"
+          "quickbooks"
         end
       end
 
@@ -68,6 +70,9 @@ module Integrations
           Rails.env.production? ? "avalara" : "avalara-sandbox"
         when "Integrations::HubspotIntegration"
           "hubspot"
+        when "Integrations::QuickbooksIntegration"
+          # The sandbox setting is stored uncast, so the string "false" must not select the sandbox
+          ActiveModel::Type::Boolean.new.cast(integration.sandbox) ? "quickbooks-sandbox" : "quickbooks"
         end
       end
 
