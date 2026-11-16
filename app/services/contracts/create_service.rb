@@ -42,7 +42,7 @@ module Contracts
       # downgrade, renewal) will create their pending sibling explicitly when
       # they exist; a blind second create is a mistake, not a replacement.
       # Advisory under concurrency — the partial unique index closes the race.
-      if organization.contracts.where(status: %w[pending active], external_id: params[:external_id]).exists?
+      if organization.contracts.where(status: Contract::LIVE_STATUSES, external_id: params[:external_id]).exists?
         return result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
       end
 

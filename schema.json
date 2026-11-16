@@ -11899,6 +11899,12 @@
           "interfaces": null,
           "enumValues": [
             {
+              "name": "draft",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "pending",
               "description": null,
               "isDeprecated": false,

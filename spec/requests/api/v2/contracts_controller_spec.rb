@@ -184,6 +184,22 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with a draft contract" do
+      let!(:draft_contract) { create(:contract, :draft, organization:, customer:) }
+
+      it "lists only active contracts by default" do
+        subject
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([contract.id])
+      end
+
+      it "lists draft contracts when the status filter asks for them" do
+        get_with_token(organization, "/api/v2/contracts?status[]=draft")
+
+        expect(json[:contracts].map { |c| c.slice(:lago_id, :status) }).to eq([{lago_id: draft_contract.id, status: "draft"}])
+      end
+    end
+
     context "with a billing entity filter" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let!(:matching) { create(:contract, organization:, billing_entity:) }
