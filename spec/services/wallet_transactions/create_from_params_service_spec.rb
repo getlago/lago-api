@@ -523,7 +523,7 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
 
           before { stripe_connection }
 
-          it "pins the connections on the paid transaction only" do
+          it "pins the connections on all transactions" do
             paid_transaction = result.wallet_transactions.find(&:purchased?)
             granted_transaction = result.wallet_transactions.find(&:granted?)
 
@@ -531,7 +531,11 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
               .to match_array([%w[payment specific], %w[tax skip]])
             expect(paid_transaction.effective_payment_connection).to eq(stripe_connection)
             expect(paid_transaction.effective_tax_connection).to be_nil
-            expect(granted_transaction.billing_object_connections).to be_empty
+
+            expect(granted_transaction.billing_object_connections.pluck(:category, :behavior))
+              .to match_array([%w[payment specific], %w[tax skip]])
+            expect(granted_transaction.effective_payment_connection).to eq(stripe_connection)
+            expect(granted_transaction.effective_tax_connection).to be_nil
           end
         end
 
@@ -540,7 +544,7 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
             {
               wallet_id: wallet.id,
               paid_credits:,
-              connections: { unknown: { behavior: "skip" } }
+              connections: {unknown: {behavior: "skip"}}
             }
           end
 
