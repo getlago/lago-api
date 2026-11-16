@@ -19,10 +19,6 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
-      # The v2 controller passes these raw, so an array, an object or a number is refused here.
-      invalid_field = %i[code name value_type].find { !params[it].nil? && !params[it].is_a?(String) }
-      return result.single_validation_failure!(field: invalid_field, error_code: "value_is_invalid") if invalid_field
-
       # The lock serializes the option check with other updates, creates and the feature delete.
       feature.with_lock do
         return result.not_found_failure!(resource: "feature") if feature.discarded?
@@ -31,7 +27,7 @@ module Entitlement
         privilege = feature.privileges.find_by(code: privilege_code)
         return result.not_found_failure!(resource: "privilege") unless privilege
 
-        if params.key?(:code) && params[:code]&.strip != privilege.code
+        if params.key?(:code) && stripped(params[:code]) != privilege.code
           return result.single_validation_failure!(field: :code, error_code: "value_is_immutable")
         end
 
@@ -39,17 +35,15 @@ module Entitlement
           return result.single_validation_failure!(field: :value_type, error_code: "value_is_immutable")
         end
 
-        if params.key?(:select_options)
-          select_result = ValidatePrivilegeSelectOptionsService.call(value_type: privilege.value_type, params:)
-          return result.fail_with_error!(select_result.error) unless select_result.success?
-
+        # select_options only belong to the select type, and are ignored for the other types.
+        if privilege.value_type == "select" && params.key?(:select_options)
           # v2 replaces the list instead of merging it, so every current option must be sent again.
-          removed_options = Array(privilege.config["select_options"]) - Array(select_result.config["select_options"])
+          removed_options = Array(privilege.config["select_options"]) - Array(params[:select_options])
           if removed_options.any?
             return result.single_validation_failure!(field: :select_options, error_code: "select_option_removal_not_allowed")
           end
 
-          privilege.config = select_result.config
+          privilege.config = {"select_options" => params[:select_options]}
         end
 
         privilege.name = params[:name] if params.key?(:name)
@@ -75,5 +69,9 @@ module Entitlement
     private
 
     attr_reader :feature, :privilege_code, :params
+
+    def stripped(value)
+      value.is_a?(String) ? value.strip : value
+    end
   end
 end

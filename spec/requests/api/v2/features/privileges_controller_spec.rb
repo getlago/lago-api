@@ -903,37 +903,66 @@ RSpec.describe Api::V2::Features::PrivilegesController do
       include_examples "a refused update on", "value_is_immutable", "value_type"
     end
 
-    [["null", nil], ["empty", []]].each do |label, select_options|
-      context "with select_options #{label} on a select privilege" do
-        let(:privilege_params) { {select_options:} }
+    context "with select_options empty on a select privilege" do
+      let(:privilege_params) { {select_options: []} }
 
-        include_examples "a refused update on", "value_is_mandatory", "select_options"
+      include_examples "a refused update on", "select_option_removal_not_allowed", "select_options"
+    end
+
+    context "with select_options null on a select privilege" do
+      let(:privilege_params) { {name: "SSO provider", select_options: nil} }
+
+      it "ignores them and updates the name" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(privilege.reload).to have_attributes(name: "SSO provider", config: {"select_options" => %w[okta google entra_id]})
       end
     end
 
     context "with select_options on a string privilege" do
       let(:privilege) { create(:privilege, feature:, organization:, code: "provider", value_type: "string") }
-      let(:privilege_params) { {select_options: ["okta"]} }
+      let(:privilege_params) { {name: "Provider", select_options: ["okta"]} }
 
-      include_examples "a refused update on", "value_must_be_blank", "select_options"
-    end
+      it "ignores them" do
+        request
 
-    [
-      ["a string", "okta"],
-      ["a list of numbers", [1, 2]],
-      ["a list of objects", [{a: 1}]]
-    ].each do |label, select_options|
-      context "with select_options as #{label}" do
-        let(:privilege_params) { {select_options:} }
-
-        include_examples "a refused update on", "value_is_invalid", "select_options"
+        expect(response).to have_http_status(:success)
+        expect(privilege.reload).to have_attributes(name: "Provider", config: {})
       end
     end
 
-    context "with name as an object" do
-      let(:privilege_params) { {name: {a: 1}} }
+    [["a string", "okta"], ["a list of objects", [{a: 1}]]].each do |label, select_options|
+      context "with select_options as #{label}" do
+        let(:privilege_params) { {name: "SSO provider", select_options:} }
 
-      include_examples "a refused update on", "value_is_invalid", "name"
+        it "ignores them and updates the name" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(privilege.reload).to have_attributes(name: "SSO provider", config: {"select_options" => %w[okta google entra_id]})
+        end
+      end
+    end
+
+    context "with select_options as a list of numbers" do
+      let(:privilege_params) { {select_options: [1, 2]} }
+
+      include_examples "a refused update on", "select_option_removal_not_allowed", "select_options"
+    end
+
+    context "with select_options that keep the current ones and add a number" do
+      let(:privilege_params) { {select_options: ["okta", "google", "entra_id", 1]} }
+
+      include_examples "a refused update on", "invalid_format", "select_options"
+    end
+
+    [["a number", 123], ["a boolean", true]].each do |label, name|
+      context "with name as #{label}" do
+        let(:privilege_params) { {name:} }
+
+        include_examples "a refused update on", "value_is_invalid", "name"
+      end
     end
 
     context "when the privilege root is missing" do

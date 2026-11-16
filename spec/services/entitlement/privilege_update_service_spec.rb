@@ -259,19 +259,19 @@ RSpec.describe Entitlement::PrivilegeUpdateService do
     context "when select_options are null" do
       let(:params) { {select_options: nil} }
 
-      it_behaves_like "a validation failure", {select_options: ["value_is_mandatory"]}
+      it_behaves_like "a validation failure", {select_options: ["select_option_removal_not_allowed"]}
     end
 
     context "when select_options are empty" do
       let(:params) { {select_options: []} }
 
-      it_behaves_like "a validation failure", {select_options: ["value_is_mandatory"]}
+      it_behaves_like "a validation failure", {select_options: ["select_option_removal_not_allowed"]}
     end
 
     context "when select_options are not strings" do
       let(:params) { {select_options: ["okta", "google", "entra_id", 1]} }
 
-      it_behaves_like "a validation failure", {select_options: ["value_is_invalid"]}
+      it_behaves_like "a validation failure", {select_options: ["invalid_format"]}
     end
 
     context "when the privilege is not a select" do
@@ -280,9 +280,8 @@ RSpec.describe Entitlement::PrivilegeUpdateService do
       context "when select_options are sent" do
         let(:params) { {select_options: ["okta"]} }
 
-        it "returns a validation failure and changes nothing" do
-          expect { result }.to not_have_enqueued_job(SendWebhookJob)
-          expect(result.error.messages).to eq({select_options: ["value_must_be_blank"]})
+        it "ignores them" do
+          expect(result).to be_success
           expect(privilege.reload).to have_attributes(name: "Provider", config: {})
         end
       end
@@ -306,12 +305,20 @@ RSpec.describe Entitlement::PrivilegeUpdateService do
       end
     end
 
-    [["a number", 123], ["a boolean", true], ["an array", ["provider"]], ["an object", {a: 1}]].each do |label, value|
-      %i[name code value_type].each do |field|
+    [["a number", 123], ["a boolean", true]].each do |label, value|
+      context "when name is #{label}" do
+        let(:params) { {name: value} }
+
+        it_behaves_like "a validation failure", {name: ["value_is_invalid"]}
+      end
+    end
+
+    [["a number", 123], ["a boolean", true]].each do |label, value|
+      %i[code value_type].each do |field|
         context "when #{field} is #{label}" do
           let(:params) { {field => value} }
 
-          it_behaves_like "a validation failure", {field => ["value_is_invalid"]}
+          it_behaves_like "a validation failure", {field => ["value_is_immutable"]}
         end
       end
     end
@@ -320,21 +327,6 @@ RSpec.describe Entitlement::PrivilegeUpdateService do
       let(:params) { {name: "a" * 256} }
 
       it_behaves_like "a validation failure", {name: ["value_is_too_long"]}
-    end
-
-    context "when the model refuses the config built from select_options" do
-      let(:params) { {select_options: %w[okta google entra_id onelogin]} }
-
-      before do
-        # Stands for a model rule the select_options pre-check does not know yet.
-        allow(Entitlement::ValidatePrivilegeSelectOptionsService).to receive(:call).and_return(
-          Entitlement::ValidatePrivilegeSelectOptionsService::Result.new.tap {
-            it.config = {"select_options" => ["okta", "google", "entra_id", 1]}
-          }
-        )
-      end
-
-      it_behaves_like "a validation failure", {select_options: ["invalid_format"]}
     end
 
     context "when feature is nil" do
