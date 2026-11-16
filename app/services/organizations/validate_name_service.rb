@@ -9,16 +9,14 @@ module Organizations
     NAME_MAX_LENGTH = 100
     URL_SCHEME = %r{[a-z][a-z0-9+.-]*://}
     # Schemes that work without slashes.
-    BARE_SCHEME = /(?<![\p{L}\p{N}])(?:javascript|vbscript|data|mailto|file):\S/
+    BARE_SCHEME = /(?<![\p{L}\p{N}])(?:javascript|vbscript|data|mailto|file|tel|sms|callto|facetime):\S/
     WWW = /(?<![\p{L}\p{N}])www\./
     IPV4 = /(?<![\d.])\d{1,3}(?:\.\d{1,3}){3}(?!\.?\d)/
-    DOTTED_TOKEN = /[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+/
-    # Legal forms written after a dot (`Acme Co.Ltd`, `Muster GmbH & Co.KG`): some are also top-level domains, so a
-    # dotted token loses them before the domain check.
-    LEGAL_FORMS = %w[
-      ab ag as bhd bv co corp gmbh inc kft kg kk lda llc llp lp ltd ltda nv oy plc pte pty pvt sa sarl sas sdn se sl
-      spa sro srl ug
-    ].to_set.freeze
+    # Combining marks are part of a label: Indic top-level domains (`இந்தியா`, `भारत`) are written with them.
+    DOTTED_TOKEN = /[\p{L}\p{M}\p{N}-]+(?:\.[\p{L}\p{M}\p{N}-]+)+/
+    # Legal forms written with a dot (`Acme Co.Ltd`, `Muster GmbH & Co.KG`). Only these whole tokens are spared: a
+    # legal form after any other label (`evil.ltd`, `evil.ltd.co`) is a domain on a real top-level domain.
+    DOTTED_LEGAL_FORMS = %w[co.kg co.kk co.ltd pte.ltd pty.ltd pvt.ltd sdn.bhd].to_set.freeze
     # Ideographic and full-width full stops read as dots.
     DOT_LOOKALIKES = "。．｡"
     # Zero-width non-joiner and joiner (part of Persian, Urdu and Indic spellings) and variation selectors (part of
@@ -69,18 +67,15 @@ module Organizations
       text.scan(DOTTED_TOKEN).any? { domain?(it.delete_prefix("-")) }
     end
 
-    # `co.ltd` is checked as `co`, `acme.com.ltd` as `acme.com`.
+    # A label's leading and trailing hyphens are dropped (`evil.com-` is linked as `evil.com`), and a label cut at a
+    # hyphen is checked too (`evil.com-x`). Any Punycode label (`xn--p1ai`) counts as a domain.
     def domain?(token)
-      labels = token.split(".")
-      labels.pop while labels.size > 1 && trailing_legal_form?(labels)
-      labels.size > 1 && PublicSuffix.valid?(labels.join("."), default_rule: nil)
-    end
+      labels = token.split(".").map { it.gsub(/\A-+|-+\z/, "") }.reject(&:empty?)
+      return false if labels.size < 2 || DOTTED_LEGAL_FORMS.include?(labels.join("."))
+      return true if labels.any? { it.start_with?("xn--") }
 
-    # A two-letter legal form is also a country code: it goes only after another legal form (`Co.KG`), so a bare
-    # domain on it (`acme.co`, `shop.se`) stays a domain.
-    def trailing_legal_form?(labels)
-      form = labels.last
-      LEGAL_FORMS.include?(form) && (form.length > 2 || LEGAL_FORMS.include?(labels[-2]))
+      cut = labels[...-1] + [labels.last.split("-").first]
+      [labels, cut].any? { PublicSuffix.valid?(it.join("."), default_rule: nil) }
     end
   end
 end

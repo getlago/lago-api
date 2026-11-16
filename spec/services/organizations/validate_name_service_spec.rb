@@ -73,15 +73,18 @@ RSpec.describe Organizations::ValidateNameService do
     links = ["https://acme.example", "Acme www.acme", "acme.com", "Visit acme.co.uk", "ａｃｍｅ．ｃｏｍ",
       "contact@acme.io", "Visit 10.0.0.1", "acme。com", "acme\u200D.com", "acme\uFE0F.com", "acme.com.ltd", "acme.io",
       "booking.com", "Dr.Ing Consulting", "javascript:alert(1)", "mailto:x@y", "Data:text/html,hi", "vbscript:x",
-      "file:x", "acme.co", "shop.se", "Visit t.co/abc", "shop.acme.co", "acme.ag"]
+      "file:x", "acme.co", "shop.se", "Visit t.co/abc", "shop.acme.co", "acme.ag", "Acme.Inc", "evil.ltd.co", "evil.ltd",
+      "evil.llc", "shop.inc", "evil.gmbh", "evil.இந்தியா", "evil.भारत", "evil.ভারত", "evil.xn--p1ai", "evil.com-",
+      "evil.com-x", "evil.com- Inc", "tel:+15551234", "sms:+1555", "callto:x", "facetime:x"]
 
     expect(links.index_with { described_class.call(name: it).error&.messages })
       .to eq(links.index_with { {name: ["value_contains_link"]} })
   end
 
   it "accepts names with dots that are not links" do
-    names = ["Acme Inc.", "A.B. Consulting", "Node.js Labs", "Version 2.0", "Release 1.2.3", "Acme Co.Ltd", "Acme.Inc",
-      "Acme Pty.Ltd", "Muster GmbH & Co.KG", "Metadata:Labs"]
+    names = ["Acme Inc.", "A.B. Consulting", "Node.js Labs", "Version 2.0", "Release 1.2.3", "Acme Co.Ltd",
+      "Acme Pty.Ltd", "Muster GmbH & Co.KG", "Metadata:Labs", "Acme Sdn.Bhd", "Acme Pte.Ltd", "Smith-Jones Co.Ltd",
+      "Hotel Sms Group", "Tel Aviv Labs"]
 
     expect(names.index_with { described_class.call(name: it).name }).to eq(names.index_with { it })
   end
