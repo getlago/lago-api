@@ -20,6 +20,19 @@ module Api
           end
         end
 
+        def show
+          feature = current_organization.features.find_by(code: params[:feature_code])
+          return not_found_error(resource: "feature") unless feature
+
+          privilege = feature.privileges.find_by(code: params[:code])
+
+          if privilege
+            render_privilege(privilege)
+          else
+            not_found_error(resource: "privilege")
+          end
+        end
+
         def create
           attributes = params.expect(privilege: [:code, :name, :value_type, select_options: []])
 
