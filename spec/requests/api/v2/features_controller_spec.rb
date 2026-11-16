@@ -40,8 +40,6 @@ RSpec.describe Api::V2::FeaturesController do
     include_examples "requires API permission", "feature", "read"
 
     it "returns the v2 features, newest first" do
-      create(:privilege, feature: older, organization:)
-
       subject
 
       expect(response).to have_http_status(:success)
@@ -68,14 +66,30 @@ RSpec.describe Api::V2::FeaturesController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
-    it "does not list discarded features nor features of another organization" do
-      discarded = create(:feature, organization:, deleted_at: Time.current)
-      other = create(:feature)
+    context "when a feature has privileges" do
+      before { create(:privilege, feature: older, organization:) }
 
-      subject
+      it "does not render the privileges" do
+        subject
 
-      expect(json[:features].map { it[:lago_id] }).to eq([newer.id, older.id])
-      expect(json[:features].map { it[:lago_id] }).not_to include(discarded.id, other.id)
+        expect(json[:features].map { it.keys }).to all(eq(%i[lago_id code name description created_at updated_at deleted_at]))
+      end
+    end
+
+    context "with a discarded feature and a feature of another organization" do
+      let(:discarded) { create(:feature, organization:, deleted_at: Time.current) }
+      let(:other) { create(:feature) }
+
+      before do
+        discarded
+        other
+      end
+
+      it "lists neither" do
+        subject
+
+        expect(json[:features].map { it[:lago_id] }).to eq([newer.id, older.id])
+      end
     end
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :features, model: Entitlement::Feature do
