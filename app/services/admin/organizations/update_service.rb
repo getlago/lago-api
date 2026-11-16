@@ -27,11 +27,12 @@ module Admin
           organization.premium_integrations = params[:premium_integrations] if params.key?(:premium_integrations)
           organization.save!
 
+          # The cached organization of an API key holds its premium integrations, which gate API features.
           if organization.saved_change_to_premium_integrations?
             ::Organizations::SyncSandboxSettingsService.call!(organization:)
+            after_commit { ApiKeys::CacheService.expire_all_cache(organization) }
           end
         end
-        ApiKeys::CacheService.expire_all_cache(organization)
 
         result.organization = organization
         result

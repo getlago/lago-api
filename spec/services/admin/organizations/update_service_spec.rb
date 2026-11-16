@@ -27,6 +27,26 @@ RSpec.describe Admin::Organizations::UpdateService do
       expect(organization.premium_integrations).to include("okta")
     end
 
+    describe "API key caches" do
+      before { allow(ApiKeys::CacheService).to receive(:expire_all_cache) }
+
+      it "expires them when the premium integrations change" do
+        update_service.call
+
+        expect(ApiKeys::CacheService).to have_received(:expire_all_cache).with(organization)
+      end
+
+      context "with a rename only" do
+        let(:params) { {name: "FooBar"} }
+
+        it "keeps them" do
+          update_service.call
+
+          expect(ApiKeys::CacheService).not_to have_received(:expire_all_cache)
+        end
+      end
+    end
+
     context "when the organization has a sandbox" do
       let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
 
