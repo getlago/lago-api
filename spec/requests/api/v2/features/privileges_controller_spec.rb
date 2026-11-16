@@ -616,6 +616,20 @@ RSpec.describe Api::V2::Features::PrivilegesController do
       end
     end
 
+    ["privileges", "eu/privileges"].each do |code|
+      context "when the privilege code is #{code}" do
+        let(:privilege) { create(:privilege, feature:, organization:, code:) }
+        let(:privilege_code) { code }
+
+        it "returns the privilege, not the privileges of a feature coded seats/privileges" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:privilege]).to include(lago_id: privilege.id, feature_code: "seats", code:)
+        end
+      end
+    end
+
     context "when the privilege code contains a slash" do
       let(:privilege) { create(:privilege, feature:, organization:, code: "a/b") }
       let(:privilege_code) { "a/b" }
