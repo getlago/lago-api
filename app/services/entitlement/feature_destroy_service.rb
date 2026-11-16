@@ -20,6 +20,10 @@ module Entitlement
       plans = feature.plans.to_a
 
       ActiveRecord::Base.transaction do
+        # Serializes with Entitlement::PrivilegeCreateService, so no kept privilege is added to a discarded feature.
+        feature.lock!
+        return result.not_found_failure!(resource: "feature") if feature.discarded?
+
         feature.entitlement_values.discard_all!
         feature.entitlements.discard_all!
         feature.privileges.discard_all!
