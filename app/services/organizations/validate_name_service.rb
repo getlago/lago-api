@@ -67,15 +67,20 @@ module Organizations
       text.scan(DOTTED_TOKEN).any? { domain?(it.delete_prefix("-")) }
     end
 
-    # A label's leading and trailing hyphens are dropped (`evil.com-` is linked as `evil.com`), and a label cut at a
-    # hyphen is checked too (`evil.com-x`). Any Punycode label (`xn--p1ai`) counts as a domain.
+    # A label starting with a hyphen cannot continue a host, so the token is read up to it (`Dr.-Ing.` is no domain).
+    # The last label loses its trailing hyphens (`evil.com-` is linked as `evil.com`) and is checked cut at a hyphen
+    # too (`evil.com-x`). Any Punycode label (`xn--p1ai`) counts as a domain.
     def domain?(token)
-      labels = token.split(".").map { it.gsub(/\A-+|-+\z/, "") }.reject(&:empty?)
-      return false if labels.size < 2 || DOTTED_LEGAL_FORMS.include?(labels.join("."))
+      labels = token.split(".").take_while { !it.start_with?("-") }.reject(&:empty?)
+      return false if labels.size < 2
+
+      labels[-1] = labels.last.sub(/-+\z/, "")
       return true if labels.any? { it.start_with?("xn--") }
 
       cut = labels[...-1] + [labels.last.split("-").first]
-      [labels, cut].any? { PublicSuffix.valid?(it.join("."), default_rule: nil) }
+      [labels, cut].map { it.join(".") }.any? do |host|
+        !DOTTED_LEGAL_FORMS.include?(host) && PublicSuffix.valid?(host, default_rule: nil)
+      end
     end
   end
 end
