@@ -57,6 +57,17 @@ RSpec.describe Roles::SyncSandboxService do
           # Not a member of production: the sync revokes it rather than leave it without a role.
           expect(drifted.reload).to be_revoked
         end
+
+        context "when a sandbox-only holder has another role" do
+          let(:drifted) { create(:membership, organization: sandbox, roles: %i[admin]) }
+
+          it "keeps them active with their other role" do
+            result
+
+            expect(drifted.reload).to be_active
+            expect(drifted.roles.map(&:code)).to eq(%w[admin])
+          end
+        end
       end
     end
   end
