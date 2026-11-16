@@ -3,6 +3,7 @@
 module Organizations
   # Locks an organization, then its sandbox, for a write that changes what a sandbox mirrors. Every such write goes
   # through here, so they all lock in the same mode and order and read `sandbox?` only once the row is locked.
+  # Call it before assigning anything to the organization: the lock reloads the row.
   class SandboxLockService < BaseService
     Result = BaseResult[:organization, :sandbox_organization, :production_organization]
 
@@ -18,6 +19,7 @@ module Organizations
 
     def call
       raise ArgumentError, "must be called inside a transaction" unless ApplicationRecord.connection.transaction_open?
+      raise ArgumentError, "must be called before the organization is assigned" if organization.changed?
 
       # An allowed sandbox has its production locked first, so the order stays production then sandbox.
       result.production_organization = lock_production_of_sandbox if allow_sandbox

@@ -55,17 +55,17 @@ RSpec.describe Organizations::SandboxLockService do
     end
   end
 
-  context "with unsaved changes" do
-    before { organization.name = "Unsaved" }
-
-    it "raises" do
-      expect { result }.to raise_error(RuntimeError, /unpersisted changes/)
-    end
-  end
-
   context "without a transaction", transaction: false do
     it "raises" do
       expect { described_class.call(organization:) }.to raise_error(ArgumentError, /inside a transaction/)
+    end
+  end
+
+  context "with unsaved changes on the organization" do
+    before { organization.name = "Renamed" }
+
+    it "raises before reloading them away" do
+      expect { result }.to raise_error(ArgumentError, /before the organization is assigned/)
     end
   end
 
