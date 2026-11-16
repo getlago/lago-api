@@ -165,8 +165,7 @@ class BillingEntity < ApplicationRecord
   def generate_document_number_prefix
     return unless document_number_prefix.nil?
 
-    # Spaces are left out, so a short name such as "ab Sandbox" gives "AB-4321", not "AB -4321".
-    update!(document_number_prefix: "#{name.first(3).gsub(/[[:space:]]/, "").upcase.first(3)}-#{id.last(4).upcase}")
+    update!(document_number_prefix: Organization.document_number_prefix_for(name, id))
   end
 
   def validate_email_settings
