@@ -154,6 +154,7 @@ module Contracts
           invoice: nil,
           metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:),
           billing_context:,
+          provider: events_provider,
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
@@ -226,6 +227,11 @@ module Contracts
 
     def billing_context
       @billing_context ||= Billing::Context.from(contract:)
+    end
+
+    # One for the whole computation, so the cards sharing a billing cycle share one bucket read.
+    def events_provider
+      @events_provider ||= Events::Stores::ContractUsageBucketsProvider.new(contract:, billing_context:)
     end
   end
 end
