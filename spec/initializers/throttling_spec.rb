@@ -49,6 +49,14 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
     [admitted, refused]
   end
 
+  # The cache metadata swaps Rails.cache and nothing puts the null store of the test env back.
+  around do |example|
+    cache = Rails.cache
+    example.run
+  ensure
+    Rails.cache = cache
+  end
+
   before do
     clear_throttle_keys
 
