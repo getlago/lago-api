@@ -30,6 +30,11 @@ Rails.application.routes.draw do
         post :estimate_instant_fees, on: :collection
         post :batch_estimate_instant_fees, on: :collection
       end
+      # v1 only: the RSA public key verifies jwt webhooks, which native v2 endpoints do not use.
+      resources :webhooks, only: %i[] do
+        get :public_key, on: :collection
+        get :json_public_key, on: :collection
+      end
       draw(:shared_api)
     end
 
