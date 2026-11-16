@@ -133,6 +133,7 @@ module Entitlement
       entitlements_params.each do |feature_code, privilege_values|
         @current_feature_code = feature_code
         @current_privilege_code = nil
+        validate_privilege_values_shape!(feature_code, privilege_values)
         feature = features_by_code[feature_code]
 
         raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
@@ -148,6 +149,15 @@ module Entitlement
 
         update_entitlement_values(entitlement, feature, privilege_values)
       end
+    end
+
+    # The privilege values of a feature are a map of privilege codes to values, or empty for none.
+    def validate_privilege_values_shape!(feature_code, privilege_values)
+      return if privilege_values.blank? || privilege_values.is_a?(Hash)
+
+      result.single_validation_failure!(
+        field: entitlement_entry_field(feature_code), error_code: "value_is_invalid"
+      ).raise_if_error!
     end
 
     def create_entitlement_values(entitlement, feature, privilege_values)

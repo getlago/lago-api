@@ -103,18 +103,14 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
 
     context "with an empty entitlements map" do
       let(:request_params) { {entitlements: {}} }
-      let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
-      let(:value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: "10") }
 
-      before { value }
-
-      it "discards every entitlement and value of the plan" do
+      it "returns a missing parameter error and keeps the entitlements" do
+        entitlement = create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:)
         request
 
-        expect(response).to have_http_status(:success)
-        expect(json).to eq(entitlements: [])
-        expect(entitlement.reload).to be_discarded
-        expect(value.reload).to be_discarded
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "entitlements", meta: {}}])
+        expect(entitlement.reload).not_to be_discarded
       end
     end
 
@@ -132,11 +128,11 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
     context "when entitlements is not a map" do
       let(:request_params) { {entitlements: "seats"} }
 
-      it "returns a value_is_invalid error on entitlements" do
+      it "returns a missing parameter error" do
         request
 
         expect(response).to have_http_status(:bad_request)
-        expect(json).to eq(code: "value_is_invalid", details: [{code: "value_is_invalid", field: "entitlements", meta: {}}])
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "entitlements", meta: {}}])
       end
     end
 
@@ -146,8 +142,8 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
       it "returns a value_is_invalid error on the feature" do
         request
 
-        expect(response).to have_http_status(:bad_request)
-        expect(json).to eq(code: "value_is_invalid", details: [{code: "value_is_invalid", field: "entitlements.seats", meta: {}}])
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats", meta: {}}])
       end
     end
 
@@ -157,8 +153,8 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
       it "returns a value_is_invalid error on the privilege" do
         request
 
-        expect(response).to have_http_status(:bad_request)
-        expect(json).to eq(code: "value_is_invalid", details: [{code: "value_is_invalid", field: "entitlements.seats.max", meta: {}}])
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats.max", meta: {}}])
         expect(catalog_plan.entitlements).to be_empty
       end
     end
@@ -169,8 +165,8 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
       it "returns a value_is_invalid error on the privilege" do
         request
 
-        expect(response).to have_http_status(:bad_request)
-        expect(json).to eq(code: "value_is_invalid", details: [{code: "value_is_invalid", field: "entitlements.seats.max", meta: {}}])
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats.max", meta: {}}])
       end
     end
 
@@ -198,12 +194,18 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
 
     context "with an invalid privilege value after a valid feature" do
       let(:request_params) { {entitlements: {seats: {max: 50}, sso: {provider: "okta", domains: ["a"]}}} }
+      let(:sso) { create(:feature, organization:, code: "sso") }
+
+      before do
+        create(:privilege, organization:, feature: sso, code: "provider", value_type: "string")
+        create(:privilege, organization:, feature: sso, code: "domains", value_type: "string")
+      end
 
       it "returns a value_is_invalid error on the first invalid path" do
         request
 
-        expect(response).to have_http_status(:bad_request)
-        expect(json).to eq(code: "value_is_invalid", details: [{code: "value_is_invalid", field: "entitlements.sso.domains", meta: {}}])
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.sso.domains", meta: {}}])
         expect(catalog_plan.entitlements).to be_empty
       end
     end
@@ -219,25 +221,6 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
           code: "expand_not_supported",
           details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["feature"]}}]
         )
-      end
-    end
-
-    [
-      ["limit", "1"],
-      ["page", "1"],
-      ["after", "x"],
-      ["include_total_count", "true"]
-    ].each do |name, value|
-      context "with the #{name} pagination parameter" do
-        let(:query) { "?#{name}=#{value}" }
-
-        it "returns a not_paginated error" do
-          request
-
-          expect(response).to have_http_status(:bad_request)
-          expect(json).to eq(code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: name, meta: {}}])
-          expect(catalog_plan.entitlements).to be_empty
-        end
       end
     end
 

@@ -170,6 +170,19 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       end
     end
 
+    context "when the privileges of a feature are not a map" do
+      let(:entitlements_params) { {"seats" => [50]} }
+
+      it "returns a validation failure on the feature entry and stores nothing" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq("entitlements.seats": ["value_is_invalid"])
+        expect(result.failed_field).to eq(:"entitlements.seats")
+        expect(plan.entitlements).to be_empty
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
     context "when plan is nil" do
       subject(:result) { described_class.call(organization:, plan: nil, entitlements_params:, partial: false) }
 

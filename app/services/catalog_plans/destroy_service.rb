@@ -48,9 +48,12 @@ module CatalogPlans
 
     attr_reader :catalog_plan
 
+    # In batches, as a plan can hold many entitlements. update_all skips callbacks, so it sets updated_at itself.
     def discard_entitlements
-      Entitlement::EntitlementValue.where(entitlement: catalog_plan.entitlements).discard_all!
-      catalog_plan.entitlements.discard_all!
+      now = Time.current
+      Entitlement::EntitlementValue.where(entitlement: catalog_plan.entitlements)
+        .in_batches(of: 5000).update_all(deleted_at: now, updated_at: now) # rubocop:disable Rails/SkipsModelValidations
+      catalog_plan.entitlements.in_batches(of: 5000).update_all(deleted_at: now, updated_at: now) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end
