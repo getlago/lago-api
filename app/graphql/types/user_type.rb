@@ -36,18 +36,23 @@ module Types
 
     private
 
-    # Oldest membership first, each sandbox right after its production organization. The front falls back to the
-    # first membership when no organization is selected yet.
+    # With self-serve on, oldest membership first and each sandbox right after its production organization: the front
+    # falls back to the first membership when no organization is selected yet. Off, the order is unchanged.
     def ordered_active_memberships
       @ordered_active_memberships ||= begin
-        rows = object.memberships.active.includes(organization: :integrations).order(:created_at, :id).to_a
-        position = rows.each_with_index.to_h { |membership, index| [membership.organization_id, index] }
+        relation = object.memberships.active.includes(organization: :integrations)
+        Lago::SelfServe.enabled? ? sandbox_after_production(relation) : relation
+      end
+    end
 
-        rows.sort_by.with_index do |membership, index|
-          organization = membership.organization
-          anchor = organization.sandbox? ? position.fetch(organization.production_organization_id, index) : index
-          [anchor, organization.sandbox? ? 1 : 0, index]
-        end
+    # A sandbox whose production membership is not active keeps its own place.
+    def sandbox_after_production(relation)
+      rows = relation.order(:created_at, :id).to_a
+      position = rows.each_with_index.to_h { |membership, index| [membership.organization_id, index] }
+
+      rows.sort_by.with_index do |membership, index|
+        production_id = membership.organization.production_organization_id
+        [position.fetch(production_id, index), production_id ? 1 : 0, index]
       end
     end
   end
