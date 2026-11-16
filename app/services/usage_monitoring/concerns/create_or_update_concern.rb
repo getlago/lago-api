@@ -50,8 +50,7 @@ module UsageMonitoring
         already_past = in_alarm.reject { recorded.include?(it.code) }
         return if already_past.empty?
 
-        TriggeredAlert.create!(
-          alert:,
+        alert.all_triggered_alerts.create!(
           organization: alert.organization,
           alertable:,
           kind: :seeded,
@@ -85,8 +84,7 @@ module UsageMonitoring
         {threshold_updated: updated, threshold_removed: removed}.each do |reason, lines|
           next if lines.empty?
 
-          resolved_alert = TriggeredAlert.create!(
-            alert:,
+          resolved_alert = alert.all_triggered_alerts.create!(
             organization: alert.organization,
             alertable:,
             kind: :resolved,
