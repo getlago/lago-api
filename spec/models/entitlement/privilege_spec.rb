@@ -25,6 +25,17 @@ RSpec.describe Entitlement::Privilege do
       expect(subject).to validate_inclusion_of(:value_type).in_array(Entitlement::Privilege::VALUE_TYPES)
     end
 
+    describe "code validation" do
+      [123, true, false, ["a"]].each do |code|
+        it "refuses #{code.inspect}, which the cast would turn into a string" do
+          privilege = build(:privilege, code:)
+
+          expect(privilege).not_to be_valid
+          expect(privilege.errors.details[:code]).to include({error: :invalid})
+        end
+      end
+    end
+
     describe "#validate_config" do
       before do
         subject.value_type = "select"

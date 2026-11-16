@@ -261,6 +261,20 @@ RSpec.describe Api::V2::Features::PrivilegesController do
       end
     end
 
+    [["a number", 123], ["a boolean", true]].each do |label, code|
+      context "with code as #{label}" do
+        let(:privilege_params) { {code:} }
+
+        include_examples "a refused create", :unprocessable_content
+
+        it "returns value_is_invalid on code" do
+          request
+
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+        end
+      end
+    end
+
     [["an array", ["max_admins"]], ["an object", {a: 1}]].each do |label, code|
       context "with code as #{label}" do
         let(:privilege_params) { {code:, name: "Maximum admins"} }
