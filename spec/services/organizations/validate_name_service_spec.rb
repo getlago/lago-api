@@ -75,7 +75,7 @@ RSpec.describe Organizations::ValidateNameService do
       "booking.com", "Dr.Ing Consulting", "javascript:alert(1)", "mailto:x@y", "Data:text/html,hi", "vbscript:x",
       "file:x", "acme.co", "shop.se", "Visit t.co/abc", "shop.acme.co", "acme.ag", "Acme.Inc", "evil.ltd.co", "evil.ltd",
       "evil.llc", "shop.inc", "evil.gmbh", "evil.இந்தியா", "evil.भारत", "evil.ভারত", "evil.xn--p1ai", "evil.com-",
-      "evil.com-x", "evil.com- Inc", "evil.com.-x", "tel:+15551234", "sms:+1555", "callto:x", "facetime:x"]
+      "evil.com-x", "evil.com- Inc", "evil.com.-x", "Acme.-evil.com", "Acme --evil.com", "tel:+15551234", "sms:+1555", "callto:x", "facetime:x"]
 
     expect(links.index_with { described_class.call(name: it).error&.messages })
       .to eq(links.index_with { {name: ["value_contains_link"]} })

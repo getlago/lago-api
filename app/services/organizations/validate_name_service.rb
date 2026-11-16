@@ -64,14 +64,19 @@ module Organizations
       text = value.gsub(KEPT_INVISIBLE, "").unicode_normalize(:nfkc).downcase.tr(DOT_LOOKALIKES, "...")
       return true if [URL_SCHEME, BARE_SCHEME, WWW, IPV4].any? { it.match?(text) }
 
-      text.scan(DOTTED_TOKEN).any? { domain?(it.delete_prefix("-")) }
+      text.scan(DOTTED_TOKEN).any? { domain?(it) }
     end
 
-    # A label starting with a hyphen cannot continue a host, so the token is read up to it (`Dr.-Ing.` is no domain).
+    # A label starting with a hyphen cannot continue a host, so the token is cut before it and each part is checked
+    # without its leading hyphens (`Dr.-Ing.` holds no domain, `Acme.-evil.com` holds `evil.com`).
+    def domain?(token)
+      token.split(/\.(?=-)/).any? { host?(it.sub(/\A-+/, "")) }
+    end
+
     # The last label loses its trailing hyphens (`evil.com-` is linked as `evil.com`) and is checked cut at a hyphen
     # too (`evil.com-x`). Any Punycode label (`xn--p1ai`) counts as a domain.
-    def domain?(token)
-      labels = token.split(".").take_while { !it.start_with?("-") }.reject(&:empty?)
+    def host?(part)
+      labels = part.split(".").reject(&:empty?)
       return false if labels.size < 2
 
       labels[-1] = labels.last.sub(/-+\z/, "")
