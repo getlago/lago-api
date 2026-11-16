@@ -2,7 +2,8 @@
 
 class SegmentTrackJob < ApplicationJob
   queue_as :default
-  # Its properties carry emails and the signup Step 3 answers, which stay out of the job logs.
+  # Its properties carry emails and the signup Step 3 answers: kept out of the job logs. They still reach Redis and
+  # error reports with the job's arguments.
   self.log_arguments = false
 
   def perform(membership_id:, event:, properties:)
