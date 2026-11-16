@@ -98,10 +98,10 @@ module Organizations
         organization.customer_portal_locked_fields = params[:customer_portal_locked_fields]&.uniq
       end
       # A reordered resubmission of the same set is no change: assigning it would log and email one.
-      if params.key?(:authentication_methods) && params[:authentication_methods].to_a.sort != organization.authentication_methods.sort
-        deletions = organization.authentication_methods - params[:authentication_methods]
-        additions = params[:authentication_methods] - organization.authentication_methods
-        organization.authentication_methods = params[:authentication_methods]
+      if params.key?(:authentication_methods) && requested_authentication_methods.sort != organization.authentication_methods.sort
+        deletions = organization.authentication_methods - requested_authentication_methods
+        additions = requested_authentication_methods - organization.authentication_methods
+        organization.authentication_methods = requested_authentication_methods
 
         if organization.authentication_methods_changed?
           @authentication_methods_diff = {additions:, deletions:}
@@ -117,9 +117,14 @@ module Organizations
     def lock_for_authentication_methods
       SandboxLockService.call!(organization:, allow_sandbox: true)
       return unless organization.sandbox?
-      return if params[:authentication_methods].to_a.sort == organization.authentication_methods.sort
+      return if requested_authentication_methods.sort == organization.authentication_methods.sort
 
       result.forbidden_failure!(code: "sandbox_managed_by_production").raise_if_error!
+    end
+
+    # A `null` is an empty list, which the model refuses with a validation error.
+    def requested_authentication_methods
+      @requested_authentication_methods ||= Array(params[:authentication_methods])
     end
 
     def billing

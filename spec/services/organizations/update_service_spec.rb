@@ -492,6 +492,18 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when authentication_methods is null" do
+      let(:params) { {authentication_methods: nil} }
+
+      it "returns a validation error and keeps the methods" do
+        result = update_service.call
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to eq([:authentication_methods])
+        expect(organization.reload.authentication_methods).to eq(%w[email_password google_oauth])
+      end
+    end
+
     context "when authentication_methods change but the update fails" do
       subject { described_class.new(organization:, params:, user:) }
 
