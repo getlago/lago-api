@@ -48,6 +48,19 @@ RSpec.describe Admin::ApplyFeatureChangeService do
           before_value: false, after_value: true, actor_user: actor, reason:)
         expect(mirror.batch_id).to eq(result.audit_log.batch_id).and be_present
       end
+
+      context "when the sandbox holds a flag that no longer exists" do
+        before { sandbox.update_column(:feature_flags, ["not_a_real_flag"]) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "drops it without logging the drop under the reason of the change" do
+          result = change_feature(organization:)
+
+          expect(result).to be_success
+          expect(sandbox.reload.feature_flags).to eq([])
+          expect(CsAdminAuditLog.where(organization: sandbox).pluck(:feature_type, :feature_key))
+            .to eq([%w[premium_integration okta]])
+        end
+      end
     end
 
     it "leaves the batch empty when nothing is mirrored" do

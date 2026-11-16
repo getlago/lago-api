@@ -72,12 +72,14 @@ module Admin
     attr_reader :actor, :organization, :feature_type, :feature_key, :enabled, :reason, :notify_org_admin, :rollback_of
 
     # One [type, key, added] per feature the sandbox gained or lost, each logged in the batch of the production row.
+    # A flag the sync drops because it no longer exists is cleanup, not a CS change: it gets no row under this reason.
     def mirrored_changes(sync)
       {premium_integrations: "premium_integration", feature_flags: "feature_flag"}.flat_map do |setting, type|
         change = sync.changes[setting]
         next [] unless change
 
-        change[:added].map { [type, it, true] } + change[:removed].map { [type, it, false] }
+        removed = (type == "feature_flag") ? change[:removed].select { FeatureFlag.valid?(it) } : change[:removed]
+        change[:added].map { [type, it, true] } + removed.map { [type, it, false] }
       end
     end
 
