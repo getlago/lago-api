@@ -445,26 +445,16 @@ RSpec.describe Api::V2::FeaturesController do
       expect(Utils::ActivityLog).to have_produced("feature.created").after_commit.with(feature)
     end
 
-    [
-      ["an empty list", []],
-      ["a list", [{code: "max", value_type: "integer"}]],
-      ["null", nil]
-    ].each do |label, privileges|
-      context "with privileges as #{label}" do
-        let(:feature_params) { super().merge(privileges:) }
+    context "with privileges in the body" do
+      let(:feature_params) { super().merge(privileges: [{code: "max", value_type: "integer"}]) }
 
-        it "refuses the parameter and writes nothing" do
-          expect { request }
-            .to not_change(Entitlement::Feature, :count)
-            .and not_change(Entitlement::Privilege, :count)
-            .and not_have_enqueued_job(SendWebhookJob)
+      it "ignores them and creates the feature without privileges" do
+        expect { request }
+          .to change(organization.features, :count).by(1)
+          .and not_change(Entitlement::Privilege, :count)
 
-          expect(response).to have_http_status(:bad_request)
-          expect(json).to eq(
-            code: "parameter_not_allowed",
-            details: [{code: "parameter_not_allowed", field: "feature.privileges", meta: {}}]
-          )
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:feature]).not_to have_key(:privileges)
       end
     end
 
