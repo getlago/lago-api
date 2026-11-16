@@ -415,6 +415,143 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
     end
   end
 
+  describe "the late events" do
+    let(:watermark) { (Time.current + 1.minute).floor(3) }
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: boundaries[:from_datetime] + 5.hours, watermark:)
+    end
+
+    def late_event(transaction_id:, timestamp:, properties:)
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: properties.merge("value" => "1"),
+        value: "1",
+        decimal_value: 1,
+        enriched_at: watermark + 1.minute
+      )
+    end
+
+    def raw_event(transaction_id:, timestamp:, ingested_at:)
+      Clickhouse::EventsRaw.create!(
+        organization_id: organization.id,
+        external_customer_id: customer.external_id,
+        external_subscription_id: subscription.external_id,
+        transaction_id:,
+        timestamp:,
+        code: billable_metric.code,
+        properties: {},
+        ingested_at:
+      )
+    end
+
+    it "finds none" do
+      pricing_buckets.each do |item|
+        expect(scan.late_ingestion?(filter_store(item), period)).to be(false)
+        expect(scan.resent_after_watermark?(filter_store(item), period)).to be(false)
+      end
+    end
+
+    context "with an event dated in the period and ingested after its watermark" do
+      before do
+        late_event(transaction_id: "tr_late", timestamp: boundaries[:from_datetime] - 10.days, properties: {"region" => "us"})
+        raw_event(transaction_id: "tr_late", timestamp: boundaries[:from_datetime] - 10.days, ingested_at: watermark + 1.minute)
+      end
+
+      it "finds it in the filters whose store does, and no re-send" do
+        late = pricing_buckets.map { scan.late_ingestion?(filter_store(it), period) }
+
+        expect(late).to eq(pricing_buckets.map { filter_store(it).late_ingestion?(period) })
+        expect(late).to include(true, false)
+        expect(pricing_buckets.map { scan.resent_after_watermark?(filter_store(it), period) }).to all(be(false))
+      end
+
+      context "when asked for every filter of the charge" do
+        let(:stores) { pricing_buckets.map { filter_store(it) } }
+        let(:resent_lookups) { [] }
+
+        before do
+          allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+          stores.each do |store|
+            allow(store).to receive(:resent_after_watermark_sql).and_wrap_original do |original, *args|
+              resent_lookups << store
+              original.call(*args)
+            end
+          end
+        end
+
+        def ask_every_filter
+          stores.each do |store|
+            scan.late_ingestion?(store, period)
+            scan.resent_after_watermark?(store, period)
+          end
+        end
+
+        it "reads the late events once" do
+          ask_every_filter
+
+          expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+        end
+
+        context "with several batches of filters" do
+          before { stub_const("#{described_class}::FILTERS_PER_SCAN", 2) }
+
+          it "reads the late events once per batch, and looks for a re-send in the first one only" do
+            ask_every_filter
+
+            expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).exactly(3).times
+            expect(resent_lookups.size).to eq(1)
+          end
+        end
+      end
+    end
+
+    # tr_0 is dated at the start of the period, in us, and re-sent in eu
+    context "with a re-send of an event ingested by the watermark" do
+      before do
+        raw_event(transaction_id: "tr_0", timestamp: boundaries[:from_datetime], ingested_at: watermark - 1.minute)
+        raw_event(transaction_id: "tr_0", timestamp: boundaries[:from_datetime], ingested_at: watermark + 1.minute)
+        late_event(transaction_id: "tr_0", timestamp: boundaries[:from_datetime], properties: {"region" => "eu", "model" => "a"})
+      end
+
+      it "finds it for every filter, as the filter stores do" do
+        expect(pricing_buckets.map { scan.resent_after_watermark?(filter_store(it), period) }).to all(be(true))
+        expect(pricing_buckets.map { filter_store(it).resent_after_watermark?(period) }).to all(be(true))
+      end
+
+      context "with several batches of filters" do
+        before { stub_const("#{described_class}::FILTERS_PER_SCAN", 2) }
+
+        it "finds it for the filters of every batch" do
+          expect(pricing_buckets.reverse.map { scan.resent_after_watermark?(filter_store(it), period) }).to all(be(true))
+        end
+      end
+    end
+
+    describe "#covers_late_events?" do
+      it "covers the stores of the charge's filters, whatever their groups" do
+        expect(pricing_buckets.map { scan.covers_late_events?(filter_store(it).tap { it.grouped_by = ["workspace"] }) })
+          .to all(be(true))
+      end
+
+      context "when the caller narrowed the store's conditions" do
+        it "does not cover the store" do
+          store = Events::Stores::ClickhouseStore.new(
+            code: billable_metric.code,
+            billing_context:,
+            boundaries:,
+            filters: filter_store(pricing_buckets.first).filters.merge(matching_filters: {"region" => ["eu"]})
+          )
+
+          expect(scan.covers_late_events?(store)).to be(false)
+        end
+      end
+    end
+  end
+
   describe "a max charge" do
     let(:billable_metric) { create(:max_billable_metric, organization:, field_name: "value") }
     let(:charge_properties) { {"amount" => "1", "pricing_group_keys" => ["user"]} }

@@ -251,6 +251,60 @@ describe "Recurring aggregation snapshots", transaction: false do
     end
   end
 
+  describe "with an event re-sent after the snapshot that holds it", clickhouse: true do
+    let(:clickhouse_events_store) { true }
+    let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+
+    # events_raw keeps each insert, events_enriched the latest one
+    def send_event(amount, at:, timestamp: at, transaction_id: SecureRandom.uuid)
+      travel_to(at) do
+        Clickhouse::EventsRaw.create!(
+          organization_id: organization.id,
+          external_customer_id: customer.external_id,
+          external_subscription_id: customer.external_id,
+          transaction_id:,
+          timestamp:,
+          code: billable_metric.code,
+          properties: {amount: amount.to_s},
+          ingested_at: Time.current
+        )
+        create_clickhouse_event(
+          code: billable_metric.code,
+          external_subscription_id: customer.external_id,
+          transaction_id:,
+          timestamp:,
+          properties: {amount:},
+          decimal_value: amount.to_d,
+          enriched_at: Time.current
+        )
+      end
+    end
+
+    def bill
+      start_subscription
+      send_event(10, at: Time.utc(2026, 3, 5), transaction_id: "resent")
+      send_event(3, at: Time.utc(2026, 3, 10))
+      march_invoice = bill_at(march_billed_at)
+
+      send_event(10, at: Time.utc(2026, 4, 2), timestamp: Time.utc(2026, 3, 5), transaction_id: "resent")
+      send_event(5, at: Time.utc(2026, 4, 15))
+      april_usage = usage_at(Time.utc(2026, 4, 20))
+      april_invoice = bill_at(Time.utc(2026, 5, 1, 1))
+
+      send_event(4, at: Time.utc(2026, 5, 10))
+      {march_invoice:, april_usage:, april_invoice:, may_invoice: bill_at(Time.utc(2026, 6, 1, 1))}
+    end
+
+    it "counts it once" do
+      expect(bill).to eq(
+        march_invoice: [{amount_cents: 1300, units: 13, events_count: 2}],
+        april_usage: {amount_cents: 1800, units: 18, events_count: 3},
+        april_invoice: [{amount_cents: 1800, units: 18, events_count: 3}],
+        may_invoice: [{amount_cents: 2200, units: 22, events_count: 4}]
+      )
+    end
+  end
+
   describe "with more billed periods than kept snapshots" do
     let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
     let(:may_snapshot) { Time.utc(2026, 5, 31).end_of_day.floor(6) }
