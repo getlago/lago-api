@@ -176,6 +176,15 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  context "when the contract is a draft whose start has passed" do
+    let(:contract) { create(:contract, :draft, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
+
+    it "returns the contract with no window" do
+      expect(result.rate_card_usages).to eq([])
+      expect(result).to have_attributes(contract:, amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
+    end
+  end
+
   context "with a product type filter" do
     let(:filters) { {product_type: "fixed"} }
     let(:fixed_rate_card) do

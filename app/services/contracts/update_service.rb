@@ -101,7 +101,7 @@ module Contracts
 
       # An active contract only gets here with its locked fields unchanged;
       # writing them back would still version them on a signed contract.
-      if contract.pending?
+      if contract.editable?
         contract.billing_time = params[:billing_time] if params[:billing_time].present?
         contract.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
         contract.started_at = started_at_in_customer_timezone if params[:started_at].present?

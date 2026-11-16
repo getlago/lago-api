@@ -30,8 +30,8 @@ module Contracts
 
       result.contract = contract
 
-      # A pending contract has not started billing, so it has no usage yet.
-      result.rate_card_usages = if contract.pending?
+      # A draft or pending contract has not started billing, so it has no usage yet.
+      result.rate_card_usages = if contract.draft? || contract.pending?
         []
       else
         cards = selected_cards

@@ -177,6 +177,20 @@ RSpec.describe Contracts::TerminateService do
     end
   end
 
+  context "when the contract is a draft" do
+    let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.ago) }
+
+    it "cancels it without billing" do
+      freeze_time do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.canceled", contract)
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(status: "canceled", canceled_at: Time.current, terminated_at: nil)
+        expect(contract.billing_segments).to be_empty
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.canceled")
+      end
+    end
+  end
+
   context "when the contract is already terminated" do
     let(:contract) { create(:contract, :terminated, organization:, customer:, catalog_plan:) }
 
