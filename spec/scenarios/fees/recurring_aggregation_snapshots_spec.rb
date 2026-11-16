@@ -545,13 +545,8 @@ describe "Recurring aggregation snapshots", transaction: false do
         termination_invoice: [{amount_cents: 3200, units: 32, events_count: 7}]
       }
     end
-    let(:snapshots) do
-      [
-        {to: Date.new(2026, 3, 31), units: 15, events_count: 3},
-        {to: Date.new(2026, 4, 30), units: 28, events_count: 6},
-        {to: Date.new(2026, 5, 15), units: 32, events_count: 7}
-      ]
-    end
+    # Nothing follows the subscription, so the termination invoice deletes its snapshots rather than writing one
+    let(:snapshots) { [] }
     let(:usage_reads) { [] }
 
     def bill

@@ -635,7 +635,9 @@ module Fees
       return false unless options.snapshot_backfill? || billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
 
       # A progressive billing invoice stops mid-period, its units do not close the period
-      !invoice&.progressive_billing? && snapshot_eligible?(selected_metered_item)
+      # Only the subscription and the one following it read its snapshots: the invoice deletes them instead
+      !invoice&.progressive_billing? && snapshot_eligible?(selected_metered_item) &&
+        !subscription.ended_without_next_subscription?
     end
 
     def snapshot_eligible?(selected_metered_item)
