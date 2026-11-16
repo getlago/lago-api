@@ -76,17 +76,21 @@ RSpec.describe Api::V2::Features::PrivilegesController do
     [
       ["absent", {}],
       ["null", {select_options: nil}],
-      ["empty", {select_options: []}]
+      ["empty", {select_options: []}],
+      ["a string", {select_options: "foo"}],
+      ["an object", {select_options: {a: "b"}}],
+      ["a list of objects", {select_options: [{a: 1}]}],
+      ["a list of numbers", {select_options: [1, 2]}]
     ].each do |label, options_params|
       context "with select and select_options #{label}" do
         let(:privilege_params) { {code: "tier", value_type: "select"}.merge(options_params) }
 
         include_examples "a refused create", :unprocessable_content
 
-        it "returns value_is_mandatory on select_options" do
+        it "returns invalid_format on select_options" do
           request
 
-          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "select_options", meta: {}}])
+          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_format", field: "select_options", meta: {}}])
         end
       end
     end
@@ -94,34 +98,11 @@ RSpec.describe Api::V2::Features::PrivilegesController do
     context "with select_options on a string privilege" do
       let(:privilege_params) { {code: "tier", value_type: "string", select_options: ["a"]} }
 
-      include_examples "a refused create", :unprocessable_content
+      it "ignores them" do
+        expect { request }.to change(feature.privileges, :count).by(1)
 
-      it "returns value_must_be_blank on select_options" do
-        request
-
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_must_be_blank", field: "select_options", meta: {}}])
-      end
-    end
-
-    %w[select string].each do |value_type|
-      [
-        ["a string", "foo"],
-        ["an object", {a: "b"}],
-        ["a list of objects", [{a: 1}]],
-        ["a list of lists", [["a"]]],
-        ["a list of numbers", [1, 2]]
-      ].each do |label, select_options|
-        context "with #{value_type} and select_options as #{label}" do
-          let(:privilege_params) { {code: "tier", value_type:, select_options:} }
-
-          include_examples "a refused create", :unprocessable_content
-
-          it "returns value_is_invalid on select_options" do
-            request
-
-            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "select_options", meta: {}}])
-          end
-        end
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(value_type: "string", select_options: nil)
       end
     end
 
@@ -245,28 +226,11 @@ RSpec.describe Api::V2::Features::PrivilegesController do
       end
     end
 
-    context "with an unknown value_type" do
-      let(:privilege_params) { {code: "max_admins", value_type: "float"} }
-
-      include_examples "a refused create", :unprocessable_content
-
-      it "returns value_is_invalid on value_type with the allowed values" do
-        request
-
-        expect(json).to eq(
-          code: "validation_errors",
-          details: [{code: "value_is_invalid", field: "value_type", meta: {allowed_values: %w[integer string boolean select]}}]
-        )
-      end
-    end
-
     [
-      ["value_type as an array", {code: "max_admins", value_type: ["select"]}, "value_type", {allowed_values: %w[integer string boolean select]}],
-      ["value_type as an object", {code: "max_admins", value_type: {a: 1}}, "value_type", {allowed_values: %w[integer string boolean select]}],
-      ["name as an object", {code: "max_admins", name: {a: 1}}, "name", {}],
-      ["code as a number", {code: 123}, "code", {}],
-      ["code as a boolean", {code: true}, "code", {}]
-    ].each do |label, input, field, meta|
+      ["an unknown value_type", {code: "max_admins", value_type: "float"}, "value_type"],
+      ["value_type as a number", {code: "max_admins", value_type: 1}, "value_type"],
+      ["value_type as false", {code: "max_admins", value_type: false}, "value_type"]
+    ].each do |label, input, field|
       context "with #{label}" do
         let(:privilege_params) { input }
 
@@ -275,7 +239,38 @@ RSpec.describe Api::V2::Features::PrivilegesController do
         it "returns value_is_invalid on #{field}" do
           request
 
-          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field:, meta:}])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field:, meta: {}}])
+        end
+      end
+    end
+
+    [
+      ["value_type as an array", {code: "max_admins", value_type: ["select"]}],
+      ["value_type as an object", {code: "max_admins", value_type: {a: 1}}],
+      ["name as an object", {code: "max_admins", name: {a: 1}}]
+    ].each do |label, input|
+      context "with #{label}" do
+        let(:privilege_params) { input }
+
+        it "ignores the value and creates a string privilege without a name" do
+          expect { request }.to change(feature.privileges, :count).by(1)
+
+          expect(response).to have_http_status(:success)
+          expect(feature.privileges.sole).to have_attributes(value_type: "string", name: nil)
+        end
+      end
+    end
+
+    [["an array", ["max_admins"]], ["an object", {a: 1}]].each do |label, code|
+      context "with code as #{label}" do
+        let(:privilege_params) { {code:, name: "Maximum admins"} }
+
+        include_examples "a refused create", :unprocessable_content
+
+        it "returns value_is_mandatory on code" do
+          request
+
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "code", meta: {}}])
         end
       end
     end

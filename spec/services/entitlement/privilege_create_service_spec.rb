@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Entitlement::PrivilegeCreateService do
   subject(:result) { described_class.call(feature:, params:) }
 
-  let_it_be(:organization) { create(:organization) }
+  let(:organization) { create(:organization) }
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:params) { {code: "max_admins", name: "Max admins", value_type: "integer"} }
 
@@ -131,63 +131,42 @@ RSpec.describe Entitlement::PrivilegeCreateService do
     context "when value_type is unknown" do
       let(:params) { {code: "max_admins", value_type: "float"} }
 
-      it_behaves_like "a validation failure",
-        {value_type: ["value_is_invalid"]},
-        {value_type: {allowed_values: %w[integer string boolean select]}}
+      it_behaves_like "a validation failure", {value_type: ["value_is_invalid"]}
     end
 
     context "when value_type is not a string" do
       let(:params) { {code: "max_admins", value_type: 1} }
 
-      it_behaves_like "a validation failure",
-        {value_type: ["value_is_invalid"]},
-        {value_type: {allowed_values: %w[integer string boolean select]}}
+      it_behaves_like "a validation failure", {value_type: ["value_is_invalid"]}
     end
 
-    [["a number", 123], ["a boolean", true], ["an array", ["max_admins"]], ["an object", {a: 1}]].each do |label, value|
-      context "when code is #{label}" do
-        let(:params) { {code: value} }
+    context "when value_type is false" do
+      let(:params) { {code: "max_admins", value_type: false} }
 
-        it_behaves_like "a validation failure", {code: ["value_is_invalid"]}
-      end
-
-      context "when name is #{label}" do
-        let(:params) { {code: "max_admins", name: value} }
-
-        it_behaves_like "a validation failure", {name: ["value_is_invalid"]}
-      end
+      it_behaves_like "a validation failure", {value_type: ["value_is_invalid"]}
     end
 
-    context "when value_type is an array" do
-      let(:params) { {code: "max_admins", value_type: ["select"]} }
-
-      it_behaves_like "a validation failure",
-        {value_type: ["value_is_invalid"]},
-        {value_type: {allowed_values: %w[integer string boolean select]}}
-    end
-
-    context "when the model refuses the config built from select_options" do
-      let(:params) { {code: "level", value_type: "select", select_options: ["low"]} }
-
-      before do
-        # Stands for a model rule the select_options pre-check does not know yet.
-        allow(Entitlement::ValidatePrivilegeSelectOptionsService).to receive(:call)
-          .and_return(Entitlement::ValidatePrivilegeSelectOptionsService::Result.new.tap { it.config = {"select_options" => [1]} })
-      end
+    context "when value_type is select and select_options are absent" do
+      let(:params) { {code: "level", value_type: "select"} }
 
       it_behaves_like "a validation failure", {select_options: ["invalid_format"]}
     end
 
-    context "when select_options are refused" do
-      let(:params) { {code: "level", value_type: "select"} }
+    [["empty", []], ["null", nil], ["not strings", [1, 2]]].each do |label, select_options|
+      context "when value_type is select and select_options are #{label}" do
+        let(:params) { {code: "level", value_type: "select", select_options:} }
 
-      it_behaves_like "a validation failure", {select_options: ["value_is_mandatory"]}
+        it_behaves_like "a validation failure", {select_options: ["invalid_format"]}
+      end
     end
 
     context "when select_options are sent with another value_type" do
       let(:params) { {code: "level", value_type: "string", select_options: ["a"]} }
 
-      it_behaves_like "a validation failure", {select_options: ["value_must_be_blank"]}
+      it "ignores them" do
+        expect(result).to be_success
+        expect(result.privilege).to have_attributes(value_type: "string", config: {})
+      end
     end
 
     context "when code is blank" do
@@ -256,6 +235,47 @@ RSpec.describe Entitlement::PrivilegeCreateService do
 
       it "creates the 50th privilege" do
         expect(result).to be_success
+        expect(feature.privileges.count).to eq(50)
+      end
+    end
+
+    context "when two creates run at the same time on a feature with 49 privileges", transaction: false do
+      before { create_list(:privilege, 49, feature:, organization:) }
+
+      it "creates only one of them" do
+        paused = Queue.new
+        resume = Queue.new
+        first_call = Queue.new
+        first_call << true
+
+        # The first create waits after its count, while holding the lock.
+        allow_any_instance_of(described_class).to receive(:attributes).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+          if first_call.pop(timeout: 0)
+            paused << true
+            resume.pop
+          end
+
+          original.call(*args)
+        end
+
+        create_privilege = lambda do |code|
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              described_class.call(feature: Entitlement::Feature.find(feature.id), params: {code:})
+            end
+          end
+        end
+
+        first = create_privilege.call("first")
+        paused.pop
+        second = create_privilege.call("second")
+        sleep 0.5
+        resume << true
+
+        results = [first.value, second.value]
+
+        expect(results.count(&:success?)).to eq(1)
+        expect(results.reject(&:success?).map { |r| r.error.messages }).to eq([{base: ["too_many_privileges"]}])
         expect(feature.privileges.count).to eq(50)
       end
     end

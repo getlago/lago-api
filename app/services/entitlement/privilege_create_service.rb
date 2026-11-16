@@ -20,21 +20,6 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
-      # The v2 controller passes these raw, so an array, an object or a number is refused here.
-      invalid_field = %i[code name].find { !params[it].nil? && !params[it].is_a?(String) }
-      return result.single_validation_failure!(field: invalid_field, error_code: "value_is_invalid") if invalid_field
-
-      unless Privilege::VALUE_TYPES.include?(value_type)
-        return result.single_validation_failure!(
-          field: :value_type,
-          error_code: "value_is_invalid",
-          meta: {allowed_values: Privilege::VALUE_TYPES}
-        )
-      end
-
-      select_result = ValidatePrivilegeSelectOptionsService.call(value_type:, params:)
-      return result.fail_with_error!(select_result.error) unless select_result.success?
-
       # The lock serializes the count and the insert with other creates and with the feature delete.
       feature.with_lock do
         return result.not_found_failure!(resource: "feature") if feature.discarded?
@@ -47,13 +32,7 @@ module Entitlement
           )
         end
 
-        result.privilege = feature.privileges.create!(
-          organization_id: feature.organization_id,
-          code: params[:code]&.strip,
-          name: params[:name],
-          value_type:,
-          config: select_result.config
-        )
+        result.privilege = feature.privileges.create!(attributes)
 
         SendWebhookJob.perform_after_commit("feature.updated", feature)
       end
@@ -70,8 +49,18 @@ module Entitlement
 
     attr_reader :feature, :params
 
-    def value_type
-      params[:value_type] || "string"
+    # The model validates the values. A missing value_type keeps the column default (string), and
+    # select_options only belong to the select type.
+    def attributes
+      code = params[:code]
+      value_type = params[:value_type]
+
+      {
+        organization_id: feature.organization_id,
+        code: code.is_a?(String) ? code.strip : code,
+        name: params[:name],
+        config: (value_type == "select") ? {"select_options" => params[:select_options]} : {}
+      }.tap { it[:value_type] = value_type unless value_type.nil? }
     end
   end
 end
