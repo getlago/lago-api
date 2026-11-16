@@ -88,6 +88,21 @@ RSpec.describe Integrations::EntraId::DestroyService do
       end
     end
 
+    context "when the sandbox sync fails" do
+      before do
+        allow(Organizations::SyncSandboxSettingsService).to receive(:call!)
+          .and_raise(BaseResult.new.service_failure!(code: "sync_failed", message: "Sync failed").error)
+      end
+
+      it "keeps the integration and sends no security log" do
+        result = destroy_service.call
+
+        expect(result.error.code).to eq("sync_failed")
+        expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
+        expect(security_logger).not_to have_received(:produce)
+      end
+    end
+
     context "when the organization is a sandbox" do
       let(:sandbox) { create(:organization, :sandbox, premium_integrations: ["entra_id"], authentication_methods: %w[email_password entra_id]) }
       let(:integration) { create(:entra_id_integration, organization: sandbox) }

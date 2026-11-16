@@ -16,7 +16,8 @@ module Integrations
       integration.destroy!
 
       result.integration = integration
-      register_security_log(integration)
+      # Sent once committed: Okta and Entra ID destroy inside a transaction that can still roll back.
+      after_commit { register_security_log(integration) }
       result
     end
 
