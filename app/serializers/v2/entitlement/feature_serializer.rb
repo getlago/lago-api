@@ -19,9 +19,9 @@ module V2
 
       private
 
-      # Creation order, as the association has none.
+      # Newest first, as the association has no order. Sorted in memory, so a preloaded association costs no query.
       def privileges
-        model.privileges.reorder(:created_at, :id)
+        model.privileges.sort_by { [-it.created_at.to_r, it.id] }
       end
     end
   end

@@ -255,7 +255,7 @@ RSpec.describe Api::V2::FeaturesController do
       let(:base_time) { Time.zone.parse("2026-10-03T10:00:00.000001Z") }
 
       # Created out of order, and two of them at the same instant with ids against their insertion
-      # order, so only created_at then id gives this list.
+      # order, so only created_at (newest first) then id gives this list.
       let(:select_privilege) do
         create(:privilege, feature:, organization:, code: "provider", name: "Provider", value_type: "select",
           config: {"select_options" => %w[okta google]}, created_at: base_time + 3.hours, updated_at: base_time + 4.hours)
@@ -283,7 +283,7 @@ RSpec.describe Api::V2::FeaturesController do
         [select_privilege, boolean_privilege, string_privilege, integer_privilege, deleted_privilege, other_privilege]
       end
 
-      it "embeds the live privileges oldest first" do
+      it "embeds the live privileges newest first, then by id" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -297,14 +297,14 @@ RSpec.describe Api::V2::FeaturesController do
           deleted_at: nil,
           privileges: [
             {
-              lago_id: integer_privilege.id,
+              lago_id: select_privilege.id,
               feature_code: "sso",
-              code: "max_admins",
-              name: "Max admins",
-              value_type: "integer",
-              select_options: nil,
-              created_at: "2026-10-03T10:00:00.000001Z",
-              updated_at: "2026-10-03T10:00:00.000001Z",
+              code: "provider",
+              name: "Provider",
+              value_type: "select",
+              select_options: %w[okta google],
+              created_at: "2026-10-03T13:00:00.000001Z",
+              updated_at: "2026-10-03T14:00:00.000001Z",
               deleted_at: nil
             },
             {
@@ -330,14 +330,14 @@ RSpec.describe Api::V2::FeaturesController do
               deleted_at: nil
             },
             {
-              lago_id: select_privilege.id,
+              lago_id: integer_privilege.id,
               feature_code: "sso",
-              code: "provider",
-              name: "Provider",
-              value_type: "select",
-              select_options: %w[okta google],
-              created_at: "2026-10-03T13:00:00.000001Z",
-              updated_at: "2026-10-03T14:00:00.000001Z",
+              code: "max_admins",
+              name: "Max admins",
+              value_type: "integer",
+              select_options: nil,
+              created_at: "2026-10-03T10:00:00.000001Z",
+              updated_at: "2026-10-03T10:00:00.000001Z",
               deleted_at: nil
             }
           ]

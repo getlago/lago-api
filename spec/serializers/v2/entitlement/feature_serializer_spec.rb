@@ -95,7 +95,7 @@ RSpec.describe V2::Entitlement::FeatureSerializer do
       other_privilege
     end
 
-    it "renders the live privileges oldest first, then by id" do
+    it "renders the live privileges newest first, then by id" do
       expect(payload).to eq(
         lago_id: feature.id,
         code: "seats",
@@ -105,6 +105,17 @@ RSpec.describe V2::Entitlement::FeatureSerializer do
         updated_at: feature.updated_at.iso8601,
         deleted_at: nil,
         privileges: [
+          {
+            lago_id: select_privilege.id,
+            feature_code: "seats",
+            code: "bbb",
+            name: "Tier",
+            value_type: "select",
+            select_options: %w[option1 option2 option3],
+            created_at: "2026-03-03T10:00:00Z",
+            updated_at: "2026-03-03T10:00:00Z",
+            deleted_at: nil
+          },
           *tied_privileges.map do |privilege|
             {
               lago_id: privilege.id,
@@ -117,18 +128,7 @@ RSpec.describe V2::Entitlement::FeatureSerializer do
               updated_at: "2026-03-02T10:00:00Z",
               deleted_at: nil
             }
-          end,
-          {
-            lago_id: select_privilege.id,
-            feature_code: "seats",
-            code: "bbb",
-            name: "Tier",
-            value_type: "select",
-            select_options: %w[option1 option2 option3],
-            created_at: "2026-03-03T10:00:00Z",
-            updated_at: "2026-03-03T10:00:00Z",
-            deleted_at: nil
-          }
+          end
         ]
       )
     end
@@ -141,6 +141,18 @@ RSpec.describe V2::Entitlement::FeatureSerializer do
       ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { serializer.serialize }
 
       expect(tables.compact.tally).to eq("entitlement_privileges" => 1)
+    end
+
+    it "does not query the privileges when they are preloaded" do
+      feature = Entitlement::Feature.preload(:privileges).find(self.feature.id)
+      tables = []
+      callback = ->(*, payload) { tables << payload[:sql][/FROM "(entitlement_features|entitlement_privileges)"/, 1] }
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        described_class.new(feature, includes:).serialize
+      end
+
+      expect(tables.compact).to be_empty
     end
 
     context "when the feature has no privileges" do
