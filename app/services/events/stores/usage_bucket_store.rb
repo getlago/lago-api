@@ -69,19 +69,31 @@ module Events
       end
 
       # Why the delta from `period` must come from the events: a late ingestion is an event the
-      # snapshot missed. Snapshots the buckets can never complete are refused by the Provider.
-      # The events tell it, not the buckets: their ingestion time is not the one the watermark bounds.
+      # snapshot missed, and a re-send one it holds, maybe in another filter. Snapshots the buckets can
+      # never complete are refused by the Provider. The events tell it, not the buckets: their ingestion
+      # time is not the one the watermark bounds.
       def recurring_fallback_reason(period)
-        return "no_period" if period.nil?
-        return "not_adjacent" unless adjacent?(period)
-
-        "late_ingestion" if late_ingestion?(period)
+        if period.nil?
+          "no_period"
+        elsif !adjacent?(period)
+          "not_adjacent"
+        elsif late_ingestion?(period)
+          "late_ingestion"
+        elsif resent_after_watermark?(period)
+          "resent_after_watermark"
+        end
       end
 
       # Asked again by the recurring reads of the same period
       def late_ingestion?(period)
         @late_ingestion ||= {}
         @late_ingestion.fetch(period) { @late_ingestion[period] = super }
+      end
+
+      # Asked again by the recurring reads of the same period
+      def resent_after_watermark?(period)
+        @resent_after_watermark ||= {}
+        @resent_after_watermark.fetch(period) { @resent_after_watermark[period] = super }
       end
 
       def max(with_count: true)

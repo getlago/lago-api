@@ -578,6 +578,7 @@ module Events
       end
 
       # The first copy is read from events_raw, which keeps every insert: events_enriched can have merged it away.
+      # A single insert ingested by the watermark but enriched after it is a late event, not a re-send.
       # The late copies are not filtered: a re-send can move an event out of the bucket whose snapshot holds it.
       def resent_after_watermark?(period)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
@@ -585,10 +586,11 @@ module Events
             SELECT 1
             FROM #{raw_events_table}
             WHERE #{deduplicated_events_where_sql(from_datetime: nil, to_datetime: period.to_datetime)}
-              AND #{sql_condition("ingested_at <= ?", period.watermark)}
               AND (transaction_id, timestamp) IN (
                 SELECT transaction_id, timestamp FROM (#{late_events_sql(period, deduplicated_columns: [])})
               )
+            GROUP BY transaction_id, timestamp
+            HAVING count() > 1 AND #{sql_condition("countIf(ingested_at <= ?) > 0", period.watermark)}
             LIMIT 1
           SQL
 

@@ -298,7 +298,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     let(:timestamp) { subscription.started_at + 1.day }
 
     # events_raw keeps each insert, while FINAL reads the latest one from events_enriched
-    def ingest(ingested_at:, region: "eu")
+    def ingest(ingested_at:, region: "eu", enriched_at: ingested_at)
       Clickhouse::EventsRaw.create!(
         organization_id: organization.id,
         external_customer_id: customer.external_id,
@@ -318,7 +318,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         properties: {"value" => "1", "region" => region},
         value: "1",
         decimal_value: 1,
-        enriched_at: ingested_at
+        enriched_at:
       )
     end
 
@@ -360,6 +360,12 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       end
 
       it { is_expected.to be(true) }
+    end
+
+    context "with an event ingested once by the watermark and enriched after it" do
+      before { ingest(ingested_at: period.watermark, enriched_at: period.watermark + 1.second) }
+
+      it { is_expected.to be(false) }
     end
 
     context "with an event first ingested after the watermark" do

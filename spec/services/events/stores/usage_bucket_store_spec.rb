@@ -107,6 +107,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
       )
     end
     let(:late_ingestion) { false }
+    let(:resent) { false }
     let(:usage_buckets) do
       Events::Stores::UsageBucketSet.new(
         totals: {[charge.id, ""] => totals},
@@ -114,7 +115,10 @@ RSpec.describe Events::Stores::UsageBucketStore do
       )
     end
 
-    before { allow(delegated_store).to receive(:late_ingestion?).and_return(late_ingestion) }
+    before do
+      allow(delegated_store).to receive(:late_ingestion?).and_return(late_ingestion)
+      allow(delegated_store).to receive(:resent_after_watermark?).and_return(resent)
+    end
 
     describe "#recurring_fallback_reason" do
       it { expect(store.recurring_fallback_reason(period)).to be_nil }
@@ -149,10 +153,18 @@ RSpec.describe Events::Stores::UsageBucketStore do
         it { expect(store.recurring_fallback_reason(period)).to eq("late_ingestion") }
       end
 
+      # The re-send can move the event to another filter, whose late events then hold it instead
+      context "when the events hold a re-send of one the snapshot holds" do
+        let(:resent) { true }
+
+        it { expect(store.recurring_fallback_reason(period)).to eq("resent_after_watermark") }
+      end
+
       it "asks the store it wraps once per period" do
         2.times { store.recurring_fallback_reason(period) }
 
         expect(delegated_store).to have_received(:late_ingestion?).with(period).once
+        expect(delegated_store).to have_received(:resent_after_watermark?).with(period).once
       end
     end
 

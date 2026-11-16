@@ -141,7 +141,7 @@ module BillableMetrics
 
       # A late copy of an event the snapshots already hold would count it twice: the full scan counts it once.
       # Checked after the delta read, so that a copy re-sent while it ran is seen too. The buckets only serve
-      # a window without late ingestion.
+      # a window without a re-send (see UsageBucketStore#recurring_fallback_reason).
       def resent_after_watermark?(period)
         !delta_from_buckets? && event_store.resent_after_watermark?(period)
       end
