@@ -5742,6 +5742,39 @@ RSpec.describe Fees::ChargeService, :premium do
       expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
     end
 
+    # The pre-filtering skips a charge the buckets serve, so no ingestion timestamp would ever
+    # invalidate a fee cached while the buckets fall back to events.
+    context "with a recurring charge the buckets fall back on" do
+      let(:organization) do
+        create(
+          :organization,
+          clickhouse_events_store: true,
+          feature_flags: %w[realtime_usage realtime_usage_recurring_sum persisted_recurring_values]
+        )
+      end
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+
+      before do
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          value: "4.0",
+          decimal_value: 4.0
+        )
+      end
+
+      it "reads the events, as no snapshot period precedes the window, and bypasses the charge cache" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+
+        expect(result.fees.first.units).to eq(4)
+        expect(Subscriptions::ChargeCacheService).not_to have_received(:call)
+      end
+    end
+
     context "when the provider was never asked to serve a precomputed source" do
       let(:provider) { Events::Stores::Provider.new(organization:, billing_context:) }
       let(:read_at) { boundaries.charges_from_datetime + 2.days }

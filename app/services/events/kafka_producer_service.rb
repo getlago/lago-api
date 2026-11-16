@@ -32,8 +32,7 @@ module Events
     def catalog_pipeline?
       return @catalog_pipeline if defined?(@catalog_pipeline)
 
-      @catalog_pipeline = catalog_events ||
-        (organization.product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?)
+      @catalog_pipeline = catalog_events || organization.product_events_pipeline?
     end
 
     def topic

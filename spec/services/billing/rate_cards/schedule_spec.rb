@@ -543,7 +543,7 @@ RSpec.describe Billing::RateCards::Schedule do
 
         it "walks unpriced cycles once and returns the first priced billing date" do
           expect(schedule.billing_at(timestamp: starts_at, target: "next")).to eq(Time.utc(2022, 6, 2))
-          expect(walker).to have_received(:cycle_after).at_most(300).times
+          expect(walker).to have_received(:cycle_after).at_most(137).times # Jan 15 to Jun 1: 17 + 28 + 31 + 30 + 31 days.
         end
       end
 
@@ -607,6 +607,50 @@ RSpec.describe Billing::RateCards::Schedule do
         cycle = schedule.next_billable_cycle(after_cycle_started_at: starts_at)
 
         expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2022, 5, 1), Time.utc(2022, 6, 1)])
+      end
+
+      context "when the card ends before pricing starts" do
+        let(:ends_at) { Time.utc(2022, 3, 20) }
+
+        it "returns no next billable cycle" do
+          expect(schedule.next_billable_cycle(after_cycle_started_at: starts_at)).to be_nil
+        end
+      end
+    end
+
+    context "when the card ends mid-cycle" do
+      let(:ends_at) { Time.utc(2022, 3, 20) }
+
+      it "clamps the last cycle to the termination" do
+        cycle = schedule.cycle_at(ends_at - 1.second)
+
+        expect([cycle.started_at, cycle.ended_at]).to eq([Time.utc(2022, 3, 1), ends_at])
+      end
+
+      it "returns no cycle at or after the termination" do
+        expect(schedule.cycle_at(ends_at)).to be_nil
+        expect(schedule.cycle_at(ends_at + 1.day)).to be_nil
+      end
+
+      it "returns no next billable cycle after the final cycle" do
+        expect(schedule.next_billable_cycle(after_cycle_started_at: Time.utc(2022, 3, 1))).to be_nil
+      end
+
+      it "returns no next billable cycle at or after the termination" do
+        expect(schedule.next_billable_cycle(after_cycle_started_at: ends_at)).to be_nil
+        expect(schedule.next_billable_cycle(after_cycle_started_at: ends_at + 1.day)).to be_nil
+      end
+    end
+
+    context "when the card ends on a cycle boundary" do
+      let(:ends_at) { Time.utc(2022, 3, 1) }
+
+      it "returns no cycle starting at the termination" do
+        expect(schedule.cycle_at(ends_at)).to be_nil
+      end
+
+      it "returns no next billable cycle after the final cycle" do
+        expect(schedule.next_billable_cycle(after_cycle_started_at: Time.utc(2022, 2, 1))).to be_nil
       end
     end
   end

@@ -108,4 +108,33 @@ RSpec.describe Resolvers::CurrentUserResolver do
       expect_unauthorized_error(result)
     end
   end
+
+  describe "needsOrganization" do
+    let(:query) { "query { currentUser { needsOrganization memberships { id } organizations { id } } }" }
+
+    def current_user_data(user)
+      execute_graphql(current_user: user, query:)["data"]["currentUser"]
+    end
+
+    context "when self-serve is on" do
+      include_context "with self-serve enabled"
+
+      it "is true for a self-serve user who never had an organization, with empty lists" do
+        expect(current_user_data(create(:user, :self_serve)))
+          .to eq("needsOrganization" => true, "memberships" => [], "organizations" => [])
+      end
+
+      it "is false for a legacy user without membership and for a revoked self-serve user" do
+        revoked = create(:user, :self_serve)
+        create(:membership, :revoked, user: revoked)
+
+        expect(current_user_data(create(:user))["needsOrganization"]).to be(false)
+        expect(current_user_data(revoked)["needsOrganization"]).to be(false)
+      end
+    end
+
+    it "is false when self-serve is off" do
+      expect(current_user_data(create(:user, :self_serve))["needsOrganization"]).to be(false)
+    end
+  end
 end

@@ -8,12 +8,12 @@ module Mutations
         graphql_name "GoogleLoginUser"
         description "Opens a session for an existing user with Google Oauth"
 
-        argument :code, String, required: true
+        input_object_class Types::Auth::Google::LoginUserInput
 
         type Types::Payloads::LoginUserType
 
-        def resolve(code:)
-          result = ::Auth::GoogleService.call(:login, code)
+        def resolve(code:, state: nil, state_secret: nil)
+          result = ::Auth::GoogleService.call(:login, code, state:, state_secret:)
           result.success? ? result : result_error(result)
         end
       end

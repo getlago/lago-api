@@ -51,6 +51,33 @@ RSpec.describe GraphqlController do
         expect(json["data"]["loginUser"]["user"]["organizations"].first["id"]).to eq(membership.organization_id)
       end
 
+      context "with a self-serve user who never had an organization" do
+        let(:user) { create(:user, :self_serve) }
+        let(:membership) { nil }
+
+        include_context "with self-serve enabled"
+
+        def post_with_token(query, token, headers = {})
+          post "/graphql", headers: {"Authorization" => "Bearer #{token}"}.merge(headers), params: {query:}
+          JSON.parse(response.body)
+        end
+
+        it "logs in, then reaches the current user only" do
+          # The outer before logged in before self-serve was turned on.
+          post "/graphql", params: {query: mutation, variables: {input: {email: user.email, password: "ILoveLago"}}}
+          token = JSON.parse(response.body)["data"]["loginUser"]["token"]
+
+          current_user = post_with_token("query { currentUser { needsOrganization memberships { id } } }", token)
+          expect(current_user["data"]["currentUser"]).to eq("needsOrganization" => true, "memberships" => [])
+
+          organization = post_with_token("query { organization { id } }", token)
+          expect(organization["errors"].first["extensions"]["code"]).to eq("forbidden")
+
+          other = post_with_token("query { organization { id } }", token, "x-lago-organization" => create(:organization).id)
+          expect(other["errors"].first["extensions"]["code"]).to eq("forbidden")
+        end
+      end
+
       context "when membership is revoked" do
         let(:membership) { create(:membership, :revoked) }
 
