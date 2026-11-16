@@ -6,7 +6,7 @@ RSpec.describe ApiKeys::CreateMemberKeyService do
   subject(:result) { described_class.call(membership:) }
 
   let(:organization) { create(:organization) }
-  let(:role) { create(:role, organization:, permissions: %w[invoices:view]) }
+  let(:role) { create(:role, organization:, permissions: %w[invoices:view payment_receipts:view]) }
   let(:membership) { create(:membership, organization:, role:) }
 
   it "creates a short-lived key carrying the member's permissions" do

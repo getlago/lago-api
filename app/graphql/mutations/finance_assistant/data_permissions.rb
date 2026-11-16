@@ -22,10 +22,7 @@ module Mutations
         missing = PERMISSIONS.reject { |permission| context.dig(:permissions, permission) }
         return if missing.empty?
 
-        raise GraphQL::ExecutionError.new(
-          "Missing permissions",
-          extensions: {status: :forbidden, code: "forbidden", required_permissions: missing}
-        )
+        raise not_enough_permissions_error(missing)
       end
     end
   end

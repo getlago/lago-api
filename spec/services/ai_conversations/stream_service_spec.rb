@@ -172,6 +172,20 @@ RSpec.describe AiConversations::StreamService do
         expect(ApiKey.unscoped.find(api_key.id)).to be_expired
       end
 
+      context "when the member was revoked while the turn was queued" do
+        let(:membership) { create(:membership, :revoked, role: create(:role, :finance)) }
+
+        it "fails without calling the MCP server or creating a key" do
+          result = service.call
+
+          expect(result).to be_failure
+          expect(LagoMcpClient::Config).not_to have_received(:new)
+          expect(LagoApiSchema.subscriptions).to have_received(:trigger)
+            .with(:ai_conversation_streamed, {id: ai_conversation.id}, hash_including(done: true))
+          expect(ApiKey.unscoped.where(membership:)).not_to exist
+        end
+      end
+
       it "expires the key when the turn fails" do
         allow(mistral_agent_mock).to receive(:chat).and_raise(StandardError.new("Connection timeout"))
 

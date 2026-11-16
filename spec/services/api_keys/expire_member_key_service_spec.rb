@@ -19,6 +19,24 @@ RSpec.describe ApiKeys::ExpireMemberKeyService do
     end
   end
 
+  it "invalidates the cached key", cache: :memory do
+    ApiKeys::CacheService.call(api_key.value, with_cache: true)
+
+    result
+
+    expect(ApiKeys::CacheService.call(api_key.value, with_cache: true)).to eq([nil, nil])
+  end
+
+  describe ".expire_all" do
+    it "expires every live key of the member" do
+      keys = [api_key, ApiKeys::CreateMemberKeyService.call!(membership:).api_key]
+
+      described_class.expire_all(membership)
+
+      expect(ApiKey.unscoped.where(id: keys.map(&:id))).to all(be_expired)
+    end
+  end
+
   it "records the cached usage and removes the entry" do
     used_at = 1.minute.ago.iso8601
     allow(Rails.cache).to receive(:read).and_call_original

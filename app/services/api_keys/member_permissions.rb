@@ -34,14 +34,16 @@ module ApiKeys
         write: %w[credit_notes:create credit_notes:update credit_notes:void credit_notes:send]
       },
       "customer" => crud("customers"),
-      "customer_usage" => {read: %w[customers:view]},
+      # Also serves the usage of contracts.
+      "customer_usage" => {read: %w[customers:view contracts:view]},
       # The dashboard shows events, with the keys that send them, to the members who manage developers.
       "event" => {read: %w[developers:manage], write: %w[developers:manage]},
       "feature" => crud("features"),
       "fee" => {read: %w[invoices:view]},
+      # Also serves payment receipts, which the dashboard gates apart.
       "invoice" => {
-        read: %w[invoices:view],
-        write: %w[invoices:create invoices:update invoices:void invoices:delete invoices:send]
+        read: %w[invoices:view payment_receipts:view],
+        write: %w[invoices:create invoices:update invoices:void invoices:delete invoices:send payment_receipts:send]
       },
       "lifetime_usage" => {read: %w[subscriptions:view], write: %w[subscriptions:update]},
       "order" => {read: %w[orders:view], write: %w[orders:update orders:execute]},

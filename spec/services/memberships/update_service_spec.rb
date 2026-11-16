@@ -29,6 +29,14 @@ RSpec.describe Memberships::UpdateService do
         expect(result.membership.roles).to eq([manager_role])
       end
 
+      it "expires the keys the AI agent holds with the previous permissions" do
+        api_key = ApiKeys::CreateMemberKeyService.call!(membership:).api_key
+
+        result
+
+        expect(ApiKey.unscoped.find(api_key.id)).to be_expired
+      end
+
       it_behaves_like "produces a security log", "user.role_edited" do
         before { result }
       end

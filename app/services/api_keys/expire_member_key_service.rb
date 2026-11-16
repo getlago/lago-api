@@ -6,6 +6,11 @@ module ApiKeys
   class ExpireMemberKeyService < BaseService
     Result = BaseResult[:api_key]
 
+    # Ends the live keys of a member whose access changed, so a running turn stops acting for them.
+    def self.expire_all(membership)
+      ApiKey.where(membership:).find_each { call!(api_key: it) }
+    end
+
     def initialize(api_key:)
       @api_key = api_key
       super

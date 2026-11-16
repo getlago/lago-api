@@ -34,7 +34,10 @@ RSpec.describe ApiKeys::MemberPermissions do
         create(
           :role,
           organization:,
-          permissions: %w[invoices:view invoices:update customers:view customers:create customers:update customers:delete]
+          permissions: %w[
+            invoices:view invoices:update payment_receipts:view
+            customers:view customers:create customers:update customers:delete
+          ]
         )
       end
 
@@ -53,6 +56,22 @@ RSpec.describe ApiKeys::MemberPermissions do
       it "leaves resources without a rule to admins" do
         expect(permissions["x402_connection"]).to eq([])
         expect(permissions["organization"]).to eq([])
+      end
+    end
+
+    context "when the member can view customers but not contracts" do
+      let(:role) { create(:role, organization:, permissions: %w[customers:view]) }
+
+      it "grants no read on customer usage, which also serves contract usage" do
+        expect(permissions["customer_usage"]).to eq([])
+      end
+    end
+
+    context "when the member can view invoices but not payment receipts" do
+      let(:role) { create(:role, organization:, permissions: %w[invoices:view]) }
+
+      it "grants no read on invoices, which also serve payment receipts" do
+        expect(permissions["invoice"]).to eq([])
       end
     end
 

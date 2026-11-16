@@ -6,7 +6,7 @@ require "rails_helper"
 # even when the organization has not enabled API key permissions.
 RSpec.describe "API with a member key" do
   let(:organization) { create(:organization, premium_integrations: []) }
-  let(:role) { create(:role, organization:, permissions: %w[invoices:view invoices:update]) }
+  let(:role) { create(:role, organization:, permissions: %w[invoices:view invoices:update payment_receipts:view]) }
   let(:membership) { create(:membership, organization:, role:) }
   let(:api_key) { ApiKeys::CreateMemberKeyService.call!(membership:).api_key }
   let(:customer) { create(:customer, organization:) }
