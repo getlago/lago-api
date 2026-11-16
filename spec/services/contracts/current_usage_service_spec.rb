@@ -226,6 +226,12 @@ RSpec.describe Contracts::CurrentUsageService do
       it "prices the cards of that product only" do
         expect(priced_cards.keys).to contain_exactly(rate_card, eu_rate_card)
       end
+
+      it "does not load units for the selected metered cards" do
+        statements = capture_sql { result }
+
+        expect(statements.grep(/FROM "contract_rate_cards_terms"/i)).to be_empty
+      end
     end
 
     context "with a product filter code filter" do

@@ -3,7 +3,7 @@
 module Billing
   module RateCards
     class Schedule
-      BILLING_TARGET = {current: "current", next: "next"}.freeze
+      BILLING_TARGETS = {current: "current", next: "next"}.freeze
 
       def initialize(rates:, terms:, phases:, starts_at:, anchor_date:, timezone:, ends_at: nil, resume_at: nil)
         if resume_at && resume_at < starts_at.in_time_zone(timezone).beginning_of_day
@@ -50,9 +50,9 @@ module Billing
 
       # The current billing instant covers the time being served; the next is strictly later.
       def billing_at(timestamp:, target:)
-        raise ArgumentError, "unknown billing target: #{target}" unless BILLING_TARGET.value?(target)
+        raise ArgumentError, "unknown billing target: #{target}" unless BILLING_TARGETS.value?(target)
 
-        if target == BILLING_TARGET.fetch(:current)
+        if target == BILLING_TARGETS.fetch(:current)
           segment = segment_covering(timestamp)
           segment&.billing_at || find_billing_after(timestamp)
         else
