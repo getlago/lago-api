@@ -271,6 +271,12 @@ class Organization < ApplicationRecord
     end
   end
 
+  # Shared with the billing entities. Spaces are left out ("ab Sandbox" gives "AB-4321", not "AB -4321"), and the cut
+  # comes after the upcase, which can lengthen a name ("ßßß" gives "SSS", not "SSSSSS").
+  def self.document_number_prefix_for(name, id)
+    "#{name.first(3).gsub(/[[:space:]]/, "").upcase.first(3)}-#{id.last(4).upcase}"
+  end
+
   # Product catalog (billing v2) is a rollout feature flag, not a license-gated
   # premium integration: it is available to any organization, premium or not.
   def product_catalog_enabled?
@@ -389,9 +395,9 @@ class Organization < ApplicationRecord
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
-  # Example of expected format is ORG-4321
+  # Example of expected format is ORG-4321.
   def generate_document_number_prefix
-    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
+    update!(document_number_prefix: self.class.document_number_prefix_for(name, id))
   end
 
   def validate_email_settings
