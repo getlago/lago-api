@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe "Standard Webhooks signature" do
-  let(:organization) { create(:organization, webhook_url: nil, feature_flags: ["standard_webhooks_signature"]) }
+  let(:organization) { create(:organization, webhook_url: nil) }
   let(:webhook_url) { "https://example.com/lago-webhooks" }
   let(:requests_sent) { [] }
 

@@ -512,18 +512,6 @@ RSpec.describe Organizations::UpdateService do
 
           expect(security_logger).to have_received(:produce).with(hash_including(log_event: "webhook_endpoint.created"))
         end
-
-        context "with the standard_webhooks_signature flag" do
-          before { organization.enable_feature_flag!(:standard_webhooks_signature) }
-
-          it "creates a jwt endpoint with no signing key" do
-            result = update_service.call
-
-            expect(result).to be_success
-            expect(organization.webhook_endpoints.reload.map(&:signature_algo)).to eq(["jwt"])
-            expect(WebhookEndpointSigningKey.where(organization:)).to be_empty
-          end
-        end
       end
 
       context "when the lowest id endpoint signs with standard_webhooks" do
@@ -538,7 +526,6 @@ RSpec.describe Organizations::UpdateService do
         let(:other_signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint: other_webhook_endpoint) }
 
         before do
-          organization.enable_feature_flag!(:standard_webhooks_signature)
           signing_key
           other_signing_key
         end

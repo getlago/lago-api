@@ -67,6 +67,32 @@ RSpec.describe Resolvers::OrganizationResolver do
     end
   end
 
+  context "when the organization still stores the removed standard_webhooks_signature flag" do
+    let(:query) do
+      <<~GQL
+        query {
+          organization {
+            featureFlags
+          }
+        }
+      GQL
+    end
+
+    let(:membership) { create(:membership, organization: create(:organization, feature_flags: ["standard_webhooks_signature"])) }
+
+    it "returns the feature flags without it" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {}
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["organization"]["featureFlags"]).to eq([])
+    end
+  end
+
   context "with field requiring permissions" do
     let(:query) do
       <<~GQL

@@ -122,26 +122,15 @@ RSpec.describe WebhookEndpoint do
     end
   end
 
-  describe ".v1_signature_algo_rule" do
-    subject(:rule) { described_class.v1_signature_algo_rule(organization) }
+  describe "V1_SIGNATURE_ALGO_RULE" do
+    subject(:rule) { described_class::V1_SIGNATURE_ALGO_RULE }
 
-    let(:organization) { create(:organization) }
-
-    it "allows jwt and hmac, with jwt as the default" do
-      expect(rule.allowed_values).to eq(%w[jwt hmac])
+    it "allows every algorithm, with jwt as the default" do
+      expect(rule.allowed_values).to eq(%w[jwt hmac standard_webhooks])
       expect(rule.default).to eq("jwt")
-      expect(rule.allow?(:hmac)).to be(true)
-      expect(rule.allow?("standard_webhooks")).to be(false)
-    end
-
-    context "with the standard_webhooks_signature flag" do
-      before { organization.enable_feature_flag!(:standard_webhooks_signature) }
-
-      it "also allows standard_webhooks, with jwt as the default" do
-        expect(rule.allowed_values).to eq(%w[jwt hmac standard_webhooks])
-        expect(rule.default).to eq("jwt")
-        expect(rule.allow?("standard_webhooks")).to be(true)
-      end
+      expect(rule.allow?(:standard_webhooks)).to be(true)
+      expect(rule.allow?("foo")).to be(false)
+      expect(rule.allow?(nil)).to be(false)
     end
   end
 
