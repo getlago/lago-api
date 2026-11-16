@@ -38,6 +38,22 @@ module Admin
       end
     end
 
+    def link_sandbox
+      result = ::Organizations::LinkSandboxService.call(
+        production_organization: organization,
+        sandbox_organization: Organization.find_by(id: params[:sandbox_organization_id])
+      )
+
+      if result.success?
+        render json: {
+          organization: ::Admin::OrganizationSerializer.new(result.organization).serialize,
+          sandbox_organization: ::Admin::OrganizationSerializer.new(result.sandbox_organization).serialize
+        }
+      else
+        render_error_response(result)
+      end
+    end
+
     private
 
     def organization

@@ -2,6 +2,8 @@
 
 module Admin
   class ApplyFeatureChangeService < ::BaseService
+    include SandboxMirrorAuditLogs
+
     Result = BaseResult[:audit_log]
 
     def initialize(actor:, organization:, feature_type:, feature_key:, enabled:, reason:, notify_org_admin: false, rollback_of: nil)
@@ -46,12 +48,13 @@ module Admin
 
         update_feature!
         sync = ::Organizations::SyncSandboxSettingsService.call!(organization:, actor:)
-        mirrored = mirrored_changes(sync)
+        mirrored = mirrored_changes(sync.changes)
         # Shared with the rows of the sandbox copy, which the Slack message names: set from what the sync changed.
         audit_log.batch_id ||= SecureRandom.uuid if mirrored.any?
         audit_log.save!
         result.audit_log = audit_log
-        mirrored.each { |type, key, added| mirror_audit_log(sync.sandbox_organization, audit_log, type, key, added:) }
+        # Each in the batch of the production row.
+        mirror_audit_logs!(sync.sandbox_organization, mirrored, batch_id: audit_log.batch_id, rollback_of:)
 
         after_commit do
           Admin::SlackNotificationJob.perform_later(audit_log.id)
@@ -70,50 +73,6 @@ module Admin
     private
 
     attr_reader :actor, :organization, :feature_type, :feature_key, :enabled, :reason, :notify_org_admin, :rollback_of
-
-    # One [type, key, added] per feature the sandbox gained or lost, each logged in the batch of the production row.
-    # A flag the sync drops because it no longer exists is cleanup, not a CS change: it gets no row under this reason.
-    def mirrored_changes(sync)
-      {premium_integrations: "premium_integration", feature_flags: "feature_flag"}.flat_map do |setting, type|
-        change = sync.changes[setting]
-        next [] unless change
-
-        removed = (type == "feature_flag") ? change[:removed].select { FeatureFlag.valid?(it) } : change[:removed]
-        change[:added].map { [type, it, true] } + removed.map { [type, it, false] }
-      end
-    end
-
-    def mirror_audit_log(sandbox, audit_log, type, key, added:)
-      mirror_of = rolled_back_mirror(sandbox, type, key)
-      action = if mirror_of
-        :rollback
-      else
-        added ? :toggle_on : :toggle_off
-      end
-
-      CsAdminAuditLog.create!(
-        actor_user: actor,
-        actor_email: actor.email,
-        action:,
-        organization: sandbox,
-        feature_type: type,
-        feature_key: key,
-        before_value: !added,
-        after_value: added,
-        reason:,
-        rollback_of: mirror_of,
-        batch_id: audit_log.batch_id
-      )
-    end
-
-    # On a rollback, the sandbox row the rolled back change wrote in its batch, so the sandbox's history reads the
-    # same as its production's.
-    def rolled_back_mirror(sandbox, type, key)
-      return unless rollback_of&.batch_id
-
-      CsAdminAuditLog.where(organization: sandbox, batch_id: rollback_of.batch_id, feature_type: type, feature_key: key)
-        .where.missing(:rollback).order(:created_at).last
-    end
 
     def action
       if rollback_of
