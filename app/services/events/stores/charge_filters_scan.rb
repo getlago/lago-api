@@ -61,10 +61,6 @@ module Events
       # watermark of the snapshot the computation persists (see BaseStore#recurring_sum).
       RecurringRow = Data.define(:groups, :value, :snapshot_value, :events_count, :snapshot_events_count)
 
-      # The filters of a batch holding an event dated in a snapshot period and ingested after its watermark,
-      # and whether one of those re-sends an event the snapshots hold.
-      LateEvents = Data.define(:filter_keys, :resent)
-
       # A charge without filters only has the default bucket, which its own store reads as cheaply.
       # The scan only takes one when it keeps its rows between computations (see IncrementalCache).
       def self.supported_charge?(charge, incremental: false)
@@ -103,6 +99,7 @@ module Events
         @incremental = incremental
         @buckets = {}
         @rows = {}
+        @resent = {}
       end
 
       # Only the calls the filter's own store would answer the same way: the scan is built from
@@ -121,12 +118,15 @@ module Events
 
       # ClickhouseStore#late_ingestion? of the filter's store, from one read of the late events of its batch.
       def late_ingestion?(store, period)
-        late_events(store, period).filter_keys.include?(filter_key(store.charge_filter_id))
+        late_filter_keys(store, period).include?(filter_key(store.charge_filter_id))
       end
 
       # ClickhouseStore#resent_after_watermark?, which does not depend on the filter: the same read answers it.
       def resent_after_watermark?(store, period)
-        late_events(store, period).resent
+        key = [store.applicable_to_datetime, period]
+        late_filter_keys(store, period) unless @resent.key?(key)
+
+        @resent.fetch(key)
       end
 
       def incremental?
@@ -338,19 +338,21 @@ module Events
 
       # Asked by every recurring read the buckets serve (see UsageBucketStore#recurring_fallback_reason): one read
       # per batch instead of two per filter.
-      def late_events(store, period)
+      def late_filter_keys(store, period)
         batch = batch_index.fetch(filter_key(store.charge_filter_id))
 
-        @rows[[:late, batch, store.applicable_to_datetime, period]] ||= read_late_events(store, batch, period)
+        @rows[[:late, batch, store.applicable_to_datetime, period]] ||= read_late_filter_keys(store, batch, period)
       end
 
       # The late events are those ClickhouseStore#late_ingestion? reads, attributed to the filters of the batch.
-      # Without any, the re-send lookup reads no granule of events_raw.
-      def read_late_events(store, batch, period)
+      # The re-send lookup does not depend on the filters: only the first batch read for the period runs it, and
+      # without late events it reads no granule of events_raw.
+      def read_late_filter_keys(store, batch, period)
+        resent_key = [store.applicable_to_datetime, period]
+        resent_sql = @resent.key?(resent_key) ? "0" : "(SELECT count() FROM (#{store.resent_after_watermark_sql(period)}))"
+
         sql = <<~SQL
-          SELECT
-            groupUniqArrayArray(#{filter_positions_sql(store, batch)}),
-            (SELECT count() FROM (#{store.resent_after_watermark_sql(period)}))
+          SELECT groupUniqArrayArray(#{filter_positions_sql(store, batch)}), #{resent_sql}
           FROM (#{store.late_events_sql(period, deduplicated_columns: [])}) AS events_enriched
         SQL
 
@@ -358,10 +360,8 @@ module Events
           connection.select_rows(sql).first
         end
 
-        LateEvents.new(
-          filter_keys: positions.to_set { batch_keys(batch).fetch(it.to_i - 1) },
-          resent: resent.to_i.positive?
-        )
+        @resent[resent_key] = resent.to_i.positive? unless @resent.key?(resent_key)
+        positions.to_set { batch_keys(batch).fetch(it.to_i - 1) }
       end
 
       # One read per batch and window: the stores of the batch share it, and recurring metrics

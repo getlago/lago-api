@@ -427,16 +427,27 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         end
 
         let(:incremental) { false }
+        let(:resent) { [false] }
+        let(:late_events_scan) { nil }
+        let(:wrapped_stores) { [] }
 
         before do
           allow(event_store_class).to receive(:new).and_wrap_original do |original, **args|
+            store = original.call(**args).tap do
+              allow(it).to receive(:incremental_sum?).and_return(incremental)
+              allow(it).to receive(:resent_after_watermark?).and_return(*resent)
+              allow(it).to receive(:recurring_sum).and_call_original
+            end
+            wrapped_stores << store
+
             Events::Stores::UsageBucketStore.new(
-              original.call(**args).tap { allow(it).to receive(:incremental_sum?).and_return(incremental) },
+              store,
               usage_buckets:,
               charge_id: charge.id,
               charge_filter_id: "",
               recurring: true,
-              charges_from_datetime: args[:boundaries][:from_datetime]
+              charges_from_datetime: args[:boundaries][:from_datetime],
+              late_events_scan:
             )
           end
         end
@@ -477,6 +488,35 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
               expect(result.aggregation).to eq(3 + 10 + 7 + 20)
             end
+          end
+
+          # The scan answers the late ingestion and the re-send together, before the delta is read
+          context "when an event is re-sent while the delta is read" do
+            let(:late_events_scan) do
+              instance_double(
+                Events::Stores::ChargeFiltersScan,
+                covers_late_events?: true, late_ingestion?: true, resent_after_watermark?: false
+              )
+            end
+            let(:resent) { [true] }
+
+            it "asks the store it wraps after reading the delta, and sums every event" do
+              result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
+
+              expect(result.aggregation).to eq(3 + 10 + 7 + 20)
+              expect(wrapped_stores.last).to have_received(:recurring_sum).with(watermark: anything, period: closed(periods.first))
+            end
+          end
+        end
+
+        context "when the buckets found a re-send of an event the snapshot holds" do
+          let(:resent) { [true] }
+
+          it "sums every event without reading the delta" do
+            result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
+
+            expect(result.aggregation).to eq(3 + 10 + 7 + 20)
+            expect(wrapped_stores.last).not_to have_received(:recurring_sum).with(watermark: anything, period: anything)
           end
         end
 

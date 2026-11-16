@@ -469,15 +469,43 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
         expect(pricing_buckets.map { scan.resent_after_watermark?(filter_store(it), period) }).to all(be(false))
       end
 
-      it "reads the late events once for every filter of the charge" do
-        allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+      context "when asked for every filter of the charge" do
+        let(:stores) { pricing_buckets.map { filter_store(it) } }
+        let(:resent_lookups) { [] }
 
-        pricing_buckets.each do |item|
-          scan.late_ingestion?(filter_store(item), period)
-          scan.resent_after_watermark?(filter_store(item), period)
+        before do
+          allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+          stores.each do |store|
+            allow(store).to receive(:resent_after_watermark_sql).and_wrap_original do |original, *args|
+              resent_lookups << store
+              original.call(*args)
+            end
+          end
         end
 
-        expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+        def ask_every_filter
+          stores.each do |store|
+            scan.late_ingestion?(store, period)
+            scan.resent_after_watermark?(store, period)
+          end
+        end
+
+        it "reads the late events once" do
+          ask_every_filter
+
+          expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+        end
+
+        context "with several batches of filters" do
+          before { stub_const("#{described_class}::FILTERS_PER_SCAN", 2) }
+
+          it "reads the late events once per batch, and looks for a re-send in the first one only" do
+            ask_every_filter
+
+            expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).exactly(3).times
+            expect(resent_lookups.size).to eq(1)
+          end
+        end
       end
     end
 
@@ -492,6 +520,14 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       it "finds it for every filter, as the filter stores do" do
         expect(pricing_buckets.map { scan.resent_after_watermark?(filter_store(it), period) }).to all(be(true))
         expect(pricing_buckets.map { filter_store(it).resent_after_watermark?(period) }).to all(be(true))
+      end
+
+      context "with several batches of filters" do
+        before { stub_const("#{described_class}::FILTERS_PER_SCAN", 2) }
+
+        it "finds it for the filters of every batch" do
+          expect(pricing_buckets.reverse.map { scan.resent_after_watermark?(filter_store(it), period) }).to all(be(true))
+        end
       end
     end
 

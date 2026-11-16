@@ -81,7 +81,7 @@ module BillableMetrics
       def recurring_sum(options)
         return unless billable_metric.recurring?
 
-        if (period = delta_period(options))
+        if (period = delta_period(options)) && !resent_before_delta?(period)
           delta = event_store.recurring_sum(watermark: delta_watermark(options), period:)
         end
 
@@ -97,7 +97,7 @@ module BillableMetrics
       def grouped_recurring_sum(options)
         return unless billable_metric.recurring?
 
-        if (period = delta_period(options))
+        if (period = delta_period(options)) && !resent_before_delta?(period)
           deltas = event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:)
         end
 
@@ -144,6 +144,11 @@ module BillableMetrics
       # a window without a re-send (see UsageBucketStore#recurring_fallback_reason).
       def resent_after_watermark?(period)
         !delta_from_buckets? && event_store.resent_after_watermark?(period)
+      end
+
+      # The buckets fell back on a re-send they found: the delta from the events would be thrown away.
+      def resent_before_delta?(period)
+        precomputed? && event_store.recurring_fallback_reason(period) == "resent_after_watermark"
       end
 
       # A fallback stays `precomputed?`, so it still bypasses the charge cache: the pre-filtering skips

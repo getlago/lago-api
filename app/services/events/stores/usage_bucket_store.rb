@@ -82,7 +82,7 @@ module Events
           "not_adjacent"
         elsif late_ingestion?(period)
           "late_ingestion"
-        elsif resent_after_watermark?(period)
+        elsif resent_for_fallback?(period)
           "resent_after_watermark"
         end
       end
@@ -92,15 +92,6 @@ module Events
         @late_ingestion ||= {}
         @late_ingestion.fetch(period) do
           @late_ingestion[period] = late_events_scanned? ? late_events_scan.late_ingestion?(__getobj__, period) : super
-        end
-      end
-
-      # Asked again by the recurring reads of the same period
-      def resent_after_watermark?(period)
-        @resent_after_watermark ||= {}
-        @resent_after_watermark.fetch(period) do
-          @resent_after_watermark[period] =
-            late_events_scanned? ? late_events_scan.resent_after_watermark?(__getobj__, period) : super
         end
       end
 
@@ -151,6 +142,20 @@ module Events
       private
 
       attr_reader :usage_buckets, :charge_id, :charge_filter_id, :recurring, :charges_from_datetime, :late_events_scan
+
+      # Asked again by the recurring reads of the same period. Only the fallback reason reads it: a delta read from
+      # the events asks the store it wraps after reading it (see SumService#resent_after_watermark?), as a copy
+      # re-sent in between would be counted twice.
+      def resent_for_fallback?(period)
+        @resent_for_fallback ||= {}
+        @resent_for_fallback.fetch(period) do
+          @resent_for_fallback[period] = if late_events_scanned?
+            late_events_scan.resent_after_watermark?(__getobj__, period)
+          else
+            __getobj__.resent_after_watermark?(period)
+          end
+        end
+      end
 
       def late_events_scanned?
         late_events_scan.present? && !grouped_by_values? && late_events_scan.covers_late_events?(__getobj__)
