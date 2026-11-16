@@ -51,11 +51,10 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
 
     before { create(:entitlement_value, organization:, entitlement:, privilege:, value: "30") }
 
-    it "lists them through the v1 controller, which only POST leaves" do
+    it "no longer lists them through the v1 controller, as GET is native" do
       get_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements")
 
-      expect(response).to have_http_status(:success)
-      expect(json).to eq(expected_body)
+      expect(response).to be_v2_not_found_error("plan")
     end
 
     it "updates them through the v1 controller" do
