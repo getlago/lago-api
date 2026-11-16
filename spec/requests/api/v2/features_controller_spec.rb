@@ -697,8 +697,10 @@ RSpec.describe Api::V2::FeaturesController do
     end
 
     context "with privileges in the body" do
-      let(:feature_params) { super().merge(privileges: []) }
-      let(:privilege) { create(:privilege, feature:, organization:, code: "max", value_type: "integer") }
+      let(:feature_params) do
+        super().merge(privileges: [{code: "max", name: "Renamed max", value_type: "integer"}, {code: "gb", value_type: "integer"}])
+      end
+      let(:privilege) { create(:privilege, feature:, organization:, code: "max", name: "Maximum", value_type: "integer") }
 
       before { privilege }
 
@@ -707,7 +709,8 @@ RSpec.describe Api::V2::FeaturesController do
 
         expect(response).to have_http_status(:success)
         expect(json[:feature]).to include(name: "Renamed")
-        expect(privilege.reload.deleted_at).to be_nil
+        expect(privilege.reload).to have_attributes(name: "Maximum", deleted_at: nil)
+        expect(feature.privileges.pluck(:code)).to eq(%w[max])
       end
     end
 
