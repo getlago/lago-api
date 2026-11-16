@@ -111,6 +111,18 @@ RSpec.describe Signups::CreateOrganizationService do
     end
   end
 
+  context "when the membership cannot be saved" do
+    before do
+      invalid = Membership.new.tap { it.errors.add(:user_id, :taken) }
+      allow(Membership).to receive(:create!).and_raise(ActiveRecord::RecordInvalid.new(invalid))
+    end
+
+    it "answers a validation failure and creates nothing" do
+      expect { result }.not_to change(Organization, :count)
+      expect(result.error.messages).to eq(user_id: ["value_already_exist"])
+    end
+  end
+
   context "when self-serve is off" do
     let(:self_serve_env) { {"LAGO_SELF_SERVE_ENABLED" => "false"} }
 
