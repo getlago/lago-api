@@ -19,6 +19,19 @@ RSpec.describe Entitlement::FeatureCreateService do
   end
 
   describe "#call", :premium do
+    [["a number", 123], ["a boolean", true]].each do |label, code|
+      context "when the code is #{label}" do
+        let(:params) { {code:} }
+
+        it "returns a validation failure and creates nothing" do
+          expect { subject }.not_to change(Entitlement::Feature, :count)
+
+          expect(subject).to be_failure
+          expect(subject.error.messages).to eq({code: ["value_is_invalid"]})
+        end
+      end
+    end
+
     it "creates a feature with the provided attributes" do
       expect { subject }.to change(Entitlement::Feature, :count).by(1)
 

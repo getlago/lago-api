@@ -480,6 +480,19 @@ RSpec.describe Api::V2::FeaturesController do
       end
     end
 
+    [["a number", 123], ["a boolean", true]].each do |label, code|
+      context "with code as #{label}" do
+        let(:feature_params) { super().merge(code:) }
+
+        it "returns value_is_invalid on code and creates nothing" do
+          expect { request }.not_to change(Entitlement::Feature, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+        end
+      end
+    end
+
     context "with a blank code" do
       let(:feature_params) { super().merge(code: "") }
 
