@@ -84,18 +84,35 @@ module Admin
     end
 
     def mirror_audit_log(sandbox, audit_log, type, key, added:)
+      mirror_of = rolled_back_mirror(sandbox, type, key)
+      action = if mirror_of
+        :rollback
+      else
+        added ? :toggle_on : :toggle_off
+      end
+
       CsAdminAuditLog.create!(
         actor_user: actor,
         actor_email: actor.email,
-        action: added ? :toggle_on : :toggle_off,
+        action:,
         organization: sandbox,
         feature_type: type,
         feature_key: key,
         before_value: !added,
         after_value: added,
         reason:,
+        rollback_of: mirror_of,
         batch_id: audit_log.batch_id
       )
+    end
+
+    # On a rollback, the sandbox row the rolled back change wrote in its batch, so the sandbox's history reads the
+    # same as its production's.
+    def rolled_back_mirror(sandbox, type, key)
+      return unless rollback_of&.batch_id
+
+      CsAdminAuditLog.where(organization: sandbox, batch_id: rollback_of.batch_id, feature_type: type, feature_key: key)
+        .where.missing(:rollback).order(:created_at).last
     end
 
     def action

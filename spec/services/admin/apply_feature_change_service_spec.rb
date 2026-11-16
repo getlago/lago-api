@@ -49,6 +49,24 @@ RSpec.describe Admin::ApplyFeatureChangeService do
         expect(mirror.batch_id).to eq(result.audit_log.batch_id).and be_present
       end
 
+      context "when the change rolls back a mirrored one" do
+        let(:toggle) { change_feature(organization:).audit_log }
+        let(:mirror) { CsAdminAuditLog.find_by!(organization: sandbox, action: :toggle_on) }
+
+        before { toggle }
+
+        it "logs the sandbox row as a rollback of the sandbox's mirror row" do
+          result = change_feature(organization:, enabled: false, rollback_of: toggle)
+
+          expect(result).to be_success
+          expect(sandbox.reload.premium_integrations).to eq([])
+          rollback = CsAdminAuditLog.find_by!(organization: sandbox, action: :rollback)
+          expect(rollback).to have_attributes(rollback_of: mirror, feature_key: "okta", before_value: true,
+            after_value: false, batch_id: toggle.batch_id)
+          expect(mirror.reload).to be_rolled_back
+        end
+      end
+
       context "when the sandbox holds a flag that no longer exists" do
         before { sandbox.update_column(:feature_flags, ["not_a_real_flag"]) } # rubocop:disable Rails/SkipsModelValidations
 
