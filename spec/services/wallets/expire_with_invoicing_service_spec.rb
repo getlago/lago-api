@@ -150,6 +150,18 @@ RSpec.describe Wallets::ExpireWithInvoicingService, :premium, transaction: false
       expect(Invoices::ProgressiveBilling::WalletExpirationService).not_to have_received(:call)
       expect(wallet.reload.status).to eq("active")
     end
+
+    context "when the job retries after an attempt that failed on another subscription" do
+      subject(:result) { described_class.call(wallet:, retrying: true) }
+
+      it "only invoices the subscriptions without an expiration invoice" do
+        expect(result).to be_success
+
+        expect(Invoices::ProgressiveBilling::WalletExpirationService).to have_received(:call).once
+        expect(Invoices::ProgressiveBilling::WalletExpirationService)
+          .to have_received(:call).with(wallet:, subscription: subscription_without_invoice)
+      end
+    end
   end
 
   context "when the wallet is already terminated" do

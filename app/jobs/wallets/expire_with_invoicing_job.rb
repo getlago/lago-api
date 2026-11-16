@@ -15,7 +15,7 @@ module Wallets
     unique :until_executed, on_conflict: :log
 
     def perform(wallet)
-      Wallets::ExpireWithInvoicingService.call!(wallet:)
+      Wallets::ExpireWithInvoicingService.call!(wallet:, retrying: executions > 1)
     end
   end
 end
