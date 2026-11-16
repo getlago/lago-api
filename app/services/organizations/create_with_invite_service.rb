@@ -32,8 +32,10 @@ module Organizations
           result.organization = pair.organization
           result.sandbox_organization = pair.sandbox_organization
         else
+          # The rules of the self-serve path, so both admin paths store the same name for the same input.
+          valid_name = ValidateNameService.call!(name:, allow_links: true).name
           result.organization = CreateService.call!(
-            name:, timezone:, document_numbering:, premium_integrations:, feature_flags:
+            name: valid_name, timezone:, document_numbering:, premium_integrations:, feature_flags:
           ).organization
         end
 

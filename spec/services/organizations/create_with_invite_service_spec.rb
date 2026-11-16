@@ -31,6 +31,31 @@ RSpec.describe Organizations::CreateWithInviteService do
     end
   end
 
+  [false, true].each do |pair|
+    context "with a name over 100 characters#{" and self_serve" if pair}" do
+      include_context "with self-serve enabled"
+
+      let(:name) { "a" * 101 }
+      let(:self_serve) { pair }
+
+      it "refuses it and creates nothing" do
+        expect { result }.not_to change(Organization, :count)
+        expect(result.error.messages).to eq(name: ["value_is_too_long"])
+      end
+    end
+
+    context "with extra spaces in the name#{" and self_serve" if pair}" do
+      include_context "with self-serve enabled"
+
+      let(:name) { "  Hooli   Inc  " }
+      let(:self_serve) { pair }
+
+      it "stores it collapsed" do
+        expect(result.organization.name).to eq("Hooli Inc")
+      end
+    end
+  end
+
   context "with self_serve" do
     include_context "with self-serve enabled"
 
