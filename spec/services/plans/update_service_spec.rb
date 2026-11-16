@@ -194,6 +194,7 @@ RSpec.describe Plans::UpdateService do
     end
 
     context "when the code changes and an agent storefront sells the plan" do
+      let(:plan) { create_default(:plan, organization:, amount_cents: 0) }
       let(:update_args) { {code: "renamed_plan"} }
       let(:storefront) { create(:agent_storefront_integration, organization:) }
 

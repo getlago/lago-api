@@ -238,6 +238,9 @@ module Types
     field :create_entra_id_integration, mutation: Mutations::Integrations::EntraId::Create
     field :update_entra_id_integration, mutation: Mutations::Integrations::EntraId::Update
 
+    field :create_agent_storefront_integration, mutation: Mutations::Integrations::AgentStorefront::Create
+    field :update_agent_storefront_integration, mutation: Mutations::Integrations::AgentStorefront::Update
+
     field :create_anrok_integration, mutation: Mutations::Integrations::Anrok::Create
     field :update_anrok_integration, mutation: Mutations::Integrations::Anrok::Update
 

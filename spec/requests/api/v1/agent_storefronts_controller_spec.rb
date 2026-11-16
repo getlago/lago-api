@@ -55,10 +55,18 @@ RSpec.describe Api::V1::AgentStorefrontsController, :premium do
         scope: "acme_api:use"
       )
       expect(json[:agent_storefront][:lago_id]).to be_present
+
+      storefront_id = json[:agent_storefront][:lago_id]
+      expect(json[:agent_storefront]).to include(
+        agent_url: "#{ENV["LAGO_API_URL"]}/agents/v1/#{storefront_id}",
+        auth_document_url: "#{ENV["LAGO_API_URL"]}/agents/v1/#{storefront_id}/AUTH.md",
+        billing_document_url: "#{ENV["LAGO_API_URL"]}/agents/v1/#{storefront_id}/BILLING.md",
+        claim_url: "#{Rails.application.config.lago_front_url}/agent-claim/#{storefront_id}"
+      )
     end
 
     context "with plans" do
-      let(:plan) { create(:plan, organization:) }
+      let(:plan) { create(:plan, organization:, amount_cents: 0) }
       let(:params) { super().merge(plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000, free_credits_cents: 1000}]) }
 
       it "creates the storefront with the plans it sells" do
@@ -66,6 +74,17 @@ RSpec.describe Api::V1::AgentStorefrontsController, :premium do
 
         expect(response).to have_http_status(:ok)
         expect(json[:agent_storefront][:plans]).to eq([{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000, free_credits_cents: 1000}])
+      end
+
+      context "when the plan has a subscription fee" do
+        let(:plan) { create(:plan, organization:, amount_cents: 100) }
+
+        it "refuses the plan" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details]).to eq(plans: %w[plan_not_usage_only])
+        end
       end
     end
 
@@ -115,7 +134,7 @@ RSpec.describe Api::V1::AgentStorefrontsController, :premium do
     end
 
     context "with plans" do
-      let(:plan) { create(:plan, organization:) }
+      let(:plan) { create(:plan, organization:, amount_cents: 0) }
       let(:params) { {plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}]} }
 
       it "saves and renders them" do

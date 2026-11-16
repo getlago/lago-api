@@ -26,6 +26,14 @@ module Integrations
       "#{ENV["LAGO_API_URL"]}/agents/v1/#{id}"
     end
 
+    def auth_document_url
+      "#{agent_url}/AUTH.md"
+    end
+
+    def billing_document_url
+      "#{agent_url}/BILLING.md"
+    end
+
     # The lago-front page where a person claims one of this storefront's agents.
     def claim_url
       "#{Rails.application.config.lago_front_url}/agent-claim/#{id}"
@@ -68,6 +76,9 @@ module Integrations
         errors.add(:plans, "value_is_invalid")
       elsif !(codes - plans_for_sale.pluck(:code)).empty?
         errors.add(:plans, "plan_not_found")
+      elsif !plans_for_sale.all? { X402::PlanEligibility.usage_only?(it) }
+        # Agents prepay a wallet and are charged per use, as the enrollment checks again.
+        errors.add(:plans, "plan_not_usage_only")
       end
     end
 

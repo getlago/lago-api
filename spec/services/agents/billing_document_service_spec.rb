@@ -27,9 +27,13 @@ RSpec.describe Agents::BillingDocumentService do
     end
 
     context "when a sold plan has a subscription fee" do
-      let(:pro_plan) { create(:plan, organization:, name: "Pro", code: "agent_pro", amount_cents: 2_000) }
+      let(:pro_plan) { create(:plan, organization:, name: "Pro", code: "agent_pro", amount_cents: 0) }
 
-      before { storefront.update!(plans: storefront.plans + [{plan_code: pro_plan.code}]) }
+      # Sold while usage-only, then given a fee: the sale is refused otherwise.
+      before do
+        storefront.update!(plans: storefront.plans + [{plan_code: pro_plan.code}])
+        pro_plan.update!(amount_cents: 2_000)
+      end
 
       it "leaves it out, as enrollment refuses it" do
         expect(document).to include("### Basic (`agent_basic`)")

@@ -7,7 +7,7 @@ RSpec.describe Plans::PrepareDestroyService do
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
-  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:plan) { create(:plan, organization:, amount_cents: 0) }
 
   describe "#call" do
     it "sets pending_deletion to true" do

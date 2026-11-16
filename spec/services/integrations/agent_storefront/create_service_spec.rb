@@ -83,7 +83,7 @@ RSpec.describe Integrations::AgentStorefront::CreateService do
         end
 
         context "with plans" do
-          let(:plan) { create(:plan, organization:) }
+          let(:plan) { create(:plan, organization:, amount_cents: 0) }
           let(:create_args) { super().merge(plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}]) }
 
           it "stores the plans it sells" do
@@ -94,7 +94,7 @@ RSpec.describe Integrations::AgentStorefront::CreateService do
         end
 
         context "with a top-up limit too large to store" do
-          let(:plan) { create(:plan, organization:) }
+          let(:plan) { create(:plan, organization:, amount_cents: 0) }
           let(:create_args) { super().merge(plans: [{plan_code: plan.code, maximum_topup_cents: 2**63}]) }
 
           it "returns an error" do
