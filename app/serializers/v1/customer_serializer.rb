@@ -2,6 +2,18 @@
 
 module V1
   class CustomerSerializer < ModelSerializer
+    # Associations that `serialize` reads without includes, to preload when rendering a list.
+    PRELOADS = [
+      :billing_entity,
+      :organization,
+      :metadata,
+      :stripe_customer,
+      :gocardless_customer,
+      :cashfree_customer,
+      :adyen_customer,
+      :moneyhash_customer
+    ].freeze
+
     def serialize
       payload = {
         lago_id: model.id,

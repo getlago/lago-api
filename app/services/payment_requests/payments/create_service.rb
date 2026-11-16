@@ -36,26 +36,28 @@ module PaymentRequests
 
         payable.increment_payment_attempts!
 
-        payment ||= Payment.create_with(
-          organization_id: payable.organization_id,
-          payment_provider_id: current_payment_provider.id,
-          payment_provider_customer_id: current_payment_provider_customer.id,
-          amount_cents: payable.total_amount_cents,
-          amount_currency: payable.currency,
-          status: "pending",
-          customer_id: payable.customer_id
-        ).find_or_create_by!(
-          payable:,
-          payable_payment_status: "pending"
-        )
+        payment = Payment.find_or_initialize_by(payable:, payable_payment_status: "pending")
+        payment.status = "pending" if payment.new_record?
 
-        payment.payment_method_id = determine_payment_method&.id
+        # A reused pending payment may point to a removed provider customer.
+        payment.assign_attributes(
+          organization_id: payable.organization_id,
+          customer_id: payable.customer_id,
+          payment_provider: current_payment_provider,
+          payment_provider_customer: current_payment_provider_customer,
+          payment_method_id: determine_payment_method&.id
+        )
+        # Providers keep the answer of the idempotency key `payment-<id>` for a while, and refuse the same
+        # key with another amount, so the amount only follows the payable on a new provider customer.
+        if payment.new_record? || payment.payment_provider_customer_id_changed?
+          payment.assign_attributes(amount_cents: payable.total_amount_cents, amount_currency: payable.currency)
+        end
         payment.save!
 
         result.payment = payment
 
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
-          provider:,
+          provider: current_provider_type,
           payment:,
           reference: payment_reference,
           metadata: {
@@ -129,6 +131,12 @@ module PaymentRequests
 
       def current_payment_provider
         @current_payment_provider ||= payment_provider(customer)
+      end
+
+      # Unlike `provider`, which can be the type named by the job when it was enqueued, this is the type
+      # of the provider the payment is charged through, set even when `customer.payment_provider` is nil.
+      def current_provider_type
+        current_payment_provider.payment_type.to_sym
       end
 
       def current_payment_provider_customer

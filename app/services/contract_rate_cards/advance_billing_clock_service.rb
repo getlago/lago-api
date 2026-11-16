@@ -13,7 +13,7 @@ module ContractRateCards
     end
 
     def call
-      advance_to = schedule.billing_at(timestamp:, target: Billing::RateCards::Schedule::BILLING_TARGET.fetch(:next))
+      advance_to = schedule.billing_at(timestamp:, target: Billing::RateCards::Schedule::BILLING_TARGETS.fetch(:next))
       clock = contract_rate_card.next_billing_at
 
       # Exhausted, or never set, or later: what it must never do is move back.

@@ -324,6 +324,14 @@ module Events
         build_recurring_aggregation_result(select_one(sql))
       end
 
+      def late_ingestion?(period)
+        events.where(
+          "events.timestamp <= :to_datetime AND events.created_at > :watermark",
+          to_datetime: period.to_datetime,
+          watermark: period.watermark
+        ).exists?
+      end
+
       def grouped_recurring_sum(watermark:, period: nil)
         sql = recurring_events(period)
           .group(sanitized_grouped_by)

@@ -9,6 +9,7 @@ module Types
       field :id, ID, null: false
 
       field :external_subscription_id, String, null: true
+      field :precise_total_amount_cents, String, null: true
       field :transaction_id, String, null: true
 
       field :customer_timezone, Types::TimezoneEnum, null: false
@@ -35,6 +36,7 @@ module Types
             external_subscription_id: object.external_subscription_id,
             code: object.code,
             timestamp: object.timestamp.to_i,
+            precise_total_amount_cents:,
             properties: object.properties || {}
           }
         }
@@ -47,6 +49,11 @@ module Types
         return if object.timestamp.nil?
 
         (object.timestamp.to_r * 1000).round
+      end
+
+      # The ClickHouse store saves 0.0 when an event has no amount, so zero is shown as no amount on both stores.
+      def precise_total_amount_cents
+        object.precise_total_amount_cents&.nonzero?&.to_s
       end
 
       def match_billable_metric

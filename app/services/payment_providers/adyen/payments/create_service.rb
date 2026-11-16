@@ -4,7 +4,7 @@ module PaymentProviders
   module Adyen
     module Payments
       class CreateService < BaseService
-        Result = BaseResult[:payment, :error_message, :error_code, :reraise]
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise, :should_retry]
 
         # Adyen rejects the whole payment when `reference` overflows this limit, so a
         # long billing entity name would turn a dunning retry into a hard failure.
