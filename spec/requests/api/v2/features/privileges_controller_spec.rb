@@ -602,6 +602,20 @@ RSpec.describe Api::V2::Features::PrivilegesController do
       end
     end
 
+    context "when the feature and privilege codes contain percent-encoded slashes" do
+      let(:feature) { create(:feature, organization:, code: "seats/eu") }
+      let(:privilege) { create(:privilege, feature:, organization:, code: "a/b") }
+      let(:feature_code) { "seats%2Feu" }
+      let(:privilege_code) { "a%2Fb" }
+
+      it "returns the privilege" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(lago_id: privilege.id, feature_code: "seats/eu", code: "a/b")
+      end
+    end
+
     context "when the privilege code contains a slash" do
       let(:privilege) { create(:privilege, feature:, organization:, code: "a/b") }
       let(:privilege_code) { "a/b" }
