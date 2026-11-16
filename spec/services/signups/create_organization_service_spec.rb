@@ -119,6 +119,47 @@ RSpec.describe Signups::CreateOrganizationService do
     end
   end
 
+  context "when an invite is accepted while Step 3 waits", transaction: false do
+    let(:invite) { create(:invite, email: user.email, roles: %w[admin]) }
+    let(:accepted) { Concurrent::CountDownLatch.new }
+    let(:acceptance) do
+      latch = accepted
+      invite_id = invite.id
+      user_id = user.id
+      Thread.new do
+        ApplicationRecord.connection_pool.with_connection do
+          ApplicationRecord.transaction do
+            Memberships::CreateFromInviteService.call!(invite: Invite.find(invite_id), user: User.find(user_id))
+            latch.count_down
+            await_a_blocked_session
+          end
+        end
+      end
+    end
+
+    before do
+      acceptance
+      raise "the invite was never accepted" unless accepted.wait(5)
+    end
+
+    after { acceptance.join }
+
+    def await_a_blocked_session
+      50.times do
+        break if ApplicationRecord.with_connection { |connection| connection.select_value(<<~SQL) }
+          SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted AND pg_backend_pid() = ANY(pg_blocking_pids(pid)))
+        SQL
+
+        sleep(0.1)
+      end
+    end
+
+    it "waits for the acceptance, then refuses with user_not_eligible and creates no pair" do
+      expect(result.error.code).to eq("user_not_eligible")
+      expect(Organization.where.not(id: invite.organization_id)).to be_empty
+    end
+  end
+
   context "when Step 3 is submitted twice at the same time", transaction: false do
     it "creates a single pair and refuses the other submission" do
       results = Array.new(2) do
