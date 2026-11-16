@@ -26,6 +26,22 @@ RSpec.describe Admin::LinkSandboxOrganizationService do
     expect { result }.to have_enqueued_job_after_commit(Admin::SlackNotificationJob)
   end
 
+  context "when production has premium integrations and feature flags" do
+    let(:production) { create(:organization, premium_integrations: ["netsuite"], feature_flags: ["order_forms"]) }
+
+    it "audits each feature the sandbox copied, in the batch of the link" do
+      expect(result).to be_success
+
+      batch_id = CsAdminAuditLog.find_by!(organization: target, action: :sandbox_linked).batch_id
+      expect(CsAdminAuditLog.where(organization: target, action: :toggle_on)
+        .pluck(:feature_type, :feature_key, :before_value, :after_value, :reason, :batch_id))
+        .to match_array([
+          ["premium_integration", "netsuite", false, true, reason, batch_id],
+          ["feature_flag", "order_forms", false, true, reason, batch_id]
+        ])
+    end
+  end
+
   context "with a reason that is too short" do
     let(:reason) { "short" }
 

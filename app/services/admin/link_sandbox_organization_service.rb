@@ -3,6 +3,8 @@
 module Admin
   # Links a sandbox for a CS admin, with an audit row on each organization and one Slack notification.
   class LinkSandboxOrganizationService < ::BaseService
+    include SandboxMirrorAuditLogs
+
     Result = BaseResult[:organization, :sandbox_organization]
 
     def initialize(actor:, production_organization:, sandbox_organization:, reason:)
@@ -21,7 +23,7 @@ module Admin
 
       ActiveRecord::Base.transaction do
         link = ::Organizations::LinkSandboxService.call!(production_organization:, sandbox_organization:, actor:)
-        create_audit_logs!(link.organization, link.sandbox_organization)
+        create_audit_logs!(link.organization, link.sandbox_organization, link.settings_changes)
 
         result.organization = link.organization
         result.sandbox_organization = link.sandbox_organization
@@ -38,12 +40,13 @@ module Admin
 
     attr_reader :actor, :production_organization, :sandbox_organization, :reason
 
-    # Two rows, so the link shows in the history of both organizations.
-    def create_audit_logs!(production, sandbox)
+    # A row on each organization, so the link shows in both histories, and one on the sandbox per feature it copied.
+    def create_audit_logs!(production, sandbox, settings_changes)
       batch_id = SecureRandom.uuid
       sandbox_row = audit_log(sandbox, production.id, batch_id)
       sandbox_row.save!
       audit_log(production, sandbox.id, batch_id).save!
+      mirror_audit_logs!(sandbox, mirrored_changes(settings_changes), batch_id:)
 
       after_commit { Admin::SlackNotificationJob.perform_later(sandbox_row.id) }
     end

@@ -6,7 +6,7 @@ module Organizations
   # its own SSO, settings the copy would remove, a looser login, pending invites, members production lacks, or custom
   # roles that production does not define the same way.
   class LinkSandboxService < BaseService
-    Result = BaseResult[:organization, :sandbox_organization]
+    Result = BaseResult[:organization, :sandbox_organization, :settings_changes]
 
     LOCK_KEY = "organization_sandbox_link"
 
@@ -68,7 +68,7 @@ module Organizations
       production_organization.reload_sandbox_organization
 
       # Settings first: copying custom roles needs the sandbox's custom_roles integration.
-      SyncSandboxSettingsService.call!(organization: production_organization, actor:)
+      result.settings_changes = SyncSandboxSettingsService.call!(organization: production_organization, actor:).changes
       # Every custom role, as the members below only copy the roles they hold.
       production_organization.roles.find_each { Roles::SyncSandboxService.call!(role: it, actor:) }
       production_organization.active_memberships.includes(:user).find_each do |membership|
