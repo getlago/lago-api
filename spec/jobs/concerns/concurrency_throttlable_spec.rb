@@ -14,73 +14,84 @@ RSpec.describe ConcurrencyThrottlable do
 
   before { stub_const("ConcurrencyThrottlableTestJob", job_class) }
 
-  describe "next window throttling retry" do
-    let(:error) { BaseService::NextWindowThrottlingError.new(provider_name: :quickbooks) }
+  it "includes the next window throttling retry" do
+    expect(job_class).to include(NextWindowThrottlingRetryable)
+  end
 
-    def retry_at
-      ActiveJob::Base.queue_adapter.enqueued_jobs.last[:at]
-    end
+  shared_examples "an integration job with both throttling retries" do
+    before { allow(service_class).to receive(:call).and_raise(error) }
 
-    it "retries once the rate limit window has passed, with up to 30 seconds of jitter" do
-      freeze_time do
-        job_class.new.rescue_with_handler(error)
+    context "when the provider is rate limited until its next window" do
+      let(:error) { BaseService::NextWindowThrottlingError.new(provider_name: :quickbooks) }
+      let(:retry_at) { ActiveJob::Base.queue_adapter.enqueued_jobs.last[:at] }
 
-        expect(retry_at).to be_between(60.seconds.from_now.to_f, 90.seconds.from_now.to_f)
+      it "schedules the next attempt 60 to 90 seconds later" do
+        freeze_time do
+          described_class.perform_now(**job_arguments)
+
+          expect(retry_at).to be_between(60.seconds.from_now.to_f, 90.seconds.from_now.to_f)
+        end
       end
     end
 
-    it "uses the retry delay carried by the error" do
-      error = BaseService::NextWindowThrottlingError.new(provider_name: :quickbooks, retry_after: 5.minutes)
+    context "when the provider raises the regular throttling error" do
+      let(:error) { BaseService::ThrottlingError.new(provider_name: :xero) }
 
-      freeze_time do
-        job_class.new.rescue_with_handler(error)
-
-        expect(retry_at).to be_between(5.minutes.from_now.to_f, (5.minutes + 30.seconds).from_now.to_f)
+      it "keeps its own retry rule and gives up after 25 attempts" do
+        assert_performed_jobs(25, only: [described_class]) do
+          expect { described_class.perform_later(**job_arguments) }.to raise_error(BaseService::ThrottlingError)
+        end
       end
-    end
-
-    it "keeps retrying without an attempt cap" do
-      job = job_class.new
-      job.executions = 30
-
-      freeze_time do
-        expect(job.rescue_with_handler(error)).to be_truthy
-        expect(retry_at).to be_between(60.seconds.from_now.to_f, 90.seconds.from_now.to_f)
-      end
-    end
-
-    it "does not handle the regular throttling error" do
-      error = BaseService::ThrottlingError.new(provider_name: :xero)
-
-      expect(job_class.new.rescue_with_handler(error)).to be_nil
-      expect(ActiveJob::Base.queue_adapter.enqueued_jobs).to be_empty
     end
   end
 
-  # NOTE: ActiveSupport::Rescuable picks the most recently declared handler matching the error class.
-  def handled_error_class(job_class, error)
-    job_class.rescue_handlers.rfind { |class_name, _| error.is_a?(class_name.constantize) }&.first
-  end
+  describe "integration jobs" do
+    let_it_be(:organization) { create(:organization) }
+    let_it_be(:customer) { create(:customer, organization:) }
+    let_it_be(:integration) { create(:netsuite_integration, organization:) }
 
-  [
-    IntegrationCustomers::CreateJob,
-    IntegrationCustomers::UpdateJob,
-    Integrations::Aggregator::Invoices::CreateJob,
-    Integrations::Aggregator::CreditNotes::CreateJob,
-    Integrations::Aggregator::Payments::CreateJob
-  ].each do |integration_job_class|
-    describe integration_job_class do
-      it "handles the next window throttling error with the next window retry" do
-        error = BaseService::NextWindowThrottlingError.new(provider_name: :quickbooks)
+    describe IntegrationCustomers::CreateJob do
+      let(:service_class) { IntegrationCustomers::CreateService }
+      let(:job_arguments) { {integration_customer_params: {sync_with_provider: true}, integration:, customer:} }
 
-        expect(handled_error_class(integration_job_class, error)).to eq("BaseService::NextWindowThrottlingError")
+      it_behaves_like "an integration job with both throttling retries"
+    end
+
+    describe IntegrationCustomers::UpdateJob do
+      let(:service_class) { IntegrationCustomers::UpdateService }
+      let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+      let(:job_arguments) do
+        {integration_customer_params: {sync_with_provider: true}, integration:, integration_customer:}
       end
 
-      it "keeps its own retry rule for the regular throttling error" do
-        error = BaseService::ThrottlingError.new(provider_name: :xero)
+      it_behaves_like "an integration job with both throttling retries"
+    end
 
-        expect(handled_error_class(integration_job_class, error)).to eq("BaseService::ThrottlingError")
+    describe Integrations::Aggregator::Invoices::CreateJob do
+      let(:service_class) { Integrations::Aggregator::Invoices::CreateService }
+      let(:job_arguments) { {invoice: create(:invoice, customer:, organization:)} }
+
+      # NOTE: The job looks the invoice up upstream before every retry.
+      before do
+        allow(Integrations::Aggregator::Invoices::ReconcileService).to receive(:call)
+          .and_return(Integrations::Aggregator::Invoices::ReconcileService::Result.new)
       end
+
+      it_behaves_like "an integration job with both throttling retries"
+    end
+
+    describe Integrations::Aggregator::CreditNotes::CreateJob do
+      let(:service_class) { Integrations::Aggregator::CreditNotes::CreateService }
+      let(:job_arguments) { {credit_note: create(:credit_note, customer:, organization:)} }
+
+      it_behaves_like "an integration job with both throttling retries"
+    end
+
+    describe Integrations::Aggregator::Payments::CreateJob do
+      let(:service_class) { Integrations::Aggregator::Payments::CreateService }
+      let(:job_arguments) { {payment: create(:payment, organization:, customer:)} }
+
+      it_behaves_like "an integration job with both throttling retries"
     end
   end
 end
