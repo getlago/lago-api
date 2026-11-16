@@ -11,15 +11,22 @@ module IntegrationThrottleKey
   LIMIT = 3
   NO_CONNECTION_SUFFIX = "none"
   CACHE_TTL = 1.hour
+  THREAD_KEY = :integration_throttle_key
   RECORD_KEYS = %w[invoice credit_note payment].freeze
   RECORD_CLASSES = %w[Invoice CreditNote Payment].freeze
 
+  # The gem asks for the limit, then for the key suffix, on the thread that later finalizes the job.
+  # The suffix reuses the resolution of the limit for the same arguments: a second resolution that
+  # fails or changes would count the job under "none", or free a slot in another set than the one it took.
   def self.limit(*args)
-    integration_id(args) ? LIMIT : nil
+    id = integration_id(args)
+    Thread.current[THREAD_KEY] = [args, id]
+    id ? LIMIT : nil
   end
 
   def self.key_suffix(*args)
-    id = integration_id(args)
+    resolved_args, resolved_id = Thread.current[THREAD_KEY]
+    id = (resolved_args == args) ? resolved_id : integration_id(args)
     id ? Digest::SHA256.hexdigest(id) : NO_CONNECTION_SUFFIX
   end
 
@@ -50,14 +57,18 @@ module IntegrationThrottleKey
 
   def self.lookup(klass, id)
     customer_id = klass.unscoped.where(id:).pick(:customer_id)
+    return unless customer_id
 
-    if customer_id
-      IntegrationCustomers::BaseCustomer
-        .joins(:integration)
-        .where(customer_id:, integrations: {type: QUICKBOOKS_TYPE})
-        .order("integrations.id")
-        .pick("integrations.id")
-    end
+    links = IntegrationCustomers::BaseCustomer.where(customer_id:)
+    # The record jobs sync to the first accounting_kind link of the customer (NetSuite or Xero).
+    # A customer that has one is not counted against QuickBooks. Revisit when QuickBooks joins accounting_kind.
+    return if links.accounting_kind.exists?
+
+    links
+      .joins(:integration)
+      .where(integrations: {type: QUICKBOOKS_TYPE})
+      .order("integrations.id")
+      .pick("integrations.id")
   end
 
   private_class_method :integration_id, :cached_integration_id, :lookup
