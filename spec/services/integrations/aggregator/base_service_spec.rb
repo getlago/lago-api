@@ -31,6 +31,53 @@ RSpec.describe Integrations::Aggregator::BaseService do
     end
   end
 
+  describe "#throttle!" do
+    let(:limiter) { instance_double(Throttling::Base, check: allowed) }
+    let(:allowed) { false }
+
+    before do
+      allow(sync_service).to receive(:provider).and_return(provider_name.to_s)
+      allow(sync_service).to receive(:throttle_key).and_return("throttle-key")
+      allow(Throttling).to receive(:for).with(provider_name).and_return(limiter)
+    end
+
+    %i[netsuite xero hubspot anrok avalara].each do |existing_provider|
+      context "when #{existing_provider} is rate limited" do
+        let(:provider_name) { existing_provider }
+
+        it "raises the regular throttling error" do
+          expect { sync_service.send(:throttle!, provider_name) }
+            .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(provider_name) }
+        end
+      end
+    end
+
+    context "when quickbooks is rate limited" do
+      let(:provider_name) { :quickbooks }
+
+      it "raises the next window throttling error" do
+        expect { sync_service.send(:throttle!, provider_name) }
+          .to raise_error(BaseService::NextWindowThrottlingError) do |error|
+            expect(error.provider_name).to eq(:quickbooks)
+            expect(error.retry_after).to eq(60.seconds)
+          end
+      end
+
+      it "is not a regular throttling error" do
+        expect(BaseService::NextWindowThrottlingError.ancestors).not_to include(BaseService::ThrottlingError)
+      end
+    end
+
+    context "when the provider is not rate limited" do
+      let(:provider_name) { :quickbooks }
+      let(:allowed) { true }
+
+      it "does not raise" do
+        expect { sync_service.send(:throttle!, provider_name) }.not_to raise_error
+      end
+    end
+  end
+
   describe "#trigger_action" do
     let(:service) do
       Class.new(described_class) do
