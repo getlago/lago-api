@@ -155,6 +155,16 @@ RSpec.describe Organizations::CreateService do
       end
     end
 
+    context "with a name without Latin letters" do
+      let(:params) { {name: "株式会社テスト"} }
+
+      it "codes the billing entity after the organization slug" do
+        organization = service_result.organization
+
+        expect(organization.billing_entities.sole.code).to eq(organization.slug.tr("-", "_"))
+      end
+    end
+
     context "with the self-serve and sandbox fields" do
       let(:production) { create(:organization) }
       let(:feature_flag) { FeatureFlag::DEFINITION.keys.first }

@@ -47,9 +47,14 @@ module Organizations
       entity_params = params.slice(:name, :code, :document_numbering, :timezone)
       # TODO: remove when we do not support document_numbering per organization
       entity_params[:document_numbering] = "per_billing_entity" if entity_params[:document_numbering].to_s == "per_organization"
-      entity_params[:code] = entity_params[:name]&.parameterize(separator: "_") if entity_params[:code].blank?
+      entity_params[:code] = default_code(organization) if entity_params[:code].blank?
       # NOTE: ensure first billing entity has the same id as the organization to ease the migration to multi entities.
       entity_params.merge(id: organization.id)
+    end
+
+    # A name without Latin letters (`株式会社テスト`) parameterizes to an empty string: the slug, never empty, stands in.
+    def default_code(organization)
+      params[:name].to_s.parameterize(separator: "_").presence || organization.slug.tr("-", "_")
     end
   end
 end
