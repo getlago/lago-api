@@ -116,6 +116,8 @@ module BillableMetricFilters
         values_field = ValidationFailure.item_field(:filters, filter_index, :values)
         return :"#{values_field}[#{value_index}]"
       end
+
+      nil
     end
 
     def existing_filters_by_key
