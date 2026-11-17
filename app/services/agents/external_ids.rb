@@ -9,5 +9,10 @@ module Agents
     def self.subscription(registration)
       customer(registration)
     end
+
+    # The same ids as a subquery, for a lookup over all the registrations of a storefront.
+    def self.of(registrations)
+      registrations.select(Arel.sql("'agent_' || id::text"))
+    end
   end
 end

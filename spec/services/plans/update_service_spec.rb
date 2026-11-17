@@ -198,12 +198,16 @@ RSpec.describe Plans::UpdateService do
       let(:update_args) { {code: "renamed_plan"} }
       let(:storefront) { create(:agent_storefront_integration, organization:) }
 
-      before { storefront.update!(plans: [{plan_code: plan.code, minimum_topup_cents: 500}]) }
+      # Sold while usage-only, then given a fee: the rename must still reach the storefront.
+      before do
+        storefront.update!(plans: [{plan_code: plan.code, minimum_topup_cents: 500}, {plan_code: create(:plan, organization:, amount_cents: 0, code: "other_sold").code}])
+        plan.update!(amount_cents: 2_000)
+      end
 
-      it "renames the plan in the storefront" do
-        plans_service.call
+      it "renames the plan in the storefront and leaves the other sold plans alone" do
+        expect { plans_service.call }.to change { storefront.reload.updated_at }
 
-        expect(storefront.reload.plans).to eq([{"plan_code" => "renamed_plan", "minimum_topup_cents" => 500}])
+        expect(storefront.plans).to eq([{"plan_code" => "renamed_plan", "minimum_topup_cents" => 500}, {"plan_code" => "other_sold"}])
       end
 
       context "with an override of the plan" do
@@ -213,7 +217,7 @@ RSpec.describe Plans::UpdateService do
 
         it "leaves the storefront on the parent plan" do
           expect(plans_service.call.plan.code).to eq("renamed_plan")
-          expect(storefront.reload.plans).to eq([{"plan_code" => plan.code, "minimum_topup_cents" => 500}])
+          expect(storefront.reload.plans).to eq([{"plan_code" => plan.code, "minimum_topup_cents" => 500}, {"plan_code" => "other_sold"}])
         end
       end
     end
