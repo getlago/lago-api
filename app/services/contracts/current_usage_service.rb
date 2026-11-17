@@ -34,8 +34,16 @@ module Contracts
       result.rate_card_usages = if contract.pending?
         []
       else
-        selected_cards
-          .filter_map { |card| rate_card_usage(card) }
+        cards = selected_cards
+        if cards.any?
+          ActiveRecord::Associations::Preloader.new(records: cards, associations: [{rate_card: :rates}, {rate_phases: :rate_override}, :organization, :product]).call
+        end
+        segments = cards.filter_map { |card| billing_segment_for(card) }
+        fixed_cards = segments.filter_map { |card, _, _| card unless card.rate_card.product.metered? }
+        ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
+
+        segments
+          .map { |card, billable_segment, billing_segment| rate_card_usage(card, billable_segment, billing_segment) }
           .sort_by { |usage| usage_order(usage) }
       end
 
@@ -64,12 +72,7 @@ module Contracts
     def effective_cards
       cards = contract.applied_rate_cards
         .starting_before_contract_end
-        .includes(
-          {rate_card: [:rates, :product_filter, {product: [:billable_metric, :product_category]}]},
-          {rate_phases: :rate_override},
-          :organization,
-          :product
-        )
+        .includes(rate_card: [:product_filter, {product: [:billable_metric, :product_category]}])
         .order(:effective_date, :created_at, :id)
         .to_a
       date = timestamp.in_time_zone(customer.applicable_timezone).to_date
@@ -118,19 +121,20 @@ module Contracts
       haystacks.any? { |value| value&.downcase&.include?(search_term.downcase) }
     end
 
-    def rate_card_usage(card)
+    def billing_segment_for(card)
       return if card.rate_card.rates.empty?
 
-      schedule = Billing::RateCards::BuildScheduleService.call!(
-        contract_rate_card: card, resume_from_billing_segments: false
-      ).schedule
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule
       billable_segment = schedule.segment_covering(timestamp)
       return unless billable_segment
 
       billing_segment = BillingSegments::BuildEventSegmentService.call!(
         contract_rate_card: card, billable_segment:
       ).billing_segment
+      [card, billable_segment, billing_segment]
+    end
 
+    def rate_card_usage(card, billable_segment, billing_segment)
       RateCardUsage.new(
         contract_rate_card: card,
         billing_segment:,

@@ -30,6 +30,17 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
       expect(response).to have_http_status(:success)
       expect(json[:rate_phases].map { it[:code] }).to eq(%w[default])
     end
+
+    context "with pagination parameters" do
+      subject { get_with_token(organization, base_path, {page: 2, limit: 1}) }
+
+      it "returns a bad request error for each parameter" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details]).to eq([{code: "not_paginated", field: "page", meta: {}}, {code: "not_paginated", field: "limit", meta: {}}])
+      end
+    end
   end
 
   describe "POST .../rate_phases" do

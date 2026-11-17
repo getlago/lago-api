@@ -41,10 +41,6 @@ module BillingSegments
 
     attr_reader :contract_rate_card, :schedule, :timestamp
 
-    # The second read of billing_segments — the first is the schedule's resume_at, a scalar that
-    # cannot express a hole. The query it costs buys a walk bounded by the last stored cycle
-    # rather than by the card's age, which matters for a daily card.
-    #
     # Only the stored periods that could touch the candidates.
     #
     #   due    [Feb 1 -> Feb 15), [Feb 15 -> Mar 1)   what the calendar says is owed

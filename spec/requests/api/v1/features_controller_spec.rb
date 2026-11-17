@@ -131,6 +131,30 @@ RSpec.describe Api::V1::FeaturesController do
       end
     end
 
+    [["a number", 123], ["a boolean", true]].each do |label, code|
+      context "when the feature code is #{label}" do
+        let(:params) { {feature: {code:, name: "New Feature"}} }
+
+        it "returns a validation error and creates nothing" do
+          expect { subject }.not_to change(organization.features, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:code]).to eq ["value_is_invalid"]
+        end
+      end
+
+      context "when a privilege code is #{label}" do
+        let(:params) { {feature: {code: "test", privileges: [{code:, value_type: "string"}]}} }
+
+        it "returns a validation error and creates nothing" do
+          expect { subject }.to not_change(organization.features, :count).and not_change(organization.privileges, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:"privilege.code"]).to eq ["value_is_invalid"]
+        end
+      end
+    end
+
     context "when privilege code is empty string" do
       let(:params) do
         {
@@ -337,6 +361,17 @@ RSpec.describe Api::V1::FeaturesController do
       expect(response).to have_http_status(:ok)
       expect(json[:feature][:name]).to eq(original_name)
       expect(json[:feature][:description]).to eq("Updated feature description")
+    end
+
+    [["a number", 123], ["a boolean", true]].each do |label, code|
+      it "returns a validation error when a new privilege code is #{label}" do
+        params[:feature][:privileges] << {code:, name: "New Name"}
+
+        expect { subject }.not_to change(organization.privileges, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:"privilege.code"]).to eq ["value_is_invalid"]
+      end
     end
 
     it "creates privilege non existent privilege" do

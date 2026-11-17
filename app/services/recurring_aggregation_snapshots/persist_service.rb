@@ -7,11 +7,11 @@ module RecurringAggregationSnapshots
     # Reads take the latest period, and a draft refreshed during its grace period the one before it. The third is left to the audit.
     KEPT_PERIODS = 3
 
-    # buckets: one {charge_filter:, values:} per pricing bucket of the charge
+    # key: a SubscriptionKey or ContractKey
+    # buckets: one {filter:, values:} per pricing bucket of the key
     # values: one {grouped_by:, units:, events_count:, presentation_breakdowns:} per group of the bucket
-    def initialize(subscription:, charge:, to_datetime:, watermark:, buckets:)
-      @subscription = subscription
-      @charge = charge
+    def initialize(key:, to_datetime:, watermark:, buckets:)
+      @key = key
       @to_datetime = to_datetime
       @watermark = watermark
       @buckets = buckets
@@ -22,14 +22,14 @@ module RecurringAggregationSnapshots
     def call
       # Without it, a run with an older watermark could insert a group a newer run left out.
       # Held until the outer transaction commits: the whole invoice when called while invoicing.
-      LockService.call!(subscription:, charge:, to_datetime:) do
+      LockService.call!(key:, to_datetime:) do
         # Overlapping runs of the same period: the latest watermark has seen the most events.
-        # Checked on the whole charge, as an empty filter leaves no row holding the watermark of its run.
+        # Checked on the whole key, as an empty filter leaves no row holding the watermark of its run.
         next if period_snapshots.exists?(["watermark > ?", watermark])
 
         # A group or filter missing from a later run of the period dropped to zero units
         period_snapshots.delete_all
-        RecurringAggregationSnapshot.insert_all(rows, returning: false) if rows.any? # rubocop:disable Rails/SkipsModelValidations
+        key.model.insert_all(rows, returning: false) if rows.any? # rubocop:disable Rails/SkipsModelValidations
         older_periods_snapshots.delete_all
       end
 
@@ -38,27 +38,19 @@ module RecurringAggregationSnapshots
 
     private
 
-    attr_reader :subscription, :charge, :to_datetime, :watermark, :buckets
-
-    def charge_snapshots
-      RecurringAggregationSnapshot.where(
-        organization_id: subscription.organization_id,
-        subscription_id: subscription.id,
-        charge_id: charge.id
-      )
-    end
+    attr_reader :key, :to_datetime, :watermark, :buckets
 
     def period_snapshots
-      charge_snapshots.where(to_datetime:)
+      key.snapshots.where(to_datetime:)
     end
 
     # Counted from the latest markers rather than the period written, as a draft refresh rewrites an older one
     def older_periods_snapshots
-      oldest_kept_period = charge_snapshots.where(charge_filter_id: nil).distinct
+      oldest_kept_period = key.snapshots.period_markers.distinct
         .order(to_datetime: :desc).offset(KEPT_PERIODS - 1).limit(1).select(:to_datetime)
 
-      charge_snapshots.where(
-        RecurringAggregationSnapshot.arel_table[:to_datetime].lt(Arel::Nodes::Grouping.new(oldest_kept_period.arel))
+      key.snapshots.where(
+        key.model.arel_table[:to_datetime].lt(Arel::Nodes::Grouping.new(oldest_kept_period.arel))
       )
     end
 
@@ -66,17 +58,14 @@ module RecurringAggregationSnapshots
       @rows ||= buckets.flat_map do |bucket|
         bucket[:values].map do |value|
           {
-            organization_id: subscription.organization_id,
-            subscription_id: subscription.id,
-            charge_id: charge.id,
-            charge_filter_id: bucket[:charge_filter]&.id,
-            billable_metric_id: charge.billable_metric_id,
-            grouped_by: value[:grouped_by] || {},
-            to_datetime:,
-            watermark:,
-            units: value[:units],
-            events_count: value[:events_count] || 0,
-            presentation_breakdowns: value[:presentation_breakdowns] || []
+            **key.row_attributes,
+            key.model::BUCKET_COLUMN => key.bucket_id(bucket[:filter]),
+            :grouped_by => value[:grouped_by] || {},
+            :to_datetime => to_datetime,
+            :watermark => watermark,
+            :units => value[:units],
+            :events_count => value[:events_count] || 0,
+            :presentation_breakdowns => value[:presentation_breakdowns] || []
           }
         end
       end

@@ -26,8 +26,8 @@ RSpec.describe Webhooks::ContractRateCards::UpdatedService do
   before do
     allow(organization).to receive(:product_catalog_enabled?).and_return(true)
     phase
+    contract_rate_card.terms.first.update!(units: 4)
     contract_rate_card.update!(
-      units: 4,
       effective_date: Date.new(2026, 2, 4),
       billing_anchor_date: Date.new(2026, 2, 5),
       next_billing_at: Time.zone.parse("2026-03-06T07:08:09Z")

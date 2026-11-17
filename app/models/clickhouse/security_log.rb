@@ -37,6 +37,7 @@ module Clickhouse
       role.created
       role.deleted
       role.updated
+      user.added
       user.deleted
       user.new_device_logged_in
       user.invited
@@ -68,7 +69,10 @@ module Clickhouse
     def deep_parse_map_values(hash)
       return hash unless hash.is_a?(Hash)
 
+      # ClickHouse map values are Nullable, and JSON.parse(nil) raises a TypeError.
       hash.transform_values do |v|
+        next if v.nil?
+
         JSON.parse(v)
       rescue JSON::ParserError
         v

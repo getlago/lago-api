@@ -29,6 +29,13 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
     expect(json).not_to have_key(:details)
   end
 
+  # The privilege delete was the last features action served by v1.
+  it "serves the features privilege delete natively, without falling back to v1" do
+    delete_with_token(organization, "/api/v2/features/unknown/privileges/max")
+
+    expect(response).to be_v2_not_found_error("feature")
+  end
+
   context "with the entitlements of a legacy plan" do
     let(:plan) { create(:plan, organization:) }
     let(:feature) { create(:feature, organization:, code: "seats", name: "Seats", description: nil) }

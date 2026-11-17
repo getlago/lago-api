@@ -26,9 +26,11 @@ module Contracts
           card = contract.applied_rate_cards.create!(
             organization: contract.organization,
             rate_card: plan_rate_card.rate_card,
-            units: plan_rate_card.units,
             **contract.default_rate_card_lifecycle
           )
+          if plan_rate_card.units.present?
+            card.terms.create!(organization: contract.organization, units: plan_rate_card.units, effective_date: card.effective_date)
+          end
           copy_rate_phases(plan_rate_card, card)
           ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card)
           materialized << card

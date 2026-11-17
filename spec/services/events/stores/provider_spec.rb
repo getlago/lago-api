@@ -279,6 +279,38 @@ RSpec.describe Events::Stores::Provider do
           expect(provider.recurring_refusal_reason(metered_item)).to be_nil
         end
 
+        context "with filters" do
+          let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+          let(:pricing_buckets) do
+            Fees::ChargeService::Sources::Charge.new(charge: Charge.find(charge.id), boundaries: nil).pricing_buckets
+          end
+
+          before do
+            %w[eu us].each do |value|
+              create(:charge_filter_value, charge_filter: create(:charge_filter, charge:), billable_metric_filter: region, values: [value])
+            end
+          end
+
+          # Without the scan of the charge's filters, which only reads their late events here
+          it "reads the late events of every filter of the charge once", clickhouse: true do
+            allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+
+            reasons = pricing_buckets.map do |item|
+              filters = {
+                charge_id: charge.id,
+                charge_filter: item.charge_filter,
+                matching_filters: item.matching_and_ignored_filters.matching_filters,
+                ignored_filters: item.matching_and_ignored_filters.ignored_filters
+              }
+
+              provider.store_for(metered_item:, boundaries:, filters:).recurring_fallback_reason(period)
+            end
+
+            expect(reasons).to eq([nil, nil, nil])
+            expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+          end
+        end
+
         context "when the aggregator reads the sum without a snapshot" do
           before { allow(store.__getobj__).to receive(:sum).and_return(:events_sum) }
 

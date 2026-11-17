@@ -34,6 +34,7 @@ RSpec.describe Contract do
       expect(contract).to belong_to(:billing_entity).optional
       expect(contract).to belong_to(:payment_method).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
+      expect(contract).to have_many(:wallets).class_name("CatalogWallet")
       expect(contract).to have_many(:billing_segments)
       expect(contract).to have_many(:fees)
       expect(contract).to have_many(:invoices).through(:billing_segments)

@@ -56,12 +56,6 @@ module Api
         date_range_columns.flat_map { |column| [:"#{column}_from", :"#{column}_to"] }.index_with { params[it] }
       end
 
-      # For a list returned whole: it still rejects `page` and `per_page`, which a
-      # client paging until an empty page would otherwise send forever.
-      def reject_offset_pagination!
-        ::CursorPagination::Cursor.reject_offset_params!(params, reason: "not_paginated")
-      end
-
       # For a list returned whole: a client paging until an empty page would send `page` forever,
       # and the cursor parameters have no effect, so it refuses all of them.
       def reject_pagination!

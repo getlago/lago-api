@@ -217,6 +217,7 @@ module Types
     field :reset_password, mutation: Mutations::PasswordResets::Reset
 
     field :confirm_signup_email, mutation: Mutations::Signups::Confirm
+    field :create_self_serve_organization, mutation: Mutations::Signups::CreateOrganization
     field :exchange_signup_secret, mutation: Mutations::Signups::ExchangeSecret
     field :resend_signup_email, mutation: Mutations::Signups::Resend
     field :sign_up, mutation: Mutations::Signups::Create
@@ -330,6 +331,7 @@ module Types
     field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
 
     field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
+    field :admin_link_sandbox_organization, mutation: Mutations::Admin::LinkSandboxOrganization
     field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
     field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
   end

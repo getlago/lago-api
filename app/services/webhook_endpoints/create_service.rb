@@ -7,7 +7,7 @@ module WebhookEndpoints
     def initialize(organization:, params:, signature_algo_rule: nil)
       @organization = organization
       @params = params
-      @signature_algo_rule = signature_algo_rule || WebhookEndpoint.v1_signature_algo_rule(organization)
+      @signature_algo_rule = signature_algo_rule || WebhookEndpoint::V1_SIGNATURE_ALGO_RULE
 
       super
     end
