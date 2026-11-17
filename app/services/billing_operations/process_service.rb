@@ -155,6 +155,7 @@ module BillingOperations
       contract = segments.first.contract
       invoice = nil
       outputs = {}
+      context = nil
       ActiveRecord::Base.transaction(requires_new: true) do
         invoice = Invoices::CreateGeneratingService.call!(
           customer:, billing_entity: contract.billing_entity || customer.billing_entity,
@@ -166,7 +167,7 @@ module BillingOperations
         outputs = BillingOperations::ComputeInvoiceService.call!(
           invoice:, billing_segments: segments, context:
         ).outputs
-        raise EmptyInvoice if invoice.fees.reload.empty?
+        raise EmptyInvoice if context == :finalize && invoice.fees.reload.empty?
 
         Invoices::ApplyInvoiceCustomSectionsService.call!(
           invoice:, resources: segments.map(&:contract).uniq.map do |resource|
@@ -178,7 +179,11 @@ module BillingOperations
           notify_draft_created(invoice)
         end
       end
-      billed_segments = outputs.filter_map { |segment, fees| segment if fees.any? }
+      billed_segments = if context == :draft
+        segments
+      else
+        outputs.filter_map { |segment, fees| segment if fees.any? }
+      end
       operations_with_billed_segments(billed_segments, operation_segments).each { |operation| operation.invoice = invoice }
       invoice
     rescue EmptyInvoice

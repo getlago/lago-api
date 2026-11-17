@@ -718,6 +718,128 @@ RSpec.describe BillingOperations::ProcessService do
     end
   end
 
+  context "with metered arrears and a grace period" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC", invoice_grace_period: 3) }
+    let(:metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+    let(:product) { create(:product, :metered, organization:, billable_metric: metric) }
+    let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+    let(:late_event) do
+      create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+        code: metric.code, timestamp: Time.utc(2026, 1, 10), properties: {})
+    end
+    let(:outside_events) do
+      [Time.utc(2025, 12, 31), Time.utc(2026, 2, 2)].each do |event_time|
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: metric.code, timestamp: event_time, properties: {})
+      end
+    end
+
+    around { |example| travel_to(Time.utc(2026, 2, 1, 12)) { example.run } }
+
+    before { outside_events }
+
+    it "keeps an empty draft and refreshes its original coverage when late usage arrives" do
+      invoice = result.invoices.sole
+      expect(invoice).to be_draft
+      expect(invoice.fees).to be_empty
+      expect(operation.reload).to have_attributes(invoice_id: invoice.id, processed_at: timestamp)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+
+      late_event
+      expect(Invoices::RefreshDraftService.call(invoice:)).to be_success
+      expect(invoice.reload.fees.sole).to have_attributes(units: 1, amount_cents: 3100)
+      expect(invoice.total_amount_cents).to eq(3100)
+      expect(invoice.billing_operations.pluck(:id)).to eq([operation.id])
+      expect(Invoice.where(customer:).pluck(:id)).to eq([invoice.id])
+      expect(BillingOperation.count).to eq(1)
+    end
+
+    context "without a grace period" do
+      let(:customer) { create(:customer, organization:, timezone: "UTC", invoice_grace_period: 0) }
+
+      it "completes an empty operation without an invoice" do
+        expect(result.invoices).to be_empty
+        expect(operation.reload).to have_attributes(invoice_id: nil, processed_at: timestamp)
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+      end
+    end
+
+    context "with a consolidated priced card" do
+      let(:consolidate_invoice) { true }
+      let(:fixed_product) { create(:product, :fixed, organization:) }
+      let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product, currency: "USD", proration: true) }
+      let(:fixed_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card: fixed_rate_card, units: 1,
+          next_billing_at: cursor, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+      end
+      let(:fixed_operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card: fixed_card,
+          action_type: "close_fixed_arrears", reason: "periodic_continuation",
+          billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
+      end
+
+      before do
+        create(:rate_card_rate, organization:, rate_card: fixed_rate_card,
+          effective_from: Time.utc(2026, 1, 1), rate_properties: {"amount" => "31"})
+        fixed_operation
+      end
+
+      it "refreshes both covered operations without billing adjacent cycles" do
+        invoice = result.invoices.sole
+        expect(invoice).to be_draft
+        expect(invoice.total_amount_cents).to eq(3100)
+        expect(invoice.billing_operations.pluck(:id)).to match_array([operation.id, fixed_operation.id])
+        expect(invoice.fees.sole.contract_rate_card_id).to eq(fixed_card.id)
+
+        late_event
+        expect(Invoices::RefreshDraftService.call(invoice:)).to be_success
+        expect(invoice.reload.total_amount_cents).to eq(6200) # $31 fixed + one $31 usage event.
+        expect(invoice.fees.order(:amount_cents).pluck(:contract_rate_card_id)).to match_array([contract_rate_card.id, fixed_card.id])
+        expect(invoice.fees.find_by!(contract_rate_card:).units).to eq(1)
+        expect(invoice.billing_operations.pluck(:id)).to match_array([operation.id, fixed_operation.id])
+        expect(Invoice.where(customer:).pluck(:id)).to eq([invoice.id])
+        expect(BillingOperation.count).to eq(2)
+      end
+
+      context "without a grace period" do
+        let(:customer) { create(:customer, organization:, timezone: "UTC", invoice_grace_period: 0) }
+
+        it "links only the operation that produced a fee" do
+          invoice = result.invoices.sole
+          expect(invoice).to be_finalized
+          expect(invoice.billing_operations.pluck(:id)).to eq([fixed_operation.id])
+          expect(operation.reload).to have_attributes(invoice_id: nil, processed_at: timestamp)
+        end
+      end
+
+      context "with an obsolete renewal in the batch" do
+        let(:ended_contract) do
+          create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1),
+            ended_at: cursor, consolidate_invoice: true)
+        end
+        let(:advance_rate_card) { create(:rate_card, :advance, organization:, product: fixed_product, currency: "USD") }
+        let(:ended_card) do
+          create(:contract_rate_card, organization:, contract: ended_contract, rate_card: advance_rate_card,
+            next_billing_at: cursor, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+        end
+        let(:obsolete_operation) do
+          create(:billing_operation, organization:, customer:, contract_rate_card: ended_card,
+            action_type: "renew_fixed_advance", reason: "periodic_continuation",
+            billing_at: cursor, target_cycle_started_at: cursor)
+        end
+
+        before { obsolete_operation }
+
+        it "does not link an operation with no resolved coverage" do
+          invoice = result.invoices.sole
+          expect(invoice.billing_operations.pluck(:id)).to match_array([operation.id, fixed_operation.id])
+          expect(obsolete_operation.reload).to have_attributes(invoice_id: nil, processed_at: timestamp)
+          expect(ended_card.reload.next_billing_at).to be_nil
+        end
+      end
+    end
+  end
+
   context "with recurring metered advance" do
     let(:cursor) { Time.utc(2026, 1, 1) }
     let(:metric) { create(:sum_billable_metric, organization:, recurring: true, field_name: "quantity") }
