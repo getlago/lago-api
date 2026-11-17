@@ -66,7 +66,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
     let(:integration_customer_tax) { create(:anrok_customer, integration: integration_tax, customer:) }
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { "https://api.nango.dev/action/trigger" }
+    let(:endpoint) { nango_action_endpoint }
     let(:body) do
       path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json")
       json = File.read(path)
@@ -832,10 +832,10 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").with(invoice)
         end
 
-        context "when the provider answers with a 500" do
+        context "when the provider answers with a server error" do
           before do
-            allow(lago_client).to receive(:post_with_response)
-              .and_raise(::LagoHttpClient::HttpError.new(500, body, endpoint, response_headers: {}))
+            allow(LagoHttpClient::Client).to receive(:new).and_call_original
+            stub_nango_action_failing_with(Integrations::Aggregator::ServerError)
           end
 
           it "raises ServerError so the job can retry, without failing the invoice" do

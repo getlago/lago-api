@@ -7,7 +7,6 @@ describe "Wallet refresh during a tax provider outage", :premium do
   let(:customer) { create(:customer, organization:) }
   let(:tax_integration) { create(:anrok_integration, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
-  let(:nango_action_endpoint) { "https://api.nango.dev/action/trigger" }
   let(:plan_code) { "monthly_usage" }
   let(:external_subscription_id) { "sub-#{SecureRandom.hex(4)}" }
 
@@ -19,24 +18,6 @@ describe "Wallet refresh during a tax provider outage", :premium do
       mapping_type: :fallback_item,
       settings: {external_id: "1", external_account_code: "11", external_name: ""}
     )
-  end
-
-  # Anrok answers for the fees it receives: each requested line is taxed at 10%.
-  def anrok_draft_answer(request)
-    fees = JSON.parse(request.body).dig("input", 0, "fees").map do |fee|
-      tax_amount_cents = (fee["amount_cents"].to_i * 0.1).round
-
-      {
-        item_key: fee["item_key"],
-        item_id: fee["item_id"],
-        item_code: fee["item_code"],
-        amount_cents: fee["amount_cents"],
-        tax_amount_cents:,
-        tax_breakdown: [{name: "GST/HST", rate: "0.10", tax_amount: tax_amount_cents, type: "tax"}]
-      }
-    end
-
-    {succeededInvoices: [{id: "inv_1", fees:}], failedInvoices: []}.to_json
   end
 
   it "keeps the customer flagged through the outage and refreshes the wallet on the next clock run" do
@@ -75,7 +56,7 @@ describe "Wallet refresh during a tax provider outage", :premium do
     expect(wallet.ongoing_balance_cents).to eq(1_000)
 
     # Tax provider outage: every draft tax request answers 503 with an empty body.
-    stub_request(:post, nango_action_endpoint).to_return(status: 503, body: "")
+    stub_nango_action(status: 503, body: "")
 
     travel_to(Time.zone.parse("2026-03-10T10:00:00")) do
       create_event({
@@ -100,7 +81,7 @@ describe "Wallet refresh during a tax provider outage", :premium do
     end
 
     # The provider answers again.
-    stub_request(:post, nango_action_endpoint).to_return(->(request) { {status: 200, body: anrok_draft_answer(request)} })
+    stub_nango_action(anrok_draft_taxes_answer(rate: 0.1))
 
     travel_to(Time.zone.parse("2026-03-10T10:05:00")) do
       # The customer is still flagged, so the next clock run enqueues the refresh.

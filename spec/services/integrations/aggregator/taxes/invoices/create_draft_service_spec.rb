@@ -7,7 +7,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
   let(:integration) { create(:anrok_integration, organization:) }
   let(:customer) { create(:customer, :with_shipping_address, organization:) }
-  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:endpoint) { nango_action_endpoint }
   let(:action_name) { "anrok-create-ephemeral-transaction" }
   let(:current_time) { Time.current }
   let(:integration_collection_mapping1) do
