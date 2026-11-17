@@ -228,7 +228,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           end
         end
 
-        it "uses the plan entitlement serializer and logs the changes it is given" do
+        it "files a plan entitlement under its catalog plan, with the entitlement render and the changes it is given" do
           entitlement = create(:entitlement, :catalog_plan, organization:, catalog_plan: create(:catalog_plan, organization:, code: "premium"))
           changes = {"values" => [nil, [{privilege_code: "max", value: 10}]]}
 
@@ -236,7 +236,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
           expect(karafka_producer).to have_received(:produce_async) do |args|
             payload = JSON.parse(args[:payload])
-            expect(payload).to include("resource_type" => "Entitlement::Entitlement", "resource_id" => entitlement.id, "external_customer_id" => nil)
+            expect(payload).to include("resource_type" => "CatalogPlan", "resource_id" => entitlement.catalog_plan_id, "external_customer_id" => nil)
             expect(payload.fetch("activity_object")).to eq(JSON.parse(V2::PlanEntitlementSerializer.new(entitlement).serialize.to_json))
             expect(payload.fetch("activity_object_changes")).to eq("values" => [nil, [{"privilege_code" => "max", "value" => 10}]])
           end

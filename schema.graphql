@@ -72,7 +72,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | CatalogPlan | Contract | ContractAppliedRateCard | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | PlanAppliedRateCard | PlanEntitlement | Product | ProductCategory | ProductFilter | Quote | RateCard | RateCardRate | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | CatalogPlan | Contract | ContractAppliedRateCard | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | PlanAppliedRateCard | Product | ProductCategory | ProductFilter | Quote | RateCard | RateCardRate | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -14679,11 +14679,6 @@ enum ResourceTypeEnum {
   Plan
   """
   plan
-
-  """
-  Entitlement::Entitlement
-  """
-  plan_entitlement
 
   """
   PlanRateCard

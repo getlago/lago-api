@@ -23,7 +23,6 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
       Types::Coupons::Object,
       Types::PaymentRequests::Object,
       Types::Entitlement::FeatureObject,
-      Types::Entitlement::PlanEntitlementObject,
       Types::PaymentReceipts::Object,
       Types::ProductCategories::Object,
       Types::Products::Object,
@@ -114,10 +113,6 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
 
     it "returns Types::Entitlement::FeatureObject for Feature objects" do
       expect(subject.resolve_type(feature, {})).to eq(Types::Entitlement::FeatureObject)
-    end
-
-    it "returns Types::Entitlement::PlanEntitlementObject for Entitlement objects" do
-      expect(subject.resolve_type(build(:entitlement), {})).to eq(Types::Entitlement::PlanEntitlementObject)
     end
 
     it "returns Types::ProductCategories::Object for ProductCategory objects" do

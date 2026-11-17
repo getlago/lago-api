@@ -215,6 +215,9 @@ module Utils
         # The quote lifecycle events are named quote.*: anchor them on the quote so a single
         # resource carries the whole timeline, while activity_object keeps the version payload.
         object.quote
+      when "Entitlement::Entitlement"
+        # A plan entitlement change is filed under its catalog plan, while activity_object keeps the entitlement.
+        object.catalog_plan
       else
         object
       end

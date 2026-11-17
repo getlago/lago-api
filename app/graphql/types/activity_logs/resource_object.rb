@@ -20,7 +20,6 @@ module Types
         Types::PaymentRequests::Object,
         Types::PaymentReceipts::Object,
         Types::Entitlement::FeatureObject,
-        Types::Entitlement::PlanEntitlementObject,
         Types::ProductCategories::Object,
         Types::Products::Object,
         Types::ProductFilters::Object,
@@ -61,8 +60,6 @@ module Types
           Types::PaymentReceipts::Object
         when "Entitlement::Feature"
           Types::Entitlement::FeatureObject
-        when "Entitlement::Entitlement"
-          Types::Entitlement::PlanEntitlementObject
         when "ProductCategory"
           Types::ProductCategories::Object
         when "Product"

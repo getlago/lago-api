@@ -50,29 +50,12 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
       expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("RateCardRate", "PlanRateCard", "ContractRateCard")
     end
 
-    it "defines the plan entitlement activity types and resource" do
+    it "defines the plan entitlement activity types" do
       expect(described_class::ACTIVITY_TYPES.slice(:plan_entitlement_created, :plan_entitlement_updated, :plan_entitlement_deleted)).to eq(
         plan_entitlement_created: "plan_entitlement.created",
         plan_entitlement_updated: "plan_entitlement.updated",
         plan_entitlement_deleted: "plan_entitlement.deleted"
       )
-      expect(described_class::RESOURCE_TYPES[:plan_entitlement]).to eq("Entitlement::Entitlement")
-      expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("Entitlement::Entitlement")
-    end
-  end
-
-  describe "#resource of a discarded plan entitlement" do
-    subject(:activity_log) do
-      build(:clickhouse_activity_log, organization:, resource_type: "Entitlement::Entitlement", resource_id: entitlement.id)
-    end
-
-    let(:organization) { create(:organization) }
-    let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: create(:catalog_plan, organization:)) }
-
-    before { entitlement.discard }
-
-    it "finds it" do
-      expect(activity_log.resource).to eq(entitlement)
     end
   end
 

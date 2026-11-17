@@ -477,11 +477,6 @@
             },
             {
               "kind": "OBJECT",
-              "name": "PlanEntitlement",
-              "ofType": null
-            },
-            {
-              "kind": "OBJECT",
               "name": "Product",
               "ofType": null
             },
@@ -80421,12 +80416,6 @@
             {
               "name": "plan_rate_card",
               "description": "PlanRateCard",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "plan_entitlement",
-              "description": "Entitlement::Entitlement",
               "isDeprecated": false,
               "deprecationReason": null
             },
