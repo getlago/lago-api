@@ -330,8 +330,46 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
     it { is_expected.to be(false) }
 
-    it "parses the watermark before comparing it to ingested_at, which can be a DateTime without milliseconds" do
-      expect(event_store.resent_after_watermark_sql(period)).to include("ingested_at <= toDateTime64('")
+    # Some deployments store events_raw.ingested_at as a DateTime, which rejects a watermark string with milliseconds
+    context "when events_raw stores ingested_at without milliseconds" do
+      let(:raw_table) { "events_raw_ingested_at_datetime" }
+      let(:connection) { Clickhouse::BaseRecord.connection }
+      let(:period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(
+          to_datetime: subscription.started_at + 3.days,
+          watermark: (Time.current - 1.hour).change(usec: 245_000)
+        )
+      end
+
+      def copy_raw_events
+        connection.execute("INSERT INTO #{raw_table} SELECT * FROM events_raw")
+      end
+
+      before do
+        connection.execute("DROP TABLE IF EXISTS #{raw_table}")
+        connection.execute(<<~SQL)
+          CREATE TABLE #{raw_table} ENGINE = MergeTree ORDER BY tuple()
+          AS SELECT * REPLACE (toDateTime(ingested_at) AS ingested_at) FROM events_raw WHERE 0
+        SQL
+        allow(event_store).to receive(:raw_events_table).and_return(raw_table)
+      end
+
+      after { connection.execute("DROP TABLE IF EXISTS #{raw_table}") }
+
+      it "finds an event ingested by the watermark and re-sent after it" do
+        ingest(ingested_at: period.watermark)
+        ingest(ingested_at: period.watermark + 10.minutes)
+        copy_raw_events
+
+        expect(resent).to be(true)
+      end
+
+      it "ignores an event ingested once by the watermark and enriched after it" do
+        ingest(ingested_at: period.watermark, enriched_at: period.watermark + 1.second)
+        copy_raw_events
+
+        expect(resent).to be(false)
+      end
     end
 
     context "with an event ingested by the watermark and re-sent after it" do
