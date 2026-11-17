@@ -31,6 +31,7 @@ module Entitlement
         update_feature_attributes
         delete_missing_privileges unless partial?
         update_privileges
+        check_privileges_limit!
 
         feature.save!
       end
@@ -54,6 +55,8 @@ module Entitlement
       else
         result.record_validation_failure!(record: e.record)
       end
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
@@ -102,6 +105,19 @@ module Entitlement
       privilege.config = privilege_params[:config] if privilege_params.has_key? :config
 
       privilege.save!
+      @privileges_added = true
+    end
+
+    # Counted after the removals and the creates, under the feature lock. An update that adds no privilege is
+    # accepted, so a feature already above the limit stays editable. Raising rolls the whole update back.
+    def check_privileges_limit!
+      if @privileges_added && feature.privileges.count > PrivilegeCreateService::MAX_PRIVILEGES
+        result.single_validation_failure!(
+          field: :base,
+          error_code: "too_many_privileges",
+          meta: {max_items: PrivilegeCreateService::MAX_PRIVILEGES}
+        ).raise_if_error!
+      end
     end
 
     def delete_missing_privileges
