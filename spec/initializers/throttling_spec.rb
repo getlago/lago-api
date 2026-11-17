@@ -23,6 +23,13 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
     expect(limits_for(:quickbooks)).to eq(minutely: {limit: 150, period: 60})
   end
 
+  it "keeps the shared concurrency limit at a single limit of 5" do
+    strategy = Sidekiq::Throttled::Registry.get(:concurrency_limit)
+
+    expect(strategy.concurrency.limit).to eq(5)
+    expect(strategy.threshold).to be_nil
+  end
+
   context "with a real counter store" do
     let(:check_value) { "placeholder-throttle-key" }
 
