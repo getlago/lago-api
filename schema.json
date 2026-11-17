@@ -477,6 +477,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "PlanEntitlement",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "Product",
               "ofType": null
             },
@@ -965,6 +970,24 @@
             {
               "name": "plan_rate_card_deleted",
               "description": "plan_rate_card.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_created",
+              "description": "plan_entitlement.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_updated",
+              "description": "plan_entitlement.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_deleted",
+              "description": "plan_entitlement.deleted",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -80398,6 +80421,12 @@
             {
               "name": "plan_rate_card",
               "description": "PlanRateCard",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement",
+              "description": "Entitlement::Entitlement",
               "isDeprecated": false,
               "deprecationReason": null
             },

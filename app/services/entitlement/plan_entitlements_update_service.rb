@@ -19,24 +19,26 @@ module Entitlement
     # NOTE: send_webhook gates the activity log too: both represent the same plan.updated event.
     #       It is set to false when invoked from the plan create/update mutations, where the plan
     #       service already emits the plan event, to avoid duplicates.
-    #       A catalog plan only gets the activity log: its entitlement changes get their own webhook.
+    #       A catalog plan gets no plan.updated event: each entitlement it changes is logged on its own.
     activity_loggable(
       action: "plan.updated",
       record: -> { plan },
-      condition: -> { send_webhook }
+      condition: -> { send_webhook && !catalog_plan? }
     )
 
     def call
       ActiveRecord::Base.transaction do
         lock_plan!(plan)
+        values_before = rendered_values_by_entitlement_id if catalog_plan?
         delete_missing_entitlements unless partial?
         update_entitlements
+        log_entitlement_changes(values_before) if catalog_plan?
       end
 
       # NOTE: The webhook is sent even if no changes were made to the plan
-      SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook && !plan.is_a?(CatalogPlan)
+      SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook && !catalog_plan?
 
-      result.entitlements = plan.entitlements.includes(:feature, values: :privilege).order(:created_at, :id).reload
+      result.entitlements = plan.entitlements.includes(:feature, values: :privilege).oldest_first.reload
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -75,8 +77,40 @@ module Entitlement
       )
     end
 
+    def catalog_plan?
+      plan.is_a?(CatalogPlan)
+    end
+
     def owner_attributes
-      plan.is_a?(CatalogPlan) ? {catalog_plan: plan} : {plan:}
+      catalog_plan? ? {catalog_plan: plan} : {plan:}
+    end
+
+    # The values of each kept entitlement of the plan, as its activity log renders them.
+    def rendered_values_by_entitlement_id
+      plan.entitlements.includes(:catalog_plan, :feature, values: :privilege).to_h do |entitlement|
+        [entitlement.id, ::V2::PlanEntitlementSerializer.new(entitlement).serialize[:values]]
+      end
+    end
+
+    # One activity log per entitlement the call added, changed (any of its values) or discarded,
+    # with the values before and after. An entitlement left as it was gets none.
+    def log_entitlement_changes(values_before)
+      values_after = rendered_values_by_entitlement_id
+      changed_ids = (values_before.keys | values_after.keys).reject { values_before[it] == values_after[it] }
+
+      Entitlement.with_discarded.where(id: changed_ids).oldest_first.each do |entitlement|
+        before = values_before[entitlement.id]
+        after = values_after[entitlement.id]
+        action = if before.nil?
+          "created"
+        elsif after.nil?
+          "deleted"
+        else
+          "updated"
+        end
+
+        Utils::ActivityLog.produce_after_commit(entitlement, "plan_entitlement.#{action}", changes: {"values" => [before, after]})
+      end
     end
 
     def delete_missing_entitlements

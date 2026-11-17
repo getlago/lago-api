@@ -3,7 +3,7 @@
 module Utils
   class ActivityLog
     IGNORED_FIELDS = %i[updated_at].freeze
-    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan CatalogPlan BillingEntity Entitlement::Feature ProductCategory Product ProductFilter RateCard RateCardRate PlanRateCard].freeze
+    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan CatalogPlan BillingEntity Entitlement::Feature Entitlement::Entitlement ProductCategory Product ProductFilter RateCard RateCardRate PlanRateCard].freeze
     MAX_SERIALIZED_FEES = 25
     MAX_SERIALIZED_CHARGES = 50
     MAX_SERIALIZED_CHARGE_FILTERS = 100
@@ -40,17 +40,20 @@ module Utils
     # This method is used to produce an activity log after a commit.
     #
     # It is meant to avoid race-conditions where a asynchronous post-processing run before changes are commited to the DB.
-    def self.produce_after_commit(object, activity_type, activity_id: nil, &)
-      kwargs = {after_commit: true, activity_id:}.compact
+    def self.produce_after_commit(object, activity_type, activity_id: nil, changes: nil, &)
+      kwargs = {after_commit: true, activity_id:, changes:}.compact
       produce(object, activity_type, **kwargs, &)
     end
 
-    def initialize(object, activity_type, activity_id: SecureRandom.uuid, after_commit: false, &block)
+    # changes: a diff the caller computed, logged as given for any activity type, in place of the one
+    # a block computes from the object.
+    def initialize(object, activity_type, activity_id: SecureRandom.uuid, after_commit: false, changes: nil, &block)
       @object = object
       @activity_type = activity_type
       @activity_id = activity_id
       @block = block
       @after_commit = after_commit
+      @given_changes = changes
     end
 
     def produce
@@ -80,7 +83,7 @@ module Utils
 
     private
 
-    attr_reader :object, :activity_type, :activity_id, :block, :after_commit
+    attr_reader :object, :activity_type, :activity_id, :block, :after_commit, :given_changes
 
     def run_maybe_after_commit(&block)
       if after_commit
@@ -135,6 +138,7 @@ module Utils
       # Applied-card model names differ from their public V2 serializer names.
       serializer = case object
       when PlanRateCard then V2::PlanRateCardSerializer
+      when ::Entitlement::Entitlement then V2::PlanEntitlementSerializer
       when ContractRateCard then V2::ContractAppliedRateCardSerializer
       # A catalog invoice logs the body its webhooks send.
       when Invoice then object.product_catalog? ? V2::InvoiceSerializer : V1::InvoiceSerializer
@@ -181,6 +185,7 @@ module Utils
     end
 
     def object_changes(changes)
+      return given_changes if given_changes
       return {} unless activity_type.include?("updated")
 
       changes.except(*IGNORED_FIELDS, *IGNORED_FIELDS.map(&:to_s))

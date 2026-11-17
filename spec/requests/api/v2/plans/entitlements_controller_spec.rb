@@ -40,11 +40,24 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
       expect(catalog_plan.entitlements.sole.values.sole.value).to eq("50")
     end
 
-    it "produces the plan.updated activity log once and no plan.updated webhook" do
+    it "writes one plan_entitlement.created activity log and no plan.updated event" do
       expect { request }.not_to have_enqueued_job(SendWebhookJob)
 
-      expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(catalog_plan)
-      expect(Utils::ActivityLog).to have_received(:produce).with(catalog_plan, "plan.updated", after_commit: true).once
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        catalog_plan.entitlements.sole, "plan_entitlement.created", after_commit: true,
+        changes: {"values" => [nil, [{privilege_code: "max", value: 50}]]}
+      ).once
+      expect(Utils::ActivityLog).to have_received(:produce).once
+    end
+
+    it "writes no activity log when the same call runs again" do
+      post_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements", request_params)
+      expect(Utils::ActivityLog).to have_received(:produce).once
+
+      request
+
+      expect(response).to have_http_status(:success)
+      expect(Utils::ActivityLog).to have_received(:produce).once
     end
 
     context "with an entitlement left out of the body" do

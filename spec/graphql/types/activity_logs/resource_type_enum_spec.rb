@@ -25,6 +25,7 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
         rate_card
         rate_card_rate
         plan_rate_card
+        plan_entitlement
         contract_rate_card
         contract
         quote

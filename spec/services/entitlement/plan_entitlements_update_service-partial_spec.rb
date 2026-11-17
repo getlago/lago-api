@@ -240,6 +240,30 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result.entitlements).to eq([entitlement, new_entitlement])
       end
 
+      it "logs only the added entitlement and sends no plan.updated event" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+        new_entitlement = plan.entitlements.find_by!(feature: new_feature)
+        expect(Utils::ActivityLog).to have_received(:produce).with(
+          new_entitlement, "plan_entitlement.created", after_commit: true,
+          changes: {"values" => [nil, [{privilege_code: "max_gb", value: 100}]]}
+        ).once
+        expect(Utils::ActivityLog).to have_received(:produce).once
+      end
+
+      context "when a value of a kept entitlement changes" do
+        let(:entitlements_params) { {feature.code => {privilege2.code => 5}} }
+
+        it "logs the entitlement as updated with all its values" do
+          result
+
+          expect(Utils::ActivityLog).to have_received(:produce).with(
+            entitlement, "plan_entitlement.updated", after_commit: true,
+            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max", value: 10}, {privilege_code: "max_admins", value: 5}]]}
+          ).once
+        end
+      end
+
       context "when a concurrent request creates the same entitlement" do
         before do
           # The concurrent request inserts its row after this one read the plan entitlements.
@@ -253,7 +277,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages).to eq(feature: ["value_already_exist"])
-          expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          expect(Utils::ActivityLog).not_to have_received(:produce)
         end
       end
 
@@ -272,7 +296,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages).to eq(privilege: ["value_already_exist"])
           expect(entitlement.values.where(privilege: privilege2)).to be_empty
-          expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          expect(Utils::ActivityLog).not_to have_received(:produce)
         end
       end
     end

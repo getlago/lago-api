@@ -396,20 +396,74 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(other_plan.entitlements.sole.values.sole.value).to eq("okta")
       end
 
-      it "produces one plan.updated activity log and no plan.updated webhook" do
+      it "sends no plan.updated webhook or activity log" do
         expect { result }.not_to have_enqueued_job(SendWebhookJob)
-        expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated", after_commit: true).once
+        expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+      end
+
+      it "logs the added and the dropped entitlement" do
+        result
+
+        added_values = [
+          {privilege_code: "max", value: 25},
+          {privilege_code: "provider", value: "okta"},
+          {privilege_code: "enabled", value: true},
+          {privilege_code: "invitation", value: "phone"}
+        ]
+        expect(Utils::ActivityLog).to have_received(:produce).with(
+          plan.entitlements.sole, "plan_entitlement.created", after_commit: true, changes: {"values" => [nil, added_values]}
+        )
+        expect(Utils::ActivityLog).to have_received(:produce).with(
+          old_entitlement, "plan_entitlement.deleted", after_commit: true,
+          changes: {"values" => [[{privilege_code: "provider", value: "okta"}], nil]}
+        )
+        expect(Utils::ActivityLog).to have_received(:produce).twice
+      end
+
+      context "with an added, a changed, a dropped and an unchanged entitlement" do
+        let(:storage_feature) { create(:feature, organization:, code: "storage") }
+        let(:storage_privilege) { create(:privilege, organization:, feature: storage_feature, code: "gb", value_type: "integer") }
+        let(:api_feature) { create(:feature, organization:, code: "api") }
+        let(:api_privilege) { create(:privilege, organization:, feature: api_feature, code: "calls", value_type: "integer") }
+        let(:changed_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature:) }
+        let(:unchanged_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature: api_feature) }
+        let(:entitlements_params) do
+          {"seats" => {"max" => 25}, "storage" => {"gb" => 100}, "api" => {"calls" => 1000}}
+        end
+
+        before do
+          create(:entitlement_value, organization:, entitlement: changed_entitlement, privilege:, value: "10")
+          create(:entitlement_value, organization:, entitlement: unchanged_entitlement, privilege: api_privilege, value: "1000")
+          storage_privilege
+        end
+
+        it "writes one activity log of the matching type for each changed entitlement" do
+          result
+
+          added_entitlement = plan.entitlements.find_by!(feature: storage_feature)
+          expect(Utils::ActivityLog).to have_received(:produce).with(
+            added_entitlement, "plan_entitlement.created", after_commit: true,
+            changes: {"values" => [nil, [{privilege_code: "gb", value: 100}]]}
+          )
+          expect(Utils::ActivityLog).to have_received(:produce).with(
+            changed_entitlement, "plan_entitlement.updated", after_commit: true,
+            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max", value: 25}]]}
+          )
+          expect(Utils::ActivityLog).to have_received(:produce).with(
+            old_entitlement, "plan_entitlement.deleted", after_commit: true,
+            changes: {"values" => [[{privilege_code: "provider", value: "okta"}], nil]}
+          )
+          expect(Utils::ActivityLog).to have_received(:produce).exactly(3).times
+        end
       end
 
       context "when the replace changes nothing" do
-        let(:old_value) { nil }
-        let(:other_value) { nil }
-        let(:entitlements_params) { {} }
+        let(:entitlements_params) { {"sso" => {"provider" => "okta"}} }
 
-        it "still produces one plan.updated activity log" do
+        it "writes no activity log" do
           expect(result).to be_success
-          expect(result.entitlements).to be_empty
-          expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated", after_commit: true).once
+          expect(result.entitlements).to eq([old_entitlement])
+          expect(Utils::ActivityLog).not_to have_received(:produce)
         end
       end
 
@@ -441,7 +495,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect(result).not_to be_success
           expect(result.error.error_code).to eq("plan_not_found")
           expect(old_entitlement.reload).not_to be_discarded
-          expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          expect(Utils::ActivityLog).not_to have_received(:produce)
         end
       end
     end
