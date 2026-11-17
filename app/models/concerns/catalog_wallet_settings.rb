@@ -21,6 +21,8 @@ module CatalogWalletSettings
     belongs_to :organization
 
     has_many :selectors, class_name: "CatalogWalletSelector"
+    has_many :applied_taxes, class_name: "CatalogWalletAppliedTax"
+    has_many :taxes, through: :applied_taxes
     has_one :metadata, class_name: "Metadata::ItemMetadata", as: :owner, dependent: :destroy
 
     enum :tax_application, TAX_APPLICATIONS, validate: true
