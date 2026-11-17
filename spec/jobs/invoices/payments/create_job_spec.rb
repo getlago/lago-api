@@ -26,9 +26,10 @@ RSpec.describe Invoices::Payments::CreateJob do
       create(:stripe_provider, code: "stripe_2", organization:)
     end
 
-    it "skips the payment without failing" do
+    it "fails with the provider lookup failure without a payment failure webhook" do
       expect { described_class.perform_now(invoice:, payment_provider:) }
-        .not_to have_enqueued_job(SendWebhookJob)
+        .to raise_error(BaseService::ServiceFailure) { |error| expect(error.code).to eq("payment_provider_code_missing") }
+        .and not_have_enqueued_job(SendWebhookJob)
 
       expect(invoice.reload.payment_status).to eq("pending")
       expect(invoice.payment_attempts).to eq(0)

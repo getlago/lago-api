@@ -116,8 +116,6 @@ module Invoices
       def should_process_payment?
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided? || invoice.closed?
-        # Same rule as call_async: a customer without a provider type is not charged automatically.
-        return false if customer.payment_provider.blank?
         return false if current_payment_provider.blank?
 
         current_payment_provider_customer&.provider_customer_id &&
