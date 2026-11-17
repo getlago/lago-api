@@ -237,10 +237,31 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       end
 
       context "when the snapshot closes an older period" do
-        let(:initial_value) { [snapshot(units: 400, to_datetime: from_datetime - 1.month)] }
+        let(:snapshot_to_datetime) { from_datetime - 1.month - 1.second }
+        let(:initial_value) do
+          [snapshot(units: 400, to_datetime: snapshot_to_datetime, presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "400.0"}])]
+        end
+        let(:events_values) do
+          [
+            {timestamp: snapshot_to_datetime, value: 7, region: "eu"},
+            {timestamp: from_datetime - 10.days, value: 5, region: "eu"},
+            {timestamp: from_datetime - 5.days, value: 2, region: "us"}
+          ]
+        end
 
-        it "uses the persisted recurring value as initial value" do
-          expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+        it "adds the events dated after the snapshot period, as the invoice of the unbilled period will" do
+          # 400 + 5 + 2, the event dated at the snapshot period end is in the snapshot
+          expect(aggregator.aggregate.total_aggregated_units).to eq(407)
+        end
+
+        context "when using presentation_by" do
+          let(:presentation_by) { ["region"] }
+
+          it "adds them to the snapshot presentation breakdowns" do
+            expect(aggregator.aggregate.breakdowns).to match_array(
+              [{groups: {"region" => "eu"}, value: 405.to_d}, {groups: {"region" => "us"}, value: 2.to_d}]
+            )
+          end
         end
       end
 
@@ -263,11 +284,70 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         end
 
         context "when the period is older" do
-          let(:initial_period) { closed_period(from_datetime - 1.month) }
+          let(:initial_period) { closed_period(from_datetime - 1.month - 1.second) }
+          let(:events_values) { [{timestamp: from_datetime - 10.days, value: 5, region: "eu"}] }
 
-          it "uses the persisted recurring value as initial value" do
-            expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+          it "starts from the events dated after it" do
+            result = aggregator.aggregate
+
+            expect([result.total_aggregated_units, result.breakdowns]).to eq([5, [{groups: {"region" => "eu"}, value: 5.to_d}]])
           end
+        end
+      end
+    end
+
+    context "when the previous period is closed but not invoiced yet" do
+      let(:billed_to_datetime) { from_datetime - 1.month - 1.second }
+      let(:cached_aggregation) do
+        create(:cached_aggregation, charge:, organization:, external_subscription_id: subscription.external_id,
+          timestamp: billed_to_datetime - 5.days, current_aggregation: 1000, created_at: cached_at)
+      end
+      # Written by the invoice of the period it closes, after that period ends
+      let(:cached_at) { billed_to_datetime + 10.minutes }
+      let(:events_values) do
+        [
+          # Dated in the invoiced period, after its last event: ignored as a late event
+          {timestamp: billed_to_datetime - 1.day, value: 7},
+          {timestamp: from_datetime - 10.days, value: 5}
+        ]
+      end
+
+      before do
+        create(:invoice_subscription, subscription:, invoicing_reason: :subscription_periodic,
+          charges_from_datetime: billed_to_datetime.beginning_of_month, charges_to_datetime: billed_to_datetime)
+      end
+
+      it "adds the events of the unbilled period to the persisted recurring value" do
+        expect(aggregator.aggregate.total_aggregated_units).to eq(1005)
+      end
+
+      context "when only a progressive billing invoice covers the previous period" do
+        before do
+          create(:invoice_subscription, subscription:, invoicing_reason: :progressive_billing,
+            charges_from_datetime: from_datetime - 1.month, charges_to_datetime: from_datetime - 1.second)
+        end
+
+        it "still adds the events of the unbilled period" do
+          expect(aggregator.aggregate.total_aggregated_units).to eq(1005)
+        end
+      end
+
+      context "when the previous period is invoiced" do
+        before do
+          create(:invoice_subscription, subscription:, invoicing_reason: :subscription_periodic,
+            charges_from_datetime: from_datetime - 1.month, charges_to_datetime: from_datetime - 1.second)
+        end
+
+        it "uses the persisted recurring value as initial value" do
+          expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+        end
+      end
+
+      context "when the cached aggregation was written after the period started" do
+        let(:cached_at) { from_datetime + 10.minutes }
+
+        it "takes it for the invoice of the previous period and adds no event" do
+          expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
         end
       end
     end
@@ -851,12 +931,41 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         end
 
         context "when the snapshots close an older period" do
+          let(:snapshot_to_datetime) { from_datetime - 1.month - 1.second }
           let(:initial_value) do
-            [snapshot(units: 400, grouped_by: {"agent_name" => "aragorn"}, to_datetime: from_datetime - 1.month)]
+            [
+              snapshot(
+                units: 400,
+                grouped_by: {"agent_name" => "aragorn"},
+                to_datetime: snapshot_to_datetime,
+                presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "400.0"}]
+              )
+            ]
+          end
+          let(:events_values) do
+            [
+              {timestamp: from_datetime - 10.days, value: 3, agent_name: "aragorn", region: "eu"},
+              {timestamp: from_datetime - 5.days, value: 5, agent_name: "frodo", region: "us"}
+            ]
           end
 
-          it "uses the persisted recurring values as initial values" do
-            expect(aggregator.aggregate.aggregations.map(&:total_aggregated_units)).to eq([1000, 1000])
+          it "adds the events dated after the snapshot period to each group" do
+            expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.total_aggregated_units] }).to match_array(
+              [[{"agent_name" => "aragorn"}, 403], [{"agent_name" => "frodo"}, 5]]
+            )
+          end
+
+          context "when using presentation_by" do
+            let(:presentation_by) { ["region"] }
+
+            it "adds them to the snapshot presentation breakdowns" do
+              expect(aggregator.aggregate.recurring_breakdowns).to match_array(
+                [
+                  {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 403},
+                  {groups: {"agent_name" => "frodo", "region" => "us"}, value: 5}
+                ]
+              )
+            end
           end
         end
 
@@ -883,6 +992,28 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               ]
             )
           end
+        end
+      end
+
+      context "when the previous period is closed but not invoiced yet" do
+        let(:events_values) { [{timestamp: from_datetime - 10.days, value: 3, agent_name: "aragorn"}] }
+        let(:cached_aggregations) do
+          %w[aragorn frodo].map do |agent_name|
+            create(:cached_aggregation, organization:, charge:, external_subscription_id: subscription.external_id,
+              timestamp: from_datetime - 1.month - 1.day, current_aggregation: 1000, grouped_by: {"agent_name" => agent_name},
+              created_at: from_datetime - 1.month + 10.minutes)
+          end
+        end
+
+        before do
+          create(:invoice_subscription, subscription:, invoicing_reason: :subscription_periodic,
+            charges_from_datetime: from_datetime - 2.months, charges_to_datetime: from_datetime - 1.month - 1.second)
+        end
+
+        it "adds the events of the unbilled period to each group" do
+          expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.total_aggregated_units] }).to match_array(
+            [[{"agent_name" => "aragorn"}, 1003], [{"agent_name" => "frodo"}, 1000]]
+          )
         end
       end
 

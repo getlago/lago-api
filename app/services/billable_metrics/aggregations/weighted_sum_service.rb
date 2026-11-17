@@ -115,11 +115,11 @@ module BillableMetrics
         return @latest_value if defined?(@latest_value)
 
         if latest_snapshots
-          return @latest_value = latest_snapshots.sum(BigDecimal(0), &:units)
+          return @latest_value = latest_snapshots.sum(BigDecimal(0), &:units) + unbilled_value
         end
 
         if latest_cached_aggregation
-          return @latest_value = latest_cached_aggregation.current_aggregation
+          return @latest_value = latest_cached_aggregation.current_aggregation + unbilled_value
         end
 
         if billing_context.previous_subscription_id?
@@ -133,11 +133,11 @@ module BillableMetrics
         return @latest_breakdowns if defined?(@latest_breakdowns)
 
         if latest_snapshots
-          return @latest_breakdowns = latest_snapshots.flat_map(&:presentation_breakdowns)
+          return @latest_breakdowns = with_unbilled(latest_snapshots.flat_map(&:presentation_breakdowns), unbilled_breakdowns)
         end
 
         if latest_cached_aggregation
-          return @latest_breakdowns = latest_cached_aggregation.presentation_breakdowns
+          return @latest_breakdowns = with_unbilled(latest_cached_aggregation.presentation_breakdowns, unbilled_breakdowns)
         end
 
         if billing_context.previous_subscription_id?
@@ -147,14 +147,70 @@ module BillableMetrics
         @latest_breakdowns = []
       end
 
-      # Only a period closing right before this one: an older one misses the periods in between (as the cached
-      # aggregation does for a period never invoiced), a later one (previous subscription terminated on upgrade)
-      # counts events the variation reads again.
-      # Without snapshots, the period still tells that the bucket had no active units.
+      # Not a period closing after this one starts (previous subscription terminated on upgrade): the
+      # variation reads its events again. Without snapshots, the period still tells that the bucket had no active units.
       def latest_snapshots
         return @latest_snapshots if defined?(@latest_snapshots)
 
-        @latest_snapshots = initial_value if initial_period&.to_datetime&.between?(from_datetime - 1.second, from_datetime)
+        @latest_snapshots = initial_value if initial_period && initial_period.to_datetime <= from_datetime
+      end
+
+      # The latest value closes a billed period. Periods closed since then but not invoiced yet (the minutes
+      # before the billing run) add the events dated in them, as their invoice will.
+      def unbilled_store
+        return @unbilled_store if defined?(@unbilled_store)
+
+        closed_at = if latest_snapshots
+          initial_period.to_datetime
+        elsif !cached_after_period_start?
+          last_billed_charges_to_datetime
+        end
+        return @unbilled_store = nil if closed_at.nil? || closed_at >= from_datetime - 1.second
+
+        # The stores floor from_datetime to the millisecond
+        @unbilled_store = event_store.for_window(from_datetime: closed_at + 0.001.seconds, to_datetime: previous_period_end)
+      end
+
+      # A row written after this period started comes from the invoice of the previous period: none is left
+      # unbilled, and the invoices query is skipped on every usage refresh but those before that invoice.
+      def cached_after_period_start?
+        rows = grouped_by.present? ? grouped_latest_cached_aggregations : [latest_cached_aggregation].compact
+        rows.any? { it.created_at >= from_datetime }
+      end
+
+      def last_billed_charges_to_datetime
+        return unless billing_context.subscription?
+
+        billing_context.subscription.invoice_subscriptions
+          .where(invoicing_reason: %i[subscription_periodic subscription_terminating])
+          .where(charges_to_datetime: ...from_datetime)
+          .maximum(:charges_to_datetime)
+      end
+
+      def unbilled_value
+        return BigDecimal(0) unless unbilled_store
+
+        BigDecimal(unbilled_store.sum(with_count: false).value.to_s)
+      end
+
+      def unbilled_grouped_values
+        return [] unless unbilled_store
+
+        unbilled_store.grouped_sum(with_count: false).map(&:to_grouped_hash)
+      end
+
+      def unbilled_breakdowns
+        return [] unless unbilled_store && presentation_by.present?
+
+        unbilled_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash)
+      end
+
+      def with_unbilled(values, unbilled)
+        return values if unbilled.empty?
+
+        (values.map(&:with_indifferent_access) + unbilled).group_by { it[:groups].to_h.stringify_keys }.map do |groups, items|
+          {groups:, value: items.sum(BigDecimal(0)) { BigDecimal(it[:value].to_s) }}
+        end
       end
 
       def latest_cached_aggregation
@@ -197,16 +253,16 @@ module BillableMetrics
         return @grouped_latest_values if defined?(@grouped_latest_values)
 
         if latest_snapshots
-          return @grouped_latest_values = latest_snapshots.map { {groups: it.grouped_by, value: it.units} }
+          return @grouped_latest_values = with_unbilled(
+            latest_snapshots.map { {groups: it.grouped_by, value: it.units} }, unbilled_grouped_values
+          )
         end
 
         if grouped_latest_cached_aggregations.any?
-          return @grouped_latest_values = grouped_latest_cached_aggregations.map do |cached_aggregation|
-            {
-              groups: cached_aggregation.grouped_by,
-              value: cached_aggregation.current_aggregation
-            }
-          end
+          return @grouped_latest_values = with_unbilled(
+            grouped_latest_cached_aggregations.map { {groups: it.grouped_by, value: it.current_aggregation} },
+            unbilled_grouped_values
+          )
         end
 
         if billing_context.previous_subscription_id?
@@ -220,15 +276,13 @@ module BillableMetrics
         return @grouped_latest_breakdowns if defined?(@grouped_latest_breakdowns)
 
         if latest_snapshots
-          return @grouped_latest_breakdowns = latest_snapshots.flat_map do
-            with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns)
-          end
+          breakdowns = latest_snapshots.flat_map { with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns) }
+          return @grouped_latest_breakdowns = with_unbilled(breakdowns, unbilled_breakdowns)
         end
 
         if grouped_latest_cached_aggregations.any?
-          return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map do
-            with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns)
-          end
+          breakdowns = grouped_latest_cached_aggregations.flat_map { with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns) }
+          return @grouped_latest_breakdowns = with_unbilled(breakdowns, unbilled_breakdowns)
         end
 
         if billing_context.previous_subscription_id?
