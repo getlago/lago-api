@@ -19,16 +19,17 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
-      if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges])
-        return result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated")
-      end
-
       return too_many_privileges_failure if too_many_new_privileges?
 
       ActiveRecord::Base.transaction do
         # Serializes with Entitlement::FeatureDestroyService, so a feature discarded since its lookup is not written.
         feature.lock!
         return result.not_found_failure!(resource: "feature") if feature.discarded?
+
+        # Read under the lock: the stored codes decide whether a padded code and its stripped twin may both be sent.
+        if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges], stored_codes: feature.privileges.map(&:code))
+          result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated").raise_if_error!
+        end
 
         update_feature_attributes
         delete_missing_privileges unless partial?
@@ -71,6 +72,11 @@ module Entitlement
       code.is_a?(String) ? code.strip : code
     end
 
+    # Codes are saved stripped, but privileges saved before that keep their padded code: the exact code wins.
+    def find_privilege(code)
+      feature.privileges.find { it.code == code } || feature.privileges.find { it.code == stripped(code) }
+    end
+
     def update_feature_attributes
       feature.name = params[:name] if params.key?(:name)
       feature.description = params[:description] if params.key?(:description)
@@ -80,7 +86,7 @@ module Entitlement
       return if params[:privileges].blank?
 
       params[:privileges].each do |privilege_params|
-        privilege = feature.privileges.find { it[:code] == privilege_params[:code] }
+        privilege = find_privilege(privilege_params[:code])
 
         if privilege.nil?
           create_privilege(privilege_params)
@@ -139,7 +145,8 @@ module Entitlement
       # Find privileges that are in the database but not in the params
       # Delete all EntitlementValues associated with those privileges
       # Then delete the privileges themselves
-      missing_privilege_codes = feature.privileges.pluck(:code) - (params[:privileges] || []).pluck(:code)
+      kept_privilege_codes = (params[:privileges] || []).filter_map { find_privilege(it[:code])&.code }
+      missing_privilege_codes = feature.privileges.pluck(:code) - kept_privilege_codes
       EntitlementValue.where(privilege: feature.privileges.where(code: missing_privilege_codes)).discard_all!
       feature.privileges.where(code: missing_privilege_codes).discard_all!
       missing_privilege_codes.each do |code|

@@ -92,6 +92,32 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, :premium do
       end
     end
 
+    context "when the privilege code is padded with spaces" do
+      let(:privilege) do
+        create(:privilege, feature:, code: "max", name: "Old Name", value_type: "select", config: {select_options: %w[one two]})
+      end
+      let(:plan_value) { create(:entitlement_value, entitlement: create(:entitlement, feature:), privilege:, value: "one") }
+      let(:subscription_value) do
+        create(:entitlement_value, entitlement: create(:entitlement, :subscription, feature:), privilege:, value: "two")
+      end
+      let(:input) { {id: feature.id, privileges: [{code: " max ", name: "New Name"}]} }
+
+      before do
+        plan_value
+        subscription_value
+      end
+
+      it "keeps the stored privilege, its config and its entitlement values" do
+        result = subject
+
+        expect(result["data"]["updateFeature"]["privileges"]).to eq([{"code" => "max", "name" => "New Name"}])
+        expect(Entitlement::Privilege.with_discarded.where(feature:).pluck(:id, :code, :config)).to eq([
+          [privilege.id, "max", {"select_options" => %w[one two]}]
+        ])
+        expect(Entitlement::EntitlementValue.where(privilege:)).to match_array([plan_value, subscription_value])
+      end
+    end
+
     context "when privilege is new" do
       let(:new_privilege_code) { "new_privilege" }
       let(:new_privilege_name) { "New Privilege" }
