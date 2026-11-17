@@ -1,0 +1,10 @@
+---
+sk:
+  payment_receipt:
+    document_name: Potvrdenie o platbe
+    download_invoice: Stiahnuť faktúru
+    download_receipt: Stiahnuť potvrdenie o platbe
+    number: Číslo potvrdenia o platbe
+    paid_on: 'Uhradené dňa %{date} (Zostáva uhradiť: %{total_due_amount})'
+    payment_date: Dátum úhrady
+    payment_method: Spôsob platby

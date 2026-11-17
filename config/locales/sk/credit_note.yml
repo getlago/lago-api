@@ -1,0 +1,29 @@
+---
+sk:
+  credit_note:
+    amount: Suma (bez dane)
+    coupon_adjustment: Kupóny
+    credit_from: Dodávateľ
+    credit_note_number: Číslo dobropisu
+    credit_to: Príjemca dobropisu
+    credited_notice: Pripísané k zostatku zákazníka dňa %{issuing_date}
+    credited_on_customer_balance: Pripísané k zostatku zákazníka
+    document_name: Dobropis
+    invoice_number: Číslo faktúry
+    issue_date: Dátum vystavenia
+    issued_notice: Vystavené dňa %{issuing_date}
+    item: Položka
+    offset_invoice: Započítané voči faktúre %{invoice_number}
+    offset_invoice_notice: Započítané voči faktúre %{invoice_number} dňa %{issuing_date}
+    powered_by: Využíva technológiu
+    prepaid_credits_for_wallet: Predplatené kredity – %{wallet_name}
+    purchase_order_number: Číslo objednávky
+    refunded: Vrátené
+    refunded_notice: Vrátené dňa %{issuing_date}
+    self_billed:
+      footer: Tento dobropis k faktúre vystavenej odberateľom vystavil odberateľ v mene partnera a s jeho súhlasom. Partner súhlasil, že za túto transakciu nevystaví vlastný dobropis.
+    sub_total_without_tax: Medzisúčet (bez dane)
+    subscription: Predplatné
+    tax: "%{name} (%{rate} % zo sumy %{amount})"
+    tax_rate: Sadzba dane
+    total: Celkom
