@@ -107,17 +107,18 @@ RSpec.describe V2::PlanEntitlementSerializer do
 
     before do
       travel_to(entitlement.updated_at) do
-        create(:entitlement_value, organization:, entitlement:, privilege: first_privilege, value: "eu")
+        # Written in the reverse order of their privilege ids
         create(:entitlement_value, organization:, entitlement:, privilege: second_privilege, value: "west")
+        create(:entitlement_value, organization:, entitlement:, privilege: first_privilege, value: "eu")
       end
     end
 
-    it "orders them by privilege id, highest first" do
+    it "orders them by privilege id" do
       expect(payload).to eq(
         flat_payload.merge(
           values: [
-            {privilege_code: "zone", value: "west"},
-            {privilege_code: "region", value: "eu"}
+            {privilege_code: "region", value: "eu"},
+            {privilege_code: "zone", value: "west"}
           ]
         )
       )

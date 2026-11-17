@@ -19,7 +19,8 @@ module Entitlement
       parents: %i[plan catalog_plan subscription],
       error: "one_of_plan_or_subscription_required"
 
-    scope :oldest_first, -> { order(:created_at, :id) }
+    # Newest first, ties by id, as Feature#ordered_privileges.
+    scope :newest_first, -> { order(created_at: :desc, id: :asc) }
   end
 end
 

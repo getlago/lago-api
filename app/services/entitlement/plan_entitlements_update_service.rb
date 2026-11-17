@@ -38,7 +38,7 @@ module Entitlement
       # NOTE: The webhook is sent even if no changes were made to the plan
       SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook && !catalog_plan?
 
-      result.entitlements = plan.entitlements.includes(:feature, values: :privilege).oldest_first.reload
+      result.entitlements = plan.entitlements.includes(:feature, values: :privilege).newest_first.reload
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -98,7 +98,7 @@ module Entitlement
       values_after = rendered_values_by_entitlement_id
       changed_ids = (values_before.keys | values_after.keys).reject { values_before[it] == values_after[it] }
 
-      Entitlement.with_discarded.where(id: changed_ids).includes(:catalog_plan, :feature).oldest_first.each do |entitlement|
+      Entitlement.with_discarded.where(id: changed_ids).includes(:catalog_plan, :feature).newest_first.each do |entitlement|
         before = values_before[entitlement.id]
         after = values_after[entitlement.id]
         action = if before.nil?

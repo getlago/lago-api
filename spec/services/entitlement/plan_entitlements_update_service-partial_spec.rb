@@ -237,7 +237,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(new_entitlement.plan_id).to be_nil
         expect(new_entitlement.values.sole.value).to eq("100")
         expect(entitlement_value.reload.value).to eq("10")
-        expect(result.entitlements).to eq([entitlement, new_entitlement])
+        expect(result.entitlements).to eq([new_entitlement, entitlement])
       end
 
       it "logs only the added entitlement and sends no plan.updated event" do

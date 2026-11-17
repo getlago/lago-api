@@ -489,13 +489,13 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         let(:entitlements_params) { {"storage" => {}, "seats" => {}} }
 
         before do
-          # Inserted first but created later, so the result order comes from created_at, not from the table.
-          recent_entitlement
+          # Inserted in the order they were created, the reverse of the result: the order comes from created_at.
           older_entitlement
+          recent_entitlement
         end
 
-        it "returns them oldest first" do
-          expect(result.entitlements).to eq([older_entitlement, recent_entitlement])
+        it "returns them newest first" do
+          expect(result.entitlements).to eq([recent_entitlement, older_entitlement])
         end
       end
 

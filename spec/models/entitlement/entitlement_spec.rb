@@ -19,7 +19,7 @@ RSpec.describe Entitlement::Entitlement do
   end
 
   describe "Scopes" do
-    describe ".oldest_first" do
+    describe ".newest_first" do
       let(:organization) { create(:organization) }
       let(:created_at) { Time.zone.parse("2026-09-04T10:00:00Z") }
       let(:recent) { create(:entitlement, organization:, created_at: created_at + 1.day) }
@@ -32,8 +32,8 @@ RSpec.describe Entitlement::Entitlement do
         same_time_lower_id
       end
 
-      it "orders by creation, then by id" do
-        expect(described_class.where(organization:).oldest_first).to eq([same_time_lower_id, same_time_higher_id, recent])
+      it "orders by creation, newest first, then by id" do
+        expect(described_class.where(organization:).newest_first).to eq([recent, same_time_lower_id, same_time_higher_id])
       end
     end
   end
