@@ -202,6 +202,36 @@ RSpec.describe Entitlement::FeatureCreateService do
       end
     end
 
+    [
+      ["a single object", {code: "seats", value_type: "boolean"}],
+      ["an object with numeric keys", {"0" => {code: "a"}, "1" => {code: "b"}}]
+    ].each do |label, privileges|
+      context "when privileges is #{label}" do
+        let(:params) { {code: "seats", privileges:} }
+
+        it "returns value_is_invalid on privileges and creates nothing" do
+          expect { subject }
+            .to not_change(Entitlement::Feature, :count)
+            .and not_change(Entitlement::Privilege, :count)
+            .and not_have_enqueued_job(SendWebhookJob)
+
+          expect(subject).to be_failure
+          expect(subject.error).to be_a(BaseService::ValidationFailure)
+          expect(subject.error.messages).to eq({privileges: ["value_is_invalid"]})
+        end
+      end
+    end
+
+    context "when privileges is an empty hash" do
+      let(:params) { {code: "seats", privileges: {}} }
+
+      it "creates the feature without privileges" do
+        expect { subject }.to change(Entitlement::Feature, :count).by(1).and not_change(Entitlement::Privilege, :count)
+
+        expect(subject).to be_success
+      end
+    end
+
     context "when privilege value_type is invalid" do
       let(:params) do
         {
