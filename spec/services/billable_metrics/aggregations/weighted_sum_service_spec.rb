@@ -254,6 +254,36 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           expect(aggregator.aggregate.total_aggregated_units).to eq(407)
         end
 
+        context "with ClickHouse events", clickhouse: true do
+          let(:event_store_class) { Events::Stores::ClickhouseStore }
+          let(:organization) { create(:organization, clickhouse_events_store: true) }
+          let(:subscription) { create(:subscription, organization:, started_at: DateTime.parse("2023-04-01 22:22:22")) }
+          let(:events_values) { [] }
+
+          before do
+            {snapshot_to_datetime => 7, from_datetime - 0.001.seconds => 5, from_datetime => 2}.each do |timestamp, value|
+              create(:clickhouse_events_enriched, organization:, subscription:, customer:, billable_metric:,
+                timestamp:, value: value.to_s, decimal_value: value)
+            end
+          end
+
+          it "reads each event once across the snapshot, the unbilled period and this one" do
+            # 400 + 5 dated a millisecond before this period + 2 dated at its start; the 7 is in the snapshot
+            expect(aggregator.aggregate.total_aggregated_units).to eq(407)
+          end
+        end
+
+        context "when an invoice closed a later period" do
+          before do
+            create(:invoice_subscription, subscription:, invoicing_reason: :subscription_periodic,
+              charges_from_datetime: from_datetime - 1.month, charges_to_datetime: from_datetime - 1.second)
+          end
+
+          it "uses the persisted recurring value of that invoice" do
+            expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+          end
+        end
+
         context "when using presentation_by" do
           let(:presentation_by) { ["region"] }
 
@@ -325,9 +355,13 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         before do
           create(:invoice_subscription, subscription:, invoicing_reason: :progressive_billing,
             charges_from_datetime: from_datetime - 1.month, charges_to_datetime: from_datetime - 1.second)
+          # Written by the progressive billing invoice: 1000 + 5, at its last event
+          create(:cached_aggregation, charge:, organization:, external_subscription_id: subscription.external_id,
+            timestamp: from_datetime - 10.days, current_aggregation: 1005, created_at: from_datetime - 5.days)
         end
 
-        it "still adds the events of the unbilled period" do
+        it "starts from the invoiced period and adds its events once" do
+          # 1000 at the last invoiced period + 5 dated in the unbilled one
           expect(aggregator.aggregate.total_aggregated_units).to eq(1005)
         end
       end
@@ -950,6 +984,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           end
 
           it "adds the events dated after the snapshot period to each group" do
+            # aragorn: 400 snapshot + 3 unbilled; frodo: no snapshot + 5 unbilled
             expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.total_aggregated_units] }).to match_array(
               [[{"agent_name" => "aragorn"}, 403], [{"agent_name" => "frodo"}, 5]]
             )
@@ -959,6 +994,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             let(:presentation_by) { ["region"] }
 
             it "adds them to the snapshot presentation breakdowns" do
+              # aragorn/eu: 400 + 3, frodo/us: 0 + 5
               expect(aggregator.aggregate.recurring_breakdowns).to match_array(
                 [
                   {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 403},
@@ -996,11 +1032,12 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       end
 
       context "when the previous period is closed but not invoiced yet" do
-        let(:events_values) { [{timestamp: from_datetime - 10.days, value: 3, agent_name: "aragorn"}] }
+        let(:events_values) { [{timestamp: from_datetime - 10.days, value: 3, agent_name: "aragorn", region: "eu"}] }
         let(:cached_aggregations) do
-          %w[aragorn frodo].map do |agent_name|
+          {"aragorn" => "eu", "frodo" => "us"}.map do |agent_name, region|
             create(:cached_aggregation, organization:, charge:, external_subscription_id: subscription.external_id,
               timestamp: from_datetime - 1.month - 1.day, current_aggregation: 1000, grouped_by: {"agent_name" => agent_name},
+              presentation_breakdowns: [{"groups" => {"region" => region}, "value" => "1000.0"}],
               created_at: from_datetime - 1.month + 10.minutes)
           end
         end
@@ -1011,9 +1048,23 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         end
 
         it "adds the events of the unbilled period to each group" do
+          # aragorn: 1000 cached + 3 unbilled; frodo: 1000 cached
           expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.total_aggregated_units] }).to match_array(
             [[{"agent_name" => "aragorn"}, 1003], [{"agent_name" => "frodo"}, 1000]]
           )
+        end
+
+        context "when using presentation_by" do
+          let(:presentation_by) { ["region"] }
+
+          it "adds them to the cached presentation breakdowns" do
+            expect(aggregator.aggregate.recurring_breakdowns).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 1003},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: 1000}
+              ]
+            )
+          end
         end
       end
 
