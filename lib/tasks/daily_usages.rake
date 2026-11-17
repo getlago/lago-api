@@ -84,7 +84,7 @@ namespace :daily_usages do
     puts "enqueued #{enqueued} jobs in #{(Time.current - enqueue_start).round}s"
   end
 
-  desc "Recompute the usage_diff of daily usages written after a charge's filters were edited mid-period"
+  desc "Recompute incorrect daily usage diffs written after a mid-period change"
   task recompute_diffs: :environment do
     Rails.logger.level = Logger::INFO
 

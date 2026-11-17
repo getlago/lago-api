@@ -148,6 +148,26 @@ RSpec.describe DailyUsages::RecomputeDiffsService do
     end
   end
 
+  context "when termination shortens the billing period" do
+    let(:filters_after_edit) { filters_before_edit }
+    let(:buggy_usage_diff) { usage_payload(filters_after_edit, 1100) }
+    let(:termination_time) { Time.zone.parse("2025-03-03T18:00:00Z") }
+
+    let!(:edited_day) do
+      create_daily_usage(
+        Date.new(2025, 3, 3),
+        usage_payload(filters_after_edit, 1100),
+        usage_diff: buggy_usage_diff,
+        period: [from_datetime, termination_time]
+      )
+    end
+
+    it "recomputes the termination day's diff" do
+      expect(recompute_service.call.daily_usages).to eq([edited_day])
+      expect(edited_day.reload.usage_diff["amount_cents"]).to eq(100)
+    end
+  end
+
   context "when the previous row belongs to another billing period" do
     let!(:edited_day) do
       create_daily_usage(
