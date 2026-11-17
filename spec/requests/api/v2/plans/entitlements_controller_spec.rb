@@ -575,7 +575,8 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
       expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", sso_entitlement)
       expect(Utils::ActivityLog).to have_received(:produce).with(
         sso_entitlement, "plan_entitlement.created", after_commit: true,
-        changes: {"values" => [nil, [{privilege_code: "provider", value: "okta"}]]}
+        changes: {"values" => [nil, [{privilege_code: "provider", value: "okta"}]]},
+        activity_object: hash_including(lago_id: sso_entitlement.id, values: [{privilege_code: "provider", value: "okta"}])
       ).once
       expect(Utils::ActivityLog).to have_received(:produce).once
     end
@@ -634,7 +635,8 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
         expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", catalog_plan.entitlements.find_by!(feature: sso))
         expect(Utils::ActivityLog).to have_received(:produce).with(
           entitlement, "plan_entitlement.updated", after_commit: true,
-          changes: {"values" => [[{privilege_code: "max", value: 50}], [{privilege_code: "max", value: 60}]]}
+          changes: {"values" => [[{privilege_code: "max", value: 50}], [{privilege_code: "max", value: 60}]]},
+          activity_object: hash_including(lago_id: entitlement.id, values: [{privilege_code: "max", value: 60}])
         ).once
         expect(Utils::ActivityLog).to have_received(:produce).twice
       end
