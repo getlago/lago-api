@@ -17,7 +17,7 @@ class Membership < ApplicationRecord
   ].freeze
 
   # Production manages these and mirrors them onto its sandbox, so a sandbox membership never holds them.
-  SANDBOX_MANAGED_PERMISSIONS = %w[
+  SANDBOX_DENIED_PERMISSIONS = %w[
     organization:members:create
     organization:members:update
     organization:members:delete
@@ -49,7 +49,7 @@ class Membership < ApplicationRecord
   def permissions_hash
     Permission.permissions_hash.dup.tap do |h|
       roles.each { |role| role.permissions_hash.each { |key, val| h[key] ||= val } }
-      SANDBOX_MANAGED_PERMISSIONS.each { |key| h[key] = false } if organization.sandbox?
+      SANDBOX_DENIED_PERMISSIONS.each { |key| h[key] = false } if organization.sandbox?
     end
   end
 

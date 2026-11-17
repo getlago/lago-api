@@ -87,7 +87,7 @@ RSpec.describe Membership do
       end
 
       it "holds every other permission" do
-        expect(permissions_hash.except(*described_class::SANDBOX_MANAGED_PERMISSIONS).values).to all(be true)
+        expect(permissions_hash.except(*described_class::SANDBOX_DENIED_PERMISSIONS).values).to all(be true)
         expect(permissions_hash).to include("customers:view" => true, "organization:integrations:create" => true)
       end
     end
