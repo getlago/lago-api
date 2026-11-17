@@ -5,6 +5,61 @@ require "rails_helper"
 RSpec.describe Utils::Entitlement do
   subject(:utils_entitlement) { described_class }
 
+  describe ".privilege_code_is_duplicated?" do
+    subject(:duplicated) { utils_entitlement.privilege_code_is_duplicated?(privileges_params, stored_codes:) }
+
+    let(:stored_codes) { [] }
+
+    context "when privileges params are blank" do
+      let(:privileges_params) { nil }
+
+      it { expect(duplicated).to be(false) }
+    end
+
+    context "when codes are distinct" do
+      let(:privileges_params) { [{code: "max"}, {code: "min"}] }
+
+      it { expect(duplicated).to be(false) }
+    end
+
+    context "when a code is not a string" do
+      let(:privileges_params) { [{code: nil}, {code: "max"}] }
+
+      it { expect(duplicated).to be(false) }
+    end
+
+    context "when two codes are equal" do
+      let(:privileges_params) { [{code: "max"}, {code: "max"}] }
+
+      it { expect(duplicated).to be(true) }
+
+      context "when the feature stores that code" do
+        let(:stored_codes) { ["max"] }
+
+        it { expect(duplicated).to be(true) }
+      end
+    end
+
+    context "when two codes are equal once stripped" do
+      let(:privileges_params) { [{code: "max"}, {code: " max "}] }
+
+      it { expect(duplicated).to be(true) }
+
+      context "when the feature stores only one of them" do
+        let(:stored_codes) { ["max", "min"] }
+
+        it { expect(duplicated).to be(true) }
+      end
+
+      context "when the feature stores each of them" do
+        let(:privileges_params) { [{code: " max"}, {code: "max"}] }
+        let(:stored_codes) { ["max", " max"] }
+
+        it { expect(duplicated).to be(false) }
+      end
+    end
+  end
+
   describe ".cast_value" do
     context "when value is blank" do
       it "returns nil for empty string" do
