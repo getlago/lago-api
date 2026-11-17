@@ -19,6 +19,10 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
+      if Utils::Entitlement.privileges_param_invalid?(params[:privileges])
+        return result.single_validation_failure!(field: :privileges, error_code: "value_is_invalid")
+      end
+
       ActiveRecord::Base.transaction do
         # Serializes with Entitlement::FeatureDestroyService, so a feature discarded since its lookup is not written.
         feature.lock!

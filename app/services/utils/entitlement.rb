@@ -2,6 +2,11 @@
 
 module Utils
   class Entitlement
+    # A hash that strong params kept (a single object, numeric keys) is refused; a blank one is ignored as before.
+    def self.privileges_param_invalid?(privileges_params)
+      privileges_params.present? && !privileges_params.is_a?(Array)
+    end
+
     # Codes are compared stripped, as they are saved. A feature can still store a padded code next to its stripped
     # twin (saved before codes were stripped): sending both exact codes is accepted, as each matches its own privilege.
     def self.privilege_code_is_duplicated?(privileges_params, stored_codes: [])

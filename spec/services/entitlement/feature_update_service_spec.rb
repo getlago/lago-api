@@ -21,6 +21,32 @@ RSpec.describe Entitlement::FeatureUpdateService do
   end
 
   describe "#call", :premium do
+    [true, false].each do |partial_update|
+      [
+        ["a single object", {code: "max", name: "New", value_type: "boolean"}],
+        ["an object with numeric keys", {"0" => {code: "max", name: "New"}, "1" => {code: "other"}}]
+      ].each do |label, privileges|
+        context "when privileges is #{label} and partial is #{partial_update}" do
+          let(:partial) { partial_update }
+          let(:params) { {name: "Updated Name", description: "Updated description", privileges:} }
+          let(:entitlement) { create(:entitlement, feature:) }
+
+          before { create(:entitlement_value, entitlement:, privilege: privilege1, value: 10) }
+
+          it "returns value_is_invalid on privileges and changes nothing" do
+            expect { subject }
+              .to not_change { feature.reload.attributes.slice("name", "description") }
+              .and not_change { feature.privileges.reload.pluck(:id, :code, :name) }
+              .and not_have_enqueued_job(SendWebhookJob)
+
+            expect(subject).to be_failure
+            expect(subject.error).to be_a(BaseService::ValidationFailure)
+            expect(subject.error.messages).to eq({privileges: ["value_is_invalid"]})
+          end
+        end
+      end
+    end
+
     context "when update is full" do
       let(:partial) { false }
 
