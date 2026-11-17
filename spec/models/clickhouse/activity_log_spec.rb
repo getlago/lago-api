@@ -49,6 +49,14 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
       )
       expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("RateCardRate", "PlanRateCard", "ContractRateCard")
     end
+
+    it "defines the plan entitlement activity types" do
+      expect(described_class::ACTIVITY_TYPES.slice(:plan_entitlement_created, :plan_entitlement_updated, :plan_entitlement_deleted)).to eq(
+        plan_entitlement_created: "plan_entitlement.created",
+        plan_entitlement_updated: "plan_entitlement.updated",
+        plan_entitlement_deleted: "plan_entitlement.deleted"
+      )
+    end
   end
 
   describe "#resource" do
