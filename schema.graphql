@@ -7421,6 +7421,7 @@ type Fee implements InvoiceItem {
   itemName: String!
   itemType: String!
   offsettableAmountCents: BigInt!
+  originalFee: Fee
   payInAdvance: Boolean!
   preciseAmountCents: Float!
   preciseCouponsAmountCents: Float!

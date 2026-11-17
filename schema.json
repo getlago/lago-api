@@ -36783,6 +36783,18 @@
               "deprecationReason": null
             },
             {
+              "name": "originalFee",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Fee",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "payInAdvance",
               "description": null,
               "args": [],
