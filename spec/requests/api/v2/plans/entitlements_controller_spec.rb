@@ -1272,6 +1272,268 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
     end
   end
 
+  describe "DELETE /api/v2/plans/:plan_code/entitlements/:code" do
+    subject(:request) { delete_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements/#{feature_code}#{query}") }
+
+    let(:plan_code) { catalog_plan.code }
+    let(:feature_code) { feature.code }
+    let(:query) { "" }
+    let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
+    let(:value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: "30") }
+    let(:other_plan) { create(:catalog_plan, organization:, code: "other") }
+    let(:other_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: other_plan, feature:) }
+    let(:other_value) { create(:entitlement_value, organization:, entitlement: other_entitlement, privilege:, value: "40") }
+
+    before do
+      value
+      other_value
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
+      # The per-entitlement events are behind the entitlement_events flag, see "without the entitlement_events flag".
+      organization.enable_feature_flag!(:entitlement_events)
+    end
+
+    shared_examples "a refused remove" do
+      it "discards nothing" do
+        request
+
+        expect(entitlement.reload).not_to be_discarded
+        expect(value.reload).to have_attributes(value: "30", deleted_at: nil)
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    include_examples "requires API permission", "plan", "write"
+
+    # In a context of its own: the :bullet hook registers on the group of the example, so it would reach
+    # the examples that run after it, such as the one whose stubbed service leaves the preload unused.
+    context "with an entitlement granted by the catalog plan" do
+      # Two values, so that a query per value would be caught.
+      let(:min_privilege) { create(:privilege, organization:, feature:, code: "min", name: nil, value_type: "integer") }
+
+      before { create(:entitlement_value, organization:, entitlement:, privilege: min_privilege, value: "5") }
+
+      it "removes it and renders it with its last values and its deletion time", :bullet do
+        request
+
+        expect(response).to have_http_status(:success)
+        # `match` rather than `eq`, so that the values compose with match_array: the whole body is still compared.
+        expect(json).to match(
+          plan_entitlement: plan_entitlement_json(entitlement, match_array([{privilege_code: "max", value: 30}, {privilege_code: "min", value: 5}]))
+        )
+        expect(json[:plan_entitlement][:deleted_at]).to be_present
+        expect(entitlement.reload).to be_discarded
+        expect(value.reload).to be_discarded
+      end
+    end
+
+    context "without the entitlement_events flag" do
+      before { organization.disable_feature_flag!(:entitlement_events) }
+
+      it "removes the entitlement, logs nothing and sends no webhook" do
+        expect { request }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(response).to have_http_status(:success)
+        expect(entitlement.reload).to be_discarded
+        expect(Utils::ActivityLog).not_to have_received(:produce)
+      end
+    end
+
+    it "no longer lists the entitlement and keeps it on another catalog plan" do
+      request
+      get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/entitlements")
+
+      expect(json).to eq(plan_entitlements: [])
+      expect(other_entitlement.reload).not_to be_discarded
+      expect(other_value.reload).to have_attributes(value: "40", deleted_at: nil)
+    end
+
+    it "sends one plan_entitlement.deleted webhook after commit, with the values it held, and no plan.updated webhook" do
+      expect { request }.to have_enqueued_job_after_commit(SendWebhookJob)
+        .with("plan_entitlement.deleted", entitlement, {values: [{privilege_code: "max", value: 30}]}).exactly(:once)
+
+      expect(response).to have_http_status(:success)
+      expect(SendWebhookJob).to have_been_enqueued.exactly(:once)
+    end
+
+    it "produces one plan_entitlement.deleted activity log and no plan.updated" do
+      request
+
+      expect(Utils::ActivityLog).to have_received(:produce)
+        .with(
+          entitlement, "plan_entitlement.deleted", after_commit: true,
+          changes: {"values" => [[{privilege_code: "max", value: 30}], nil]},
+          activity_object: hash_including(lago_id: entitlement.id, values: [{privilege_code: "max", value: 30}])
+        ).once
+      expect(Utils::ActivityLog).to have_received(:produce).once
+    end
+
+    context "with a feature code containing a dot" do
+      let(:feature) { create(:feature, organization:, code: "seats.v2", name: "Seats", description: nil) }
+
+      it "removes the entitlement" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan_entitlement][:feature_code]).to eq("seats.v2")
+        expect(entitlement.reload).to be_discarded
+      end
+    end
+
+    context "with an unknown feature code" do
+      let(:feature_code) { "unknown" }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+
+      include_examples "a refused remove"
+    end
+
+    context "with a feature the catalog plan does not grant" do
+      let(:feature_code) { "api" }
+      let(:api_entitlement) do
+        create(:entitlement, :catalog_plan, organization:, catalog_plan: other_plan, feature: create(:feature, organization:, code: "api"))
+      end
+
+      before { api_entitlement }
+
+      it "returns not found and keeps the entitlement of the other catalog plan" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+        expect(api_entitlement.reload).not_to be_discarded
+      end
+
+      include_examples "a refused remove"
+    end
+
+    context "when the service fails" do
+      before do
+        allow(Entitlement::PlanEntitlementDestroyService).to receive(:call)
+          .and_return(Entitlement::PlanEntitlementDestroyService::Result.new.not_found_failure!(resource: "plan"))
+      end
+
+      it "renders the failure" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "with expands" do
+      let(:query) { "?expands[]=feature" }
+
+      it "returns expand_not_supported" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["feature"]}}]
+        )
+      end
+
+      include_examples "a refused remove"
+    end
+
+    [
+      ["limit", "1"],
+      ["page", "1"],
+      ["after", "x"],
+      ["include_total_count", "true"]
+    ].each do |name, value|
+      context "with the #{name} pagination parameter" do
+        let(:query) { "?#{name}=#{value}" }
+
+        it "returns a not_paginated error" do
+          request
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: name, meta: {}}])
+        end
+
+        include_examples "a refused remove"
+      end
+    end
+
+    context "with an unknown plan code" do
+      let(:plan_code) { "unknown" }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+
+      include_examples "a refused remove"
+    end
+
+    context "with the catalog plan of another organization" do
+      let(:plan_code) { "shared" }
+      let(:other_organization) { create(:organization) }
+      let(:foreign_entitlement) do
+        create(
+          :entitlement, :catalog_plan,
+          organization: other_organization,
+          catalog_plan: create(:catalog_plan, organization: other_organization, code: "shared"),
+          feature: create(:feature, organization: other_organization, code: "seats")
+        )
+      end
+
+      before { foreign_entitlement }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+        expect(foreign_entitlement.reload).not_to be_discarded
+      end
+
+      include_examples "a refused remove"
+    end
+
+    context "with a legacy plan code" do
+      let(:plan_code) { "legacy" }
+      let(:legacy_entitlement) { create(:entitlement, organization:, plan: create(:plan, organization:, code: "legacy"), feature:) }
+
+      before { legacy_entitlement }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+        expect(legacy_entitlement.reload).not_to be_discarded
+      end
+
+      include_examples "a refused remove"
+    end
+
+    context "with a deleted catalog plan" do
+      let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium", deleted_at: Time.current) }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+
+      include_examples "a refused remove"
+    end
+
+    context "without the product catalog", product_catalog: false do
+      it "returns feature_unavailable" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "feature_unavailable", details: [])
+      end
+
+      include_examples "a refused remove"
+    end
+  end
+
   # The v2 render of a plan entitlement, with its datetimes to the microsecond as native v2 renders them.
   def plan_entitlement_json(entitlement, values)
     entitlement = Entitlement::Entitlement.with_discarded.find(entitlement.id)

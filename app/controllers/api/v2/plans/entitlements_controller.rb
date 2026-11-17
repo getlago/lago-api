@@ -3,13 +3,13 @@
 module Api
   module V2
     module Plans
-      # Lists, shows, replaces and merges the entitlements of a catalog plan, with the v1 body, and the v2 response and errors.
-      # The other entitlement routes of a plan (destroy, privilege destroy) still reach the v1 controller.
+      # Lists, shows, replaces, merges and removes the entitlements of a catalog plan, with the v1 body, and the v2
+      # response and errors. Only the privilege destroy of a plan still reaches the v1 controller.
       class EntitlementsController < Api::V2::BaseController
         serializable_with ::V2::PlanEntitlementSerializer, root: :plan_entitlement, expand_on: []
 
         # Before the lookup, like the cursor of the paginated lists.
-        before_action :reject_pagination!, only: %i[index show create update]
+        before_action :reject_pagination!, only: %i[index show create update destroy]
         before_action :find_catalog_plan
 
         # Bounded by the entitlement limit of a catalog plan: returned whole, without pagination.
@@ -18,18 +18,27 @@ module Api
           render_plan_entitlements(catalog_plan.entitlements.joins(:feature).includes(:catalog_plan, :feature, values: :privilege).newest_first)
         end
 
-        # A partial unique index allows one kept entitlement per feature and catalog plan. The join
-        # makes the entitlement of a discarded feature a 404, as v1 does.
         def show
-          entitlement = catalog_plan.entitlements
-            .joins(:feature)
-            .preload(:catalog_plan, :feature, values: :privilege)
-            .find_by(entitlement_features: {code: params[:code]})
+          entitlement = find_entitlement
 
           if entitlement
             render_plan_entitlement(entitlement)
           else
             not_found_error(resource: "feature")
+          end
+        end
+
+        # Renders the removed entitlement with the values it had, which stay loaded after the discard, and its deleted_at.
+        def destroy
+          entitlement = find_entitlement
+          return not_found_error(resource: "feature") unless entitlement
+
+          result = ::Entitlement::PlanEntitlementDestroyService.call(entitlement:)
+
+          if result.success?
+            render_plan_entitlement(result.entitlement)
+          else
+            render_error_response(result)
           end
         end
 
@@ -64,6 +73,15 @@ module Api
           else
             render_entitlements_error(result)
           end
+        end
+
+        # A partial unique index allows one kept entitlement per feature and catalog plan. The join
+        # makes the entitlement of a discarded feature a 404, as v1 does.
+        def find_entitlement
+          catalog_plan.entitlements
+            .joins(:feature)
+            .preload(:catalog_plan, :feature, values: :privilege)
+            .find_by(entitlement_features: {code: params[:code]})
         end
 
         def find_catalog_plan

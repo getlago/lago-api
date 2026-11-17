@@ -83,9 +83,11 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
-        # Ahead of the legacy nested routes: the list, the show, the replace and the merge are native,
-        # the destroy and the privilege destroy still reach the v1 controller.
-        resources :entitlements, only: %i[index show create], param: :code, code: /.*/, controller: "plans/entitlements"
+        # Ahead of the legacy nested routes: the list, the show, the replace, the merge and the remove are native.
+        # The privilege destroy still reaches the v1 controller: nested, it is drawn before the greedy :code.
+        resources :entitlements, only: %i[index show create destroy], param: :code, code: /.*/, controller: "plans/entitlements" do
+          resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "/api/v1/plans/entitlements/privileges"
+        end
         patch :entitlements, controller: "plans/entitlements", action: :update
         draw(:plan_nested_api)
       end

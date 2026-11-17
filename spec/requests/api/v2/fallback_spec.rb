@@ -41,13 +41,6 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
     let(:feature) { create(:feature, organization:, code: "seats", name: "Seats", description: nil) }
     let(:privilege) { create(:privilege, organization:, feature:, code: "max", name: nil, value_type: "integer") }
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
-    let(:expected_body) do
-      {
-        entitlements: [
-          {code: "seats", name: "Seats", description: nil, privileges: [{code: "max", name: nil, value_type: "integer", value: 30, config: {}}]}
-        ]
-      }
-    end
 
     before { create(:entitlement_value, organization:, entitlement:, privilege:, value: "30") }
 
@@ -71,11 +64,22 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
       expect(entitlement.values.sole.value).to eq("30")
     end
 
-    it "deletes one through the v1 controller" do
+    it "no longer deletes one through the v1 controller, as DELETE is native" do
       delete_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements/seats")
 
+      expect(response).to be_v2_not_found_error("plan")
+      expect(entitlement.reload).not_to be_discarded
+      expect(entitlement.values.sole.value).to eq("30")
+    end
+
+    it "still deletes a privilege value through the v1 controller" do
+      delete_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements/seats/privileges/max")
+
       expect(response).to have_http_status(:success)
-      expect(json).to eq(entitlement: expected_body[:entitlements].sole)
+      expect(json).to eq(entitlement: {code: "seats", name: "Seats", description: nil, privileges: []})
+      expect(entitlement.reload).not_to be_discarded
+      expect(entitlement.values).to be_empty
+      expect(Entitlement::EntitlementValue.with_discarded.where(entitlement:).sole).to be_discarded
     end
 
     it "no longer replaces them through the v1 controller, as POST is native" do
