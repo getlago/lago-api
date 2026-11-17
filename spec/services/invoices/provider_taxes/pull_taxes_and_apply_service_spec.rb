@@ -64,8 +64,6 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
 
     let(:integration_tax) { create(:anrok_integration, organization:) }
     let(:integration_customer_tax) { create(:anrok_customer, integration: integration_tax, customer:) }
-    let(:response) { instance_double(Net::HTTPOK) }
-    let(:lago_client) { instance_double(LagoHttpClient::Client) }
     let(:endpoint) { nango_action_endpoint }
     let(:body) do
       path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json")
@@ -94,11 +92,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
 
       integration_customer_tax
 
-      allow(LagoHttpClient::Client).to receive(:new)
-        .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        .and_return(lago_client)
-      allow(lago_client).to receive(:post_with_response).and_return(response)
-      allow(response).to receive(:body).and_return(body)
+      stub_nango_action(status: 200, body:)
     end
 
     context "when invoice does not exist" do
@@ -578,9 +572,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       it "does not report the zero-amount fee to the tax provider" do
         pull_taxes_service.call
 
-        expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-          expect(payload[:input].first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
-        end
+        expect(nango_action_payloads.sole.dig("input", 0, "fees").map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
       end
 
       it "leaves the zero-amount fee untaxed and taxes the rest of the invoice" do
@@ -628,9 +620,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       it "still reports the invoice to the tax provider" do
         pull_taxes_service.call
 
-        expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-          expect(payload[:input].first["fees"].map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
-        end
+        expect(nango_action_payloads.sole.dig("input", 0, "fees").map { |fee| fee["item_id"] }).to eq([fee_subscription.id])
       end
 
       it "finalizes with no tax due but keeps the jurisdiction rate" do
@@ -711,12 +701,10 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
           expect(invoice.error_details.tax_error.sole.details).to include("tax_error" => "validationError")
           expect(fee_subscription.reload.applied_taxes).to be_empty
           expect(fee_charge.reload.applied_taxes).to be_empty
-          expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-            expect(payload[:input].first["fees"]).to contain_exactly(
-              hash_including("item_id" => fee_subscription.id, "item_code" => "mapped-product"),
-              hash_including("item_id" => fee_charge.id, "item_code" => nil)
-            )
-          end
+          expect(nango_action_payloads.sole.dig("input", 0, "fees")).to contain_exactly(
+            hash_including("item_id" => fee_subscription.id, "item_code" => "mapped-product"),
+            hash_including("item_id" => fee_charge.id, "item_code" => nil)
+          )
         end
       end
 
@@ -795,8 +783,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         end
 
         before do
-          allow(lago_client).to receive(:post_with_response)
-            .and_raise(::LagoHttpClient::HttpError.new(501, body, endpoint, response_headers: {}))
+          stub_nango_action(status: 501, body:)
         end
 
         it "puts invoice in failed status" do
@@ -834,7 +821,6 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
 
         context "when the provider answers with a server error" do
           before do
-            allow(LagoHttpClient::Client).to receive(:new).and_call_original
             stub_nango_action_failing_with(Integrations::Aggregator::ServerError)
           end
 

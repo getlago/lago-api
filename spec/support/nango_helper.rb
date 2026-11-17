@@ -47,6 +47,15 @@ module NangoHelper
     stub_request(:post, NANGO_ACTION_ENDPOINT).to_return(*responses)
   end
 
+  # The JSON payloads of the Nango action requests sent so far, in order.
+  def nango_action_payloads
+    pattern = WebMock::RequestPattern.new(:post, NANGO_ACTION_ENDPOINT)
+
+    WebMock::RequestRegistry.instance.requested_signatures.hash.keys
+      .select { |request| pattern.matches?(request) }
+      .map { |request| JSON.parse(request.body) }
+  end
+
   def stub_nango_action_failing_with(error_class)
     answer = RETRYABLE_ERROR_ANSWERS.fetch(error_class.name)
     return stub_request(:post, NANGO_ACTION_ENDPOINT).to_raise(answer) if answer.is_a?(Class)

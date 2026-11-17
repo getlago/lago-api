@@ -157,105 +157,105 @@ RSpec.describe Customers::RefreshWalletJob do
         end
       end
 
-      context "when the tax provider fails to answer the draft tax request" do
-        let(:customer) { create(:customer, awaiting_wallet_refresh:) }
-        let(:awaiting_wallet_refresh) { true }
-        let(:wallet) do
-          create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0, ongoing_balance_cents: 1000, credits_ongoing_balance: 10.0, rate_amount: 1)
-        end
-        let(:integration) { create(:anrok_integration, organization: customer.organization) }
-        let(:plan) { create(:plan, interval: "monthly") }
-        let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
-        let(:subscription) { create(:subscription, plan:, customer:, started_at: 2.years.ago) }
-
-        before do
-          wallet
-          create(:anrok_customer, integration:, customer:)
-          create(:standard_charge, plan:, billable_metric:, properties: {amount: "3"})
-          create(:netsuite_collection_mapping, integration:, mapping_type: :fallback_item, settings: {external_id: "1", external_account_code: "11", external_name: ""})
-          create(:event, organization_id: customer.organization_id, subscription:, customer:, code: billable_metric.code, timestamp: Time.current, created_at: 1.hour.ago)
-
-          allow(Customers::RefreshWalletsService).to receive(:call).and_call_original
-        end
-
-        Integrations::Aggregator::BaseService.retryable_errors.each do |error_class|
-          context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
-            before { stub_nango_action_failing_with(error_class) }
-
-            it "retries the job, then raises the error without a tax error or a webhook and keeps the customer flagged" do
-              assert_performed_jobs(6, only: [described_class]) do
-                expect { described_class.perform_later(customer) }.to raise_error(error_class)
-              end
-
-              expect(customer.reload.awaiting_wallet_refresh).to be(true)
-              expect(customer.error_details).to be_empty
-              expect(SendWebhookJob).not_to have_been_enqueued
-              expect(wallet.reload.ongoing_balance_cents).to eq(1000)
-            end
-
-            context "when it is a top-up refresh of a customer not flagged before" do
-              let(:awaiting_wallet_refresh) { false }
-
-              it "flags the customer once the retries are used up, then raises the error" do
-                assert_performed_jobs(6, only: [described_class]) do
-                  expect { described_class.perform_later(customer, wallet_ids: [wallet.id]) }.to raise_error(error_class)
-                end
-
-                expect(customer.reload.awaiting_wallet_refresh).to be(true)
-              end
-            end
-          end
-        end
-
-        context "when the customer has no active wallet" do
-          let(:awaiting_wallet_refresh) { false }
-          let(:wallet) { create(:wallet, :terminated, customer:) }
-
-          before { stub_nango_action(status: 503, body: "") }
-
-          it "raises the error without flagging the customer" do
-            assert_performed_jobs(6, only: [described_class]) do
-              expect { described_class.perform_later(customer, wallet_ids: [wallet.id]) }.to raise_error(Integrations::Aggregator::ServerError)
-            end
-
-            expect(customer.reload.awaiting_wallet_refresh).to be(false)
-          end
-        end
-
-        context "when the provider answers with an HTTP 400" do
-          before { stub_nango_action(status: 400, body: {error: {code: "bad_request", message: "Invalid input"}}.to_json) }
-
-          it "does not retry and raises the tax error" do
-            assert_performed_jobs(1, only: [described_class]) do
-              expect { described_class.perform_later(customer) }.to raise_error(BaseService::ValidationFailure, /tax_error/)
-            end
-
-            expect(customer.reload.awaiting_wallet_refresh).to be(true)
-          end
-        end
-
-        context "when the provider answers again on the retry" do
-          before { stub_nango_action({status: 503, body: ""}, anrok_draft_taxes_answer(rate: 0.1)) }
-
-          it "refreshes the wallets with the provider taxes and clears the flag" do
-            assert_performed_jobs(2, only: [described_class]) do
-              expect { described_class.perform_later(customer) }.not_to raise_error
-            end
-
-            wallet.reload
-            expect(wallet.ongoing_usage_balance_cents).to eq(300 + 30) # 1 event x 3 usage fee + 10% provider tax
-            expect(wallet.ongoing_balance_cents).to eq(1000 - 330) # balance - ongoing usage
-            expect(wallet.credits_ongoing_balance).to eq(6.7) # 670 cents at rate 1
-            expect(customer.reload.awaiting_wallet_refresh).to be(false)
-          end
-        end
-      end
-
       context "when refresh customer's wallets fails with a non-tax error" do
         let(:result) { Customers::RefreshWalletsService::Result.new.validation_failure!(errors: {other_error: ["something"]}) }
 
         it "re-raises the error" do
           expect { subject }.to raise_error(BaseService::ValidationFailure)
+        end
+      end
+    end
+  end
+
+  describe "retry_on" do
+    context "when the tax provider fails to answer the draft tax request" do
+      let(:customer) { create(:customer, awaiting_wallet_refresh:) }
+      let(:awaiting_wallet_refresh) { true }
+      let(:wallet) do
+        create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0, ongoing_balance_cents: 1000, credits_ongoing_balance: 10.0, rate_amount: 1)
+      end
+      let(:integration) { create(:anrok_integration, organization: customer.organization) }
+      let(:plan) { create(:plan, interval: "monthly") }
+      let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+      let(:subscription) { create(:subscription, plan:, customer:, started_at: 2.years.ago) }
+
+      before do
+        wallet
+        create(:anrok_customer, integration:, customer:)
+        create(:standard_charge, plan:, billable_metric:, properties: {amount: "3"})
+        create(:netsuite_collection_mapping, integration:, mapping_type: :fallback_item, settings: {external_id: "1", external_account_code: "11", external_name: ""})
+        create(:event, organization_id: customer.organization_id, subscription:, customer:, code: billable_metric.code, timestamp: Time.current, created_at: 1.hour.ago)
+      end
+
+      Integrations::Aggregator::BaseService.retryable_errors.each do |error_class|
+        context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
+          before { stub_nango_action_failing_with(error_class) }
+
+          it "retries the job, then raises the error without a tax error or a webhook and keeps the customer flagged" do
+            assert_performed_jobs(6, only: [described_class]) do
+              expect { described_class.perform_later(customer) }.to raise_error(error_class)
+            end
+
+            expect(customer.reload.awaiting_wallet_refresh).to be(true)
+            expect(customer.error_details).to be_empty
+            expect(SendWebhookJob).not_to have_been_enqueued
+            expect(wallet.reload.ongoing_balance_cents).to eq(1000)
+          end
+
+          context "when it is a top-up refresh of a customer not flagged before" do
+            let(:awaiting_wallet_refresh) { false }
+
+            it "flags the customer once the retries are used up, then raises the error" do
+              assert_performed_jobs(6, only: [described_class]) do
+                expect { described_class.perform_later(customer, wallet_ids: [wallet.id]) }.to raise_error(error_class)
+              end
+
+              expect(customer.reload.awaiting_wallet_refresh).to be(true)
+            end
+          end
+        end
+      end
+
+      context "when the customer has no active wallet" do
+        let(:awaiting_wallet_refresh) { false }
+        let(:wallet) { create(:wallet, :terminated, customer:) }
+
+        before { stub_nango_action(status: 503, body: "") }
+
+        it "raises the error without flagging the customer" do
+          assert_performed_jobs(6, only: [described_class]) do
+            expect { described_class.perform_later(customer, wallet_ids: [wallet.id]) }.to raise_error(Integrations::Aggregator::ServerError)
+          end
+
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
+      end
+
+      context "when the provider answers with an HTTP 400" do
+        before { stub_nango_action(status: 400, body: {error: {code: "bad_request", message: "Invalid input"}}.to_json) }
+
+        it "does not retry and raises the tax error" do
+          assert_performed_jobs(1, only: [described_class]) do
+            expect { described_class.perform_later(customer) }.to raise_error(BaseService::ValidationFailure, /tax_error/)
+          end
+
+          expect(customer.reload.awaiting_wallet_refresh).to be(true)
+        end
+      end
+
+      context "when the provider answers again on the retry" do
+        before { stub_nango_action({status: 503, body: ""}, anrok_draft_taxes_answer(rate: 0.1)) }
+
+        it "refreshes the wallets with the provider taxes and clears the flag" do
+          assert_performed_jobs(2, only: [described_class]) do
+            expect { described_class.perform_later(customer) }.not_to raise_error
+          end
+
+          wallet.reload
+          expect(wallet.ongoing_usage_balance_cents).to eq(300 + 30) # 1 event x 3 usage fee + 10% provider tax
+          expect(wallet.ongoing_balance_cents).to eq(1000 - 330) # balance - ongoing usage
+          expect(wallet.credits_ongoing_balance).to eq(6.7) # 670 cents at rate 1
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
         end
       end
     end
