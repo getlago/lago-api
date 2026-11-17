@@ -321,26 +321,21 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         end
       end
 
-      context "when the plan already holds more than 500 entitlements" do
-        # rubocop:disable Rails/SkipsModelValidations
+      context "when the plan already holds more than 200 entitlements" do
         before do
           now = Time.current
-          feature_ids = Entitlement::Feature.insert_all!(
-            Array.new(500) { {organization_id: organization.id, code: "bulk_#{it}", created_at: now, updated_at: now} },
-            returning: :id
-          ).rows.flatten
-          Entitlement::Entitlement.insert_all!(
-            feature_ids.map { {organization_id: organization.id, catalog_plan_id: plan.id, entitlement_feature_id: it, created_at: now, updated_at: now} }
-          )
+          rows = bulk_create_features(organization, 200).values.map do
+            {organization_id: organization.id, catalog_plan_id: plan.id, entitlement_feature_id: it, created_at: now, updated_at: now}
+          end
+          Entitlement::Entitlement.insert_all!(rows) # rubocop:disable Rails/SkipsModelValidations
         end
-        # rubocop:enable Rails/SkipsModelValidations
 
         context "when the write updates an existing value" do
           let(:entitlements_params) { {feature.code => {privilege.code => 60}} }
 
           it "accepts it" do
             expect(result).to be_success
-            expect(plan.entitlements.count).to eq(501) # 500 bulk + the entitlement of feature
+            expect(plan.entitlements.count).to eq(201) # 200 bulk + the entitlement of feature
             expect(entitlement_value.reload.value).to eq("60")
           end
         end
@@ -351,7 +346,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
 
             expect(result).not_to be_success
             expect(result.error.messages).to eq(base: ["too_many_entitlements"])
-            expect(result.error.meta).to eq(base: {max_items: 500})
+            expect(result.error.meta).to eq(base: {max_items: 200})
             expect(result.failed_field).to be_nil
             expect(Utils::ActivityLog).not_to have_produced("plan.updated")
           end

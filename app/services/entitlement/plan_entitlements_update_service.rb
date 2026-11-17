@@ -8,7 +8,7 @@ module Entitlement
     Result = BaseResult[:entitlements, :failed_field]
 
     # Catalog plans only: legacy plans keep no limit.
-    MAX_CATALOG_PLAN_ENTITLEMENTS = 500
+    MAX_CATALOG_PLAN_ENTITLEMENTS = 200
     MAX_CATALOG_PLAN_ENTITLEMENT_VALUES = 50
 
     def initialize(organization:, plan:, entitlements_params:, partial:, send_webhook: true)
@@ -35,6 +35,7 @@ module Entitlement
       ActiveRecord::Base.transaction do
         lock_plan!(plan)
         baseline = catalog_plan_counts if catalog_plan?
+        refuse_oversized_replace!(baseline) if catalog_plan? && !partial?
         stored_before = stored_values_by_entitlement_id if catalog_plan?
         rendered_before = rendered_values_by_entitlement_id if render_entitlement_changes?
         delete_missing_entitlements unless partial?
@@ -193,6 +194,17 @@ module Entitlement
         .count
 
       {entitlements: plan.entitlements.count, values:}
+    end
+
+    # A full replace leaves exactly the features of its body, so an oversized one is refused before
+    # any write. A partial write and the values are checked on the state after the write.
+    def refuse_oversized_replace!(baseline)
+      count = entitlements_params.size
+      return unless count > MAX_CATALOG_PLAN_ENTITLEMENTS && count > baseline[:entitlements]
+
+      result.single_validation_failure!(
+        field: :base, error_code: "too_many_entitlements", meta: {max_items: MAX_CATALOG_PLAN_ENTITLEMENTS}
+      ).raise_if_error!
     end
 
     # Counts the state after the write. A count already over its limit before the write is refused

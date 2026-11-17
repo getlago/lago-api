@@ -678,15 +678,8 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         let(:select_privilege) { nil }
         let(:bulk_feature_count) { 0 }
         let(:planned_feature_count) { 0 }
-        # Inserted in bulk: hundreds of factory calls would make these examples slow. {code => id}
+        let(:bulk_features) { bulk_create_features(organization, bulk_feature_count) }
         # rubocop:disable Rails/SkipsModelValidations
-        let(:bulk_features) do
-          now = Time.current
-          rows = Array.new(bulk_feature_count) do |i|
-            {organization_id: organization.id, code: "bulk_#{i}", name: "Bulk #{i}", created_at: now, updated_at: now}
-          end
-          rows.empty? ? {} : Entitlement::Feature.insert_all!(rows, returning: %w[code id]).rows.to_h
-        end
         # The entitlements the plan holds before the write: the first planned_feature_count bulk features.
         let(:planned_entitlements) do
           now = Time.current
@@ -727,25 +720,33 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           end
         end
 
-        context "with 500 entitlements after the replace" do
-          let(:bulk_feature_count) { 500 }
+        context "with 200 entitlements after the replace" do
+          let(:bulk_feature_count) { 200 }
 
           it "accepts them" do
             expect(result).to be_success
-            expect(plan.entitlements.count).to eq(500) # 500 features of the body, sso dropped
+            expect(plan.entitlements.count).to eq(200) # 200 features of the body, sso dropped
             expect(old_entitlement.reload).to be_discarded
           end
         end
 
-        context "with 501 entitlements after the replace" do
-          let(:bulk_feature_count) { 501 }
+        context "with 201 entitlements after the replace" do
+          let(:bulk_feature_count) { 201 }
 
           it_behaves_like "a refused write"
+
+          it "refuses it before any write" do
+            allow(Entitlement::Entitlement).to receive(:create!).and_call_original
+
+            result
+
+            expect(Entitlement::Entitlement).not_to have_received(:create!)
+          end
 
           it "returns too_many_entitlements on base" do
             expect(result.error.messages).to eq(base: ["too_many_entitlements"])
             expect(result.error.codes).to eq(base: ["too_many_entitlements"])
-            expect(result.error.meta).to eq(base: {max_items: 500})
+            expect(result.error.meta).to eq(base: {max_items: 200})
           end
         end
 
@@ -771,15 +772,14 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         end
 
         context "with both limits crossed" do
-          let(:bulk_feature_count) { 501 }
+          let(:bulk_feature_count) { 201 }
           let(:seats_value_count) { 51 }
 
           it_behaves_like "a refused write"
 
-          it "returns too_many_entitlements on base first, then too_many_values" do
-            expect(result.error.messages).to eq(base: ["too_many_entitlements"], "entitlements.seats": ["too_many_values"])
-            expect(result.error.messages.keys).to eq([:base, :"entitlements.seats"])
-            expect(result.error.meta).to eq(base: {max_items: 500}, "entitlements.seats": {max_items: 50})
+          it "returns too_many_entitlements alone, refused before the values are written" do
+            expect(result.error.messages).to eq(base: ["too_many_entitlements"])
+            expect(result.error.meta).to eq(base: {max_items: 200})
           end
         end
 
@@ -799,17 +799,17 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           end
         end
 
-        context "when the plan already holds more than 500 entitlements" do
+        context "when the plan already holds more than 200 entitlements" do
           let(:old_value) { nil }
-          let(:bulk_feature_count) { 502 }
-          let(:planned_feature_count) { 501 }
+          let(:bulk_feature_count) { 202 }
+          let(:planned_feature_count) { 201 }
 
           context "when the replace keeps them" do
-            let(:entitlements_params) { bulk_features.keys.first(501).index_with { {} } }
+            let(:entitlements_params) { bulk_features.keys.first(201).index_with { {} } }
 
             it "accepts it" do
               expect(result).to be_success
-              expect(plan.entitlements.count).to eq(501)
+              expect(plan.entitlements.count).to eq(201)
             end
           end
 
@@ -821,15 +821,15 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
             end
           end
 
-          context "when the replace drops entitlements but stays above 500" do
-            let(:planned_feature_count) { 502 }
-            let(:entitlements_params) { bulk_features.keys.first(501).index_with { {} } }
+          context "when the replace drops entitlements but stays above 200" do
+            let(:planned_feature_count) { 202 }
+            let(:entitlements_params) { bulk_features.keys.first(201).index_with { {} } }
 
             it "accepts it" do
-              expect(plan.entitlements.count).to eq(502)
+              expect(plan.entitlements.count).to eq(202)
 
               expect(result).to be_success
-              expect(plan.entitlements.count).to eq(501) # 502 held - bulk_501 dropped
+              expect(plan.entitlements.count).to eq(201) # 202 held - bulk_201 dropped
             end
           end
         end
@@ -910,12 +910,12 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         context "with a legacy plan" do
           let(:plan) { create(:plan, organization:) }
           let(:old_value) { nil }
-          let(:bulk_feature_count) { 501 }
+          let(:bulk_feature_count) { 201 }
           let(:seats_value_count) { 51 }
 
           it "has no limit" do
             expect(result).to be_success
-            expect(plan.entitlements.count).to eq(502) # 501 bulk features + seats
+            expect(plan.entitlements.count).to eq(202) # 201 bulk features + seats
             expect(plan.entitlements.joins(:feature).find_by!(feature: {code: "seats"}).values.count).to eq(51)
           end
         end
