@@ -103,14 +103,18 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
 
     context "with an empty entitlements map" do
       let(:request_params) { {entitlements: {}} }
+      let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
+      let(:value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: "10") }
 
-      it "returns a missing parameter error and keeps the entitlements" do
-        entitlement = create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:)
+      before { value }
+
+      it "discards every entitlement and value of the plan" do
         request
 
-        expect(response).to have_http_status(:bad_request)
-        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "entitlements", meta: {}}])
-        expect(entitlement.reload).not_to be_discarded
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(entitlements: [])
+        expect(entitlement.reload).to be_discarded
+        expect(value.reload).to be_discarded
       end
     end
 

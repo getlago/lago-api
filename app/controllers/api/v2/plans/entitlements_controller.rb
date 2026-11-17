@@ -11,10 +11,14 @@ module Api
         before_action :find_catalog_plan
 
         def create
+          permitted = params.slice(:entitlements).permit(entitlements: {})
+          # An empty map is valid: it discards every entitlement. A missing or non-map value is a 400.
+          return missing_parameter_error(ActionController::ParameterMissing.new(:entitlements)) unless permitted.key?(:entitlements)
+
           result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: current_organization,
             plan: catalog_plan,
-            entitlements_params: params.expect(entitlements: {}).to_h,
+            entitlements_params: permitted[:entitlements].to_h,
             partial: false
           )
 
