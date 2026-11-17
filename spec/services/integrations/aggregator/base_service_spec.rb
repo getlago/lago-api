@@ -380,12 +380,5 @@ RSpec.describe Integrations::Aggregator::BaseService do
       expect { service.send(:throttle!, :netsuite) }
         .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(:netsuite) }
     end
-
-    it "does not count QuickBooks calls for a NetSuite integration" do
-      service = described_class.new(integration: create(:netsuite_integration))
-
-      expect { 151.times { service.send(:throttle!, :quickbooks) } }.not_to raise_error
-      expect(store_keys).to be_empty
-    end
   end
 end

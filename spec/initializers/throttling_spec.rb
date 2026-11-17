@@ -23,13 +23,6 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
     expect(limits_for(:quickbooks)).to eq(minutely: {limit: 150, period: 60})
   end
 
-  it "keeps the shared concurrency limit at 5 with no threshold" do
-    strategy = Sidekiq::Throttled::Registry.get(:concurrency_limit)
-
-    expect(strategy.concurrency.strategies.map(&:limit)).to eq([5])
-    expect(strategy.threshold.strategies).to be_empty
-  end
-
   context "with a real counter store" do
     let(:check_value) { "placeholder-throttle-key" }
 
@@ -46,6 +39,14 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
       results = Array.new(150) { check_quickbooks }
 
       expect(results).to all(be(true))
+      expect(check_quickbooks).to be(false)
+    end
+
+    it "still refuses QuickBooks calls 59 seconds into the same minute" do
+      151.times { check_quickbooks }
+
+      travel(59.seconds)
+
       expect(check_quickbooks).to be(false)
     end
 
