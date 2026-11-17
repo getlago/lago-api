@@ -229,8 +229,8 @@ RSpec.describe Subscriptions::InvoiceGroupingService do
 
         context "when subscriptions have different crm connections" do
           before do
-            create_connection(subscription1, "crm", integration_customer: create(:netsuite_customer, customer:))
-            create_connection(subscription2, "crm", integration_customer: create(:xero_customer, customer:))
+            create_connection(subscription1, "crm", integration_customer: create(:hubspot_customer, customer:))
+            create_connection(subscription2, "crm", integration_customer: create(:salesforce_customer, customer:))
           end
 
           it "returns one group per accounting connection" do

@@ -18,6 +18,11 @@ module Subscriptions
     def initialize(subscriptions:)
       @subscriptions = subscriptions
 
+      ActiveRecord::Associations::Preloader.new(
+        records: @subscriptions,
+        associations: [:billing_entity, :billing_object_connections, {customer: :integration_customers}]
+      ).call
+
       super
     end
 
@@ -156,7 +161,7 @@ module Subscriptions
         customer.payment_provider_customers.to_a
       else
         types = IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE.select { |_, c| c == category.to_s }.keys
-        customer.integration_customers.where(type: types).to_a
+        customer.integration_customers.select { it.type.in?(types) }
       end
     end
 
