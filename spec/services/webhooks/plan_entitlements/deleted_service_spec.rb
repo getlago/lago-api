@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Webhooks::PlanEntitlements::DeletedService do
-  subject(:webhook_service) { described_class.new(object: entitlement) }
+  subject(:webhook_service) { described_class.new(object: entitlement, options:) }
+
+  let(:options) { {values: [{privilege_code: "max", value: 50}]} }
 
   let(:organization) { create(:organization) }
   let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium") }
@@ -19,7 +21,7 @@ RSpec.describe Webhooks::PlanEntitlements::DeletedService do
   end
 
   describe ".call" do
-    it "creates a webhook with the discarded plan entitlement only" do
+    it "creates a webhook with the discarded plan entitlement and the values it had before the delete" do
       webhook_service.call
 
       entitlement.reload
@@ -31,12 +33,22 @@ RSpec.describe Webhooks::PlanEntitlements::DeletedService do
           "lago_id" => entitlement.id,
           "plan_code" => "premium",
           "feature_code" => "seats",
-          "values" => [],
+          "values" => [{"privilege_code" => "max", "value" => 50}],
           "created_at" => entitlement.created_at.iso8601,
           "updated_at" => entitlement.updated_at.iso8601,
           "deleted_at" => entitlement.deleted_at.iso8601
         }
       )
+    end
+
+    context "without the values before the delete" do
+      let(:options) { {} }
+
+      it "renders the values left on the entitlement" do
+        webhook_service.call
+
+        expect(Webhook.order(created_at: :desc).first.payload.dig("plan_entitlement", "values")).to eq([])
+      end
     end
   end
 end
