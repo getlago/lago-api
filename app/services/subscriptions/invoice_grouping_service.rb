@@ -18,11 +18,6 @@ module Subscriptions
     def initialize(subscriptions:)
       @subscriptions = subscriptions
 
-      ActiveRecord::Associations::Preloader.new(
-        records: @subscriptions,
-        associations: [:billing_entity, :billing_object_connections, {customer: :integration_customers}]
-      ).call
-
       super
     end
 
@@ -113,6 +108,11 @@ module Subscriptions
     # NOTE: Subscriptions sharing an invoice must use the same payment, tax, accounting and CRM connections.
     #       A subscription without an override inherits the default connections of its customer.
     def group_by_connections(subscription_groups)
+      ActiveRecord::Associations::Preloader.new(
+        records: @subscriptions,
+        associations: [:billing_object_connections, {customer: :integration_customers}]
+      ).call
+
       subscription_groups.flat_map do |subscriptions|
         next [subscriptions] if subscriptions.size <= 1
 
