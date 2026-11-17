@@ -12,6 +12,38 @@ module Api
       # What a selector renders its target from.
       SELECTOR_TARGETS = [:product_category, :product, {product_filter: :product}].freeze
 
+      UNFILTERED_PARAMS = %i[tax_codes applies_to metadata].freeze
+
+      def create
+        result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: wallet_params)
+
+        if result.success?
+          render_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def update
+        result = ::PlanWallets::UpdateService.call(plan_wallet: find_plan_wallet, params: wallet_params)
+
+        if result.success?
+          render_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def destroy
+        result = ::PlanWallets::DestroyService.call(plan_wallet: find_plan_wallet)
+
+        if result.success?
+          render_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
       def show
         plan_wallet = plan_wallets&.includes(selectors: SELECTOR_TARGETS)&.find_by(code: params[:code])
 
@@ -48,6 +80,46 @@ module Api
 
       def plan_wallets
         find_catalog_plan&.wallets
+      end
+
+      def find_plan_wallet
+        plan_wallets&.find_by(code: params[:code])
+      end
+
+      def wallet_params
+        wallet = params.require(:wallet)
+        permitted = wallet.permit(
+          :code,
+          :name,
+          :invoice_display_name,
+          :currency,
+          :tax_application,
+          :priority,
+          :top_up_min_amount_cents,
+          :top_up_max_amount_cents,
+          # Passes through so that the services refuse it explicitly instead of strong params
+          # dropping it, as they do for an `exclude` inside `applies_to`.
+          :rate_amount,
+          tax_codes: [],
+          applies_to: {},
+          metadata: {}
+        ).to_h
+
+        # Strong params drop a null and a value of another shape. The services need both: a null
+        # metadata clears it, and another shape is refused instead of ignored.
+        UNFILTERED_PARAMS.each do |key|
+          permitted[key] = unfiltered(wallet[key]) if wallet.key?(key) && !permitted.key?(key)
+        end
+
+        permitted
+      end
+
+      def unfiltered(value)
+        case value
+        when ActionController::Parameters then value.to_unsafe_h
+        when Array then value.map { unfiltered(it) }
+        else value
+        end
       end
 
       def resource_name
