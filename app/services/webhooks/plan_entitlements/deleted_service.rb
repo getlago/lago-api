@@ -3,23 +3,22 @@
 module Webhooks
   module PlanEntitlements
     class DeletedService < Webhooks::BaseService
+      include PlanEntitlementPayload
+
       private
 
-      def object_serializer
-        ::V2::PlanEntitlementSerializer.new(object, root_name: "plan_entitlement", values: values_before)
+      # The values are discarded with the entitlement, so they are not loaded: the sender passes the ones it
+      # had before the delete.
+      def preloaded_associations
+        [:catalog_plan, :feature]
       end
 
-      # The values are discarded with the entitlement, so the sender passes the ones it had before the delete.
-      def values_before
-        options[:values]&.map { it.to_h.symbolize_keys }
+      def serializer_options
+        {values: options[:values]&.map { it.to_h.symbolize_keys }}
       end
 
       def webhook_type
         "plan_entitlement.deleted"
-      end
-
-      def object_type
-        "plan_entitlement"
       end
     end
   end

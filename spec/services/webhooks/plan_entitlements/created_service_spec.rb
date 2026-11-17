@@ -37,6 +37,27 @@ RSpec.describe Webhooks::PlanEntitlements::CreatedService do
       )
     end
 
+    context "when the entitlement is loaded without its associations, as SendWebhookJob does" do
+      subject(:webhook_service) { described_class.new(object: Entitlement::Entitlement.find(entitlement.id)) }
+
+      let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+
+      before do
+        %w[min step].each do |code|
+          other_privilege = create(:privilege, :integer_type, organization:, feature:, code:)
+          create(:entitlement_value, organization:, entitlement:, privilege: other_privilege, value: "1")
+        end
+      end
+
+      it "loads the values and their privileges in one query each" do
+        statements = capture_sql { webhook_service.call }
+
+        expect(Webhook.order(created_at: :desc).first.payload["plan_entitlement"]["values"].size).to eq(3)
+        expect(statements.count { it.include?('FROM "entitlement_entitlement_values"') }).to eq(1)
+        expect(statements.count { it.include?('FROM "entitlement_privileges"') }).to eq(1)
+      end
+    end
+
     context "when the endpoint filter lacks the type" do
       before { organization.webhook_endpoints.sole.update!(event_types: ["plan_entitlement.updated"]) }
 
