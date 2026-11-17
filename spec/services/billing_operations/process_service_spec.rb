@@ -1041,7 +1041,7 @@ RSpec.describe BillingOperations::ProcessService do
     end
     let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule }
     let(:planned_operation) do
-      BillingOperations::Schedule::BuildPlannedOperation.call!(contract_rate_card:, schedule:, at: Time.utc(2026, 2, 1)).planned_operation
+      BillingOperations::Schedule::BuildPlannedOperation.call!(schedule:, at: Time.utc(2026, 2, 1)).planned_operation
     end
     let(:operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_metered_arrears",
