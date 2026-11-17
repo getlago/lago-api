@@ -455,8 +455,19 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           {privilege_code: "provider", value: "okta"},
           {privilege_code: "max", value: 25}
         ]
+        added = plan.entitlements.sole
         expect(Utils::ActivityLog).to have_received(:produce).with(
-          plan.entitlements.sole, "plan_entitlement.created", after_commit: true, changes: {"values" => [nil, added_values]}
+          added, "plan_entitlement.created", after_commit: true,
+          changes: {"values" => [nil, added_values]},
+          activity_object: {
+            lago_id: added.id,
+            plan_code: plan.code,
+            feature_code: "seats",
+            values: added_values,
+            created_at: added.created_at.iso8601,
+            updated_at: added.updated_at.iso8601,
+            deleted_at: nil
+          }
         )
         dropped = Entitlement::Entitlement.with_discarded.find(old_entitlement.id)
         expect(Utils::ActivityLog).to have_received(:produce).with(
@@ -499,11 +510,13 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           added_entitlement = plan.entitlements.find_by!(feature: storage_feature)
           expect(Utils::ActivityLog).to have_received(:produce).with(
             added_entitlement, "plan_entitlement.created", after_commit: true,
-            changes: {"values" => [nil, [{privilege_code: "gb", value: 100}]]}
+            changes: {"values" => [nil, [{privilege_code: "gb", value: 100}]]},
+            activity_object: hash_including(lago_id: added_entitlement.id, values: [{privilege_code: "gb", value: 100}])
           )
           expect(Utils::ActivityLog).to have_received(:produce).with(
             changed_entitlement, "plan_entitlement.updated", after_commit: true,
-            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max", value: 25}]]}
+            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max", value: 25}]]},
+            activity_object: hash_including(lago_id: changed_entitlement.id, values: [{privilege_code: "max", value: 25}])
           )
           expect(Utils::ActivityLog).to have_received(:produce).with(
             old_entitlement, "plan_entitlement.deleted", after_commit: true,
@@ -540,6 +553,54 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
 
         it "returns them newest first" do
           expect(result.entitlements).to eq([recent_entitlement, older_entitlement])
+        end
+      end
+
+      context "when activity logs are sent for several changed entitlements", :capture_kafka_messages do
+        let(:storage_feature) { create(:feature, organization:, code: "storage") }
+        let(:storage_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature: storage_feature) }
+        let(:entitlements_params) do
+          {"seats" => {"max" => 25, "provider" => "okta"}, "storage" => {"gb" => 200, "region" => "eu"}}
+        end
+
+        let(:queries_after_commit) { [] }
+
+        before do
+          allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+          allow(::V2::PlanEntitlementSerializer).to receive(:new).and_call_original
+          # The logs are sent from after-commit callbacks: the queries they run are tracked apart.
+          allow(AfterCommitEverywhere).to receive(:after_commit).and_wrap_original do |original, *args, &callback|
+            original.call(*args) do
+              track = ->(*, payload) { queries_after_commit << payload[:sql] }
+              ActiveSupport::Notifications.subscribed(track, "sql.active_record", &callback)
+            end
+          end
+          gb = create(:privilege, organization:, feature: storage_feature, code: "gb", value_type: "integer")
+          region = create(:privilege, organization:, feature: storage_feature, code: "region", value_type: "string")
+          create(:entitlement_value, organization:, entitlement: storage_entitlement, privilege: gb, value: "100")
+          create(:entitlement_value, organization:, entitlement: storage_entitlement, privilege: region, value: "us")
+        end
+
+        it "logs each entitlement with the render built in the transaction, without loading its values again" do
+          result
+
+          expect(queries_after_commit.grep(/entitlement_entitlement_values|entitlement_privileges/)).to be_empty
+
+          activity_objects = kafka_messages.map { JSON.parse(it[:payload]) }.to_h { [it["activity_type"], it["activity_object"]] }
+          entitlement = storage_entitlement.reload
+          expect(activity_objects.keys).to match_array(%w[plan_entitlement.created plan_entitlement.updated plan_entitlement.deleted])
+          expect(activity_objects["plan_entitlement.updated"]).to eq(
+            "lago_id" => entitlement.id,
+            "plan_code" => plan.code,
+            "feature_code" => "storage",
+            # Newest privilege first: region is created after gb.
+            "values" => [{"privilege_code" => "region", "value" => "eu"}, {"privilege_code" => "gb", "value" => 200}],
+            "created_at" => entitlement.created_at.iso8601,
+            "updated_at" => entitlement.updated_at.iso8601,
+            "deleted_at" => nil
+          )
+          # Two renders of the kept entitlements before the call (storage, sso), three after (seats, storage, sso).
+          expect(::V2::PlanEntitlementSerializer).to have_received(:new).exactly(5).times
         end
       end
 

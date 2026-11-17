@@ -110,11 +110,8 @@ module Entitlement
     end
 
     # The values of the kept entitlements of the plan, as their activity log renders them.
-    def rendered_values_by_entitlement_id(ids = nil)
-      entitlements = plan.entitlements.includes(:catalog_plan, :feature, values: :privilege)
-      entitlements = entitlements.where(id: ids) if ids
-
-      entitlements.to_h do |entitlement|
+    def rendered_values_by_entitlement_id
+      plan.entitlements.includes(:catalog_plan, :feature, values: :privilege).to_h do |entitlement|
         [entitlement.id, ::V2::PlanEntitlementSerializer.new(entitlement).serialize[:values]]
       end
     end
@@ -130,13 +127,16 @@ module Entitlement
       log_entitlement_changes(changed_ids, rendered_before) if rendered_before
     end
 
-    # One activity log per changed entitlement, with the values before and after.
+    # One activity log per changed entitlement, with the values before and after. Each log gets its render from
+    # here, where the values are preloaded, so that it does not serialize the entitlement on its own after the commit.
     def log_entitlement_changes(changed_ids, values_before)
-      values_after = rendered_values_by_entitlement_id(changed_ids)
+      entitlements = Entitlement.with_discarded.where(id: changed_ids)
+        .includes(:catalog_plan, :feature, values: :privilege).newest_first
 
-      Entitlement.with_discarded.where(id: changed_ids).includes(:catalog_plan, :feature).newest_first.each do |entitlement|
+      entitlements.each do |entitlement|
+        render = ::V2::PlanEntitlementSerializer.new(entitlement).serialize
         before = values_before[entitlement.id]
-        after = values_after[entitlement.id]
+        after = entitlement.discarded? ? nil : render[:values]
         next if before == after
         action = if before.nil?
           "created"
@@ -149,14 +149,10 @@ module Entitlement
         Utils::ActivityLog.produce_after_commit(
           entitlement, "plan_entitlement.#{action}",
           changes: {"values" => [before, after]},
-          activity_object: (action == "deleted") ? deleted_entitlement_render(entitlement, before) : nil
+          # A dropped entitlement is logged with its deletion time and the values it had: they are discarded with it.
+          activity_object: (action == "deleted") ? render.merge(values: before) : render
         )
       end
-    end
-
-    # A dropped entitlement as it was before the call, with its deletion time: its values are discarded with it.
-    def deleted_entitlement_render(entitlement, values_before)
-      ::V2::PlanEntitlementSerializer.new(entitlement).serialize.merge(values: values_before)
     end
 
     def delete_missing_entitlements
