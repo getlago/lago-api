@@ -70,6 +70,28 @@ RSpec.describe Membership do
       end
     end
 
+    context "with admin role on a sandbox organization" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+      let(:membership) { create(:membership, organization: sandbox, roles: %i[admin]) }
+
+      it "does not hold the permissions its production manages" do
+        expect(permissions_hash).to include(
+          "organization:members:create" => false,
+          "organization:members:update" => false,
+          "organization:members:delete" => false,
+          "roles:create" => false,
+          "roles:update" => false,
+          "roles:delete" => false,
+          "authentication_methods:update" => false
+        )
+      end
+
+      it "holds every other permission" do
+        expect(permissions_hash.except(*described_class::SANDBOX_MANAGED_PERMISSIONS).values).to all(be true)
+        expect(permissions_hash).to include("customers:view" => true, "organization:integrations:create" => true)
+      end
+    end
+
     context "with finance role" do
       let(:membership) { create(:membership, roles: %i[finance]) }
 

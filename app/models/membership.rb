@@ -16,6 +16,17 @@ class Membership < ApplicationRecord
     :revoked
   ].freeze
 
+  # Production manages these and mirrors them onto its sandbox, so a sandbox membership never holds them.
+  SANDBOX_MANAGED_PERMISSIONS = %w[
+    organization:members:create
+    organization:members:update
+    organization:members:delete
+    roles:create
+    roles:update
+    roles:delete
+    authentication_methods:update
+  ].freeze
+
   enum :status, STATUSES
 
   validates :user_id, uniqueness: {conditions: -> { where(revoked_at: nil) }, scope: :organization_id}
@@ -38,6 +49,7 @@ class Membership < ApplicationRecord
   def permissions_hash
     Permission.permissions_hash.dup.tap do |h|
       roles.each { |role| role.permissions_hash.each { |key, val| h[key] ||= val } }
+      SANDBOX_MANAGED_PERMISSIONS.each { |key| h[key] = false } if organization.sandbox?
     end
   end
 
