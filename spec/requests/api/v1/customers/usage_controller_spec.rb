@@ -139,6 +139,27 @@ RSpec.describe Api::V1::Customers::UsageController do
           expect(response.body).to match(/anrok.*Try again later/)
         end
       end
+
+      context "when the anrok provider answers with a server error" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+        before do
+          integration_customer
+          stub_nango_action(status: 503, body: "")
+        end
+
+        it "returns a third party error" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(
+            status: 422,
+            error: "Unprocessable Entity",
+            code: "third_party_error",
+            error_details: {third_party: "anrok", thirdparty_error: "503: "}
+          )
+        end
+      end
     end
 
     context "with charge and group filtering" do
