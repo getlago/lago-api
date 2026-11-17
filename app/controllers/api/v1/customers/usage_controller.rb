@@ -29,8 +29,6 @@ module Api
           else
             render_error_response(result)
           end
-        rescue *Integrations::Aggregator::BaseService.retryable_errors => error
-          tax_provider_error(error)
         end
 
         def past
@@ -59,14 +57,6 @@ module Api
         end
 
         private
-
-        # Jobs retry these temporary tax provider errors. A request answers at once instead.
-        def tax_provider_error(error)
-          customer = current_organization.customers.find_by(external_id: params[:customer_external_id])
-          third_party = customer&.tax_customer&.integration&.provider_key
-
-          render_error_response(BaseResult.new.third_party_failure!(third_party:, error_code: nil, error_message: error.message))
-        end
 
         def past_usage_filters
           params.permit(

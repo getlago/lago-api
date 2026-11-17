@@ -23,10 +23,6 @@ module Mutations
         ).call
 
         result.success? ? result.fees : validation_error(messages: {tax_error: [result.error.code]})
-      # Jobs retry these temporary tax provider errors. A request answers at once instead.
-      rescue *::Integrations::Aggregator::BaseService.retryable_errors => error
-        third_party = customer&.tax_customer&.integration&.provider_key
-        result_error(BaseResult.new.third_party_failure!(third_party:, error_code: nil, error_message: error.message))
       end
 
       private

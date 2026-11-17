@@ -99,25 +99,6 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "invoices:create"
 
-  context "when the provider answers with a server error" do
-    before do
-      allow(LagoHttpClient::Client).to receive(:new).and_call_original
-      stub_nango_action(status: 503, body: "")
-    end
-
-    it "returns a third party error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {input: {customerId: customer.id, currency:, fees:}}
-      )
-
-      expect_graphql_error(result:, message: "third_party_error")
-    end
-  end
-
   it "fetches tax results" do
     result = execute_graphql(
       current_user: membership.user,
