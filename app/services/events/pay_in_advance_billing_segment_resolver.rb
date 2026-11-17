@@ -54,10 +54,10 @@ module Events
       pricing_unit_codes = selected_cards.filter_map { |card| card.rate_card.applied_pricing_unit_code }.uniq
       pricing_units = organization.pricing_units.where(code: pricing_unit_codes).index_by(&:code) if pricing_unit_codes.any?
 
-      selected_cards.filter_map { |card| segment_for(card, pricing_units || {}) }
+      selected_cards.filter_map { |card| billing_segment_for(card, pricing_units || {}) }
     end
 
-    def segment_for(card, pricing_units)
+    def billing_segment_for(card, pricing_units)
       return if card.rate_card.rates.empty?
 
       schedule = Billing::RateCards::BuildScheduleService.call!(
@@ -66,12 +66,12 @@ module Events
       obligation = schedule.obligation_at(event.timestamp)
       return unless obligation
 
-      segment = obligation.segments.find do |slice|
-        (slice.started_at...slice.ended_at).cover?(event.timestamp)
+      segment = obligation.segments.find do |segment|
+        (segment.started_at...segment.ended_at).cover?(event.timestamp)
       end
 
       if segment
-        BillingSegments::BuildEventSegmentService.call!(
+        BillingSegments::BuildService.call!(
           contract_rate_card: card, obligation:, segment:, pricing_units_by_code: pricing_units
         ).billing_segment
       end

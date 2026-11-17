@@ -686,7 +686,7 @@ RSpec.describe BillingOperations::ProcessService do
 
         it "loads pricing units once for all cards and builds slices without organization lookups" do
           build_queries = []
-          allow(BillingSegments::BuildEventSegmentService).to receive(:call!).and_wrap_original do |original, **attributes|
+          allow(BillingSegments::BuildService).to receive(:call!).and_wrap_original do |original, **attributes|
             resolution = nil
             build_queries.concat(capture_sql { resolution = original.call(**attributes) })
             resolution

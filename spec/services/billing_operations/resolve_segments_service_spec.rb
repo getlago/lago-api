@@ -245,7 +245,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
 
       context "when the current schedule no longer covers the stored cycle" do
         let(:schedule) do
-          instance_double(Billing::RateCards::Schedule, resolve_obligation: nil)
+          instance_double(Billing::RateCards::Schedule, obligation_for_operation: nil)
         end
 
         before do
@@ -438,7 +438,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 1),
           target_cycle_started_at: Time.utc(2026, 1, 1))
       end
-      let(:schedule) { instance_double(Billing::RateCards::Schedule, resolve_obligation: nil) }
+      let(:schedule) { instance_double(Billing::RateCards::Schedule, obligation_for_operation: nil) }
 
       before do
         allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_return(double(schedule:))

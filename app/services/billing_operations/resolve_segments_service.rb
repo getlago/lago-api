@@ -24,7 +24,7 @@ module BillingOperations
 
       schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: operation.contract_rate_card).schedule
       result.schedule = schedule
-      obligation = schedule.resolve_obligation(
+      obligation = schedule.obligation_for_operation(
         cycle_started_at: operation.target_cycle_started_at,
         billing_at: operation.billing_at,
         after: previous_billing_at
@@ -54,9 +54,10 @@ module BillingOperations
     end
 
     def build_billing_segment(obligation:, segment:)
-      billing_segment = BillingSegments::BuildEventSegmentService.call!(
+      billing_segment = BillingSegments::BuildService.call!(
         contract_rate_card: operation.contract_rate_card, obligation:, segment:, pricing_units_by_code:
       ).billing_segment
+      # TODO: Remove BillingSegment#billing_at; make Obligation#billing_at the single source of truth.
       billing_segment.billing_at = operation.billing_at
       billing_segment
     end

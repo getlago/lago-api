@@ -19,12 +19,12 @@ module Billing
         return unless cycle && (cycle.started_at...cycle.ended_at).cover?(timestamp)
 
         obligations_for(cycle).find do |obligation|
-          obligation.segments.any? { (it.started_at...it.ended_at).cover?(timestamp) }
+          obligation.segments.any? { |segment| (segment.started_at...segment.ended_at).cover?(timestamp) }
         end
       end
 
       # Delayed operations can own several natural obligations, but never another cycle.
-      def resolve_obligation(cycle_started_at:, billing_at:, after: nil)
+      def obligation_for_operation(cycle_started_at:, billing_at:, after: nil)
         cycle = walker.resume(cycle_started_at)
         return unless cycle&.started_at == cycle_started_at
 
@@ -33,11 +33,11 @@ module Billing
           .flat_map(&:segments)
         return if segments.empty?
 
-        Obligation.new(cycle:, segments:, billing_at:)
+        Obligation.new(cycle:, segments:, billing_at:, terms:)
       end
 
       # `from` names the target cycle when billing belongs to an earlier cycle than its instant.
-      # A block maps an obligation to its adjusted billing instant.
+      # A block affects selection only; the returned obligation keeps its original billing_at.
       def next_obligation(from:, after: nil)
         obligations(from:).find do |obligation|
           if after.nil?
@@ -70,7 +70,7 @@ module Billing
 
         groups = terms.cycle_scope? ? [priced] : priced.zip
         groups.map do |group|
-          Obligation.new(cycle:, segments: group, billing_at: terms.obligation_billing_at_for(cycle:, segments: group))
+          Obligation.new(cycle:, segments: group, billing_at: terms.obligation_billing_at_for(cycle:, segments: group), terms:)
         end
       end
     end

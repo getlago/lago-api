@@ -138,7 +138,7 @@ module Contracts
     def rate_card_usage(card, obligation)
       current_index = obligation.segments.index { (it.started_at...it.ended_at).cover?(timestamp) }
       billing_segments = obligation.segments.map do |segment|
-        BillingSegments::BuildEventSegmentService.call!(
+        BillingSegments::BuildService.call!(
           contract_rate_card: card, obligation:, segment:, pricing_units_by_code: @pricing_units_by_code
         ).billing_segment
       end
