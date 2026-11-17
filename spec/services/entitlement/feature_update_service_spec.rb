@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe Entitlement::FeatureUpdateService do
   subject { described_class.call(feature:, params:, partial:) }
 
-  let_it_be(:organization) { create(:organization) }
+  # A let, not let_it_be: before_all makes every thread share one connection, which the concurrency example cannot use.
+  let(:organization) { create(:organization) }
   let(:feature) { create(:feature, organization:) }
   let(:privilege1) { create(:privilege, feature:, code: "max", name: "Maximum") }
   let(:privilege2) { create(:privilege, feature:, code: "min", name: "Minimum") }
@@ -572,6 +573,47 @@ RSpec.describe Entitlement::FeatureUpdateService do
           expect(feature.reload.name).to eq("Renamed")
           expect(privilege1.reload.name).to eq("Max.")
           expect(feature.privileges.count).to eq(51)
+        end
+      end
+
+      context "when two updates add the 50th privilege at the same time", transaction: false do
+        before { create_list(:privilege, 46, feature:, organization:) }
+
+        it "applies only one of them" do
+          paused = Queue.new
+          resume = Queue.new
+          first_call = Queue.new
+          first_call << true
+
+          # The first update waits after its count, while holding the feature lock.
+          allow_any_instance_of(described_class).to receive(:check_privileges_limit!).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+            original.call(*args)
+
+            if first_call.pop(timeout: 0)
+              paused << true
+              resume.pop
+            end
+          end
+
+          add_privilege = lambda do |code|
+            Thread.new do
+              ActiveRecord::Base.connection_pool.with_connection do
+                described_class.call(feature: Entitlement::Feature.find(feature.id), params: {privileges: [{code:}]}, partial: true)
+              end
+            end
+          end
+
+          first = add_privilege.call("first")
+          paused.pop
+          second = add_privilege.call("second")
+          sleep 0.5
+          resume << true
+
+          results = [first.value, second.value]
+
+          expect(results.count(&:success?)).to eq(1)
+          expect(results.reject(&:success?).map { |r| r.error.messages }).to eq([{base: ["too_many_privileges"]}])
+          expect(feature.privileges.count).to eq(50)
         end
       end
 
