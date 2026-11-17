@@ -162,6 +162,19 @@ RSpec.describe Entitlement::FeatureCreateService do
       end
     end
 
+    context "when two privilege codes are equal once stripped" do
+      let(:params) { {code: "seats", privileges: [{code: "max"}, {code: " max "}]} }
+
+      it "returns a validation failure and creates nothing" do
+        result = subject
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:"privilege.code"]).to eq ["value_is_duplicated"]
+        expect(Entitlement::Feature.count).to eq(0)
+        expect(Entitlement::Privilege.count).to eq(0)
+      end
+    end
+
     context "with 50 privileges" do
       let(:params) { {code: "seats", privileges: Array.new(50) { |i| {code: "privilege_#{i}"} }} }
 
