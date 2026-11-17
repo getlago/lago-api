@@ -34,10 +34,11 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
     context "with the entitlement_events flag" do
       before { organization.enable_feature_flag!(:entitlement_events) }
 
-      it "writes one plan_entitlement.created activity log and no plan.updated event" do
-        expect { request }.not_to have_enqueued_job(SendWebhookJob)
+      it "writes one plan_entitlement.created activity log and webhook, and no plan.updated event" do
+        expect { request }.to have_enqueued_job(SendWebhookJob).exactly(:once)
 
         entitlement = catalog_plan.entitlements.sole
+        expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", entitlement)
         expect(Utils::ActivityLog).to have_received(:produce).with(
           entitlement, "plan_entitlement.created", after_commit: true,
           changes: {"values" => [nil, [{privilege_code: "max", value: 50}]]},
@@ -46,11 +47,11 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
         expect(Utils::ActivityLog).to have_received(:produce).once
       end
 
-      it "writes no activity log when the same call runs again" do
+      it "writes no activity log and sends no webhook when the same call runs again" do
         post_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements", request_params)
         expect(Utils::ActivityLog).to have_received(:produce).once
 
-        request
+        expect { request }.not_to have_enqueued_job(SendWebhookJob)
 
         expect(response).to have_http_status(:success)
         expect(Utils::ActivityLog).to have_received(:produce).once
