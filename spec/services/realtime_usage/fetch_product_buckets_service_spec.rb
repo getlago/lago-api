@@ -56,12 +56,12 @@ RSpec.describe RealtimeUsage::FetchProductBucketsService, clickhouse: {clean_bef
       expect(totals.events_count).to eq(3)
     end
 
-    it "keeps the rows of its own version and drops those tagged for another one" do
-      create_bucket(bucket: started_at, units: "10.0", events_count: 2)
-      create_bucket(bucket: started_at + 1.hour, units: "3.0", events_count: 1, card_effective_date: "2027-02-01")
-      create_bucket(bucket: started_at + 1.hour, units: "7.0", events_count: 1, card_effective_date: "2027-01-01")
+    it "bills only the rows matching no filter on a card without one" do
+      product_filter = create(:product_filter, :with_values, organization:, product:)
+      create_bucket(bucket: started_at, units: "10.0")
+      create_bucket(bucket: started_at, units: "3.0", product_filters: [product_filter])
 
-      expect(totals_for(contract_rate_card).value).to eq(BigDecimal("13.0")) # untagged 10.0 + own version 3.0
+      expect(totals_for(contract_rate_card).value).to eq(BigDecimal("10.0"))
     end
 
     it "ignores the buckets of other contracts and the ones the sink deleted" do
@@ -80,21 +80,59 @@ RSpec.describe RealtimeUsage::FetchProductBucketsService, clickhouse: {clean_bef
       expect(totals_for(contract_rate_card).value).to eq(BigDecimal("12.0"))
     end
 
-    context "with a card scoped to a product filter" do
-      let(:product_filter) { create(:product_filter, organization:, product:) }
-      let(:filtered_rate_card) { create(:rate_card, organization:, product:, product_filter:, currency: "EUR") }
-      let(:filtered_contract_rate_card) do
-        create(:contract_rate_card, organization:, contract:, rate_card: filtered_rate_card, effective_date:,
-          billing_anchor_date: effective_date)
+    context "with overlapping product filters" do
+      # An event in the EU on the free tier matches both filters. Without prices, region = eu
+      # wins: one value against tier's two.
+      let(:region_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:tier_filter) { create(:billable_metric_filter, billable_metric:, key: "tier", values: %w[free premium]) }
+      let(:eu_filter) { filter_on(region_filter, "eu") }
+      let(:any_tier_filter) { filter_on(tier_filter, nil) }
+      let(:eu_card) { filtered_card(eu_filter, eu_effective_date) }
+      let(:any_tier_card) { filtered_card(any_tier_filter, effective_date) }
+      let(:eu_effective_date) { effective_date }
+      let(:billing_segments) { [segment_for(eu_card), segment_for(any_tier_card)] }
+
+      def filter_on(metric_filter, value)
+        create(:product_filter, organization:, product:).tap do |filter|
+          create(:product_filter_value, organization:, product_filter: filter, billable_metric_filter: metric_filter, value:)
+        end
       end
-      let(:billing_segments) { [billing_segment, segment_for(filtered_contract_rate_card)] }
 
-      it "reads each card on its own product filter" do
-        create_bucket(bucket: started_at, units: "10.0")
-        create_bucket(bucket: started_at, units: "3.0", product_filter_id: product_filter.id)
+      def filtered_card(product_filter, card_effective_date)
+        filtered_rate_card = create(:rate_card, organization:, product:, product_filter:, currency: "EUR")
+        create(:contract_rate_card, organization:, contract:, rate_card: filtered_rate_card,
+          effective_date: card_effective_date, billing_anchor_date: card_effective_date)
+      end
 
-        expect(totals_for(contract_rate_card).value).to eq(BigDecimal("10.0"))
-        expect(totals_for(filtered_contract_rate_card, product_filter_id: product_filter.id).value).to eq(BigDecimal("3.0"))
+      before do
+        create_bucket(bucket: started_at, units: "10.0", product_filters: [eu_filter, any_tier_filter])
+        create_bucket(bucket: started_at, units: "3.0", product_filters: [any_tier_filter])
+      end
+
+      it "bills the rows matching both on the filter Rails picks for the segment" do
+        expect(totals_for(eu_card, product_filter_id: eu_filter.id).value).to eq(BigDecimal("10.0"))
+        expect(totals_for(any_tier_card, product_filter_id: any_tier_filter.id).value).to eq(BigDecimal("3.0"))
+      end
+
+      context "when the better filter's card starts after the segment" do
+        let(:eu_effective_date) { Date.new(2027, 3, 1) }
+        let(:billing_segments) { [segment_for(any_tier_card)] }
+
+        it "bills them on the filter the segment prices" do
+          # Only tier = any is priced in February (BillingSegment#priced_product_filter_ids).
+          expect(totals_for(any_tier_card, product_filter_id: any_tier_filter.id).value).to eq(BigDecimal("13.0")) # 10.0 + 3.0
+        end
+      end
+
+      context "when the segment prices neither filter" do
+        # A card started before the segment is not priced in it (BillingSegment#priced_product_filter_ids).
+        let(:eu_effective_date) { Date.new(2027, 1, 1) }
+        let(:any_tier_card) { filtered_card(any_tier_filter, Date.new(2027, 1, 1)) }
+
+        it "bills them on the filter the usual precedence picks" do
+          expect(totals_for(eu_card, product_filter_id: eu_filter.id).value).to eq(BigDecimal("10.0"))
+          expect(totals_for(any_tier_card, product_filter_id: any_tier_filter.id).value).to eq(BigDecimal("3.0"))
+        end
       end
     end
 
@@ -106,10 +144,34 @@ RSpec.describe RealtimeUsage::FetchProductBucketsService, clickhouse: {clean_bef
       end
       let(:billing_segments) { [billing_segment, segment_for(other_contract_rate_card)] }
 
-      it "reads neither, as their rows cannot be told apart" do
+      it "reads the rows for each, as each segment reads its own events" do
         create_bucket(bucket: started_at)
 
-        expect(fetch.usage_buckets).to be_nil
+        expect(totals_for(contract_rate_card).value).to eq(BigDecimal("10.0"))
+        expect(totals_for(other_contract_rate_card).value).to eq(BigDecimal("10.0"))
+      end
+    end
+
+    context "with segments of one product on different windows" do
+      let(:other_rate_card) { create(:rate_card, organization:, product:, currency: "EUR") }
+      let(:other_contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card, effective_date:,
+          billing_anchor_date: Date.new(2027, 2, 15))
+      end
+      let(:other_segment) do
+        build(:billing_segment, organization:, customer:, contract:, contract_rate_card: other_contract_rate_card,
+          rate_properties:, cycle_started_at: Time.zone.parse("2027-02-15"), started_at: Time.zone.parse("2027-02-15"),
+          ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-03-15")))
+      end
+      let(:billing_segments) { [billing_segment, other_segment] }
+
+      it "sums each segment over its own window" do
+        create_bucket(bucket: started_at, units: "1.0")
+        create_bucket(bucket: Time.zone.parse("2027-02-20"), units: "2.0")
+        create_bucket(bucket: Time.zone.parse("2027-03-10"), units: "4.0")
+
+        expect(totals_for(contract_rate_card).value).to eq(BigDecimal("3.0")) # 1.0 + 2.0
+        expect(totals_for(other_contract_rate_card).value).to eq(BigDecimal("6.0")) # 2.0 + 4.0
       end
     end
 
@@ -129,16 +191,24 @@ RSpec.describe RealtimeUsage::FetchProductBucketsService, clickhouse: {clean_bef
       it "returns one result per group, regrouped on the segment's keys" do
         create_bucket(bucket: started_at, units: "10.0", events_count: 2, grouped_by: {"region" => "eu"}.to_json)
         create_bucket(bucket: started_at, units: "1.0", events_count: 1, grouped_by: {"region" => ""}.to_json)
-        create_bucket(bucket: started_at + 15.minutes, units: "4.0", events_count: 1, grouped_by: "{}")
+        create_bucket(bucket: started_at + 15.minutes, units: "4.0", events_count: 1, grouped_by: {"region" => "", "model" => "a"}.to_json)
 
         grouped = fetch.usage_buckets.grouped_aggregation_results_for(charge_id: contract_rate_card.id, charge_filter_id: "")
 
         expect(grouped.map { [it.groups, it.value, it.events_count] }).to match_array(
           [
             [{"region" => "eu"}, BigDecimal("10.0"), 2],
-            [{"region" => nil}, BigDecimal("5.0"), 2] # the empty value (1.0) and the row written without the key (4.0)
+            [{"region" => nil}, BigDecimal("5.0"), 2] # the empty value (1.0) and the row grouped by another key too (4.0)
           ]
         )
+      end
+
+      it "reads nothing when a row was written without one of the segment's keys" do
+        create_bucket(bucket: started_at, units: "10.0", events_count: 2, grouped_by: {"region" => "eu"}.to_json)
+        create_bucket(bucket: started_at + 15.minutes, units: "4.0", events_count: 1, grouped_by: "{}")
+
+        expect(fetch).to be_success
+        expect(fetch.usage_buckets).to be_nil
       end
     end
 

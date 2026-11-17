@@ -6,8 +6,7 @@ CREATE TABLE default.product_usage_buckets_15m
     `customer_id` String,
     `code` String,
     `product_id` String,
-    `product_filter_id` String,
-    `card_effective_date` String,
+    `matched_filter_ids` String,
     `grouped_by` String,
     `aggregation_type` String,
     `events_count` Int64,
@@ -20,5 +19,5 @@ CREATE TABLE default.product_usage_buckets_15m
 )
 ENGINE = SharedReplacingMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}', ver, is_deleted)
 PARTITION BY toYYYYMM(bucket)
-ORDER BY (organization_id, contract_id, product_id, product_filter_id, card_effective_date, grouped_by, bucket)
+ORDER BY (organization_id, contract_id, product_id, matched_filter_ids, grouped_by, bucket)
 SETTINGS index_granularity = 8192

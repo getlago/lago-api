@@ -2,12 +2,11 @@
 
 class CreateProductUsageBuckets15m < ActiveRecord::Migration[8.0]
   # usage_buckets_15m for contracts, written by RisingWave from the product events. Keyed by
-  # contract, product and product filter rather than subscription and charge.
+  # contract and product rather than subscription and charge.
   #
-  # card_effective_date is empty unless the event falls in the day around a change of card
-  # version: the pipeline does not know the customer timezone, so it counts such an event once
-  # per version that may apply, tagged with the version's effective date, and the reader keeps
-  # the one of the billing segment it prices.
+  # matched_filter_ids holds every product filter the events match (sorted ids joined by ",",
+  # empty for none) rather than the one billing them: a segment ranks the filters it prices
+  # first, which the pipeline cannot know, so the reader picks the filter per segment.
   def up
     safety_assured do
       execute <<~SQL
@@ -18,8 +17,7 @@ class CreateProductUsageBuckets15m < ActiveRecord::Migration[8.0]
             customer_id String,
             code String,
             product_id String,
-            product_filter_id String,
-            card_effective_date String,
+            matched_filter_ids String,
             grouped_by String,
             aggregation_type String,
             events_count Int64,
@@ -31,7 +29,7 @@ class CreateProductUsageBuckets15m < ActiveRecord::Migration[8.0]
             ver DateTime64(3) MATERIALIZED now64(3)
         ) ENGINE = ReplacingMergeTree(ver, is_deleted)
         PARTITION BY toYYYYMM(bucket)
-        ORDER BY (organization_id, contract_id, product_id, product_filter_id, card_effective_date, grouped_by, bucket)
+        ORDER BY (organization_id, contract_id, product_id, matched_filter_ids, grouped_by, bucket)
       SQL
     end
   end

@@ -6,7 +6,7 @@ FactoryBot.define do
       contract { create(:contract) }
       organization { contract.organization }
       product { create(:product, :metered, organization:) }
-      product_filter { nil }
+      product_filters { [] }
     end
 
     organization_id { organization.id }
@@ -14,8 +14,7 @@ FactoryBot.define do
     customer_id { contract.customer_id }
     code { product.billable_metric.code }
     product_id { product.id }
-    product_filter_id { product_filter&.id || "" }
-    card_effective_date { "" }
+    matched_filter_ids { product_filters.map(&:id).sort.join(",") }
     grouped_by { "{}" }
     aggregation_type { "count" }
     bucket { Time.current.beginning_of_hour }
