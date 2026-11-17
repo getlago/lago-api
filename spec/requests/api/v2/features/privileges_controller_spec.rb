@@ -1105,20 +1105,223 @@ RSpec.describe Api::V2::Features::PrivilegesController do
     end
   end
 
-  describe "DELETE /api/v2/features/:feature_code/privileges/:code", v2_timestamps: false do
-    subject(:request) { delete_with_token(organization, "/api/v2/features/seats/privileges/max") }
+  describe "DELETE /api/v2/features/:feature_code/privileges/:code" do
+    subject(:request) { delete_with_token(organization, "/api/v2/features/#{feature_code}/privileges/#{privilege_code}") }
 
-    let(:feature) { create(:feature, organization:, code: "seats") }
-    let(:privilege) { create(:privilege, feature:, organization:, code: "max") }
+    let(:feature_code) { "seats" }
+    let(:privilege_code) { "max_admins" }
+    let(:feature) { create(:feature, organization:, code: "seats", name: "Seats") }
+    let(:privilege) do
+      create(:privilege, feature:, organization:, code: "max_admins", name: "Maximum admins", value_type: "integer",
+        created_at: Time.zone.parse("2026-11-14T10:00:00.123456Z"), updated_at: Time.zone.parse("2026-11-14T11:00:00.654321Z"))
+    end
 
     before { privilege }
 
-    it "still reaches the v1 controller and discards the privilege" do
-      request
+    include_examples "requires API permission", "feature", "write"
+
+    shared_examples "a refused delete" do |status|
+      it "discards nothing and sends no webhook" do
+        expect { request }
+          .to not_have_enqueued_job(SendWebhookJob)
+          .and not_change { privilege.reload.deleted_at }
+
+        expect(response).to have_http_status(status)
+        expect(feature.reload).not_to be_discarded
+      end
+    end
+
+    it "discards the privilege and renders it with the v2 body" do
+      travel_to(Time.zone.parse("2026-11-16T10:00:00.123456Z"), with_usec: true) { request }
 
       expect(response).to have_http_status(:success)
-      expect(json[:feature]).to include(code: "seats", privileges: [])
+      expect(json).to eq(
+        privilege: {
+          lago_id: privilege.id,
+          feature_code: "seats",
+          code: "max_admins",
+          name: "Maximum admins",
+          value_type: "integer",
+          select_options: nil,
+          created_at: "2026-11-14T10:00:00.123456Z",
+          updated_at: "2026-11-16T10:00:00.123456Z",
+          deleted_at: "2026-11-16T10:00:00.123456Z"
+        }
+      )
       expect(privilege.reload).to be_discarded
+      expect(feature.reload).not_to be_discarded
+    end
+
+    it "sends feature.updated once" do
+      expect { request }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature) # exactly once by default
+
+      expect(response).to have_http_status(:success)
+    end
+
+    it "answers the v2 not found error on a later show and a second delete" do
+      request
+      expect(response).to have_http_status(:success)
+
+      get_with_token(organization, "/api/v2/features/seats/privileges/max_admins")
+      expect(response).to be_v2_not_found_error("privilege")
+
+      delete_with_token(organization, "/api/v2/features/seats/privileges/max_admins")
+      expect(response).to be_v2_not_found_error("privilege")
+    end
+
+    context "when plans and subscriptions grant values of the privilege" do
+      let(:plan) { create(:plan, organization:) }
+      let(:plan_entitlement) { create(:entitlement, feature:, organization:, plan:) }
+      let(:subscription_entitlement) do
+        create(:entitlement, :subscription, feature:, organization:, subscription: create(:subscription, organization:))
+      end
+      let(:other_privilege) { create(:privilege, feature:, organization:, code: "max", value_type: "integer") }
+      let(:plan_value) { create(:entitlement_value, entitlement: plan_entitlement, privilege:, organization:, value: "10") }
+      let(:subscription_value) do
+        create(:entitlement_value, entitlement: subscription_entitlement, privilege:, organization:, value: "20")
+      end
+      let(:other_value) { create(:entitlement_value, entitlement: plan_entitlement, privilege: other_privilege, organization:, value: "5") }
+
+      before do
+        plan_value
+        subscription_value
+        other_value
+      end
+
+      it "discards the values of the privilege only" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(plan_value.reload).to be_discarded
+        expect(subscription_value.reload).to be_discarded
+        expect(other_value.reload).not_to be_discarded
+        expect(other_privilege.reload).not_to be_discarded
+        expect(plan_entitlement.reload).not_to be_discarded
+      end
+
+      it "sends feature.updated once and plan.updated for the plan" do
+        expect { request }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature) # exactly once by default
+
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", plan).once
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
+      end
+    end
+
+    context "when the feature does not exist" do
+      let(:feature_code) { "unknown" }
+
+      include_examples "a refused delete", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature is discarded" do
+      let(:feature) { create(:feature, organization:, code: "seats", deleted_at: Time.current) }
+
+      it "returns the v2 not found error and leaves the privilege kept" do
+        expect { request }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(response).to be_v2_not_found_error("feature")
+        expect(privilege.reload).not_to be_discarded
+      end
+    end
+
+    context "when the feature belongs to another organization" do
+      let(:feature) { create(:feature, organization: create(:organization), code: "seats") }
+      let(:privilege) { create(:privilege, feature:, organization: feature.organization, code: "max_admins") }
+
+      include_examples "a refused delete", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the privilege does not exist" do
+      let(:privilege_code) { "unknown" }
+
+      include_examples "a refused delete", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "when the privilege is discarded" do
+      let(:privilege) { create(:privilege, feature:, organization:, code: "max_admins", deleted_at: Time.current) }
+
+      include_examples "a refused delete", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "when the privilege belongs to another feature" do
+      let(:privilege) do
+        create(:privilege, organization:, code: "max_admins", feature: create(:feature, organization:, code: "storage"))
+      end
+
+      before { feature }
+
+      include_examples "a refused delete", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "when the destroy service fails" do
+      before do
+        allow(Entitlement::PrivilegeDestroyService).to receive(:call)
+          .and_return(Entitlement::PrivilegeDestroyService::Result.new.not_found_failure!(resource: "privilege"))
+      end
+
+      it "renders the failure with the v2 error body" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+        expect(privilege.reload).not_to be_discarded
+      end
+    end
+
+    context "without product catalog", product_catalog: false do
+      include_examples "a refused delete", :forbidden
+
+      it "returns feature_unavailable" do
+        request
+
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
+    context "when the feature and privilege codes contain a slash" do
+      let(:feature) { create(:feature, organization:, code: "sso/eu") }
+      let(:feature_code) { "sso/eu" }
+      let(:privilege) { create(:privilege, feature:, organization:, code: "a/b") }
+      let(:privilege_code) { "a/b" }
+
+      before { create(:privilege, organization:, code: "a/b", feature: create(:feature, organization:, code: "sso")) }
+
+      it "discards the privilege of that feature" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(lago_id: privilege.id, feature_code: "sso/eu", code: "a/b")
+        expect(privilege.reload).to be_discarded
+      end
     end
   end
 end
