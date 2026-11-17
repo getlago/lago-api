@@ -325,14 +325,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
     context "with more entitlements or values than a catalog plan holds" do
       let(:feature_count) { 0 }
       let(:value_count) { 1 }
-      # Inserted in bulk: hundreds of factory calls would make these examples slow.
-      # rubocop:disable Rails/SkipsModelValidations
-      let(:feature_codes) do
-        now = Time.current
-        rows = Array.new(feature_count) { {organization_id: organization.id, code: "bulk_#{it}", created_at: now, updated_at: now} }
-        rows.empty? ? [] : Entitlement::Feature.insert_all!(rows, returning: :code).rows.flatten
-      end
-      # rubocop:enable Rails/SkipsModelValidations
+      let(:feature_codes) { bulk_create_features(organization, feature_count).keys }
       # max and 50 more integer privileges: 51 privileges on seats.
       let(:seats_privileges) { [privilege, *create_list(:privilege, 50, organization:, feature:, value_type: "integer")] }
       let(:request_params) do
@@ -363,23 +356,23 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
         end
       end
 
-      context "with 500 entitlements" do
-        let(:feature_count) { 499 }
+      context "with 200 entitlements" do
+        let(:feature_count) { 199 }
 
         it "accepts them" do
           request
 
           expect(response).to have_http_status(:success)
-          expect(json[:entitlements].size).to eq(500) # 499 bulk features + seats, sso dropped
-          expect(catalog_plan.entitlements.count).to eq(500)
+          expect(json[:entitlements].size).to eq(200) # 199 bulk features + seats, sso dropped
+          expect(catalog_plan.entitlements.count).to eq(200)
         end
       end
 
-      context "with 501 entitlements" do
-        let(:feature_count) { 500 }
+      context "with 201 entitlements" do
+        let(:feature_count) { 200 }
 
         include_examples "a refused write",
-          [{code: "too_many_entitlements", field: "base", meta: {max_items: 500}}]
+          [{code: "too_many_entitlements", field: "base", meta: {max_items: 200}}]
       end
 
       context "with 50 values on an entitlement" do
@@ -401,14 +394,12 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
       end
 
       context "with both limits crossed" do
-        let(:feature_count) { 500 }
+        let(:feature_count) { 200 }
         let(:value_count) { 51 }
 
+        # The oversized replace is refused before the values are written.
         include_examples "a refused write",
-          [
-            {code: "too_many_entitlements", field: "base", meta: {max_items: 500}},
-            {code: "too_many_values", field: "entitlements.seats", meta: {max_items: 50}}
-          ]
+          [{code: "too_many_entitlements", field: "base", meta: {max_items: 200}}]
       end
     end
 
