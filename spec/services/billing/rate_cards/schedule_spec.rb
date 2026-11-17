@@ -930,13 +930,18 @@ RSpec.describe Billing::RateCards::Schedule do
     let(:due_on_coverage_end) { true }
     let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
 
-    it "keeps billing at the start and falls due at the end of each slice" do
+    it "stores the end of each slice as its periodic billing instant" do
       due = schedule.segments_due_in_cycle(Time.utc(2022, 2, 1), by: Time.utc(2022, 3, 1))
 
-      expect(due.map { [it.billing_at, it.due_at] }).to eq([
-        [Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)],
-        [Time.utc(2022, 2, 15), Time.utc(2022, 3, 1)]
-      ])
+      expect(due.map(&:billing_at)).to eq([Time.utc(2022, 2, 15), Time.utc(2022, 3, 1)])
+    end
+
+    it "keeps terms-based queries at the start of each slice" do
+      expect(schedule.segments_due_by(Time.utc(2022, 2, 15)).map(&:started_at))
+        .to eq([starts_at, Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)])
+      expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 10), target: "current")).to eq(Time.utc(2022, 2, 1))
+      expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 10), target: "next")).to eq(Time.utc(2022, 2, 15))
+      expect(schedule.billing_at(timestamp: Time.utc(2022, 2, 15), target: "next")).to eq(Time.utc(2022, 3, 1))
     end
 
     it "keeps the slice closing exactly at a cut as the first obligation" do
@@ -950,7 +955,7 @@ RSpec.describe Billing::RateCards::Schedule do
     end
 
     it "lets the caller move a due instant" do
-      moved = schedule.next_obligation(after: Time.utc(2022, 2, 15), from: Time.utc(2022, 2, 1)) { it.due_at + 1.day }
+      moved = schedule.next_obligation(after: Time.utc(2022, 2, 15), from: Time.utc(2022, 2, 1)) { it.billing_at + 1.day }
 
       expect(moved.started_at).to eq(Time.utc(2022, 2, 1))
     end

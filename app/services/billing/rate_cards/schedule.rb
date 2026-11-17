@@ -25,14 +25,14 @@ module Billing
         @walker = CycleWalker.new(rates:, phases:, starts_at:, anchor_date:, timezone:, ends_at:)
       end
 
-      # Every slice from the card's start that the terms bill by the instant. It reads
-      # `billing_at`, not `due_at`: it lists what is billed, not what an operation picks up.
+      # Every slice from the card's start that the terms bill by the instant, independently
+      # of when a periodic operation picks it up.
       # A rate change can make a slice billable before its cycle ends.
       def segments_due_by(timestamp)
         cycles = walker.walk_to(timestamp, from: resume_at)
 
         billable_segments_of(cycles).select do |segment|
-          segment.billing_at <= timestamp
+          terms.billing_at_for(segment) <= timestamp
         end
       end
 
@@ -65,7 +65,7 @@ module Billing
 
         if target == BILLING_TARGETS.fetch(:current)
           segment = segment_covering(timestamp)
-          segment&.billing_at || find_billing_after(timestamp)
+          (terms.billing_at_for(segment) if segment) || find_billing_after(timestamp)
         else
           find_billing_after(timestamp)
         end
@@ -76,7 +76,7 @@ module Billing
       # Only the cycle containing the instant is searched backwards: a slice of an earlier
       # cycle that closed on the instant is not returned.
       def first_obligation(at:)
-        segments(from: at).find { it.ended_at > at || it.due_at == at }
+        segments(from: at).find { it.ended_at > at || it.billing_at == at }
       end
 
       # The first slice falling due strictly after a completed billing instant, so a slice
@@ -84,7 +84,7 @@ module Billing
       # walking from, for a billing that belongs to an earlier cycle than its instant.
       # A block maps a slice to its due instant when the caller moves it.
       def next_obligation(after:, from: after)
-        segments(from:).find { (block_given? ? yield(it) : it.due_at) > after }
+        segments(from:).find { (block_given? ? yield(it) : it.billing_at) > after }
       end
 
       # The slices of one cycle falling due after a completed billing and by the given instant:
@@ -92,7 +92,7 @@ module Billing
       def segments_due_in_cycle(cycle_started_at, by:, after: nil)
         segments(from: cycle_started_at)
           .take_while { it.cycle_started_at == cycle_started_at }
-          .select { (after.nil? || it.due_at > after) && it.due_at <= by }
+          .select { (after.nil? || it.billing_at > after) && it.billing_at <= by }
           .to_a
       end
 
@@ -127,7 +127,8 @@ module Billing
       attr_reader :rates, :terms, :due_on_coverage_end, :timezone, :resume_at, :walker
 
       def find_billing_after(timestamp)
-        segments(from: timestamp).find { it.billing_at > timestamp }&.billing_at
+        segment = segments(from: timestamp).find { terms.billing_at_for(it) > timestamp }
+        terms.billing_at_for(segment) if segment
       end
 
       # Every priced slice in billing order, from the cycle containing `from`. Lazy, because an
@@ -162,15 +163,12 @@ module Billing
           1.0
         end
 
-        billing_at = terms.billing_at_for(segment)
-
         BillableSegment.new(
           cycle_index: cycle.index,
           cycle_started_at: cycle.started_at,
           started_at: segment.started_at,
           ended_at: segment.ended_at,
-          billing_at:,
-          due_at: due_on_coverage_end ? segment.ended_at : billing_at,
+          billing_at: due_on_coverage_end ? segment.ended_at : terms.billing_at_for(segment),
           rate: segment.rate,
           rate_override: cycle.phase.rate_override,
           proration_ratio:,

@@ -110,6 +110,11 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
     expect(timeline.fetch(:active_period).fetch(:fee)).to have_attributes(
       amount_cents: 4_000, units: 40, pay_in_advance: true, payment_status: "succeeded", invoice_id: nil
     )
+    expect(Time.iso8601(timeline.fetch(:active_period).fetch(:fee).properties.fetch("timestamp"))).to eq(period_started_at)
+    expect(timeline.fetch(:active_period).fetch(:fee).properties).to include(
+      "charges_from_datetime" => period_started_at.iso8601(6),
+      "charges_to_datetime" => BillingSegment.inclusive_end(period_ended_at).iso8601(6)
+    )
     expect(timeline.fetch(:active_period).fetch(:next_billing_at)).to eq(period_ended_at)
     expect(timeline.fetch(:active_period).fetch(:operations).sole).to have_attributes(
       id: timeline.fetch(:operation).id,
@@ -131,5 +136,6 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
     expect(invoice).to have_attributes(status: "finalized", total_amount_cents: 4_000)
     expect(invoice.created_at).to be > period_ended_at
     expect(Fee.find_by!(contract:, fee_type: :product).invoice_id).to eq(invoice.id)
+    expect(Fee.find_by!(contract:, fee_type: :product).properties).to eq(timeline.fetch(:active_period).fetch(:fee).properties)
   end
 end

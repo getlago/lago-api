@@ -7,8 +7,7 @@ module BillingOperations
       Result = BaseResult[:planned_operation]
 
       # `cycle_started_at` identifies the cycle the operation bills. `billing_at` is when the
-      # operation runs: the slice's `due_at`, not its terms' `billing_at`, which differ for
-      # cards that regroup paid advance fees (see Billing::BillableSegment).
+      # operation runs: the slice's periodic billing instant (see Billing::BillableSegment).
       PlannedOperation = Data.define(:cycle_started_at, :billing_at)
 
       # Two ways to plan, and exactly one must be given:
@@ -28,7 +27,7 @@ module BillingOperations
 
       def call
         segment = if after_operation
-          schedule.next_obligation(after: after_operation.billing_at, from: after_operation.target_cycle_started_at) { final_due_at(it) }
+          schedule.next_obligation(after: after_operation.billing_at, from: after_operation.target_cycle_started_at) { operation_billing_at(it) }
         else
           schedule.first_obligation(at:)
         end
@@ -36,7 +35,7 @@ module BillingOperations
         if segment
           result.planned_operation = PlannedOperation.new(
             cycle_started_at: segment.cycle_started_at,
-            billing_at: after_operation ? final_due_at(segment) : segment.due_at
+            billing_at: after_operation ? operation_billing_at(segment) : segment.billing_at
           )
         end
         result
@@ -48,13 +47,13 @@ module BillingOperations
 
       # Outstanding final coverage closes at termination. Coverage already billed at the
       # planned end must not become due again when termination happens later.
-      def final_due_at(segment)
+      def operation_billing_at(segment)
         contract = contract_rate_card.contract
 
-        if contract.terminated_at && segment.due_at == contract.billing_ends_at && segment.due_at > after_operation.billing_at
+        if contract.terminated_at && segment.billing_at == contract.billing_ends_at && segment.billing_at > after_operation.billing_at
           contract.terminated_at
         else
-          segment.due_at
+          segment.billing_at
         end
       end
     end

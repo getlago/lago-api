@@ -27,7 +27,10 @@ module BillingSegments
         cycle_started_at: billable_segment.cycle_started_at,
         started_at: billable_segment.started_at,
         ended_at: BillingSegment.inclusive_end(billable_segment.ended_at),
-        billing_at: billable_segment.billing_at,
+        billing_at: Billing::Terms.new(
+          timing: contract_rate_card.rate_card.billing_timing,
+          prorated: contract_rate_card.rate_card.proration?
+        ).billing_at_for(billable_segment),
         proration_ratio: billable_segment.proration_ratio
       )
       result
