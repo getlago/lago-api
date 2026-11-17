@@ -62,6 +62,12 @@ module Api
         ::CursorPagination::Cursor.reject_offset_params!(params, reason: "not_paginated")
       end
 
+      # For a list returned whole: a client paging until an empty page would send `page` forever,
+      # and the cursor parameters have no effect, so it refuses all of them.
+      def reject_pagination!
+        ::CursorPagination::Cursor.reject_pagination_params!(params, reason: "not_paginated")
+      end
+
       def missing_parameter_error(error)
         invalid_request_error(code: "missing_parameter", error_details: {error.param => {reason: "missing"}})
       end

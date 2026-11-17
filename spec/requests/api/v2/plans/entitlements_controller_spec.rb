@@ -241,6 +241,23 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
       end
     end
 
+    [
+      ["limit", "1"],
+      ["page", "1"],
+      ["after", "x"]
+    ].each do |name, value|
+      context "with the #{name} pagination parameter" do
+        let(:query) { "?#{name}=#{value}" }
+
+        it "returns a not_paginated error and writes nothing" do
+          expect { request }.not_to change(Entitlement::Entitlement, :count)
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: name, meta: {}}])
+        end
+      end
+    end
+
     context "when the service refuses an entry" do
       let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
       let(:value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: "10") }

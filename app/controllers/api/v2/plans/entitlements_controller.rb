@@ -8,6 +8,8 @@ module Api
       class EntitlementsController < Api::V2::BaseController
         serializable_with ::V1::Entitlement::PlanEntitlementSerializer, root: :entitlement, expand_on: []
 
+        # Before the lookup, like the cursor of the paginated lists.
+        before_action :reject_pagination!, only: :create
         before_action :find_catalog_plan
 
         def create
