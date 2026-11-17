@@ -796,7 +796,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
 
         before do
           allow(lago_client).to receive(:post_with_response)
-            .and_raise(::LagoHttpClient::HttpError.new(500, body, endpoint, response_headers: {}))
+            .and_raise(::LagoHttpClient::HttpError.new(501, body, endpoint, response_headers: {}))
         end
 
         it "puts invoice in failed status" do
@@ -830,6 +830,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         it "produces an activity log for invoice.ready_to_finalize" do
           pull_taxes_service.call
           expect(Utils::ActivityLog).to have_produced("invoice.ready_to_finalize").with(invoice)
+        end
+
+        context "when the provider answers with a 500" do
+          before do
+            allow(lago_client).to receive(:post_with_response)
+              .and_raise(::LagoHttpClient::HttpError.new(500, body, endpoint, response_headers: {}))
+          end
+
+          it "raises ServerError so the job can retry, without failing the invoice" do
+            expect { pull_taxes_service.call }.to raise_error(Integrations::Aggregator::ServerError)
+            expect(invoice.reload.tax_status).to eq("pending")
+          end
         end
       end
     end

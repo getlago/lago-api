@@ -2,8 +2,8 @@
 
 module Integrations
   module Aggregator
-    # NOTE: Raised on a 500, 503 or 504 answer only for callers that opt in, such as the wallet
-    #       refresh job. Not a LagoHttpClient::HttpError, so no generic rescue swallows it.
+    # NOTE: Raised on a 500, 503 or 504 answer of the draft tax request. Not a LagoHttpClient::HttpError,
+    #       so no generic rescue swallows it.
     class ServerError < StandardError
     end
   end

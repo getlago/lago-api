@@ -49,7 +49,7 @@ module Customers
       return if wallet_ids.nil? && !customer.awaiting_wallet_refresh?
       return if customer.error_details.tax_error.exists?
 
-      Customers::RefreshWalletsService.call!(customer:, raise_on_server_error: true)
+      Customers::RefreshWalletsService.call!(customer:)
     rescue BaseService::ValidationFailure => e
       tax_error = Array(e.messages[:tax_error])
 

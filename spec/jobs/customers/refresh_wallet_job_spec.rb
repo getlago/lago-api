@@ -47,7 +47,7 @@ RSpec.describe Customers::RefreshWalletJob do
     let(:wallet_ids) { nil }
 
     before do
-      allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, raise_on_server_error: true).and_return(result)
+      allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_return(result)
     end
 
     context "when customer is not awaiting wallet refresh" do
@@ -63,7 +63,7 @@ RSpec.describe Customers::RefreshWalletJob do
 
         it "still refreshes the whole customer" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, raise_on_server_error: true)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
     end
@@ -74,7 +74,7 @@ RSpec.describe Customers::RefreshWalletJob do
       context "when refresh customer's wallets succeeds" do
         it "calls the Customers::RefreshWalletsService service" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, raise_on_server_error: true)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
 
@@ -83,7 +83,7 @@ RSpec.describe Customers::RefreshWalletJob do
 
         it "refreshes the whole customer" do
           subject
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:, raise_on_server_error: true)
+          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
         end
       end
 
@@ -118,7 +118,7 @@ RSpec.describe Customers::RefreshWalletJob do
         ].each do |error_class|
           context "when the error is #{error_class.name.demodulize.underscore.humanize.downcase}" do
             before do
-              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, raise_on_server_error: true).and_raise(error_class)
+              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error_class)
             end
 
             it "raises the error and retries the job" do
@@ -150,7 +150,7 @@ RSpec.describe Customers::RefreshWalletJob do
         end
 
         before do
-          allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, raise_on_server_error: true).and_raise(error)
+          allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error)
         end
 
         it "retries a bounded number of times then gives up without raising" do
@@ -196,7 +196,7 @@ RSpec.describe Customers::RefreshWalletJob do
             end
 
             before do
-              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, raise_on_server_error: true).and_raise(error)
+              allow(Customers::RefreshWalletsService).to receive(:call).with(customer:).and_raise(error)
             end
 
             it "retries the job, then raises the error and keeps the customer flagged" do
@@ -226,7 +226,7 @@ RSpec.describe Customers::RefreshWalletJob do
           let(:wallet) { create(:wallet, :terminated, customer:) }
 
           before do
-            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:, raise_on_server_error: true)
+            allow(Customers::RefreshWalletsService).to receive(:call).with(customer:)
               .and_raise(Integrations::Aggregator::ServerError)
           end
 

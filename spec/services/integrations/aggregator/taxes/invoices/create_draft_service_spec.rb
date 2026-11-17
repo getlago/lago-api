@@ -400,7 +400,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       end
 
       context "when it is a script error" do
-        let(:response_status) { Faker::Number.between(from: 500, to: 599) }
+        let(:response_status) { 501 }
         let(:body) do
           path = Rails.root.join("spec/fixtures/integration_aggregator/error_script_response.json")
           File.read(path)
@@ -417,7 +417,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       end
 
       context "when it is another server error" do
-        let(:response_status) { Faker::Number.between(from: 500, to: 599) }
+        let(:response_status) { 501 }
 
         it "returns an error" do
           result = service_call
@@ -465,91 +465,41 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
         end
       end
 
-      context "with raise_on_server_error: true" do
-        subject(:service_call) { described_class.call(invoice:, raise_on_server_error: true) }
+      context "when the error code is 500 with a server_error body" do
+        let(:response_status) { 500 }
+        let(:body) { {error: {code: "server_error"}}.to_json }
 
-        context "when the error code is 500 with a server_error body" do
-          let(:response_status) { 500 }
-          let(:body) { {error: {code: "server_error"}}.to_json }
-
-          it "raises ServerError" do
-            expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A500: /)
-          end
-        end
-
-        context "when the error code is 503 with an empty body" do
-          let(:response_status) { 503 }
-          let(:body) { "" }
-
-          it "raises ServerError" do
-            expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A503: /)
-          end
-        end
-
-        context "when the error code is 504" do
-          let(:response_status) { 504 }
-
-          it "raises ServerError" do
-            expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A504: /)
-          end
-        end
-
-        context "when the error code is 502" do
-          let(:response_status) { 502 }
-          let(:body) { "" }
-
-          it "raises BadGatewayError" do
-            expect { service_call }.to raise_error(Integrations::Aggregator::BadGatewayError)
-          end
-        end
-
-        context "when the error code is 500 with a task expired body" do
-          let(:response_status) { 500 }
-          let(:body) { {error: {code: "action_script_failure", message: "Task abc12345-1234-1234-1234-abc123456789 expired"}}.to_json }
-
-          it "raises TaskExpiredError" do
-            expect { service_call }.to raise_error(Integrations::Aggregator::TaskExpiredError)
-          end
-        end
-
-        context "when the error code is another 5xx" do
-          let(:response_status) { 501 }
-
-          it "returns a service failure" do
-            result = service_call
-
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("action_script_runtime_error")
-          end
-        end
-
-        context "when the error code is 4xx" do
-          let(:response_status) { 400 }
-
-          it "returns a service failure" do
-            result = service_call
-
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("action_script_runtime_error")
-          end
+        it "raises ServerError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A500: /)
         end
       end
 
-      context "without raise_on_server_error" do
-        [500, 503, 504].each do |status|
-          context "when the error code is #{status}" do
-            let(:response_status) { status }
+      context "when the error code is 503 with an empty body" do
+        let(:response_status) { 503 }
+        let(:body) { "" }
 
-            it "returns a service failure" do
-              result = service_call
+        it "raises ServerError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A503: /)
+        end
+      end
 
-              expect(result).not_to be_success
-              expect(result.error).to be_a(BaseService::ServiceFailure)
-              expect(result.error.code).to eq("action_script_runtime_error")
-            end
-          end
+      context "when the error code is 504" do
+        let(:response_status) { 504 }
+
+        it "raises ServerError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A504: /)
+        end
+      end
+
+      context "when the error code is 4xx" do
+        let(:response_status) { 400 }
+
+        it "returns a service failure" do
+          result = service_call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("action_script_runtime_error")
         end
       end
 

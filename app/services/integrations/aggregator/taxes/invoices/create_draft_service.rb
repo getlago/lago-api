@@ -7,14 +7,6 @@ module Integrations
         class CreateDraftService < BaseService
           SERVER_ERROR_CODES = [500, 503, 504].freeze
 
-          # NOTE: raise_on_server_error lets a caller that retries (the wallet refresh job) tell a
-          #       temporary provider 5xx apart from a tax error. Other callers keep the service failure.
-          def initialize(invoice:, fees: nil, raise_on_server_error: false)
-            @raise_on_server_error = raise_on_server_error
-
-            super(invoice:, fees:)
-          end
-
           def action_name
             case provider
             when "anrok"
@@ -56,10 +48,8 @@ module Integrations
 
           private
 
-          attr_reader :raise_on_server_error
-
           def server_error?(http_error)
-            raise_on_server_error && SERVER_ERROR_CODES.include?(http_error.error_code.to_i)
+            SERVER_ERROR_CODES.include?(http_error.error_code.to_i)
           end
 
           # NOTE: Throttling happens here, so an answer served from the cache doesn't use up the
