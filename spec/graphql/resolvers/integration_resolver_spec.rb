@@ -69,4 +69,52 @@ RSpec.describe Resolvers::IntegrationResolver do
       )
     end
   end
+
+  context "with a persisted QuickBooks integration" do
+    let(:quickbooks_integration) do
+      create(
+        :quickbooks_integration,
+        organization:,
+        settings: {realm_id: "1234567890", sandbox: true, sync_invoices: true, sync_credit_notes: false, sync_payments: true}
+      )
+    end
+    let(:query) do
+      <<~GQL
+        query($integrationId: ID!) {
+          integration(id: $integrationId) {
+            __typename
+            ... on QuickbooksIntegration {
+              id code name connectionId realmId sandbox syncInvoices syncCreditNotes syncPayments
+            }
+          }
+        }
+      GQL
+    end
+
+    it "returns the QuickBooks integration" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {integrationId: quickbooks_integration.id}
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["integration"]).to eq(
+        {
+          "__typename" => "QuickbooksIntegration",
+          "id" => quickbooks_integration.id,
+          "code" => "quickbooks",
+          "name" => "QuickBooks Integration",
+          "connectionId" => "quickbooks-test-connection",
+          "realmId" => "1234567890",
+          "sandbox" => true,
+          "syncInvoices" => true,
+          "syncCreditNotes" => false,
+          "syncPayments" => true
+        }
+      )
+    end
+  end
 end

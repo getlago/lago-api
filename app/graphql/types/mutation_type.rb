@@ -254,6 +254,9 @@ module Types
     field :create_xero_integration, mutation: Mutations::Integrations::Xero::Create
     field :update_xero_integration, mutation: Mutations::Integrations::Xero::Update
 
+    field :create_quickbooks_integration, mutation: Mutations::Integrations::Quickbooks::Create
+    field :update_quickbooks_integration, mutation: Mutations::Integrations::Quickbooks::Update
+
     field :create_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Create
     field :update_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Update
 
