@@ -405,6 +405,51 @@ RSpec.describe Api::V2::FeaturesController do
       end
     end
 
+    context "when the code contains a percent-encoded slash" do
+      let(:code) { "seats%2Feu" }
+      let(:feature) { create(:feature, organization:, code: "seats/eu") }
+
+      it "returns the feature" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature]).to include(lago_id: feature.id, code: "seats/eu")
+      end
+    end
+
+    context "when the code ends with /privileges" do
+      let(:feature) { create(:feature, organization:, code: "seats/privileges") }
+      let(:other_feature) { create(:feature, organization:, code: "seats") }
+
+      before do
+        other_feature
+        create(:privilege, feature: other_feature, organization:, code: "max")
+      end
+
+      context "with the slash percent-encoded" do
+        let(:code) { "seats%2Fprivileges" }
+
+        it "returns the feature" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:feature]).to include(lago_id: feature.id, code: "seats/privileges")
+        end
+      end
+
+      context "with the slash left as is" do
+        let(:code) { "seats/privileges" }
+
+        it "serves the privileges of the feature before the slash, not the feature" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:privileges].map { it[:code] }).to eq(%w[max])
+          expect(json).not_to have_key(:feature)
+        end
+      end
+    end
+
     context "without product catalog", product_catalog: false do
       it "returns feature unavailable" do
         subject

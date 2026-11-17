@@ -195,6 +195,17 @@ RSpec.describe Api::V2::RateCards::RatesController do
       end
     end
 
+    context "with cursor pagination parameters" do
+      subject { get_with_token(organization, "/api/v2/rate_cards/#{rate_card.code}/rates", {limit: 1, after: "x"}) }
+
+      it "returns a bad request error for each parameter" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details]).to eq([{code: "not_paginated", field: "limit", meta: {}}, {code: "not_paginated", field: "after", meta: {}}])
+      end
+    end
+
     context "with offset pagination parameters and an unknown rate card" do
       subject { get_with_token(organization, "/api/v2/rate_cards/unknown/rates", {page: 2}) }
 

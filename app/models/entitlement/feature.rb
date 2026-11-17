@@ -25,6 +25,12 @@ module Entitlement
       %w[code name description]
     end
 
+    # Newest first, then by id, as the association has none. The v2 privileges list uses it, and the
+    # feature expansion sorts the same way in memory.
+    def ordered_privileges
+      privileges.reorder(created_at: :desc, id: :asc)
+    end
+
     def subscriptions_count
       return @subscriptions_count if defined?(@subscriptions_count)
 

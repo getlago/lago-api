@@ -6,6 +6,20 @@ module Api
       class PrivilegesController < Api::V2::BaseController
         serializable_with ::V2::Entitlement::PrivilegeSerializer, root: :privilege
 
+        # Bounded by their feature and returned whole: every pagination param is refused, before
+        # the lookup like the cursor of the paginated lists.
+        before_action :reject_pagination!, only: :index
+
+        def index
+          feature = current_organization.features.find_by(code: params[:feature_code])
+
+          if feature
+            render_privileges(feature.ordered_privileges)
+          else
+            not_found_error(resource: "feature")
+          end
+        end
+
         def create
           attributes = params.expect(privilege: [:code, :name, :value_type, select_options: []])
 
