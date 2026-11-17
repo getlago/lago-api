@@ -95,12 +95,14 @@ module Integrations
       end
 
       def throttle_key
-        # Hubspot and Xero calls are throttled globally, others are throttled per api key or client id
+        # Hubspot, Xero and Avalara calls are throttled globally, others per client id, api key or connection id (digested)
         case provider
         when "netsuite"
           Digest::SHA2.hexdigest(integration.client_id)
         when "anrok"
           Digest::SHA2.hexdigest(integration.api_key)
+        when "quickbooks"
+          Digest::SHA2.hexdigest(integration.connection_id)
         else
           provider.to_s
         end
