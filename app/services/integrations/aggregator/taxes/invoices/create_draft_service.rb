@@ -5,6 +5,8 @@ module Integrations
     module Taxes
       module Invoices
         class CreateDraftService < BaseService
+          SERVER_ERROR_CODES = [500, 503, 504].freeze
+
           def action_name
             case provider
             when "anrok"
@@ -34,6 +36,7 @@ module Integrations
             raise Integrations::Aggregator::TaskInProgressError if task_in_progress_error?(e)
             raise Integrations::Aggregator::TaskExpiredError if task_expired_error?(e)
             raise Integrations::Aggregator::OrchestratorFailureError if orchestrator_failure_error?(e)
+            raise Integrations::Aggregator::ServerError, "#{e.error_code}: #{e.error_body}" if server_error?(e)
 
             code = code(e)
             message = message(e)
@@ -44,6 +47,10 @@ module Integrations
           end
 
           private
+
+          def server_error?(http_error)
+            SERVER_ERROR_CODES.include?(http_error.error_code.to_i)
+          end
 
           # NOTE: Throttling happens here, so an answer served from the cache doesn't use up the
           #       provider rate limit.

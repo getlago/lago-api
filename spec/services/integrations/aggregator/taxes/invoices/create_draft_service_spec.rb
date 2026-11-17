@@ -400,7 +400,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       end
 
       context "when it is a script error" do
-        let(:response_status) { Faker::Number.between(from: 500, to: 599) }
+        let(:response_status) { 501 }
         let(:body) do
           path = Rails.root.join("spec/fixtures/integration_aggregator/error_script_response.json")
           File.read(path)
@@ -417,7 +417,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       end
 
       context "when it is another server error" do
-        let(:response_status) { Faker::Number.between(from: 500, to: 599) }
+        let(:response_status) { 501 }
 
         it "returns an error" do
           result = service_call
@@ -462,6 +462,44 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
         it "raises OrchestratorFailureError" do
           expect { service_call }.to raise_error(Integrations::Aggregator::OrchestratorFailureError)
+        end
+      end
+
+      context "when the error code is 500 with a server_error body" do
+        let(:response_status) { 500 }
+        let(:body) { {error: {code: "server_error"}}.to_json }
+
+        it "raises ServerError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A500: /)
+        end
+      end
+
+      context "when the error code is 503 with an empty body" do
+        let(:response_status) { 503 }
+        let(:body) { "" }
+
+        it "raises ServerError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A503: /)
+        end
+      end
+
+      context "when the error code is 504" do
+        let(:response_status) { 504 }
+
+        it "raises ServerError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::ServerError, /\A504: /)
+        end
+      end
+
+      context "when the error code is 4xx" do
+        let(:response_status) { 400 }
+
+        it "returns a service failure" do
+          result = service_call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("action_script_runtime_error")
         end
       end
 

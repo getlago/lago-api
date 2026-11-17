@@ -16,7 +16,7 @@ module Integrations
         [
           BadGatewayError, RequestLimitError, OutOfMemoryError,
           TaskInProgressError, TaskExpiredError, OrchestratorFailureError,
-          ServerContentionError, TimeoutError
+          ServerContentionError, TimeoutError, ServerError
         ]
       end
 

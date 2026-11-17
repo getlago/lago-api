@@ -35,7 +35,12 @@ module Customers
       job.lock_strategy.unlock(resource: job.lock_key)
     end
 
-    retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6)
+    retry_on(*Integrations::Aggregator::BaseService.retryable_errors, wait: :polynomially_longer, attempts: 6) do |job, error|
+      # A top-up refresh can run for a customer that is not flagged: flag it so the next clock run
+      # refreshes its wallets, then raise so the failure ends in the dead set and stays counted.
+      job.arguments.first.flag_wallets_for_refresh
+      raise error
+    end
 
     def perform(customer, wallet_ids: nil)
       # wallet_ids marks an explicitly requested refresh (e.g. balance increase) that must run
