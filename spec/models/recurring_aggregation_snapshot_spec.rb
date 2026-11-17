@@ -162,6 +162,14 @@ RSpec.describe RecurringAggregationSnapshot do
 
           it { is_expected.to be(false) }
         end
+
+        context "with a card billed in advance" do
+          let(:billing_segment) do
+            build_stubbed(:billing_segment, contract_rate_card: build_stubbed(:contract_rate_card, rate_card: build_stubbed(:rate_card, :advance)))
+          end
+
+          it { is_expected.to be(false) }
+        end
       end
     end
   end

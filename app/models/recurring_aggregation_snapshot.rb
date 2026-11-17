@@ -12,9 +12,15 @@ class RecurringAggregationSnapshot < ApplicationRecord
   # The default bucket keeps a row for every closed period, which marks the period for all buckets
   scope :period_markers, -> { where(charge_filter_id: nil) }
 
-  # A charge is snapshotted under its subscription, a billing segment under its contract
+  # A charge is snapshotted under its subscription, a billing segment under its contract.
+  # An advance card bills its segments at their start and never closes one, so it has no snapshot to read.
   def self.eligible?(metered_item:, billing_context:)
-    owner_context = metered_item.billing_segment ? billing_context.contract? : billing_context.subscription?
+    billing_segment = metered_item.billing_segment
+    owner_context = if billing_segment
+      billing_context.contract? && !billing_segment.contract_rate_card.rate_card.advance?
+    else
+      billing_context.subscription?
+    end
 
     owner_context && AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
   end
