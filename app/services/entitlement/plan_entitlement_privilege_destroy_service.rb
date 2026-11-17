@@ -74,10 +74,15 @@ module Entitlement
       entitlement.organization.feature_flag_enabled?(:entitlement_events)
     end
 
+    # The log gets its render from here, where the values are preloaded, so that it does not serialize the
+    # entitlement on its own after the commit.
     def send_updated_events(values_before)
       if Utils::ActivityLog.available?
+        render = ::V2::PlanEntitlementSerializer.new(result.entitlement).serialize
         Utils::ActivityLog.produce_after_commit(
-          result.entitlement, "plan_entitlement.updated", changes: {"values" => [values_before, rendered_values(result.entitlement)]}
+          result.entitlement, "plan_entitlement.updated",
+          changes: {"values" => [values_before, render[:values]]},
+          activity_object: render
         )
       end
       SendWebhookJob.perform_after_commit("plan_entitlement.updated", result.entitlement)

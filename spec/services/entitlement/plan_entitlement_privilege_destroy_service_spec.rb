@@ -113,7 +113,8 @@ RSpec.describe Entitlement::PlanEntitlementPrivilegeDestroyService do
               [{privilege_code: "max_admins", value: "test_value"}, {privilege_code: "max", value: "test_value"}],
               [{privilege_code: "max_admins", value: "test_value"}]
             ]
-          }
+          },
+          activity_object: hash_including(lago_id: entitlement.id, values: [{privilege_code: "max_admins", value: "test_value"}])
         ).once
         expect(Utils::ActivityLog).to have_received(:produce).once
       end
