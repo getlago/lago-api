@@ -2,7 +2,7 @@
 
 module Signups
   # Signup Step 3: creates the production organization of a self-serve user who has none yet, with its sandbox, and
-  # makes the user admin of both. The role and source answers go to analytics only and are never stored.
+  # makes the user admin of both. The role and source answers go to analytics only and are never saved in the database.
   class CreateOrganizationService < BaseService
     Result = BaseResult[:organization, :sandbox_organization, :user]
 
@@ -36,7 +36,7 @@ module Signups
 
         result.organization = pair.organization
         result.sandbox_organization = pair.sandbox_organization
-        after_commit { announce(membership) }
+        after_commit { announce(membership, pair.sandbox_organization) }
       end
       return result if result.failure?
 
@@ -64,7 +64,7 @@ module Signups
       membership
     end
 
-    def announce(membership)
+    def announce(membership, sandbox)
       Utils::SecurityLog.produce(
         organization: membership.organization,
         log_type: "user",
@@ -77,10 +77,17 @@ module Signups
       SegmentTrackJob.perform_later(
         membership_id: "membership/#{membership.id}",
         event: "organization_registered",
+        # The only place the Step 3 answers go: not in the database, and not in the job logs. The job's arguments still
+        # reach Redis (the queue, then the dead set if it fails) and error reports.
         properties: {
           organization_name: membership.organization.name,
           organization_id: membership.organization_id,
-          email: user.email
+          email: user.email,
+          self_serve: true,
+          sandbox_organization_id: sandbox.id,
+          role:,
+          source: referral_source,
+          region: Lago::SelfServe.region
         }
       )
     end
