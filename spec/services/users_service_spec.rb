@@ -112,6 +112,39 @@ RSpec.describe UsersService do
         before { described_class.call(:register, "email", "password", "organization_name") }
       end
     end
+
+    context "when the organization fails to save" do
+      it "rolls the user back and returns the validation failure" do
+        result = nil
+
+        expect { result = described_class.call(:register, "email", "password", "") }.not_to change(User, :count)
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(name: ["value_is_mandatory"])
+        expect(SegmentIdentifyJob).not_to have_been_enqueued
+        expect(SegmentTrackJob).not_to have_been_enqueued
+        expect(UserDevices::RegisterService).not_to have_received(:call!)
+      end
+    end
+
+    context "when a record raises a validation error" do
+      before do
+        allow(Membership).to receive(:create!)
+          .and_raise(ActiveRecord::RecordInvalid.new(Membership.new.tap(&:validate)))
+      end
+
+      it "rolls the user back and returns the validation failure" do
+        result = nil
+
+        expect { result = described_class.call(:register, "email", "password", "Foobar") }.not_to change(User, :count)
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(organization: ["relation_must_exist"], user: ["relation_must_exist"])
+        expect(SegmentIdentifyJob).not_to have_been_enqueued
+        expect(SegmentTrackJob).not_to have_been_enqueued
+        expect(UserDevices::RegisterService).not_to have_received(:call!)
+      end
+    end
   end
 
   describe ".call(:register_from_invite)" do
