@@ -21,6 +21,11 @@ module Entitlement
 
     # Newest first, ties by id, as Feature#ordered_privileges.
     scope :newest_first, -> { order(created_at: :desc, id: :asc) }
+
+    # The catalog plan or the legacy plan the entitlement belongs to, nil for a subscription entitlement.
+    def owner_plan
+      catalog_plan || plan
+    end
   end
 end
 

@@ -1523,6 +1523,295 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
     end
   end
 
+  describe "DELETE /api/v2/plans/:plan_code/entitlements/:code/privileges/:privilege_code" do
+    subject(:request) do
+      delete_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements/#{feature_code}/privileges/#{privilege_code}#{query}")
+    end
+
+    let(:plan_code) { catalog_plan.code }
+    let(:feature_code) { feature.code }
+    let(:privilege_code) { privilege.code }
+    let(:query) { "" }
+    let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
+    let(:value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: "30") }
+    let(:other_privilege) { create(:privilege, organization:, feature:, code: "min", name: nil, value_type: "integer") }
+    let(:kept_value) { create(:entitlement_value, organization:, entitlement:, privilege: other_privilege, value: "5") }
+    let(:other_plan) { create(:catalog_plan, organization:, code: "other") }
+    let(:other_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: other_plan, feature:) }
+    let(:other_value) { create(:entitlement_value, organization:, entitlement: other_entitlement, privilege:, value: "40") }
+
+    before do
+      value
+      kept_value
+      other_value
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
+      # The per-entitlement events are behind the entitlement_events flag, see "without the entitlement_events flag".
+      organization.enable_feature_flag!(:entitlement_events)
+    end
+
+    shared_examples "a refused value remove" do
+      it "discards nothing" do
+        request
+
+        expect(entitlement.reload).not_to be_discarded
+        expect(value.reload).to have_attributes(value: "30", deleted_at: nil)
+        expect(kept_value.reload).to have_attributes(value: "5", deleted_at: nil)
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    include_examples "requires API permission", "plan", "write"
+
+    it "removes the value and renders the entitlement with its other values" do
+      request
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(plan_entitlement: plan_entitlement_json(entitlement, [{privilege_code: "min", value: 5}]))
+      expect(value.reload).to be_discarded
+      expect(entitlement.reload).not_to be_discarded
+      expect(kept_value.reload).to have_attributes(value: "5", deleted_at: nil)
+    end
+
+    context "without the entitlement_events flag" do
+      before { organization.disable_feature_flag!(:entitlement_events) }
+
+      it "removes the value, logs nothing and sends no webhook" do
+        expect { request }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(response).to have_http_status(:success)
+        expect(value.reload).to be_discarded
+        expect(Utils::ActivityLog).not_to have_received(:produce)
+      end
+    end
+
+    it "touches the entitlement" do
+      entitlement.update_columns(updated_at: 1.day.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      freeze_time do
+        request
+
+        expect(entitlement.reload.updated_at).to eq(Time.current)
+      end
+    end
+
+    it "keeps the same value on another catalog plan" do
+      request
+
+      expect(other_entitlement.reload).not_to be_discarded
+      expect(other_value.reload).to have_attributes(value: "40", deleted_at: nil)
+    end
+
+    it "sends one plan_entitlement.updated webhook after commit and no plan.updated webhook" do
+      expect { request }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_entitlement.updated", entitlement).exactly(:once)
+
+      expect(response).to have_http_status(:success)
+      expect(SendWebhookJob).to have_been_enqueued.exactly(:once)
+    end
+
+    it "produces one plan_entitlement.updated activity log and no plan.updated" do
+      request
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        entitlement, "plan_entitlement.updated", after_commit: true,
+        changes: {"values" => [[{privilege_code: "min", value: 5}, {privilege_code: "max", value: 30}], [{privilege_code: "min", value: 5}]]}
+      ).once
+      expect(Utils::ActivityLog).to have_received(:produce).once
+    end
+
+    context "with the last value of the entitlement" do
+      let(:kept_value) { nil }
+
+      it "renders the entitlement without privileges and keeps it" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(plan_entitlement: plan_entitlement_json(entitlement, []))
+        expect(value.reload).to be_discarded
+        expect(entitlement.reload).not_to be_discarded
+      end
+    end
+
+    context "with feature and privilege codes containing a dot" do
+      let(:feature) { create(:feature, organization:, code: "seats.v2", name: "Seats", description: nil) }
+      let(:privilege) { create(:privilege, organization:, feature:, code: "max.v1", name: nil, value_type: "integer") }
+
+      it "removes the value" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan_entitlement]).to include(feature_code: "seats.v2", values: [{privilege_code: "min", value: 5}])
+        expect(value.reload).to be_discarded
+      end
+    end
+
+    context "with an unknown feature code" do
+      let(:feature_code) { "unknown" }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+
+      include_examples "a refused value remove"
+    end
+
+    context "with a feature the catalog plan does not grant" do
+      let(:feature_code) { "api" }
+      let(:api_feature) { create(:feature, organization:, code: "api") }
+      let(:api_privilege) { create(:privilege, organization:, feature: api_feature, code: "max", value_type: "integer") }
+      let(:api_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: other_plan, feature: api_feature) }
+      let(:api_value) { create(:entitlement_value, organization:, entitlement: api_entitlement, privilege: api_privilege, value: "10") }
+
+      before { api_value }
+
+      it "returns not found and keeps the value of the other catalog plan" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+        expect(api_value.reload).to have_attributes(value: "10", deleted_at: nil)
+      end
+
+      include_examples "a refused value remove"
+    end
+
+    context "with a privilege the entitlement has no value for" do
+      let(:privilege_code) { "unset" }
+
+      before { create(:privilege, organization:, feature:, code: "unset", value_type: "integer") }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+
+      include_examples "a refused value remove"
+    end
+
+    context "with expands" do
+      let(:query) { "?expands[]=feature" }
+
+      it "returns expand_not_supported" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["feature"]}}]
+        )
+      end
+
+      include_examples "a refused value remove"
+    end
+
+    [
+      ["limit", "1"],
+      ["page", "1"],
+      ["after", "x"],
+      ["include_total_count", "true"]
+    ].each do |name, value|
+      context "with the #{name} pagination parameter" do
+        let(:query) { "?#{name}=#{value}" }
+
+        it "returns a not_paginated error" do
+          request
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: name, meta: {}}])
+        end
+
+        include_examples "a refused value remove"
+      end
+    end
+
+    context "with an unknown plan code" do
+      let(:plan_code) { "unknown" }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+
+      include_examples "a refused value remove"
+    end
+
+    context "with the catalog plan of another organization" do
+      let(:plan_code) { "shared" }
+      let(:other_organization) { create(:organization) }
+      let(:foreign_feature) { create(:feature, organization: other_organization, code: "seats") }
+      let(:foreign_entitlement) do
+        create(
+          :entitlement, :catalog_plan,
+          organization: other_organization,
+          catalog_plan: create(:catalog_plan, organization: other_organization, code: "shared"),
+          feature: foreign_feature
+        )
+      end
+      let(:foreign_value) do
+        create(
+          :entitlement_value,
+          organization: other_organization,
+          entitlement: foreign_entitlement,
+          privilege: create(:privilege, organization: other_organization, feature: foreign_feature, code: "max", value_type: "integer"),
+          value: "50"
+        )
+      end
+
+      before { foreign_value }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+        expect(foreign_value.reload).to have_attributes(value: "50", deleted_at: nil)
+      end
+
+      include_examples "a refused value remove"
+    end
+
+    context "with a legacy plan code" do
+      let(:plan_code) { "legacy" }
+      let(:legacy_entitlement) { create(:entitlement, organization:, plan: create(:plan, organization:, code: "legacy"), feature:) }
+      let(:legacy_value) { create(:entitlement_value, organization:, entitlement: legacy_entitlement, privilege:, value: "20") }
+
+      before { legacy_value }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+        expect(legacy_value.reload).to have_attributes(value: "20", deleted_at: nil)
+      end
+
+      include_examples "a refused value remove"
+    end
+
+    context "with a deleted catalog plan" do
+      let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium", deleted_at: Time.current) }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+
+      include_examples "a refused value remove"
+    end
+
+    context "without the product catalog", product_catalog: false do
+      it "returns feature_unavailable" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "feature_unavailable", details: [])
+      end
+
+      include_examples "a refused value remove"
+    end
+  end
+
   # The v2 render of a plan entitlement, with its datetimes to the microsecond as native v2 renders them.
   def plan_entitlement_json(entitlement, values)
     entitlement = Entitlement::Entitlement.with_discarded.find(entitlement.id)
