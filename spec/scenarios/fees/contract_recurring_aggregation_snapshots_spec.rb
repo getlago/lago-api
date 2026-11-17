@@ -124,7 +124,7 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
 
   def bill_at(time)
     travel_to(time) do
-      clock_job { Clock::ProcessBillingOperationsJob.perform_later }
+      clock_job { Clock::ScheduleBillingOperationsJob.perform_later }
       product_fees(customer.invoices.where(created_at: Time.current).sole)
     end
   end
