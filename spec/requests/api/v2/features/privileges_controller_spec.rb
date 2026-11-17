@@ -542,6 +542,193 @@ RSpec.describe Api::V2::Features::PrivilegesController do
     end
   end
 
+  describe "GET /api/v2/features/:feature_code/privileges/:code" do
+    subject(:request) { get_with_token(organization, "/api/v2/features/#{feature_code}/privileges/#{privilege_code}", params) }
+
+    let(:feature_code) { "seats" }
+    let(:privilege_code) { "max" }
+    let(:params) { {} }
+    let(:feature) { create(:feature, organization:, code: "seats") }
+    let(:privilege) do
+      create(:privilege, feature:, organization:, code: "max", name: "Maximum", value_type: "integer",
+        created_at: Time.zone.parse("2026-11-14T10:00:00.123456Z"), updated_at: Time.zone.parse("2026-11-14T11:00:00.654321Z"))
+    end
+
+    before { privilege }
+
+    include_examples "requires API permission", "feature", "read"
+
+    it "returns the privilege" do
+      request
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(
+        privilege: {
+          lago_id: privilege.id,
+          feature_code: "seats",
+          code: "max",
+          name: "Maximum",
+          value_type: "integer",
+          select_options: nil,
+          created_at: "2026-11-14T10:00:00.123456Z",
+          updated_at: "2026-11-14T11:00:00.654321Z",
+          deleted_at: nil
+        }
+      )
+    end
+
+    context "with a select privilege" do
+      let(:privilege) { create(:privilege, feature:, organization:, code: "max", value_type: "select", config: {select_options: %w[a b]}) }
+
+      it "returns its options" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(lago_id: privilege.id, value_type: "select", select_options: %w[a b])
+      end
+    end
+
+    context "when the feature code contains a slash" do
+      let(:feature) { create(:feature, organization:, code: "seats/eu") }
+      let(:feature_code) { "seats/eu" }
+
+      before { create(:privilege, organization:, code: "max", feature: create(:feature, organization:, code: "seats")) }
+
+      it "returns the privilege of that feature" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(lago_id: privilege.id, feature_code: "seats/eu", code: "max")
+      end
+    end
+
+    context "when the feature and privilege codes contain percent-encoded slashes" do
+      let(:feature) { create(:feature, organization:, code: "seats/eu") }
+      let(:privilege) { create(:privilege, feature:, organization:, code: "a/b") }
+      let(:feature_code) { "seats%2Feu" }
+      let(:privilege_code) { "a%2Fb" }
+
+      it "returns the privilege" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(lago_id: privilege.id, feature_code: "seats/eu", code: "a/b")
+      end
+    end
+
+    ["privileges", "eu/privileges"].each do |code|
+      context "when the privilege code is #{code}" do
+        let(:privilege) { create(:privilege, feature:, organization:, code:) }
+        let(:privilege_code) { code }
+
+        it "returns the privilege, not the privileges of a feature coded seats/privileges" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:privilege]).to include(lago_id: privilege.id, feature_code: "seats", code:)
+        end
+      end
+    end
+
+    context "when the privilege code contains a slash" do
+      let(:privilege) { create(:privilege, feature:, organization:, code: "a/b") }
+      let(:privilege_code) { "a/b" }
+
+      it "returns the privilege" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(lago_id: privilege.id, feature_code: "seats", code: "a/b")
+      end
+    end
+
+    context "when the feature does not exist" do
+      let(:feature_code) { "unknown" }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature is discarded" do
+      let(:feature) { create(:feature, organization:, code: "seats", deleted_at: Time.current) }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature belongs to another organization" do
+      let(:feature) { create(:feature, organization: create(:organization), code: "seats") }
+      let(:privilege) { create(:privilege, feature:, code: "max") }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the privilege does not exist" do
+      let(:privilege_code) { "unknown" }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "when the privilege is discarded" do
+      let(:privilege) { create(:privilege, feature:, organization:, code: "max", deleted_at: Time.current) }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "when the privilege belongs to another feature" do
+      let(:privilege) { create(:privilege, organization:, code: "max", feature: create(:feature, organization:, code: "storage")) }
+
+      before { feature }
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "with expands" do
+      let(:params) { {expands: ["anything"]} }
+
+      it "rejects the expansion" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["anything"]}}]
+        )
+      end
+    end
+
+    context "without product catalog", product_catalog: false do
+      it "returns feature_unavailable" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+  end
+
   describe "DELETE /api/v2/features/:feature_code/privileges/:code", v2_timestamps: false do
     subject(:request) { delete_with_token(organization, "/api/v2/features/seats/privileges/max") }
 
