@@ -729,6 +729,382 @@ RSpec.describe Api::V2::Features::PrivilegesController do
     end
   end
 
+  describe "PUT /api/v2/features/:feature_code/privileges/:code" do
+    subject(:request) do
+      send("#{verb}_with_token", organization, "/api/v2/features/#{feature_code}/privileges/#{privilege_code}", params)
+    end
+
+    let(:verb) { :put }
+    let(:feature_code) { "sso" }
+    let(:privilege_code) { "provider" }
+    let(:privilege_params) { {name: "SSO provider", select_options: %w[okta google entra_id onelogin]} }
+    let(:params) { {privilege: privilege_params} }
+    let(:feature) { create(:feature, organization:, code: "sso", name: "SSO") }
+    let(:privilege) do
+      travel_to(Time.zone.parse("2026-11-01T08:00:00.654321Z"), with_usec: true) do
+        create(:privilege, feature:, organization:, code: "provider", name: "Provider", value_type: "select",
+          config: {select_options: %w[okta google entra_id]})
+      end
+    end
+
+    before { privilege }
+
+    include_examples "requires API permission", "feature", "write"
+
+    shared_examples "a refused update" do |status|
+      it "changes nothing and sends no webhook" do
+        expect { request }
+          .to not_have_enqueued_job(SendWebhookJob)
+          .and not_change { privilege.reload.attributes }
+
+        expect(response).to have_http_status(status)
+      end
+    end
+
+    shared_examples "a refused update on" do |code, field|
+      include_examples "a refused update", :unprocessable_content
+
+      it "returns #{code} on #{field}" do
+        request
+
+        expect(json).to eq(code: "validation_errors", details: [{code:, field:, meta: {}}])
+      end
+    end
+
+    %i[put patch].each do |http_verb|
+      context "with #{http_verb.upcase}, a new name and an added option" do
+        let(:verb) { http_verb }
+
+        it "updates the privilege, renders the v2 body and sends feature.updated" do
+          travel_to(Time.zone.parse("2026-11-14T10:00:00.123456Z"), with_usec: true) do
+            expect { request }
+              .to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature) # exactly once by default
+          end
+
+          expect(response).to have_http_status(:success)
+          expect(json[:privilege]).to eq(
+            lago_id: privilege.id,
+            feature_code: "sso",
+            code: "provider",
+            name: "SSO provider",
+            value_type: "select",
+            select_options: %w[okta google entra_id onelogin],
+            created_at: "2026-11-01T08:00:00.654321Z",
+            updated_at: "2026-11-14T10:00:00.123456Z",
+            deleted_at: nil
+          )
+          expect(privilege.reload).to have_attributes(name: "SSO provider", config: {"select_options" => %w[okta google entra_id onelogin]})
+          expect(Utils::ActivityLog).to have_produced("feature.updated").after_commit.with(feature)
+        end
+      end
+
+      context "with #{http_verb.upcase} and only the name" do
+        let(:verb) { http_verb }
+        let(:privilege_params) { {name: "SSO provider"} }
+
+        it "updates the name and keeps the options" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:privilege]).to include(name: "SSO provider", select_options: %w[okta google entra_id])
+          expect(privilege.reload).to have_attributes(name: "SSO provider", config: {"select_options" => %w[okta google entra_id]})
+        end
+      end
+
+      context "with #{http_verb.upcase} and options omitting a current one" do
+        let(:verb) { http_verb }
+        let(:privilege_params) { {select_options: %w[okta google]} }
+
+        include_examples "a refused update on", "select_option_removal_not_allowed", "select_options"
+      end
+    end
+
+    context "when plans grant the feature" do
+      let(:plan) { create(:plan, organization:) }
+      let(:other_plan) { create(:plan, organization:) }
+
+      before do
+        create(:entitlement, feature:, organization:, plan:)
+        create(:entitlement, feature:, organization:, plan: other_plan)
+      end
+
+      it "sends plan.updated once for each plan" do
+        expect { request }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan) # exactly once by default
+
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", other_plan).once
+        expect(response).to have_http_status(:success)
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(other_plan)
+      end
+
+      context "with options omitting a current one" do
+        let(:privilege_params) { {select_options: %w[okta google]} }
+
+        it "sends no plan.updated" do
+          expect { request }.not_to have_enqueued_job(SendWebhookJob).with("plan.updated", anything)
+
+          expect(response).to have_http_status(:unprocessable_content)
+        end
+      end
+    end
+
+    context "with the same options and name" do
+      let(:privilege_params) { {name: "Provider", select_options: %w[okta google entra_id]} }
+
+      it "still sends feature.updated" do
+        expect { request }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature)
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+
+    context "with the current code and value_type" do
+      let(:privilege_params) { {code: "provider", value_type: "select", name: "SSO provider"} }
+
+      it "accepts them" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(code: "provider", value_type: "select", name: "SSO provider")
+      end
+    end
+
+    context "with a null name" do
+      let(:privilege_params) { {name: nil} }
+
+      it "clears the name" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(privilege.reload.name).to be_nil
+      end
+    end
+
+    context "with unpermitted keys" do
+      let(:privilege_params) { {name: "SSO provider", config: {select_options: ["a"]}, lago_id: SecureRandom.uuid} }
+
+      it "ignores them" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(privilege.reload).to have_attributes(id: privilege.id, config: {"select_options" => %w[okta google entra_id]})
+      end
+    end
+
+    context "with another code and value_type" do
+      let(:privilege_params) { {code: "other", value_type: "string", name: "SSO provider"} }
+
+      it "ignores them and updates the name" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(code: "provider", value_type: "select", name: "SSO provider")
+        expect(privilege.reload).to have_attributes(code: "provider", value_type: "select")
+      end
+    end
+
+    context "with select_options empty on a select privilege" do
+      let(:privilege_params) { {select_options: []} }
+
+      include_examples "a refused update on", "select_option_removal_not_allowed", "select_options"
+    end
+
+    context "with select_options null on a select privilege" do
+      let(:privilege_params) { {name: "SSO provider", select_options: nil} }
+
+      it "ignores them and updates the name" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(privilege.reload).to have_attributes(name: "SSO provider", config: {"select_options" => %w[okta google entra_id]})
+      end
+    end
+
+    context "with select_options on a string privilege" do
+      let(:privilege) { create(:privilege, feature:, organization:, code: "provider", value_type: "string") }
+      let(:privilege_params) { {name: "Provider", select_options: ["okta"]} }
+
+      it "ignores them" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(privilege.reload).to have_attributes(name: "Provider", config: {})
+      end
+    end
+
+    [["a string", "okta"], ["a list of objects", [{a: 1}]]].each do |label, select_options|
+      context "with select_options as #{label}" do
+        let(:privilege_params) { {name: "SSO provider", select_options:} }
+
+        it "ignores them and updates the name" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(privilege.reload).to have_attributes(name: "SSO provider", config: {"select_options" => %w[okta google entra_id]})
+        end
+      end
+    end
+
+    context "with select_options as a list of numbers" do
+      let(:privilege_params) { {select_options: [1, 2]} }
+
+      include_examples "a refused update on", "select_option_removal_not_allowed", "select_options"
+    end
+
+    context "with select_options that keep the current ones and add a number" do
+      let(:privilege_params) { {select_options: ["okta", "google", "entra_id", 1]} }
+
+      include_examples "a refused update on", "invalid_format", "select_options"
+    end
+
+    [["a number", 123], ["a boolean", true]].each do |label, name|
+      context "with name as #{label}" do
+        let(:privilege_params) { {name:} }
+
+        include_examples "a refused update on", "value_is_invalid", "name"
+      end
+    end
+
+    context "when the privilege root is missing" do
+      let(:params) { privilege_params }
+
+      include_examples "a refused update", :bad_request
+
+      it "returns the v2 missing parameter error" do
+        request
+
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "privilege", meta: {}}])
+      end
+    end
+
+    context "when the privilege root is a string" do
+      let(:params) { {privilege: "SSO provider"} }
+
+      include_examples "a refused update", :bad_request
+
+      it "returns the v2 missing parameter error" do
+        request
+
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "privilege", meta: {}}])
+      end
+    end
+
+    context "when the feature does not exist" do
+      let(:feature_code) { "unknown" }
+
+      include_examples "a refused update", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature is discarded" do
+      let(:feature) { create(:feature, organization:, code: "sso", deleted_at: Time.current) }
+      let(:privilege) do
+        create(:privilege, feature:, organization:, code: "provider", value_type: "select", config: {select_options: %w[okta]},
+          deleted_at: Time.current)
+      end
+
+      include_examples "a refused update", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the feature belongs to another organization" do
+      let(:feature) { create(:feature, organization: create(:organization), code: "sso") }
+      let(:privilege) do
+        create(:privilege, feature:, organization: feature.organization, code: "provider", value_type: "select",
+          config: {select_options: %w[okta google entra_id]})
+      end
+
+      include_examples "a refused update", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "when the privilege does not exist" do
+      let(:privilege_code) { "unknown" }
+
+      include_examples "a refused update", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "when the privilege is discarded" do
+      let(:privilege) do
+        create(:privilege, feature:, organization:, code: "provider", value_type: "select", config: {select_options: %w[okta]},
+          deleted_at: Time.current)
+      end
+
+      include_examples "a refused update", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "when the privilege belongs to another feature" do
+      let(:privilege) do
+        create(:privilege, organization:, code: "provider", value_type: "select", config: {select_options: %w[okta]},
+          feature: create(:feature, organization:, code: "storage"))
+      end
+
+      before { feature }
+
+      include_examples "a refused update", :not_found
+
+      it "returns the v2 not found error" do
+        request
+
+        expect(response).to be_v2_not_found_error("privilege")
+      end
+    end
+
+    context "without product catalog", product_catalog: false do
+      include_examples "a refused update", :forbidden
+
+      it "returns feature_unavailable" do
+        request
+
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
+    context "when the feature and privilege codes contain a slash" do
+      let(:feature) { create(:feature, organization:, code: "sso/eu") }
+      let(:feature_code) { "sso/eu" }
+      let(:privilege) do
+        create(:privilege, feature:, organization:, code: "a/b", value_type: "select", config: {select_options: %w[okta]})
+      end
+      let(:privilege_code) { "a/b" }
+      let(:privilege_params) { {name: "Renamed"} }
+
+      it "updates the privilege of that feature" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:privilege]).to include(lago_id: privilege.id, feature_code: "sso/eu", code: "a/b", name: "Renamed")
+      end
+    end
+  end
+
   describe "DELETE /api/v2/features/:feature_code/privileges/:code", v2_timestamps: false do
     subject(:request) { delete_with_token(organization, "/api/v2/features/seats/privileges/max") }
 

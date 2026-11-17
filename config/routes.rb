@@ -67,11 +67,12 @@ Rails.application.routes.draw do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end
       resources :product_categories, param: :code, code: /.*/, only: %i[index show create update destroy]
-      # The privilege index, show and create are native and the privilege delete stays on v1, all
-      # nested here so the greedy feature code does not swallow them. The show is drawn first, so a
-      # privilege code that ends with `privileges` is not read as a feature code by the index.
+      # The privilege index, show, create and update are native and the privilege delete stays on v1,
+      # all nested here so the greedy feature code does not swallow them. The show and update are
+      # drawn first, so a privilege code that ends with `privileges` is not read as a feature code
+      # by the index.
       resources :features, param: :code, code: /.*/, only: %i[index show create update destroy] do
-        resources :privileges, only: %i[show], param: :code, controller: "features/privileges"
+        resources :privileges, only: %i[show update], param: :code, controller: "features/privileges"
         resources :privileges, only: %i[index create], controller: "features/privileges"
         resources :privileges, only: %i[destroy], param: :code, controller: "/api/v1/features/privileges"
       end

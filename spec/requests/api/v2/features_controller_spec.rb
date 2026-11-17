@@ -717,6 +717,18 @@ RSpec.describe Api::V2::FeaturesController do
       end
     end
 
+    context "when the code contains a slash" do
+      let(:code) { "seats/eu" }
+      let(:feature) { create(:feature, organization:, code: "seats/eu", name: "Seats") }
+
+      it "updates that feature, not a privilege" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature]).to include(lago_id: feature.id, code: "seats/eu", name: "Renamed")
+      end
+    end
+
     context "with a code in the body" do
       let(:feature_params) { super().merge(code: "other") }
 
