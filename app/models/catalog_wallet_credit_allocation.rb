@@ -5,6 +5,8 @@ class CatalogWalletCreditAllocation < ApplicationRecord
 
   belongs_to :catalog_wallet, -> { with_discarded }
 
+  has_many :transactions, class_name: "CatalogWalletTransaction", foreign_key: :credit_allocation_id, inverse_of: :credit_allocation
+
   validates :code, uniqueness: {scope: :catalog_wallet_id, conditions: -> { where(deleted_at: nil) }}
 end
 
