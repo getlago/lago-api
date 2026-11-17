@@ -535,7 +535,8 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           added_entitlement = plan.entitlements.find_by!(feature: storage_feature)
           expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", added_entitlement)
           expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.updated", changed_entitlement)
-          expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.deleted", old_entitlement)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("plan_entitlement.deleted", old_entitlement, {values: [{privilege_code: "provider", value: "okta"}]})
           expect(bulk_pushes).to eq([3])
         end
 
