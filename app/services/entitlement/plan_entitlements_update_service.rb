@@ -38,30 +38,12 @@ module Entitlement
 
       result.entitlements = plan.entitlements.includes(:feature, values: :privilege).order(:created_at, :id).reload
       result
-    rescue BaseService::ValidationFailure => e
-      record_failing_entry
-      result.fail_with_error!(at_entry_path(e, :"#{@current_privilege_code}_privilege_value"))
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
-      record_failing_entry
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordNotUnique => e
       unique_index_failure!(e, plan_unique_indexes(plan))
-    rescue ActiveRecord::RecordInvalid => e
-      record_failing_entry
-      if e.record.is_a?(EntitlementValue)
-        result.fail_with_error!(entitlement_value_failure(e.record))
-      else
-        result.record_validation_failure!(record: e.record)
-      end
-    rescue ActiveRecord::RecordNotFound => e
-      record_failing_entry
-      if e.message.include?("Entitlement::Feature")
-        result.not_found_failure!(resource: "feature")
-      elsif e.message.include?("Entitlement::Privilege")
-        result.not_found_failure!(resource: "privilege")
-      else
-        result.not_found_failure!(resource: "record")
-      end
     end
 
     private
@@ -69,36 +51,28 @@ module Entitlement
     attr_reader :organization, :plan, :entitlements_params, :partial, :send_webhook
     alias_method :partial?, :partial
 
-    # NOTE: The failures keep the keys that v1 and GraphQL clients read. The path of the failing entry
-    #       lets the v2 controller point an unknown feature or privilege at entitlements.<feature>[.<privilege>].
-    def record_failing_entry
-      result.failed_field = entitlement_entry_field(@current_feature_code, @current_privilege_code) if @current_feature_code
-    end
-
-    # The path of an entry in the entitlements map of a request, which native v2 renders as the field.
-    def entitlement_entry_field(feature_code, privilege_code = nil)
-      privilege_code.nil? ? :"entitlements.#{feature_code}" : :"entitlements.#{feature_code}.#{privilege_code}"
-    end
-
-    # The failure with the codes and meta of v1_field on the path of the failing entry, which native v2
-    # renders. Its messages keep the keys that v1 and GraphQL clients read.
-    def at_entry_path(failure, v1_field)
-      entry_path = entitlement_entry_field(@current_feature_code, @current_privilege_code)
-      v2_field = ->(field) { (field.to_sym == v1_field) ? entry_path : field }
-
-      BaseService::ValidationFailure.new(
-        result,
-        messages: failure.messages,
-        codes: failure.codes.transform_keys(&v2_field),
-        meta: failure.meta.transform_keys(&v2_field)
-      )
+    # NOTE: The failures keep the keys that v1 and GraphQL clients read, and put their codes on the path of
+    #       the failing entry of the request (entitlements.<feature>[.<privilege>]), which native v2 renders.
+    #       failed_field lets the v2 controller render an unknown feature or privilege on that path.
+    def not_found_at!(path, resource)
+      result.failed_field = path
+      result.not_found_failure!(resource:).raise_if_error!
     end
 
     # v1 and GraphQL clients read privilege.<attribute>.
-    def entitlement_value_failure(entitlement_value)
-      failure = BaseService::ValidationFailure.from_errors(result, entitlement_value.errors).remap(result) { :"privilege.#{it}" }
+    def save_value_at!(path)
+      yield
+    rescue ActiveRecord::RecordInvalid => e
+      raise unless e.record.is_a?(EntitlementValue)
 
-      at_entry_path(failure, :"privilege.value")
+      failure = BaseService::ValidationFailure.from_errors(result, e.record.errors)
+      at_path = ->(field) { (field.to_sym == :value) ? path : :"privilege.#{field}" }
+      raise BaseService::ValidationFailure.new(
+        result,
+        messages: failure.messages.transform_keys { :"privilege.#{it}" },
+        codes: failure.codes.transform_keys(&at_path),
+        meta: failure.meta.transform_keys(&at_path)
+      )
     end
 
     def owner_attributes
@@ -131,12 +105,9 @@ module Entitlement
         .index_by(&:entitlement_feature_id)
 
       entitlements_params.each do |feature_code, privilege_values|
-        @current_feature_code = feature_code
-        @current_privilege_code = nil
-        validate_privilege_values_shape!(feature_code, privilege_values)
-        feature = features_by_code[feature_code]
-
-        raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
+        path = :"entitlements.#{feature_code}"
+        validate_privilege_values_shape!(path, privilege_values)
+        feature = features_by_code[feature_code] || not_found_at!(path, "feature")
 
         # Find existing entitlement or create new one
         entitlement = entitlements_by_feature_id[feature.id]
@@ -147,56 +118,34 @@ module Entitlement
           delete_missing_entitlement_values(entitlement, privilege_values)
         end
 
-        update_entitlement_values(entitlement, feature, privilege_values)
+        update_entitlement_values(entitlement, feature, privilege_values, path)
       end
     end
 
     # The privilege values of a feature are a map of privilege codes to values, or empty for none.
-    def validate_privilege_values_shape!(feature_code, privilege_values)
+    def validate_privilege_values_shape!(path, privilege_values)
       return if privilege_values.blank? || privilege_values.is_a?(Hash)
 
-      result.single_validation_failure!(
-        field: entitlement_entry_field(feature_code), error_code: "value_is_invalid"
-      ).raise_if_error!
+      result.single_validation_failure!(field: path, error_code: "value_is_invalid").raise_if_error!
     end
 
-    def create_entitlement_values(entitlement, feature, privilege_values)
-      privilege_values.each do |privilege_code, value|
-        @current_privilege_code = privilege_code
-        privilege = feature.privileges.find { it.code == privilege_code }
-
-        raise ActiveRecord::RecordNotFound.new("Entitlement::Privilege") unless privilege
-
-        create_entitlement_value(entitlement, privilege, value)
-      end
-    end
-
-    def update_entitlement_values(entitlement, feature, privilege_values)
+    def update_entitlement_values(entitlement, feature, privilege_values, feature_path)
       return if privilege_values.blank?
 
       privilege_values.each do |privilege_code, value|
-        @current_privilege_code = privilege_code
-        privilege = feature.privileges.find { it.code == privilege_code }
-
-        raise ActiveRecord::RecordNotFound.new("Entitlement::Privilege") unless privilege
-
+        path = :"#{feature_path}.#{privilege_code}"
+        privilege = feature.privileges.find { it.code == privilege_code } || not_found_at!(path, "privilege")
+        value = validate_value(value, privilege, path:)
         entitlement_value = entitlement.values.find { it.entitlement_privilege_id == privilege.id }
 
-        if entitlement_value
-          entitlement_value.update!(value: validate_value(value, privilege))
-        else
-          create_entitlement_value(entitlement, privilege, value)
+        save_value_at!(path) do
+          if entitlement_value
+            entitlement_value.update!(value:)
+          else
+            EntitlementValue.create!(organization:, entitlement:, privilege:, value:)
+          end
         end
       end
-    end
-
-    def create_entitlement_value(entitlement, privilege, value)
-      EntitlementValue.create!(
-        organization: organization,
-        entitlement: entitlement,
-        privilege: privilege,
-        value: validate_value(value, privilege)
-      )
     end
   end
 end

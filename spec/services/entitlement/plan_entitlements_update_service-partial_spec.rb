@@ -152,7 +152,8 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect { result }.not_to change { entitlement_value.reload.value }
 
           expect(result.error.messages).to eq({"privilege.value": ["value_is_mandatory"]})
-          expect(result.failed_field).to eq(:"entitlements.#{feature2.code}.max_storage")
+          expect(result.error.codes).to eq({"entitlements.#{feature2.code}.max_storage": ["value_is_mandatory"]})
+          expect(result.failed_field).to be_nil
         end
       end
     end

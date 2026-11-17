@@ -177,7 +177,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages).to eq("entitlements.seats": ["value_is_invalid"])
-        expect(result.failed_field).to eq(:"entitlements.seats")
+        expect(result.failed_field).to be_nil
         expect(plan.entitlements).to be_empty
         expect(SendWebhookJob).not_to have_been_enqueued
       end
@@ -254,7 +254,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result.error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
         expect(result.error.codes).to eq({"entitlements.seats.max": ["value_is_invalid"]})
         expect(result.error.meta).to eq({})
-        expect(result.failed_field).to eq(:"entitlements.seats.max")
+        expect(result.failed_field).to be_nil
       end
     end
 
@@ -275,7 +275,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result).not_to be_success
         expect(result.error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
         expect(result.error.codes).to eq({"entitlements.storage.max": ["value_is_invalid"]})
-        expect(result.failed_field).to eq(:"entitlements.storage.max")
+        expect(result.failed_field).to be_nil
       end
     end
 
@@ -324,7 +324,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages).to eq({"privilege.value": ["value_is_mandatory"]})
         expect(result.error.codes).to eq({"entitlements.seats.max": ["value_is_mandatory"]})
-        expect(result.failed_field).to eq(:"entitlements.seats.max")
+        expect(result.failed_field).to be_nil
       end
     end
 
@@ -344,7 +344,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result.error.messages).to eq({invitation_privilege_value: ["value_not_in_select_options"]})
         expect(result.error.codes).to eq({"entitlements.seats.invitation": ["value_not_in_select_options"]})
         expect(result.error.meta).to eq({"entitlements.seats.invitation": {allowed_values: ["email", "phone", "slack"]}})
-        expect(result.failed_field).to eq(:"entitlements.seats.invitation")
+        expect(result.failed_field).to be_nil
       end
     end
 
