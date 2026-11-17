@@ -3,10 +3,10 @@
 module Api
   module V2
     module Plans
-      # Replaces the entitlements of a catalog plan, with the v1 body and response and the v2 errors.
+      # Replaces the entitlements of a catalog plan, with the v1 body, and the v2 response and errors.
       # The other entitlement routes of a plan still reach the v1 controller.
       class EntitlementsController < Api::V2::BaseController
-        serializable_with ::V1::Entitlement::PlanEntitlementSerializer, root: :entitlement, expand_on: []
+        serializable_with ::V2::PlanEntitlementSerializer, root: :plan_entitlement, expand_on: []
 
         # Before the lookup, like the cursor of the paginated lists.
         before_action :reject_pagination!, only: :create
@@ -25,7 +25,7 @@ module Api
           )
 
           if result.success?
-            render_entitlements(result.entitlements)
+            render_plan_entitlements(result.entitlements)
           else
             render_entitlements_error(result)
           end

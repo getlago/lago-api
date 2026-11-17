@@ -3,7 +3,7 @@
 require "rails_helper"
 
 # The entitlements render in the v1 shape: no datetime to render to the microsecond.
-RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
+RSpec.describe Api::V2::Plans::EntitlementsController do
   let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium") }
   let(:feature) { create(:feature, organization:, code: "seats", name: "Seats", description: nil) }
@@ -27,16 +27,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
       request
 
       expect(response).to have_http_status(:success)
-      expect(json).to eq(
-        entitlements: [
-          {
-            code: "seats",
-            name: "Seats",
-            description: nil,
-            privileges: [{code: "max", name: nil, value_type: "integer", value: 50, config: {}}]
-          }
-        ]
-      )
+      expect(json).to eq(plan_entitlements: [plan_entitlement_json(catalog_plan.entitlements.sole, [{privilege_code: "max", value: 50}])])
       expect(catalog_plan.entitlements.sole.values.sole.value).to eq("50")
     end
 
@@ -83,7 +74,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
         request
 
         expect(response).to have_http_status(:success)
-        expect(json[:entitlements].map { it[:code] }).to eq(["seats"])
+        expect(json[:plan_entitlements].map { it[:feature_code] }).to eq(["seats"])
         expect(old_entitlement.reload).to be_discarded
         expect(old_value.reload).to be_discarded
       end
@@ -104,20 +95,18 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
         request
 
         expect(response).to have_http_status(:success)
-        # `match` rather than `eq`, so that the privileges compose with match_array: the whole body is still compared.
+        # `match` rather than `eq`, so that the values compose with match_array: the whole body is still compared.
         expect(json).to match(
-          entitlements: [
-            {
-              code: "seats",
-              name: "Seats",
-              description: nil,
-              privileges: match_array([
-                {code: "max", name: nil, value_type: "integer", value: 25, config: {}},
-                {code: "provider", name: "Provider", value_type: "string", value: "okta", config: {}},
-                {code: "enabled", name: nil, value_type: "boolean", value: true, config: {}},
-                {code: "invitation", name: nil, value_type: "select", value: "phone", config: {select_options: %w[email phone]}}
+          plan_entitlements: [
+            plan_entitlement_json(
+              catalog_plan.entitlements.sole,
+              match_array([
+                {privilege_code: "max", value: 25},
+                {privilege_code: "provider", value: "okta"},
+                {privilege_code: "enabled", value: true},
+                {privilege_code: "invitation", value: "phone"}
               ])
-            }
+            )
           ]
         )
         expect(catalog_plan.entitlements.sole.values.to_h { [it.privilege.code, it.value] })
@@ -136,7 +125,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
         request
 
         expect(response).to have_http_status(:success)
-        expect(json).to eq(entitlements: [])
+        expect(json).to eq(plan_entitlements: [])
         expect(entitlement.reload).to be_discarded
         expect(value.reload).to be_discarded
       end
@@ -207,16 +196,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
         request
 
         expect(response).to have_http_status(:success)
-        expect(json).to eq(
-          entitlements: [
-            {
-              code: "seats",
-              name: "Seats",
-              description: nil,
-              privileges: [{code: "enabled", name: nil, value_type: "boolean", value: false, config: {}}]
-            }
-          ]
-        )
+        expect(json).to eq(plan_entitlements: [plan_entitlement_json(catalog_plan.entitlements.sole, [{privilege_code: "enabled", value: false}])])
       end
     end
 
@@ -439,5 +419,20 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
         expect(json[:code]).to eq("feature_unavailable")
       end
     end
+  end
+
+  # The v2 render of a plan entitlement, with its datetimes to the microsecond as native v2 renders them.
+  def plan_entitlement_json(entitlement, values)
+    entitlement = Entitlement::Entitlement.with_discarded.find(entitlement.id)
+
+    {
+      lago_id: entitlement.id,
+      plan_code: entitlement.catalog_plan&.code,
+      feature_code: entitlement.feature.code,
+      values:,
+      created_at: entitlement.created_at.iso8601(6),
+      updated_at: entitlement.updated_at.iso8601(6),
+      deleted_at: entitlement.deleted_at&.iso8601(6)
+    }
   end
 end
