@@ -85,3 +85,7 @@ recurring_aggregation_snapshots:
 catalog_wallets:
   description: "Enable contract wallets (prepaid credit owned by a contract) on the v2 API, on top of product_catalog"
   owners: ["@osmarluz"]
+
+standard_webhooks_signature:
+  description: "Allow webhook endpoints to sign deliveries with Standard Webhooks on v1 REST, GraphQL and the app"
+  owners: ["@groyoh"]

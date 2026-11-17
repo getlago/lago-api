@@ -177,7 +177,7 @@ RSpec.describe WebhookEndpoints::CreateService do
         expect(result.webhook_endpoint.signing_keys.pluck(:organization_id)).to eq([organization.id])
       end
 
-      context "when the organization still stores the removed standard_webhooks_signature flag" do
+      context "with the standard_webhooks_signature flag" do
         let(:organization) { create(:organization, feature_flags: ["standard_webhooks_signature"]) }
 
         it "creates a standard_webhooks endpoint with one signing key" do
