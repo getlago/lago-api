@@ -155,22 +155,14 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           expect(agg_service.call.aggregation).to eq(10 + 7 + 5)
         end
 
-        context "with a snapshot of the contract's previous segment" do
+        context "with a snapshot of the product written by an earlier arrears card" do
           before do
             create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, units: 100, events_count: 1,
               to_datetime: BillingSegment.inclusive_end(started_at), watermark: snapshot_watermark)
           end
 
-          it "adds the events the snapshot did not count to its units" do
-            expect(agg_service.call.aggregation).to eq(100 + 7 + 5)
-          end
-
-          context "without the persisted_recurring_values feature flag" do
-            before { organization.disable_feature_flag!(:persisted_recurring_values) }
-
-            it "reads the full history" do
-              expect(agg_service.call.aggregation).to eq(10 + 7 + 5)
-            end
+          it "reads the full history, as the advance card reads no snapshot" do
+            expect(agg_service.call.aggregation).to eq(10 + 7 + 5)
           end
         end
       end
