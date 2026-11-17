@@ -373,6 +373,27 @@ RSpec.describe GraphqlController do
         expect { post "/graphql", headers:, params: {query:} }.not_to change(Role, :count)
         expect(json[:errors].sole[:extensions]).to include(code: "forbidden", required_permissions: ["roles:create"])
       end
+
+      it "refuses to create an Okta integration" do
+        query = <<~GQL
+          mutation {
+            createOktaIntegration(input: {clientId: "id", clientSecret: "secret", domain: "sso.test", organizationName: "sso"}) { id }
+          }
+        GQL
+
+        expect { post "/graphql", headers:, params: {query:} }.not_to change(Integrations::OktaIntegration, :count)
+        expect(json[:errors].sole[:extensions]).to include(code: "forbidden", required_permissions: ["authentication_methods:update"])
+      end
+
+      it "ignores the login methods sent to updateOrganization" do
+        query = <<~GQL
+          mutation { updateOrganization(input: {authenticationMethods: [email_password]}) { authenticationMethods } }
+        GQL
+
+        expect { post "/graphql", headers:, params: {query:} }.not_to change { sandbox.reload.authentication_methods }
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:updateOrganization][:authenticationMethods]).to eq(sandbox.authentication_methods)
+      end
     end
 
     context "with customer portal token" do
