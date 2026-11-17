@@ -242,6 +242,18 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           end
         end
 
+        it "logs the activity object it is given in place of the serialized object" do
+          entitlement = create(:entitlement, :catalog_plan, organization:, catalog_plan: create(:catalog_plan, organization:, code: "premium"))
+          activity_object = {lago_id: entitlement.id, values: [{privilege_code: "max", value: 10}]}
+
+          activity_log.produce(entitlement, "plan_entitlement.deleted", activity_object:)
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload.fetch("activity_object")).to eq("lago_id" => entitlement.id, "values" => [{"privilege_code" => "max", "value" => 10}])
+          end
+        end
+
         it "uses the applied contract card serializer and its customer" do
           activity_log.produce(contract_rate_card, "contract_rate_card.created")
 

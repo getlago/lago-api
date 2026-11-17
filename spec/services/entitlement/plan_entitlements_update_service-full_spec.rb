@@ -414,10 +414,21 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(Utils::ActivityLog).to have_received(:produce).with(
           plan.entitlements.sole, "plan_entitlement.created", after_commit: true, changes: {"values" => [nil, added_values]}
         )
+        dropped = Entitlement::Entitlement.with_discarded.find(old_entitlement.id)
         expect(Utils::ActivityLog).to have_received(:produce).with(
           old_entitlement, "plan_entitlement.deleted", after_commit: true,
-          changes: {"values" => [[{privilege_code: "provider", value: "okta"}], nil]}
+          changes: {"values" => [[{privilege_code: "provider", value: "okta"}], nil]},
+          activity_object: {
+            lago_id: old_entitlement.id,
+            plan_code: plan.code,
+            feature_code: "sso",
+            values: [{privilege_code: "provider", value: "okta"}],
+            created_at: dropped.created_at.iso8601,
+            updated_at: dropped.updated_at.iso8601,
+            deleted_at: dropped.deleted_at.iso8601
+          }
         )
+        expect(dropped.deleted_at).to be_present
         expect(Utils::ActivityLog).to have_received(:produce).twice
       end
 
@@ -452,7 +463,8 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           )
           expect(Utils::ActivityLog).to have_received(:produce).with(
             old_entitlement, "plan_entitlement.deleted", after_commit: true,
-            changes: {"values" => [[{privilege_code: "provider", value: "okta"}], nil]}
+            changes: {"values" => [[{privilege_code: "provider", value: "okta"}], nil]},
+            activity_object: hash_including(lago_id: old_entitlement.id, values: [{privilege_code: "provider", value: "okta"}])
           )
           expect(Utils::ActivityLog).to have_received(:produce).exactly(3).times
         end

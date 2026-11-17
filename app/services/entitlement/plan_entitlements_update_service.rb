@@ -98,7 +98,7 @@ module Entitlement
       values_after = rendered_values_by_entitlement_id
       changed_ids = (values_before.keys | values_after.keys).reject { values_before[it] == values_after[it] }
 
-      Entitlement.with_discarded.where(id: changed_ids).oldest_first.each do |entitlement|
+      Entitlement.with_discarded.where(id: changed_ids).includes(:catalog_plan, :feature).oldest_first.each do |entitlement|
         before = values_before[entitlement.id]
         after = values_after[entitlement.id]
         action = if before.nil?
@@ -109,8 +109,17 @@ module Entitlement
           "updated"
         end
 
-        Utils::ActivityLog.produce_after_commit(entitlement, "plan_entitlement.#{action}", changes: {"values" => [before, after]})
+        Utils::ActivityLog.produce_after_commit(
+          entitlement, "plan_entitlement.#{action}",
+          changes: {"values" => [before, after]},
+          activity_object: (action == "deleted") ? deleted_entitlement_render(entitlement, before) : nil
+        )
       end
+    end
+
+    # A dropped entitlement as it was before the call, with its deletion time: its values are discarded with it.
+    def deleted_entitlement_render(entitlement, values_before)
+      ::V2::PlanEntitlementSerializer.new(entitlement).serialize.merge(values: values_before)
     end
 
     def delete_missing_entitlements

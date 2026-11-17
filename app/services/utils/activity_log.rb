@@ -40,20 +40,23 @@ module Utils
     # This method is used to produce an activity log after a commit.
     #
     # It is meant to avoid race-conditions where a asynchronous post-processing run before changes are commited to the DB.
-    def self.produce_after_commit(object, activity_type, activity_id: nil, changes: nil, &)
-      kwargs = {after_commit: true, activity_id:, changes:}.compact
+    def self.produce_after_commit(object, activity_type, activity_id: nil, changes: nil, activity_object: nil, &)
+      kwargs = {after_commit: true, activity_id:, changes:, activity_object:}.compact
       produce(object, activity_type, **kwargs, &)
     end
 
     # changes: a diff the caller computed, logged as given for any activity type, in place of the one
     # a block computes from the object.
-    def initialize(object, activity_type, activity_id: SecureRandom.uuid, after_commit: false, changes: nil, &block)
+    # activity_object: a render the caller built, logged in place of the object serialized when the log is sent,
+    # for a record whose state at that time is not the one to log (a deleted record with its last values).
+    def initialize(object, activity_type, activity_id: SecureRandom.uuid, after_commit: false, changes: nil, activity_object: nil, &block)
       @object = object
       @activity_type = activity_type
       @activity_id = activity_id
       @block = block
       @after_commit = after_commit
       @given_changes = changes
+      @given_activity_object = activity_object
     end
 
     def produce
@@ -83,7 +86,7 @@ module Utils
 
     private
 
-    attr_reader :object, :activity_type, :activity_id, :block, :after_commit, :given_changes
+    attr_reader :object, :activity_type, :activity_id, :block, :after_commit, :given_changes, :given_activity_object
 
     def run_maybe_after_commit(&block)
       if after_commit
@@ -112,7 +115,7 @@ module Utils
           resource_id: resource.id,
           resource_type: resource.class.name,
           organization_id: organization_id,
-          activity_object: object_serialized,
+          activity_object: given_activity_object || object_serialized,
           activity_object_changes: object_changes(changes),
           external_customer_id: external_customer_id,
           external_subscription_id: external_subscription_id
