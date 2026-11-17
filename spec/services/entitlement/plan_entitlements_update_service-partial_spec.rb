@@ -259,7 +259,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
 
           expect(Utils::ActivityLog).to have_received(:produce).with(
             entitlement, "plan_entitlement.updated", after_commit: true,
-            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max", value: 10}, {privilege_code: "max_admins", value: 5}]]}
+            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max_admins", value: 5}, {privilege_code: "max", value: 10}]]}
           ).once
         end
       end

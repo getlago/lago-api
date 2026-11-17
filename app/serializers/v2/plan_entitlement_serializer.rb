@@ -15,17 +15,19 @@ module V2
 
     private
 
-    # Sorted in Ruby so that a preloaded association is not queried again
+    # Newest privilege first, then by privilege id, so that the order does not depend on when each value
+    # was written. Sorted in Ruby so that a preloaded association is not queried again.
     def values
-      model.values.sort_by { [it.created_at, it.id] }.filter_map do |entitlement_value|
-        privilege = entitlement_value.privilege
-        next if privilege.nil?
+      model.values.select(&:privilege)
+        .sort_by { [it.privilege.created_at, it.privilege.id] }.reverse
+        .map do |entitlement_value|
+          privilege = entitlement_value.privilege
 
-        {
-          privilege_code: privilege.code,
-          value: Utils::Entitlement.cast_value(entitlement_value.value, privilege.value_type)
-        }
-      end
+          {
+            privilege_code: privilege.code,
+            value: Utils::Entitlement.cast_value(entitlement_value.value, privilege.value_type)
+          }
+        end
     end
   end
 end

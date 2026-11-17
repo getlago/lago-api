@@ -8,9 +8,15 @@ RSpec.describe V2::PlanEntitlementSerializer do
   let_it_be(:organization) { create(:organization) }
   let_it_be(:catalog_plan) { create(:catalog_plan, organization:, code: "premium") }
   let_it_be(:feature) { create(:feature, organization:, code: "seats") }
-  let_it_be(:integer_privilege) { create(:privilege, :integer_type, organization:, feature:, code: "max") }
-  let_it_be(:boolean_privilege) { create(:privilege, :boolean_type, organization:, feature:, code: "enabled") }
-  let_it_be(:string_privilege) { create(:privilege, :string_type, organization:, feature:, code: "tier") }
+  let_it_be(:integer_privilege) do
+    create(:privilege, :integer_type, organization:, feature:, code: "max", created_at: Time.zone.parse("2026-01-01T10:00:00Z"))
+  end
+  let_it_be(:boolean_privilege) do
+    create(:privilege, :boolean_type, organization:, feature:, code: "enabled", created_at: Time.zone.parse("2026-01-01T10:01:00Z"))
+  end
+  let_it_be(:string_privilege) do
+    create(:privilege, :string_type, organization:, feature:, code: "tier", created_at: Time.zone.parse("2026-01-01T10:02:00Z"))
+  end
 
   let(:options) { {} }
   let(:entitlement) do
@@ -44,23 +50,23 @@ RSpec.describe V2::PlanEntitlementSerializer do
     before do
       # A value touches its entitlement: created at the entitlement's updated_at to keep it
       travel_to(entitlement.updated_at) do
-        # Created in another order than their timestamps, to check the oldest first order
+        # Written in another order than their privileges, to check that the order comes from the privileges
+        create(:entitlement_value, organization:, entitlement:, privilege: boolean_privilege, value: "true",
+          created_at: Time.zone.parse("2026-01-05T10:00:00Z"))
+        create(:entitlement_value, organization:, entitlement:, privilege: integer_privilege, value: "50",
+          created_at: Time.zone.parse("2026-01-05T10:01:00Z"))
         create(:entitlement_value, organization:, entitlement:, privilege: string_privilege, value: "gold",
           created_at: Time.zone.parse("2026-01-05T10:02:00Z"))
-        create(:entitlement_value, organization:, entitlement:, privilege: integer_privilege, value: "50",
-          created_at: Time.zone.parse("2026-01-05T10:00:00Z"))
-        create(:entitlement_value, organization:, entitlement:, privilege: boolean_privilege, value: "true",
-          created_at: Time.zone.parse("2026-01-05T10:01:00Z"))
       end
     end
 
-    it "renders the values oldest first, cast by privilege type" do
+    it "renders the values newest privilege first, cast by privilege type" do
       expect(payload).to eq(
         flat_payload.merge(
           values: [
-            {privilege_code: "max", value: 50},
+            {privilege_code: "tier", value: "gold"},
             {privilege_code: "enabled", value: true},
-            {privilege_code: "tier", value: "gold"}
+            {privilege_code: "max", value: 50}
           ]
         )
       )
@@ -90,23 +96,28 @@ RSpec.describe V2::PlanEntitlementSerializer do
     end
   end
 
-  context "with values created at the same time" do
-    let(:created_at) { Time.zone.parse("2026-01-05T10:00:00Z") }
-    let(:value_ids) { %w[00000000-0000-0000-0000-000000000002 00000000-0000-0000-0000-000000000001] }
+  context "with privileges created at the same time" do
+    let(:created_at) { Time.zone.parse("2026-01-02T10:00:00Z") }
+    let(:first_privilege) do
+      create(:privilege, :string_type, id: "00000000-0000-0000-0000-000000000001", organization:, feature:, code: "region", created_at:)
+    end
+    let(:second_privilege) do
+      create(:privilege, :string_type, id: "00000000-0000-0000-0000-000000000002", organization:, feature:, code: "zone", created_at:)
+    end
 
     before do
       travel_to(entitlement.updated_at) do
-        create(:entitlement_value, id: value_ids.first, organization:, entitlement:, privilege: integer_privilege, value: "50", created_at:)
-        create(:entitlement_value, id: value_ids.last, organization:, entitlement:, privilege: string_privilege, value: "gold", created_at:)
+        create(:entitlement_value, organization:, entitlement:, privilege: first_privilege, value: "eu")
+        create(:entitlement_value, organization:, entitlement:, privilege: second_privilege, value: "west")
       end
     end
 
-    it "orders them by id" do
+    it "orders them by privilege id, highest first" do
       expect(payload).to eq(
         flat_payload.merge(
           values: [
-            {privilege_code: "tier", value: "gold"},
-            {privilege_code: "max", value: 50}
+            {privilege_code: "zone", value: "west"},
+            {privilege_code: "region", value: "eu"}
           ]
         )
       )

@@ -404,11 +404,12 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "logs the added and the dropped entitlement" do
         result
 
+        # Newest privilege first: max is created before the three others.
         added_values = [
-          {privilege_code: "max", value: 25},
-          {privilege_code: "provider", value: "okta"},
+          {privilege_code: "invitation", value: "phone"},
           {privilege_code: "enabled", value: true},
-          {privilege_code: "invitation", value: "phone"}
+          {privilege_code: "provider", value: "okta"},
+          {privilege_code: "max", value: 25}
         ]
         expect(Utils::ActivityLog).to have_received(:produce).with(
           plan.entitlements.sole, "plan_entitlement.created", after_commit: true, changes: {"values" => [nil, added_values]}
