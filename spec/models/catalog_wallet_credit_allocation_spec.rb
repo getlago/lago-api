@@ -22,6 +22,7 @@ describe CatalogWalletCreditAllocation do
     it do
       expect(allocation).to belong_to(:organization)
       expect(allocation).to belong_to(:catalog_wallet)
+      expect(allocation).to have_many(:transactions).class_name("CatalogWalletTransaction").with_foreign_key(:credit_allocation_id).inverse_of(:credit_allocation)
       expect(allocation).to belong_to(:product).optional
       expect(allocation).to belong_to(:product_filter).optional
     end
