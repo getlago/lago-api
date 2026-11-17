@@ -239,6 +239,55 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
+      context "when the update keeps the 3 privileges and adds 47" do
+        let(:params) { {privileges: [{code: "max"}, {code: "min"}, {code: "opt"}] + Array.new(47) { |i| {code: "new_#{i}"} }} }
+
+        it "ends with 50 privileges" do
+          expect(subject).to be_success
+          expect(feature.privileges.count).to eq(50)
+        end
+      end
+
+      context "when the update keeps the 3 privileges and adds 48" do
+        let(:params) do
+          {
+            name: "Renamed",
+            privileges: [{code: "max", name: "Max."}, {code: "min"}, {code: "opt"}] + Array.new(48) { |i| {code: "new_#{i}"} }
+          }
+        end
+
+        it "returns too_many_privileges and writes nothing" do
+          expect { subject }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(subject).to be_failure
+          expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+          expect(subject.error.meta).to eq({base: {max_items: 50}})
+          expect(feature.reload.name).not_to eq("Renamed")
+          expect(feature.privileges.pluck(:code)).to match_array(%w[max min opt])
+          expect(privilege1.reload.name).to eq("Maximum")
+        end
+      end
+
+      context "when the update removes the 3 privileges and adds 50" do
+        let(:params) { {privileges: Array.new(50) { |i| {code: "new_#{i}"} }} }
+
+        it "counts the privileges after the removals" do
+          expect(subject).to be_success
+          expect(feature.privileges.count).to eq(50)
+          expect(feature.privileges.where(code: %w[max min opt])).to be_empty
+        end
+      end
+
+      context "when the update removes the 3 privileges and adds 51" do
+        let(:params) { {privileges: Array.new(51) { |i| {code: "new_#{i}"} }} }
+
+        it "returns too_many_privileges and keeps the removed privileges" do
+          expect(subject).to be_failure
+          expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+          expect(feature.reload.privileges.pluck(:code)).to match_array(%w[max min opt])
+        end
+      end
+
       context "when feature is nil" do
         let(:params) { {name: "Updated Name"} }
 
@@ -488,6 +537,41 @@ RSpec.describe Entitlement::FeatureUpdateService do
           expect(result.feature.description).to eq("Updated feature description")
           expect(privilege1.reload.name).to eq("Max.")
           expect(privilege2.reload.name).to eq("Minimum") # unchanged
+        end
+      end
+
+      context "when the update adds 47 privileges to the 3 existing ones" do
+        let(:params) { {privileges: Array.new(47) { |i| {code: "new_#{i}"} }} }
+
+        it "ends with 50 privileges" do
+          expect(subject).to be_success
+          expect(feature.privileges.count).to eq(50)
+        end
+      end
+
+      context "when the update adds 48 privileges to the 3 existing ones" do
+        let(:params) { {privileges: Array.new(48) { |i| {code: "new_#{i}"} }} }
+
+        it "returns too_many_privileges and writes nothing" do
+          expect { subject }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(subject).to be_failure
+          expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+          expect(subject.error.meta).to eq({base: {max_items: 50}})
+          expect(feature.reload.privileges.pluck(:code)).to match_array(%w[max min opt])
+        end
+      end
+
+      context "when the feature is already above the limit and the update adds no privilege" do
+        let(:params) { {name: "Renamed", privileges: [{code: "max", name: "Max."}]} }
+
+        before { create_list(:privilege, 48, feature:) }
+
+        it "updates the feature" do
+          expect(subject).to be_success
+          expect(feature.reload.name).to eq("Renamed")
+          expect(privilege1.reload.name).to eq("Max.")
+          expect(feature.privileges.count).to eq(51)
         end
       end
 

@@ -116,5 +116,32 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, :premium do
         expect(result_data["privileges"].sole["name"]).to eq(new_privilege_name)
       end
     end
+
+    context "when the update replaces the existing privilege with 50 new ones" do
+      let(:input) { {id: feature.id, privileges: Array.new(50) { |i| {code: "privilege_#{i}"} }} }
+
+      before { create(:privilege, feature:, code: "seats") }
+
+      it "counts the privileges after the removal" do
+        result = subject
+
+        expect(result["data"]["updateFeature"]["privileges"].size).to eq(50)
+      end
+    end
+
+    context "when the update ends with 51 privileges" do
+      let(:input) { {id: feature.id, name: "Renamed", privileges: Array.new(51) { |i| {code: "privilege_#{i}"} }} }
+
+      before { create(:privilege, feature:, code: "seats") }
+
+      it "returns too_many_privileges and writes nothing" do
+        result = nil
+        expect { result = subject }.not_to change(Entitlement::Privilege, :count)
+
+        expect_graphql_error(result:, message: "unprocessable_entity", details: {base: ["too_many_privileges"]})
+        expect(feature.reload.name).to eq("Feature Name")
+        expect(feature.privileges.pluck(:code)).to eq(["seats"])
+      end
+    end
   end
 end

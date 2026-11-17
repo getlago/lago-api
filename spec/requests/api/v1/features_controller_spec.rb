@@ -177,6 +177,28 @@ RSpec.describe Api::V1::FeaturesController do
       end
     end
 
+    context "with 50 privileges" do
+      let(:params) { {feature: {code: "new_feature", privileges: Array.new(50) { |i| {code: "priv_#{i}"} }}} }
+
+      it "creates the feature with its 50 privileges" do
+        expect { subject }.to change(organization.privileges, :count).by(50)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature][:privileges].size).to eq(50)
+      end
+    end
+
+    context "with 51 privileges" do
+      let(:params) { {feature: {code: "new_feature", privileges: Array.new(51) { |i| {code: "priv_#{i}"} }}} }
+
+      it "returns too_many_privileges and creates nothing" do
+        expect { subject }.to not_change(organization.features, :count).and not_change(organization.privileges, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: ["too_many_privileges"])
+      end
+    end
+
     context "when feature has no privileges" do
       let(:params) do
         {
@@ -424,6 +446,29 @@ RSpec.describe Api::V1::FeaturesController do
         expect(json[:feature][:description]).to eq("Number of users of the account") # unchanged
         expect(indexed_privileges[:max][:name]).to eq("Max.")
         expect(indexed_privileges[:max_admins][:name]).to eq("Max Admins")
+      end
+    end
+
+    context "when the update adds 48 privileges to the 2 existing ones" do
+      let(:params) { {feature: {privileges: Array.new(48) { |i| {code: "priv_#{i}"} }}} }
+
+      it "ends with 50 privileges" do
+        expect { subject }.to change(organization.privileges, :count).by(48)
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:feature][:privileges].size).to eq(50)
+      end
+    end
+
+    context "when the update adds 49 privileges to the 2 existing ones" do
+      let(:params) { {feature: {name: "Renamed", privileges: Array.new(49) { |i| {code: "priv_#{i}"} }}} }
+
+      it "returns too_many_privileges and writes nothing" do
+        expect { subject }.not_to change(organization.privileges, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: ["too_many_privileges"])
+        expect(feature1.reload.name).to eq("Number of seats")
       end
     end
 
