@@ -4,14 +4,6 @@ module BillingOperations
   class ProcessService < BaseService
     Result = BaseResult[:invoices]
     EmptyInvoice = Class.new(StandardError)
-    ELIGIBLE_ACTION_TYPES = %w[
-      renew_fixed_advance
-      close_fixed_arrears
-      close_metered_arrears
-      renew_recurring_metered_advance
-      regroup_paid_fees
-    ].freeze
-
     def initialize(customer:, timestamp:)
       @customer = customer
       @timestamp = timestamp
@@ -44,7 +36,7 @@ module BillingOperations
     def due_operations
       customer_contracts = customer.contracts.where(organization_id: customer.organization_id)
       operations = customer.billing_operations.due_for_processing(timestamp)
-        .where(organization_id: customer.organization_id, action_type: ELIGIBLE_ACTION_TYPES)
+        .where(organization_id: customer.organization_id, action_type: BillingOperation::PERIODIC_ACTIONS.keys)
         .joins(:contract_rate_card)
         .merge(ContractRateCard.kept.where(
           organization_id: customer.organization_id,
@@ -247,7 +239,6 @@ module BillingOperations
       return unless resolution.cycle
 
       Schedule::BuildPlannedOperation.call!(
-        contract_rate_card: operation.contract_rate_card,
         schedule: resolution.schedule,
         after_operation: operation
       ).planned_operation

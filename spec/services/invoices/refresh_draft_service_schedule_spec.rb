@@ -14,6 +14,7 @@ RSpec.describe Invoices::RefreshDraftService do
   let(:rate_card) { create(:rate_card, billing_timing:, organization:, product:, currency: "USD") }
   let(:billing_timing) { "advance" }
   let(:pricing_unit_conversion_rate) { nil }
+  let(:operation_cycles) { [1, 2, 3] }
   let(:contract_rate_card) do
     create(
       :contract_rate_card,
@@ -53,6 +54,13 @@ RSpec.describe Invoices::RefreshDraftService do
     rate_card_rate
     create(:contract_rate_card_term, organization:, contract_rate_card:, units: 2)
     initial_fee
+    operation_cycles.each do |month|
+      cycle_start = Time.utc(2026, month, 1)
+      billing_at = (billing_timing == "advance") ? cycle_start : cycle_start + 1.month
+      create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,
+        action_type: (billing_timing == "advance") ? "renew_fixed_advance" : "close_fixed_arrears",
+        reason: :periodic_continuation, billing_at:, target_cycle_started_at: cycle_start, processed_at: billing_at)
+    end
   end
 
   def fee_coverage
@@ -61,7 +69,27 @@ RSpec.describe Invoices::RefreshDraftService do
     end.sort_by(&:first)
   end
 
-  it "rebuilds all advance slices due at the stored timestamp, with the schedule cutoff retained" do
+  context "when no operations are linked" do
+    let(:operation_cycles) { [] }
+
+    before do
+      invoice.update!(taxes_amount_cents: 44, sub_total_excluding_taxes_amount_cents: 400,
+        sub_total_including_taxes_amount_cents: 444)
+    end
+
+    it "preserves the draft when its fee references a card" do
+      expect(result).to be_failure
+      expect(result.error.code).to eq("missing_billing_operations")
+      expect(invoice.reload).to have_attributes(
+        status: "draft", ready_to_be_refreshed: true, total_amount_cents: 444, fees_amount_cents: 444,
+        taxes_amount_cents: 44, sub_total_excluding_taxes_amount_cents: 400,
+        sub_total_including_taxes_amount_cents: 444
+      )
+      expect(invoice.fees.pluck(:id, :amount_cents)).to eq([[initial_fee.id, 444]])
+    end
+  end
+
+  it "rebuilds the advance coverage owned by the linked operations" do
     expect(result).to be_success
 
     expect(invoice.reload.fees.count).to eq(3)
@@ -71,8 +99,8 @@ RSpec.describe Invoices::RefreshDraftService do
       [Time.utc(2026, 3, 1).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 4, 1)).iso8601(6), 3_000]
     ])
     expect(invoice.total_amount_cents).to eq(3 * 2 * 1_500) # Three cycles, two units at $15 each.
-    expect(invoice.fees.pluck(Arel.sql("properties ->> 'timestamp'")).map { Time.iso8601(it) }.uniq)
-      .to eq([Time.utc(2026, 3, 1)])
+    expect(invoice.fees.pluck(Arel.sql("properties ->> 'timestamp'")).map { Time.iso8601(it) }.sort)
+      .to eq([Time.utc(2026, 1, 1), Time.utc(2026, 2, 1), Time.utc(2026, 3, 1)])
     first_coverage = fee_coverage
     first_total = invoice.total_amount_cents
     second_result = described_class.call(invoice:)
@@ -83,6 +111,7 @@ RSpec.describe Invoices::RefreshDraftService do
   end
 
   context "when the invoice has linked billing operations" do
+    let(:operation_cycles) { [] }
     let(:operation_attributes) do
       {
         action_type: "renew_fixed_advance",
@@ -93,7 +122,8 @@ RSpec.describe Invoices::RefreshDraftService do
     end
 
     before do
-      create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:, **operation_attributes)
+      create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,
+        processed_at: operation_attributes[:billing_at], **operation_attributes)
     end
 
     it "rebuilds only the slices covered by those operations" do
@@ -181,7 +211,8 @@ RSpec.describe Invoices::RefreshDraftService do
         create(
           :billing_operation, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
           action_type: "renew_fixed_advance", reason: :periodic_continuation,
-          billing_at: Time.utc(2026, 3, 1), target_cycle_started_at: Time.utc(2026, 3, 1)
+          billing_at: Time.utc(2026, 3, 1), target_cycle_started_at: Time.utc(2026, 3, 1),
+          processed_at: Time.utc(2026, 3, 1)
         )
       end
 
@@ -245,6 +276,7 @@ RSpec.describe Invoices::RefreshDraftService do
 
   context "when the rate card bills in arrears" do
     let(:billing_timing) { "arrears" }
+    let(:operation_cycles) { [1, 2] }
 
     it "does not include the currently unclosed March cycle" do
       expect(result).to be_success
@@ -312,7 +344,7 @@ RSpec.describe Invoices::RefreshDraftService do
       create(:contract_rate_card_term, organization: other_organization, contract_rate_card: foreign_contract_rate_card, units: 1)
     end
 
-    it "only rebuilds cards referenced by invoice fees and scoped to its organization" do
+    it "only rebuilds cards referenced by invoice operations and scoped to its organization" do
       expect(result).to be_success
 
       expect(invoice.reload.fees.count).to eq(3)
@@ -332,7 +364,7 @@ RSpec.describe Invoices::RefreshDraftService do
         fees_amount_cents: 444
       )
       expect(invoice.fees.pluck(:id)).to eq([initial_fee.id])
-      expect(BillingOperation.count).to eq(0)
+      expect(invoice.billing_operations.count).to eq(3)
     end
   end
 end

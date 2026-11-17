@@ -82,6 +82,21 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
+  def oracle_segments(cycles, timing:)
+    terms = Billing::Terms.new(timing:, prorated: true)
+    cycles.flat_map do |cycle|
+      Billing::Segments.within(cycle, rates:).filter_map do |segment|
+        next unless segment.rate
+        billing_at = terms.billing_at_for(segment)
+        next if billing_at > asked_at
+
+        [cycle.index, cycle.started_at, segment.started_at, segment.ended_at, billing_at,
+          cycle.calendar.proration_ratio(segment.started_at, segment.ended_at),
+          cycle.phase.code, segment.rate.effective_from, cycle.phase.rate_override&.billing_interval_unit]
+      end
+    end
+  end
+
   shapes = [
     {timezone: "America/New_York", timing: :arrears, anchor: Date.new(2026, 1, 31)},
     {timezone: "America/New_York", timing: :advance, anchor: Date.new(2026, 1, 31)},
@@ -141,7 +156,7 @@ RSpec.describe Billing::RateCards::Schedule do
       it "answers the same segments whichever cycle it jumps to" do
         cycles = walk(**shape)
         schedule = build(**shape)
-        full = segment_values(schedule.segments_due_by(asked_at))
+        full = oracle_segments(cycles, timing: shape[:timing])
 
         mismatches = cycles.filter_map do |cycle|
           jumped = segment_values(schedule.segments_due_in_cycle(cycle.started_at, by: asked_at))

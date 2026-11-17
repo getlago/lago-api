@@ -15,10 +15,9 @@ module BillingOperations
       #   change, termination): the first obligation still open at it.
       # - `after_operation:` once a billing completed: the first obligation falling due later,
       #   walking from its cycle because a billing can belong to an earlier cycle.
-      def initialize(contract_rate_card:, schedule:, at: nil, after_operation: nil)
+      def initialize(schedule:, at: nil, after_operation: nil)
         raise ArgumentError, "pass either at: or after_operation:" unless at.nil? ^ after_operation.nil?
 
-        @contract_rate_card = contract_rate_card
         @schedule = schedule
         @at = at
         @after_operation = after_operation
@@ -43,12 +42,12 @@ module BillingOperations
 
       private
 
-      attr_reader :contract_rate_card, :schedule, :at, :after_operation
+      attr_reader :schedule, :at, :after_operation
 
       # Outstanding final coverage closes at termination. Coverage already billed at the
       # planned end must not become due again when termination happens later.
       def operation_billing_at(segment)
-        contract = contract_rate_card.contract
+        contract = after_operation.contract_rate_card.contract
 
         if contract.terminated_at && segment.billing_at == contract.billing_ends_at && segment.billing_at > after_operation.billing_at
           contract.terminated_at

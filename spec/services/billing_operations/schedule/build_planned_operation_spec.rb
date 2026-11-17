@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   subject(:result) do
-    described_class.call(contract_rate_card:, schedule:, **planning)
+    described_class.call(schedule:, **planning)
   end
 
   let(:organization) { create(:organization) }
@@ -249,8 +249,8 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
 
   context "when neither or both planning instants are given" do
     it "refuses the call" do
-      expect { described_class.call(contract_rate_card:, schedule:) }.to raise_error(ArgumentError, /either at: or after_operation:/)
-      expect { described_class.call(contract_rate_card:, schedule:, at: timestamp, after_operation:) }
+      expect { described_class.call(schedule:) }.to raise_error(ArgumentError, /either at: or after_operation:/)
+      expect { described_class.call(schedule:, at: timestamp, after_operation:) }
         .to raise_error(ArgumentError, /either at: or after_operation:/)
     end
   end

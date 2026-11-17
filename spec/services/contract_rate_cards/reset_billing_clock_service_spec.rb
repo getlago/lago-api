@@ -90,6 +90,18 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-14"))
     end
 
+    it "reuses the card when planning after the completed close" do
+      queries = []
+      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
+        planned = nil
+        queries.concat(capture_sql { planned = original.call(**attributes) })
+        planned
+      end
+
+      expect(result).to be_success
+      expect(queries.grep(/FROM "contract_rate_cards"/)).to be_empty
+    end
+
     context "when a new rate starts on the boundary of the close still owed" do
       before do
         create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-10-14"),

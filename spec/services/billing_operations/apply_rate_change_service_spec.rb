@@ -121,7 +121,7 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
 
     before do
       other_card
-      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_wrap_original do |original, **attributes|
+      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
         raise BaseService::FailedResult.new(failure, "cannot schedule") if attributes[:contract_rate_card] == other_card
 
         original.call(**attributes)

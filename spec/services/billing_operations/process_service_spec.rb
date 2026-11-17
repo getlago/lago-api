@@ -62,6 +62,19 @@ RSpec.describe BillingOperations::ProcessService do
     end
   end
 
+  context "with a late payment operation" do
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", reason: "late_payment",
+        billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
+    end
+
+    it "processes the periodic action despite its reason" do
+      expect(result.invoices.sole.total_amount_cents).to eq(3100)
+      expect(operation.reload.processed_at).to eq(timestamp)
+    end
+  end
+
   context "with a pending activation operation" do
     let(:operation) { nil }
     let(:activation_operation) do

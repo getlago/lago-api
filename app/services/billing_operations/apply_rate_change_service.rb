@@ -52,7 +52,7 @@ module BillingOperations
         return unless contract_rate_card.next_billing_at&.between?(Time.current, rate.effective_from)
 
         planned_operation = Schedule::BuildPlannedOperation.call!(
-          contract_rate_card:, schedule:, at: rate.effective_from
+          schedule:, at: rate.effective_from
         ).planned_operation
         return unless planned_operation
 

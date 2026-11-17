@@ -337,9 +337,14 @@ RSpec.describe Invoices::RefreshDraftService do
         )
       end
       let(:billing_segment) do
-        billable_segment = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:)
-          .schedule.segments_due_by(timestamp).sole
-        BillingSegments::BuildEventSegmentService.call!(contract_rate_card:, billable_segment:).billing_segment
+        BillingOperations::ResolveSegmentsService.call!(operation:).segments.sole
+      end
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,
+          action_type: (rate_card.billing_timing == "advance") ? "renew_fixed_advance" : "close_fixed_arrears",
+          reason: :periodic_continuation, billing_at: timestamp,
+          target_cycle_started_at: (rate_card.billing_timing == "advance") ? timestamp : timestamp - 1.month,
+          processed_at: timestamp)
       end
       let(:seed_fee) do
         create(:fee, invoice:, organization:, billing_entity: invoice.billing_entity, subscription: nil,
@@ -350,6 +355,7 @@ RSpec.describe Invoices::RefreshDraftService do
       before do
         rate_card_rate
         seed_fee
+        operation
       end
 
       it "rebuilds the product fees and totals from the referenced card schedule" do
@@ -383,7 +389,12 @@ RSpec.describe Invoices::RefreshDraftService do
             properties: {"timestamp" => timestamp.iso8601})
         end
 
-        before { second_seed_fee }
+        before do
+          second_seed_fee
+          create(:billing_operation, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
+            action_type: "close_fixed_arrears", reason: :periodic_continuation, billing_at: timestamp,
+            target_cycle_started_at: timestamp - 1.month, processed_at: timestamp)
+        end
 
         it "loads units for all segments in one query" do
           billing_segment
@@ -442,6 +453,23 @@ RSpec.describe Invoices::RefreshDraftService do
 
           expect(result).to be_success
           expect(closing_snapshot.reload.current_aggregation).to eq(10)
+        end
+      end
+
+      context "when an operation-owned draft originally has no fees" do
+        let(:seed_fee) { nil }
+        let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+        let(:product) { create(:product, organization:, billable_metric:) }
+
+        before do
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: Time.utc(2026, 1, 15))
+        end
+
+        it "creates a fee for late usage within the operation's coverage" do
+          expect(invoice.fees).to be_empty
+          expect(refresh_service.call).to be_success
+          expect(invoice.reload.fees.sole).to have_attributes(invoiceable: product, amount_cents: 1_500)
         end
       end
 

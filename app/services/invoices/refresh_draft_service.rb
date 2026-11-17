@@ -159,40 +159,11 @@ module Invoices
           {rate_phases: :rate_override}
         ])
 
-      unless operations.empty?
-        pricing_units = pricing_units_by_code(operations.map(&:contract_rate_card))
-        @billing_segments = operations.flat_map do |operation|
-          BillingOperations::ResolveSegmentsService.call!(operation:, pricing_units_by_code: pricing_units).segments
-        end
-        return @billing_segments
-      end
+      result.not_allowed_failure!(code: "missing_billing_operations").raise_if_error! if operations.empty?
 
-      timestamp = fetch_timestamp
-      contract_rate_cards = ContractRateCard
-        .where(
-          organization_id: invoice.organization_id,
-          id: invoice.fees.where.not(contract_rate_card_id: nil).select(:contract_rate_card_id)
-        )
-        .order(:created_at, :id)
-        .includes(
-          :organization,
-          :terms,
-          {product: {filters: {values: :billable_metric_filter}}},
-          {contract: :customer},
-          {rate_card: [:rates, {product: :billable_metric}]},
-          {rate_phases: :rate_override}
-        )
-
-      pricing_units = pricing_units_by_code(contract_rate_cards)
-      @billing_segments = contract_rate_cards.flat_map do |contract_rate_card|
-        schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
-
-        schedule.segments_due_by(timestamp).map do |billable_segment|
-          BillingSegments::BuildEventSegmentService
-            .call!(contract_rate_card:, billable_segment:, pricing_units_by_code: pricing_units)
-            .billing_segment
-            .tap { it.billing_at = timestamp }
-        end
+      pricing_units = pricing_units_by_code(operations.map(&:contract_rate_card))
+      @billing_segments = operations.flat_map do |operation|
+        BillingOperations::ResolveSegmentsService.call!(operation:, pricing_units_by_code: pricing_units).segments
       end
     end
 

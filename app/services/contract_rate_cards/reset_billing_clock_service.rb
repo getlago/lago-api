@@ -22,7 +22,7 @@ module ContractRateCards
         contract_rate_card.update!(next_billing_at: nil)
       elsif schedule
         result.planned_operation = BillingOperations::Schedule::BuildPlannedOperation.call!(
-          contract_rate_card:, schedule:, **planning
+          schedule:, **planning
         ).planned_operation
         contract_rate_card.update!(next_billing_at: result.planned_operation&.billing_at)
       end
@@ -58,6 +58,8 @@ module ContractRateCards
         .where(organization_id: contract_rate_card.organization_id, action_type:, cancelled_at: nil)
         .order(billing_at: :desc, created_at: :desc, id: :desc)
         .first
+      @last_billing.association(:contract_rate_card).target = contract_rate_card if @last_billing
+      @last_billing
     end
   end
 end
