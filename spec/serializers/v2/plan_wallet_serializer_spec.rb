@@ -6,7 +6,7 @@ describe V2::PlanWalletSerializer do
   subject(:payload) { described_class.new(plan_wallet, options).serialize }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:catalog_plan) { create(:catalog_plan, organization:, code: "pro") }
+  let_it_be(:catalog_plan) { create(:catalog_plan, organization:, code: "pro", currency: "USD") }
 
   let(:plan_wallet) do
     create(:plan_wallet, organization:, catalog_plan:, code: "ai_credits", name: "AI credits",
