@@ -222,7 +222,7 @@ RSpec.describe Mutations::WalletTransactions::Create do
         end
       end
 
-      context "when the code does not resolve" do
+      context "when the code resolves" do
         before { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
 
         it "routes the top-up to the connections" do
