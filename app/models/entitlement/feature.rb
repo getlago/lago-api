@@ -9,7 +9,7 @@ module Entitlement
     default_scope -> { kept }
 
     belongs_to :organization
-    has_many :privileges, class_name: "Entitlement::Privilege", foreign_key: "entitlement_feature_id", dependent: :destroy
+    has_many :privileges, class_name: "Entitlement::Privilege", foreign_key: "entitlement_feature_id", inverse_of: :feature, dependent: :destroy
     has_many :entitlements, class_name: "Entitlement::Entitlement", foreign_key: "entitlement_feature_id", dependent: :destroy
     has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
     has_many :plans, through: :entitlements
