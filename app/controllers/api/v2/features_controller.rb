@@ -63,6 +63,17 @@ module Api
         end
       end
 
+      def destroy
+        feature = current_organization.features.find_by(code: params[:code])
+        result = ::Entitlement::FeatureDestroyService.call(feature:)
+
+        if result.success?
+          render_feature(result.feature)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def resource_name
