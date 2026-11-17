@@ -516,6 +516,379 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
     end
   end
 
+  describe "PATCH /api/v2/plans/:plan_code/entitlements" do
+    subject(:request) { patch_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements#{query}", request_params) }
+
+    let(:plan_code) { catalog_plan.code }
+    let(:query) { "" }
+    let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
+    let(:value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: "50") }
+    let(:sso) { create(:feature, organization:, code: "sso", name: "SSO", description: nil) }
+    let(:provider) { create(:privilege, organization:, feature: sso, code: "provider", name: "Provider", value_type: "string") }
+    let(:request_params) { {entitlements: {sso: {provider: "okta"}}} }
+
+    before do
+      value
+      provider
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
+      # The per-entitlement events are behind the entitlement_events flag, see "without the entitlement_events flag".
+      organization.enable_feature_flag!(:entitlement_events)
+    end
+
+    include_examples "requires API permission", "plan", "write"
+
+    it "adds the features of the body and keeps the others, newest first" do
+      expect { request }.not_to change { Entitlement::Entitlement.with_discarded.where.not(deleted_at: nil).count }
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(
+        plan_entitlements: [
+          plan_entitlement_json(catalog_plan.entitlements.find_by!(feature: sso), [{privilege_code: "provider", value: "okta"}]),
+          plan_entitlement_json(entitlement, [{privilege_code: "max", value: 50}])
+        ]
+      )
+      expect(entitlement.reload).not_to be_discarded
+      expect(value.reload).to have_attributes(value: "50", deleted_at: nil)
+    end
+
+    it "writes one plan_entitlement.created activity log and webhook for the added feature only" do
+      expect { request }.to have_enqueued_job(SendWebhookJob).exactly(:once)
+
+      sso_entitlement = catalog_plan.entitlements.find_by!(feature: sso)
+      expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", sso_entitlement)
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        sso_entitlement, "plan_entitlement.created", after_commit: true,
+        changes: {"values" => [nil, [{privilege_code: "provider", value: "okta"}]]},
+        activity_object: hash_including(lago_id: sso_entitlement.id, values: [{privilege_code: "provider", value: "okta"}])
+      ).once
+      expect(Utils::ActivityLog).to have_received(:produce).once
+    end
+
+    context "without the entitlement_events flag" do
+      before { organization.disable_feature_flag!(:entitlement_events) }
+
+      it "logs nothing and sends no webhook" do
+        expect { request }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(response).to have_http_status(:success)
+        expect(Utils::ActivityLog).not_to have_received(:produce)
+      end
+    end
+
+    it "writes no activity log and sends no webhook when the same call runs again" do
+      patch_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements", request_params)
+      expect(Utils::ActivityLog).to have_received(:produce).once
+
+      expect { request }.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(response).to have_http_status(:success)
+      expect(Utils::ActivityLog).to have_received(:produce).once
+    end
+
+    context "with a value of an existing feature" do
+      let(:request_params) { {entitlements: {seats: {max: 60}}} }
+      let(:storage) { create(:privilege, organization:, feature:, code: "storage", name: nil, value_type: "integer") }
+      let(:storage_value) { create(:entitlement_value, organization:, entitlement:, privilege: storage, value: "10") }
+
+      before { storage_value }
+
+      it "updates the value of the body and keeps the other values" do
+        request
+
+        expect(response).to have_http_status(:success)
+        # `match` rather than `eq`, so that the values compose with match_array: the whole body is still compared.
+        expect(json).to match(
+          plan_entitlements: [
+            plan_entitlement_json(entitlement, match_array([{privilege_code: "max", value: 60}, {privilege_code: "storage", value: 10}]))
+          ]
+        )
+        expect(value.reload).to have_attributes(value: "60", deleted_at: nil)
+        expect(storage_value.reload).to have_attributes(value: "10", deleted_at: nil)
+      end
+    end
+
+    context "with several features" do
+      let(:request_params) { {entitlements: {seats: {max: 60}, sso: {provider: "okta"}}} }
+
+      it "writes one event per changed entitlement: updated for seats, created for sso" do
+        expect { request }.to have_enqueued_job(SendWebhookJob).exactly(:twice)
+
+        expect(response).to have_http_status(:success)
+        expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.updated", entitlement)
+        expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", catalog_plan.entitlements.find_by!(feature: sso))
+        expect(Utils::ActivityLog).to have_received(:produce).with(
+          entitlement, "plan_entitlement.updated", after_commit: true,
+          changes: {"values" => [[{privilege_code: "max", value: 50}], [{privilege_code: "max", value: 60}]]},
+          activity_object: hash_including(lago_id: entitlement.id, values: [{privilege_code: "max", value: 60}])
+        ).once
+        expect(Utils::ActivityLog).to have_received(:produce).twice
+      end
+    end
+
+    context "with an empty entitlements map" do
+      let(:request_params) { {entitlements: {}} }
+
+      it "keeps every entitlement and value of the plan" do
+        expect { request }
+          .to not_change(Entitlement::Entitlement.with_discarded, :count)
+          .and not_change(Entitlement::EntitlementValue.with_discarded, :count)
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(plan_entitlements: [plan_entitlement_json(entitlement, [{privilege_code: "max", value: 50}])])
+        expect(entitlement.reload).not_to be_discarded
+        expect(value.reload).to have_attributes(value: "50", deleted_at: nil)
+      end
+
+      it "writes no activity log and sends no webhook, as nothing changes" do
+        expect { request }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(Utils::ActivityLog).not_to have_received(:produce)
+      end
+    end
+
+    # Each refused request leaves the entitlements of the plan as they were.
+    shared_examples "a refused merge" do |status, body|
+      it "returns the error and writes nothing" do
+        expect { request }
+          .to not_change(Entitlement::Entitlement.with_discarded, :count)
+          .and not_change(Entitlement::EntitlementValue.with_discarded, :count)
+
+        expect(response).to have_http_status(status)
+        expect(json).to eq(body)
+        expect(entitlement.reload).not_to be_discarded
+        expect(value.reload).to have_attributes(value: "50", deleted_at: nil)
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    context "without the entitlements key" do
+      let(:request_params) { {} }
+
+      include_examples "a refused merge", :bad_request,
+        {code: "missing_parameter", details: [{code: "missing", field: "entitlements", meta: {}}]}
+    end
+
+    context "when entitlements is not a map" do
+      let(:request_params) { {entitlements: "seats"} }
+
+      include_examples "a refused merge", :bad_request,
+        {code: "missing_parameter", details: [{code: "missing", field: "entitlements", meta: {}}]}
+    end
+
+    context "when a feature value is not a map" do
+      let(:request_params) { {entitlements: {seats: [60]}} }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats", meta: {}}]}
+    end
+
+    context "when a privilege value is an object" do
+      let(:request_params) { {entitlements: {seats: {max: {value: 60}}}} }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats.max", meta: {}}]}
+    end
+
+    context "with expands" do
+      let(:query) { "?expands[]=feature" }
+
+      include_examples "a refused merge", :bad_request,
+        {code: "expand_not_supported", details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["feature"]}}]}
+    end
+
+    [
+      ["limit", "1"],
+      ["page", "1"],
+      ["after", "x"],
+      ["include_total_count", "true"]
+    ].each do |name, param_value|
+      context "with the #{name} pagination parameter" do
+        let(:query) { "?#{name}=#{param_value}" }
+
+        include_examples "a refused merge", :bad_request,
+          {code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: name, meta: {}}]}
+      end
+    end
+
+    context "with an unknown feature" do
+      let(:request_params) { {entitlements: {sso: {provider: "okta"}, unknown: {max: 60}}} }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "resource_not_found", field: "entitlements.unknown", meta: {resource: "feature"}}]}
+    end
+
+    context "with an unknown privilege" do
+      let(:request_params) { {entitlements: {seats: {max: 60, unknown: 1}}} }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "resource_not_found", field: "entitlements.seats.unknown", meta: {resource: "privilege"}}]}
+    end
+
+    context "with an invalid integer value" do
+      let(:request_params) { {entitlements: {seats: {max: "many"}}} }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats.max", meta: {}}]}
+    end
+
+    # PATCH cannot delete: a null value is refused, not a removal.
+    context "with a null value on an existing privilege" do
+      let(:request_params) { {entitlements: {seats: {max: nil}}} }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "value_is_mandatory", field: "entitlements.seats.max", meta: {}}]}
+    end
+
+    context "with a select value outside the options" do
+      let(:request_params) { {entitlements: {seats: {invitation: "fax"}}} }
+
+      before { create(:privilege, organization:, feature:, code: "invitation", name: nil, value_type: "select", config: {select_options: %w[email phone]}) }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {
+          code: "validation_errors",
+          details: [{code: "value_not_in_select_options", field: "entitlements.seats.invitation", meta: {allowed_values: %w[email phone]}}]
+        }
+    end
+
+    context "with more entitlements or values than a catalog plan holds" do
+      let(:bulk_count) { 0 }
+      let(:extra_value_count) { 0 }
+      # rubocop:disable Rails/SkipsModelValidations
+      let(:bulk_entitlements) do
+        next if bulk_count.zero?
+
+        now = Time.current
+        feature_ids = bulk_create_features(organization, bulk_count).values
+        Entitlement::Entitlement.insert_all!(
+          feature_ids.map { {organization_id: organization.id, entitlement_feature_id: it, catalog_plan_id: catalog_plan.id, created_at: now, updated_at: now} }
+        )
+      end
+      let(:extra_values) do
+        next if extra_value_count.zero?
+
+        now = Time.current
+        privileges = create_list(:privilege, extra_value_count, organization:, feature:, value_type: "integer")
+        Entitlement::EntitlementValue.insert_all!(
+          privileges.map do
+            {organization_id: organization.id, entitlement_entitlement_id: entitlement.id, entitlement_privilege_id: it.id, value: "1", created_at: now, updated_at: now}
+          end
+        )
+      end
+      # rubocop:enable Rails/SkipsModelValidations
+      let(:new_privilege) { create(:privilege, organization:, feature:, code: "new", value_type: "integer") }
+
+      before do
+        bulk_entitlements
+        extra_values
+        new_privilege
+      end
+
+      context "with 199 entitlements on the plan" do
+        let(:bulk_count) { 198 }
+
+        it "accepts one more" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(catalog_plan.entitlements.count).to eq(200) # 198 bulk + seats + sso
+        end
+      end
+
+      context "with 200 entitlements on the plan" do
+        let(:bulk_count) { 199 } # 199 bulk + seats
+
+        include_examples "a refused merge", :unprocessable_content,
+          {code: "validation_errors", details: [{code: "too_many_entitlements", field: "base", meta: {max_items: 200}}]}
+
+        context "with a value of an existing feature" do
+          let(:request_params) { {entitlements: {seats: {max: 60}}} }
+
+          it "accepts it" do
+            request
+
+            expect(response).to have_http_status(:success)
+            expect(catalog_plan.entitlements.count).to eq(200)
+            expect(value.reload.value).to eq("60")
+          end
+        end
+      end
+
+      context "with 49 values on an entitlement" do
+        let(:extra_value_count) { 48 } # max + 48 bulk values
+        let(:request_params) { {entitlements: {seats: {new: 1}}} }
+
+        it "accepts one more" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(entitlement.values.count).to eq(50) # max + 48 bulk values + new
+        end
+      end
+
+      context "with 50 values on an entitlement" do
+        let(:extra_value_count) { 49 } # max + 49 bulk values
+        let(:request_params) { {entitlements: {seats: {new: 1}}} }
+
+        include_examples "a refused merge", :unprocessable_content,
+          {code: "validation_errors", details: [{code: "too_many_values", field: "entitlements.seats", meta: {max_items: 50}}]}
+      end
+    end
+
+    context "with an unknown plan code" do
+      let(:plan_code) { "unknown" }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    context "with the catalog plan of another organization" do
+      let(:plan_code) { create(:catalog_plan, organization: create(:organization), code: "shared").code }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "with a legacy plan code" do
+      let(:plan_code) { create(:plan, organization:, code: "legacy").code }
+
+      before { allow(Entitlement::PlanEntitlementsUpdateService).to receive(:call).and_call_original }
+
+      it "returns not found without calling the service" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+        expect(Entitlement::PlanEntitlementsUpdateService).not_to have_received(:call)
+      end
+    end
+
+    context "with a deleted catalog plan" do
+      let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium", deleted_at: Time.current) }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "without the product catalog", product_catalog: false do
+      it "returns feature_unavailable" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+  end
+
   describe "GET /api/v2/plans/:plan_code/entitlements" do
     subject(:request) { get_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements#{query}") }
 

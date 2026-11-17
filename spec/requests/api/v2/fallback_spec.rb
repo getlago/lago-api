@@ -64,11 +64,11 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
       expect(entitlement.values.sole.value).to eq("30")
     end
 
-    it "updates them through the v1 controller" do
-      patch_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements", {entitlements: {seats: {max: 30}}})
+    it "no longer updates them through the v1 controller, as PATCH is native" do
+      patch_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements", {entitlements: {seats: {max: 40}}})
 
-      expect(response).to have_http_status(:success)
-      expect(json).to eq(expected_body)
+      expect(response).to be_v2_not_found_error("plan")
+      expect(entitlement.values.sole.value).to eq("30")
     end
 
     it "deletes one through the v1 controller" do
