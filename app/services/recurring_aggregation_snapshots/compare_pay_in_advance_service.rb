@@ -176,12 +176,9 @@ module RecurringAggregationSnapshots
     # An event is a (transaction_id, timestamp) pair, as for the event stores, and its field is read
     # from the latest insert, which replaces the others in events_enriched.
     def clickhouse_events(billable_metric)
-      scope = Clickhouse::EventsRaw.where(
-        organization_id: owner.organization_id,
-        external_subscription_id: owner.external_id,
-        code: billable_metric.code,
-        timestamp: period_started_at..timestamp
-      )
+      scope = clickhouse_raw_events
+        .where(organization_id: owner.organization_id, code: billable_metric.code, timestamp: period_started_at..timestamp)
+        .where(clickhouse_scope_column => owner.external_id)
       latest_inserts = scope
         .group(:transaction_id, :timestamp)
         .having("NOT match(argMax(properties[?], ingested_at), ?)", billable_metric.field_name, Events::Stores::BaseStore::BLANK_VALUE_PATTERN)
@@ -197,6 +194,15 @@ module RecurringAggregationSnapshots
         .to_a
         .uniq { [it.transaction_id, it.timestamp] }
         .map { Events::CommonFactory.new_instance(source: it) }
+    end
+
+    # Organizations on the product events pipeline write product_events_raw, keyed by contract, as the store reads it
+    def clickhouse_raw_events
+      owner.organization.product_events_pipeline? ? Clickhouse::ProductEventsRaw : Clickhouse::EventsRaw
+    end
+
+    def clickhouse_scope_column
+      owner.organization.product_events_pipeline? ? :external_contract_id : :external_subscription_id
     end
 
     def compared?(metered_item)

@@ -423,6 +423,34 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
       end
     end
 
+    context "with the ClickHouse store on the product events pipeline", clickhouse: true do
+      let(:organization) { create(:organization, feature_flags: [:product_catalog], clickhouse_events_store: true) }
+      let(:raw_event) do
+        create(:clickhouse_product_events_raw, organization:, external_contract_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2022-05-12"), ingested_at: Time.zone.parse("2022-05-12"),
+          properties: {value: "4"})
+      end
+
+      around do |example|
+        ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw"
+        example.run
+      ensure
+        ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil
+      end
+
+      before do
+        raw_event
+        # Same contract external id on the subscription pipeline table: never read for this organization
+        create(:clickhouse_events_raw, organization:, external_subscription_id: contract.external_id, billable_metric:,
+          timestamp: Time.zone.parse("2022-05-13"), properties: {value: "9"})
+      end
+
+      it "replays the contract's product raw events" do
+        expect(result.compared_events_count).to eq(1)
+        expect(result.rows.sole).to have_attributes(event_transaction_id: raw_event.transaction_id, snapshot_read: true)
+      end
+    end
+
     context "with an arrears rate card" do
       let(:rate_card) { create(:rate_card, organization:, product:, currency: "EUR") }
 
