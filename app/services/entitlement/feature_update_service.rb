@@ -24,6 +24,10 @@ module Entitlement
       end
 
       ActiveRecord::Base.transaction do
+        # Serializes with Entitlement::FeatureDestroyService, so a feature discarded since its lookup is not written.
+        feature.lock!
+        return result.not_found_failure!(resource: "feature") if feature.discarded?
+
         update_feature_attributes
         delete_missing_privileges unless partial?
         update_privileges
