@@ -15,7 +15,9 @@ RSpec.describe Billing::RateCards::Schedule do
   let(:starts_at) { Time.utc(2022, 1, 15) }
   let(:timing) { :arrears }
   let(:ends_at) { nil }
-  let(:terms) { Billing::Terms.new(timing:, prorated:) }
+  let(:terms) { Billing::Terms.new(timing:, prorated:, billing_scope:, due_on_coverage_end:) }
+  let(:billing_scope) { "segment" }
+  let(:due_on_coverage_end) { false }
 
   # The two shapes the schedule reads. A rate carries the cadence and the date it takes
   # effect; an override pins the cadence for one phase and wins over the rate, which is how
@@ -56,6 +58,91 @@ RSpec.describe Billing::RateCards::Schedule do
     end
 
     segments
+  end
+
+  describe "default billing scope" do
+    subject(:schedule) { described_class.new(anchor_date:, phases:, rates:, terms:, timezone:, starts_at:) }
+
+    let(:terms) { Billing::Terms.new(timing:, prorated:) }
+    let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
+
+    it "groups all priced slices of a cycle into one obligation" do
+      obligation = schedule.first_obligation(at: Time.utc(2022, 2, 10))
+
+      expect(obligation.billing_at).to eq(Time.utc(2022, 3, 1))
+      expect(obligation).to be_a(Billing::Obligation)
+      expect(obligation.cycle.started_at).to eq(Time.utc(2022, 2, 1))
+      expect(obligation.segments.map(&:started_at)).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)])
+    end
+  end
+
+  describe "billing scopes" do
+    let(:billing_scope) { "cycle" }
+    let(:rates) do
+      [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 10)), card_rate(Time.utc(2022, 2, 20))]
+    end
+    let(:cycle_start) { Time.utc(2022, 2, 1) }
+    let(:cycle_end) { Time.utc(2022, 3, 1) }
+
+    it "bills all slices at the cycle end and only selects the complete obligation" do
+      obligation = schedule.first_obligation(at: Time.utc(2022, 2, 10))
+      expect(obligation.billing_at).to eq(cycle_end)
+      expect(obligation.segments.map(&:billing_at)).to eq([cycle_end, cycle_end, cycle_end])
+      expect(schedule.segments_due_in_cycle(cycle_start, by: cycle_end - 1.second)).to be_empty
+      expect(schedule.segments_due_in_cycle(cycle_start, by: cycle_end)).to eq(obligation.segments)
+      expect(schedule.segments_due_in_cycle(cycle_start + 1.day, by: cycle_end)).to be_empty
+      expect(schedule.segments_due_in_cycle(cycle_start, by: cycle_end, after: cycle_end)).to be_empty
+      expect(schedule.segment_covering(Time.utc(2022, 2, 15))).to eq(obligation.segments[1])
+      expect(schedule.next_obligation(after: cycle_end, from: cycle_start).cycle.started_at).to eq(cycle_end)
+    end
+
+    context "when billing in advance" do
+      let(:timing) { :advance }
+
+      it "bills every slice at the first priced start" do
+        obligation = schedule.first_obligation(at: Time.utc(2022, 2, 15))
+        expect(obligation.billing_at).to eq(cycle_start)
+        expect(obligation.segments.map(&:billing_at)).to eq([cycle_start, cycle_start, cycle_start])
+        expect(schedule.next_obligation(after: cycle_start, from: cycle_start).cycle.started_at).to eq(cycle_end)
+      end
+
+      context "when the cycle begins unpriced" do
+        let(:rates) { [card_rate(Time.utc(2022, 2, 10)), card_rate(Time.utc(2022, 2, 20))] }
+
+        it "uses the first priced start and does not search future cycles for an unpriced cycle" do
+          obligation = schedule.first_obligation(at: cycle_start)
+          expect(obligation.billing_at).to eq(Time.utc(2022, 2, 10))
+          expect(obligation.segments.map(&:billing_at)).to eq([Time.utc(2022, 2, 10)] * 2)
+          expect(schedule.segments_due_in_cycle(starts_at, by: cycle_end)).to be_empty
+          expect(schedule.segment_covering(cycle_start)).to be_nil
+        end
+      end
+    end
+
+    context "when advance fees are regrouped" do
+      let(:timing) { :advance }
+      let(:due_on_coverage_end) { true }
+
+      it "bills all slices at the cycle end" do
+        obligation = schedule.first_obligation(at: Time.utc(2022, 2, 10))
+        expect(obligation.billing_at).to eq(cycle_end)
+        expect(obligation.segments.map(&:billing_at)).to eq([cycle_end] * 3)
+      end
+    end
+
+    context "with segment scope" do
+      let(:billing_scope) { "segment" }
+
+      it "returns one slice per obligation with the same parent cycle" do
+        first = schedule.first_obligation(at: Time.utc(2022, 2, 10))
+        second = schedule.next_obligation(after: first.billing_at, from: cycle_start)
+        expect(first.billing_at).to eq(Time.utc(2022, 2, 10))
+        expect(first.segments.sole.started_at).to eq(cycle_start)
+        expect(second.billing_at).to eq(Time.utc(2022, 2, 20))
+        expect(second.cycle).to eq(first.cycle)
+        expect(second.segments.sole.billing_at).to eq(second.billing_at)
+      end
+    end
   end
 
   describe "validation" do
@@ -551,7 +638,7 @@ RSpec.describe Billing::RateCards::Schedule do
 
   describe "obligations due when coverage ends" do
     subject(:schedule) do
-      described_class.new(anchor_date:, phases:, rates:, terms:, timezone:, starts_at:, due_on_coverage_end:)
+      described_class.new(anchor_date:, phases:, rates:, terms:, timezone:, starts_at:)
     end
 
     let(:timing) { :advance }
@@ -565,26 +652,26 @@ RSpec.describe Billing::RateCards::Schedule do
     end
 
     it "keeps the slice closing exactly at a cut as the first obligation" do
-      expect(schedule.first_obligation(at: Time.utc(2022, 2, 15)).started_at).to eq(Time.utc(2022, 2, 1))
+      expect(schedule.first_obligation(at: Time.utc(2022, 2, 15)).segments.sole.started_at).to eq(Time.utc(2022, 2, 1))
     end
 
     it "compares the end of coverage with the completed billing" do
-      expect(schedule.next_obligation(after: Time.utc(2022, 2, 1)).started_at).to eq(Time.utc(2022, 2, 1))
-      expect(schedule.next_obligation(after: Time.utc(2022, 2, 15), from: Time.utc(2022, 2, 1)).started_at)
+      expect(schedule.next_obligation(after: Time.utc(2022, 2, 1)).segments.sole.started_at).to eq(Time.utc(2022, 2, 1))
+      expect(schedule.next_obligation(after: Time.utc(2022, 2, 15), from: Time.utc(2022, 2, 1)).segments.sole.started_at)
         .to eq(Time.utc(2022, 2, 15))
     end
 
     it "lets the caller move a due instant" do
       moved = schedule.next_obligation(after: Time.utc(2022, 2, 15), from: Time.utc(2022, 2, 1)) { it.billing_at + 1.day }
 
-      expect(moved.started_at).to eq(Time.utc(2022, 2, 1))
+      expect(moved.segments.sole.started_at).to eq(Time.utc(2022, 2, 1))
     end
 
     context "when slices fall due as the terms say" do
       let(:due_on_coverage_end) { false }
 
       it "selects the slice opening at the cut" do
-        expect(schedule.first_obligation(at: Time.utc(2022, 2, 15)).started_at).to eq(Time.utc(2022, 2, 15))
+        expect(schedule.first_obligation(at: Time.utc(2022, 2, 15)).segments.sole.started_at).to eq(Time.utc(2022, 2, 15))
       end
     end
   end
@@ -713,7 +800,7 @@ RSpec.describe Billing::RateCards::Schedule do
         anchor_date: Date.new(2026, 8, 10),
         starts_at: Time.utc(2026, 8, 12),
         rates:,
-        terms: Billing::Terms.new(timing:, prorated: true),
+        terms: Billing::Terms.new(timing:, prorated: true, billing_scope: "segment"),
         timezone: "UTC",
         phases: [
           phase(cycle_count: 3, every: 1, unit: :week, code: "weekly_intro", override: "-50%"),
@@ -811,7 +898,7 @@ RSpec.describe Billing::RateCards::Schedule do
       end
 
       it "produces the same cycles as arrears" do
-        arrears = described_class.new(**arguments.merge(terms: Billing::Terms.new(timing: :arrears, prorated: true)))
+        arrears = described_class.new(**arguments.merge(terms: Billing::Terms.new(timing: :arrears, prorated: true, billing_scope: "segment")))
           .then { due_segments(it, asked_at) }.group_by(&:cycle_started_at).first(4)
 
         expect(slices_by_cycle.map { |started_at, group| [started_at, group.last.ended_at] })

@@ -6,10 +6,11 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   subject(:result) { described_class.call(contract_rate_card:) }
 
   let(:organization) { create(:organization) }
+  let(:billing_scope) { "cycle" }
   let(:contract_rate_card) do
     create(
       :contract_rate_card,
-      organization:, contract:, rate_card:,
+      organization:, contract:, rate_card:, billing_scope:,
       billing_anchor_date: Date.new(2026, 1, 1),
       effective_date: Date.new(2026, 1, 15)
     )
@@ -47,6 +48,26 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   it "builds a schedule when rates are available" do
     expect(result).to be_success
     expect(result.schedule).to be_a(Billing::RateCards::Schedule)
+  end
+
+  context "with multiple rates in the first cycle" do
+    before { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 20)) }
+
+    it "groups them by cycle by default" do
+      obligation = result.schedule.first_obligation(at: Time.utc(2026, 1, 15))
+      expect(obligation.billing_at).to eq(Time.utc(2026, 2, 1))
+      expect(obligation.segments.size).to eq(2)
+    end
+
+    context "when the attachment bills by segment" do
+      let(:billing_scope) { "segment" }
+
+      it "propagates the scope to the schedule" do
+        obligation = result.schedule.first_obligation(at: Time.utc(2026, 1, 15))
+        expect(obligation.billing_at).to eq(Time.utc(2026, 1, 20))
+        expect(obligation.segments.size).to eq(1)
+      end
+    end
   end
 
   it "carries the card's anchor, timing and end onto the schedule" do

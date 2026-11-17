@@ -2,18 +2,14 @@
 
 module Billing
   module RateCards
-    # Answers when a rate card bills. Cycles come from the walker; each cycle is cut at rate
-    # changes into priced slices, and every question below is asked of those slices.
+    # Answers when a rate card bills its priced slices, grouped by cycle or by segment.
     class Schedule
-      # `due_on_coverage_end` makes every slice fall due when its coverage ends, whatever the
-      # terms' timing. Cards that regroup paid advance fees use it (see BillableSegment).
       def initialize(
         rates:, terms:, phases:, starts_at:, anchor_date:, timezone:,
-        ends_at: nil, due_on_coverage_end: false
+        ends_at: nil
       )
         @rates = rates
         @terms = terms
-        @due_on_coverage_end = due_on_coverage_end
         @walker = CycleWalker.new(rates:, phases:, starts_at:, anchor_date:, timezone:, ends_at:)
       end
 
@@ -22,29 +18,26 @@ module Billing
         walker.resume(timestamp)
       end
 
-      # The first slice still open at the instant, or falling due exactly on it. The second
-      # case keeps an arrears slice that closes on a mid-cycle rate change owed at that change.
-      # Only the cycle containing the instant is searched backwards: a slice of an earlier
-      # cycle that closed on the instant is not returned.
+      # Only the cycle containing the instant is searched backwards.
       def first_obligation(at:)
-        segments(from: at).find { it.ended_at > at || it.billing_at == at }
+        obligations(from: at).find { it.segments.last.ended_at > at || it.billing_at == at }
       end
 
-      # The first slice falling due strictly after a completed billing instant, so a slice
-      # billed at that instant is never returned twice. `from` names the cycle to start
-      # walking from, for a billing that belongs to an earlier cycle than its instant.
-      # A block maps a slice to its due instant when the caller moves it.
+      # `from` names the target cycle when billing belongs to an earlier cycle than its instant.
+      # A block maps an obligation to its adjusted billing instant.
       def next_obligation(after:, from: after)
-        segments(from:).find { (block_given? ? yield(it) : it.billing_at) > after }
+        obligations(from:).find { (block_given? ? yield(it) : it.billing_at) > after }
       end
 
       # The slices of one cycle falling due after a completed billing and by the given instant:
       # what one operation of that cycle bills. `cycle_started_at` must be a cycle's own start.
       def segments_due_in_cycle(cycle_started_at, by:, after: nil)
-        segments(from: cycle_started_at)
-          .take_while { it.cycle_started_at == cycle_started_at }
+        cycle = walker.resume(cycle_started_at)
+        return [] unless cycle && cycle.started_at == cycle_started_at
+
+        obligations_for(cycle)
           .select { (after.nil? || it.billing_at > after) && it.billing_at <= by }
-          .to_a
+          .flat_map(&:segments)
       end
 
       # Find the priced slice serving this instant, independently of completed operations.
@@ -52,7 +45,7 @@ module Billing
         cycle = walker.resume(timestamp)
 
         if cycle
-          billable_segments_of([cycle]).find do |segment|
+          obligations_for(cycle).flat_map(&:segments).find do |segment|
             (segment.started_at...segment.ended_at).cover?(timestamp)
           end
         end
@@ -60,26 +53,29 @@ module Billing
 
       private
 
-      attr_reader :rates, :terms, :due_on_coverage_end, :walker
+      attr_reader :rates, :terms, :walker
 
-      # Every priced slice in billing order, from the cycle containing `from`. Lazy, because an
-      # open-ended card has no last cycle: callers stop at the first slice that answers them.
-      # Unpriced cycles yield nothing.
-      def segments(from:)
+      # Open-ended cards have no last cycle; unpriced cycles yield nothing.
+      def obligations(from:)
         Enumerator.new do |yielder|
           cycle = walker.resume(from)
 
           while cycle
-            billable_segments_of([cycle]).each { yielder << it }
+            obligations_for(cycle).each { yielder << it }
             cycle = walker.cycle_after(cycle)
           end
         end.lazy
       end
 
-      # Unpriced periods of a cycle are not billable.
-      def billable_segments_of(cycles)
-        cycles.flat_map do |cycle|
-          priced_segments_for_cycle(cycle).map { build_billable_segment(cycle:, segment: it) }
+      def obligations_for(cycle)
+        priced = priced_segments_for_cycle(cycle)
+        return [] if priced.empty?
+
+        groups = terms.cycle_scope? ? [priced] : priced.map { [it] }
+        groups.map do |group|
+          billing_at = terms.obligation_billing_at_for(cycle:, segments: group)
+          segments = group.map { build_billable_segment(cycle:, segment: it, billing_at:) }
+          Obligation.new(cycle:, segments:, billing_at:)
         end
       end
 
@@ -87,7 +83,7 @@ module Billing
         Segments.within(cycle, rates:).select(&:rate)
       end
 
-      def build_billable_segment(cycle:, segment:)
+      def build_billable_segment(cycle:, segment:, billing_at:)
         proration_ratio = if terms.prorated
           cycle.calendar.proration_ratio(segment.started_at, segment.ended_at)
         else
@@ -99,7 +95,7 @@ module Billing
           cycle_started_at: cycle.started_at,
           started_at: segment.started_at,
           ended_at: segment.ended_at,
-          billing_at: due_on_coverage_end ? segment.ended_at : terms.billing_at_for(segment),
+          billing_at:,
           rate: segment.rate,
           rate_override: cycle.phase.rate_override,
           proration_ratio:,

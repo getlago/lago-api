@@ -3,11 +3,7 @@
 module Billing
   # One priced slice of a cycle, used to build an in-memory billing segment.
   #
-  # `billing_at` is when a periodic operation picks up the slice. For cards that regroup paid
-  # advance fees, this is the coverage end rather than the advance terms' billing instant.
-  #
-  # @example a monthly cycle cut by a rate change on Feb 15, in arrears
-  #   [Segment(Feb 1 -> Feb 15, billing_at Feb 15), Segment(Feb 15 -> Mar 1, billing_at Mar 1)]
+  # `billing_at` is the owning periodic obligation's billing instant.
   BillableSegment = Data.define(
     :cycle_index,
     :cycle_started_at,

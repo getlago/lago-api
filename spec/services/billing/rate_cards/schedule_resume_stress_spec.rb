@@ -49,7 +49,7 @@ RSpec.describe Billing::RateCards::Schedule do
   def build(timezone:, timing:, anchor:)
     described_class.new(
       anchor_date: anchor, starts_at: anchor.in_time_zone(timezone), timezone:,
-      phases:, rates:, terms: Billing::Terms.new(timing:, prorated: true)
+      phases:, rates:, terms: Billing::Terms.new(timing:, prorated: true, billing_scope: "segment")
     )
   end
 

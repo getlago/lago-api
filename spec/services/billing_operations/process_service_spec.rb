@@ -11,6 +11,7 @@ RSpec.describe BillingOperations::ProcessService do
   let(:consolidate_invoice) { false }
   let(:product) { create(:product, :fixed, organization:) }
   let(:billing_timing) { "arrears" }
+  let(:billing_scope) { "cycle" }
   let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:, currency: "USD", proration: true) }
   let(:rate) do
     create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1), rate_properties: {"amount" => "31"})
@@ -18,7 +19,7 @@ RSpec.describe BillingOperations::ProcessService do
   let(:cursor) { Time.utc(2026, 2, 1) }
   let(:timestamp) { cursor }
   let(:contract_rate_card) do
-    create(:contract_rate_card, organization:, contract:, rate_card:, units: 1, next_billing_at: cursor,
+    create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:, units: 1, next_billing_at: cursor,
       effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
   end
   let(:operation) do
@@ -679,6 +680,7 @@ RSpec.describe BillingOperations::ProcessService do
   end
 
   context "with two known prices in one cycle" do
+    let(:billing_scope) { "segment" }
     let(:cursor) { Time.utc(2026, 1, 15) }
 
     before do
@@ -711,6 +713,27 @@ RSpec.describe BillingOperations::ProcessService do
         expect(described_class.call!(customer:, timestamp: Time.utc(2026, 1, 15)).invoices.sole.total_amount_cents).to eq(3400) # $62 * 17 / 31 days.
         expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
       end
+    end
+  end
+
+  context "with cycle-scoped advance billing and two known prices" do
+    let(:billing_timing) { "advance" }
+    let(:cursor) { Time.utc(2026, 1, 1) }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
+        rate_properties: {"amount" => "62"})
+    end
+
+    it "purchases both priced slices once at the cycle opening" do
+      invoice = result.invoices.sole
+
+      expect(invoice.total_amount_cents).to eq(1400 + 3400) # $31 * 14/31 days, then $62 * 17/31 days.
+      expect(invoice.fees.order(:amount_cents).pluck(:amount_cents)).to eq([1400, 3400])
+      expect(invoice.billing_operations.sole.id).to eq(operation.id)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
+      expect(described_class.call!(customer:, timestamp: Time.utc(2026, 1, 15)).invoices).to be_empty
+      expect(contract_rate_card.fees.count).to eq(2)
     end
   end
 

@@ -26,7 +26,7 @@ RSpec.describe Billing::RateCards::Schedule do
       phases: shape[:phase_args].map { |args| phase(*args) },
       rates: shape[:rate_args].map { |args| rate(*args) },
       ends_at: shape[:ends_at],
-      terms: Billing::Terms.new(timing: shape[:timing], prorated: shape.fetch(:prorated, true))
+      terms: Billing::Terms.new(timing: shape[:timing], prorated: shape.fetch(:prorated, true), billing_scope: "segment")
     )
   end
 

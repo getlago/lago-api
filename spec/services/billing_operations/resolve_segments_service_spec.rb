@@ -13,8 +13,10 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
     let(:rate_card) do
       create(:rate_card, :advance, organization:, product:, currency: "USD")
     end
+    let(:billing_scope) { "cycle" }
     let(:contract_rate_card) do
-      create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1), units: 1)
+      create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
+        effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1), units: 1)
     end
     let(:timestamp) { Time.utc(2026, 3, 1) }
     let(:operation) do
@@ -56,6 +58,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
     end
 
     context "when resolving regrouped paid fees" do
+      let(:billing_scope) { "segment" }
       let(:billable_metric) do
         create(:billable_metric, organization:, aggregation_type: :sum_agg, recurring: false, field_name: "units")
       end
@@ -92,6 +95,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       end
 
       context "with a newly priced neighboring operation slice" do
+        let(:billing_scope) { "segment" }
         let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD", proration: true) }
         let(:later_rate) do
           create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
@@ -116,9 +120,26 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           expect(segments.sole.ended_at).to eq(BillingSegment.inclusive_end(Time.utc(2026, 1, 15)))
           expect(later_rate).to be_persisted
         end
+
+        context "when the scope covers the cycle" do
+          let(:billing_scope) { "cycle" }
+
+          it "returns both priced slices owned by the opening operation" do
+            expect(segments.map { [it.rate_card_rate_id, it.started_at, it.ended_at, it.billing_at] }).to eq([
+              [rate_card.rates.order(:effective_from).first.id, Time.utc(2026, 1, 1),
+                BillingSegment.inclusive_end(Time.utc(2026, 1, 15)), operation.billing_at],
+              [later_rate.id, Time.utc(2026, 1, 15),
+                BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), operation.billing_at]
+            ])
+            expect(operation.reload).to have_attributes(
+              billing_at: Time.utc(2026, 1, 1), target_cycle_started_at: Time.utc(2026, 1, 1)
+            )
+          end
+        end
       end
 
       context "when an arrears cycle is split by a price change" do
+        let(:billing_scope) { "segment" }
         let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
         let(:operation) do
           create(:billing_operation, organization:, customer:, contract_rate_card:,
@@ -136,6 +157,29 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           expect(segments.map { [it.started_at, it.billing_at] }).to eq(
             [[Time.utc(2026, 1, 1), operation.billing_at]]
           )
+        end
+
+        context "when the scope covers the cycle" do
+          let(:billing_scope) { "cycle" }
+
+          it "returns no coverage at the intermediate price change" do
+            expect(segments).to be_empty
+          end
+
+          context "when the operation closes the cycle" do
+            let(:operation) do
+              create(:billing_operation, organization:, customer:, contract_rate_card:,
+                action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 2, 1),
+                target_cycle_started_at: Time.utc(2026, 1, 1))
+            end
+
+            it "returns every priced slice at the cycle's billing instant" do
+              expect(segments.map { [it.started_at, it.ended_at, it.billing_at] }).to eq([
+                [Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)), operation.billing_at],
+                [Time.utc(2026, 1, 15), BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), operation.billing_at]
+              ])
+            end
+          end
         end
 
         context "when the cycle close follows an operation at the price change" do
