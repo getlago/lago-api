@@ -40,7 +40,12 @@ module Entitlement
       # NOTE: The webhook is sent even if no changes were made to the plan
       SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook && !catalog_plan?
 
-      result.entitlements = plan.entitlements.includes(:catalog_plan, :feature, values: :privilege).newest_first.reload
+      # A legacy plan keeps its unordered relation, as before catalog plans existed.
+      result.entitlements = if catalog_plan?
+        plan.entitlements.includes(:catalog_plan, :feature, values: :privilege).newest_first.reload
+      else
+        plan.entitlements.includes(:feature, values: :privilege).reload
+      end
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

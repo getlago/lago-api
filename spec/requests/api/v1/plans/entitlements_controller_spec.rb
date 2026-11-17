@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe Api::V1::Plans::EntitlementsController do
   let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
-  let(:feature) { create(:feature, organization:, code: "seats") }
+  let(:feature) { create(:feature, organization:, code: "seats", id: feature_ids[0]) }
+  # Ascending ids keep every physical or index order of an unordered query equal to the creation order.
+  let(:feature_ids) { %w[00000000-0000-4000-8000-000000000001 00000000-0000-4000-8000-000000000002 00000000-0000-4000-8000-000000000003 00000000-0000-4000-8000-000000000004] }
   let(:privilege) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
 
   describe "GET /api/v1/plans/:plan_code/entitlements" do
@@ -115,6 +117,24 @@ RSpec.describe Api::V1::Plans::EntitlementsController do
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
       expect(json[:entitlements].first[:privileges].sole[:value]).to eq(25)
+    end
+
+    context "when several entitlements are created" do
+      let(:params) do
+        {"entitlements" => {"seats" => {"max" => 25}, "storage" => {}, "api_calls" => {}}}
+      end
+
+      before do
+        create(:feature, organization:, code: "storage", id: feature_ids[1])
+        create(:feature, organization:, code: "api_calls", id: feature_ids[2])
+      end
+
+      it "returns them in creation order" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:entitlements].pluck(:code)).to eq(%w[seats storage api_calls])
+      end
     end
 
     context "when plan has existing entitlements" do
@@ -303,6 +323,23 @@ RSpec.describe Api::V1::Plans::EntitlementsController do
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
       expect(json[:entitlements].first[:privileges].sole[:value]).to eq(60)
+    end
+
+    context "when the plan has several entitlements" do
+      let(:params) { {"entitlements" => {"api_calls" => {}}} }
+
+      before do
+        create(:entitlement, organization:, plan:, feature: create(:feature, organization:, code: "storage", id: feature_ids[1]))
+        create(:entitlement, organization:, plan:, feature: create(:feature, organization:, code: "support", id: feature_ids[2]))
+        create(:feature, organization:, code: "api_calls", id: feature_ids[3])
+      end
+
+      it "returns them in creation order" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:entitlements].pluck(:code)).to eq(%w[seats storage support api_calls])
+      end
     end
 
     it "does not create new entitlement" do
