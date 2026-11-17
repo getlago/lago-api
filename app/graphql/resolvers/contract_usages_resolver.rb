@@ -32,7 +32,7 @@ module Resolvers
       contract = current_organization.contracts.find_by(id: contract_id)
       return not_found_error(resource: "contract") unless contract
 
-      result = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: false, search_term:, filters:)
+      result = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: false, search_term:, filters:, use_usage_buckets: true)
       return result_error(result) unless result.success?
 
       usages = group_by_product(result.rate_card_usages)

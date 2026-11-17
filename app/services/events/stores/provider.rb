@@ -6,8 +6,11 @@ module Events
       # `incremental_charge_cache` lets the single scan keep the rows of past events between
       # computations (see ChargeFiltersScan::IncrementalCache). Only current usage asks for it:
       # an invoice reads its events once.
+      # `billing_segments` are the segments a contract's current usage prices, read from the product
+      # buckets in one query.
       def initialize(organization:, billing_context:, serve_current_usage_from_buckets: false,
-        boundaries: nil, usage_filters: UsageFilters::NONE, charges: [], incremental_charge_cache: false)
+        boundaries: nil, usage_filters: UsageFilters::NONE, charges: [], incremental_charge_cache: false,
+        billing_segments: [])
         @organization = organization
         @billing_context = billing_context
         @serve_current_usage_from_buckets = serve_current_usage_from_buckets
@@ -15,6 +18,7 @@ module Events
         @usage_filters = usage_filters
         @charges = charges
         @incremental_charge_cache = incremental_charge_cache
+        @billing_segments = billing_segments
       end
 
       attr_reader :billing_context
@@ -28,7 +32,9 @@ module Events
           boundaries:,
           filters:
         )
-        if served_from_buckets?(metered_item:, boundaries:, filters:)
+        if metered_item.billing_segment
+          product_store(store, metered_item:, boundaries:, filters:)
+        elsif served_from_buckets?(metered_item:, boundaries:, filters:)
           recurring = RealtimeUsage.recurring_charge?(metered_item.charge)
           if recurring
             # A recurring charge falls back to events per snapshot period, through the same scan as today.
@@ -67,10 +73,10 @@ module Events
       # a charge the buckets cannot answer costs nothing to skip. The parity task skips the
       # recurring refusal to ask it last, so a refused charge is counted under one reason.
       def may_precompute_charge?(metered_item:, boundaries:, refuse_recurring: true)
+        # A billing segment is priced from its product rather than from the optional legacy charge
+        # that product may carry, so it reads the product buckets rather than the charge ones.
+        return may_precompute_billing_segment?(metered_item:, boundaries:) if metered_item.billing_segment
         return false unless may_precompute?
-        # The buckets are keyed by charge, and a billing segment is priced from its product
-        # rather than from the optional legacy charge that product may carry.
-        return false if metered_item.billing_segment
 
         charge = metered_item.charge
         return false if charge.nil?
@@ -113,7 +119,7 @@ module Events
       private
 
       attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters, :charges,
-        :incremental_charge_cache
+        :incremental_charge_cache, :billing_segments
 
       # A full usage window opens on `subscription.started_at`, which `same_window_as_prefetch?`
       # cannot tell apart from a first billing period.
@@ -122,6 +128,7 @@ module Events
       end
 
       def served_from_buckets?(metered_item:, boundaries:, filters: {}, refuse_recurring: true)
+        return false if metered_item.billing_segment
         return false unless may_precompute_charge?(metered_item:, boundaries:, refuse_recurring:)
         return false unless filters[:grouped_by_values].blank? &&
           filters[:event].blank? &&
@@ -136,6 +143,75 @@ module Events
         else
           usage_buckets.present?
         end
+      end
+
+      # The set is keyed by card in place of charge (see RealtimeUsage::FetchProductBucketsService).
+      def product_store(store, metered_item:, boundaries:, filters:)
+        return store unless served_from_product_buckets?(metered_item:, boundaries:, filters:)
+
+        UsageBucketStore.new(
+          store,
+          usage_buckets: product_usage_buckets,
+          charge_id: metered_item.contract_rate_card.id,
+          charge_filter_id: metered_item.product_filter&.id || ""
+        )
+      end
+
+      # As for a charge, an empty set falls back to the events rather than serving a zero.
+      def served_from_product_buckets?(metered_item:, boundaries:, filters:)
+        return false unless may_precompute_billing_segment?(metered_item:, boundaries:)
+        return false unless filters[:grouped_by_values].blank? &&
+          filters[:event].blank? &&
+          filters[:presentation_by].blank?
+
+        product_usage_buckets.present?
+      end
+
+      def may_precompute_billing_segment?(metered_item:, boundaries:)
+        return false unless may_precompute_products?
+        return false if boundaries[:max_timestamp].present?
+        return false unless prefetched_segment?(metered_item, boundaries)
+
+        RealtimeUsage.supported_billing_segment?(metered_item)
+      end
+
+      # The product buckets are written from the product events, so only an organization on the
+      # product events pipeline has any.
+      def may_precompute_products?
+        return @may_precompute_products if defined?(@may_precompute_products)
+
+        @may_precompute_products = serve_current_usage_from_buckets &&
+          billing_segments.any? &&
+          whole_charge_read? &&
+          RealtimeUsage.enabled?(organization) &&
+          product_events?
+      end
+
+      # The read covers the segments it can answer of those the caller passed, each over its own
+      # window. Any other one would find no row and be served a zero.
+      def prefetched_segment?(metered_item, window)
+        segment = bucket_segments.find { it.contract_rate_card_id == metered_item.contract_rate_card.id }
+        return false if segment.nil?
+
+        window[:from_datetime] == segment.started_at && window[:to_datetime] == segment.ended_at
+      end
+
+      # `call` rather than `call!`, as for the charge buckets: a nil set falls back to the events.
+      def product_usage_buckets
+        return @product_usage_buckets if defined?(@product_usage_buckets)
+
+        @product_usage_buckets = RealtimeUsage::FetchProductBucketsService
+          .call(contract: billing_context.contract, billing_segments: bucket_segments)
+          .usage_buckets
+      end
+
+      # The segments the buckets could answer, so a contract without any pays no read.
+      def bucket_segments
+        @bucket_segments ||= RealtimeUsage::FetchProductBucketsService.readable_segments(
+          billing_segments.select do |billing_segment|
+            RealtimeUsage.supported_billing_segment?(Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:))
+          end
+        )
       end
 
       # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A
