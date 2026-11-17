@@ -9,8 +9,6 @@ class WalletTransaction < ApplicationRecord
   belongs_to :organization
   belongs_to :billing_entity, optional: true
 
-  delegate :customer, to: :wallet
-
   # these two relationships are populated only for outbound transactions
   belongs_to :invoice, optional: true
   belongs_to :credit_note, optional: true
