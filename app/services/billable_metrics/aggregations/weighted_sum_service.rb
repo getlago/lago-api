@@ -122,12 +122,12 @@ module BillableMetrics
           return @latest_value = latest_cached_aggregation.current_aggregation + unbilled_value
         end
 
-        if cached_unbilled_since
-          return @latest_value = unbilled_value
-        end
-
         if billing_context.previous_subscription_id?
           return @latest_value = latest_value_from_events.first
+        end
+
+        if cached_unbilled_since
+          return @latest_value = unbilled_value
         end
 
         @latest_value = BigDecimal(0)
@@ -144,12 +144,12 @@ module BillableMetrics
           return @latest_breakdowns = with_unbilled(latest_cached_aggregation.presentation_breakdowns, unbilled_breakdowns)
         end
 
-        if cached_unbilled_since
-          return @latest_breakdowns = unbilled_breakdowns
-        end
-
         if billing_context.previous_subscription_id?
           return @latest_breakdowns = latest_value_from_events.second
+        end
+
+        if cached_unbilled_since
+          return @latest_breakdowns = unbilled_breakdowns
         end
 
         @latest_breakdowns = []
@@ -192,7 +192,8 @@ module BillableMetrics
 
       # Rows written after the last invoiced period come from progressive billing invoices: the unbilled
       # events would count their events again, so the rows of the last invoiced period are read instead.
-      # Without any, the level starts from zero at that period, as its invoice found no row either.
+      # Without any, the level starts from zero at that period, as its invoice found no row either, unless a
+      # plan change reads the history of the external id.
       def billed_cached_rows(query)
         rows = yield(query)
         @cached_unbilled_since = cached_rows_unbilled_since(rows)
@@ -290,12 +291,12 @@ module BillableMetrics
           )
         end
 
-        if cached_unbilled_since
-          return @grouped_latest_values = unbilled_grouped_values
-        end
-
         if billing_context.previous_subscription_id?
           return @grouped_latest_values = grouped_latest_values_from_events.first
+        end
+
+        if cached_unbilled_since
+          return @grouped_latest_values = unbilled_grouped_values
         end
 
         @grouped_latest_values = {}
@@ -314,12 +315,12 @@ module BillableMetrics
           return @grouped_latest_breakdowns = with_unbilled(breakdowns, unbilled_breakdowns)
         end
 
-        if cached_unbilled_since
-          return @grouped_latest_breakdowns = unbilled_breakdowns
-        end
-
         if billing_context.previous_subscription_id?
           return @grouped_latest_breakdowns = grouped_latest_values_from_events.second
+        end
+
+        if cached_unbilled_since
+          return @grouped_latest_breakdowns = unbilled_breakdowns
         end
 
         @grouped_latest_breakdowns = []

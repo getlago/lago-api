@@ -372,6 +372,28 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             # No level before the progressive billing invoice + 5 dated in the unbilled period
             expect(aggregator.aggregate.total_aggregated_units).to eq(5)
           end
+
+          context "when the subscription comes from a plan change" do
+            let(:previous_subscription) do
+              create(:subscription, :terminated, started_at: DateTime.parse("2022-01-01 22:22:22"),
+                terminated_at: DateTime.parse("2023-04-01 22:22:21"))
+            end
+            let(:customer) { previous_subscription.customer }
+            let(:subscription) do
+              create(:subscription, started_at: DateTime.parse("2023-04-01 22:22:22"), previous_subscription:,
+                customer:, external_id: previous_subscription.external_id)
+            end
+
+            before do
+              create(:event, organization_id: organization.id, code: billable_metric.code, subscription: previous_subscription,
+                customer:, timestamp: Time.zone.parse("2023-03-01 22:22:22"), properties: {value: 10})
+            end
+
+            it "reads the history of the external id, as the coming invoice will" do
+              # 10 from the previous subscription + 7 and 5 of this one, unbilled period included
+              expect(aggregator.aggregate.total_aggregated_units).to eq(22)
+            end
+          end
         end
       end
 
