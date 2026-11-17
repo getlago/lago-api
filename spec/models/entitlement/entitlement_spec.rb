@@ -38,6 +38,22 @@ RSpec.describe Entitlement::Entitlement do
     end
   end
 
+  describe "#owner_plan" do
+    it "returns the catalog plan of a catalog plan entitlement" do
+      catalog_plan = build_stubbed(:catalog_plan)
+      expect(build_stubbed(:entitlement, plan: nil, catalog_plan:).owner_plan).to eq(catalog_plan)
+    end
+
+    it "returns the plan of a legacy plan entitlement" do
+      plan = build_stubbed(:plan)
+      expect(build_stubbed(:entitlement, plan:).owner_plan).to eq(plan)
+    end
+
+    it "returns nil for a subscription entitlement" do
+      expect(build_stubbed(:entitlement, plan: nil, subscription: build_stubbed(:subscription)).owner_plan).to be_nil
+    end
+  end
+
   describe "validations" do
     describe "exactly_one_parent_present validation" do
       let_it_be(:organization) { create_default(:organization) }

@@ -83,10 +83,10 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
-        # Ahead of the legacy nested routes: the list, the show, the replace, the merge and the remove are native.
-        # The privilege destroy still reaches the v1 controller: nested, it is drawn before the greedy :code.
+        # Ahead of the legacy nested routes: every entitlement action, privilege destroy included, is native.
+        # The privilege destroy stays in the block, which is drawn before the greedy :code destroy.
         resources :entitlements, only: %i[index show create destroy], param: :code, code: /.*/, controller: "plans/entitlements" do
-          resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "/api/v1/plans/entitlements/privileges"
+          delete "privileges/:privilege_code", action: :destroy_privilege, on: :member, privilege_code: /.*/
         end
         patch :entitlements, controller: "plans/entitlements", action: :update
         # The route with an alert code is drawn first, so an alert coded `alerts` is not read as a
@@ -98,6 +98,10 @@ Rails.application.routes.draw do
           end
         end
         draw(:plan_nested_api)
+        draw(:plan_metadata_api)
+        # Without it, the fallback's greedy DELETE /plans/:code would destroy a plan coded "{code}/entitlements" through v1.
+        # Drawn last so the greedy :plan_code does not take charge or metadata paths ending in "entitlements".
+        delete :entitlements, to: "/application#not_found"
       end
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
