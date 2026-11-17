@@ -437,18 +437,21 @@ plan_entitlement_created:
   category: Plans
   deprecated: false
   product_catalog_only: true
+  feature_flag: entitlement_events
 plan_entitlement_updated:
   name: plan_entitlement.updated
   description: A feature entitlement has been updated on a plan
   category: Plans
   deprecated: false
   product_catalog_only: true
+  feature_flag: entitlement_events
 plan_entitlement_deleted:
   name: plan_entitlement.deleted
   description: A feature entitlement has been removed from a plan
   category: Plans
   deprecated: false
   product_catalog_only: true
+  feature_flag: entitlement_events
 contract_rate_card_created:
   name: contract_rate_card.created
   description: A contract rate card association has been created

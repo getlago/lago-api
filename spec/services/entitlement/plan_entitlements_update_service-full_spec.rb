@@ -414,13 +414,22 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       context "when activity logs cannot be sent" do
         before { allow(Utils::ActivityLog).to receive(:available?).and_return(false) }
 
-        it "logs nothing and renders no entitlement" do
-          allow(::V2::PlanEntitlementSerializer).to receive(:new).and_call_original
-
-          result
+        it "logs nothing and still sends the webhooks" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).twice
 
           expect(Utils::ActivityLog).not_to have_received(:produce)
-          expect(::V2::PlanEntitlementSerializer).not_to have_received(:new)
+        end
+
+        context "when the organization has no webhook endpoint" do
+          before { organization.webhook_endpoints.destroy_all }
+
+          it "renders no entitlement" do
+            allow(::V2::PlanEntitlementSerializer).to receive(:new).and_call_original
+
+            expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+            expect(::V2::PlanEntitlementSerializer).not_to have_received(:new)
+          end
         end
       end
 
