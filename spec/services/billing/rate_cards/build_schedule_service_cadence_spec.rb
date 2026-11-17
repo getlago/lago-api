@@ -19,11 +19,11 @@ require "rails_helper"
 # expectation below is the old one with the end moved to the next instant.
 RSpec.describe Billing::RateCards::BuildScheduleService do
   def due_segments(schedule, by:)
-    cycle = schedule.cycle_at(contract_rate_card.effective_date.in_time_zone("UTC"))
     segments = []
-    while cycle && cycle.started_at <= by
-      segments.concat(schedule.segments_due_in_cycle(cycle.started_at, by:))
-      cycle = schedule.cycle_at(cycle.ended_at)
+    obligation = schedule.next_obligation(from: contract_rate_card.effective_date.in_time_zone("UTC"))
+    while obligation && obligation.billing_at <= by
+      segments.concat(obligation.segments)
+      obligation = schedule.next_obligation(from: obligation.cycle.started_at, after: obligation.billing_at)
     end
     segments
   end
@@ -191,7 +191,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     # The advance segment is already due and still carries the re-anchored end of its cycle.
     it "runs the cadence in force through to the re-anchored boundary" do
       at = Time.utc(2026, 5, 20)
-      in_force = schedule.segment_covering(at)
+      in_force = schedule.obligation_at(at).segments.find { (it.started_at...it.ended_at).cover?(at) }
 
       expect(in_force.ended_at).to eq(Time.utc(2026, 6, 6))
     end
@@ -322,7 +322,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "stops producing cycles after the termination" do
-      expect(schedule.next_obligation(after: Time.utc(2027, 1, 1))&.billing_at).to be_nil
+      expect(schedule.next_obligation(from: Time.utc(2027, 1, 1), after: Time.utc(2027, 1, 1))&.billing_at).to be_nil
     end
   end
 end

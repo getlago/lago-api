@@ -234,9 +234,9 @@ module BillingOperations
       end
     end
 
-    # Nothing follows an operation whose cycle the schedule no longer has.
+    # Reconciliation and obsolete renewals do not build a schedule to continue.
     def next_planned_operation(operation, resolution)
-      return unless resolution.cycle
+      return unless resolution.schedule
 
       Schedule::BuildPlannedOperation.call!(
         schedule: resolution.schedule,

@@ -64,6 +64,143 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  ContractRateCard::BILLING_SCOPES.each_value do |scope|
+    context "with #{scope} billing and a mid-cycle rate change" do
+      let(:timestamp) { Time.zone.parse("2027-02-15 12:00:00") }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, units:, billing_scope: scope,
+          effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+      end
+      let(:new_rate) do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-15"),
+          rate_properties: {"amount" => "5"})
+      end
+
+      before do
+        new_rate
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2027-02-15 01:00:00"))
+      end
+
+      it "prices the selected obligation in one usage entry" do
+        usage = result.rate_card_usages.sole
+        expect(usage.obligation.segments.map(&:rate)).to eq(
+          (scope == ContractRateCard::BILLING_SCOPES.fetch(:cycle)) ? [rate, new_rate] : [new_rate]
+        )
+        expect(usage.billing_segment).to have_attributes(rate_card_rate: new_rate,
+          started_at: Time.zone.parse("2027-02-15"), ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-03-01")))
+        expect(usage.fees.map { |fee| [fee.units, fee.amount_cents] }).to eq(
+          (scope == ContractRateCard::BILLING_SCOPES.fetch(:cycle)) ? [[1, 200], [1, 500]] : [[1, 500]]
+        )
+      end
+
+      context "when querying before the known rate change" do
+        let(:timestamp) { Time.zone.parse("2027-02-10 12:00:00") }
+
+        it "retains future cycle coverage without pricing future metered usage" do
+          usage = result.rate_card_usages.sole
+
+          expect(usage.obligation.segments.map(&:rate)).to eq(
+            (scope == ContractRateCard::BILLING_SCOPES.fetch(:cycle)) ? [rate, new_rate] : [rate]
+          )
+          expect(usage.fees.sole).to have_attributes(units: 1, amount_cents: 200)
+          expect(usage.billing_segment.ended_at).to eq(BillingSegment.inclusive_end(Time.zone.parse("2027-02-15")))
+        end
+      end
+
+      context "when querying at the rate change" do
+        let(:timestamp) { Time.zone.parse("2027-02-15") }
+
+        it "includes earlier usage only when it belongs to the selected obligation" do
+          expect(result.amount_cents).to eq((scope == ContractRateCard::BILLING_SCOPES.fetch(:cycle)) ? 200 : 0)
+        end
+      end
+
+      context "with taxes" do
+        let(:apply_taxes) { true }
+
+        before do
+          create(:customer_applied_tax, customer:, tax: create(:tax, organization:, rate: 20))
+        end
+
+        it "taxes every fee of the selected obligation" do
+          expected_amounts = (scope == ContractRateCard::BILLING_SCOPES.fetch(:cycle)) ? [200, 500] : [500]
+          expect(result.rate_card_usages.sole.fees.map(&:taxes_amount_cents)).to eq(expected_amounts.map { it / 5 })
+          expect(result.total_amount_cents).to eq(expected_amounts.sum * 6 / 5)
+        end
+      end
+
+      context "with later events already ingested" do
+        before do
+          [timestamp, timestamp + 1.second, Time.zone.parse("2027-02-25")].each do |event_timestamp|
+            create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+              code: billable_metric.code, timestamp: event_timestamp)
+          end
+        end
+
+        it "includes the query instant but excludes events after it" do
+          expect(result.rate_card_usages.sole.fees.map(&:amount_cents)).to eq(
+            (scope == ContractRateCard::BILLING_SCOPES.fetch(:cycle)) ? [200, 1000] : [1000]
+          ) # Earlier slice: one €2 event; current slice: two €5 events through the query instant.
+        end
+      end
+    end
+
+    context "with #{scope} billing before the first priced cycle" do
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope: scope,
+          effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+      end
+      let(:rate) do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-03-01"),
+          rate_properties: {"amount" => "2"})
+      end
+
+      it "does not search forward for usage" do
+        expect(result.rate_card_usages).to eq([])
+        expect(result.amount_cents).to eq(0)
+      end
+
+      context "when pricing starts later in this cycle" do
+        let(:rate) do
+          create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-15"),
+            rate_properties: {"amount" => "2"})
+        end
+
+        it "returns no usage before pricing starts" do
+          expect(result.rate_card_usages).to eq([])
+          expect(result.amount_cents).to eq(0)
+        end
+      end
+    end
+  end
+
+  context "with multiple pricing slices in a custom pricing unit" do
+    let(:pricing_unit) { create(:pricing_unit, organization:, code: "credits") }
+    let(:rate_card) do
+      create(:rate_card, organization:, product:, currency: "EUR", applied_pricing_unit_code: pricing_unit.code)
+    end
+    let(:rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-01-01"),
+        rate_properties: {"amount" => "2"}, applied_pricing_unit_conversion_rate: 2)
+    end
+    let(:timestamp) { Time.zone.parse("2027-02-20") }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-15"),
+        rate_properties: {"amount" => "4"}, applied_pricing_unit_conversion_rate: 2)
+      create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+        code: billable_metric.code, timestamp: Time.zone.parse("2027-02-16"))
+    end
+
+    it "loads pricing units once and converts every slice" do
+      statements = capture_sql { result }
+
+      expect(statements.grep(/FROM "pricing_units"/i).size).to eq(1)
+      expect(result.rate_card_usages.sole.fees.map(&:amount_cents)).to eq([400, 800]) # 2 and 4 credits * €2 per credit * 100 cents.
+    end
+  end
+
   context "when the card is not effective yet" do
     let(:effective_date) { Date.new(2027, 2, 15) }
 
@@ -352,10 +489,14 @@ RSpec.describe Contracts::CurrentUsageService do
       stub_request(:post, endpoint).to_return do |request|
         response = JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")))
         provider_fee = response["succeededInvoices"].first["fees"].last
-        provider_fee["item_key"] = JSON.parse(request.body)["input"].first["fees"].last["item_key"]
-        provider_fee["amount_cents"] = 200
-        provider_fee["tax_amount_cents"] = 17
-        provider_fee["tax_breakdown"].first["tax_amount"] = 17
+        response["succeededInvoices"].first["fees"] = JSON.parse(request.body)["input"].first["fees"].map do |fee|
+          provider_fee.deep_dup.tap do |item|
+            item["item_key"] = fee["item_key"]
+            item["amount_cents"] = fee["amount_cents"]
+            item["tax_amount_cents"] = 17
+            item["tax_breakdown"].first["tax_amount"] = 17
+          end
+        end
 
         {body: response.to_json}
       end
@@ -364,6 +505,23 @@ RSpec.describe Contracts::CurrentUsageService do
     it "takes the taxes from the provider instead of the local ones" do
       expect(result.rate_card_usages.sole.fees.sole).to have_attributes(taxes_amount_cents: 17)
       expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 17, total_amount_cents: 217, taxes_unavailable: false)
+    end
+
+    context "with multiple pricing slices" do
+      let(:timestamp) { Time.zone.parse("2027-02-20") }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-15"),
+          rate_properties: {"amount" => "5"})
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2027-02-16"))
+      end
+
+      it "sends all fees in one provider request and applies each response" do
+        expect(result.rate_card_usages.sole.fees.map(&:taxes_amount_cents)).to eq([17, 17])
+        expect(result).to have_attributes(amount_cents: 700, taxes_amount_cents: 34, total_amount_cents: 734)
+        expect(WebMock).to have_requested(:post, endpoint).once
+      end
     end
 
     context "when the provider cannot resolve the taxes" do
@@ -486,6 +644,27 @@ RSpec.describe Contracts::CurrentUsageService do
       usage = result.rate_card_usages.sole
 
       expect(usage.fees.sole).to have_attributes(fee_type: "product", units: 3, amount_cents: 3000)
+    end
+
+    context "with a mid-cycle price change and proration" do
+      let(:timestamp) { Time.zone.parse("2027-02-20") }
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "EUR", proration: true) }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-15"),
+          rate_properties: {"amount" => "20"})
+      end
+
+      it "prices both slices without changing their coverage or proration" do
+        usage = result.rate_card_usages.sole
+
+        expect(usage.obligation.segments.map(&:proration_ratio)).to eq([14.fdiv(28), 14.fdiv(28)])
+        expect(usage.fees.map(&:amount_cents)).to eq([1500, 3000]) # 3 units * €10 or €20 * 14 / 28 days.
+        expect(usage.fees.map { it.properties.values_at("from_datetime", "to_datetime") }).to eq([
+          [Time.zone.parse("2027-02-01").iso8601(6), BillingSegment.inclusive_end(Time.zone.parse("2027-02-15")).iso8601(6)],
+          [Time.zone.parse("2027-02-15").iso8601(6), BillingSegment.inclusive_end(Time.zone.parse("2027-03-01")).iso8601(6)]
+        ])
+      end
     end
 
     context "with multiple fixed cards" do

@@ -26,11 +26,11 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   let(:terminated_at) { nil }
 
   def due_segments(schedule, by:)
-    cycle = schedule.cycle_at(contract_rate_card.effective_date.in_time_zone(timezone))
     segments = []
-    while cycle && cycle.started_at <= by
-      segments.concat(schedule.segments_due_in_cycle(cycle.started_at, by:))
-      cycle = schedule.cycle_at(cycle.ended_at)
+    obligation = schedule.next_obligation(from: contract_rate_card.effective_date.in_time_zone(timezone))
+    while obligation && obligation.billing_at <= by
+      segments.concat(obligation.segments)
+      obligation = schedule.next_obligation(from: obligation.cycle.started_at, after: obligation.billing_at)
     end
     segments
   end
@@ -54,7 +54,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     before { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 20)) }
 
     it "groups them by cycle by default" do
-      obligation = result.schedule.first_obligation(at: Time.utc(2026, 1, 15))
+      obligation = result.schedule.next_obligation(from: Time.utc(2026, 1, 15))
       expect(obligation.billing_at).to eq(Time.utc(2026, 2, 1))
       expect(obligation.segments.size).to eq(2)
     end
@@ -63,7 +63,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       let(:billing_scope) { "segment" }
 
       it "propagates the scope to the schedule" do
-        obligation = result.schedule.first_obligation(at: Time.utc(2026, 1, 15))
+        obligation = result.schedule.next_obligation(from: Time.utc(2026, 1, 15))
         expect(obligation.billing_at).to eq(Time.utc(2026, 1, 20))
         expect(obligation.segments.size).to eq(1)
       end
@@ -111,7 +111,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       contract_rate_card.discard!
       schedule = described_class.call!(contract_rate_card: successor).schedule
 
-      expect(schedule.segments_due_in_cycle(Time.utc(2026, 7, 1), by: Time.utc(2026, 8, 1)).map(&:cycle_index)).to eq([0])
+      expect(schedule.obligation_at(Time.utc(2026, 7, 1)).segments.map(&:cycle_index)).to eq([0])
     end
   end
 
@@ -124,7 +124,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
 
     it "still replays from the start of the card's effective date" do
       expect(result).to be_success
-      expect(result.schedule.segments_due_in_cycle(Time.utc(2026, 1, 15), by: Time.utc(2026, 2, 1)).sole.cycle_started_at)
+      expect(result.schedule.obligation_at(Time.utc(2026, 1, 15)).segments.sole.cycle_started_at)
         .to eq(Time.utc(2026, 1, 15))
     end
   end
@@ -161,7 +161,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       contract.update!(ended_at: Time.utc(2026, 1, 20, 12))
       schedule = described_class.call!(contract_rate_card:).schedule
 
-      expect(schedule.next_obligation(after: contract.ended_at)&.billing_at).to be_nil
+      expect(schedule.next_obligation(from: contract.ended_at, after: contract.ended_at)&.billing_at).to be_nil
     end
   end
 

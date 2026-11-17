@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# One rate card's usage on its open billing window. A card with pricing groups has one fee per group.
-RateCardUsage = Data.define(:contract_rate_card, :billing_segment, :rate_phase, :fees) do
+# One rate card's obligation, with fees from its eligible pricing slices.
+RateCardUsage = Data.define(:contract_rate_card, :obligation, :billing_segment, :rate_phase, :fees) do
   def units
     fees.sum(BigDecimal(0), &:units)
   end

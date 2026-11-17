@@ -63,6 +63,16 @@ RSpec.describe Billing::RateCards::Schedule do
     build_walker(**shape).walk_to(asked_at, from:)
   end
 
+  def scheduled_segments(schedule, cycle)
+    segments = []
+    obligation = schedule.next_obligation(from: cycle.started_at)
+    while obligation && obligation.cycle.started_at == cycle.started_at && obligation.billing_at <= asked_at
+      segments.concat(obligation.segments)
+      obligation = schedule.next_obligation(from: cycle.started_at, after: obligation.billing_at)
+    end
+    segments
+  end
+
   def state_of(cycle)
     [cycle.started_at, cycle.calendar.anchor_date, cycle.calendar.interval, cycle.index]
   end
@@ -159,7 +169,7 @@ RSpec.describe Billing::RateCards::Schedule do
         full = oracle_segments(cycles, timing: shape[:timing])
 
         mismatches = cycles.filter_map do |cycle|
-          jumped = segment_values(schedule.segments_due_in_cycle(cycle.started_at, by: asked_at))
+          jumped = segment_values(scheduled_segments(schedule, cycle))
           walked = full.select { |values| values.first == cycle.index }
           next if jumped == walked
 

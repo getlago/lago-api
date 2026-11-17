@@ -26,9 +26,9 @@ module BillingOperations
 
       def call
         obligation = if after_operation
-          schedule.next_obligation(after: after_operation.billing_at, from: after_operation.target_cycle_started_at) { operation_billing_at(it) }
+          schedule.next_obligation(from: after_operation.target_cycle_started_at, after: after_operation.billing_at) { operation_billing_at(it) }
         else
-          schedule.first_obligation(at:)
+          schedule.next_obligation(from: at)
         end
 
         if obligation

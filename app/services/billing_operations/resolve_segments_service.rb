@@ -3,7 +3,7 @@
 module BillingOperations
   # Resolves a persisted operation's slices in its stored cycle without changing its identity.
   class ResolveSegmentsService < BaseService
-    Result = BaseResult[:segments, :schedule, :cycle]
+    Result = BaseResult[:segments, :schedule]
 
     def initialize(operation:, pricing_units_by_code: nil)
       @operation = operation
@@ -24,8 +24,12 @@ module BillingOperations
 
       schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: operation.contract_rate_card).schedule
       result.schedule = schedule
-      result.cycle = schedule.cycle_at(operation.target_cycle_started_at)
-      result.segments = owned_billable_segments(after: previous_billing_at).map { build_billing_segment(it) }
+      obligation = schedule.resolve_obligation(
+        cycle_started_at: operation.target_cycle_started_at,
+        billing_at: operation.billing_at,
+        after: previous_billing_at
+      )
+      result.segments = obligation ? obligation.segments.map { build_billing_segment(it) } : []
       result
     rescue BaseService::FailedResult => error
       result.fail_with_error!(error)
@@ -34,17 +38,6 @@ module BillingOperations
     private
 
     attr_reader :operation, :pricing_units_by_code
-
-    # An operation whose cycle the schedule no longer has bills nothing.
-    def owned_billable_segments(after:)
-      cycle = result.cycle
-
-      if cycle
-        result.schedule.segments_due_in_cycle(cycle.started_at, by: operation.billing_at, after:)
-      else
-        []
-      end
-    end
 
     # Only completed billing owns coverage; a failed run leaves its cursor unchanged.
     def previous_billing_at

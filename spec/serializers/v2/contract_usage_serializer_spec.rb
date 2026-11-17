@@ -38,6 +38,7 @@ RSpec.describe V2::ContractUsageSerializer do
     let(:rate_card_usage) do
       RateCardUsage.new(
         contract_rate_card:,
+        obligation: instance_double(Billing::Obligation),
         billing_segment: build_stubbed(:billing_segment, contract:, contract_rate_card:),
         rate_phase: nil,
         fees: [build_stubbed(:fee, amount_cents: 700, taxes_amount_cents: 140)]

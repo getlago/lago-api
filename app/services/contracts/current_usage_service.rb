@@ -38,12 +38,14 @@ module Contracts
         if cards.any?
           ActiveRecord::Associations::Preloader.new(records: cards, associations: [{rate_card: :rates}, {rate_phases: :rate_override}, :organization, :product]).call
         end
-        segments = cards.filter_map { |card| billing_segment_for(card) }
-        fixed_cards = segments.filter_map { |card, _, _| card unless card.rate_card.product.metered? }
+        obligations = cards.filter_map { |card| obligation_for(card) }
+        fixed_cards = obligations.filter_map { |card, _| card unless card.rate_card.product.metered? }
         ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
+        codes = obligations.filter_map { |card, _| card.rate_card.applied_pricing_unit_code.presence }.uniq
+        @pricing_units_by_code = codes.any? ? contract.organization.pricing_units.where(code: codes).index_by(&:code) : {}
 
-        segments
-          .map { |card, billable_segment, billing_segment| rate_card_usage(card, billable_segment, billing_segment) }
+        obligations
+          .map { |card, obligation| rate_card_usage(card, obligation) }
           .sort_by { |usage| usage_order(usage) }
       end
 
@@ -121,40 +123,49 @@ module Contracts
       haystacks.any? { |value| value&.downcase&.include?(search_term.downcase) }
     end
 
-    def billing_segment_for(card)
+    def obligation_for(card)
       return if card.rate_card.rates.empty?
 
       schedule = Billing::RateCards::BuildScheduleService.call!(
         contract_rate_card: card
       ).schedule
-      billable_segment = schedule.segment_covering(timestamp)
-      return unless billable_segment
+      obligation = schedule.obligation_at(timestamp)
+      return unless obligation
 
-      billing_segment = BillingSegments::BuildEventSegmentService.call!(
-        contract_rate_card: card, billable_segment:
-      ).billing_segment
-      [card, billable_segment, billing_segment]
+      [card, obligation]
     end
 
-    def rate_card_usage(card, billable_segment, billing_segment)
+    def rate_card_usage(card, obligation)
+      billing_segments = obligation.segments.map do |billable_segment|
+        BillingSegments::BuildEventSegmentService.call!(
+          contract_rate_card: card, billable_segment:, pricing_units_by_code: @pricing_units_by_code
+        ).billing_segment
+      end
+      # Keep the existing response's singular pricing metadata effective at the query instant.
+      billing_segment = billing_segments.find { (it.started_at...BillingSegment.exclusive_end(it.ended_at)).cover?(timestamp) }
       RateCardUsage.new(
         contract_rate_card: card,
+        obligation:,
         billing_segment:,
-        rate_phase: card.rate_phases.find { |phase| phase.code == billable_segment.rate_phase_code },
-        fees: compute_fees(billing_segment)
+        rate_phase: card.rate_phases.find { |phase| phase.code == obligation.cycle.phase.code },
+        fees: billing_segments.flat_map { compute_fees(it) }
       )
     end
 
     # Oldest window first; on the same start, the one closing first.
     def usage_order(usage)
-      [usage.billing_segment.started_at, usage.billing_segment.ended_at, usage.contract_rate_card.rate_card.code]
+      [usage.obligation.segments.first.started_at, usage.obligation.segments.last.ended_at, usage.contract_rate_card.rate_card.code]
     end
 
     def compute_fees(billing_segment)
       if billing_segment.contract_rate_card.rate_card.product.metered?
+        return [] if billing_segment.started_at > timestamp
+
         Fees::ChargeService.call!(
           invoice: nil,
-          metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:),
+          metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(
+            billing_segment:, max_timestamp: [timestamp, billing_segment.ended_at].min
+          ),
           billing_context:,
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees

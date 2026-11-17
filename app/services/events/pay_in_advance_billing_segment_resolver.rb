@@ -63,7 +63,12 @@ module Events
       schedule = Billing::RateCards::BuildScheduleService.call!(
         contract_rate_card: card
       ).schedule
-      segment = schedule.segment_covering(event.timestamp)
+      obligation = schedule.obligation_at(event.timestamp)
+      return unless obligation
+
+      segment = obligation.segments.find do |slice|
+        (slice.started_at...slice.ended_at).cover?(event.timestamp)
+      end
 
       if segment
         BillingSegments::BuildEventSegmentService.call!(

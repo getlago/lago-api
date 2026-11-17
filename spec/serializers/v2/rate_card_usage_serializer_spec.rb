@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe V2::RateCardUsageSerializer do
   subject(:payload) { described_class.new(usage).serialize }
 
-  let(:usage) { RateCardUsage.new(contract_rate_card:, billing_segment:, rate_phase:, fees:) }
+  let(:usage) { RateCardUsage.new(contract_rate_card:, obligation: instance_double(Billing::Obligation), billing_segment:, rate_phase:, fees:) }
   let(:billable_metric) { build_stubbed(:billable_metric, code: "api_calls") }
   let(:product_category) { build_stubbed(:product_category, code: "compute", name: "Compute") }
   let(:product) do

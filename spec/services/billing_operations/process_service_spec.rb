@@ -260,6 +260,51 @@ RSpec.describe BillingOperations::ProcessService do
     end
   end
 
+  context "when the stored cycle is unpriced but a later cycle has a price" do
+    let(:rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 2, 15),
+        rate_properties: {"amount" => "31"})
+    end
+
+    it "completes empty work and advances to the next priced obligation" do
+      expect(result).to be_success
+      expect(result.invoices).to be_empty
+      expect(operation.reload).to have_attributes(processed_at: timestamp, invoice_id: nil)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+      expect(contract_rate_card.fees).to be_empty
+
+      BillingOperations::ScheduleService.call!(customer:, timestamp: Time.utc(2026, 3, 1))
+      invoice = described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)).invoices.sole
+
+      expect(invoice.total_amount_cents).to eq(1550) # $31 * 14 priced days / 28 days in February.
+      expect(invoice.fees.sole.properties).to include(
+        "from_datetime" => Time.utc(2026, 2, 15).iso8601(6),
+        "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 3, 1)).iso8601(6)
+      )
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 4, 1))
+    end
+  end
+
+  context "when the stored arrears cycle is after contract end" do
+    let(:contract) do
+      create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1),
+        ended_at: Time.utc(2026, 1, 20))
+    end
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", billing_at: cursor,
+        target_cycle_started_at: Time.utc(2026, 2, 1))
+    end
+
+    it "completes empty work and clears the exhausted cursor" do
+      expect(result).to be_success
+      expect(result.invoices).to be_empty
+      expect(operation.reload).to have_attributes(processed_at: timestamp, invoice_id: nil)
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+      expect(contract_rate_card.fees).to be_empty
+    end
+  end
+
   context "when another customer is due" do
     let(:other_customer) { create(:customer, organization:) }
     let(:other_contract) { create(:contract, organization:, customer: other_customer) }

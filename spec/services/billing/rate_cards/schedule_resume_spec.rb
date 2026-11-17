@@ -42,6 +42,16 @@ RSpec.describe Billing::RateCards::Schedule do
     build_walker(shape).walk_to(to, from:)
   end
 
+  def scheduled_segments(schedule, cycle)
+    segments = []
+    obligation = schedule.next_obligation(from: cycle.started_at)
+    while obligation && obligation.cycle.started_at == cycle.started_at && obligation.billing_at <= asked_at
+      segments.concat(obligation.segments)
+      obligation = schedule.next_obligation(from: cycle.started_at, after: obligation.billing_at)
+    end
+    segments
+  end
+
   # Far enough out that every shape has billed a run of cycles by then, including the yearly
   # override and the card whose first rate lands in May 2026.
   let(:asked_at) { Time.utc(2027, 6, 1) }
@@ -158,27 +168,27 @@ RSpec.describe Billing::RateCards::Schedule do
     let(:cycles) { walk(shape) }
 
     it "finds cycles before, at and after a later query" do
-      schedule.cycle_at(cycles[3].started_at)
+      schedule.obligation_at(cycles[3].started_at)
       cycles[1..4].each do |cycle|
-        expect(state_of(schedule.cycle_at(cycle.started_at))).to eq(state_of(cycle))
+        expect(state_of(schedule.obligation_at(cycle.started_at).cycle)).to eq(state_of(cycle))
       end
     end
 
     it "finds the obligation of the cycle covering an instant" do
       at = cycles[1].started_at + 1.day
 
-      expect(schedule.first_obligation(at: at).billing_at).to eq(cycles[1].ended_at)
+      expect(schedule.next_obligation(from: at).billing_at).to eq(cycles[1].ended_at)
     end
 
     it "finds a later cycle after querying an earlier cycle" do
-      schedule.cycle_at(cycles[1].started_at)
-      expect(schedule.segments_due_in_cycle(cycles[3].started_at, by: cycles[4].ended_at).map(&:cycle_index)).to eq([3])
+      schedule.obligation_at(cycles[1].started_at)
+      expect(schedule.obligation_at(cycles[3].started_at).segments.map(&:cycle_index)).to eq([3])
     end
 
     it "finds the first billing date when asked before the card began" do
       at = shape[:starts_at] - 1.year
 
-      expect(schedule.first_obligation(at: at).billing_at).to eq(cycles.first.ended_at)
+      expect(schedule.next_obligation(from: at).billing_at).to eq(cycles.first.ended_at)
     end
   end
 
@@ -254,7 +264,7 @@ RSpec.describe Billing::RateCards::Schedule do
 
       schedule = build(shape)
       mismatches = full.each_index.flat_map do |n|
-        jumped = schedule.segments_due_in_cycle(full[n].started_at, by: asked_at)
+        jumped = scheduled_segments(schedule, full[n])
         [
           ((fingerprint(walk(shape, from: full[n].started_at)) == fingerprint(full.drop(n))) ? nil : "cycles at #{n}"),
           ((segment_values(jumped) == segments.select { |values| values.first == full[n].index }) ? nil : "segments at #{n}")
@@ -317,7 +327,7 @@ RSpec.describe Billing::RateCards::Schedule do
       full = oracle_segments(shape, cycles)
 
       cycles.filter_map do |cycle|
-        jumped = segment_values(schedule.segments_due_in_cycle(cycle.started_at, by: asked_at))
+        jumped = segment_values(scheduled_segments(schedule, cycle))
         walked = full.select { |values| values.first == cycle.index }
         next if jumped == walked
 

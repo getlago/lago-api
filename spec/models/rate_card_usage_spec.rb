@@ -4,10 +4,11 @@ require "rails_helper"
 
 RSpec.describe RateCardUsage do
   subject(:usage) do
-    described_class.new(contract_rate_card:, billing_segment:, rate_phase: nil, fees:)
+    described_class.new(contract_rate_card:, obligation:, billing_segment:, rate_phase: nil, fees:)
   end
 
   let(:contract_rate_card) { build_stubbed(:contract_rate_card) }
+  let(:obligation) { instance_double(Billing::Obligation) }
   let(:rate_override) { nil }
   let(:billing_segment) { build_stubbed(:billing_segment, contract_rate_card:, rate_override:) }
   let(:fees) do
@@ -21,6 +22,10 @@ RSpec.describe RateCardUsage do
     expect(usage).to have_attributes(
       units: BigDecimal("3.5"), events_count: 3, amount_cents: 350, taxes_amount_cents: 70, rate_source: "rate"
     )
+  end
+
+  it "retains the selected obligation" do
+    expect(usage.obligation).to eq(obligation)
   end
 
   context "without fees" do
