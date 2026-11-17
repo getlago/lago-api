@@ -233,7 +233,7 @@ RSpec.describe Subscriptions::InvoiceGroupingService do
             create_connection(subscription2, "crm", integration_customer: create(:salesforce_customer, customer:))
           end
 
-          it "returns one group per accounting connection" do
+          it "returns one group per crm connection" do
             expect(result.subscription_groups).to eq([[subscription1], [subscription2]])
           end
         end
