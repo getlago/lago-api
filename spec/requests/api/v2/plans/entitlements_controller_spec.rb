@@ -37,9 +37,11 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
       it "writes one plan_entitlement.created activity log and no plan.updated event" do
         expect { request }.not_to have_enqueued_job(SendWebhookJob)
 
+        entitlement = catalog_plan.entitlements.sole
         expect(Utils::ActivityLog).to have_received(:produce).with(
-          catalog_plan.entitlements.sole, "plan_entitlement.created", after_commit: true,
-          changes: {"values" => [nil, [{privilege_code: "max", value: 50}]]}
+          entitlement, "plan_entitlement.created", after_commit: true,
+          changes: {"values" => [nil, [{privilege_code: "max", value: 50}]]},
+          activity_object: hash_including(lago_id: entitlement.id, values: [{privilege_code: "max", value: 50}])
         ).once
         expect(Utils::ActivityLog).to have_received(:produce).once
       end

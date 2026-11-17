@@ -260,7 +260,8 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         new_entitlement = plan.entitlements.find_by!(feature: new_feature)
         expect(Utils::ActivityLog).to have_received(:produce).with(
           new_entitlement, "plan_entitlement.created", after_commit: true,
-          changes: {"values" => [nil, [{privilege_code: "max_gb", value: 100}]]}
+          changes: {"values" => [nil, [{privilege_code: "max_gb", value: 100}]]},
+          activity_object: hash_including(lago_id: new_entitlement.id, values: [{privilege_code: "max_gb", value: 100}])
         ).once
         expect(Utils::ActivityLog).to have_received(:produce).once
       end
@@ -273,7 +274,11 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
 
           expect(Utils::ActivityLog).to have_received(:produce).with(
             entitlement, "plan_entitlement.updated", after_commit: true,
-            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max_admins", value: 5}, {privilege_code: "max", value: 10}]]}
+            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max_admins", value: 5}, {privilege_code: "max", value: 10}]]},
+            activity_object: hash_including(
+              lago_id: entitlement.id,
+              values: [{privilege_code: "max_admins", value: 5}, {privilege_code: "max", value: 10}]
+            )
           ).once
         end
       end
