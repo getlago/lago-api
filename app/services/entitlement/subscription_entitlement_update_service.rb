@@ -3,6 +3,7 @@
 module Entitlement
   class SubscriptionEntitlementUpdateService < BaseService
     include ::Entitlement::Concerns::CreateOrUpdateConcern
+    include ::Entitlement::Concerns::OwnerLockConcern
 
     Result = BaseResult[:entitlement]
 
@@ -23,6 +24,7 @@ module Entitlement
       return result.not_found_failure!(resource: "subscription") unless subscription
 
       ActiveRecord::Base.transaction do
+        lock_subscription!(subscription)
         plan = subscription.plan.parent || subscription.plan
         feature = organization.features.includes(:privileges).find_by!(code: feature_code)
 
@@ -45,6 +47,8 @@ module Entitlement
       result
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, SUBSCRIPTION_UNIQUE_INDEXES)
     rescue ActiveRecord::RecordNotFound => e
       if e.message.include?("Entitlement::Feature")
         result.not_found_failure!(resource: "feature")
