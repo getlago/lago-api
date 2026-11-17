@@ -31,6 +31,58 @@ RSpec.describe Integrations::Aggregator::BaseService do
     end
   end
 
+  describe "#throttle!" do
+    subject(:throttle) { service.send(:throttle!, provider_name) }
+
+    let(:limiter) { instance_double(Throttling::Base, check: allowed) }
+    let(:allowed) { false }
+
+    let(:service) do
+      throttled_provider = provider_name.to_s
+
+      Class.new(described_class) do
+        define_method(:provider) { throttled_provider }
+        define_method(:throttle_key) { "throttle-key" }
+      end.new(integration:)
+    end
+
+    before do
+      allow(Throttling).to receive(:for).with(provider_name).and_return(limiter)
+    end
+
+    %i[netsuite xero hubspot anrok avalara].each do |existing_provider|
+      context "when #{existing_provider} is rate limited" do
+        let(:provider_name) { existing_provider }
+
+        it "raises the regular throttling error" do
+          expect { throttle }
+            .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(provider_name) }
+        end
+      end
+    end
+
+    context "when quickbooks is rate limited" do
+      let(:provider_name) { :quickbooks }
+
+      it "raises the next window throttling error" do
+        expect { throttle }
+          .to raise_error(BaseService::NextWindowThrottlingError) do |error|
+            expect(error.provider_name).to eq(:quickbooks)
+            expect(error.retry_after).to eq(60.seconds)
+          end
+      end
+    end
+
+    context "when the provider is not rate limited" do
+      let(:provider_name) { :quickbooks }
+      let(:allowed) { true }
+
+      it "does not raise" do
+        expect { throttle }.not_to raise_error
+      end
+    end
+  end
+
   describe "#trigger_action" do
     let(:service) do
       Class.new(described_class) do
@@ -209,6 +261,124 @@ RSpec.describe Integrations::Aggregator::BaseService do
           end
         end
       end
+    end
+  end
+
+  describe "#throttle_key" do
+    subject(:throttle_key) { described_class.new(integration:).send(:throttle_key) }
+
+    context "with QuickBooks integrations" do
+      let(:connection_id_a) { "quickbooks-placeholder-connection-a" }
+      let(:connection_id_b) { "quickbooks-placeholder-connection-b" }
+      let(:integration_a) do
+        create(:quickbooks_integration, code: "quickbooks_a", secrets: {connection_id: connection_id_a}.to_json)
+      end
+      let(:integration_b) do
+        create(:quickbooks_integration, code: "quickbooks_b", secrets: {connection_id: connection_id_b}.to_json)
+      end
+      let(:key_a) { described_class.new(integration: integration_a).send(:throttle_key) }
+      let(:key_b) { described_class.new(integration: integration_b).send(:throttle_key) }
+
+      it "uses the SHA-256 digest of each connection id" do
+        expect(key_a).to eq(Digest::SHA2.hexdigest(connection_id_a))
+        expect(key_b).to eq(Digest::SHA2.hexdigest(connection_id_b))
+        expect(key_a).to match(/\A\h{64}\z/)
+        expect(key_b).to match(/\A\h{64}\z/)
+      end
+
+      it "gives different keys to different connections" do
+        expect(key_a).not_to eq(key_b)
+      end
+
+      it "never holds the raw connection id" do
+        expect(key_a).not_to include(connection_id_a)
+        expect(key_b).not_to include(connection_id_b)
+      end
+
+      it "gives the same key for the same connection" do
+        expect(described_class.new(integration: integration_a).send(:throttle_key)).to eq(key_a)
+      end
+    end
+
+    context "with a NetSuite integration" do
+      let(:integration) { create(:netsuite_integration) }
+
+      it "uses the SHA-256 digest of the client id" do
+        expect(throttle_key).to eq(Digest::SHA2.hexdigest(integration.client_id))
+      end
+    end
+
+    context "with an Anrok integration" do
+      let(:integration) { create(:anrok_integration) }
+
+      it "uses the SHA-256 digest of the api key" do
+        expect(throttle_key).to eq(Digest::SHA2.hexdigest(integration.api_key))
+      end
+    end
+
+    {xero_integration: "xero", hubspot_integration: "hubspot", avalara_integration: "avalara"}.each do |factory, key|
+      context "with a #{key} integration" do
+        let(:integration) { create(factory) }
+
+        it "uses the global #{key} key" do
+          expect(throttle_key).to eq(key)
+        end
+      end
+    end
+  end
+
+  describe "#throttle! with a real counter" do
+    let(:store) { ActiveSupport::Cache::MemoryStore.new }
+    let(:store_keys) { store.instance_variable_get(:@data).keys }
+
+    let(:connection_id_a) { "quickbooks-placeholder-connection-a" }
+    let(:connection_id_b) { "quickbooks-placeholder-connection-b" }
+    let(:integration_a) do
+      create(:quickbooks_integration, code: "quickbooks_a", secrets: {connection_id: connection_id_a}.to_json)
+    end
+    let(:integration_b) do
+      create(:quickbooks_integration, code: "quickbooks_b", secrets: {connection_id: connection_id_b}.to_json)
+    end
+    let(:service_a) { described_class.new(integration: integration_a) }
+    let(:service_b) { described_class.new(integration: integration_b) }
+
+    before do
+      allow(Throttling).to receive(:storage).and_return(store)
+      travel_to(Time.zone.parse("2026-01-05 10:00:00"))
+    end
+
+    it "allows 150 QuickBooks calls a minute and waits for the next window on the 151st" do
+      expect { 150.times { service_a.send(:throttle!, :quickbooks) } }.not_to raise_error
+
+      expect { service_a.send(:throttle!, :quickbooks) }
+        .to raise_error(BaseService::NextWindowThrottlingError) do |error|
+          expect(error.provider_name).to eq(:quickbooks)
+          expect(error.retry_after).to eq(60.seconds)
+        end
+    end
+
+    it "counts each QuickBooks connection apart and never stores the raw connection id" do
+      150.times { service_a.send(:throttle!, :quickbooks) }
+
+      expect { service_a.send(:throttle!, :quickbooks) }
+        .to raise_error(BaseService::NextWindowThrottlingError) do |error|
+          expect(error.message).not_to include(connection_id_a)
+        end
+      expect { service_b.send(:throttle!, :quickbooks) }.not_to raise_error
+
+      expect(store_keys).to include(a_string_including(Digest::SHA2.hexdigest(connection_id_a)))
+      expect(store_keys).to include(a_string_including(Digest::SHA2.hexdigest(connection_id_b)))
+      expect(store_keys).to all(start_with("throttle:quickbooks:client:"))
+      expect(store_keys.join).not_to include(connection_id_a)
+      expect(store_keys.join).not_to include(connection_id_b)
+    end
+
+    it "still raises the regular throttling error on the 11th NetSuite call in a second" do
+      service = described_class.new(integration: create(:netsuite_integration))
+
+      expect { 10.times { service.send(:throttle!, :netsuite) } }.not_to raise_error
+      expect { service.send(:throttle!, :netsuite) }
+        .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(:netsuite) }
     end
   end
 end
