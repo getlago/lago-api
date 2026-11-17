@@ -29,6 +29,7 @@ RSpec.describe Product do
       expect(product).to belong_to(:charge).optional
       expect(product).to have_many(:filters).class_name("ProductFilter").inverse_of(:product)
       expect(product).to have_many(:rate_cards)
+      expect(product).to have_many(:contract_alerts).class_name("UsageMonitoring::ContractAlert")
       expect(product).to have_many(:integration_mappings)
         .class_name("IntegrationMappings::BaseMapping")
         .dependent(:destroy)
