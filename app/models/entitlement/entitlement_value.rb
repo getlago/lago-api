@@ -10,8 +10,7 @@ module Entitlement
 
     belongs_to :organization
     belongs_to :privilege, class_name: "Entitlement::Privilege", foreign_key: :entitlement_privilege_id
-    # The values are the content of an entitlement: its updated_at tells API and webhook clients they changed.
-    belongs_to :entitlement, class_name: "Entitlement::Entitlement", foreign_key: :entitlement_entitlement_id, touch: true
+    belongs_to :entitlement, class_name: "Entitlement::Entitlement", foreign_key: :entitlement_entitlement_id
 
     validates :entitlement_privilege_id, presence: true
     validates :entitlement_entitlement_id, presence: true

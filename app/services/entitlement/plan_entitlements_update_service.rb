@@ -19,7 +19,8 @@ module Entitlement
     # NOTE: send_webhook gates the activity log too: both represent the same plan.updated event.
     #       It is set to false when invoked from the plan create/update mutations, where the plan
     #       service already emits the plan event, to avoid duplicates.
-    #       A catalog plan gets no plan.updated event: each entitlement it changes is logged on its own.
+    #       A catalog plan gets no plan.updated event: with the entitlement_events flag, each entitlement it changes
+    #       is logged on its own, and without it nothing is logged.
     activity_loggable(
       action: "plan.updated",
       record: -> { plan },
@@ -29,10 +30,11 @@ module Entitlement
     def call
       ActiveRecord::Base.transaction do
         lock_plan!(plan)
-        values_before = rendered_values_by_entitlement_id if catalog_plan?
+        stored_before = stored_values_by_entitlement_id if catalog_plan?
+        rendered_before = rendered_values_by_entitlement_id if log_entitlement_changes?
         delete_missing_entitlements unless partial?
         update_entitlements
-        log_entitlement_changes(values_before) if catalog_plan?
+        track_entitlement_changes(stored_before, rendered_before) if catalog_plan?
       end
 
       # NOTE: The webhook is sent even if no changes were made to the plan
@@ -85,22 +87,57 @@ module Entitlement
       catalog_plan? ? {catalog_plan: plan} : {plan:}
     end
 
-    # The values of each kept entitlement of the plan, as its activity log renders them.
-    def rendered_values_by_entitlement_id
-      plan.entitlements.includes(:catalog_plan, :feature, values: :privilege).to_h do |entitlement|
+    # The per-entitlement events of a catalog plan are behind the entitlement_events flag.
+    def entitlement_events?
+      catalog_plan? && organization.feature_flag_enabled?(:entitlement_events)
+    end
+
+    # The logs render every entitlement of the plan before and after the call, so they are only built
+    # when they can be sent.
+    def log_entitlement_changes?
+      entitlement_events? && Utils::ActivityLog.available?
+    end
+
+    # The stored values of each kept entitlement of the plan, by privilege id, in two queries: enough to
+    # find the entitlements a call changed, without rendering them.
+    def stored_values_by_entitlement_id
+      values = EntitlementValue.where(entitlement: plan.entitlements)
+        .pluck(:entitlement_entitlement_id, :entitlement_privilege_id, :value)
+        .group_by(&:first)
+        .transform_values { |rows| rows.to_h { |_, privilege_id, value| [privilege_id, value] } }
+
+      plan.entitlements.pluck(:id).index_with { values.fetch(it, {}) }
+    end
+
+    # The values of the kept entitlements of the plan, as their activity log renders them.
+    def rendered_values_by_entitlement_id(ids = nil)
+      entitlements = plan.entitlements.includes(:catalog_plan, :feature, values: :privilege)
+      entitlements = entitlements.where(id: ids) if ids
+
+      entitlements.to_h do |entitlement|
         [entitlement.id, ::V2::PlanEntitlementSerializer.new(entitlement).serialize[:values]]
       end
     end
 
-    # One activity log per entitlement the call added, changed (any of its values) or discarded,
-    # with the values before and after. An entitlement left as it was gets none.
-    def log_entitlement_changes(values_before)
-      values_after = rendered_values_by_entitlement_id
-      changed_ids = (values_before.keys | values_after.keys).reject { values_before[it] == values_after[it] }
+    # An entitlement added, discarded or whose stored values changed. Its values are its content, so a kept one is
+    # touched to tell API and webhook clients through its updated_at; a discarded one got it from the discard.
+    def track_entitlement_changes(stored_before, rendered_before)
+      stored_after = stored_values_by_entitlement_id
+      changed_ids = (stored_before.keys | stored_after.keys).reject { stored_before[it] == stored_after[it] }
+      return if changed_ids.empty?
+
+      Entitlement.where(id: changed_ids).touch_all # rubocop:disable Rails/SkipsModelValidations
+      log_entitlement_changes(changed_ids, rendered_before) if rendered_before
+    end
+
+    # One activity log per changed entitlement, with the values before and after.
+    def log_entitlement_changes(changed_ids, values_before)
+      values_after = rendered_values_by_entitlement_id(changed_ids)
 
       Entitlement.with_discarded.where(id: changed_ids).includes(:catalog_plan, :feature).newest_first.each do |entitlement|
         before = values_before[entitlement.id]
         after = values_after[entitlement.id]
+        next if before == after
         action = if before.nil?
           "created"
         elsif after.nil?

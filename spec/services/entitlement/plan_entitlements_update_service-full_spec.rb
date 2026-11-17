@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Entitlement::PlanEntitlementsUpdateService do
   subject(:result) { described_class.call(organization:, plan:, entitlements_params:, partial: false) }
 
-  let_it_be(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization) }
   let_it_be(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
@@ -367,11 +367,55 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       end
 
       before do
+        # The per-entitlement events of a catalog plan are behind the entitlement_events flag.
+        organization.enable_feature_flag!(:entitlement_events)
         string_privilege
         boolean_privilege
         select_privilege
         old_value
         other_value
+      end
+
+      context "without the entitlement_events flag" do
+        before { organization.disable_feature_flag!(:entitlement_events) }
+
+        it "logs nothing, sends no webhook and renders no entitlement" do
+          allow(::V2::PlanEntitlementSerializer).to receive(:new).and_call_original
+
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(result).to be_success
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+          expect(::V2::PlanEntitlementSerializer).not_to have_received(:new)
+        end
+      end
+
+      context "when activity logs cannot be sent" do
+        before { allow(Utils::ActivityLog).to receive(:available?).and_return(false) }
+
+        it "logs nothing and renders no entitlement" do
+          allow(::V2::PlanEntitlementSerializer).to receive(:new).and_call_original
+
+          result
+
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+          expect(::V2::PlanEntitlementSerializer).not_to have_received(:new)
+        end
+      end
+
+      context "with a kept entitlement whose values change" do
+        let(:entitlements_params) { {"sso" => {"provider" => "google"}} }
+
+        before { old_entitlement.update_columns(updated_at: 1.day.ago) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "touches it, with or without the entitlement_events flag" do
+          organization.disable_feature_flag!(:entitlement_events)
+
+          freeze_time do
+            result
+            expect(old_entitlement.reload.updated_at).to eq(Time.current)
+          end
+        end
       end
 
       it "replaces the entitlements of the catalog plan" do

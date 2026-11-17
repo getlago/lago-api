@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Entitlement::PlanEntitlementsUpdateService do
   subject(:result) { described_class.call(organization:, plan:, entitlements_params:, partial: true) }
 
-  let_it_be(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization) }
   let_it_be(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:) }
   let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
@@ -228,6 +228,20 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       let(:new_feature) { create(:feature, organization:, code: "storage") }
       let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb", value_type: "integer") }
       let(:entitlements_params) { {new_feature.code => {new_privilege.code => "100"}} }
+
+      # The per-entitlement events of a catalog plan are behind the entitlement_events flag.
+      before { organization.enable_feature_flag!(:entitlement_events) }
+
+      context "without the entitlement_events flag" do
+        before { organization.disable_feature_flag!(:entitlement_events) }
+
+        it "logs nothing and sends no webhook" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(result).to be_success
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+        end
+      end
 
       it "adds the feature and keeps the other ones" do
         expect(result).to be_success

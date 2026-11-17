@@ -48,7 +48,6 @@ RSpec.describe V2::PlanEntitlementSerializer do
 
   context "with values" do
     before do
-      # A value touches its entitlement: created at the entitlement's updated_at to keep it
       travel_to(entitlement.updated_at) do
         # Written in another order than their privileges, to check that the order comes from the privileges
         create(:entitlement_value, organization:, entitlement:, privilege: boolean_privilege, value: "true",
@@ -68,29 +67,6 @@ RSpec.describe V2::PlanEntitlementSerializer do
             {privilege_code: "enabled", value: true},
             {privilege_code: "max", value: 50}
           ]
-        )
-      )
-    end
-  end
-
-  context "when a value changes after the entitlement" do
-    let(:entitlement_value) do
-      travel_to(entitlement.updated_at) do
-        create(:entitlement_value, organization:, entitlement:, privilege: integer_privilege, value: "50")
-      end
-    end
-
-    before do
-      entitlement_value
-      travel_to(Time.zone.parse("2026-01-07T09:00:00Z")) { entitlement_value.update!(value: "60") }
-      entitlement.reload
-    end
-
-    it "renders the time of the value change as updated_at" do
-      expect(payload).to eq(
-        flat_payload.merge(
-          values: [{privilege_code: "max", value: 60}],
-          updated_at: "2026-01-07T09:00:00Z"
         )
       )
     end
