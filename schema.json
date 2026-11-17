@@ -37347,12 +37347,6 @@
               "deprecationReason": null
             },
             {
-              "name": "plan_entitlements_updated",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "product_category_created",
               "description": null,
               "isDeprecated": false,
@@ -37456,6 +37450,24 @@
             },
             {
               "name": "plan_rate_card_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_deleted",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

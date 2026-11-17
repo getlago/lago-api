@@ -323,12 +323,6 @@ plan_deleted:
   description: A plan has been deleted
   category: Plans
   deprecated: false
-plan_entitlements_updated:
-  name: plan.entitlements_updated
-  description: The entitlements of a plan have been updated
-  category: Plans
-  deprecated: false
-  product_catalog_only: true
 product_category_created:
   name: product_category.created
   description: A new product category has been created
@@ -434,6 +428,24 @@ plan_rate_card_updated:
 plan_rate_card_deleted:
   name: plan_rate_card.deleted
   description: A plan rate card association has been deleted
+  category: Plans
+  deprecated: false
+  product_catalog_only: true
+plan_entitlement_created:
+  name: plan_entitlement.created
+  description: A feature entitlement has been added to a plan
+  category: Plans
+  deprecated: false
+  product_catalog_only: true
+plan_entitlement_updated:
+  name: plan_entitlement.updated
+  description: A feature entitlement has been updated on a plan
+  category: Plans
+  deprecated: false
+  product_catalog_only: true
+plan_entitlement_deleted:
+  name: plan_entitlement.deleted
+  description: A feature entitlement has been removed from a plan
   category: Plans
   deprecated: false
   product_catalog_only: true

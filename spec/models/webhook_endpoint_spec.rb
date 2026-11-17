@@ -292,6 +292,7 @@ RSpec.describe WebhookEndpoint do
           "rate_card_rate" => Webhooks::RateCardRates,
           "plan" => Webhooks::Plans,
           "plan_rate_card" => Webhooks::PlanRateCards,
+          "plan_entitlement" => Webhooks::PlanEntitlements,
           "contract_rate_card" => Webhooks::ContractRateCards,
           "contract" => Webhooks::Contracts
         }
@@ -322,14 +323,6 @@ RSpec.describe WebhookEndpoint do
       let(:event_types) { ["product.created"] }
 
       it "is valid regardless of catalog feature enablement" do
-        expect(webhook_endpoint).to be_valid
-      end
-    end
-
-    context "when selecting plan.entitlements_updated" do
-      let(:event_types) { ["plan.entitlements_updated"] }
-
-      it "is valid" do
         expect(webhook_endpoint).to be_valid
       end
     end
