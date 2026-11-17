@@ -894,6 +894,7 @@ DROP INDEX IF EXISTS public.index_entitlement_subscription_feature_removals_on_d
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_entitlement_feature_id;
 DROP INDEX IF EXISTS public.index_entitlement_features_on_organization_id;
+DROP INDEX IF EXISTS public.index_entitlement_features_by_cursor;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_subscription_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_plan_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_organization_id;
@@ -10380,6 +10381,13 @@ CREATE INDEX index_entitlement_entitlements_on_subscription_id ON public.entitle
 
 
 --
+-- Name: index_entitlement_features_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_features_by_cursor ON public.entitlement_features USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_entitlement_features_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16971,6 +16979,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261116121442'),
 ('20261116121439'),
 ('20261116121436'),
+('20261113204932'),
 ('20261112092027'),
 ('20261109151633'),
 ('20261109122133'),
