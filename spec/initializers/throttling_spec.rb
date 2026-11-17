@@ -26,8 +26,8 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
   it "keeps the shared concurrency limit at a single limit of 5" do
     strategy = Sidekiq::Throttled::Registry.get(:concurrency_limit)
 
-    expect(strategy.concurrency.limit).to eq(5)
-    expect(strategy.threshold).to be_nil
+    expect(strategy.concurrency.map(&:limit)).to eq([5])
+    expect(strategy.threshold.to_a).to be_empty
   end
 
   context "with a real counter store" do
