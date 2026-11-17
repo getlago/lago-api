@@ -21,7 +21,8 @@ class WebhookEndpoint < ApplicationRecord
     default: STANDARD_WEBHOOKS_SIGNATURE_ALGO
   )
 
-  V1_SIGNATURE_ALGOS = (SIGNATURE_ALGOS.map(&:to_s) - [STANDARD_WEBHOOKS_SIGNATURE_ALGO]).freeze
+  # v1 REST and GraphQL offer every algorithm and default to jwt.
+  V1_SIGNATURE_ALGO_RULE = SignatureAlgoRule.new(allowed_values: SIGNATURE_ALGOS.map(&:to_s).freeze, default: "jwt")
 
   WEBHOOK_EVENT_TYPE_CONFIG = YAML.safe_load_file(
     Rails.root.join("config/webhook_event_types.yml"),
@@ -55,17 +56,6 @@ class WebhookEndpoint < ApplicationRecord
   before_validation :normalize_event_types, if: :event_types_changed?
 
   enum :signature_algo, SIGNATURE_ALGOS
-
-  # v1 REST, GraphQL and the app offer standard_webhooks only behind its rollout flag.
-  def self.v1_signature_algo_rule(organization)
-    allowed_values = if organization.feature_flag_enabled?(:standard_webhooks_signature)
-      SIGNATURE_ALGOS.map(&:to_s)
-    else
-      V1_SIGNATURE_ALGOS
-    end
-
-    SignatureAlgoRule.new(allowed_values: allowed_values.freeze, default: "jwt")
-  end
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[webhook_url]

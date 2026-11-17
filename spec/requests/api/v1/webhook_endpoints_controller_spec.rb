@@ -53,6 +53,18 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       end
     end
 
+    context "with a null signature_algo" do
+      let(:create_params) { super().merge(signature_algo: nil) }
+
+      it "signs with JWT" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+        expect(json[:webhook_endpoint][:signing_keys]).to eq([])
+      end
+    end
+
     context "with the hmac signature_algo" do
       let(:create_params) { super().merge(signature_algo: "hmac") }
 
@@ -79,47 +91,36 @@ RSpec.describe Api::V1::WebhookEndpointsController do
     context "with the standard_webhooks signature_algo" do
       let(:create_params) { super().merge(signature_algo: "standard_webhooks") }
 
-      it "returns a validation error without the standard_webhooks_signature flag" do
-        expect { subject }.not_to change(WebhookEndpoint, :count)
+      it "creates the endpoint with exactly one signing key" do
+        expect { subject }.to change(WebhookEndpointSigningKey, :count).by(1)
 
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
+        expect(response).to have_http_status(:success)
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+        webhook_endpoint = organization.webhook_endpoints.find(json[:webhook_endpoint][:lago_id])
+        expect(webhook_endpoint.signature_algo).to eq("standard_webhooks")
+        expect(webhook_endpoint.signing_keys.count).to eq(1)
+        signing_key = webhook_endpoint.signing_keys.sole
+        expect(json[:webhook_endpoint][:signing_keys]).to eq(
+          [{lago_id: signing_key.id, secret_key: signing_key.secret, created_at: signing_key.created_at.iso8601}]
+        )
+        expect(signing_key.secret).to start_with("whsec_")
       end
 
-      context "with the standard_webhooks_signature flag" do
-        let(:organization) { create(:organization, feature_flags: ["standard_webhooks_signature"]) }
+      context "when the API log is produced", :capture_kafka_messages do
+        include_context "with API log infrastructure"
 
-        it "creates the endpoint with exactly one signing key" do
-          expect { subject }.to change(WebhookEndpointSigningKey, :count).by(1)
+        it "masks the secret_key of every signing key" do
+          subject
 
           expect(response).to have_http_status(:success)
-          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
-          webhook_endpoint = organization.webhook_endpoints.find(json[:webhook_endpoint][:lago_id])
-          expect(webhook_endpoint.signature_algo).to eq("standard_webhooks")
-          expect(webhook_endpoint.signing_keys.count).to eq(1)
-          signing_key = webhook_endpoint.signing_keys.sole
-          expect(json[:webhook_endpoint][:signing_keys]).to eq(
-            [{lago_id: signing_key.id, secret_key: signing_key.secret, created_at: signing_key.created_at.iso8601}]
+          signing_key = organization.webhook_endpoints.find(json[:webhook_endpoint][:lago_id]).signing_keys.sole
+          logged_endpoint = api_log_payload["request_response"]["webhook_endpoint"]
+          expect(logged_endpoint["signing_keys"]).to eq(
+            [{"lago_id" => signing_key.id, "secret_key" => "[FILTERED]", "created_at" => signing_key.created_at.iso8601}]
           )
-          expect(signing_key.secret).to start_with("whsec_")
-        end
-
-        context "when the API log is produced", :capture_kafka_messages do
-          include_context "with API log infrastructure"
-
-          it "masks the secret_key of every signing key" do
-            subject
-
-            expect(response).to have_http_status(:success)
-            signing_key = organization.webhook_endpoints.find(json[:webhook_endpoint][:lago_id]).signing_keys.sole
-            logged_endpoint = api_log_payload["request_response"]["webhook_endpoint"]
-            expect(logged_endpoint["signing_keys"]).to eq(
-              [{"lago_id" => signing_key.id, "secret_key" => "[FILTERED]", "created_at" => signing_key.created_at.iso8601}]
-            )
-            expect(logged_endpoint["lago_id"]).to eq(signing_key.webhook_endpoint_id)
-            expect(logged_endpoint["webhook_url"]).to eq(create_params[:webhook_url])
-            expect(kafka_messages.find { it[:topic] == "api_logs" }[:payload]).not_to include("whsec_")
-          end
+          expect(logged_endpoint["lago_id"]).to eq(signing_key.webhook_endpoint_id)
+          expect(logged_endpoint["webhook_url"]).to eq(create_params[:webhook_url])
+          expect(kafka_messages.find { it[:topic] == "api_logs" }[:payload]).not_to include("whsec_")
         end
       end
     end
@@ -294,23 +295,11 @@ RSpec.describe Api::V1::WebhookEndpointsController do
           older_key
         end
 
-        it "returns the signing keys oldest first without the standard_webhooks_signature flag" do
+        it "returns the signing keys oldest first" do
           subject
 
           expect(response).to have_http_status(:ok)
-          expect(organization.feature_flag_enabled?(:standard_webhooks_signature)).to be(false)
           expect(json[:webhook_endpoint][:signing_keys]).to eq(expected_signing_keys)
-        end
-
-        context "with the standard_webhooks_signature flag" do
-          before { organization.enable_feature_flag!(:standard_webhooks_signature) }
-
-          it "returns the signing keys oldest first" do
-            subject
-
-            expect(response).to have_http_status(:ok)
-            expect(json[:webhook_endpoint][:signing_keys]).to eq(expected_signing_keys)
-          end
         end
 
         context "when the organization has the api_permissions premium integration", :premium do
@@ -553,47 +542,47 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         before { subject }
       end
 
-      context "when switching to standard_webhooks" do
-        let(:update_params) { {signature_algo: "standard_webhooks"} }
+      context "with an unknown signature_algo" do
+        let(:update_params) { {signature_algo: "md5"} }
 
-        it "returns a validation error without the standard_webhooks_signature flag" do
+        it "returns unprocessable_content error without changing the endpoint" do
           expect { subject }.not_to change { webhook_endpoint.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
         end
+      end
 
-        context "with the standard_webhooks_signature flag" do
-          before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+      context "when switching to standard_webhooks" do
+        let(:update_params) { {signature_algo: "standard_webhooks"} }
 
-          it "updates the endpoint and creates exactly one signing key" do
+        it "updates the endpoint and creates exactly one signing key" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+          expect(webhook_endpoint.reload.signing_keys.count).to eq(1)
+          signing_key = webhook_endpoint.signing_keys.sole
+          expect(json[:webhook_endpoint][:signing_keys]).to eq(
+            [{lago_id: signing_key.id, secret_key: signing_key.secret, created_at: signing_key.created_at.iso8601}]
+          )
+        end
+
+        context "when the API log is produced", :capture_kafka_messages do
+          include_context "with API log infrastructure"
+
+          it "masks the secret_key of every signing key" do
             subject
 
             expect(response).to have_http_status(:success)
-            expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
-            expect(webhook_endpoint.reload.signing_keys.count).to eq(1)
             signing_key = webhook_endpoint.signing_keys.sole
-            expect(json[:webhook_endpoint][:signing_keys]).to eq(
-              [{lago_id: signing_key.id, secret_key: signing_key.secret, created_at: signing_key.created_at.iso8601}]
+            logged_endpoint = api_log_payload["request_response"]["webhook_endpoint"]
+            expect(logged_endpoint["signing_keys"]).to eq(
+              [{"lago_id" => signing_key.id, "secret_key" => "[FILTERED]", "created_at" => signing_key.created_at.iso8601}]
             )
-          end
-
-          context "when the API log is produced", :capture_kafka_messages do
-            include_context "with API log infrastructure"
-
-            it "masks the secret_key of every signing key" do
-              subject
-
-              expect(response).to have_http_status(:success)
-              signing_key = webhook_endpoint.signing_keys.sole
-              logged_endpoint = api_log_payload["request_response"]["webhook_endpoint"]
-              expect(logged_endpoint["signing_keys"]).to eq(
-                [{"lago_id" => signing_key.id, "secret_key" => "[FILTERED]", "created_at" => signing_key.created_at.iso8601}]
-              )
-              expect(logged_endpoint["lago_id"]).to eq(webhook_endpoint.id)
-              expect(logged_endpoint["webhook_url"]).to eq(webhook_endpoint.webhook_url)
-              expect(kafka_messages.find { it[:topic] == "api_logs" }[:payload]).not_to include("whsec_")
-            end
+            expect(logged_endpoint["lago_id"]).to eq(webhook_endpoint.id)
+            expect(logged_endpoint["webhook_url"]).to eq(webhook_endpoint.webhook_url)
+            expect(kafka_messages.find { it[:topic] == "api_logs" }[:payload]).not_to include("whsec_")
           end
         end
       end
@@ -614,7 +603,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         end
       end
 
-      context "when renaming a standard_webhooks endpoint of an organization without the flag" do
+      context "when renaming a standard_webhooks endpoint" do
         let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
         let(:update_params) { {name: "Renamed", signature_algo: "standard_webhooks"} }
         let(:signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
@@ -648,7 +637,7 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         end
       end
 
-      context "when only webhook_url is provided on a standard_webhooks endpoint without the flag" do
+      context "when only webhook_url is provided on a standard_webhooks endpoint" do
         let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
         let(:update_params) { {webhook_url: "http://foo.bar"} }
         let(:signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:) }

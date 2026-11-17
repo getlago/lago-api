@@ -61,6 +61,25 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
     it_behaves_like "produces a security log", "webhook_endpoint.created"
   end
 
+  [["absent", ->(input) { input.except(:signatureAlgo) }], ["null", ->(input) { input.merge(signatureAlgo: nil) }]].each do |label, build_input|
+    context "when signatureAlgo is #{label}" do
+      subject(:result) do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: build_input.call(input)}
+        )
+      end
+
+      it "creates a jwt endpoint" do
+        expect(result["data"]["createWebhookEndpoint"]).to include("signatureAlgo" => "jwt")
+        expect(WebhookEndpoint.find(result["data"]["createWebhookEndpoint"]["id"]).signature_algo).to eq("jwt")
+      end
+    end
+  end
+
   context "when signatureAlgo is standard_webhooks" do
     subject(:result) do
       execute_graphql(
@@ -74,42 +93,32 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
 
     let(:permissions) { ["developers:manage", "developers:keys:manage"] }
 
-    it "refuses it without the standard_webhooks_signature flag" do
-      expect { result }.not_to change(WebhookEndpoint, :count)
-
-      expect_unprocessable_entity(result, details: {signatureAlgo: ["value_is_invalid"]})
+    it "creates a standard_webhooks endpoint with one signing key" do
+      expect(result["data"]["createWebhookEndpoint"]).to include("signatureAlgo" => "standard_webhooks")
+      webhook_endpoint = WebhookEndpoint.find(result["data"]["createWebhookEndpoint"]["id"])
+      expect(webhook_endpoint.signature_algo).to eq("standard_webhooks")
+      expect(webhook_endpoint.signing_keys.count).to eq(1)
     end
 
-    context "with the standard_webhooks_signature flag" do
-      before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+    it "returns the signing key of the created endpoint" do
+      webhook_endpoint = WebhookEndpoint.find(result["data"]["createWebhookEndpoint"]["id"])
+      signing_key = webhook_endpoint.signing_keys.sole
 
-      it "creates a standard_webhooks endpoint with one signing key" do
-        expect(result["data"]["createWebhookEndpoint"]).to include("signatureAlgo" => "standard_webhooks")
-        webhook_endpoint = WebhookEndpoint.find(result["data"]["createWebhookEndpoint"]["id"])
-        expect(webhook_endpoint.signature_algo).to eq("standard_webhooks")
-        expect(webhook_endpoint.signing_keys.count).to eq(1)
-      end
+      expect(result["data"]["createWebhookEndpoint"]["signingKeys"]).to eq(
+        [{"id" => signing_key.id, "secretKey" => signing_key.secret, "createdAt" => signing_key.created_at.iso8601}]
+      )
+      expect(signing_key.secret).to start_with("whsec_")
+    end
 
-      it "returns the signing key of the created endpoint" do
-        webhook_endpoint = WebhookEndpoint.find(result["data"]["createWebhookEndpoint"]["id"])
-        signing_key = webhook_endpoint.signing_keys.sole
+    context "when the user cannot manage keys" do
+      let(:permissions) { "developers:manage" }
 
-        expect(result["data"]["createWebhookEndpoint"]["signingKeys"]).to eq(
-          [{"id" => signing_key.id, "secretKey" => signing_key.secret, "createdAt" => signing_key.created_at.iso8601}]
-        )
-        expect(signing_key.secret).to start_with("whsec_")
-      end
+      it "returns null signing keys and the other fields" do
+        webhook_endpoint_response = result["data"]["createWebhookEndpoint"]
 
-      context "when the user cannot manage keys" do
-        let(:permissions) { "developers:manage" }
-
-        it "returns null signing keys and the other fields" do
-          webhook_endpoint_response = result["data"]["createWebhookEndpoint"]
-
-          expect(webhook_endpoint_response["signingKeys"]).to be_nil
-          expect(webhook_endpoint_response["id"]).to be_present
-          expect(webhook_endpoint_response["signatureAlgo"]).to eq("standard_webhooks")
-        end
+        expect(webhook_endpoint_response["signingKeys"]).to be_nil
+        expect(webhook_endpoint_response["id"]).to be_present
+        expect(webhook_endpoint_response["signatureAlgo"]).to eq("standard_webhooks")
       end
     end
   end
@@ -131,8 +140,7 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
       context "with #{algo}" do
         let(:signature_algo) { algo }
 
-        it "creates the endpoint without the standard_webhooks_signature flag and returns no signing key" do
-          expect(organization.feature_flag_enabled?(:standard_webhooks_signature)).to be(false)
+        it "creates the endpoint and returns no signing key" do
           expect(result["data"]["createWebhookEndpoint"]).to include("signatureAlgo" => algo, "signingKeys" => [])
         end
       end
