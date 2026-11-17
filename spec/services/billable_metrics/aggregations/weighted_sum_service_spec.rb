@@ -364,6 +364,15 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           # 1000 at the last invoiced period + 5 dated in the unbilled one
           expect(aggregator.aggregate.total_aggregated_units).to eq(1005)
         end
+
+        context "when the last invoiced period wrote no cached aggregation" do
+          let(:cached_aggregation) {}
+
+          it "starts from zero and adds the events of the unbilled period" do
+            # No level before the progressive billing invoice + 5 dated in the unbilled period
+            expect(aggregator.aggregate.total_aggregated_units).to eq(5)
+          end
+        end
       end
 
       context "when the previous period is invoiced" do
@@ -1045,6 +1054,20 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         before do
           create(:invoice_subscription, subscription:, invoicing_reason: :subscription_periodic,
             charges_from_datetime: from_datetime - 2.months, charges_to_datetime: from_datetime - 1.month - 1.second)
+        end
+
+        context "when only a progressive billing invoice wrote cached aggregations" do
+          let(:cached_aggregations) do
+            create(:cached_aggregation, organization:, charge:, external_subscription_id: subscription.external_id,
+              timestamp: from_datetime - 10.days, current_aggregation: 3, grouped_by: {"agent_name" => "aragorn"},
+              created_at: from_datetime - 5.days)
+          end
+
+          it "starts every group from zero and adds the events of the unbilled period" do
+            # aragorn: no invoiced level + 3 unbilled, already in the progressive row
+            expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.total_aggregated_units] })
+              .to eq([[{"agent_name" => "aragorn"}, 3]])
+          end
         end
 
         it "adds the events of the unbilled period to each group" do
