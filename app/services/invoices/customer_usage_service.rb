@@ -17,7 +17,8 @@ module Invoices
       with_zero_units_filters: true,
       usage_filters: UsageFilters::NONE,
       use_usage_buckets: false,
-      cache_prefilter: false
+      cache_prefilter: false,
+      rescue_tax_provider_errors: false
     )
       super
 
@@ -31,16 +32,19 @@ module Invoices
       @usage_filters = usage_filters
       @use_usage_buckets = use_usage_buckets
       @cache_prefilter = cache_prefilter
+      @rescue_tax_provider_errors = rescue_tax_provider_errors
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true,
-      with_projection: false, usage_filters: UsageFilters::NONE, use_usage_buckets: false, cache_prefilter: false)
+      with_projection: false, usage_filters: UsageFilters::NONE, use_usage_buckets: false, cache_prefilter: false,
+      rescue_tax_provider_errors: false)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, with_projection:, usage_filters:, use_usage_buckets:, cache_prefilter:)
+      new(customer:, subscription:, apply_taxes:, with_projection:, usage_filters:, use_usage_buckets:, cache_prefilter:,
+        rescue_tax_provider_errors:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -64,12 +68,26 @@ module Invoices
       result
     rescue BaseService::ThrottlingError => error
       result.too_many_provider_requests_failure!(provider_name: error.provider_name, error:)
+    rescue Integrations::Aggregator::RequestLimitError => error
+      if rescue_tax_provider_errors
+        result.too_many_provider_requests_failure!(provider_name: tax_provider, error:)
+      else
+        raise
+      end
+    # The jobs retry on these transient errors, which a request cannot wait for: only a caller
+    # answering a request (rescue_tax_provider_errors) turns them into a failure.
+    rescue *Integrations::Aggregator::BaseService.retryable_errors => error
+      if rescue_tax_provider_errors
+        result.third_party_failure!(third_party: tax_provider, error_code: nil, error_message: error.message)
+      else
+        raise
+      end
     end
 
     private
 
     attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :with_projection, :with_zero_units_filters
-    attr_reader :usage_filters, :use_usage_buckets, :cache_prefilter
+    attr_reader :usage_filters, :use_usage_buckets, :cache_prefilter, :rescue_tax_provider_errors
 
     delegate :plan, to: :subscription
     delegate :billing_entity, to: :customer
@@ -319,6 +337,11 @@ module Invoices
 
     def customer_provider_taxation?
       @customer_provider_taxation ||= invoice.customer.tax_customer
+    end
+
+    # The provider errors come from compute_amounts_with_provider_taxes, which runs only for a tax customer.
+    def tax_provider
+      customer.tax_customer.integration.provider_key
     end
 
     # Only the charges being computed are billed, so restricting the event lookup to their codes

@@ -252,4 +252,76 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
       expect(response["details"]["taxError"]).to include("taxDateTooFarInFuture")
     end
   end
+
+  context "when the tax provider fails with a retryable error" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: {customerId: customer.id, currency:, fees:}}
+      )
+    end
+
+    before { allow(lago_client).to receive(:post_with_response).and_raise(error) }
+
+    context "when the provider answers 502" do
+      let(:error) { LagoHttpClient::HttpError.new(502, "Bad Gateway", endpoint) }
+
+      it "returns a third party error naming the provider" do
+        response = result["errors"].first["extensions"]
+
+        expect(response["status"]).to eq(422)
+        expect(response["code"]).to eq("third_party_error")
+        expect(response["details"]).to eq(
+          "error" => "anrok:  - HTTP 502 - URI: #{endpoint}.\nError: Bad Gateway\nResponse headers: {}"
+        )
+      end
+    end
+
+    context "when the provider request times out" do
+      let(:error) { Net::ReadTimeout.new }
+
+      it "returns a third party error naming the provider" do
+        response = result["errors"].first["extensions"]
+
+        expect(response["status"]).to eq(422)
+        expect(response["code"]).to eq("third_party_error")
+        expect(response["details"]).to eq("error" => "anrok:  - Net::ReadTimeout")
+      end
+    end
+
+    context "when the provider request limit is reached" do
+      let(:error) do
+        LagoHttpClient::HttpError.new(429, {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json, endpoint)
+      end
+
+      it "returns a third party error naming the provider" do
+        response = result["errors"].first["extensions"]
+
+        expect(response["status"]).to eq(422)
+        expect(response["code"]).to eq("third_party_error")
+        expect(response["details"]).to eq(
+          "error" => "anrok:  - #{Integrations::Aggregator::RequestLimitError.new(error).message}"
+        )
+      end
+    end
+
+    context "when the customer uses Avalara" do
+      let(:integration) { create(:avalara_integration, organization:) }
+      let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+      let(:error) { LagoHttpClient::HttpError.new(502, "Bad Gateway", endpoint) }
+
+      it "returns a third party error naming the provider" do
+        response = result["errors"].first["extensions"]
+
+        expect(response["status"]).to eq(422)
+        expect(response["code"]).to eq("third_party_error")
+        expect(response["details"]).to eq(
+          "error" => "avalara:  - HTTP 502 - URI: #{endpoint}.\nError: Bad Gateway\nResponse headers: {}"
+        )
+      end
+    end
+  end
 end

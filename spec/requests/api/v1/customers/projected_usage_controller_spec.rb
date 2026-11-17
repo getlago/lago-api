@@ -177,6 +177,56 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, :premium do
           end
         end
       end
+
+      context "when the anrok provider fails" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+        let(:nango_stub) { stub_request(:post, "https://api.nango.dev/action/trigger") }
+
+        before { integration_customer }
+
+        context "with a transient error" do
+          before { nango_stub.to_return(status: 502, body: "Bad Gateway") }
+
+          it "returns a third party error naming the provider" do
+            travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+              subject
+
+              expect(response).to have_http_status(:unprocessable_content)
+              expect(json[:code]).to eq("third_party_error")
+              expect(json[:error_details]).to match(third_party: "anrok", thirdparty_error: start_with("HTTP 502"))
+            end
+          end
+        end
+
+        context "with a timeout" do
+          before { nango_stub.to_raise(Net::ReadTimeout) }
+
+          it "returns a third party error naming the provider" do
+            travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+              subject
+
+              expect(response).to have_http_status(:unprocessable_content)
+              expect(json[:code]).to eq("third_party_error")
+              expect(json[:error_details]).to match(third_party: "anrok", thirdparty_error: a_kind_of(String))
+            end
+          end
+        end
+
+        context "with an exceeded request limit" do
+          before { nango_stub.to_return(status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json) }
+
+          it "returns a too many provider requests error naming the provider" do
+            travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+              subject
+
+              expect(response).to have_http_status(:too_many_requests)
+              expect(json[:code]).to eq("too_many_provider_requests")
+              expect(json[:error_details]).to include(provider_name: "anrok")
+            end
+          end
+        end
+      end
     end
 
     context "with filters" do
