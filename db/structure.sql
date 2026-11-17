@@ -674,7 +674,6 @@ DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_expires_at;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_customer_date;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_and_date;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_card_and_date;
-DROP INDEX IF EXISTS public.index_pending_billing_operations_on_billing_at;
 DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
@@ -11574,13 +11573,6 @@ CREATE INDEX index_pending_active_subscriptions_on_plan_id_and_status ON public.
 
 
 --
--- Name: index_pending_billing_operations_on_billing_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_pending_billing_operations_on_billing_at ON public.billing_operations USING btree (billing_at) INCLUDE (customer_id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL));
-
-
---
 -- Name: index_pending_billing_operations_on_card_and_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16618,7 +16610,6 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261112145548'),
 ('20261112092027'),
-('20261111173458'),
 ('20261111173450'),
 ('20261109151633'),
 ('20261109122133'),

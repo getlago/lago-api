@@ -43,6 +43,15 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     expect(contract.applied_rate_cards.sole.billing_operations).to be_empty
   end
 
+  context "when the billing schedule is locked" do
+    before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+    it "returns a concurrency failure without creating a contract" do
+      expect { result }.not_to change(Contract, :count)
+      expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+    end
+  end
+
   context "when creating an active contract with a priced rate card" do
     let(:product) { create(:product, :fixed, organization:) }
     let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance") }

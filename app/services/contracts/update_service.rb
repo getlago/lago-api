@@ -51,6 +51,8 @@ module Contracts
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
       e.result
+    rescue BaseLockService::FailedToAcquireLock => e
+      result.lock_acquisition_failure!(message: e.message, error: e)
     end
 
     private

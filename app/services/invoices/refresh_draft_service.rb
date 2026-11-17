@@ -151,15 +151,18 @@ module Invoices
       operations = invoice.billing_operations
         .order(:target_cycle_started_at, :billing_at, :id)
         .includes(contract_rate_card: [
+          :organization,
           :terms,
+          {product: {filters: {values: :billable_metric_filter}}},
           {contract: :customer},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override}
         ])
 
       unless operations.empty?
+        pricing_units = pricing_units_by_code(operations.map(&:contract_rate_card))
         @billing_segments = operations.flat_map do |operation|
-          BillingOperations::ResolveSegmentsService.call!(operation:).segments
+          BillingOperations::ResolveSegmentsService.call!(operation:, pricing_units_by_code: pricing_units).segments
         end
         return @billing_segments
       end
@@ -172,22 +175,30 @@ module Invoices
         )
         .order(:created_at, :id)
         .includes(
+          :organization,
           :terms,
+          {product: {filters: {values: :billable_metric_filter}}},
           {contract: :customer},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override}
         )
 
+      pricing_units = pricing_units_by_code(contract_rate_cards)
       @billing_segments = contract_rate_cards.flat_map do |contract_rate_card|
         schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
 
         schedule.segments_due_by(timestamp).map do |billable_segment|
           BillingSegments::BuildEventSegmentService
-            .call!(contract_rate_card:, billable_segment:)
+            .call!(contract_rate_card:, billable_segment:, pricing_units_by_code: pricing_units)
             .billing_segment
             .tap { it.billing_at = timestamp }
         end
       end
+    end
+
+    def pricing_units_by_code(contract_rate_cards)
+      codes = contract_rate_cards.filter_map { it.rate_card.applied_pricing_unit_code }.uniq
+      codes.any? ? invoice.organization.pricing_units.where(code: codes).index_by(&:code) : {}
     end
 
     def fetch_timestamp

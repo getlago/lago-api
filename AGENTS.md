@@ -77,7 +77,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - A job that runs one service has its name with `Job` (`Contracts::ActivateService` runs in `Contracts::ActivateJob`), takes positional arguments (records or ids) and calls `Service.call!`. See `app/jobs/contracts/activate_job.rb`.
 - `ApplicationJob` sets Sidekiq `retry: 0`. Retries only come from `retry_on` (lock errors, `LagoHttpClient::HttpError`, `BaseService::ThrottlingError`) or an explicit `sidekiq_options retry:`; any other error sends the job to the dead set.
 - Use an existing queue. Dedicated queues are enabled by a `SIDEKIQ_<NAME>` flag and fall back to a queue the default worker reads (`config/sidekiq/*.yml`). A new queue needs a Sidekiq config, a start script in `scripts/` and its own `SIDEKIQ_<NAME>` flag.
-- Jobs must be idempotent. Add `unique` (usually `:until_executed, on_conflict: :log`) when the same job can be enqueued twice. Enqueue many jobs with `ApplicationJob.perform_all_later`, which raises for unique jobs.
+- Jobs must be idempotent. A retry must also resume committed-but-unfinished work (such as a generating invoice), even when the original operation is no longer pending. Add `unique` (usually `:until_executed, on_conflict: :log`) when the same job can be enqueued twice. Enqueue many jobs with `ApplicationJob.perform_all_later`, which raises for unique jobs.
 - A new webhook `resource.action` needs a `Webhooks::<Resources>::<Action>Service` (see `app/services/webhooks/customers/created_service.rb`), an entry in `SendWebhookJob::WEBHOOK_SERVICES` and one in `config/webhook_event_types.yml`, then a GraphQL schema dump. It is sent with `SendWebhookJob.perform_after_commit("resource.action", record)`.
 
 ## REST API

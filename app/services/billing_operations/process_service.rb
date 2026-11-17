@@ -27,6 +27,8 @@ module BillingOperations
         rescue BaseService::FailedResult => error
           @first_error ||= error
         end
+        finalize_generating_invoices
+        result.invoices.each(&:reload)
       end
       raise @first_error if @first_error
 
@@ -113,8 +115,6 @@ module BillingOperations
         end
         complete_operations(operation_segments)
       end
-      finalize_generating_invoices(operations.filter_map(&:invoice_id))
-      invoice&.reload
       invoice
     end
 
@@ -124,11 +124,15 @@ module BillingOperations
       ActiveRecord::Associations::Preloader.new(
         records: operations.map(&:contract_rate_card),
         associations: [
+          :organization,
+          {product: {filters: {values: :billable_metric_filter}}},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override},
           {contract: :customer}
         ]
       ).call
+      codes = operations.filter_map { it.contract_rate_card.rate_card.applied_pricing_unit_code }.uniq
+      @pricing_units_by_code = codes.any? ? customer.organization.pricing_units.where(code: codes).index_by(&:code) : {}
     end
 
     # An obsolete terminal renewal bills nothing, but still completes and clears its clock.
@@ -136,7 +140,7 @@ module BillingOperations
       if obsolete_terminal_renewal?(operation)
         ResolveSegmentsService::Result.new.tap { it.segments = [] }
       else
-        ResolveSegmentsService.call!(operation:)
+        ResolveSegmentsService.call!(operation:, pricing_units_by_code: @pricing_units_by_code)
       end
     end
 
@@ -246,8 +250,11 @@ module BillingOperations
       ).planned_operation
     end
 
-    def finalize_generating_invoices(invoice_ids)
-      Invoice.where(id: invoice_ids, status: :generating)
+    def finalize_generating_invoices
+      invoice_ids = customer.billing_operations.completed.where(organization_id: customer.organization_id)
+        .joins(:invoice).where(invoices: {status: :generating}).select(:invoice_id)
+
+      customer.invoices.generating.where(organization_id: customer.organization_id, id: invoice_ids)
         .order(:issuing_date, :id).each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)

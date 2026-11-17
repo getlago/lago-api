@@ -34,6 +34,16 @@ RSpec.describe Contracts::ActivateService do
     expect { result }.to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
   end
 
+  context "when the billing schedule is locked" do
+    before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+    it "returns a concurrency failure and leaves the contract pending" do
+      expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+      expect(contract.reload).to be_pending
+      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
+    end
+  end
+
   context "with rate cards" do
     let(:queries) { [] }
 

@@ -521,13 +521,62 @@ RSpec.describe BillingOperations::ProcessService do
   context "when finalization fails after billing commits" do
     before { allow(Invoices::FinalizeContractInvoiceService).to receive(:call!).and_raise("finalization failed") }
 
-    it "leaves the generating invoice untouched on retry without repeating billing" do
+    it "finalizes the existing invoice on retry without repeating billing" do
       expect { result }.to raise_error("finalization failed")
       expect(contract_rate_card.billing_operations.sole.processed_at).to eq(timestamp)
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
       allow(Invoices::FinalizeContractInvoiceService).to receive(:call!).and_call_original
-      expect { described_class.call!(customer:, timestamp:) }.not_to change(Fee, :count)
-      expect(Invoice.where(customer:).sole).to be_generating
+      expect { described_class.call!(customer:, timestamp:) }
+        .to not_change(Fee, :count)
+        .and not_change(Invoice, :count)
+        .and not_change(BillingOperation, :count)
+      expect(Invoice.where(customer:).sole).to be_finalized
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+    end
+
+    context "when another customer has an unfinished invoice" do
+      let(:other_customer) { create(:customer, organization:) }
+      let(:other_invoice) { create(:invoice, organization:, customer: other_customer, status: :generating, invoice_type: :contract) }
+      let(:other_card) { create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer: other_customer)) }
+
+      before do
+        create(:billing_operation, organization:, customer: other_customer, contract_rate_card: other_card,
+          invoice: other_invoice, processed_at: timestamp)
+      end
+
+      it "only recovers the current customer's invoices" do
+        expect { result }.to raise_error("finalization failed")
+        allow(Invoices::FinalizeContractInvoiceService).to receive(:call!).and_call_original
+
+        described_class.call!(customer:, timestamp:)
+
+        expect(Invoice.where(customer:).sole).to be_finalized
+        expect(other_invoice.reload).to be_generating
+      end
+    end
+  end
+
+  context "when finalizing regrouped advance fees fails" do
+    let(:product) { create(:product, organization:) }
+    let(:rate_card) do
+      create(:rate_card, organization:, product:, billing_timing: "advance", display_on_invoice: false,
+        regroup_paid_fees: "invoice", currency: "USD")
+    end
+    let(:invoice) { create(:invoice, organization:, customer:, status: :generating, invoice_type: :advance_charges, total_amount_cents: 100) }
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "regroup_paid_fees",
+        billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: timestamp, invoice:)
+    end
+
+    before { allow(Invoices::FinalizeAndPublishAdvanceChargesService).to receive(:call!).and_raise("finalization failed") }
+
+    it "retries finalization even with no pending billing operation" do
+      expect { result }.to raise_error("finalization failed")
+      allow(Invoices::FinalizeAndPublishAdvanceChargesService).to receive(:call!).and_call_original
+
+      expect { described_class.call!(customer:, timestamp:) }
+        .to not_change(Fee, :count).and not_change(BillingOperation, :count)
+      expect(invoice.reload).to be_finalized
     end
   end
 
@@ -563,6 +612,55 @@ RSpec.describe BillingOperations::ProcessService do
         rate_queries = capture_sql { result }.grep(/FROM "rate_card_rates" WHERE.*"rate_card_id"/)
 
         expect(rate_queries.size).to eq(1)
+      end
+
+      context "with custom pricing units" do
+        let(:pricing_unit) { create(:pricing_unit, organization:, code: "credits") }
+        let(:rate) do
+          create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1),
+            rate_properties: {"amount" => "31"}, applied_pricing_unit_conversion_rate: 1)
+        end
+        let(:rate_card) do
+          create(:rate_card, organization:, product:, billing_timing:, currency: "USD", proration: true,
+            applied_pricing_unit_code: pricing_unit.code)
+        end
+
+        it "loads pricing units once for all cards and builds slices without organization lookups" do
+          build_queries = []
+          allow(BillingSegments::BuildEventSegmentService).to receive(:call!).and_wrap_original do |original, **attributes|
+            resolution = nil
+            build_queries.concat(capture_sql { resolution = original.call(**attributes) })
+            resolution
+          end
+
+          queries = capture_sql { result }
+
+          expect(result.invoices.sole.fees.map { it.pricing_unit_usage.pricing_unit_id }).to eq([pricing_unit.id, pricing_unit.id])
+          expect(queries.grep(/FROM "pricing_units"/).size).to eq(1)
+          expect(build_queries.grep(/FROM "(organizations|pricing_units)"/)).to be_empty
+        end
+      end
+
+      context "with filtered metered products" do
+        let(:metric) { create(:sum_billable_metric, organization:, recurring: true, field_name: "units") }
+        let(:product) { create(:product, organization:, billable_metric: metric) }
+        let(:filter_key) { create(:billable_metric_filter, organization:, billable_metric: metric, key: "region", values: %w[eu us]) }
+        let(:product_filter) { create(:product_filter, organization:, product:) }
+
+        before do
+          create(:product_filter_value, organization:, product_filter:, billable_metric_filter: filter_key, value: "eu")
+          [contract, other_contract].each do |target_contract|
+            create(:event, organization:, customer:, code: metric.code, external_subscription_id: target_contract.external_id,
+              timestamp: Time.utc(2026, 1, 10), properties: {"units" => 1, "region" => "eu"})
+          end
+        end
+
+        it "loads product filters once for all invoice targets" do
+          queries = capture_sql { result }
+
+          expect(result).to be_success
+          expect(queries.grep(/FROM "product_filters"/).size).to eq(1)
+        end
       end
     end
   end

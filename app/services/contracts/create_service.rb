@@ -89,6 +89,8 @@ module Contracts
       result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
     rescue BaseService::FailedResult => e
       e.result
+    rescue BaseLockService::FailedToAcquireLock => e
+      result.lock_acquisition_failure!(message: e.message, error: e)
     end
 
     private

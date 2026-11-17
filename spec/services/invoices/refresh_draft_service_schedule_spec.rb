@@ -13,6 +13,7 @@ RSpec.describe Invoices::RefreshDraftService do
   let(:product) { create(:product, :fixed, organization:) }
   let(:rate_card) { create(:rate_card, billing_timing:, organization:, product:, currency: "USD") }
   let(:billing_timing) { "advance" }
+  let(:pricing_unit_conversion_rate) { nil }
   let(:contract_rate_card) do
     create(
       :contract_rate_card,
@@ -35,6 +36,7 @@ RSpec.describe Invoices::RefreshDraftService do
       effective_from: Time.utc(2025, 1, 1),
       billing_interval_count: 1,
       billing_interval_unit: "month",
+      applied_pricing_unit_conversion_rate: pricing_unit_conversion_rate,
       rate_properties: {"amount" => "15.00"}
     )
   end
@@ -173,7 +175,8 @@ RSpec.describe Invoices::RefreshDraftService do
         create(
           :rate_card_rate, organization:, rate_card: second_rate_card,
           effective_from: Time.utc(2025, 1, 1), billing_interval_count: 1,
-          billing_interval_unit: "month", rate_properties: {"amount" => "10.00"}
+          billing_interval_unit: "month", rate_properties: {"amount" => "10.00"},
+          applied_pricing_unit_conversion_rate: pricing_unit_conversion_rate
         )
         create(
           :billing_operation, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
@@ -190,6 +193,38 @@ RSpec.describe Invoices::RefreshDraftService do
           [Time.utc(2026, 3, 1).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 4, 1)).iso8601(6), 1_000]
         ])
         expect(invoice.fees.count).to eq(2)
+      end
+
+      context "with custom pricing units" do
+        let(:pricing_unit) { create(:pricing_unit, organization:, code: "credits") }
+        let(:pricing_unit_conversion_rate) { 1 }
+        let(:rate_card) do
+          create(:rate_card, :advance, organization:, product:, currency: "USD", applied_pricing_unit_code: pricing_unit.code)
+        end
+        let(:second_rate_card) do
+          create(:rate_card, :advance, organization:, product: second_product, currency: "USD", applied_pricing_unit_code: pricing_unit.code)
+        end
+
+        it "loads pricing units once and reuses loaded filters when refreshing all slices" do
+          lookup_queries = []
+          allow(BillingOperations::ComputeInvoiceService).to receive(:call!).and_wrap_original do |original, **attributes|
+            lookup_queries.concat(capture_sql do
+              attributes.fetch(:billing_segments).each do |segment|
+                target = Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment: segment)
+                target.filters
+                target.filters
+              end
+            end)
+            original.call(**attributes)
+          end
+
+          queries = capture_sql { result }
+
+          expect(result).to be_success
+          expect(invoice.fees.map { it.pricing_unit_usage.pricing_unit_id }).to eq([pricing_unit.id, pricing_unit.id])
+          expect(queries.grep(/FROM "pricing_units"/).size).to eq(1)
+          expect(lookup_queries).to be_empty
+        end
       end
     end
   end

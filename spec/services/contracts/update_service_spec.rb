@@ -27,6 +27,15 @@ RSpec.describe Contracts::UpdateService do
     expect(contract.reload).to have_attributes(name: "Renamed", billing_time: "anniversary")
   end
 
+  context "when the billing schedule is locked" do
+    before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+    it "returns a concurrency failure without changing the contract" do
+      expect { result }.not_to change { contract.reload.attributes }
+      expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+    end
+  end
+
   it "publishes contract.updated after a successful update" do
     expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.updated", contract)
 
