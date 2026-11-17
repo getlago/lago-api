@@ -28,6 +28,16 @@ RSpec.describe Api::V2::ContractsController do
 
     include_examples "requires API permission", "contract", "write"
 
+    context "when the billing schedule is locked" do
+      before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+      it "returns a concurrency error without creating a contract", v2_timestamps: false do
+        expect { subject }.not_to change(Contract, :count)
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "concurrency_conflict", field: "base", meta: {}}])
+      end
+    end
+
     context "with a rate card on the plan" do
       let(:rate_card) { create(:rate_card, organization:) }
 
@@ -613,6 +623,16 @@ RSpec.describe Api::V2::ContractsController do
 
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
     let(:update_params) { {name: "Renamed"} }
+
+    context "when the billing schedule is locked" do
+      before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+      it "returns a concurrency error without updating the contract", v2_timestamps: false do
+        expect { subject }.not_to change { contract.reload.attributes }
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "concurrency_conflict", field: "base", meta: {}}])
+      end
+    end
 
     include_examples "requires API permission", "contract", "write"
 

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-# LAGO-1946: a rate card billed in advance is due the moment the contract starts, so its
+# A rate card billed in advance is due the moment the contract starts, so its
 # invoice must not wait for the hourly producer. Everything between the create call and the
 # invoice is real — the materializer, the calendar, the selection, the writer, the consumer.
 describe "A contract billed in advance invoices on creation" do
@@ -18,7 +18,7 @@ describe "A contract billed in advance invoices on creation" do
     )
   end
 
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
   let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
   let(:product) { create(:product, :fixed, organization:) }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
@@ -46,14 +46,18 @@ describe "A contract billed in advance invoices on creation" do
 
     invoice = Invoice.where(customer:).sole
     expect(invoice).to have_attributes(status: "finalized", currency: "EUR", total_amount_cents: 5_000)
-    expect(BillingSegment.where(customer:).sole).to have_attributes(status: "done", invoice_id: invoice.id)
+    expect(invoice.billing_operations.sole).to have_attributes(processed_at: Time.current, customer_id: customer.id)
+    expect(LegacyBillingSegment.where(customer_id: customer.id)).to be_empty
   end
 
-  it "moves the clock on, so the next tick does not bill the period again" do
-    perform_enqueued_jobs { create_contract }
+  it "does not bill the period again on the next processing tick" do
+    perform_enqueued_jobs { expect(create_contract).to be_success }
+    counts = [BillingOperation.count, Invoice.count, Fee.count]
 
-    expect { perform_enqueued_jobs { Clock::CreateBillingSegmentsJob.perform_now } }
-      .not_to change(BillingSegment, :count)
+    travel 1.hour
+    perform_enqueued_jobs { Clock::ProcessBillingOperationsJob.perform_now }
+
+    expect([BillingOperation.count, Invoice.count, Fee.count]).to eq(counts)
   end
 
   # Arrears owes nothing until its first period closes, so the same trigger must produce no
@@ -65,7 +69,13 @@ describe "A contract billed in advance invoices on creation" do
       perform_enqueued_jobs { expect(create_contract).to be_success }
 
       expect(Invoice.where(customer:)).to be_empty
-      expect(BillingSegment.where(customer:)).to be_empty
+      expect(BillingOperation.where(customer:)).to contain_exactly(have_attributes(
+        action_type: "close_fixed_arrears", reason: "contract_activation",
+        billing_at: Time.zone.parse("2026-02-15"), target_cycle_started_at: Time.zone.parse("2026-01-15"),
+        processed_at: nil
+      ))
+      expect(ContractRateCard.joins(:contract).where(contracts: {customer_id: customer.id}).sole.next_billing_at).to be_present
+      expect(LegacyBillingSegment.where(customer_id: customer.id)).to be_empty
     end
   end
 end

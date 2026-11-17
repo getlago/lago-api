@@ -34,9 +34,8 @@ RSpec.describe Contract do
       expect(contract).to belong_to(:billing_entity).optional
       expect(contract).to belong_to(:payment_method).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
-      expect(contract).to have_many(:billing_segments)
       expect(contract).to have_many(:fees)
-      expect(contract).to have_many(:invoices).through(:billing_segments)
+      expect(contract).to have_many(:invoices).through(:fees)
       expect(contract).to have_many(:applied_invoice_custom_sections).class_name("Contract::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(contract).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
     end
@@ -181,10 +180,14 @@ RSpec.describe Contract do
   end
 
   describe "#invoices" do
-    it "returns each invoice once across multiple billing segments" do
+    it "returns each invoice once across multiple contract fees" do
       contract.save!
       invoice = create(:invoice, organization: contract.organization, customer: contract.customer)
-      create_list(:billing_segment, 2, contract:, invoice:, organization: contract.organization, customer: contract.customer)
+      contract_rate_card = create(:contract_rate_card, organization: contract.organization, contract:)
+      rate = create(:rate_card_rate, organization: contract.organization, rate_card: contract_rate_card.rate_card)
+      2.times do
+        create(:product_fee, invoice:, contract:, contract_rate_card:, rate_card_rate: rate, organization: contract.organization)
+      end
 
       expect(contract.invoices).to eq([invoice])
     end
@@ -219,6 +222,41 @@ RSpec.describe Contract do
     end
   end
 
+  describe "#billing_ends_at" do
+    subject(:contract) { build(:contract, ended_at:, terminated_at:) }
+
+    let(:ended_at) { nil }
+    let(:terminated_at) { nil }
+
+    it "is nil while the contract is open-ended" do
+      expect(contract.billing_ends_at).to be_nil
+    end
+
+    context "with a planned end" do
+      let(:ended_at) { Time.utc(2026, 6, 1) }
+
+      it "is the planned end" do
+        expect(contract.billing_ends_at).to eq(ended_at)
+      end
+
+      context "when terminated earlier" do
+        let(:terminated_at) { Time.utc(2026, 3, 15) }
+
+        it "is the termination" do
+          expect(contract.billing_ends_at).to eq(terminated_at)
+        end
+      end
+
+      context "when terminated later" do
+        let(:terminated_at) { Time.utc(2026, 7, 1) }
+
+        it "stays the planned end" do
+          expect(contract.billing_ends_at).to eq(ended_at)
+        end
+      end
+    end
+  end
+
   describe "#editable?" do
     it "is true only while the contract is pending" do
       expect(build(:contract, :pending).editable?).to be(true)
@@ -250,7 +288,7 @@ RSpec.describe Contract do
   end
 
   describe "#default_rate_card_lifecycle" do
-    it "seeds the window, anchor and clock from the contract" do
+    it "seeds the window and anchor from the contract" do
       customer = create(:customer, timezone: "America/Los_Angeles")
       contract = build(:contract, customer:, organization: customer.organization, started_at: Time.zone.parse("2026-10-01T02:00:00Z"))
 
@@ -293,9 +331,9 @@ RSpec.describe Contract do
           ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
         end
 
-        # Fresh statistics: without them the planner costs every partial index on
-        # status alike and may settle on the live external id one.
-        before { ActiveRecord::Base.connection.execute("ANALYZE contracts") }
+        # Refresh both joined tables so statistics left by earlier specs do not
+        # make a customer-first plan look cheaper than the pending-start index.
+        before { ActiveRecord::Base.connection.execute("ANALYZE contracts, customers") }
 
         # The relation the activation clock batches over.
         it "reads the pending start index" do

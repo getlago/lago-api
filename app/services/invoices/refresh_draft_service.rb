@@ -92,11 +92,12 @@ module Invoices
     end
 
     def refresh_product_catalog_fees!
+      segments = billing_segments
       reset_product_catalog_invoice_values!
 
-      BillingSegments::ComputeInvoiceService.call!(
+      BillingOperations::ComputeInvoiceService.call!(
         invoice:,
-        billing_segments:,
+        billing_segments: segments,
         context: billing_segment_context
       )
     end
@@ -145,13 +146,30 @@ module Invoices
     end
 
     def billing_segments
-      @billing_segments ||= invoice.billing_segments.includes(
-        :pricing_unit,
-        :rate_override,
-        :contract,
-        contract_rate_card: [:terms, {rate_card: :product}],
-        rate_card_rate: :rate_card
-      )
+      return @billing_segments if @billing_segments
+
+      operations = invoice.billing_operations
+        .order(:target_cycle_started_at, :billing_at, :id)
+        .includes(contract_rate_card: [
+          :organization,
+          :terms,
+          {product: {filters: {values: :billable_metric_filter}}},
+          {contract: :customer},
+          {rate_card: [:rates, {product: :billable_metric}]},
+          {rate_phases: :rate_override}
+        ])
+
+      result.not_allowed_failure!(code: "missing_billing_operations").raise_if_error! if operations.empty?
+
+      pricing_units = pricing_units_by_code(operations.map(&:contract_rate_card))
+      @billing_segments = operations.flat_map do |operation|
+        BillingOperations::ResolveSegmentsService.call!(operation:, pricing_units_by_code: pricing_units).segments
+      end
+    end
+
+    def pricing_units_by_code(contract_rate_cards)
+      codes = contract_rate_cards.filter_map { it.rate_card.applied_pricing_unit_code }.uniq
+      codes.any? ? invoice.organization.pricing_units.where(code: codes).index_by(&:code) : {}
     end
 
     def fetch_timestamp
