@@ -396,8 +396,8 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(other_plan.entitlements.sole.values.sole.value).to eq("okta")
       end
 
-      it "produces one plan.updated activity log and no plan.updated webhook" do
-        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      it "produces one plan.updated activity log and webhook" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan)
         expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated", after_commit: true).once
       end
 

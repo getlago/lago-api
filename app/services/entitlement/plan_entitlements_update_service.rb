@@ -19,7 +19,6 @@ module Entitlement
     # NOTE: send_webhook gates the activity log too: both represent the same plan.updated event.
     #       It is set to false when invoked from the plan create/update mutations, where the plan
     #       service already emits the plan event, to avoid duplicates.
-    #       A catalog plan only gets the activity log: its entitlement changes get their own webhook.
     activity_loggable(
       action: "plan.updated",
       record: -> { plan },
@@ -34,7 +33,7 @@ module Entitlement
       end
 
       # NOTE: The webhook is sent even if no changes were made to the plan
-      SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook && !plan.is_a?(CatalogPlan)
+      SendWebhookJob.perform_after_commit("plan.updated", plan) if send_webhook
 
       result.entitlements = plan.entitlements.includes(:feature, values: :privilege).order(:created_at, :id).reload
       result

@@ -40,8 +40,8 @@ RSpec.describe Api::V2::Plans::EntitlementsController, v2_timestamps: false do
       expect(catalog_plan.entitlements.sole.values.sole.value).to eq("50")
     end
 
-    it "produces the plan.updated activity log once and no plan.updated webhook" do
-      expect { request }.not_to have_enqueued_job(SendWebhookJob)
+    it "produces the plan.updated activity log once and the webhook" do
+      expect { request }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", catalog_plan)
 
       expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(catalog_plan)
       expect(Utils::ActivityLog).to have_received(:produce).with(catalog_plan, "plan.updated", after_commit: true).once
