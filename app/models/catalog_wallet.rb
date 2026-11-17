@@ -8,6 +8,8 @@ class CatalogWallet < ApplicationRecord
   belongs_to :contract
   belongs_to :customer, -> { with_discarded }
 
+  has_many :credit_allocations, class_name: "CatalogWalletCreditAllocation"
+
   validates :code, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 end
 
