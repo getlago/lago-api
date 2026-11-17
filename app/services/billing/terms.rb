@@ -38,7 +38,7 @@ module Billing
     #
     # @param window [#started_at, #ended_at] a cycle, or a slice of one
     # @return [Time] the start in advance, the end in arrears
-    def billing_at_for(window)
+    def pricing_anchor_for(window)
       if timing == :advance
         window.started_at
       else

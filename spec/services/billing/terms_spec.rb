@@ -55,23 +55,22 @@ RSpec.describe Billing::Terms do
   end
 
   # The one place in the engine that knows what advance and arrears mean.
-  describe "#billing_at_for" do
-    it "falls due when the window closes in arrears" do
-      expect(terms.billing_at_for(window)).to eq(window.ended_at)
+  describe "#pricing_anchor_for" do
+    it "anchors pricing at the window close in arrears" do
+      expect(terms.pricing_anchor_for(window)).to eq(window.ended_at)
     end
 
-    it "falls due when the window opens in advance" do
-      expect(described_class.new(timing: :advance, prorated: true).billing_at_for(window))
+    it "anchors pricing at the window opening in advance" do
+      expect(described_class.new(timing: :advance, prorated: true).pricing_anchor_for(window))
         .to eq(window.started_at)
     end
 
     # It is asked about a whole cycle and about one slice of a cut cycle, and answers each on
-    # its own bounds — which is what lets a slice fall due on the cut rather than at the
-    # cycle's close.
+    # its own bounds, so a slice can use a cut rather than the cycle's close.
     it "answers on the bounds it is given, whatever kind of window that is" do
       slice = Billing::Segments::Segment.new(started_at: window.started_at, ended_at: Time.utc(2026, 8, 25), rate: nil)
 
-      expect(terms.billing_at_for(slice)).to eq(Time.utc(2026, 8, 25))
+      expect(terms.pricing_anchor_for(slice)).to eq(Time.utc(2026, 8, 25))
     end
   end
 
@@ -90,7 +89,7 @@ RSpec.describe Billing::Terms do
 
     it "uses the cycle end in arrears" do
       expect(terms.obligation_billing_at_for(cycle:, segments:)).to eq(cycle.ended_at)
-      expect(terms.billing_at_for(first_slice)).to eq(first_slice.ended_at)
+      expect(terms.pricing_anchor_for(first_slice)).to eq(first_slice.ended_at)
     end
 
     context "when billing in advance" do
@@ -98,7 +97,7 @@ RSpec.describe Billing::Terms do
 
       it "uses the first priced start, not the unpriced cycle start" do
         expect(terms.obligation_billing_at_for(cycle:, segments:)).to eq(first_slice.started_at)
-        expect(terms.billing_at_for(cycle)).to eq(cycle.started_at)
+        expect(terms.pricing_anchor_for(cycle)).to eq(cycle.started_at)
       end
 
       context "when regrouping" do
@@ -106,7 +105,7 @@ RSpec.describe Billing::Terms do
 
         it "uses the cycle end without changing the terms anchor" do
           expect(terms.obligation_billing_at_for(cycle:, segments:)).to eq(cycle.ended_at)
-          expect(terms.billing_at_for(first_slice)).to eq(first_slice.started_at)
+          expect(terms.pricing_anchor_for(first_slice)).to eq(first_slice.started_at)
         end
       end
     end
@@ -131,7 +130,7 @@ RSpec.describe Billing::Terms do
 
           it "uses the segment end while preserving the terms anchor" do
             expect(terms.obligation_billing_at_for(cycle:, segments:)).to eq(first_slice.ended_at)
-            expect(terms.billing_at_for(first_slice)).to eq(first_slice.started_at)
+            expect(terms.pricing_anchor_for(first_slice)).to eq(first_slice.started_at)
           end
         end
       end

@@ -67,7 +67,7 @@ RSpec.describe Billing::RateCards::Schedule do
     segments = []
     obligation = schedule.next_obligation(from: cycle.started_at)
     while obligation && obligation.cycle.started_at == cycle.started_at && obligation.billing_at <= asked_at
-      segments.concat(obligation.segments)
+      segments.concat(obligation.segments.map { |segment| [obligation, segment] })
       obligation = schedule.next_obligation(from: cycle.started_at, after: obligation.billing_at)
     end
     segments
@@ -85,10 +85,11 @@ RSpec.describe Billing::RateCards::Schedule do
   end
 
   def segment_values(segments)
-    segments.map do |segment|
-      [segment.cycle_index, segment.cycle_started_at, segment.started_at, segment.ended_at,
-        segment.billing_at, segment.proration_ratio, segment.rate_phase_code,
-        segment.rate.effective_from, segment.rate_override&.billing_interval_unit]
+    segments.map do |obligation, segment|
+      cycle = obligation.cycle
+      [cycle.index, cycle.started_at, segment.started_at, segment.ended_at,
+        obligation.billing_at, cycle.calendar.proration_ratio(segment.started_at, segment.ended_at),
+        cycle.phase.code, segment.rate.effective_from, cycle.phase.rate_override&.billing_interval_unit]
     end
   end
 
@@ -97,7 +98,7 @@ RSpec.describe Billing::RateCards::Schedule do
     cycles.flat_map do |cycle|
       Billing::Segments.within(cycle, rates:).filter_map do |segment|
         next unless segment.rate
-        billing_at = terms.billing_at_for(segment)
+        billing_at = terms.pricing_anchor_for(segment)
         next if billing_at > asked_at
 
         [cycle.index, cycle.started_at, segment.started_at, segment.ended_at, billing_at,

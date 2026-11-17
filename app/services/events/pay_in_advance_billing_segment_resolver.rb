@@ -72,7 +72,7 @@ module Events
 
       if segment
         BillingSegments::BuildEventSegmentService.call!(
-          contract_rate_card: card, billable_segment: segment, pricing_units_by_code: pricing_units
+          contract_rate_card: card, obligation:, segment:, pricing_units_by_code: pricing_units
         ).billing_segment
       end
     end

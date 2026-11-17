@@ -136,17 +136,17 @@ module Contracts
     end
 
     def rate_card_usage(card, obligation)
-      billing_segments = obligation.segments.map do |billable_segment|
+      current_index = obligation.segments.index { (it.started_at...it.ended_at).cover?(timestamp) }
+      billing_segments = obligation.segments.map do |segment|
         BillingSegments::BuildEventSegmentService.call!(
-          contract_rate_card: card, billable_segment:, pricing_units_by_code: @pricing_units_by_code
+          contract_rate_card: card, obligation:, segment:, pricing_units_by_code: @pricing_units_by_code
         ).billing_segment
       end
       # Keep the existing response's singular pricing metadata effective at the query instant.
-      billing_segment = billing_segments.find { (it.started_at...BillingSegment.exclusive_end(it.ended_at)).cover?(timestamp) }
       RateCardUsage.new(
         contract_rate_card: card,
         obligation:,
-        billing_segment:,
+        billing_segment: billing_segments.fetch(current_index),
         rate_phase: card.rate_phases.find { |phase| phase.code == obligation.cycle.phase.code },
         fees: billing_segments.flat_map { compute_fees(it) }
       )

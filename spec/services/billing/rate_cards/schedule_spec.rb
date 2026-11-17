@@ -49,14 +49,18 @@ RSpec.describe Billing::RateCards::Schedule do
   end
 
   # Traverse cycles only in these examples; production callers select obligations by cycle.
-  def due_segments(schedule, by)
-    segments = []
+  def due_obligations(schedule, by)
+    obligations = []
     obligation = schedule.next_obligation(from: traversal_start)
     while obligation && obligation.billing_at <= by
-      segments.concat(obligation.segments)
+      obligations << obligation
       obligation = schedule.next_obligation(from: obligation.cycle.started_at, after: obligation.billing_at)
     end
-    segments
+    obligations
+  end
+
+  def due_segments(schedule, by)
+    due_obligations(schedule, by).flat_map(&:segments)
   end
 
   describe "default billing scope" do
@@ -100,7 +104,7 @@ RSpec.describe Billing::RateCards::Schedule do
 
           expect(obligation.segments.map(&:rate)).to eq(rates)
           expect(obligation.segments.map(&:started_at)).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)])
-          expect(obligation.segments.map(&:billing_at)).to eq([Time.utc(2022, 3, 1)] * 2)
+          expect(obligation.billing_at).to eq(Time.utc(2022, 3, 1))
         end
       end
     end
@@ -149,7 +153,7 @@ RSpec.describe Billing::RateCards::Schedule do
     it "bills all slices at the cycle end and only selects the complete obligation" do
       obligation = schedule.next_obligation(from: Time.utc(2022, 2, 10))
       expect(obligation.billing_at).to eq(cycle_end)
-      expect(obligation.segments.map(&:billing_at)).to eq([cycle_end, cycle_end, cycle_end])
+      expect(obligation.segments.map(&:started_at)).to eq([cycle_start, Time.utc(2022, 2, 10), Time.utc(2022, 2, 20)])
       expect(schedule.obligation_at(cycle_start)).to eq(obligation)
       expect(schedule.obligation_at(cycle_start + 1.day)).to eq(obligation)
       expect(schedule.obligation_at(Time.utc(2022, 2, 15)).segments[1]).to eq(obligation.segments[1])
@@ -162,7 +166,7 @@ RSpec.describe Billing::RateCards::Schedule do
       it "bills every slice at the first priced start" do
         obligation = schedule.next_obligation(from: Time.utc(2022, 2, 15))
         expect(obligation.billing_at).to eq(cycle_start)
-        expect(obligation.segments.map(&:billing_at)).to eq([cycle_start, cycle_start, cycle_start])
+        expect(obligation.segments.map(&:started_at)).to eq([cycle_start, Time.utc(2022, 2, 10), Time.utc(2022, 2, 20)])
         expect(schedule.next_obligation(after: cycle_start, from: cycle_start).cycle.started_at).to eq(cycle_end)
       end
 
@@ -172,7 +176,7 @@ RSpec.describe Billing::RateCards::Schedule do
         it "uses the first priced start and does not search future cycles for an unpriced cycle" do
           obligation = schedule.next_obligation(from: cycle_start)
           expect(obligation.billing_at).to eq(Time.utc(2022, 2, 10))
-          expect(obligation.segments.map(&:billing_at)).to eq([Time.utc(2022, 2, 10)] * 2)
+          expect(obligation.segments.map(&:started_at)).to eq([Time.utc(2022, 2, 10), Time.utc(2022, 2, 20)])
           expect(schedule.obligation_at(starts_at)).to be_nil
           expect(schedule.obligation_at(cycle_start)).to be_nil
           expect(schedule.obligation_at(Time.utc(2022, 2, 10))).to eq(obligation)
@@ -187,7 +191,7 @@ RSpec.describe Billing::RateCards::Schedule do
       it "bills all slices at the cycle end" do
         obligation = schedule.next_obligation(from: Time.utc(2022, 2, 10))
         expect(obligation.billing_at).to eq(cycle_end)
-        expect(obligation.segments.map(&:billing_at)).to eq([cycle_end] * 3)
+        expect(obligation.segments.map(&:started_at)).to eq([cycle_start, Time.utc(2022, 2, 10), Time.utc(2022, 2, 20)])
       end
     end
 
@@ -201,7 +205,7 @@ RSpec.describe Billing::RateCards::Schedule do
         expect(first.segments.sole.started_at).to eq(cycle_start)
         expect(second.billing_at).to eq(Time.utc(2022, 2, 20))
         expect(second.cycle).to eq(first.cycle)
-        expect(second.segments.sole.billing_at).to eq(second.billing_at)
+        expect(second.segments.sole).to be_a(Billing::Segments::Segment)
       end
     end
   end
@@ -242,7 +246,7 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
-  describe "cycle information on billable segments" do
+  describe "cycle information on obligations" do
     it "clamps the first cycle to the start rather than to the boundary before it" do
       expect(windows(due_segments(schedule, Time.utc(2022, 3, 1))))
         .to eq(["2022-01-15 -> 2022-01-31", "2022-02-01 -> 2022-02-28"])
@@ -255,7 +259,7 @@ RSpec.describe Billing::RateCards::Schedule do
 
     # The last one closes exactly on the timestamp asked about, so it has fallen due.
     it "numbers cycles from zero, counting from the card start" do
-      expect(due_segments(schedule, Time.utc(2022, 5, 1)).map(&:cycle_index)).to eq([0, 1, 2, 3])
+      expect(due_obligations(schedule, Time.utc(2022, 5, 1)).map { it.cycle.index }).to eq([0, 1, 2, 3])
     end
 
     it "returns nothing when nothing has fallen due" do
@@ -266,11 +270,11 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:timing) { :advance }
 
       it "includes the first cycle as soon as it starts" do
-        expect(due_segments(schedule, starts_at).map(&:cycle_index)).to eq([0])
+        expect(due_obligations(schedule, starts_at).map { it.cycle.index }).to eq([0])
       end
 
       it "includes the cycle opening exactly at the requested time" do
-        expect(due_segments(schedule, Time.utc(2022, 2, 1)).map(&:cycle_index)).to eq([0, 1])
+        expect(due_obligations(schedule, Time.utc(2022, 2, 1)).map { it.cycle.index }).to eq([0, 1])
       end
     end
 
@@ -278,9 +282,9 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:starts_at) { Time.utc(2021, 12, 20) }
 
       it "still opens at cycle 0, clamped to the start" do
-        cycle = due_segments(schedule, Time.utc(2022, 1, 1)).sole
+        cycle = due_obligations(schedule, Time.utc(2022, 1, 1)).sole.cycle
 
-        expect(cycle.cycle_index).to eq(0)
+        expect(cycle.index).to eq(0)
         expect(cycle.started_at...cycle.ended_at).to eq(Time.utc(2021, 12, 20)...Time.utc(2022, 1, 1))
       end
     end
@@ -306,7 +310,7 @@ RSpec.describe Billing::RateCards::Schedule do
 
   describe "when a window falls due" do
     it "bills at the end of the cycle in arrears" do
-      expect(due_segments(schedule, Time.utc(2022, 4, 1)).map(&:billing_at))
+      expect(due_obligations(schedule, Time.utc(2022, 4, 1)).map(&:billing_at))
         .to eq([Time.utc(2022, 2, 1), Time.utc(2022, 3, 1), Time.utc(2022, 4, 1)])
     end
 
@@ -314,7 +318,7 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:timing) { :advance }
 
       it "bills at the start of the cycle" do
-        expect(due_segments(schedule, Time.utc(2022, 4, 1)).map(&:billing_at))
+        expect(due_obligations(schedule, Time.utc(2022, 4, 1)).map(&:billing_at))
           .to eq([Time.utc(2022, 1, 15), Time.utc(2022, 2, 1), Time.utc(2022, 3, 1), Time.utc(2022, 4, 1)])
       end
     end
@@ -323,13 +327,13 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:ends_at) { Time.utc(2022, 3, 20) }
 
       it "bills the final cycle at the termination, not at the boundary" do
-        expect(due_segments(schedule, Time.utc(2023, 1, 1)).last.billing_at).to eq(Time.utc(2022, 3, 20))
+        expect(due_obligations(schedule, Time.utc(2023, 1, 1)).last.billing_at).to eq(Time.utc(2022, 3, 20))
       end
     end
   end
 
-  # Each pricing slice carries the cycle facts needed by its operation.
-  describe "the flat segment surface" do
+  # Each obligation carries the cycle facts needed to price its slices.
+  describe "segments and their obligations" do
     let(:cut) { Time.utc(2022, 2, 15) }
     let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(cut)] }
 
@@ -340,9 +344,9 @@ RSpec.describe Billing::RateCards::Schedule do
       # had already moved past the 15th, withheld it for good. QA plan R3b, decision #60 —
       # one document per transition.
       it "releases the slice before a cut as soon as the cut passes, not when the cycle closes" do
-        due = due_segments(schedule, Time.utc(2022, 2, 20))
+        due = due_obligations(schedule, Time.utc(2022, 2, 20))
 
-        expect(due.map { |segment| [segment.started_at.to_date.to_s, segment.billing_at.to_date.to_s] }).to eq(
+        expect(due.map { |segment| [segment.segments.sole.started_at.to_date.to_s, segment.billing_at.to_date.to_s] }).to eq(
           [["2022-01-15", "2022-02-01"],
             ["2022-02-01", "2022-02-15"]]
         )
@@ -353,18 +357,18 @@ RSpec.describe Billing::RateCards::Schedule do
           .not_to include(Time.utc(2022, 3, 1))
       end
 
-      it "joins the cycle's facts onto every slice" do
-        first, second = due_segments(schedule, Time.utc(2022, 2, 20)).last(2)
+      it "retains the cycle's facts on each obligation" do
+        first, second = due_obligations(schedule, Time.utc(2022, 2, 20)).last(2)
 
-        expect([first.cycle_index, second.cycle_index]).to eq([0, 1])
-        expect(second.cycle_started_at).to eq(Time.utc(2022, 2, 1))
+        expect([first.cycle.index, second.cycle.index]).to eq([0, 1])
+        expect(second.cycle.started_at).to eq(Time.utc(2022, 2, 1))
       end
 
       # The two slices of one cut cycle are shares of that cycle, so they add back up to it.
-      it "prorates each slice against its own cycle" do
-        ratios = due_segments(schedule, Time.utc(2022, 4, 1))
-          .select { |segment| segment.cycle_index == 1 }
-          .map(&:proration_ratio)
+      it "measures each slice against its own cycle" do
+        ratios = due_obligations(schedule, Time.utc(2022, 4, 1))
+          .select { it.cycle.index == 1 }
+          .flat_map { |obligation| obligation.segments.map { obligation.cycle.calendar.proration_ratio(it.started_at, it.ended_at) } }
 
         expect(ratios).to eq([14.fdiv(28), 14.fdiv(28)])
         expect(ratios.sum).to eq(1.0)
@@ -374,9 +378,9 @@ RSpec.describe Billing::RateCards::Schedule do
         let(:timing) { :advance }
 
         it "releases each segment when it starts, including at a rate change" do
-          segments = due_segments(schedule, cut)
+          obligations = due_obligations(schedule, cut)
 
-          expect(segments.map { |segment| [segment.started_at, segment.billing_at] }).to eq([
+          expect(obligations.map { |obligation| [obligation.segments.sole.started_at, obligation.billing_at] }).to eq([
             [Time.utc(2022, 1, 15), Time.utc(2022, 1, 15)],
             [Time.utc(2022, 2, 1), Time.utc(2022, 2, 1)],
             [cut, cut]
@@ -392,27 +396,27 @@ RSpec.describe Billing::RateCards::Schedule do
         end
 
         it "returns only the priced part when it falls due" do
-          segment = due_segments(schedule, Time.utc(2022, 3, 1)).sole
+          obligation = due_obligations(schedule, Time.utc(2022, 3, 1)).sole
+          segment = obligation.segments.sole
 
-          expect([segment.cycle_index, segment.started_at, segment.ended_at, segment.billing_at, segment.rate])
+          expect([obligation.cycle.index, segment.started_at, segment.ended_at, obligation.billing_at, segment.rate])
             .to eq([1, cut, Time.utc(2022, 3, 1), Time.utc(2022, 3, 1), rates.sole])
-          expect(segment.proration_ratio).to eq(0.5)
+          expect(obligation.cycle.calendar.proration_ratio(segment.started_at, segment.ended_at)).to eq(0.5)
         end
       end
 
       context "when proration is disabled" do
         let(:prorated) { false }
 
-        it "gives each priced segment a full ratio" do
-          segments = due_segments(schedule, Time.utc(2022, 3, 1)).select { |segment| segment.cycle_index == 1 }
+        it "retains the same split coverage for the pricing adapter" do
+          obligations = due_obligations(schedule, Time.utc(2022, 3, 1))
+          first = obligations.find { it.cycle.index == 0 }
+          split = obligations.select { it.cycle.index == 1 }.flat_map(&:segments)
 
-          expect(segments.map(&:proration_ratio)).to eq([1.0, 1.0])
-        end
-
-        it "bills the partial first cycle whole" do
-          first = due_segments(schedule, Time.utc(2022, 3, 1)).find { |segment| segment.cycle_index == 0 }
-
-          expect(first.proration_ratio).to eq(1.0)
+          expect([first.segments.sole.started_at, first.segments.sole.ended_at]).to eq([starts_at, Time.utc(2022, 2, 1)])
+          expect(split.map { [it.started_at, it.ended_at] }).to eq([
+            [Time.utc(2022, 2, 1), cut], [cut, Time.utc(2022, 3, 1)]
+          ])
         end
       end
 
@@ -424,26 +428,28 @@ RSpec.describe Billing::RateCards::Schedule do
         end
 
         it "assigns the slice no share of the cycle" do
-          segment = schedule.obligation_at(Time.utc(2022, 2, 15, 9)).segments.sole
+          obligation = schedule.obligation_at(Time.utc(2022, 2, 15, 9))
+          segment = obligation.segments.sole
 
-          expect(segment.proration_ratio).to eq(0.0)
+          expect(obligation.cycle.calendar.proration_ratio(segment.started_at, segment.ended_at)).to eq(0.0)
         end
       end
     end
   end
 
-  # The cut and the share, read where the consumer reads them. The cycle carries the ruler it
-  # was measured on and nothing else: what a window costs needs the card's terms, so the
-  # schedule answers that, not the cycle.
+  # The parent cycle carries the calendar used to measure each raw slice.
   describe "cutting a cycle and sharing it" do
     subject(:slices) do
-      due_segments(schedule, Time.utc(2022, 4, 1))
-        .select { |segment| segment.cycle_started_at == Time.utc(2022, 3, 1) }
+      due_obligations(schedule, Time.utc(2022, 4, 1))
+        .select { it.cycle.started_at == Time.utc(2022, 3, 1) }.flat_map(&:segments)
     end
 
     def bounds = slices.map { |slice| [slice.started_at, slice.ended_at] }
 
-    def ratios = slices.map(&:proration_ratio)
+    def ratios
+      cycle = schedule.obligation_at(Time.utc(2022, 3, 1)).cycle
+      slices.map { cycle.calendar.proration_ratio(it.started_at, it.ended_at) }
+    end
 
     it "is the whole cycle when no rate changes inside it" do
       expect(bounds).to eq([[Time.utc(2022, 3, 1), Time.utc(2022, 4, 1)]])
@@ -485,15 +491,15 @@ RSpec.describe Billing::RateCards::Schedule do
       let(:prorated) { false }
       let(:ends_at) { Time.utc(2022, 3, 20) }
 
-      it "bills the clamped cycle whole" do
-        expect(ratios).to eq([1.0])
+      it "retains the clamped coverage for the pricing adapter" do
+        expect(ratios).to eq([19.fdiv(31)])
       end
 
       context "when a rate change cuts the cycle as well" do
         let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 3, 10))] }
 
-        it "bills each slice whole, so the cut cycle costs twice" do
-          expect(ratios).to eq([1.0, 1.0])
+        it "retains both clamped slices for the pricing adapter" do
+          expect(ratios).to eq([9.fdiv(31), 10.fdiv(31)])
         end
       end
     end
@@ -690,8 +696,10 @@ RSpec.describe Billing::RateCards::Schedule do
       obligation = schedule.resolve_obligation(cycle_started_at:, billing_at: Time.utc(2022, 4, 1))
 
       expect(obligation.cycle.started_at).to eq(cycle_started_at)
-      expect(obligation.segments.map(&:cycle_started_at)).to eq([cycle_started_at, cycle_started_at])
-      expect(obligation.segments.map(&:billing_at)).to eq([obligation.billing_at] * 2)
+      expect(obligation.segments.map { [it.started_at, it.ended_at] }).to eq([
+        [cycle_started_at, Time.utc(2022, 2, 15)], [Time.utc(2022, 2, 15), Time.utc(2022, 3, 1)]
+      ])
+      expect(obligation.billing_at).to eq(Time.utc(2022, 4, 1))
     end
 
     it "rejects a stored target that is not an exact cycle start" do
@@ -723,9 +731,10 @@ RSpec.describe Billing::RateCards::Schedule do
     let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
 
     it "stores the end of each slice as its periodic billing instant" do
-      due = schedule.resolve_obligation(cycle_started_at: Time.utc(2022, 2, 1), billing_at: Time.utc(2022, 3, 1)).segments
+      due = schedule.resolve_obligation(cycle_started_at: Time.utc(2022, 2, 1), billing_at: Time.utc(2022, 3, 1))
 
-      expect(due.map(&:billing_at)).to eq([Time.utc(2022, 3, 1)] * 2)
+      expect(due.billing_at).to eq(Time.utc(2022, 3, 1))
+      expect(due.segments.map(&:started_at)).to eq([Time.utc(2022, 2, 1), Time.utc(2022, 2, 15)])
       expect(schedule.obligation_at(Time.utc(2022, 2, 1)).billing_at).to eq(Time.utc(2022, 2, 15))
     end
 
@@ -899,12 +908,13 @@ RSpec.describe Billing::RateCards::Schedule do
 
     # Group priced slices by the cycle their operation owns.
     def slices_by_cycle
-      due_segments(schedule, asked_at).group_by(&:cycle_started_at).first(4)
+      due_obligations(schedule, asked_at).group_by { it.cycle.started_at }.first(4)
     end
 
     it "runs weekly for three cycles, then on the card's own month" do
-      windows = slices_by_cycle.map do |started_at, group|
-        ["#{started_at.to_date} -> #{group.last.ended_at.to_date}", group.first.rate_phase_code]
+      windows = slices_by_cycle.map do |_started_at, group|
+        cycle = group.first.cycle
+        ["#{cycle.started_at.to_date} -> #{group.last.segments.last.ended_at.to_date}", cycle.phase.code]
       end
 
       expect(windows).to eq(
@@ -918,14 +928,18 @@ RSpec.describe Billing::RateCards::Schedule do
     # A cycle is one turn of the interval clamped by the card's life, so the anchor decides
     # where the boundary falls and the card's start decides where the first cycle opens.
     it "opens the first cycle where the card starts, not on the anchor" do
-      started_at, segments = slices_by_cycle.first
+      _started_at, obligations = slices_by_cycle.first
+      cycle = obligations.first.cycle
 
-      expect(started_at).to eq(Time.utc(2026, 8, 12))
-      expect(segments.last.ended_at).to eq(Time.utc(2026, 8, 17))
+      expect(cycle.started_at).to eq(Time.utc(2026, 8, 12))
+      expect(obligations.last.segments.last.ended_at).to eq(Time.utc(2026, 8, 17))
     end
 
     it "prices each segment at its share of a whole interval" do
-      billed = slices_by_cycle.map { |_cycle, group| group.map { [it.rate.label, it.proration_ratio] } }
+      billed = slices_by_cycle.map do |_started_at, group|
+        cycle = group.first.cycle
+        group.flat_map { |obligation| obligation.segments.map { [it.rate.label, cycle.calendar.proration_ratio(it.started_at, it.ended_at)] } }
+      end
 
       expect(billed).to eq(
         [[["A", 5.fdiv(7)]],
@@ -939,18 +953,19 @@ RSpec.describe Billing::RateCards::Schedule do
     # start bills less than a whole interval — 5 of its 7 days. A cycle merely cut by a rate
     # change bills exactly one, however many segments it ends up with.
     it "bills a clamped cycle short and a cut cycle whole" do
-      totals = slices_by_cycle.map { |_cycle, group| group.sum(&:proration_ratio) }
+      totals = slices_by_cycle.map do |_started_at, group|
+        cycle = group.first.cycle
+        group.flat_map(&:segments).sum { cycle.calendar.proration_ratio(it.started_at, it.ended_at) }
+      end
 
       expect(totals).to eq([5.fdiv(7), 1.0, 1.0, 1.0])
     end
 
-    # The two fields the flat surface carries purely for attribution: which phase priced the
-    # slice, and the override it priced it with. Neither shows up in an amount, so nothing
-    # else in the suite would notice them both returning nil.
-    it "carries the phase that priced each slice onto the flat surface" do
-      attributed = due_segments(schedule, asked_at).first(6).map do |segment|
-        [segment.rate.label, segment.rate_phase_code, segment.rate_override&.label]
-      end
+    # The obligation's cycle retains both the phase and the override used for its slices.
+    it "retains the phase that prices each slice on its parent cycle" do
+      attributed = due_obligations(schedule, asked_at).flat_map do |obligation|
+        obligation.segments.map { [it.rate.label, obligation.cycle.phase.code, obligation.cycle.phase.rate_override&.label] }
+      end.first(6)
 
       expect(attributed).to eq(
         [["A", "weekly_intro", "-50%"],
@@ -978,10 +993,10 @@ RSpec.describe Billing::RateCards::Schedule do
 
       it "produces the same cycles as arrears" do
         arrears = described_class.new(**arguments.merge(terms: Billing::Terms.new(timing: :arrears, prorated: true, billing_scope: "segment")))
-          .then { due_segments(it, asked_at) }.group_by(&:cycle_started_at).first(4)
+          .then { due_obligations(it, asked_at) }.group_by { it.cycle.started_at }.first(4)
 
-        expect(slices_by_cycle.map { |started_at, group| [started_at, group.last.ended_at] })
-          .to eq(arrears.map { |started_at, group| [started_at, group.last.ended_at] })
+        expect(slices_by_cycle.map { |started_at, group| [started_at, group.last.segments.last.ended_at] })
+          .to eq(arrears.map { |started_at, group| [started_at, group.last.segments.last.ended_at] })
       end
     end
   end
@@ -998,11 +1013,11 @@ RSpec.describe Billing::RateCards::Schedule do
 
     it "bills nothing before the first rate and preserves the cycle numbering afterwards" do
       expect(due_segments(schedule, Time.utc(2026, 3, 1))).to be_empty
-      first = due_segments(schedule, Time.utc(2026, 6, 11)).first
+      first = due_obligations(schedule, Time.utc(2026, 6, 11)).first
 
-      expect(first.cycle_index).to eq(21)
-      expect(first.started_at).to eq(Time.utc(2026, 6, 1))
-      expect(first.ended_at).to eq(Time.utc(2026, 6, 4))
+      expect(first.cycle.index).to eq(21)
+      expect(first.segments.first.started_at).to eq(Time.utc(2026, 6, 1))
+      expect(first.segments.first.ended_at).to eq(Time.utc(2026, 6, 4))
     end
   end
 
@@ -1042,11 +1057,11 @@ RSpec.describe Billing::RateCards::Schedule do
     end
 
     it "keeps numbering across the phase change" do
-      expect(due_segments(schedule, end_on).map(&:cycle_index)).to eq((0..20).to_a)
+      expect(due_obligations(schedule, end_on).map { it.cycle.index }).to eq((0..20).to_a)
     end
 
     it "reports which phase each cycle was billed under" do
-      codes = due_segments(schedule, end_on).map { |cycle| cycle.rate_phase_code }
+      codes = due_obligations(schedule, end_on).map { it.cycle.phase.code }
 
       expect(codes.first(6).uniq).to eq(["weekly_intro"])
       expect(codes.drop(6).uniq).to eq(["standard"])
@@ -1064,7 +1079,7 @@ RSpec.describe Billing::RateCards::Schedule do
     end
 
     it "never returns to the card's own anchor day once the cadence has changed" do
-      billing_days = due_segments(schedule, end_on).drop(6).map { |segment| segment.billing_at.day }
+      billing_days = due_obligations(schedule, end_on).drop(6).map { it.billing_at.day }
 
       expect(billing_days.uniq).to eq([21])
     end

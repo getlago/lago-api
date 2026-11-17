@@ -31,7 +31,6 @@ module Billing
         segments = obligations_for(cycle)
           .select { it.billing_at <= billing_at && (after.nil? || it.billing_at > after) }
           .flat_map(&:segments)
-          .map { it.with(billing_at:) }
         return if segments.empty?
 
         Obligation.new(cycle:, segments:, billing_at:)
@@ -62,7 +61,7 @@ module Billing
             obligations_for(cycle).each { yielder << it }
             cycle = walker.cycle_after(cycle)
           end
-        end.lazy
+        end
       end
 
       def obligations_for(cycle)
@@ -71,30 +70,8 @@ module Billing
 
         groups = terms.cycle_scope? ? [priced] : priced.zip
         groups.map do |group|
-          billing_at = terms.obligation_billing_at_for(cycle:, segments: group)
-          segments = group.map { build_billable_segment(cycle:, segment: it, billing_at:) }
-          Obligation.new(cycle:, segments:, billing_at:)
+          Obligation.new(cycle:, segments: group, billing_at: terms.obligation_billing_at_for(cycle:, segments: group))
         end
-      end
-
-      def build_billable_segment(cycle:, segment:, billing_at:)
-        proration_ratio = if terms.prorated
-          cycle.calendar.proration_ratio(segment.started_at, segment.ended_at)
-        else
-          1.0
-        end
-
-        BillableSegment.new(
-          cycle_index: cycle.index,
-          cycle_started_at: cycle.started_at,
-          started_at: segment.started_at,
-          ended_at: segment.ended_at,
-          billing_at:,
-          rate: segment.rate,
-          rate_override: cycle.phase.rate_override,
-          proration_ratio:,
-          rate_phase_code: cycle.phase.code
-        )
       end
     end
   end

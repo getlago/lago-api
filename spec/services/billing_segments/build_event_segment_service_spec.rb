@@ -3,27 +3,41 @@
 require "rails_helper"
 
 RSpec.describe BillingSegments::BuildEventSegmentService do
-  subject(:result) { described_class.call(contract_rate_card:, billable_segment:) }
+  subject(:result) { described_class.call(contract_rate_card:, obligation:, segment:, pricing_units_by_code:) }
 
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, organization:, timezone:) }
   let(:contract) { create(:contract, organization:, customer:) }
-  let(:product) { create(:product, organization:) }
-  let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+  let(:billable_metric) { create(:billable_metric, organization:, recurring: true, aggregation_type: "sum_agg", field_name: "amount") }
+  let(:product) { create(:product, organization:, billable_metric:) }
+  let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing:, proration:) }
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
   let(:rate) { create(:rate_card_rate, organization:, rate_card:, rate_properties: {"amount" => "12"}) }
+  let(:billing_timing) { :arrears }
+  let(:proration) { true }
+  let(:pricing_units_by_code) { nil }
   let(:cycle_started_at) { Time.zone.parse("2026-02-01") }
   let(:exclusive_end) { Time.zone.parse("2026-03-01") }
-  let(:billable_segment) do
-    Billing::BillableSegment.new(cycle_index: 0, cycle_started_at:, started_at: cycle_started_at,
-      ended_at: exclusive_end, billing_at: exclusive_end, rate:, rate_override: nil,
-      proration_ratio: 1, rate_phase_code: nil)
+  let(:started_at) { cycle_started_at }
+  let(:cycle_end) { Time.zone.parse("2026-03-01") }
+  let(:interval_unit) { :month }
+  let(:timezone) { "UTC" }
+  let(:anchor_date) { cycle_started_at.to_date }
+  let(:rate_override) { nil }
+  let(:phase) { Billing::Phase.new(code: nil, billing_interval_cycle_count: nil, rate_override:) }
+  let(:calendar) do
+    Billing::Calendar.new(anchor_date:,
+      interval: Billing::Interval.new(count: 1, unit: interval_unit), timezone:)
   end
+  let(:cycle) { Billing::Cycle.new(index: 0, started_at: cycle_started_at, ended_at: cycle_end, phase:, calendar:) }
+  let(:segment) { Billing::Segments::Segment.new(started_at:, ended_at: exclusive_end, rate:) }
+  let(:obligation_billing_at) { cycle_end }
+  let(:obligation) { Billing::Obligation.new(cycle:, segments: [segment], billing_at: obligation_billing_at) }
 
   it "builds an in-memory slice with the priced associations and inclusive period end" do
-    segment = result.billing_segment
+    built_segment = result.billing_segment
 
-    expect(segment).to have_attributes(
+    expect(built_segment).to have_attributes(
       organization:,
       customer:,
       contract:,
@@ -38,7 +52,7 @@ RSpec.describe BillingSegments::BuildEventSegmentService do
       billing_at: exclusive_end,
       proration_ratio: 1
     )
-    expect(segment).not_to respond_to(:save, :reload, :persisted?)
+    expect(built_segment).not_to respond_to(:save, :reload, :persisted?)
   end
 
   shared_examples "preserves the terms-based fee boundaries" do
@@ -71,21 +85,14 @@ RSpec.describe BillingSegments::BuildEventSegmentService do
 
   context "with a mid-cycle slice" do
     let(:started_at) { Time.zone.parse("2026-02-10") }
-    let(:billing_timing) { :arrears }
-    let(:canonical_billing_at) { exclusive_end }
+    let(:proration) { false }
     let(:expected_billing_at) { exclusive_end }
-    let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing:) }
-    let(:billable_segment) do
-      Billing::BillableSegment.new(cycle_index: 0, cycle_started_at:, started_at:,
-        ended_at: exclusive_end, billing_at: canonical_billing_at, rate:, rate_override: nil,
-        proration_ratio: 1, rate_phase_code: nil)
-    end
 
     include_examples "preserves the terms-based fee boundaries"
 
     context "when billing normally in advance" do
       let(:billing_timing) { :advance }
-      let(:canonical_billing_at) { started_at }
+      let(:obligation_billing_at) { started_at }
       let(:expected_billing_at) { started_at }
 
       include_examples "preserves the terms-based fee boundaries"
@@ -96,10 +103,178 @@ RSpec.describe BillingSegments::BuildEventSegmentService do
       let(:expected_billing_at) { started_at }
       let(:rate_card) do
         create(:rate_card, organization:, product:, currency: "USD", billing_timing:,
-          regroup_paid_fees: :invoice, display_on_invoice: false)
+          proration:, regroup_paid_fees: :invoice, display_on_invoice: false)
       end
 
       include_examples "preserves the terms-based fee boundaries"
+    end
+  end
+
+  describe "proration" do
+    it "uses the complete monthly cycle" do
+      expect(result.billing_segment.proration_ratio).to eq(1.0)
+    end
+
+    context "with a partial start" do
+      let(:started_at) { Time.utc(2026, 2, 10) }
+
+      it "prices 19 of February's 28 days" do
+        expect(result.billing_segment.proration_ratio).to eq((19.to_d / 28).round(10))
+      end
+    end
+
+    context "with a partial first cycle" do
+      let(:anchor_date) { Date.new(2026, 2, 1) }
+      let(:cycle_started_at) { Time.utc(2026, 2, 10) }
+
+      it "uses the full calendar month for 19 of 28 days" do
+        expect(result.billing_segment.proration_ratio).to eq((19.to_d / 28).round(10))
+      end
+    end
+
+    context "with cuts on both sides" do
+      let(:started_at) { Time.utc(2026, 2, 8) }
+      let(:exclusive_end) { Time.utc(2026, 2, 22) }
+
+      it "prices 14 of February's 28 days" do
+        expect(result.billing_segment.proration_ratio).to eq(14.fdiv(28))
+      end
+    end
+
+    context "with a midday cut" do
+      let(:started_at) { Time.utc(2026, 2, 8, 12) }
+      let(:exclusive_end) { Time.utc(2026, 2, 22, 12) }
+
+      it "counts the mid-cut days by their local midnights" do
+        expect(result.billing_segment.proration_ratio).to eq(14.fdiv(28))
+      end
+    end
+
+    context "with a zero-day slice" do
+      let(:started_at) { Time.utc(2026, 2, 8, 8) }
+      let(:exclusive_end) { Time.utc(2026, 2, 8, 12) }
+
+      it "prices zero of February's 28 days" do
+        expect(result.billing_segment.proration_ratio).to eq(0.0)
+      end
+    end
+
+    context "with a termination clamp" do
+      let(:exclusive_end) { Time.utc(2026, 2, 16) }
+      let(:cycle_end) { exclusive_end }
+
+      it "prices 15 of February's 28 days" do
+        expect(result.billing_segment.proration_ratio).to eq((15.to_d / 28).round(10))
+      end
+    end
+
+    context "with a daylight saving transition" do
+      let(:timezone) { "America/New_York" }
+      let(:anchor_date) { Date.new(2026, 3, 1) }
+      let(:cycle_started_at) { Time.find_zone!(timezone).local(2026, 3, 1) }
+      let(:cycle_end) { Time.find_zone!(timezone).local(2026, 4, 1) }
+      let(:started_at) { Time.find_zone!(timezone).local(2026, 3, 8) }
+      let(:exclusive_end) { Time.find_zone!(timezone).local(2026, 3, 10) }
+
+      it "prices two local days of the 31-day March cycle" do
+        expect(result.billing_segment.proration_ratio).to eq((2.to_d / 31).round(10))
+      end
+    end
+
+    context "when disabled" do
+      let(:proration) { false }
+      let(:started_at) { Time.utc(2026, 2, 10) }
+
+      it "does not prorate the partial slice" do
+        expect(result.billing_segment.proration_ratio).to eq(1.0)
+      end
+    end
+
+    context "with a monthly cycle and a weekly rate" do
+      let(:cycle_started_at) { Time.utc(2026, 1, 1) }
+      let(:cycle_end) { Time.utc(2026, 2, 1) }
+      let(:started_at) { Time.utc(2026, 1, 15) }
+      let(:exclusive_end) { cycle_end }
+      let(:rate) { create(:rate_card_rate, organization:, rate_card:, billing_interval_count: 1, billing_interval_unit: :week) }
+
+      it "uses 31 cycle days, not the weekly rate cadence" do
+        expect(result.billing_segment.proration_ratio).to eq((17.to_d / 31).round(10))
+      end
+    end
+
+    context "with a weekly cycle and a monthly rate" do
+      let(:interval_unit) { :week }
+      let(:cycle_end) { Time.utc(2026, 2, 8) }
+      let(:started_at) { Time.utc(2026, 2, 3) }
+      let(:exclusive_end) { cycle_end }
+
+      it "uses seven cycle days, not the monthly rate cadence" do
+        expect(result.billing_segment.proration_ratio).to eq((5.to_d / 7).round(10))
+      end
+    end
+  end
+
+  context "with a phase override" do
+    let(:rate_override) { instance_double(RateOverride, properties: {"amount" => "7"}) }
+
+    it "uses the complete override properties while retaining the base rate" do
+      expect(result.billing_segment).to have_attributes(rate_card_rate: rate, rate_override:, rate_properties: {"amount" => "7"})
+    end
+
+    context "without a base rate" do
+      let(:rate) { nil }
+
+      it "prices from the override" do
+        expect(result.billing_segment.rate_properties).to eq({"amount" => "7"})
+      end
+    end
+  end
+
+  context "without a rate or override" do
+    let(:rate) { nil }
+
+    it "rejects the unpriced slice" do
+      expect { result }.to raise_error(ArgumentError, "a billable segment needs a rate or an override to price it")
+    end
+  end
+
+  context "with an applied pricing unit" do
+    let(:unit) { create(:pricing_unit, organization:, code: "credits") }
+
+    before do
+      rate
+      allow(rate_card).to receive(:applied_pricing_unit_code).and_return("credits")
+    end
+
+    it "finds the unit in the card's organization" do
+      unit
+      expect(result.billing_segment.pricing_unit).to eq(unit)
+    end
+
+    context "with a batched lookup" do
+      let(:pricing_units_by_code) { {"credits" => unit} }
+
+      it "uses the supplied unit" do
+        expect(result.billing_segment.pricing_unit).to eq(unit)
+      end
+
+      context "when the unit is missing from the batch" do
+        let(:pricing_units_by_code) { {} }
+
+        it "does not fall back to a database lookup" do
+          unit
+          expect { result }.to raise_error(BaseService::FailedResult)
+        end
+      end
+    end
+
+    context "when only another organization has the unit" do
+      let(:unit) { create(:pricing_unit, code: "credits") }
+
+      it "does not find the other organization's unit" do
+        unit
+        expect { result }.to raise_error(BaseService::FailedResult)
+      end
     end
   end
 

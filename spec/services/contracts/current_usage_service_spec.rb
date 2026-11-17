@@ -658,7 +658,6 @@ RSpec.describe Contracts::CurrentUsageService do
       it "prices both slices without changing their coverage or proration" do
         usage = result.rate_card_usages.sole
 
-        expect(usage.obligation.segments.map(&:proration_ratio)).to eq([14.fdiv(28), 14.fdiv(28)])
         expect(usage.fees.map(&:amount_cents)).to eq([1500, 3000]) # 3 units * €10 or €20 * 14 / 28 days.
         expect(usage.fees.map { it.properties.values_at("from_datetime", "to_datetime") }).to eq([
           [Time.zone.parse("2027-02-01").iso8601(6), BillingSegment.inclusive_end(Time.zone.parse("2027-02-15")).iso8601(6)],
