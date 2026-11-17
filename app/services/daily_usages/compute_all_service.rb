@@ -169,8 +169,18 @@ module DailyUsages
       computed_yesterday(organization).where.not(subscription_id: nil).pluck(:subscription_id)
     end
 
+    # A contract's usage_date is the day before the customer's current local date, which
+    # can be two UTC days back for customers ahead of UTC.
     def already_computed_contract_ids(organization)
-      computed_yesterday(organization).where.not(contract_id: nil).distinct.pluck(:contract_id)
+      DailyUsage
+        .where(organization_id: organization.id)
+        .where.not(contract_id: nil)
+        .where(usage_date: (timestamp.to_date - 2.days)..timestamp.to_date)
+        .joins("INNER JOIN customers ON daily_usages.customer_id = customers.id")
+        .joins("INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id")
+        .where("daily_usages.usage_date = DATE(:timestamp#{at_time_zone}) - 1", timestamp:)
+        .distinct
+        .pluck(:contract_id)
     end
 
     # Daily usages already computed for yesterday (in the customer's timezone).

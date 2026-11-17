@@ -311,6 +311,26 @@ RSpec.describe DailyUsages::ComputeAllService do
         end
       end
 
+      context "with a customer timezone ahead of UTC by 3 hours or more" do
+        let(:customer) { create(:customer, organization:, billing_entity:, timezone: "Asia/Tokyo") }
+        # Oct 22, 00:05 in Tokyo: the day to compute is Oct 21, while the UTC date is still Oct 21.
+        let(:timestamp) { Time.zone.parse("2024-10-21 15:05:00") }
+
+        it "enqueues the contract when only the day before was computed" do
+          create(:daily_usage, :contract, customer:, contract:, contract_rate_card:, usage_date: Date.new(2024, 10, 20))
+
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeContractJob).to have_been_enqueued.with(contract, timestamp:)
+        end
+
+        it "does not enqueue the contract when its previous day was computed" do
+          create(:daily_usage, :contract, customer:, contract:, contract_rate_card:, usage_date: Date.new(2024, 10, 21))
+
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeContractJob).not_to have_been_enqueued
+        end
+      end
+
       context "when the contract was terminated during the previous day" do
         let(:contract) { create(:contract, :terminated, organization:, customer:, terminated_at: timestamp - 12.hours) }
 

@@ -174,6 +174,33 @@ RSpec.describe DailyUsages::ComputeContractService do
     end
   end
 
+  context "when the contract was terminated after a previous day of its window was recorded" do
+    let(:event_timestamps) { [Time.zone.parse("2027-02-05 10:00:00")] }
+
+    before do
+      described_class.call!(contract:, timestamp: Time.zone.parse("2027-02-06 00:05:00"))
+      create_event(Time.zone.parse("2027-02-10 10:00:00"))
+      contract.update!(status: :terminated, terminated_at: Time.zone.parse("2027-02-10 18:00:00"))
+    end
+
+    it "records the difference with that day, although the window now ends earlier" do
+      daily_usage = result.daily_usages.sole.reload
+
+      expect(daily_usage.to_datetime).to be < BillingSegment.inclusive_end(Time.zone.parse("2027-03-01"))
+      expect(daily_usage.usage["amount_cents"]).to eq(400)
+      expect(daily_usage.usage_diff["amount_cents"]).to eq(200) # 400 - 200 on Feb 5
+    end
+  end
+
+  context "when the contract was ended by date on the previous day" do
+    # Terminated at the local midnight that follows its last day, Feb 9.
+    before { contract.update!(status: :terminated, terminated_at: Time.zone.parse("2027-02-10 00:00:00")) }
+
+    it "records nothing for the day after its end" do
+      expect { result }.not_to change(DailyUsage, :count)
+    end
+  end
+
   context "when the contract was terminated before the usage date" do
     before { contract.update!(status: :terminated, terminated_at: Time.zone.parse("2027-02-09 18:00:00")) }
 
@@ -187,6 +214,19 @@ RSpec.describe DailyUsages::ComputeContractService do
 
     it "records nothing" do
       expect { result }.not_to change(DailyUsage, :count)
+    end
+  end
+
+  context "when the card has no usage on later runs of the scheduling window", cache: :memory do
+    let(:event_timestamps) { [] }
+
+    it "computes the usage once" do
+      allow(Contracts::CurrentUsageService).to receive(:call).and_call_original
+
+      described_class.call!(contract:, timestamp:)
+      described_class.call!(contract:, timestamp: timestamp + 1.hour)
+
+      expect(Contracts::CurrentUsageService).to have_received(:call).once
     end
   end
 
@@ -255,6 +295,36 @@ RSpec.describe DailyUsages::ComputeContractService do
 
     it "records the previous day of the customer" do
       expect(result.daily_usages.sole.usage_date).to eq(Date.new(2027, 2, 10))
+    end
+  end
+
+  context "when a rate takes effect inside the usage date" do
+    let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo", currency: "EUR") }
+    # Feb 11, 00:05 in Tokyo. The new arrears rate starts at UTC midnight, 09:00 in Tokyo on Feb 10.
+    let(:timestamp) { Time.zone.parse("2027-02-10 15:05:00") }
+    let(:boundary) { Time.zone.parse("2027-02-10 00:00:00") }
+    let(:event_timestamps) { [Time.zone.parse("2027-02-05 01:00:00")] }
+
+    before do
+      described_class.call!(contract:, timestamp: Time.zone.parse("2027-02-05 15:05:00"))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: boundary, rate_properties: {"amount" => "3"})
+      create_event(Time.zone.parse("2027-02-09 20:00:00")) # Feb 10, 05:00 in Tokyo, before the new rate
+      create_event(Time.zone.parse("2027-02-10 03:00:00")) # Feb 10, 12:00 in Tokyo, after it
+    end
+
+    it "records the segment that ended during the day and the one that started" do
+      daily_usages = result.daily_usages.map(&:reload).sort_by(&:from_datetime)
+
+      expect(daily_usages.map(&:usage_date)).to eq([Date.new(2027, 2, 10)] * 2)
+
+      ended, started = daily_usages
+      expect(ended.to_datetime).to eq(BillingSegment.inclusive_end(boundary))
+      expect(ended.usage["amount_cents"]).to eq(400) # the Feb 5 and Feb 10 05:00 events at 2 EUR
+      expect(ended.usage_diff["amount_cents"]).to eq(200) # 400 - 200 on Feb 5
+
+      expect(started.from_datetime).to eq(boundary)
+      expect(started.usage["amount_cents"]).to eq(300) # the Feb 10 12:00 event at 3 EUR
+      expect(started.usage_diff).to eq(started.usage)
     end
   end
 end

@@ -73,11 +73,21 @@ module DailyUsages
     # in those cases would double-count the gap days in downstream analytics that sum
     # `usage_diff` (see lago-data `data_pipeline/models/usage/usage_daily_base.sql`).
     def previous_daily_usage
-      @previous_daily_usage ||= (contract_rate_card || subscription).daily_usages
-        .where(from_datetime:, to_datetime:)
+      @previous_daily_usage ||= previous_daily_usages
         .where("usage_date < ?", usage_date)
         .order(usage_date: :desc)
         .first
+    end
+
+    # A contract window is matched on its start only: its end moves earlier when the contract is
+    # terminated or a rate is added inside the window, while its usage keeps accumulating from
+    # the same start. The contract_id condition lets Postgres use the partial index on contract rows.
+    def previous_daily_usages
+      if contract_rate_card
+        contract_rate_card.daily_usages.where.not(contract_id: nil).where(from_datetime:)
+      else
+        subscription.daily_usages.where(from_datetime:, to_datetime:)
+      end
     end
 
     # Prorates previous taxes based on how much of the previous amount came from charges
