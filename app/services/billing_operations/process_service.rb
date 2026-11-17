@@ -244,14 +244,12 @@ module BillingOperations
 
     # Nothing follows an operation whose cycle the schedule no longer has.
     def next_planned_operation(operation, resolution)
-      cycle = resolution.cycle
-      return unless cycle
+      return unless resolution.cycle
 
       Schedule::BuildPlannedOperation.call!(
         contract_rate_card: operation.contract_rate_card,
         schedule: resolution.schedule,
-        after: operation.billing_at,
-        from: cycle.started_at
+        after_operation: operation
       ).planned_operation
     end
 

@@ -45,7 +45,7 @@ module ContractRateCards
     # the cycle it billed.
     def planning
       if last_billing
-        {after: last_billing.billing_at, from: last_billing.target_cycle_started_at}
+        {after_operation: last_billing}
       else
         {at: contract_rate_card.effective_date.in_time_zone(contract_rate_card.contract.customer.applicable_timezone)}
       end

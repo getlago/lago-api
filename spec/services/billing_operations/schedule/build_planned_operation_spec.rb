@@ -22,7 +22,11 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule }
   let(:timestamp) { Time.utc(2026, 11, 1) }
   let(:after) { nil }
-  let(:planning) { after ? {after:, from: timestamp} : {at: timestamp} }
+  let(:after_operation) do
+    build_stubbed(:billing_operation, organization:, customer:, contract_rate_card:,
+      billing_at: after, target_cycle_started_at: timestamp)
+  end
+  let(:planning) { after ? {after_operation:} : {at: timestamp} }
   let(:rate_effective_from) { Time.utc(2026, 11, 1) }
 
   before do
@@ -245,9 +249,9 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
 
   context "when neither or both planning instants are given" do
     it "refuses the call" do
-      expect { described_class.call(contract_rate_card:, schedule:) }.to raise_error(ArgumentError, /either at: or after:/)
-      expect { described_class.call(contract_rate_card:, schedule:, at: timestamp, after: timestamp) }
-        .to raise_error(ArgumentError, /either at: or after:/)
+      expect { described_class.call(contract_rate_card:, schedule:) }.to raise_error(ArgumentError, /either at: or after_operation:/)
+      expect { described_class.call(contract_rate_card:, schedule:, at: timestamp, after_operation:) }
+        .to raise_error(ArgumentError, /either at: or after_operation:/)
     end
   end
 end

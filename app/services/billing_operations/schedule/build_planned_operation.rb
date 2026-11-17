@@ -14,22 +14,21 @@ module BillingOperations
       # Two ways to plan, and exactly one must be given:
       # - `at:` when nothing was billed yet from that instant (activation, clock reset, rate
       #   change, termination): the first obligation still open at it.
-      # - `after:` once a billing completed: the first obligation falling due later, walking
-      #   from the cycle of `from:` because a billing can belong to an earlier cycle.
-      def initialize(contract_rate_card:, schedule:, at: nil, after: nil, from: nil)
-        raise ArgumentError, "pass either at: or after:" unless at.nil? ^ after.nil?
+      # - `after_operation:` once a billing completed: the first obligation falling due later,
+      #   walking from its cycle because a billing can belong to an earlier cycle.
+      def initialize(contract_rate_card:, schedule:, at: nil, after_operation: nil)
+        raise ArgumentError, "pass either at: or after_operation:" unless at.nil? ^ after_operation.nil?
 
         @contract_rate_card = contract_rate_card
         @schedule = schedule
         @at = at
-        @after = after
-        @from = from
+        @after_operation = after_operation
         super
       end
 
       def call
-        segment = if after
-          schedule.next_obligation(after:, from:) { final_due_at(it) }
+        segment = if after_operation
+          schedule.next_obligation(after: after_operation.billing_at, from: after_operation.target_cycle_started_at) { final_due_at(it) }
         else
           schedule.first_obligation(at:)
         end
@@ -37,7 +36,7 @@ module BillingOperations
         if segment
           result.planned_operation = PlannedOperation.new(
             cycle_started_at: segment.cycle_started_at,
-            billing_at: after ? final_due_at(segment) : segment.due_at
+            billing_at: after_operation ? final_due_at(segment) : segment.due_at
           )
         end
         result
@@ -45,14 +44,14 @@ module BillingOperations
 
       private
 
-      attr_reader :contract_rate_card, :schedule, :at, :after, :from
+      attr_reader :contract_rate_card, :schedule, :at, :after_operation
 
       # Outstanding final coverage closes at termination. Coverage already billed at the
       # planned end must not become due again when termination happens later.
       def final_due_at(segment)
         contract = contract_rate_card.contract
 
-        if contract.terminated_at && segment.due_at == contract.billing_ends_at && segment.due_at > after
+        if contract.terminated_at && segment.due_at == contract.billing_ends_at && segment.due_at > after_operation.billing_at
           contract.terminated_at
         else
           segment.due_at
