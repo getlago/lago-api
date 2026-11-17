@@ -23,6 +23,93 @@ RSpec.describe Integrations::QuickbooksIntegration do
       expect(quickbooks_integration).not_to be_valid
       expect(quickbooks_integration.errors[:connection_id]).to eq(["value_is_mandatory"])
     end
+
+    describe "realm_id uniqueness" do
+      subject(:integration) do
+        build(:quickbooks_integration, organization: new_organization, code: "quickbooks_2", settings: {realm_id: new_realm_id})
+      end
+
+      let(:organization) { create(:organization) }
+      let(:new_organization) { organization }
+      let(:stored_realm_id) { "1234567890" }
+      let(:new_realm_id) { "1234567890" }
+      let(:stored_integration) do
+        create(:quickbooks_integration, organization:, code: "quickbooks_1", settings: {realm_id: stored_realm_id})
+      end
+
+      before { stored_integration }
+
+      it "is invalid with the realm_id of another QuickBooks integration of the organization" do
+        expect(integration).not_to be_valid
+        expect(integration.errors[:realm_id]).to eq(["value_already_exist"])
+      end
+
+      context "when the realm_id belongs to another organization" do
+        let(:new_organization) { create(:organization) }
+
+        it "is valid" do
+          expect(integration).to be_valid
+        end
+      end
+
+      context "when the realm_id is different" do
+        let(:new_realm_id) { "9876543210" }
+
+        it "is valid" do
+          expect(integration).to be_valid
+        end
+      end
+
+      context "when the stored integration is validated again with its own realm_id" do
+        it "is valid" do
+          expect(stored_integration.reload).to be_valid
+        end
+      end
+
+      context "when both realm_ids are empty strings" do
+        let(:stored_realm_id) { "" }
+        let(:new_realm_id) { "" }
+
+        it "is valid" do
+          expect(integration).to be_valid
+        end
+      end
+
+      context "when both realm_ids are nil" do
+        let(:stored_realm_id) { nil }
+        let(:new_realm_id) { nil }
+
+        it "is valid" do
+          expect(integration).to be_valid
+        end
+      end
+
+      context "when a Xero integration of the organization carries the realm_id in its settings" do
+        let(:stored_integration) { create(:xero_integration, organization:, settings: {realm_id: stored_realm_id}) }
+
+        it "is valid" do
+          expect(integration).to be_valid
+        end
+      end
+
+      context "when the stored realm_id is a string and the new one an Integer" do
+        let(:stored_realm_id) { "123" }
+        let(:new_realm_id) { 123 }
+
+        it "is invalid" do
+          expect(integration).not_to be_valid
+          expect(integration.errors[:realm_id]).to eq(["value_already_exist"])
+        end
+
+        # Behind a database proxy, prepared statements are off and the bound value is inlined in the SQL
+        it "is invalid without prepared statements" do
+          valid = ActiveRecord::Base.connection.unprepared_statement { integration.valid? }
+
+          expect(valid).to eq(false)
+          expect(integration.errors[:realm_id]).to eq(["value_already_exist"])
+        end
+      end
+    end
   end
 
   describe ".connection_id" do

@@ -3,6 +3,7 @@
 module Integrations
   class QuickbooksIntegration < BaseIntegration
     validates :connection_id, presence: true
+    validate :realm_id_uniqueness
 
     settings_accessors :sync_invoices, :sync_credit_notes, :sync_payments, :realm_id, :sandbox
     secrets_accessors :connection_id
@@ -10,6 +11,22 @@ module Integrations
     # The setting is stored uncast: only true and "true" select the sandbox
     def sandbox?
       sandbox.to_s == "true"
+    end
+
+    private
+
+    def realm_id_uniqueness
+      return if realm_id.blank?
+
+      duplicate = ::Integrations::QuickbooksIntegration
+        .where(organization_id:)
+        .where("settings->>'realm_id' = ?", realm_id.to_s)
+        .where.not(id:)
+        .exists?
+
+      if duplicate
+        errors.add(:realm_id, "value_already_exist")
+      end
     end
   end
 end
