@@ -22,7 +22,7 @@ module Entitlement
         return result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated")
       end
 
-      # Codes are unique at this point, so each privilege param creates one privilege.
+      # Each privilege param creates at most one privilege.
       if Array(params[:privileges]).size > PrivilegeCreateService::MAX_PRIVILEGES
         return result.single_validation_failure!(
           field: :base,
