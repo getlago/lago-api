@@ -57,6 +57,13 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
       expect(response).to be_v2_not_found_error("plan")
     end
 
+    it "no longer shows one through the v1 controller, as GET is native" do
+      get_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements/seats")
+
+      expect(response).to be_v2_not_found_error("plan")
+      expect(entitlement.values.sole.value).to eq("30")
+    end
+
     it "updates them through the v1 controller" do
       patch_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements", {entitlements: {seats: {max: 30}}})
 

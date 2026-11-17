@@ -717,6 +717,177 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
     end
   end
 
+  describe "GET /api/v2/plans/:plan_code/entitlements/:code" do
+    subject(:request) { get_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements/#{feature_code}#{query}") }
+
+    let(:plan_code) { catalog_plan.code }
+    let(:feature_code) { feature.code }
+    let(:query) { "" }
+    let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
+    let(:sso) { create(:feature, organization:, code: "sso", name: "SSO", description: "Single sign-on") }
+
+    before do
+      create(:entitlement_value, organization:, entitlement:, privilege:, value: "50")
+      create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature: sso)
+    end
+
+    include_examples "requires API permission", "plan", "read"
+
+    it "returns the entitlement of the catalog plan", :bullet do
+      request
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(plan_entitlement: plan_entitlement_json(entitlement, [{privilege_code: "max", value: 50}]))
+    end
+
+    context "with a feature code containing a dot" do
+      let(:feature) { create(:feature, organization:, code: "seats.v2", name: "Seats", description: nil) }
+
+      it "returns the entitlement" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(plan_entitlement: plan_entitlement_json(entitlement, [{privilege_code: "max", value: 50}]))
+      end
+    end
+
+    context "with an unknown feature code" do
+      let(:feature_code) { "unknown" }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "with a feature the catalog plan does not grant" do
+      let(:feature_code) { create(:feature, organization:, code: "api").code }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "with a feature granted by another catalog plan" do
+      let(:feature_code) { "api" }
+
+      before do
+        api = create(:feature, organization:, code: "api")
+        create(:entitlement, :catalog_plan, organization:, catalog_plan: create(:catalog_plan, organization:, code: "other"), feature: api)
+      end
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "with a discarded entitlement" do
+      before { entitlement.discard! }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+      end
+    end
+
+    context "with an entitlement of a discarded feature" do
+      before { feature.discard! }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("feature")
+        expect(entitlement.reload).not_to be_discarded
+      end
+    end
+
+    context "with expands" do
+      let(:query) { "?expands[]=feature" }
+
+      it "returns expand_not_supported" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["feature"]}}]
+        )
+      end
+    end
+
+    [
+      ["limit", "1"],
+      ["page", "1"],
+      ["per_page", "1"],
+      ["after", "x"],
+      ["before", "x"],
+      ["include_total_count", "true"]
+    ].each do |name, value|
+      context "with the #{name} pagination parameter" do
+        let(:query) { "?#{name}=#{value}" }
+
+        it "returns a not_paginated error" do
+          request
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: name, meta: {}}])
+        end
+      end
+    end
+
+    context "with an unknown plan code" do
+      let(:plan_code) { "unknown" }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "with the catalog plan of another organization" do
+      let(:plan_code) { "shared" }
+
+      before do
+        other_organization = create(:organization)
+        other_plan = create(:catalog_plan, organization: other_organization, code: "shared")
+        other_feature = create(:feature, organization: other_organization, code: "seats")
+        create(:entitlement, :catalog_plan, organization: other_organization, catalog_plan: other_plan, feature: other_feature)
+      end
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "with a deleted catalog plan" do
+      let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium", deleted_at: Time.current) }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "without the product catalog", product_catalog: false do
+      it "returns feature_unavailable" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "feature_unavailable", details: [])
+      end
+    end
+  end
+
   # The v2 render of a plan entitlement, with its datetimes to the microsecond as native v2 renders them.
   def plan_entitlement_json(entitlement, values)
     entitlement = Entitlement::Entitlement.with_discarded.find(entitlement.id)
