@@ -5890,7 +5890,12 @@ type DataApiMrrPlan {
   planCode: String!
   planDeletedAt: ISO8601DateTime
   planId: ID!
-  planInterval: PlanInterval!
+
+  """
+  Interval of the plan. Null for product catalog plans and contracts without a
+  plan, whose rate cards each have their own interval
+  """
+  planInterval: PlanInterval
   planName: String!
 }
 
@@ -5984,7 +5989,12 @@ type DataApiRevenueStreamPlan {
   planCode: String!
   planDeletedAt: ISO8601DateTime
   planId: ID!
-  planInterval: PlanInterval!
+
+  """
+  Interval of the plan. Null for product catalog plans and contracts without a
+  plan, whose rate cards each have their own interval
+  """
+  planInterval: PlanInterval
   planName: String!
 }
 
