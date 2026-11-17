@@ -14,6 +14,7 @@ class CatalogPlan < ApplicationRecord
   belongs_to :organization
 
   has_many :applied_rate_cards, class_name: "PlanRateCard"
+  has_many :wallets, class_name: "PlanWallet"
   has_many :contracts
 
   has_many :coupon_targets
