@@ -279,7 +279,7 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
       it "finds no snapshot and bills from the full history" do
         expect(bill.slice(*billed.keys)).to eq(billed)
         expect(written_snapshots).to be_empty
-        expect(read_periods.values.flatten.uniq).to eq([nil])
+        expect(read_periods).to eq(invoice: invoice_reads.map { nil }, usage: usage_reads.map { nil })
       end
     end
   end
@@ -646,10 +646,10 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
       }
     end
     let(:snapshots) { [] }
-    # No arrears close writes a snapshot for an advance card: the six events and the renewals
-    # of March (at the contract start), April and May all read the full history
-    let(:invoice_reads) { Array.new(9) }
-    let(:usage_reads) { [nil] }
+    # No arrears close writes a snapshot for an advance card, so the events, renewals and usage
+    # read the full history without looking one up
+    let(:invoice_reads) { [] }
+    let(:usage_reads) { [] }
 
     def bill
       start_contract
