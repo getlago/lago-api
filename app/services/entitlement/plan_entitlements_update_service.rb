@@ -187,8 +187,8 @@ module Entitlement
 
       entitlements_params.each do |feature_code, privilege_values|
         path = :"entitlements.#{feature_code}"
-        validate_privilege_values_shape!(path, privilege_values)
         feature = features_by_code[feature_code] || not_found_at!(path, "feature")
+        validate_privilege_values_shape!(path, privilege_values)
 
         # Find existing entitlement or create new one
         entitlement = entitlements_by_feature_id[feature.id]

@@ -166,6 +166,17 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
       end
     end
 
+    context "when an unknown feature value is not a map" do
+      let(:request_params) { {entitlements: {nope: [1]}} }
+
+      it "returns a resource_not_found error on the feature" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "resource_not_found", field: "entitlements.nope", meta: {resource: "feature"}}])
+      end
+    end
+
     context "when a privilege value is an object" do
       let(:request_params) { {entitlements: {seats: {max: {value: 50}}}} }
 

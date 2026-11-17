@@ -172,6 +172,16 @@ RSpec.describe Api::V1::Plans::EntitlementsController do
       end
     end
 
+    context "when the unknown feature value is not a map" do
+      let(:params) { {entitlements: {"nope" => [1]}} }
+
+      it "returns not found error" do
+        subject
+
+        expect(response).to be_not_found_error("feature")
+      end
+    end
+
     context "when privilege does not exist" do
       let(:params) do
         {
@@ -455,6 +465,16 @@ RSpec.describe Api::V1::Plans::EntitlementsController do
           }
         }
       end
+
+      it "returns not found error" do
+        subject
+
+        expect(response).to be_not_found_error("feature")
+      end
+    end
+
+    context "when the unknown feature value is not a map" do
+      let(:params) { {entitlements: {"nope" => [1]}} }
 
       it "returns not found error" do
         subject
