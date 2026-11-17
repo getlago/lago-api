@@ -563,6 +563,43 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
+      context "when the update adds 51 privileges" do
+        let(:params) { {privileges: Array.new(51) { |i| {code: "new_#{i}"} }} }
+
+        it "refuses it before the lock and creates no privilege" do
+          allow(feature).to receive(:lock!).and_call_original
+
+          expect { subject }.not_to change(Entitlement::Privilege, :count)
+
+          expect(subject).to be_failure
+          expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+          expect(subject.error.meta).to eq({base: {max_items: 50}})
+          expect(feature).not_to have_received(:lock!)
+        end
+      end
+
+      context "when the 50 new codes alone reach the limit on a feature that already has privileges" do
+        let(:params) { {privileges: Array.new(50) { |i| {code: "new_#{i}"} }} }
+
+        it "passes the early check and is refused by the exact count" do
+          allow(feature).to receive(:lock!).and_call_original
+
+          expect(subject).to be_failure
+          expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+          expect(feature).to have_received(:lock!)
+          expect(feature.reload.privileges.pluck(:code)).to match_array(%w[max min opt])
+        end
+      end
+
+      context "when 51 codes are sent but 2 already exist" do
+        let(:params) { {privileges: [{code: "max"}, {code: "min"}] + Array.new(47) { |i| {code: "new_#{i}"} }} }
+
+        it "counts only the new codes" do
+          expect(subject).to be_success
+          expect(feature.privileges.count).to eq(50)
+        end
+      end
+
       context "when the feature is already above the limit and the update adds no privilege" do
         let(:params) { {name: "Renamed", privileges: [{code: "max", name: "Max."}]} }
 

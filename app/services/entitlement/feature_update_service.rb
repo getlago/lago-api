@@ -23,6 +23,8 @@ module Entitlement
         return result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated")
       end
 
+      return too_many_privileges_failure if too_many_new_privileges?
+
       ActiveRecord::Base.transaction do
         # Serializes with Entitlement::FeatureDestroyService, so a feature discarded since its lookup is not written.
         feature.lock!
@@ -108,15 +110,28 @@ module Entitlement
       @privileges_added = true
     end
 
+    # Cheap early refusal, before the lock and the writes: the new codes alone are above the limit whatever the
+    # feature holds. The exact check stays in check_privileges_limit!.
+    def too_many_new_privileges?
+      return false if params[:privileges].blank?
+
+      existing_codes = feature.privileges.pluck(:code)
+      params[:privileges].count { !existing_codes.include?(it[:code]) } > PrivilegeCreateService::MAX_PRIVILEGES
+    end
+
+    def too_many_privileges_failure
+      result.single_validation_failure!(
+        field: :base,
+        error_code: "too_many_privileges",
+        meta: {max_items: PrivilegeCreateService::MAX_PRIVILEGES}
+      )
+    end
+
     # Counted after the removals and the creates, under the feature lock. An update that adds no privilege is
     # accepted, so a feature already above the limit stays editable. Raising rolls the whole update back.
     def check_privileges_limit!
       if @privileges_added && feature.privileges.count > PrivilegeCreateService::MAX_PRIVILEGES
-        result.single_validation_failure!(
-          field: :base,
-          error_code: "too_many_privileges",
-          meta: {max_items: PrivilegeCreateService::MAX_PRIVILEGES}
-        ).raise_if_error!
+        too_many_privileges_failure.raise_if_error!
       end
     end
 
