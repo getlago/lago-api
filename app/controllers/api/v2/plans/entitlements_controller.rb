@@ -3,13 +3,13 @@
 module Api
   module V2
     module Plans
-      # Lists, shows and replaces the entitlements of a catalog plan, with the v1 body, and the v2 response and errors.
-      # The other entitlement routes of a plan (update, destroy, privilege destroy) still reach the v1 controller.
+      # Lists, shows, replaces and merges the entitlements of a catalog plan, with the v1 body, and the v2 response and errors.
+      # The other entitlement routes of a plan (destroy, privilege destroy) still reach the v1 controller.
       class EntitlementsController < Api::V2::BaseController
         serializable_with ::V2::PlanEntitlementSerializer, root: :plan_entitlement, expand_on: []
 
         # Before the lookup, like the cursor of the paginated lists.
-        before_action :reject_pagination!, only: %i[index show create]
+        before_action :reject_pagination!, only: %i[index show create update]
         before_action :find_catalog_plan
 
         # Bounded by the entitlement limit of a catalog plan: returned whole, without pagination.
@@ -33,16 +33,30 @@ module Api
           end
         end
 
+        # Replaces: discards the features and values left out of the body.
         def create
+          update_entitlements(partial: false)
+        end
+
+        # Merges: keeps the features and values left out of the body.
+        def update
+          update_entitlements(partial: true)
+        end
+
+        private
+
+        attr_reader :catalog_plan
+
+        def update_entitlements(partial:)
           permitted = params.slice(:entitlements).permit(entitlements: {})
-          # An empty map is valid: it discards every entitlement. A missing or non-map value is a 400.
+          # An empty map is valid, and a replace with it discards every entitlement. A missing or non-map value is a 400.
           return missing_parameter_error(ActionController::ParameterMissing.new(:entitlements)) unless permitted.key?(:entitlements)
 
           result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: current_organization,
             plan: catalog_plan,
             entitlements_params: permitted[:entitlements].to_h,
-            partial: false
+            partial:
           )
 
           if result.success?
@@ -51,10 +65,6 @@ module Api
             render_entitlements_error(result)
           end
         end
-
-        private
-
-        attr_reader :catalog_plan
 
         def find_catalog_plan
           @catalog_plan = current_organization.catalog_plans.find_by(code: params[:plan_code])
