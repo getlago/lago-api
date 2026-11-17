@@ -406,6 +406,38 @@ RSpec.describe Api::V1::FeaturesController do
       expect(indexed_privileges[:nonexistent][:name]).to eq("New Name")
     end
 
+    %i[patch put].each do |verb|
+      context "when a privilege code is padded with spaces and sent with #{verb.upcase}" do
+        subject { public_send(:"#{verb}_with_token", organization, "/api/v1/features/#{feature_code}", params) }
+
+        let(:privilege2) do
+          create(:privilege, feature: feature1, code: "max", name: "Maximum", value_type: "select", config: {select_options: %w[one two]})
+        end
+        let(:plan_value) { create(:entitlement_value, entitlement: create(:entitlement, feature: feature1), privilege: privilege2, value: "one") }
+        let(:subscription_value) do
+          create(:entitlement_value, entitlement: create(:entitlement, :subscription, feature: feature1), privilege: privilege2, value: "two")
+        end
+        let(:params) { {feature: {privileges: [{code: " max ", name: "New"}]}} }
+
+        before do
+          plan_value
+          subscription_value
+        end
+
+        it "renames the stored privilege in place and keeps its entitlement values" do
+          expect { subject }.not_to change(Entitlement::Privilege.with_discarded, :count)
+
+          expect(response).to have_http_status(:ok)
+          expect(indexed_privileges[:max]).to include(name: "New", config: {select_options: %w[one two]})
+          expect(feature1.privileges.reload.pluck(:id, :code, :name)).to match_array([
+            [privilege1.id, "max_admins", ""],
+            [privilege2.id, "max", "New"]
+          ])
+          expect(Entitlement::EntitlementValue.where(privilege: privilege2)).to match_array([plan_value, subscription_value])
+        end
+      end
+    end
+
     context "when updating only feature attributes" do
       let(:params) do
         {
