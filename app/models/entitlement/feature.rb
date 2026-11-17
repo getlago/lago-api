@@ -15,7 +15,7 @@ module Entitlement
     has_many :plans, through: :entitlements
     has_many :catalog_plans, through: :entitlements
 
-    validates :code, presence: true, length: {maximum: 255}
+    validates :code, presence: true, string: true, length: {maximum: 255}
     validates :name, length: {maximum: 255}
     validates :description, length: {maximum: 600}
 

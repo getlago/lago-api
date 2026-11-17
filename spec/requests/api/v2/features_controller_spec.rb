@@ -414,4 +414,178 @@ RSpec.describe Api::V2::FeaturesController do
       end
     end
   end
+
+  describe "POST /api/v2/features" do
+    subject(:request) { post_with_token(organization, "/api/v2/features", params) }
+
+    let(:feature_params) { {code: "seats", name: "Seats", description: "Number of seats"} }
+    let(:params) { {feature: feature_params} }
+
+    include_examples "requires API permission", "feature", "write"
+
+    it "creates a feature without privileges and renders the v2 body" do
+      travel_to(Time.zone.parse("2026-11-14T10:00:00.123456Z"), with_usec: true) do
+        expect { request }
+          .to change(organization.features, :count).by(1)
+          .and not_change(Entitlement::Privilege, :count)
+          .and have_enqueued_job_after_commit(SendWebhookJob).with("feature.created", instance_of(Entitlement::Feature)) # exactly once by default
+      end
+
+      feature = organization.features.sole
+      expect(response).to have_http_status(:success)
+      expect(json[:feature]).to eq(
+        lago_id: feature.id,
+        code: "seats",
+        name: "Seats",
+        description: "Number of seats",
+        created_at: "2026-11-14T10:00:00.123456Z",
+        updated_at: "2026-11-14T10:00:00.123456Z",
+        deleted_at: nil
+      )
+      expect(Utils::ActivityLog).to have_produced("feature.created").after_commit.with(feature)
+    end
+
+    context "with privileges in the body" do
+      let(:feature_params) { super().merge(privileges: [{code: "max", value_type: "integer"}]) }
+
+      it "ignores them and creates the feature without privileges" do
+        expect { request }
+          .to change(organization.features, :count).by(1)
+          .and not_change(Entitlement::Privilege, :count)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature]).not_to have_key(:privileges)
+      end
+    end
+
+    context "when the feature root is missing" do
+      let(:params) { feature_params }
+
+      it "returns the v2 missing parameter error" do
+        expect { request }.not_to change(Entitlement::Feature, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "feature", meta: {}}])
+      end
+    end
+
+    context "when the feature root is a string" do
+      let(:params) { {feature: "seats"} }
+
+      it "returns the v2 missing parameter error" do
+        expect { request }.not_to change(Entitlement::Feature, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "feature", meta: {}}])
+      end
+    end
+
+    [["a number", 123], ["a boolean", true]].each do |label, code|
+      context "with code as #{label}" do
+        let(:feature_params) { super().merge(code:) }
+
+        it "returns value_is_invalid on code and creates nothing" do
+          expect { request }.not_to change(Entitlement::Feature, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+        end
+      end
+    end
+
+    context "with a blank code" do
+      let(:feature_params) { super().merge(code: "") }
+
+      it "returns a validation error" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "code", meta: {}}])
+      end
+    end
+
+    context "when the code is already used in the organization" do
+      before { create(:feature, organization:, code: "seats") }
+
+      it "returns a validation error" do
+        expect { request }.not_to change(Entitlement::Feature, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_already_exist", field: "code", meta: {}}])
+      end
+    end
+
+    context "when the code is used by another organization" do
+      before { create(:feature, organization: create(:organization), code: "seats") }
+
+      it "creates the feature" do
+        expect { request }.to change(organization.features, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature][:code]).to eq("seats")
+      end
+    end
+
+    context "with keys that are not permitted" do
+      let(:posted_id) { SecureRandom.uuid }
+      let(:feature_params) { super().merge(lago_id: posted_id, id: posted_id, foo: "bar") }
+
+      it "ignores them and creates the feature" do
+        expect { request }.to change(organization.features, :count).by(1)
+
+        feature = organization.features.sole
+        expect(response).to have_http_status(:success)
+        expect(feature.id).not_to eq(posted_id)
+        expect(json[:feature]).to eq(
+          lago_id: feature.id,
+          code: "seats",
+          name: "Seats",
+          description: "Number of seats",
+          created_at: feature.created_at.iso8601(6),
+          updated_at: feature.updated_at.iso8601(6),
+          deleted_at: nil
+        )
+      end
+    end
+
+    context "with a code and a name over 255 characters" do
+      let(:feature_params) { super().merge(code: "a" * 256, name: "b" * 256) }
+
+      it "returns a validation error with the maximum length" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [
+            {code: "value_is_too_long", field: "code", meta: {max_length: 255}},
+            {code: "value_is_too_long", field: "name", meta: {max_length: 255}}
+          ]
+        )
+      end
+    end
+
+    context "with a description over 600 characters" do
+      let(:feature_params) { super().merge(description: "c" * 601) }
+
+      it "returns a validation error with the maximum length" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_too_long", field: "description", meta: {max_length: 600}}]
+        )
+      end
+    end
+
+    context "without product catalog", product_catalog: false do
+      it "returns feature unavailable" do
+        expect { request }.not_to change(Entitlement::Feature, :count)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+  end
 end

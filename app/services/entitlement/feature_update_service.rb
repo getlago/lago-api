@@ -57,6 +57,11 @@ module Entitlement
     attr_reader :feature, :params, :partial
     alias_method :partial?, :partial
 
+    # A code that is not a string is left to the model validation.
+    def stripped(code)
+      code.is_a?(String) ? code.strip : code
+    end
+
     def update_feature_attributes
       feature.name = params[:name] if params.key?(:name)
       feature.description = params[:description] if params.key?(:description)
@@ -86,7 +91,7 @@ module Entitlement
     def create_privilege(privilege_params)
       privilege = feature.privileges.new(
         organization: feature.organization,
-        code: privilege_params[:code]&.strip,
+        code: stripped(privilege_params[:code]),
         name: privilege_params[:name]
       )
       privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type

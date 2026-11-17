@@ -29,7 +29,7 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
     expect(json).not_to have_key(:details)
   end
 
-  # The features index and show are native: create, update and destroy stay on v1 until they are.
+  # The features index, show and create are native: update and destroy stay on v1 until they are.
   context "with the features actions v2 does not serve natively" do
     let(:feature) { create(:feature, organization:, code: "seats", name: "Seats", description: "Number of seats") }
 
@@ -48,14 +48,6 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
       expect(response).to have_http_status(:success)
       expect(json[:feature][:lago_id]).to eq(feature.id)
       expect(json[:feature]).not_to have_key(:privileges)
-    end
-
-    it "creates a feature with the v1 body" do
-      post_with_token(organization, "/api/v2/features", {feature: {code: "storage", name: "Storage", privileges: [{code: "gb", value_type: "integer"}]}})
-
-      expect(response).to have_http_status(:success)
-      expect(json[:feature]).not_to have_key(:lago_id)
-      expect(json[:feature]).to include(code: "storage", privileges: [{code: "gb", name: nil, value_type: "integer", config: {}}])
     end
 
     it "updates a feature with the v1 body" do

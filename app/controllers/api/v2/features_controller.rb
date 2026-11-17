@@ -30,6 +30,21 @@ module Api
         end
       end
 
+      def create
+        attributes = params.expect(feature: [:code, :name, :description])
+
+        result = ::Entitlement::FeatureCreateService.call(
+          organization: current_organization,
+          params: attributes.to_h.symbolize_keys
+        )
+
+        if result.success?
+          render_feature(result.feature)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def resource_name

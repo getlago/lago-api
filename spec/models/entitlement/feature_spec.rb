@@ -25,6 +25,15 @@ RSpec.describe Entitlement::Feature do
       expect(subject).to validate_length_of(:name).is_at_most(255)
       expect(subject).to validate_length_of(:description).is_at_most(600)
     end
+
+    [123, true, false, ["a"]].each do |code|
+      it "refuses #{code.inspect} as a code, which the cast would turn into a string" do
+        feature = build(:feature, code:)
+
+        expect(feature).not_to be_valid
+        expect(feature.errors.details[:code]).to include({error: :invalid})
+      end
+    end
   end
 
   describe "#subscriptions_count" do
