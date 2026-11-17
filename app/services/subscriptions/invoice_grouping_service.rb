@@ -108,8 +108,11 @@ module Subscriptions
     # NOTE: Subscriptions sharing an invoice must use the same payment, tax, accounting and CRM connections.
     #       A subscription without an override inherits the default connections of its customer.
     def group_by_connections(subscription_groups)
+      shared_groups = subscription_groups.reject(&:one?)
+      return subscription_groups if shared_groups.empty?
+
       ActiveRecord::Associations::Preloader.new(
-        records: @subscriptions,
+        records: shared_groups.flatten,
         associations: [:billing_object_connections, {customer: :integration_customers}]
       ).call
 

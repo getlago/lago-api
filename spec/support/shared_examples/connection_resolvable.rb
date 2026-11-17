@@ -29,6 +29,21 @@ RSpec.shared_examples "a connection-resolvable billing object" do
         end
       end
 
+      context "when the object pins a connection with a deleted payment_provider_customer" do
+        let(:override_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+
+        before do
+          create(:billing_object_connection, owner: resolvable, organization:, category: :payment,
+            behavior: :specific, payment_provider_customer: override_connection)
+
+          override_connection.update(deleted_at: Time.zone.now)
+        end
+
+        it "returns the customer default" do
+          expect(resolvable.effective_payment_connection).to eq(default_connection)
+        end
+      end
+
       context "when the object skips the category" do
         before do
           create(:billing_object_connection, owner: resolvable, organization:, category: :payment, behavior: :skip)
