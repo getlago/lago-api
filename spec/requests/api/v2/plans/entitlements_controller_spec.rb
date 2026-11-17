@@ -1613,7 +1613,8 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
 
       expect(Utils::ActivityLog).to have_received(:produce).with(
         entitlement, "plan_entitlement.updated", after_commit: true,
-        changes: {"values" => [[{privilege_code: "min", value: 5}, {privilege_code: "max", value: 30}], [{privilege_code: "min", value: 5}]]}
+        changes: {"values" => [[{privilege_code: "min", value: 5}, {privilege_code: "max", value: 30}], [{privilege_code: "min", value: 5}]]},
+        activity_object: hash_including(lago_id: entitlement.id, values: [{privilege_code: "min", value: 5}])
       ).once
       expect(Utils::ActivityLog).to have_received(:produce).once
     end
