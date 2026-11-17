@@ -65,19 +65,26 @@ module DailyUsages
     # from its own start, so the one that ended is read at its last instant too, otherwise its
     # events since the previous day would be in no row.
     def rate_card_usages
-      end_of_day_usages = current_usages(usage_timestamp)
       day_start = usage_date.in_time_zone(timezone).beginning_of_day
 
-      boundaries = end_of_day_usages.map { |usage| usage.billing_segment.started_at }.select { |at| at > day_start }.uniq
-      ended_usages = boundaries.flat_map do |boundary|
-        current_usages(BillingSegment.inclusive_end(boundary)).select { |usage| usage.billing_segment.started_at < boundary }
-      end
+      current_usages(usage_timestamp).flat_map do |usage|
+        usages = [usage]
+        # Walk back each card's segments that started inside the day: the one before each of
+        # them ended there, and is read at its last instant.
+        while (boundary = usages.last.billing_segment.started_at) > day_start
+          previous = current_usages(BillingSegment.inclusive_end(boundary))
+            .find { |u| u.contract_rate_card.id == usage.contract_rate_card.id }
+          break unless previous && previous.billing_segment.started_at < boundary
 
-      (end_of_day_usages + ended_usages).uniq { |usage| [usage.contract_rate_card.id, usage.billing_segment.started_at] }
+          usages << previous
+        end
+        usages
+      end
     end
 
     def current_usages(at)
-      Contracts::CurrentUsageService.call(
+      @current_usages ||= {}
+      @current_usages[at] ||= Contracts::CurrentUsageService.call(
         contract:,
         timestamp: at,
         apply_taxes: false,

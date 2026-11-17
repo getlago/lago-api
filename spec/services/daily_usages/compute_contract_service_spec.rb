@@ -327,4 +327,23 @@ RSpec.describe DailyUsages::ComputeContractService do
       expect(started.usage_diff).to eq(started.usage)
     end
   end
+
+  context "when the rate changes twice inside the usage date" do
+    let(:rate_card) { create(:rate_card, organization:, product:, product_filter:, currency: "EUR", billing_timing: "advance") }
+    let(:event_timestamps) { [Time.zone.parse("2027-02-10 04:00:00")] }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-10 06:00:00"), rate_properties: {"amount" => "3"})
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-10 12:00:00"), rate_properties: {"amount" => "5"})
+      create_event(Time.zone.parse("2027-02-10 08:00:00"))
+      create_event(Time.zone.parse("2027-02-10 14:00:00"))
+    end
+
+    it "records each of the three segments of the day" do
+      daily_usages = result.daily_usages.map(&:reload).sort_by(&:from_datetime)
+
+      expect(daily_usages.map { |du| du.usage["amount_cents"] }).to eq([200, 300, 500])
+      expect(daily_usages.drop(1).map(&:from_datetime)).to eq([Time.zone.parse("2027-02-10 06:00:00"), Time.zone.parse("2027-02-10 12:00:00")])
+    end
+  end
 end
