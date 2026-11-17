@@ -391,7 +391,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
           request
 
           expect(response).to have_http_status(:success)
-          expect(json[:entitlements].size).to eq(200) # 199 bulk features + seats, sso dropped
+          expect(json[:plan_entitlements].size).to eq(200) # 199 bulk features + seats, sso dropped
           expect(catalog_plan.entitlements.count).to eq(200)
         end
       end
@@ -410,7 +410,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
           request
 
           expect(response).to have_http_status(:success)
-          expect(json[:entitlements].sole[:privileges].size).to eq(50)
+          expect(json[:plan_entitlements].sole[:values].size).to eq(50)
         end
       end
 
