@@ -107,4 +107,62 @@ RSpec.describe Resolvers::IntegrationsResolver do
       expect(integrations_response["metadata"]["totalCount"]).to eq(0)
     end
   end
+
+  context "with a persisted QuickBooks integration" do
+    let(:quickbooks_integration) do
+      create(
+        :quickbooks_integration,
+        organization:,
+        settings: {realm_id: "1234567890", sandbox: true, sync_invoices: true, sync_credit_notes: false, sync_payments: true}
+      )
+    end
+    let(:query) do
+      <<~GQL
+        query {
+          integrations(limit: 5, types: [quickbooks]) {
+            collection {
+              __typename
+              ... on QuickbooksIntegration {
+                id code name connectionId realmId sandbox syncInvoices syncCreditNotes syncPayments
+              }
+            }
+            metadata { totalCount }
+          }
+        }
+      GQL
+    end
+
+    before { quickbooks_integration }
+
+    it "returns the QuickBooks integration" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["errors"]).to be_nil
+
+      integrations_response = result["data"]["integrations"]
+
+      expect(integrations_response["collection"]).to eq(
+        [
+          {
+            "__typename" => "QuickbooksIntegration",
+            "id" => quickbooks_integration.id,
+            "code" => "quickbooks",
+            "name" => "QuickBooks Integration",
+            "connectionId" => "quickbooks-test-connection",
+            "realmId" => "1234567890",
+            "sandbox" => true,
+            "syncInvoices" => true,
+            "syncCreditNotes" => false,
+            "syncPayments" => true
+          }
+        ]
+      )
+      expect(integrations_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end
