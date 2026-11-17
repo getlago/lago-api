@@ -90,6 +90,10 @@ RSpec.describe Membership do
         expect(permissions_hash.except(*described_class::SANDBOX_DENIED_PERMISSIONS).values).to all(be true)
         expect(permissions_hash).to include("customers:view" => true, "organization:integrations:create" => true)
       end
+
+      it "only denies permissions that exist" do
+        expect(Permission.permissions_hash.keys).to include(*described_class::SANDBOX_DENIED_PERMISSIONS)
+      end
     end
 
     context "with finance role" do
