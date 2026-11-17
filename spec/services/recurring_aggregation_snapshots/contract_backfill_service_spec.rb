@@ -66,8 +66,11 @@ RSpec.describe RecurringAggregationSnapshots::ContractBackfillService do
         rate_model: "standard", rate_properties: {"amount" => "20"})
       create_usage(1, Time.utc(2026, 3, 20))
 
-      # Processes the successor of the February close, which bills both March slices
-      BillingOperations::ProcessService.call!(customer:, timestamp: Time.utc(2026, 4, 1))
+      # Schedules then processes one operation per March slice: up to the rate change, then to the cycle end
+      2.times do
+        BillingOperations::ScheduleService.call!(customer:, timestamp: Time.utc(2026, 4, 1))
+        BillingOperations::ProcessService.call!(customer:, timestamp: Time.utc(2026, 4, 1))
+      end
     end
 
     it "writes the last slice of the latest close only" do
