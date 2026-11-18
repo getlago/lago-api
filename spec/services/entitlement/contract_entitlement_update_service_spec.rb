@@ -208,7 +208,6 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
           contract,
           {
             contract_entitlement: {
-              contract_external_id: contract.external_id,
               lago_contract_id: contract.id,
               feature_code: "seats",
               source: "plan",
@@ -247,7 +246,7 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
                 "contract_entitlement.created", contract,
                 {
                   contract_entitlement: {
-                    contract_external_id: contract.external_id, lago_contract_id: contract.id, feature_code: "storage", source: "contract",
+                    lago_contract_id: contract.id, feature_code: "storage", source: "contract",
                     values: [{privilege_code: "limit", value: 10, plan_value: nil, source: "contract"}]
                   }
                 }
@@ -256,7 +255,7 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
                 "contract_entitlement.updated", contract,
                 {
                   contract_entitlement: {
-                    contract_external_id: contract.external_id, lago_contract_id: contract.id, feature_code: "api", source: "plan",
+                    lago_contract_id: contract.id, feature_code: "api", source: "plan",
                     values: [{privilege_code: "calls", value: 200, plan_value: 100, source: "contract"}]
                   }
                 }
@@ -266,7 +265,7 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
                 {
                   # The entitlement as it applied before the write.
                   contract_entitlement: {
-                    contract_external_id: contract.external_id, lago_contract_id: contract.id, feature_code: "seats", source: "plan",
+                    lago_contract_id: contract.id, feature_code: "seats", source: "plan",
                     values: [
                       {privilege_code: "sso", value: true, plan_value: true, source: "plan"},
                       {privilege_code: "max", value: 50, plan_value: 50, source: "plan"}
