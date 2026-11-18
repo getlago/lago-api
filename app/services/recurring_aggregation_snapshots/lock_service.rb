@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
 module RecurringAggregationSnapshots
-  # Serializes the snapshot writes of one charge and billing period of a subscription.
+  # Serializes the snapshot writes of one key and billing period.
   class LockService < BaseLockService
-    def initialize(subscription:, charge:, to_datetime:)
-      @subscription = subscription
-      @charge = charge
+    def initialize(key:, to_datetime:)
+      @key = key
       @to_datetime = to_datetime
 
       # No timeout: a draft invoice refresh does not retry on FailedToAcquireLock
@@ -14,14 +13,14 @@ module RecurringAggregationSnapshots
 
     private
 
-    attr_reader :subscription, :charge, :to_datetime
+    attr_reader :key, :to_datetime
 
     def lock_owner
-      RecurringAggregationSnapshot
+      key.model
     end
 
     def lock_key
-      "recurring-aggregation-snapshot-#{subscription.id}-#{charge.id}-#{to_datetime.iso8601(6)}"
+      key.lock_key(to_datetime)
     end
   end
 end

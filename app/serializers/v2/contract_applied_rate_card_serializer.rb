@@ -9,7 +9,7 @@ module V2
         lago_id: model.id,
         external_contract_id: model.contract.external_id,
         rate_card_code: model.rate_card.code,
-        units: model.units,
+        units: model.terms.first&.units,
         effective_date: format_date(model.effective_date),
         billing_anchor_date: format_date(model.billing_anchor_date),
         **(include?(:rate_phases) ? {rate_phases: rate_phases} : {})

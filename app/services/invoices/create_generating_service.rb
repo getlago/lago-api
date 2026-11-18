@@ -4,7 +4,7 @@ module Invoices
   class CreateGeneratingService < BaseService
     Result = BaseResult[:invoice]
 
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false, billing_entity: nil, purchase_order_number: nil, payment_term: nil, payment_term_source: nil) # rubocop:disable Metrics/ParameterLists
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false, billing_entity: nil, purchase_order_number: nil, payment_term: nil, payment_term_source: nil, subscription: nil, progressive_billing_trigger: nil) # rubocop:disable Metrics/ParameterLists
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
@@ -18,6 +18,8 @@ module Invoices
       @purchase_order_number = purchase_order_number
       @payment_term = payment_term
       @payment_term_source = payment_term_source
+      @subscription = subscription
+      @progressive_billing_trigger = progressive_billing_trigger
 
       super
     end
@@ -43,7 +45,8 @@ module Invoices
           net_payment_term: payment_term.net_payment_term_alias,
           skip_charges:,
           self_billed: customer.partner_account?,
-          purchase_order_number:
+          purchase_order_number:,
+          progressive_billing_trigger:
         )
         result.invoice = invoice
 
@@ -58,7 +61,7 @@ module Invoices
     private
 
     attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id, :recurring
-    attr_accessor :subscription_gated, :billing_entity, :purchase_order_number
+    attr_accessor :subscription_gated, :billing_entity, :purchase_order_number, :subscription, :progressive_billing_trigger
 
     delegate :organization, to: :customer
 
@@ -73,7 +76,7 @@ module Invoices
     end
 
     def resolved_payment_term
-      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:, billing_entity: invoice_billing_entity)
+      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:, subscription:, billing_entity: invoice_billing_entity)
     end
 
     # NOTE: accounting date must be in customer timezone

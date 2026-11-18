@@ -41,6 +41,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       "currency" => invoice.currency,
       "fees_amount_cents" => invoice.fees_amount_cents,
       "progressive_billing_credit_amount_cents" => invoice.progressive_billing_credit_amount_cents,
+      "progressive_billing_trigger" => invoice.progressive_billing_trigger,
       "coupons_amount_cents" => invoice.coupons_amount_cents,
       "credit_notes_amount_cents" => invoice.credit_notes_amount_cents,
       "prepaid_credit_amount_cents" => invoice.prepaid_credit_amount_cents,
@@ -86,6 +87,22 @@ RSpec.describe ::V1::InvoiceSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["invoice"]["applied_usage_thresholds"].count).to eq(1)
+    end
+
+    it "reports a usage threshold trigger when none was recorded" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["invoice"]["progressive_billing_trigger"]).to eq("usage_threshold")
+    end
+
+    context "when the invoice was triggered by a wallet expiration" do
+      let(:invoice) { create(:invoice, invoice_type: :progressive_billing, progressive_billing_trigger: :wallet_expiration) }
+
+      it "serializes the recorded trigger" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["invoice"]["progressive_billing_trigger"]).to eq("wallet_expiration")
+      end
     end
   end
 
@@ -150,7 +167,8 @@ RSpec.describe ::V1::InvoiceSerializer do
       target = create(:invoice, organization:, customer:)
 
       3.times do
-        subscription = create(:subscription, customer:, organization:, plan:, external_id: SecureRandom.uuid)
+        billing_entity = create(:billing_entity, organization:)
+        subscription = create(:subscription, customer:, organization:, plan:, billing_entity:, external_id: SecureRandom.uuid)
         create(:invoice_subscription, :boundaries, invoice: target, subscription:)
       end
 
@@ -180,6 +198,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       queries = capture_sql { serialize(target) }
 
       expect(queries.count { |sql| sql.include?("billing_object_connections") }).to eq(1)
+      expect(queries.count { |sql| sql.include?('FROM "billing_entities"') }).to eq(2)
       expect(queries.count { |sql| sql.include?("payment_provider_customers") }).to eq(1)
       expect(queries.count { |sql| sql.include?("integration_customers") }).to eq(1)
     end

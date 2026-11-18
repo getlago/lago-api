@@ -2,6 +2,8 @@
 
 module Admin
   class ApplyFeatureChangeService < ::BaseService
+    include SandboxMirrorAuditLogs
+
     Result = BaseResult[:audit_log]
 
     def initialize(actor:, organization:, feature_type:, feature_key:, enabled:, reason:, notify_org_admin: false, rollback_of: nil)
@@ -19,7 +21,10 @@ module Admin
     def call
       return result.not_found_failure!(resource: "organization") unless organization
 
-      organization.with_lock do
+      ActiveRecord::Base.transaction do
+        # Refuses a sandbox once the row is locked and reloaded, so a toggle that waited behind a link sees it.
+        ::Organizations::SandboxLockService.call!(organization:)
+
         before_value = current_features.include?(feature_key)
         validator = FeatureChangeValidator.new(
           result, feature_type:, feature_key:, enabled:, before_value:, rollback_of:
@@ -42,18 +47,27 @@ module Admin
         audit_log.validate!
 
         update_feature!
+        sync = ::Organizations::SyncSandboxSettingsService.call!(organization:, actor:)
+        mirrored = mirrored_changes(sync.changes)
+        # Shared with the rows of the sandbox copy, which the Slack message names: set from what the sync changed.
+        audit_log.batch_id ||= SecureRandom.uuid if mirrored.any?
         audit_log.save!
         result.audit_log = audit_log
+        # Each in the batch of the production row.
+        mirror_audit_logs!(sync.sandbox_organization, mirrored, batch_id: audit_log.batch_id, rollback_of:)
 
         after_commit do
           Admin::SlackNotificationJob.perform_later(audit_log.id)
           AdminMailer.feature_toggled(audit_log:).deliver_later if notify_org_admin
+          ApiKeys::CacheService.expire_all_cache(organization)
         end
       end
 
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private

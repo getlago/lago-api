@@ -10,7 +10,7 @@ class Coupon < ApplicationRecord
   belongs_to :organization
 
   has_many :applied_coupons
-  has_many :customers, through: :applied_coupons
+  has_many :customers, -> { kept }, through: :applied_coupons
   has_many :coupon_targets
   has_many :plans, through: :coupon_targets
   has_many :catalog_plans, through: :coupon_targets

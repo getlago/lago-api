@@ -24,18 +24,47 @@ RSpec.describe UsersService do
       )
     end
 
-    it "calls SegmentTrackJob" do
-      result = described_class.call(:register, "user@email.com", "password", "organization_name")
+    context "when tracking the registration" do
+      before do
+        allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
+        stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "false"))
+      end
 
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: "membership/#{result.membership.id}",
-        event: "organization_registered",
-        properties: {
-          organization_name: result.organization.name,
-          organization_id: result.organization.id,
-          email: result.user.email
-        }
-      )
+      it "calls SegmentTrackJob without the front host on a self-hosted install" do
+        result = described_class.call(:register, "user@email.com", "password", "organization_name")
+
+        expect(SegmentTrackJob).to have_been_enqueued.with(
+          membership_id: "membership/#{result.membership.id}",
+          event: "organization_registered",
+          properties: {
+            organization_name: result.organization.name,
+            organization_id: result.organization.id,
+            email: result.user.email,
+            self_serve: false,
+            region: nil
+          }
+        )
+      end
+
+      context "when on Lago Cloud" do
+        before { stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "true")) }
+
+        it "calls SegmentTrackJob with the front host as the region" do
+          result = described_class.call(:register, "user@email.com", "password", "organization_name")
+
+          expect(SegmentTrackJob).to have_been_enqueued.with(
+            membership_id: "membership/#{result.membership.id}",
+            event: "organization_registered",
+            properties: {
+              organization_name: result.organization.name,
+              organization_id: result.organization.id,
+              email: result.user.email,
+              self_serve: false,
+              region: "app.eu.getlago.com"
+            }
+          )
+        end
+      end
     end
 
     it_behaves_like "produces a security log", "user.signed_up" do
@@ -110,6 +139,39 @@ RSpec.describe UsersService do
 
       it_behaves_like "does not produce a security log" do
         before { described_class.call(:register, "email", "password", "organization_name") }
+      end
+    end
+
+    context "when the organization fails to save" do
+      it "rolls the user back and returns the validation failure" do
+        result = nil
+
+        expect { result = described_class.call(:register, "email", "password", "") }.not_to change(User, :count)
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(name: ["value_is_mandatory"])
+        expect(SegmentIdentifyJob).not_to have_been_enqueued
+        expect(SegmentTrackJob).not_to have_been_enqueued
+        expect(UserDevices::RegisterService).not_to have_received(:call!)
+      end
+    end
+
+    context "when a record raises a validation error" do
+      before do
+        allow(Membership).to receive(:create!)
+          .and_raise(ActiveRecord::RecordInvalid.new(Membership.new.tap(&:validate)))
+      end
+
+      it "rolls the user back and returns the validation failure" do
+        result = nil
+
+        expect { result = described_class.call(:register, "email", "password", "Foobar") }.not_to change(User, :count)
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(organization: ["relation_must_exist"], user: ["relation_must_exist"])
+        expect(SegmentIdentifyJob).not_to have_been_enqueued
+        expect(SegmentTrackJob).not_to have_been_enqueued
+        expect(UserDevices::RegisterService).not_to have_received(:call!)
       end
     end
   end
@@ -242,6 +304,30 @@ RSpec.describe UsersService do
         expect(result.organization).to eq invite.organization
         expect(result.token).to be_present
       end
+
+      it "closes the open self-serve signup attempts of the address" do
+        attempt = create(:pending_signup, email:)
+        attempt_token = create(:pending_signup_token, pending_signup: attempt)
+
+        registration_result
+
+        expect(attempt.reload).to have_attributes(password_digest: nil, closed_at: be_present, verified_at: nil)
+        expect(attempt_token.reload).to be_replaced
+      end
+    end
+
+    context "when a self-serve signup holds the address", transaction: false do
+      let(:invite) { create(:invite, email:, organization: create(:organization)) }
+
+      before { stub_const("BaseLockService::ACQUIRE_LOCK_TIMEOUT", 0.seconds) }
+
+      it "answers lock_acquisition_failed and creates no user" do
+        with_email_lock(email) do
+          expect(registration_result.error.code).to eq("lock_acquisition_failed")
+        end
+
+        expect(User.where(email:)).not_to exist
+      end
     end
   end
 
@@ -276,6 +362,7 @@ RSpec.describe UsersService do
             expect(result).to be_a(BaseResult)
             expect(result).to be_success
             expect(result.user).to eq user
+            expect(result.needs_organization).to be(false)
             expect(result.token).to be_present
           end
 
@@ -416,6 +503,88 @@ RSpec.describe UsersService do
       it "logs in the existing user" do
         expect(result).to be_success
         expect(result.user).to eq(mixed_case_user)
+      end
+    end
+
+    context "with a self-serve user who never had an organization" do
+      let(:orgless_user) { create(:user, :self_serve, email: "jane@getlago.com", password: "Lago-Passw0rd") }
+      let(:email) { orgless_user.email }
+      let(:password) { "Lago-Passw0rd" }
+
+      before { allow(UserDevices::RegisterService).to receive(:call!) }
+
+      context "when self-serve is on" do
+        include_context "with self-serve enabled"
+
+        it "opens a password session that needs an organization" do
+          expect(result).to be_success
+          expect(result.needs_organization).to be(true)
+          expect(Utils::AuthToken.decode(token: result.token)["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+          expect(SegmentIdentifyJob).not_to have_been_enqueued
+          expect(UserDevices::RegisterService).to have_received(:call!).with(user: orgless_user)
+        end
+
+        context "with a wrong password" do
+          let(:password) { "Wrong-Passw0rd" }
+
+          it "gives the usual answer" do
+            expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+            expect(result.token).to be_nil
+          end
+        end
+
+        context "when the user is a CS admin" do
+          let(:orgless_user) { create(:user, :self_serve, cs_admin: true, password: "Lago-Passw0rd") }
+
+          it "gives the usual answer" do
+            expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          end
+        end
+
+        context "when the user did not come from a self-serve signup" do
+          let(:orgless_user) { create(:user, password: "Lago-Passw0rd") }
+
+          it "gives the usual answer" do
+            expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          end
+        end
+
+        context "when the user's memberships were all revoked" do
+          before { create(:membership, :revoked, user: orgless_user) }
+
+          it "gives the usual answer" do
+            expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          end
+        end
+      end
+
+      context "when self-serve is off" do
+        it "gives the usual answer" do
+          expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+        end
+      end
+    end
+
+    context "with an unknown email" do
+      let(:email) { "nobody@getlago.com" }
+      let(:password) { "Lago-Passw0rd" }
+
+      before { allow(described_class::DUMMY_PASSWORD.value).to receive(:is_password?).and_call_original }
+
+      context "when self-serve is on" do
+        include_context "with self-serve enabled"
+
+        it "still compares a password, so timing reveals nothing" do
+          expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          expect(described_class::DUMMY_PASSWORD.value).to have_received(:is_password?).with("Lago-Passw0rd")
+        end
+      end
+
+      context "when self-serve is off" do
+        it "answers without comparing a password, as before" do
+          expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          expect(described_class::DUMMY_PASSWORD.value).not_to have_received(:is_password?)
+        end
       end
     end
   end

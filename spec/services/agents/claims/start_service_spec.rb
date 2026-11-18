@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Agents::Claims::StartService, :premium do
   subject(:result) { described_class.call(storefront:, params:) }
 
-  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront]) }
+  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront], feature_flags: %w[agent_storefront]) }
   let(:storefront) { create(:agent_storefront_integration, organization:) }
   let(:registration) { create(:agent_registration, storefront:) }
   let(:claim) { create(:agent_claim, registration:, code: "ABCD2345") }

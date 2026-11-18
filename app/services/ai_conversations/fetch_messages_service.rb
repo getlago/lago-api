@@ -17,9 +17,12 @@ module AiConversations
       return result if ai_conversation.mistral_conversation_id.blank?
 
       http_result = @http.get(headers:)
-      messages = http_result["messages"].map { |h| h.slice("content", "created_at", "type") }
+      result.messages = http_result["messages"].filter_map do |message|
+        content = LagoMcpClient::Mistral::Content.text(message["content"])
+        next if content.blank?
 
-      result.messages = messages
+        message.slice("created_at", "type").merge("content" => content)
+      end
       result
     rescue LagoHttpClient::HttpError => e
       Rails.logger.error("Error fetching Mistral messages: #{e.message}")

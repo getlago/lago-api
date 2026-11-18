@@ -9,6 +9,22 @@ RSpec.describe Coupon do
 
   it { is_expected.to have_many(:catalog_plans).through(:coupon_targets) }
 
+  describe "#customers" do
+    subject(:coupon) { create(:coupon) }
+
+    let(:kept_customer) { create(:customer) }
+    let(:deleted_customer) { create(:customer, :deleted) }
+
+    before do
+      create(:applied_coupon, coupon:, customer: kept_customer)
+      create(:applied_coupon, coupon:, customer: deleted_customer)
+    end
+
+    it "does not return deleted customers" do
+      expect(coupon.customers).to eq([kept_customer])
+    end
+  end
+
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
