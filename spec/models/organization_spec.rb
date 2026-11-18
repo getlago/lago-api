@@ -307,6 +307,10 @@ RSpec.describe Organization do
     end
 
     describe "of activation_status" do
+      let(:self_serve_production) { create(:organization, :self_serve) }
+      let(:regular) { create(:organization) }
+      let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: self_serve_production) }
+
       context "with a self-serve production organization waiting for a payment method" do
         subject(:organization) { build(:organization, :self_serve, activation_status: "pending_payment_method") }
 
@@ -324,13 +328,24 @@ RSpec.describe Organization do
 
       context "with a self-serve sandbox waiting for a payment method" do
         subject(:organization) do
-          build(:organization, :self_serve, :sandbox, production_organization: create(:organization, :self_serve),
+          build(:organization, :self_serve, :sandbox, production_organization: self_serve_production,
             activation_status: "pending_payment_method")
         end
 
         it "is invalid" do
           expect(organization).not_to be_valid
           expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      context "with a self-serve production organization waiting for a payment method with an activation date" do
+        subject(:organization) do
+          build(:organization, :self_serve, activation_status: "pending_payment_method", activated_at: Time.current)
+        end
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activated_at: ["value_is_invalid"])
         end
       end
 
@@ -344,17 +359,19 @@ RSpec.describe Organization do
       end
 
       it "refuses a waiting regular organization in the database, for writes that skip validations" do
-        regular = create(:organization)
-
         expect { regular.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
           .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
       end
 
       it "refuses a waiting sandbox in the database, for writes that skip validations" do
-        sandbox = create(:organization, :self_serve, :sandbox, production_organization: create(:organization, :self_serve))
-
         expect { sandbox.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
           .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
+      end
+
+      it "refuses a waiting organization with an activation date in the database, for writes that skip validations" do
+        expect do
+          self_serve_production.update_columns(activation_status: "pending_payment_method", activated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        end.to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
       end
     end
 

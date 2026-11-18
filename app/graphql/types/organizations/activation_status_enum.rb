@@ -6,8 +6,14 @@ module Types
       graphql_name "OrganizationActivationStatusEnum"
       description "Whether an organization is open, or a self-serve production organization waiting for a payment method"
 
-      value "pending_payment_method", description: "Waiting for a payment method before it opens"
-      value "active", description: "Open"
+      DESCRIPTIONS = {
+        pending_payment_method: "Waiting for a payment method before it opens",
+        active: "Open"
+      }.freeze
+
+      Organization::ACTIVATION_STATUSES.each do |key, status|
+        value status, description: DESCRIPTIONS.fetch(key)
+      end
     end
   end
 end

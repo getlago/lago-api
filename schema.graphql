@@ -11601,7 +11601,7 @@ Safe Organization Type
 """
 type Organization {
   accessibleByCurrentSession: Boolean!
-  activationStatus: OrganizationActivationStatusEnum!
+  activationStatus: OrganizationActivationStatusEnum
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!

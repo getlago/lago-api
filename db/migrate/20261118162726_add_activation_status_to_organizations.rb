@@ -10,7 +10,7 @@ class AddActivationStatusToOrganizations < ActiveRecord::Migration[8.1]
     add_column :organizations, :activated_at, :datetime, if_not_exists: true
 
     add_check_constraint :organizations,
-      "activation_status = 'active' OR (self_serve AND environment = 'production')",
+      "activation_status = 'active' OR (self_serve AND environment = 'production' AND activated_at IS NULL)",
       name: "check_organizations_on_activation_status", validate: false, if_not_exists: true
   end
 end

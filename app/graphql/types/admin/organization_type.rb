@@ -7,6 +7,7 @@ module Types
 
       include Types::Organizations::EnvironmentFields
 
+      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :email, String, null: true
       field :feature_flags, [String], null: false

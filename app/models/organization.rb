@@ -441,10 +441,11 @@ class Organization < ApplicationRecord
     errors.add(:environment, :invalid) if sandbox? && persisted? && sandbox_organization.present?
   end
 
-  # Mirrors check_organizations_on_activation_status: only a self-serve production organization can wait for a
-  # payment method.
+  # Mirrors check_organizations_on_activation_status: only a self-serve production organization that was never
+  # activated can wait for a payment method.
   def validate_activation_status
     errors.add(:activation_status, :invalid) unless self_serve? && production?
+    errors.add(:activated_at, :invalid) if activated_at.present?
   end
 
   def set_hmac_key

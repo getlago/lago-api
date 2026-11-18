@@ -4436,7 +4436,7 @@ CREATE TABLE public.organizations (
     production_organization_id uuid,
     activation_status public.organization_activation_status DEFAULT 'active'::public.organization_activation_status NOT NULL,
     activated_at timestamp(6) without time zone,
-    CONSTRAINT check_organizations_on_activation_status CHECK (((activation_status = 'active'::public.organization_activation_status) OR (self_serve AND (environment = 'production'::public.organization_environment)))),
+    CONSTRAINT check_organizations_on_activation_status CHECK (((activation_status = 'active'::public.organization_activation_status) OR (self_serve AND (environment = 'production'::public.organization_environment) AND (activated_at IS NULL)))),
     CONSTRAINT check_organizations_on_environment_link CHECK ((((environment = 'production'::public.organization_environment) AND (production_organization_id IS NULL)) OR ((environment = 'sandbox'::public.organization_environment) AND (production_organization_id IS NOT NULL)))),
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0)),
