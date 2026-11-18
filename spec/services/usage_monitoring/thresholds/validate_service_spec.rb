@@ -73,7 +73,7 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
     end
   end
 
-  ["abc", "", "0x1A", "Infinity", "NaN", Float::INFINITY, 1e30, "10000000000000000000000000", true, [1], {amount: 1}].each do |value|
+  ["abc", "", "0x1A", "Infinity", "NaN", Float::INFINITY, 1e30, "10000000000000000000000000", "9999999999999999999999999.999995", true, [1], {amount: 1}].each do |value|
     context "with value #{value.inspect}" do
       let(:thresholds) { [{value:}] }
 
@@ -83,7 +83,7 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
     end
   end
 
-  [0, -10, "0"].each do |value|
+  [0, -10, "0", "0.000001"].each do |value|
     context "with a recurring value of #{value.inspect}" do
       let(:thresholds) { [{value:, recurring: true}] }
 
@@ -95,6 +95,14 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
 
   context "with the same value sent as a number and as a string" do
     let(:thresholds) { [{value: 2000}, {value: "2000.0"}] }
+
+    it "returns duplicate_threshold_values" do
+      expect(result.error.messages).to eq({thresholds: ["duplicate_threshold_values"]})
+    end
+  end
+
+  context "with values that round to the same 5 decimals" do
+    let(:thresholds) { [{value: "1.000001"}, {value: "1.000002"}] }
 
     it "returns duplicate_threshold_values" do
       expect(result.error.messages).to eq({thresholds: ["duplicate_threshold_values"]})

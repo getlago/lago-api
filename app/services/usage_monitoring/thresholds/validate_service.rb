@@ -28,7 +28,7 @@ module UsageMonitoring
           return failure("value_is_invalid")
         end
 
-        return failure("recurring_value_is_negative") unless all_recurring_threshold_values_positive?(thresholds)
+        return failure("recurring_value_is_negative") unless all_recurring_threshold_values_positive?(cast_thresholds)
         return failure("duplicate_threshold_values") if duplicate_threshold_values?(cast_thresholds)
         return failure("value_is_invalid") if thresholds.count { recurring_param?(it) } > 1
 
@@ -45,14 +45,14 @@ module UsageMonitoring
       end
 
       def value_within_limit?(value)
-        decimal = BigDecimal(value.to_s)
+        decimal = BigDecimal(value.to_s).round(5)
         decimal.finite? && decimal.abs < VALUE_LIMIT
       rescue ArgumentError
         false
       end
 
       def cast_thresholds
-        thresholds.map { it.merge(value: BigDecimal(it[:value].to_s)) }
+        thresholds.map { it.merge(value: BigDecimal(it[:value].to_s).round(5)) }
       end
     end
   end
