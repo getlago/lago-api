@@ -2,15 +2,21 @@
 
 module Utils
   class Entitlement
-    # Codes are compared stripped, as they are saved. A feature can still store a padded code next to its stripped
-    # twin (saved before codes were stripped): sending both exact codes is accepted, as each matches its own privilege.
+    # Codes are saved stripped. A code that is not a string is left to the model validation.
+    def self.stripped_code(code)
+      code.is_a?(String) ? code.strip : code
+    end
+
+    # Two codes are duplicates when they reach the same privilege. A stored code matches exactly, so a padded code
+    # saved before codes were stripped stays apart from its stripped twin; any other code reaches its stripped form.
     def self.privilege_code_is_duplicated?(privileges_params, stored_codes: [])
       return false if privileges_params.blank?
 
-      codes = privileges_params.map { it[:code] }
-      codes.uniq.size < codes.size || codes.group_by { it.is_a?(String) ? it.strip : it }.values.any? do |group|
-        group.size > 1 && !group.all? { stored_codes.include?(it) }
+      targets = privileges_params.map do |privilege_params|
+        code = privilege_params[:code]
+        stored_codes.include?(code) ? code : stripped_code(code)
       end
+      targets.uniq.size < targets.size
     end
 
     def self.cast_value(value, type)

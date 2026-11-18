@@ -240,6 +240,19 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
+      context "when only the padded code is stored and its stripped twin is sent too" do
+        let(:privilege1) { create(:privilege, feature:, code: " max", name: "Maximum") }
+        let(:params) { {privileges: [{code: " max", name: "Padded."}, {code: "max", name: "Max."}]} }
+
+        it "updates the padded privilege and creates the stripped one" do
+          result = subject
+
+          expect(result).to be_success
+          expect(feature.privileges.reload.pluck(:code, :name)).to match_array([[" max", "Padded."], ["max", "Max."]])
+          expect(privilege1.reload.name).to eq("Padded.")
+        end
+      end
+
       context "when the feature stores a padded code and its stripped twin" do
         let(:privilege2) { create(:privilege, feature:, code: " max", name: "Padded") }
         let(:params) { {privileges: [{code: " max", name: "Padded."}]} }
@@ -654,6 +667,24 @@ RSpec.describe Entitlement::FeatureUpdateService do
             [privilege2.id, "min", "Minimum"],
             [privilege3.id, "opt", "Optional"]
           ])
+        end
+      end
+
+      context "when only the padded code is stored and its stripped twin is sent too" do
+        let(:privilege1) { create(:privilege, feature:, code: " max", name: "Maximum") }
+        let(:params) { {privileges: [{code: " max", name: "Padded."}, {code: "max", name: "Max."}]} }
+
+        it "updates the padded privilege and creates the stripped one" do
+          result = subject
+
+          expect(result).to be_success
+          expect(feature.privileges.reload.pluck(:code, :name)).to match_array([
+            [" max", "Padded."],
+            ["max", "Max."],
+            ["min", "Minimum"],
+            ["opt", "Optional"]
+          ])
+          expect(privilege1.reload.name).to eq("Padded.")
         end
       end
 
