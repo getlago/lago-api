@@ -36,6 +36,17 @@ module Api
           end
         end
 
+        # Renders the entitlement as it applied before the removal.
+        def destroy
+          result = ::Entitlement::SubscriptionFeatureRemoveService.call(owner: contract, feature_code: params[:code])
+
+          if result.success?
+            render_entitlement(result.entitlement)
+          else
+            render_error_response(result)
+          end
+        end
+
         private
 
         attr_reader :contract

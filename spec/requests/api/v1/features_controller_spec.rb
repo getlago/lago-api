@@ -675,6 +675,29 @@ RSpec.describe Api::V1::FeaturesController do
       expect(json[:feature][:description]).to eq("Number of users of the account")
     end
 
+    context "when the feature has contract removals" do
+      let(:contract) { create(:contract, organization:) }
+      let(:feature_removal) { create(:subscription_feature_removal, :contract, contract:, feature: feature1) }
+      let(:privilege_removal) { create(:subscription_feature_removal, :contract, contract:, privilege: privilege1) }
+      let(:other_feature_removal) { create(:subscription_feature_removal, :contract, contract:, feature: feature2) }
+      let(:subscription_removal) { create(:subscription_feature_removal, feature: feature1) }
+
+      before do
+        feature_removal
+        privilege_removal
+        other_feature_removal
+        subscription_removal
+      end
+
+      it "discards the contract removals of the feature and of its privileges" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(Entitlement::SubscriptionFeatureRemoval.where(contract:)).to eq([other_feature_removal])
+        expect(subscription_removal.reload.deleted_at).to be_nil
+      end
+    end
+
     context "when feature does not exist" do
       let(:feature_code) { "non_existent" }
 

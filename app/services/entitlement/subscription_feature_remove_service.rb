@@ -5,8 +5,10 @@ module Entitlement
   class SubscriptionFeatureRemoveService < BaseService
     include Concerns::OwnerLockConcern
     include Concerns::OverrideOwnerConcern
+    include Concerns::ContractEntitlementEventsConcern
 
-    Result = BaseResult[:feature_code]
+    # entitlement: for a contract, the feature as it applied to the contract before the removal.
+    Result = BaseResult[:feature_code, :entitlement]
 
     def initialize(owner:, feature_code:)
       @owner = owner
@@ -14,10 +16,11 @@ module Entitlement
       super
     end
 
-    # The subscription event only: the callers of a contract log their own.
+    # The subscription event only: a contract logs contract_entitlement.deleted.
     activity_loggable(
       action: "subscription.updated",
-      record: -> { subscription }
+      record: -> { subscription },
+      condition: -> { subscription.present? }
     )
 
     def call
@@ -26,9 +29,11 @@ module Entitlement
 
       ActiveRecord::Base.transaction do
         lock_override_owner!(owner)
+        find_contract_entitlement! if contract
         delete_subscription_entitlement_if_exists
         delete_privilege_removals_if_exists
         add_feature_removal_if_feature_is_in_plan
+        send_contract_entitlement_deleted_events if contract
       end
 
       SendWebhookJob.perform_after_commit("subscription.updated", subscription) if subscription
@@ -46,6 +51,23 @@ module Entitlement
 
     def subscription
       owner if owner.is_a?(Subscription)
+    end
+
+    def contract
+      owner if owner.is_a?(Contract)
+    end
+
+    # Read under the contract lock, so that of two concurrent removals the second one finds nothing.
+    # A feature that does not apply to the contract (never granted or already removed) is not found.
+    def find_contract_entitlement!
+      result.entitlement = SubscriptionEntitlement.for_contract(contract).find { it.entitlement_feature_id == feature.id }
+      result.not_found_failure!(resource: "feature").raise_if_error! unless result.entitlement
+    end
+
+    def send_contract_entitlement_deleted_events
+      return unless render_contract_entitlement_events?(contract)
+
+      send_contract_entitlement_events(contract, [[render_contract_entitlement(result.entitlement), nil]])
     end
 
     def feature
