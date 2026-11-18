@@ -706,6 +706,38 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
         {code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats.max", meta: {}}]}
     end
 
+    # PATCH cannot remove a feature: a null feature value is refused, where {} is a feature with no values.
+    context "when a feature value is null" do
+      let(:request_params) { {entitlements: {sso: {provider: "okta"}, seats: nil}} }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats", meta: {}}]}
+
+      it "sends no activity log" do
+        request
+
+        expect(Utils::ActivityLog).not_to have_received(:produce)
+      end
+    end
+
+    context "when a feature value is null and the feature is unknown" do
+      let(:request_params) { {entitlements: {unknown: nil}} }
+
+      include_examples "a refused merge", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "resource_not_found", field: "entitlements.unknown", meta: {resource: "feature"}}]}
+    end
+
+    context "when a feature value is an empty map" do
+      let(:request_params) { {entitlements: {sso: {}}} }
+
+      it "adds the feature with no values" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(catalog_plan.entitlements.find_by(feature: sso).values).to be_empty
+      end
+    end
+
     context "with expands" do
       let(:query) { "?expands[]=feature" }
 
