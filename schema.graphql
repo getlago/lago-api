@@ -3668,11 +3668,7 @@ input CreateContractAppliedRateCardInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-
-  """
-  External id of the contract
-  """
-  externalId: String!
+  contractId: ID!
   rateCardCode: String!
   ratePhases: [PhaseInput!]
   units: Float
@@ -15798,11 +15794,7 @@ input TerminateContractInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-
-  """
-  External id of the contract to terminate
-  """
-  externalId: String!
+  id: ID!
 }
 
 """
@@ -16768,11 +16760,7 @@ input UpdateContractInput {
   clientMutationId: String
   consolidateInvoice: Boolean
   endedAt: ISO8601DateTime
-
-  """
-  External id of the contract to update
-  """
-  externalId: String!
+  id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput

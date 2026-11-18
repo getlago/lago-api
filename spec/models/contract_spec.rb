@@ -435,55 +435,5 @@ RSpec.describe Contract do
         expect(described_class.live).to match_array([pending, active])
       end
     end
-
-    describe ".live_by_external_id" do
-      let(:organization) { create(:organization) }
-
-      it "resolves to the live contract, ignoring terminated siblings" do
-        create(:contract, :terminated, organization:, external_id: "reused", started_at: 2.months.ago)
-        live = create(:contract, :pending, organization:, external_id: "reused")
-
-        expect(organization.contracts.live_by_external_id("reused")).to eq(live)
-      end
-
-      it "returns nil when only historical contracts share the id" do
-        create(:contract, :terminated, organization:, external_id: "gone")
-
-        expect(organization.contracts.live_by_external_id("gone")).to be_nil
-      end
-
-      it "prefers the pending replacement over its active sibling" do
-        active = create(:contract, organization:, external_id: "reused", started_at: 1.month.ago)
-        pending = create(:contract, :pending, organization:, external_id: "reused")
-
-        expect(organization.contracts.live_by_external_id("reused")).to eq(pending)
-        expect(active.reload.status).to eq("active")
-      end
-    end
-
-    describe ".terminatable_by_external_id" do
-      let(:organization) { create(:organization) }
-
-      it "resolves to the live contract, ignoring terminated siblings" do
-        create(:contract, :terminated, organization:, external_id: "reused", started_at: 2.months.ago)
-        live = create(:contract, :pending, organization:, external_id: "reused")
-
-        expect(organization.contracts.terminatable_by_external_id("reused")).to eq(live)
-      end
-
-      it "returns nil when only historical contracts share the id" do
-        create(:contract, :terminated, organization:, external_id: "gone")
-
-        expect(organization.contracts.terminatable_by_external_id("gone")).to be_nil
-      end
-
-      it "prefers the active contract over its pending replacement" do
-        active = create(:contract, organization:, external_id: "reused", started_at: 1.month.ago)
-        pending = create(:contract, :pending, organization:, external_id: "reused")
-
-        expect(organization.contracts.terminatable_by_external_id("reused")).to eq(active)
-        expect(pending.reload.status).to eq("pending")
-      end
-    end
   end
 end
