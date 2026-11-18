@@ -224,48 +224,6 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
-      context "when a privilege is stored with a padded code" do
-        let(:privilege1) { create(:privilege, feature:, code: " max", name: "Maximum") }
-        let(:value) { create(:entitlement_value, entitlement: create(:entitlement, feature:), privilege: privilege1, value: "10") }
-        let(:params) { {privileges: [{code: " max", name: "Max."}]} }
-
-        before { value }
-
-        it "matches it by its exact code" do
-          result = subject
-
-          expect(result).to be_success
-          expect(feature.privileges.reload.pluck(:id, :code, :name)).to eq([[privilege1.id, " max", "Max."]])
-          expect(value.reload).not_to be_discarded
-        end
-      end
-
-      context "when only the padded code is stored and its stripped twin is sent too" do
-        let(:privilege1) { create(:privilege, feature:, code: " max", name: "Maximum") }
-        let(:params) { {privileges: [{code: " max", name: "Padded."}, {code: "max", name: "Max."}]} }
-
-        it "updates the padded privilege and creates the stripped one" do
-          result = subject
-
-          expect(result).to be_success
-          expect(feature.privileges.reload.pluck(:code, :name)).to match_array([[" max", "Padded."], ["max", "Max."]])
-          expect(privilege1.reload.name).to eq("Padded.")
-        end
-      end
-
-      context "when the feature stores a padded code and its stripped twin" do
-        let(:privilege2) { create(:privilege, feature:, code: " max", name: "Padded") }
-        let(:params) { {privileges: [{code: " max", name: "Padded."}]} }
-
-        it "updates the privilege whose code matches exactly and discards the other" do
-          result = subject
-
-          expect(result).to be_success
-          expect(feature.privileges.reload.pluck(:id, :code, :name)).to eq([[privilege2.id, " max", "Padded."]])
-          expect(privilege1.reload).to be_discarded
-        end
-      end
-
       context "when two privilege codes are equal once stripped" do
         let(:params) { {name: "Renamed", privileges: [{code: "max", name: "A"}, {code: " max ", name: "B"}]} }
 
@@ -280,22 +238,6 @@ RSpec.describe Entitlement::FeatureUpdateService do
             [privilege2.id, "min", "Minimum", nil],
             [privilege3.id, "opt", "Optional", nil]
           ])
-        end
-      end
-
-      context "when the feature stores a padded code and its stripped twin and both are sent" do
-        let(:privilege2) { create(:privilege, feature:, code: " max", name: "Padded") }
-        let(:params) { {privileges: [{code: " max", name: "Padded."}, {code: "max", name: "Max."}]} }
-
-        it "updates both privileges" do
-          result = subject
-
-          expect(result).to be_success
-          expect(feature.privileges.reload.pluck(:id, :code, :name)).to match_array([
-            [privilege1.id, "max", "Max."],
-            [privilege2.id, " max", "Padded."]
-          ])
-          expect(privilege3.reload).to be_discarded
         end
       end
 
@@ -654,56 +596,6 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
-      context "when a privilege is stored with a padded code" do
-        let(:privilege1) { create(:privilege, feature:, code: " max", name: "Maximum") }
-        let(:params) { {privileges: [{code: " max", name: "Max."}]} }
-
-        it "matches it by its exact code" do
-          result = subject
-
-          expect(result).to be_success
-          expect(feature.privileges.reload.pluck(:id, :code, :name)).to match_array([
-            [privilege1.id, " max", "Max."],
-            [privilege2.id, "min", "Minimum"],
-            [privilege3.id, "opt", "Optional"]
-          ])
-        end
-      end
-
-      context "when only the padded code is stored and its stripped twin is sent too" do
-        let(:privilege1) { create(:privilege, feature:, code: " max", name: "Maximum") }
-        let(:params) { {privileges: [{code: " max", name: "Padded."}, {code: "max", name: "Max."}]} }
-
-        it "updates the padded privilege and creates the stripped one" do
-          result = subject
-
-          expect(result).to be_success
-          expect(feature.privileges.reload.pluck(:code, :name)).to match_array([
-            [" max", "Padded."],
-            ["max", "Max."],
-            ["min", "Minimum"],
-            ["opt", "Optional"]
-          ])
-          expect(privilege1.reload.name).to eq("Padded.")
-        end
-      end
-
-      context "when the feature stores a padded code and its stripped twin" do
-        let(:privilege2) { create(:privilege, feature:, code: " max", name: "Padded") }
-        let(:params) { {privileges: [{code: " max", name: "Padded."}]} }
-
-        it "updates the privilege whose code matches exactly" do
-          result = subject
-
-          expect(result).to be_success
-          expect(feature.privileges.reload.pluck(:id, :code, :name)).to match_array([
-            [privilege1.id, "max", "Maximum"],
-            [privilege2.id, " max", "Padded."],
-            [privilege3.id, "opt", "Optional"]
-          ])
-        end
-      end
-
       context "when two privilege codes are equal once stripped" do
         let(:params) { {name: "Renamed", privileges: [{code: "max", name: "A"}, {code: " max ", name: "B"}]} }
 
@@ -717,22 +609,6 @@ RSpec.describe Entitlement::FeatureUpdateService do
             [privilege1.id, "max", "Maximum", nil],
             [privilege2.id, "min", "Minimum", nil],
             [privilege3.id, "opt", "Optional", nil]
-          ])
-        end
-      end
-
-      context "when the feature stores a padded code and its stripped twin and both are sent" do
-        let(:privilege2) { create(:privilege, feature:, code: " max", name: "Padded") }
-        let(:params) { {privileges: [{code: " max", name: "Padded."}, {code: "max", name: "Max."}]} }
-
-        it "updates both privileges" do
-          result = subject
-
-          expect(result).to be_success
-          expect(feature.privileges.reload.pluck(:id, :code, :name)).to match_array([
-            [privilege1.id, "max", "Max."],
-            [privilege2.id, " max", "Padded."],
-            [privilege3.id, "opt", "Optional"]
           ])
         end
       end

@@ -19,17 +19,16 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
+      if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges])
+        return result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated")
+      end
+
       return too_many_privileges_failure if too_many_new_privileges?
 
       ActiveRecord::Base.transaction do
         # Serializes with Entitlement::FeatureDestroyService, so a feature discarded since its lookup is not written.
         feature.lock!
         return result.not_found_failure!(resource: "feature") if feature.discarded?
-
-        # Read under the lock: the stored codes decide whether a padded code and its stripped twin may both be sent.
-        if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges], stored_codes: privileges_by_code.keys)
-          result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated").raise_if_error!
-        end
 
         update_feature_attributes
         delete_missing_privileges unless partial?
@@ -72,9 +71,9 @@ module Entitlement
       @privileges_by_code ||= feature.privileges.index_by(&:code)
     end
 
-    # Codes are saved stripped, but privileges saved before that keep their padded code: the exact code wins.
+    # Stored codes are stripped, so a request code reaches the privilege with the same stripped code.
     def find_privilege(code)
-      privileges_by_code[code] || privileges_by_code[Utils::Entitlement.stripped_code(code)]
+      privileges_by_code[Utils::Entitlement.stripped_code(code)]
     end
 
     def update_feature_attributes
@@ -122,9 +121,7 @@ module Entitlement
       return false if params[:privileges].blank?
 
       existing_codes = feature.privileges.pluck(:code).to_set
-      new_codes = params[:privileges].count do
-        !existing_codes.include?(it[:code]) && !existing_codes.include?(Utils::Entitlement.stripped_code(it[:code]))
-      end
+      new_codes = params[:privileges].count { !existing_codes.include?(Utils::Entitlement.stripped_code(it[:code])) }
       new_codes > PrivilegeCreateService::MAX_PRIVILEGES
     end
 

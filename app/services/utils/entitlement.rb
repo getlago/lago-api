@@ -7,16 +7,12 @@ module Utils
       code.is_a?(String) ? code.strip : code
     end
 
-    # Two codes are duplicates when they reach the same privilege. A stored code matches exactly, so a padded code
-    # saved before codes were stripped stays apart from its stripped twin; any other code reaches its stripped form.
-    def self.privilege_code_is_duplicated?(privileges_params, stored_codes: [])
+    # Two codes are duplicates when they are equal once stripped, as they reach the same privilege.
+    def self.privilege_code_is_duplicated?(privileges_params)
       return false if privileges_params.blank?
 
-      targets = privileges_params.map do |privilege_params|
-        code = privilege_params[:code]
-        stored_codes.include?(code) ? code : stripped_code(code)
-      end
-      targets.uniq.size < targets.size
+      seen = Set.new
+      privileges_params.any? { !seen.add?(stripped_code(it[:code])) }
     end
 
     def self.cast_value(value, type)

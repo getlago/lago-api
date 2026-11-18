@@ -6,9 +6,7 @@ RSpec.describe Utils::Entitlement do
   subject(:utils_entitlement) { described_class }
 
   describe ".privilege_code_is_duplicated?" do
-    subject(:duplicated) { utils_entitlement.privilege_code_is_duplicated?(privileges_params, stored_codes:) }
-
-    let(:stored_codes) { [] }
+    subject(:duplicated) { utils_entitlement.privilege_code_is_duplicated?(privileges_params) }
 
     context "when privileges params are blank" do
       let(:privileges_params) { nil }
@@ -32,45 +30,12 @@ RSpec.describe Utils::Entitlement do
       let(:privileges_params) { [{code: "max"}, {code: "max"}] }
 
       it { expect(duplicated).to be(true) }
-
-      context "when the feature stores that code" do
-        let(:stored_codes) { ["max"] }
-
-        it { expect(duplicated).to be(true) }
-      end
     end
 
     context "when two codes are equal once stripped" do
       let(:privileges_params) { [{code: "max"}, {code: " max "}] }
 
       it { expect(duplicated).to be(true) }
-
-      context "when the feature stores only one of them" do
-        let(:stored_codes) { ["max", "min"] }
-
-        it { expect(duplicated).to be(true) }
-      end
-
-      context "when the feature stores only the padded one and both are sent" do
-        let(:privileges_params) { [{code: " max"}, {code: "max"}] }
-        let(:stored_codes) { [" max"] }
-
-        it { expect(duplicated).to be(false) }
-      end
-
-      context "when the feature stores only the padded one and two other forms are sent" do
-        let(:privileges_params) { [{code: "max"}, {code: " max "}] }
-        let(:stored_codes) { [" max"] }
-
-        it { expect(duplicated).to be(true) }
-      end
-
-      context "when the feature stores each of them" do
-        let(:privileges_params) { [{code: " max"}, {code: "max"}] }
-        let(:stored_codes) { ["max", " max"] }
-
-        it { expect(duplicated).to be(false) }
-      end
     end
   end
 
