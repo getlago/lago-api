@@ -180,6 +180,26 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "with a payment_term" do
+      let(:params) { super().merge(payment_term: {term_type: "day_of_month", day_of_month: 5}) }
+
+      it "stores the normalized term" do
+        expect(service_result).to be_success
+        expect(service_result.wallet.payment_term).to eq("term_type" => "day_of_month", "day_of_month" => 5, "month_offset" => 1)
+      end
+
+      context "when the payment_term is invalid" do
+        let(:params) { super().merge(payment_term: {term_type: "unknown"}) }
+
+        it "returns a validation error without creating the wallet" do
+          expect { service_result }.not_to change(Wallet, :count)
+
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:payment_term]).to eq(["invalid_term_type"])
+        end
+      end
+    end
+
     context "when purchase_order_number is too long" do
       let(:params) do
         super().merge(purchase_order_number: "a" * 256)
@@ -339,6 +359,47 @@ RSpec.describe Wallets::CreateService do
 
           wallet = service_result.wallet
           expect(wallet.invoice_requires_successful_payment).to eq(false)
+        end
+      end
+    end
+
+    context "when invoice_usage_on_expiration is set", :premium do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits:,
+          invoice_usage_on_expiration: true
+        }
+      end
+
+      let(:feature_flag_enabled) { true }
+
+      before { organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration) if feature_flag_enabled }
+
+      it "follows the value" do
+        expect(service_result).to be_success
+        expect(service_result.wallet.invoice_usage_on_expiration).to eq(true)
+      end
+
+      context "when the feature flag is disabled" do
+        let(:feature_flag_enabled) { false }
+
+        it "returns a forbidden failure" do
+          expect { service_result }.not_to change(Wallet, :count)
+
+          expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+
+      context "without a premium license", premium: false do
+        it "returns a forbidden failure" do
+          expect { service_result }.not_to change(Wallet, :count)
+
+          expect(service_result.error).to be_a(BaseService::ForbiddenFailure)
         end
       end
     end

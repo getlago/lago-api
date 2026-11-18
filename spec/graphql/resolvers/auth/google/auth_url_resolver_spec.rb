@@ -8,6 +8,7 @@ RSpec.describe Resolvers::Auth::Google::AuthUrlResolver do
       query {
         googleAuthUrl {
           url
+          stateSecret
         }
       }
     GQL
@@ -27,6 +28,18 @@ RSpec.describe Resolvers::Auth::Google::AuthUrlResolver do
     response = result["data"]["googleAuthUrl"]
 
     expect(response["url"]).to include("https://accounts.google.com/o/oauth2/auth")
+    expect(response["stateSecret"]).to be_nil
+  end
+
+  context "when self-serve is enabled" do
+    include_context "with self-serve enabled"
+
+    it "returns a state secret and a URL with a state and a PKCE challenge" do
+      response = execute_graphql(query:)["data"]["googleAuthUrl"]
+
+      expect(response["stateSecret"]).to be_present
+      expect(response["url"]).to include("state=", "code_challenge=", "code_challenge_method=S256")
+    end
   end
 
   context "when google auth is not setup" do

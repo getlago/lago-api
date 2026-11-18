@@ -37,6 +37,69 @@ RSpec.describe Resolvers::OrganizationResolver do
     expect(data["city"]).to eq(organization.city)
   end
 
+  context "with a production organization and its sandbox" do
+    include_context "with self-serve enabled"
+
+    let(:query) do
+      <<~GQL
+        query {
+          organization {
+            selfServe environment
+            productionOrganization { id name slug }
+            sandboxOrganization { id name slug }
+          }
+        }
+      GQL
+    end
+
+    let(:user) { create(:user) }
+    let(:production) { create(:organization, :self_serve) }
+    let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: production) }
+    # The user's membership status in the sandbox, nil for none.
+    let(:sandbox_membership_status) { :active }
+
+    def fetch(current_organization)
+      current_membership = user.memberships.active.find_by!(organization: current_organization)
+      execute_graphql(current_user: user, current_organization:, current_membership:, query:)["data"]["organization"]
+    end
+
+    before do
+      create(:membership, user:, organization: production)
+      create(:membership, user:, organization: sandbox, status: sandbox_membership_status) if sandbox_membership_status
+    end
+
+    it "links each organization to the other one for a member of both" do
+      expect(fetch(production)).to eq(
+        "selfServe" => true, "environment" => "production", "productionOrganization" => nil,
+        "sandboxOrganization" => {"id" => sandbox.id, "name" => sandbox.name, "slug" => sandbox.slug}
+      )
+      expect(fetch(sandbox)).to eq(
+        "selfServe" => true, "environment" => "sandbox", "sandboxOrganization" => nil,
+        "productionOrganization" => {"id" => production.id, "name" => production.name, "slug" => production.slug}
+      )
+    end
+
+    context "when the sandbox membership is revoked" do
+      let(:sandbox_membership_status) { :revoked }
+
+      it "hides the sandbox from the user" do
+        expect(fetch(production)["sandboxOrganization"]).to be_nil
+      end
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+      let(:standalone) do
+        {"selfServe" => false, "environment" => "production", "productionOrganization" => nil, "sandboxOrganization" => nil}
+      end
+
+      it "shows each organization as a standalone production one" do
+        expect(fetch(production)).to eq(standalone)
+        expect(fetch(sandbox)).to eq(standalone)
+      end
+    end
+  end
+
   context "when the default billing entity's term differs from the organization column" do
     let(:query) do
       <<~GQL

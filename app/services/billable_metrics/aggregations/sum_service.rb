@@ -81,8 +81,11 @@ module BillableMetrics
       def recurring_sum(options)
         return unless billable_metric.recurring?
 
-        if (period = delta_period(options))
+        if (period = delta_period(options)) && !resent_before_delta?(period)
           delta = event_store.recurring_sum(watermark: delta_watermark(options), period:)
+        end
+
+        if delta && !resent_after_watermark?(period)
           initial_value.reduce(delta) { |sum, snapshot| with_snapshot(sum, snapshot) }
         elsif options[:recurring_watermark]
           event_store.recurring_sum(watermark: options[:recurring_watermark])
@@ -94,8 +97,11 @@ module BillableMetrics
       def grouped_recurring_sum(options)
         return unless billable_metric.recurring?
 
-        if (period = delta_period(options))
+        if (period = delta_period(options)) && !resent_before_delta?(period)
           deltas = event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:)
+        end
+
+        if deltas && !resent_after_watermark?(period)
           with_grouped_snapshots(deltas.index_by(&:groups))
         elsif options[:recurring_watermark]
           event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
@@ -128,9 +134,27 @@ module BillableMetrics
       end
 
       # Without snapshots, the period still bounds the delta: the bucket starts from zero.
-      # Current usage served by the incremental scan keeps its own read.
+      # Current usage served by the incremental scan keeps its own read, unless the buckets serve it.
       def delta_period(options)
-        initial_period unless options[:is_current_usage] && event_store.incremental_sum?
+        initial_period if delta_from_buckets? || !(options[:is_current_usage] && event_store.incremental_sum?)
+      end
+
+      # A late copy of an event the snapshots already hold would count it twice: the full scan counts it once.
+      # Checked after the delta read, so that a copy re-sent while it ran is seen too. The buckets only serve
+      # a window without a re-send (see UsageBucketStore#recurring_fallback_reason).
+      def resent_after_watermark?(period)
+        !delta_from_buckets? && event_store.resent_after_watermark?(period)
+      end
+
+      # The buckets fell back on a re-send they found: the delta from the events would be thrown away.
+      def resent_before_delta?(period)
+        precomputed? && event_store.recurring_fallback_reason(period) == "resent_after_watermark"
+      end
+
+      # A fallback stays `precomputed?`, so it still bypasses the charge cache: the pre-filtering skips
+      # charges the buckets serve, leaving no ingestion timestamp to invalidate a cached fee.
+      def delta_from_buckets?
+        precomputed? && event_store.recurring_fallback_reason(initial_period).nil?
       end
 
       # Current usage persists no snapshot: its delta needs no watermark of its own.

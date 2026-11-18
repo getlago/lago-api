@@ -36,5 +36,9 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
     expect(subject).to accept_argument(:email_settings).of_type("[EmailSettingsEnum!]").with_permission("organization:emails:update")
     expect(subject).to accept_argument(:finalize_zero_amount_invoice).of_type("Boolean")
     expect(subject).to accept_argument(:document_url_expiration_days).of_type("Int")
+
+    expect(subject).not_to accept_argument(:self_serve)
+    expect(subject).not_to accept_argument(:environment)
+    expect(subject).not_to accept_argument(:production_organization_id)
   end
 end

@@ -5,10 +5,11 @@ require "rails_helper"
 RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
   subject(:result) { described_class.call(subscription:, feature_code:) }
 
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:subscription) { create(:subscription, organization:, customer:, plan:) }
+  # let, not let_it_be: the concurrency examples commit their rows and empty the tables.
+  let(:organization) { create(:organization) }
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:feature) { create(:feature, organization:, code: "test_feature") }
   let(:feature_code) { feature.code }
 
@@ -154,6 +155,48 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
           expect(removal.subscription).to eq(subscription)
           expect(removal.feature).to eq(feature)
         end
+      end
+    end
+
+    context "when another connection holds the subscription lock", transaction: false do
+      let(:plan_entitlement) { create(:entitlement, feature:, plan:) }
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      before do
+        subscription
+        plan_entitlement
+      end
+
+      # Frees the lock holder left waiting by a failed expectation.
+      after { release << -> {} }
+
+      it "waits for the lock, then removes the feature and the entitlement written under it" do
+        holder = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              Subscription.lock("FOR NO KEY UPDATE").find(subscription.id)
+              locked << true
+              release.pop.call
+            end
+          end
+        end
+        locked.pop
+
+        remover = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(subscription: Subscription.find(subscription.id), feature_code:)
+          end
+        end
+        expect(remover.join(0.5)).to be_nil
+
+        # The holder commits an entitlement that the remover can only see once it has the lock.
+        release << -> { create(:entitlement, organization:, feature:, subscription:, plan: nil) }
+        holder.join
+
+        expect(remover.value).to be_success
+        expect(Entitlement::Entitlement.unscoped.where(subscription_id: subscription.id, entitlement_feature_id: feature.id).sole).to be_discarded
+        expect(Entitlement::SubscriptionFeatureRemoval.where(subscription:, feature:).count).to eq(1)
       end
     end
   end

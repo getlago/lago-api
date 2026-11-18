@@ -11,9 +11,12 @@ RSpec.describe Admin::CreateOrganizationService do
       timezone: timezone,
       premium_integrations: premium_integrations,
       feature_flags: feature_flags,
-      reason: reason
+      reason: reason,
+      self_serve:
     )
   end
+
+  let(:self_serve) { false }
 
   let(:actor) { create(:user, email: "cs@getlago.com", cs_admin: true) }
   let(:name) { "Hooli Inc" }
@@ -28,6 +31,65 @@ RSpec.describe Admin::CreateOrganizationService do
   end
 
   describe "#call" do
+    context "with self_serve" do
+      include_context "with self-serve enabled"
+
+      let(:self_serve) { true }
+
+      it "creates the organization and its sandbox, with the same settings" do
+        result = service.call
+
+        production = result.organization
+        sandbox = result.sandbox_organization
+        expect(production).to have_attributes(name: "Hooli Inc", self_serve: true, environment: "production")
+        expect(sandbox).to have_attributes(name: "Hooli Inc Sandbox", environment: "sandbox",
+          production_organization_id: production.id, premium_integrations: match_array(%w[okta netsuite]),
+          feature_flags: ["order_forms"])
+      end
+
+      it "copies the settings to the sandbox once" do
+        allow(Organizations::SyncSandboxSettingsService).to receive(:call!).and_call_original
+
+        service.call
+
+        expect(Organizations::SyncSandboxSettingsService).to have_received(:call!).once
+      end
+
+      it "invites the owner to the production organization only" do
+        result = service.call
+
+        expect(Invite.where(organization: result.organization).sole.email).to eq("owner@hooli.com")
+        expect(Invite.where(organization: result.sandbox_organization)).to be_empty
+      end
+
+      it "audits the sandbox with its creation row only, in the same batch" do
+        result = service.call
+
+        sandbox_rows = CsAdminAuditLog.where(organization: result.sandbox_organization)
+        expect(sandbox_rows.pluck(:action, :feature_type, :feature_key)).to eq([%w[org_created organization organization]])
+        expect(sandbox_rows.sole.batch_id).to eq(CsAdminAuditLog.where(organization: result.organization).first.batch_id)
+      end
+
+      context "with a name that reads as a domain" do
+        let(:name) { "Hooli.com" }
+
+        it "accepts it, as without self_serve" do
+          result = service.call
+
+          expect([result.organization.name, result.sandbox_organization.name]).to eq(["Hooli.com", "Hooli.com Sandbox"])
+        end
+      end
+
+      context "when self-serve is off" do
+        let(:self_serve_env) { {"LAGO_SELF_SERVE_ENABLED" => "false"} }
+
+        it "refuses it and creates nothing" do
+          expect { service.call }.not_to change(Organization, :count)
+          expect(service.call.error.code).to eq("self_serve_disabled")
+        end
+      end
+    end
+
     it "creates an organization using Organizations::CreateService" do
       result = service.call
 
@@ -36,6 +98,14 @@ RSpec.describe Admin::CreateOrganizationService do
       expect(organization).to be_a(Organization)
       expect(organization.name).to eq("Hooli Inc")
       expect(organization.reload.default_billing_entity.document_numbering).to eq("per_billing_entity")
+    end
+
+    context "with a name that reads as a domain" do
+      let(:name) { "Hooli.com" }
+
+      it "accepts it" do
+        expect(service.call.organization.name).to eq("Hooli.com")
+      end
     end
 
     context "when a timezone is provided", :premium do

@@ -815,6 +815,111 @@ RSpec.describe Api::V1::CustomersController do
       expect(json[:customers][0][:taxes]).not_to be_nil
     end
 
+    context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:params) { {per_page: 10} }
+      let(:tax) { create(:tax, organization:) }
+      let(:integration) { create(:netsuite_integration, organization:) }
+      let(:other_integration) { create(:netsuite_integration, organization:) }
+
+      # Created after the outer pair and dated in the future, so the newest customers come first.
+      let(:stripe_customer) do
+        create(:customer, organization:, payment_provider: "stripe", created_at: 4.minutes.from_now)
+      end
+      let(:integrated_customer) do
+        create(:customer, organization:, payment_provider: "gocardless", created_at: 3.minutes.from_now)
+      end
+      let(:other_stripe_customer) do
+        create(:customer, organization:, payment_provider: "stripe", created_at: 2.minutes.from_now)
+      end
+      let(:plain_customer) { create(:customer, organization:, created_at: 1.minute.from_now) }
+      let(:cashfree_customer) { create(:customer, organization:, payment_provider: "cashfree") }
+      let(:adyen_customer) { create(:customer, organization:, payment_provider: "adyen") }
+      let(:moneyhash_customer) { create(:customer, organization:, payment_provider: "moneyhash") }
+
+      let(:metadata_by_customer_id) do
+        [stripe_customer, integrated_customer, other_stripe_customer].to_h do |customer|
+          [
+            customer.id,
+            [
+              create(:customer_metadata, customer:, key: "lead_name", value: customer.external_id),
+              create(:customer_metadata, customer:, key: "region", value: "eu")
+            ]
+          ]
+        end
+      end
+
+      def sql_query_count(per_page:)
+        capture_sql { get_with_token(organization, "/api/v1/customers", {per_page:}) }.count
+      end
+
+      before do
+        create(:stripe_customer, customer: stripe_customer)
+        create(:stripe_customer, customer: other_stripe_customer)
+        create(:gocardless_customer, customer: integrated_customer)
+        create(:cashfree_customer, customer: cashfree_customer)
+        create(:adyen_customer, customer: adyen_customer)
+        create(:moneyhash_customer, customer: moneyhash_customer)
+        create(:netsuite_customer, customer: integrated_customer, integration:)
+        create(:netsuite_customer, customer: other_stripe_customer, integration: other_integration)
+        create(:customer_applied_tax, customer: stripe_customer, tax:)
+        create(:customer_applied_tax, customer: other_stripe_customer, tax:)
+        plain_customer
+        metadata_by_customer_id
+      end
+
+      it "renders every customer of the page without N+1 queries" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customers].count).to eq(9)
+        json[:customers].each do |customer|
+          expected_metadata = metadata_by_customer_id.fetch(customer[:lago_id], []).map do |metadata|
+            {lago_id: metadata.id, key: metadata.key, value: metadata.value}
+          end
+          expect(customer[:metadata].map { it.slice(:lago_id, :key, :value) }).to match_array(expected_metadata)
+        end
+
+        rendered = json[:customers].index_by { it[:lago_id] }
+        expect(rendered[stripe_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(stripe_customer.stripe_customer.provider_customer_id)
+        expect(rendered[integrated_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(integrated_customer.gocardless_customer.provider_customer_id)
+        expect(rendered[cashfree_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(cashfree_customer.cashfree_customer.provider_customer_id)
+        expect(rendered[adyen_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(adyen_customer.adyen_customer.provider_customer_id)
+        expect(rendered[moneyhash_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(moneyhash_customer.moneyhash_customer.provider_customer_id)
+        expect(rendered[integrated_customer.id][:integration_customers].map { it[:integration_code] })
+          .to eq([integration.code])
+        expect(rendered[other_stripe_customer.id][:integration_customers].map { it[:integration_code] })
+          .to eq([other_integration.code])
+        expect(rendered[stripe_customer.id][:taxes].map { it[:code] }).to eq([tax.code])
+        expect(rendered[plain_customer.id][:billing_entity_code]).to eq(plain_customer.billing_entity.code)
+      end
+
+      it "loads the metadata of the page in one query" do
+        metadata_queries = capture_sql { subject }.grep(/FROM "customer_metadata"/)
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customers].count).to eq(9)
+        expect(metadata_queries.count).to eq(1)
+      end
+
+      context "when comparing pages of different sizes" do
+        it "runs the same number of queries for a page of 2 and a page of 4" do
+          small_page_count = sql_query_count(per_page: 2)
+          expect(json[:customers].pluck(:lago_id)).to eq([stripe_customer.id, integrated_customer.id])
+
+          large_page_count = sql_query_count(per_page: 4)
+          expect(json[:customers].pluck(:lago_id))
+            .to eq([stripe_customer.id, integrated_customer.id, other_stripe_customer.id, plain_customer.id])
+
+          expect(large_page_count).to eq(small_page_count)
+        end
+      end
+    end
+
     context "with account_type filters" do
       let(:params) { {account_type: %w[partner]} }
 

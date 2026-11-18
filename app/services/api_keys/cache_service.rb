@@ -4,6 +4,14 @@ module ApiKeys
   class CacheService < ::CacheService
     CACHE_KEY_VERSION = "1"
 
+    # Written in place of the cached key when it is invalidated. It only needs to outlive a request
+    # that read the key from the database just before the change, see `write_to_cache`. Keep it short:
+    # while it is there, every request on the cached endpoints reads the key from the database.
+    # It keeps the shape of a cached key, expired, so an instance still running the previous code
+    # during a deploy parses it and falls back to the database instead of failing.
+    INVALIDATED_MARKER = {invalidated: true, api_key: {expires_at: Time.at(0).utc.iso8601}, organization: {}}.to_json.freeze
+    INVALIDATED_MARKER_TTL = 5.seconds
+
     def initialize(auth_token, with_cache: false)
       @auth_token = auth_token
       @with_cache = with_cache
@@ -11,25 +19,20 @@ module ApiKeys
     end
 
     def self.expire_all_cache(organization)
-      organization.api_keys.each { expire_cache(it.value) }
+      # Not organization.api_keys, which leaves out the keys minted for the AI agent.
+      ApiKey.where(organization:).find_each { expire_cache(it.value) }
+    end
+
+    def expire_cache
+      Rails.cache.write(cache_key, INVALIDATED_MARKER, expires_in: INVALIDATED_MARKER_TTL)
     end
 
     def call
       # When no cache, just return the values from the database
       return fetch_from_database unless with_cache
 
-      # Fetch API key and organization from the cache
-      cache = Rails.cache.read(cache_key)
-      if cache
-        cache_json = JSON.parse(cache)
-        api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
-
-        # Avoid returning an expired API key
-        unless api_key.expired?
-          organization = Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))
-          return api_key, organization
-        end
-      end
+      cached = read_from_cache
+      return cached if cached
 
       # In last resort, fetch from the database and write to the cache
       api_key, organization = fetch_from_database
@@ -55,6 +58,35 @@ module ApiKeys
       [api_key, api_key&.organization]
     end
 
+    def read_from_cache
+      cache = Rails.cache.read(cache_key)
+      return if cache.nil? || cache == INVALIDATED_MARKER
+
+      cache_json = JSON.parse(cache)
+      # An entry written before a column was added (`membership_id`, `environment`) lacks it and would be read wrong:
+      # drop it, so the database answers and the next write caches every column. Unlike a CACHE_KEY_VERSION bump,
+      # this keeps one key across a deploy.
+      api_key_attributes = column_attributes(cache_json["api_key"], ApiKey)
+      organization_attributes = column_attributes(cache_json["organization"], Organization)
+      unless api_key_attributes && organization_attributes
+        Rails.cache.delete(cache_key)
+        return
+      end
+
+      api_key = ApiKey.instantiate(api_key_attributes)
+
+      # Avoid returning an expired API key
+      [api_key, Organization.instantiate(organization_attributes)] unless api_key.expired?
+    end
+
+    # The cached attributes of the model's columns, or nil when the entry is not an object or misses a column.
+    def column_attributes(attributes, model)
+      return unless attributes.is_a?(Hash)
+
+      known = attributes.slice(*model.column_names)
+      known if known.size == model.column_names.size
+    end
+
     def write_to_cache(api_key)
       # Ensure cache is kept for 1 hour at most (10 seconds in development)
       cache_duration = Rails.application.config.api_key_cache_ttl
@@ -64,13 +96,16 @@ module ApiKeys
         cache_duration
       end
 
+      # A request can read the key from the database just before it is revoked or updated. Writing only when
+      # the cache is empty keeps that stale copy from replacing the marker left by `expire_cache`.
       Rails.cache.write(
         cache_key,
         {
           organization: api_key.organization.attributes,
           api_key: api_key.attributes
         }.to_json,
-        expires_in: expiration
+        expires_in: expiration,
+        unless_exist: true
       )
     end
   end

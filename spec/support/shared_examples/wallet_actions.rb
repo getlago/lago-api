@@ -44,6 +44,7 @@ RSpec.shared_examples "a wallet create endpoint" do
     expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
     expect(json[:wallet][:expiration_at]).to eq(expiration_at)
     expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+    expect(json[:wallet]).not_to have_key(:invoice_usage_on_expiration)
     expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(5_00)
     expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(100_00)
     expect(json[:wallet][:purchase_order_number]).to eq("PO-123")
@@ -67,6 +68,49 @@ RSpec.shared_examples "a wallet create endpoint" do
         purchase_order_number: "PO-123"
       )
     )
+  end
+
+  context "with a payment_term" do
+    before { create_params[:payment_term] = {term_type: "net_end_of_month", days: 15} }
+
+    it "stores and returns the payment_term" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:payment_term]).to eq(term_type: "net_end_of_month", days: 15)
+    end
+
+    context "when the payment_term is not an object" do
+      before { create_params[:payment_term] = "net 15" }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+      end
+    end
+  end
+
+  context "with invoice_usage_on_expiration", :premium do
+    let(:create_params) { super().merge(invoice_usage_on_expiration: true) }
+
+    before { organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration) }
+
+    it "creates a wallet that invoices its usage on expiration" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:invoice_usage_on_expiration]).to eq(true)
+    end
+
+    context "without a premium license", premium: false do
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
   end
 
   context "when paid_credit is below the minimum" do
@@ -925,6 +969,7 @@ RSpec.shared_examples "a wallet update endpoint" do
     expect(json[:wallet][:priority]).to eq(update_params[:priority])
     expect(json[:wallet][:expiration_at]).to eq(expiration_at)
     expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+    expect(json[:wallet]).not_to have_key(:invoice_usage_on_expiration)
     expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(6_00)
     expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(10_00)
     expect(json[:wallet][:purchase_order_number]).to eq("PO-456")
@@ -934,6 +979,27 @@ RSpec.shared_examples "a wallet update endpoint" do
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
   end
 
+  context "with invoice_usage_on_expiration", :premium do
+    let(:update_params) { super().merge(invoice_usage_on_expiration: true) }
+
+    before { organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration) }
+
+    it "updates a wallet that invoices its usage on expiration" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:invoice_usage_on_expiration]).to eq(true)
+    end
+
+    context "without a premium license", premium: false do
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
+  end
+
   context "when wallet does not exist" do
     let(:id) { SecureRandom.uuid }
 
@@ -941,6 +1007,32 @@ RSpec.shared_examples "a wallet update endpoint" do
       subject
       expect(response).to have_http_status(:not_found)
       expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+    end
+  end
+
+  context "with a payment_term" do
+    before { update_params[:payment_term] = {term_type: "end_of_month"} }
+
+    it "updates and returns the payment_term" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:payment_term]).to eq(term_type: "end_of_month")
+      expect(wallet.reload.payment_term).to eq("term_type" => "end_of_month")
+    end
+
+    context "when the payment_term is null" do
+      let(:wallet) { create(:wallet, customer:, payment_term: {"term_type" => "net", "days" => 30}) }
+
+      before { update_params[:payment_term] = nil }
+
+      it "clears the payment_term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:payment_term]).to be_nil
+        expect(wallet.reload.payment_term).to be_nil
+      end
     end
   end
 

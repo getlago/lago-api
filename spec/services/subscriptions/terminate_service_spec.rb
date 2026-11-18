@@ -544,6 +544,61 @@ RSpec.describe Subscriptions::TerminateService do
       end
     end
 
+    context "with recurring snapshots" do
+      subject(:result) { described_class.call(subscription:, **arguments) }
+
+      let(:arguments) { {} }
+      let(:snapshots) { RecurringAggregationSnapshot.where(subscription:) }
+
+      before do
+        charge = create(:standard_charge, organization: subscription.organization, plan: subscription.plan)
+        create(:recurring_aggregation_snapshot, subscription:, charge:)
+      end
+
+      it "leaves them to the termination invoice, which reads them first" do
+        expect(result).to be_success
+
+        expect(snapshots.count).to eq(1)
+      end
+
+      context "when no termination invoice is generated" do
+        let(:arguments) { {on_termination_invoice: "skip"} }
+
+        it "deletes them" do
+          expect(result).to be_success
+
+          expect(snapshots).to be_empty
+        end
+      end
+
+      context "when the termination is billed synchronously with a pending next subscription" do
+        let(:arguments) { {async: false} }
+
+        before do
+          create(:subscription, :pending, organization: subscription.organization, customer: subscription.customer,
+            plan: subscription.plan, previous_subscription: subscription)
+        end
+
+        it "deletes them once the next subscription is canceled" do
+          expect(result).to be_success
+
+          expect(snapshots).to be_empty
+        end
+      end
+
+      context "when upgraded" do
+        let(:arguments) { {upgrade: true} }
+
+        before { create(:subscription, organization: subscription.organization, customer: subscription.customer, previous_subscription: subscription) }
+
+        it "keeps them for the next subscription" do
+          expect(result).to be_success
+
+          expect(snapshots.count).to eq(1)
+        end
+      end
+    end
+
     context "with on_termination_invoice parameter" do
       subject(:result) { described_class.call(subscription:, on_termination_invoice:) }
 

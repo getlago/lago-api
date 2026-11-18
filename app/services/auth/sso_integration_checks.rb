@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Auth
-  # Shared by the Okta and Entra ID services, which define `sso_integration` and `sso_login_method`.
+  # Shared by the Okta and Entra ID services, which define `sso_integration`, `sso_login_method` and `find_user`.
   module SsoIntegrationChecks
     private
 
@@ -36,6 +36,30 @@ module Auth
 
     def login_method_not_authorized_failure
       result.single_validation_failure!(error_code: "login_method_not_authorized", field: sso_login_method)
+    end
+
+    # Checked before the user is created, so a refused sign-in leaves no user behind. The membership write checks
+    # again under the lock.
+    def sandbox_refuses_new_member?
+      organization = sso_integration.organization
+      return false unless organization.sandbox?
+
+      user = find_user
+      user.nil? || !user.memberships.exists?(organization_id: organization.id)
+    end
+
+    # A membership of any status is kept as is, so a revoked member is not added back.
+    def find_or_create_membership
+      organization = sso_integration.organization
+      return if result.user.memberships.exists?(organization_id: organization.id)
+
+      ActiveRecord::Base.transaction do
+        Organizations::SandboxLockService.call!(organization:)
+        membership = result.user.memberships.find_or_create_by!(organization_id: organization.id)
+        next unless membership.previously_new_record?
+
+        Memberships::SyncSandboxService.call!(organization:, user: result.user, actor: result.user)
+      end
     end
   end
 end

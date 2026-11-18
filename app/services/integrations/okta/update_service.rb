@@ -13,10 +13,27 @@ module Integrations
       def call
         return result.not_found_failure!(resource: "integration") unless integration
 
-        unless integration.organization.okta_enabled?
-          return result.forbidden_failure!(code: "premium_integration_missing")
+        ActiveRecord::Base.transaction do
+          # A sandbox trusts its production's SSO: an integration it kept from before its link cannot be repointed.
+          organization = ::Organizations::SandboxLockService.call!(organization: integration.organization).organization
+          next result.forbidden_failure!(code: "premium_integration_missing") unless organization.okta_enabled?
+
+          update_integration!
+          result.integration = integration
         end
 
+        result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
+      end
+
+      private
+
+      attr_reader :integration, :params
+
+      def update_integration!
         integration.client_id = params[:client_id] if params.key?(:client_id)
         integration.client_secret = params[:client_secret] if client_secret_update?
         integration.domain = params[:domain] if params.key?(:domain)
@@ -24,16 +41,7 @@ module Integrations
         integration.host = params[:host] if params.key?(:host)
 
         integration.save!
-
-        result.integration = integration
-        result
-      rescue ActiveRecord::RecordInvalid => e
-        result.record_validation_failure!(record: e.record)
       end
-
-      private
-
-      attr_reader :integration, :params
 
       def client_secret_update?
         params[:client_secret].present? && !params[:client_secret].match?(/\A•{8}…/)

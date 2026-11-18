@@ -19,9 +19,9 @@ class Invite < ApplicationRecord
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
-  # NOTE: Emails are saved with the case the user typed, so this lookup ignores case.
+  # NOTE: Emails are saved with the case the user typed, so this lookup ignores case, as login does.
   def existing_user
-    User.find_by("lower(email) = ?", email.to_s.downcase)
+    User.lookup_by_email(email)
   end
 
   def existing_user?
