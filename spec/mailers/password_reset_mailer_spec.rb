@@ -14,6 +14,10 @@ RSpec.describe PasswordResetMailer do
       expect(mailer.to).to eq([password_reset.user.email])
     end
 
+    it_behaves_like "a mail with the Lago logo header" do
+      let(:mail) { password_reset_mailer.with(password_reset:).requested }
+    end
+
     context "when user email is nil" do
       before do
         password_reset.user.update(email: nil)

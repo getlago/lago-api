@@ -84,12 +84,7 @@ module Pagination
   # The effective page size limit of the controller: its own cap, if any, within the
   # organization or global limit.
   def effective_max_page_size
-    [self.class.max_page_size, organization_max_page_size || default_max_page_size].compact.min
-  end
-
-  # An organization cached by ApiKeys::CacheService before the column existed does not have it.
-  def organization_max_page_size
-    current_organization.pagination_max_page_size if current_organization.has_attribute?(:pagination_max_page_size)
+    [self.class.max_page_size, current_organization.pagination_max_page_size || default_max_page_size].compact.min
   end
 
   def clickhouse_relation?(records)

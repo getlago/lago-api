@@ -172,6 +172,41 @@ RSpec.describe Events::PayInAdvanceService do
         end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
       end
 
+      context "with a product event consumed from Kafka" do
+        let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: [:product_catalog]) }
+
+        # What ProductEventsChargedInAdvanceConsumer enqueues: the product enriched event, with
+        # its contract as external_subscription_id and no id.
+        let(:event) do
+          {
+            "organization_id" => organization.id,
+            "external_subscription_id" => contract.external_id,
+            "transaction_id" => "tx_1",
+            "code" => billable_metric.code,
+            "aggregation_type" => "sum",
+            "properties" => event_properties,
+            "precise_total_amount_cents" => "0.0",
+            "source" => "http_ruby",
+            "value" => "12",
+            "timestamp" => timestamp.to_f
+          }
+        end
+
+        around do |example|
+          previous = ENV.to_h.slice("LAGO_KAFKA_BOOTSTRAP_SERVERS", "LAGO_KAFKA_RAW_EVENTS_TOPIC")
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka:9092"
+          ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
+          example.run
+        ensure
+          %w[LAGO_KAFKA_BOOTSTRAP_SERVERS LAGO_KAFKA_RAW_EVENTS_TOPIC].each { ENV[it] = previous[it] }
+        end
+
+        it "enqueues the fee job for the contract rate card" do
+          expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+            .with(metered_item: have_attributes(contract_rate_card:))
+        end
+      end
+
       context "when another product shares the billable metric" do
         let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
         let(:other_card) { create(:rate_card, :advance, organization:, product: other_product, display_on_invoice: false) }

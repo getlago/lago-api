@@ -20,6 +20,41 @@ RSpec.describe Memberships::CreateFromInviteService do
       expect(result.membership.roles.pluck(:code)).to eq(%w[admin])
     end
 
+    context "when the organization has a sandbox" do
+      let(:organization) { create(:organization, :with_sandbox) }
+      let(:admin_role) { create(:role, :admin) }
+
+      before { admin_role }
+
+      it "adds the user to the sandbox with the same roles" do
+        create_service.call
+
+        expect(organization.sandbox_organization.memberships.active.sole).to have_attributes(user:, roles: [admin_role])
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:organization) { create(:organization, :sandbox) }
+
+      it "refuses the acceptance" do
+        expect { create_service.call }.to raise_error(BaseService::ForbiddenFailure) do |error|
+          expect(error.code).to eq("sandbox_managed_by_production")
+        end
+        expect(Membership.where(organization:)).to be_empty
+      end
+    end
+
+    context "when the invite was revoked meanwhile" do
+      before { Invite.find(invite.id).update!(status: :revoked, revoked_at: Time.current) }
+
+      it "answers that the invite is not found" do
+        result = create_service.call
+
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(Membership.where(organization:)).to be_empty
+      end
+    end
+
     context "when the user is already an active member" do
       before { create(:membership, organization:, user:) }
 

@@ -227,6 +227,11 @@ class Subscription < ApplicationRecord
     next_subscriptions.reject(&:canceled?).max_by(&:created_at)
   end
 
+  # Terminated without an upgrade or a downgrade to follow it
+  def ended_without_next_subscription?
+    terminated? && next_subscription.nil?
+  end
+
   def already_billed?
     fees.subscription.any?
   end
@@ -342,6 +347,7 @@ end
 #  on_termination_credit_note   :enum
 #  on_termination_invoice       :enum             default("generate"), not null
 #  payment_method_type          :enum             default("provider"), not null
+#  payment_term                 :jsonb
 #  progressive_billing_disabled :boolean          default(FALSE), not null
 #  purchase_order_number        :string
 #  skip_daily_usage             :boolean          default(FALSE), not null

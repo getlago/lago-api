@@ -17,7 +17,9 @@ module LagoHttpClient
       Errno::ECONNRESET,
       Errno::ECONNREFUSED,
       Errno::ETIMEDOUT,
-      Errno::EHOSTUNREACH
+      Errno::EHOSTUNREACH,
+      # A failed DNS lookup (Socket::ResolutionError included): no byte was sent.
+      SocketError
     ].freeze
     RETRY_BACKOFF_RANGE = (0.25..0.5)
     # No byte was sent when connecting fails this way, so the next address cannot receive the request twice.

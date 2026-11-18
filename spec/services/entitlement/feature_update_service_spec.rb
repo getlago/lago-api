@@ -251,6 +251,25 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
+      context "when the feature is discarded between its lookup and the lock" do
+        let(:params) { {name: "Updated Name"} }
+
+        before do
+          feature
+          # Another instance discards it, so the loaded one is stale.
+          Entitlement::Feature.find(feature.id).discard!
+        end
+
+        it "returns a not found failure and does not rename the feature" do
+          expect { subject }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(subject).to be_failure
+          expect(subject.error).to be_a(BaseService::NotFoundFailure)
+          expect(subject.error.resource).to eq("feature")
+          expect(Entitlement::Feature.unscoped.find(feature.id).name).not_to eq("Updated Name")
+        end
+      end
+
       context "when privilege name is empty" do
         let(:params) do
           {

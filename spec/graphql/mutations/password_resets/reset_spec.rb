@@ -15,6 +15,7 @@ RSpec.describe Mutations::PasswordResets::Reset do
       mutation($input: ResetPasswordInput!) {
         resetPassword(input: $input) {
           token
+          needsOrganization
         }
       }
     GQL
@@ -37,6 +38,17 @@ RSpec.describe Mutations::PasswordResets::Reset do
       data = result["data"]["resetPassword"]
 
       expect(data["token"]).to be_present
+      expect(data["needsOrganization"]).to be(false)
+    end
+
+    context "with a self-serve user who never had an organization" do
+      let(:user) { create(:user, :self_serve, password: "HelloLago!1") }
+
+      include_context "with self-serve enabled"
+
+      it "returns a session that needs an organization" do
+        expect(result["data"]["resetPassword"]).to include("needsOrganization" => true, "token" => be_present)
+      end
     end
 
     it_behaves_like "produces a security log", "user.password_edited" do

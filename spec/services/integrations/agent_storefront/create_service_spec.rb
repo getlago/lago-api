@@ -60,7 +60,7 @@ RSpec.describe Integrations::AgentStorefront::CreateService do
       end
 
       context "with agent storefront premium integration present" do
-        before { organization.update!(premium_integrations: %w[agent_storefront events_targeting_wallets]) }
+        before { organization.update!(premium_integrations: %w[agent_storefront events_targeting_wallets], feature_flags: %w[agent_storefront]) }
 
         context "without validation errors" do
           it "creates an integration" do
@@ -106,7 +106,7 @@ RSpec.describe Integrations::AgentStorefront::CreateService do
         end
 
         context "without events targeting wallets" do
-          before { organization.update!(premium_integrations: %w[agent_storefront]) }
+          before { organization.update!(premium_integrations: %w[agent_storefront], feature_flags: %w[agent_storefront]) }
 
           it "returns an error" do
             result = service_call

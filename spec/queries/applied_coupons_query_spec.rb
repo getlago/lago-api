@@ -47,7 +47,16 @@ RSpec.describe AppliedCouponsQuery do
 
     it "filters the applied_coupons" do
       expect(result).to be_success
-      expect(result.applied_coupons.count).to eq(1)
+      expect(result.applied_coupons).to eq([applied_coupon_2])
+    end
+
+    context "with a filter on the deleted customer" do
+      let(:filters) { {external_customer_id: customer_1.external_id} }
+
+      it "returns an empty list" do
+        expect(result).to be_success
+        expect(result.applied_coupons).to eq([])
+      end
     end
   end
 

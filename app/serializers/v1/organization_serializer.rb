@@ -9,7 +9,7 @@ module V1
         slug: model.slug,
         default_currency: model.default_currency,
         created_at: model.created_at.iso8601,
-        webhook_url: webhook_urls.first.to_s,
+        webhook_url: model.default_webhook_endpoint&.webhook_url || "",
         webhook_urls:,
         country: model.country,
         address_line1: model.address_line1,
@@ -64,8 +64,9 @@ module V1
       ).serialize
     end
 
+    # Id order, as `Organization#default_webhook_endpoint`, so the first url is `webhook_url`.
     def webhook_urls
-      model.webhook_endpoints.map(&:webhook_url)
+      model.webhook_endpoints.sort_by(&:id).map(&:webhook_url)
     end
   end
 end

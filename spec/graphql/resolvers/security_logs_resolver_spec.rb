@@ -115,4 +115,52 @@ RSpec.describe Resolvers::SecurityLogsResolver, clickhouse: true do
       expect(security_logs["metadata"]["totalCount"]).to eq(1)
     end
   end
+
+  context "when a log has NULL map values", :premium do
+    let(:query) do
+      <<~GQL
+        query($toDatetime: ISO8601DateTime!) {
+          securityLogs(toDatetime: $toDatetime) {
+            collection {
+              logId
+              resources
+              deviceInfo
+            }
+          }
+        }
+      GQL
+    end
+
+    let(:security_log) do
+      create(
+        :clickhouse_security_log,
+        membership:,
+        logged_at: 1.hour.ago,
+        log_type: "api_key",
+        log_event: "api_key.rotated",
+        resources: {"name" => nil, "value_ending" => '{"deleted":"A","added":"B"}'},
+        device_info: {"os" => nil, "browser" => "Chrome"}
+      )
+    end
+
+    before { security_log }
+
+    it "returns the log with null for the NULL values" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: "security_logs:view",
+        query:,
+        variables:
+      )
+
+      expect(result["errors"]).to be_nil
+      entry = result.dig("data", "securityLogs", "collection").find { it["logId"] == security_log.log_id }
+      expect(entry).to eq(
+        "logId" => security_log.log_id,
+        "resources" => {"name" => nil, "value_ending" => {"deleted" => "A", "added" => "B"}},
+        "deviceInfo" => {"os" => nil, "browser" => "Chrome"}
+      )
+    end
+  end
 end

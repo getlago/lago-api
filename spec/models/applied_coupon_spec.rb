@@ -19,6 +19,14 @@ RSpec.describe AppliedCoupon do
     it { is_expected.to belong_to(:customer) }
     it { is_expected.to belong_to(:organization) }
     it { is_expected.to have_many(:credits) }
+
+    context "when the customer is deleted" do
+      subject(:applied_coupon) do
+        create(:applied_coupon, customer: create(:customer, :deleted)).reload
+      end
+
+      it { expect(subject.customer).not_to be_nil }
+    end
   end
 
   describe "enums" do

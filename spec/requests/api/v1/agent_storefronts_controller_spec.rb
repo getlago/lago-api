@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::AgentStorefrontsController, :premium do
-  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront events_targeting_wallets]) }
+  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront events_targeting_wallets], feature_flags: %w[agent_storefront]) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:storefront) { create(:agent_storefront_integration, organization:, code: "acme_api", stripe_provider:) }
 
@@ -17,6 +17,16 @@ RSpec.describe Api::V1::AgentStorefrontsController, :premium do
   shared_examples "an endpoint behind the agent storefront premium integration" do
     context "without the premium integration" do
       let(:organization) { create(:organization, premium_integrations: %w[events_targeting_wallets]) }
+
+      it "returns a feature unavailable error" do
+        subject
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
+    context "without the feature flag" do
+      let(:organization) { create(:organization, premium_integrations: %w[agent_storefront events_targeting_wallets]) }
 
       it "returns a feature unavailable error" do
         subject
@@ -100,7 +110,7 @@ RSpec.describe Api::V1::AgentStorefrontsController, :premium do
     end
 
     context "without events targeting wallets" do
-      let(:organization) { create(:organization, premium_integrations: %w[agent_storefront]) }
+      let(:organization) { create(:organization, premium_integrations: %w[agent_storefront], feature_flags: %w[agent_storefront]) }
 
       it "returns a validation error" do
         subject

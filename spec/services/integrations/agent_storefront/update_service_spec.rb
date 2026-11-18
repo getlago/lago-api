@@ -38,7 +38,7 @@ RSpec.describe Integrations::AgentStorefront::UpdateService do
       end
 
       context "with agent storefront premium integration present" do
-        before { organization.update!(premium_integrations: %w[agent_storefront events_targeting_wallets]) }
+        before { organization.update!(premium_integrations: %w[agent_storefront events_targeting_wallets], feature_flags: %w[agent_storefront]) }
 
         context "without validation errors" do
           it "updates the integration" do

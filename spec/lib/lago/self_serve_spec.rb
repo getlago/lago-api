@@ -44,6 +44,32 @@ RSpec.describe Lago::SelfServe do
     end
   end
 
+  describe ".front_host" do
+    it "is the downcased host of the front URL" do
+      expect(described_class.front_host(url: "https://App.EU.getlago.com")).to eq("app.eu.getlago.com")
+    end
+
+    it "is nil for a URL without a scheme or a malformed one" do
+      expect(["app.eu.getlago.com", "https://exa mple.com", nil].map { described_class.front_host(url: it) })
+        .to eq([nil, nil, nil])
+    end
+  end
+
+  describe ".region" do
+    before { allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com") }
+
+    it "returns the front host on Lago Cloud only" do
+      expect(described_class.region(cloud: true)).to eq("app.eu.getlago.com")
+      expect(described_class.region(cloud: false)).to be_nil
+    end
+
+    it "reads LAGO_CLOUD" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "true"))
+
+      expect(described_class.region).to eq("app.eu.getlago.com")
+    end
+  end
+
   describe ".validate!" do
     let(:front_url) { "https://app.getlago.com" }
 

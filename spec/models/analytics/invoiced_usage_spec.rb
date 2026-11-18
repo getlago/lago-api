@@ -141,5 +141,97 @@ RSpec.describe Analytics::InvoicedUsage do
         })])
       end
     end
+
+    context "with product fees", cache: :null do
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:metered_product) { create(:product, organization:, code: "llm_tokens") }
+      let(:fixed_product) { create(:product, :fixed, organization:) }
+      let(:invoice3) do
+        create(:invoice, organization:, billing_entity: billing_entity1, issuing_date: 1.month.ago, status: :finalized)
+      end
+
+      def create_product_fee(product:, amount_cents:, invoice: invoice3, currency: "EUR")
+        rate_card = create(:rate_card, organization:, product:)
+        create(
+          :product_fee,
+          invoice:,
+          subscription: nil,
+          contract:,
+          contract_rate_card: create(:contract_rate_card, organization:, contract:, rate_card:),
+          rate_card_rate: create(:rate_card_rate, organization:, rate_card:),
+          invoiceable_id: product.id,
+          amount_cents:,
+          amount_currency: currency,
+          created_at: 1.month.ago
+        )
+      end
+
+      before do
+        create_product_fee(product: metered_product, amount_cents: 1000)
+        create_product_fee(product: metered_product, amount_cents: 500)
+        create_product_fee(product: fixed_product, amount_cents: 9999)
+      end
+
+      context "with no arguments" do
+        let(:args) { {} }
+
+        it "returns the metered product fees grouped by product code" do
+          expect(invoiced_usages).to match_array([hash_including({
+            "amount_cents" => 1500.0,
+            "code" => "llm_tokens",
+            "currency" => "EUR",
+            "month" => Time.current.beginning_of_month - 1.month
+          }), hash_including({
+            "amount_cents" => 700.0,
+            "code" => "api_calls",
+            "currency" => "EUR",
+            "month" => Time.current.beginning_of_month - 1.month
+          }), hash_including({
+            "amount_cents" => 300.0,
+            "code" => "api_calls",
+            "currency" => "EUR",
+            "month" => Time.current.beginning_of_month - 2.months
+          })])
+        end
+      end
+
+      context "with billing_entity_id" do
+        let(:args) { {billing_entity_id: billing_entity2.id} }
+
+        before do
+          invoice = create(:invoice, organization:, billing_entity: billing_entity2, issuing_date: 1.month.ago, status: :finalized)
+          create_product_fee(product: metered_product, amount_cents: 200, invoice:)
+        end
+
+        it "returns the product fees of the billing entity only" do
+          expect(invoiced_usages).to match_array([hash_including({
+            "amount_cents" => 200.0,
+            "code" => "llm_tokens",
+            "currency" => "EUR",
+            "month" => Time.current.beginning_of_month - 1.month
+          }), hash_including({
+            "amount_cents" => 700.0,
+            "code" => "api_calls",
+            "currency" => "EUR",
+            "month" => Time.current.beginning_of_month - 1.month
+          })])
+        end
+      end
+
+      context "with currency" do
+        let(:args) { {currency: "USD"} }
+
+        before { create_product_fee(product: metered_product, amount_cents: 400, currency: "USD") }
+
+        it "returns the product fees in the currency only" do
+          expect(invoiced_usages).to match_array([hash_including({
+            "amount_cents" => 400.0,
+            "code" => "llm_tokens",
+            "currency" => "USD",
+            "month" => Time.current.beginning_of_month - 1.month
+          })])
+        end
+      end
+    end
   end
 end

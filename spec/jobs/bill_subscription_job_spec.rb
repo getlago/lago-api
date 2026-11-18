@@ -103,6 +103,94 @@ RSpec.describe BillSubscriptionJob do
     end
   end
 
+  describe "payment term split" do
+    let(:customer) { create(:customer) }
+    let(:subscription1) { create(:subscription, customer:) }
+    let(:subscription2) { create(:subscription, customer:) }
+    let(:subscriptions) { [subscription1, subscription2] }
+
+    let(:splits) { Yabeda.payment_terms.splits_total }
+
+    before { allow(splits).to receive(:increment) }
+
+    context "when the service reports mixed payment terms" do
+      let(:result) do
+        result = Invoices::SubscriptionService::Result.new
+        result.payment_term_groups = [[subscription1], [subscription2]]
+        result.validation_failure!(errors: {payment_term: ["mixed_payment_terms"]})
+      end
+
+      before { allow(Invoices::SubscriptionService).to receive(:call).and_return(result) }
+
+      it "splits into one job per term group" do
+        described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
+
+        expect(described_class).to have_been_enqueued.with([subscription1], timestamp, invoicing_reason:)
+        expect(described_class).to have_been_enqueued.with([subscription2], timestamp, invoicing_reason:)
+        expect(splits).to have_received(:increment).with({invoicing_reason: invoicing_reason.to_s})
+      end
+
+      it "neither raises nor records a generation error" do
+        expect { described_class.perform_now(subscriptions, timestamp, invoicing_reason:) }
+          .not_to raise_error
+
+        expect(ErrorDetail.invoice_generation_error.count).to eq(0)
+      end
+
+      it "gives each child the lock key a direct enqueue of its group would have" do
+        described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
+
+        children = enqueued_jobs.map { |job| described_class.new(*ActiveJob::Arguments.deserialize(job[:args])) }
+        expected = [[subscription1], [subscription2]].map do |group|
+          described_class.new(group, timestamp, invoicing_reason:).lock_key_arguments
+        end
+
+        expect(children.map(&:lock_key_arguments)).to match_array(expected)
+      end
+
+      context "when the parent job skips charges" do
+        it "forwards skip_charges to every child" do
+          described_class.perform_now(subscriptions, timestamp, invoicing_reason:, skip_charges: true)
+
+          expect(described_class).to have_been_enqueued.with([subscription1], timestamp, invoicing_reason:, skip_charges: true)
+          expect(described_class).to have_been_enqueued.with([subscription2], timestamp, invoicing_reason:, skip_charges: true)
+        end
+      end
+    end
+
+    context "when a subscription term changes after the group was enqueued" do
+      let(:customer) { create(:customer, payment_term: {term_type: "net", days: 30}) }
+
+      before do
+        allow(Invoices::SubscriptionService).to receive(:call).and_call_original
+        subscriptions
+        subscription1.update!(payment_term: {term_type: "end_of_month"})
+      end
+
+      it "splits by the current terms instead of failing" do
+        expect { described_class.perform_now(subscriptions, timestamp, invoicing_reason:) }.not_to raise_error
+
+        expect(described_class).to have_been_enqueued.with([subscription1], timestamp, invoicing_reason:)
+        expect(described_class).to have_been_enqueued.with([subscription2], timestamp, invoicing_reason:)
+        expect(Invoice.where(customer:).count).to eq(0)
+      end
+    end
+
+    context "when the service bills the group" do
+      before do
+        result.invoice = create(:invoice, customer:)
+        allow(Invoices::SubscriptionService).to receive(:call).and_return(result)
+      end
+
+      it "does not split" do
+        described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
+
+        expect(described_class).not_to have_been_enqueued
+        expect(splits).not_to have_received(:increment)
+      end
+    end
+  end
+
   describe "#lock_key_arguments" do
     let_it_be(:customer) { create(:customer, timezone: "Europe/Paris") }
     let(:subscription) { create(:subscription, customer:) }
