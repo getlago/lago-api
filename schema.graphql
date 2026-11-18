@@ -138,6 +138,21 @@ enum ActivityTypeEnum {
   contract_created
 
   """
+  contract_entitlement.created
+  """
+  contract_entitlement_created
+
+  """
+  contract_entitlement.deleted
+  """
+  contract_entitlement_deleted
+
+  """
+  contract_entitlement.updated
+  """
+  contract_entitlement_updated
+
+  """
   contract_rate_card.created
   """
   contract_rate_card_created
