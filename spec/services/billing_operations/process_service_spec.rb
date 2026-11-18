@@ -727,36 +727,71 @@ RSpec.describe BillingOperations::ProcessService do
   context "with two known prices in one cycle" do
     let(:billing_scope) { "segment" }
     let(:cursor) { Time.utc(2026, 1, 15) }
-
-    before do
-      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15), rate_properties: {"amount" => "62"})
+    let(:closing_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
         reason: "periodic_continuation", billing_at: Time.utc(2026, 2, 1),
         target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15), rate_properties: {"amount" => "62"})
+      closing_operation
+    end
+
     it "bills each arrears slice exactly once" do
-      expect(result.invoices.sole.total_amount_cents).to eq(1400) # $31 * 14 / 31 days.
+      first_invoice = result.invoices.sole
+      expect(first_invoice.total_amount_cents).to eq(1400) # $31 * 14 / 31 days.
+      expect(first_invoice.fees.sole.properties).to include(
+        "from_datetime" => Time.utc(2026, 1, 1).iso8601(6),
+        "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 1, 15)).iso8601(6)
+      )
+      expect(operation.reload).to have_attributes(invoice_id: first_invoice.id, processed_at: cursor)
+      expect(first_invoice.billing_operations.pluck(:id)).to eq([operation.id])
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
-      expect(described_class.call!(customer:, timestamp: Time.utc(2026, 2, 1)).invoices.sole.total_amount_cents).to eq(3400) # $62 * 17 / 31 days.
+      second_invoice = described_class.call!(customer:, timestamp: Time.utc(2026, 2, 1)).invoices.sole
+      expect(second_invoice.total_amount_cents).to eq(3400) # $62 * 17 / 31 days.
+      expect(second_invoice.fees.sole.properties).to include(
+        "from_datetime" => Time.utc(2026, 1, 15).iso8601(6),
+        "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6)
+      )
+      expect(closing_operation.reload).to have_attributes(invoice_id: second_invoice.id, processed_at: Time.utc(2026, 2, 1))
+      expect(second_invoice.billing_operations.pluck(:id)).to eq([closing_operation.id])
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+      expect(described_class.call!(customer:, timestamp: Time.utc(2026, 2, 1)).invoices).to be_empty
       expect(contract_rate_card.billing_operations.order(:billing_at).pluck(:target_cycle_started_at)).to eq([Time.utc(2026, 1, 1)] * 2)
     end
 
     context "with advance billing" do
       let(:billing_timing) { "advance" }
       let(:cursor) { Time.utc(2026, 1, 1) }
-
-      before do
+      let(:second_operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
           reason: "periodic_continuation", billing_at: Time.utc(2026, 1, 15),
           target_cycle_started_at: Time.utc(2026, 1, 1))
       end
 
+      before { second_operation }
+
       it "advances through both purchased slices before the next cycle" do
-        expect(result.invoices.sole.total_amount_cents).to eq(1400) # $31 * 14 / 31 days.
+        first_invoice = result.invoices.sole
+        expect(first_invoice.total_amount_cents).to eq(1400) # $31 * 14 / 31 days.
+        expect(first_invoice.fees.sole.properties).to include(
+          "from_datetime" => Time.utc(2026, 1, 1).iso8601(6),
+          "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 1, 15)).iso8601(6)
+        )
+        expect(operation.reload).to have_attributes(invoice_id: first_invoice.id, processed_at: cursor)
+        expect(first_invoice.billing_operations.pluck(:id)).to eq([operation.id])
         expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 1, 15))
-        expect(described_class.call!(customer:, timestamp: Time.utc(2026, 1, 15)).invoices.sole.total_amount_cents).to eq(3400) # $62 * 17 / 31 days.
+        second_invoice = described_class.call!(customer:, timestamp: Time.utc(2026, 1, 15)).invoices.sole
+        expect(second_invoice.total_amount_cents).to eq(3400) # $62 * 17 / 31 days.
+        expect(second_invoice.fees.sole.properties).to include(
+          "from_datetime" => Time.utc(2026, 1, 15).iso8601(6),
+          "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6)
+        )
+        expect(second_operation.reload).to have_attributes(invoice_id: second_invoice.id, processed_at: Time.utc(2026, 1, 15))
+        expect(second_invoice.billing_operations.pluck(:id)).to eq([second_operation.id])
         expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
+        expect(described_class.call!(customer:, timestamp: Time.utc(2026, 1, 15)).invoices).to be_empty
       end
     end
   end
@@ -775,10 +810,60 @@ RSpec.describe BillingOperations::ProcessService do
 
       expect(invoice.total_amount_cents).to eq(1400 + 3400) # $31 * 14/31 days, then $62 * 17/31 days.
       expect(invoice.fees.order(:amount_cents).pluck(:amount_cents)).to eq([1400, 3400])
+      expect(invoice.fees.order(:amount_cents).map { |fee| fee.properties.values_at("from_datetime", "to_datetime") }).to eq([
+        [Time.utc(2026, 1, 1).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)).iso8601(6)],
+        [Time.utc(2026, 1, 15).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6)]
+      ])
       expect(invoice.billing_operations.sole.id).to eq(operation.id)
+      expect(operation.reload.processed_at).to eq(cursor)
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
       expect(described_class.call!(customer:, timestamp: Time.utc(2026, 1, 15)).invoices).to be_empty
       expect(contract_rate_card.fees.count).to eq(2)
+    end
+  end
+
+  context "with cycle-scoped arrears billing and two known prices" do
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
+        rate_properties: {"amount" => "62"})
+    end
+
+    it "bills both priced slices once at the cycle close" do
+      invoice = result.invoices.sole
+
+      expect(invoice.total_amount_cents).to eq(1400 + 3400) # $31 * 14/31 days, then $62 * 17/31 days.
+      expect(invoice.fees.order(:amount_cents).pluck(:amount_cents)).to eq([1400, 3400])
+      expect(invoice.fees.order(:amount_cents).map { |fee| fee.properties.values_at("from_datetime", "to_datetime") }).to eq([
+        [Time.utc(2026, 1, 1).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)).iso8601(6)],
+        [Time.utc(2026, 1, 15).iso8601(6), BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6)]
+      ])
+      expect(invoice.billing_operations.sole.id).to eq(operation.id)
+      expect(operation.reload.processed_at).to eq(cursor)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+      expect(described_class.call!(customer:, timestamp: cursor).invoices).to be_empty
+      expect(contract_rate_card.fees.count).to eq(2)
+    end
+
+    context "when computing the second fee fails" do
+      let(:failure) { BaseService::Result.new.single_validation_failure!(field: :base, error_code: "cannot_bill") }
+
+      before do
+        calls = 0
+        allow(BillingOperations::Fees::ComputeService).to receive(:call!).and_wrap_original do |original, **attributes|
+          calls += 1
+          raise BaseService::FailedResult.new(failure, "cannot bill") if calls == 2
+
+          original.call(**attributes)
+        end
+      end
+
+      it "rolls back the first fee, invoice, operation and cursor" do
+        expect(result).to be_failure
+        expect(Invoice.where(customer:)).to be_empty
+        expect(contract_rate_card.fees).to be_empty
+        expect(operation.reload).to have_attributes(processed_at: nil, invoice_id: nil)
+        expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+      end
     end
   end
 
@@ -941,8 +1026,8 @@ RSpec.describe BillingOperations::ProcessService do
       create(:rate_card, :advance, organization:, product:, currency: "USD", display_on_invoice: false, regroup_paid_fees: :invoice)
     end
     let(:paid_fee) do
-      segment = BillingOperations::ResolveSegmentsService.call!(operation:).segments.sole
-      metered_item = Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment)
+      billing_segment = BillingOperations::ResolveSegmentsService.call!(operation:).billing_segments.sole
+      metered_item = Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:)
       create(:fee, :succeeded, invoice: nil, subscription: nil, organization:, billing_entity: customer.billing_entity,
         contract:, contract_rate_card:, rate_card_rate: rate, invoiceable: product, fee_type: :product,
         amount_currency: "USD", amount_cents: 500, pay_in_advance: true, succeeded_at: Time.utc(2026, 1, 10),

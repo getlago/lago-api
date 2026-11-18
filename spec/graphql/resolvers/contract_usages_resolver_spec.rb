@@ -23,9 +23,10 @@ RSpec.describe Resolvers::ContractUsagesResolver do
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
   let(:product) { create(:product, :standalone, :metered, organization:, billable_metric:) }
   let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: :arrears, currency: "EUR") }
+  let(:billing_scope) { "cycle" }
   let(:contract_rate_card) do
     create(:contract_rate_card, organization:, contract:, rate_card:,
-      effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+      effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1), billing_scope:)
   end
   let(:rate) do
     create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-01-01"),
@@ -70,6 +71,58 @@ RSpec.describe Resolvers::ContractUsagesResolver do
 
       collection = result["data"]["contractUsages"]["collection"]
       expect(collection.sole).to include("rateCardCode" => rate_card.code, "productName" => product.name, "units" => 1.0, "amountCents" => "200")
+    end
+
+    context "with a midcycle rate change" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!) {
+            contractUsages(contractId: $contractId) {
+              collection { fromDatetime toDatetime units eventsCount amountCents }
+            }
+          }
+        GQL
+      end
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-07"),
+          rate_properties: {"amount" => "5"})
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2027-02-08"))
+      end
+
+      shared_examples "returns the selected obligation" do
+        it "reports its complete window and summed usage" do
+          result = execute_graphql(
+            current_user: membership.user, current_organization: organization,
+            permissions: required_permission, query:, variables: {contractId: contract.id}
+          )
+
+          expect(result["data"]["contractUsages"]["collection"].sole).to eq(
+            "fromDatetime" => expected_start, "toDatetime" => "2027-02-28T23:59:59Z",
+            "units" => expected_units, "eventsCount" => expected_events, "amountCents" => expected_amount
+          )
+        end
+      end
+
+      context "with cycle scope" do
+        let(:expected_start) { "2027-02-01T00:00:00Z" }
+        let(:expected_units) { 2.0 }
+        let(:expected_events) { 2 }
+        let(:expected_amount) { "700" } # One event at 2 EUR and one at 5 EUR.
+
+        include_examples "returns the selected obligation"
+      end
+
+      context "with segment scope" do
+        let(:billing_scope) { "segment" }
+        let(:expected_start) { "2027-02-07T00:00:00Z" }
+        let(:expected_units) { 1.0 }
+        let(:expected_events) { 1 }
+        let(:expected_amount) { "500" }
+
+        include_examples "returns the selected obligation"
+      end
     end
 
     it "excludes a categorized card when withoutProductCategory is true, proving the argument reaches the service" do

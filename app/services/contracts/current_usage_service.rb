@@ -35,14 +35,9 @@ module Contracts
         []
       else
         cards = selected_cards
-        if cards.any?
-          ActiveRecord::Associations::Preloader.new(records: cards, associations: [{rate_card: :rates}, {rate_phases: :rate_override}, :organization, :product]).call
-        end
+        preload_schedule_inputs(cards)
         obligations = cards.filter_map { |card| obligation_for(card) }
-        fixed_cards = obligations.filter_map { |card, _| card unless card.rate_card.product.metered? }
-        ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
-        codes = obligations.filter_map { |card, _| card.rate_card.applied_pricing_unit_code.presence }.uniq
-        @pricing_units_by_code = codes.any? ? contract.organization.pricing_units.where(code: codes).index_by(&:code) : {}
+        preload_pricing_inputs(obligations)
 
         obligations
           .map { |card, obligation| rate_card_usage(card, obligation) }
@@ -65,6 +60,33 @@ module Contracts
 
     delegate :customer, to: :contract
 
+    def preload_schedule_inputs(cards)
+      return if cards.empty?
+
+      ActiveRecord::Associations::Preloader.new(records: cards, associations: [{rate_card: :rates}, {rate_phases: :rate_override}]).call
+      recurring_candidates = cards.select do |card|
+        rate_card = card.rate_card
+        rate_card.rates.any? && rate_card.advance? && rate_card.display_on_invoice? && rate_card.product.metered?
+      end
+      if recurring_candidates.any?
+        ActiveRecord::Associations::Preloader.new(records: recurring_candidates, associations: {rate_card: {product: :billable_metric}}).call
+      end
+    end
+
+    def preload_pricing_inputs(obligations)
+      cards = obligations.map(&:first)
+      if cards.any?
+        ActiveRecord::Associations::Preloader.new(records: cards, associations: [:organization, {product: [:billable_metric, :product_category]}]).call
+        metered_cards, fixed_cards = cards.partition { |card| card.product.metered? }
+        if metered_cards.any?
+          ActiveRecord::Associations::Preloader.new(records: metered_cards, associations: {product: {filters: {values: :billable_metric_filter}}}).call
+        end
+        ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
+      end
+      codes = cards.filter_map { |card| card.rate_card.applied_pricing_unit_code.presence }.uniq
+      @pricing_units_by_code = codes.any? ? contract.organization.pricing_units.where(code: codes).index_by(&:code) : {}
+    end
+
     # Filtered after the version selection, so that a superseded version never stands in for
     # the card that replaced it.
     def selected_cards
@@ -74,7 +96,7 @@ module Contracts
     def effective_cards
       cards = contract.applied_rate_cards
         .starting_before_contract_end
-        .includes(rate_card: [:product_filter, {product: [:billable_metric, :product_category]}])
+        .includes(rate_card: [:product_filter, :product])
         .order(:effective_date, :created_at, :id)
         .to_a
       date = timestamp.in_time_zone(customer.applicable_timezone).to_date
@@ -136,25 +158,23 @@ module Contracts
     end
 
     def rate_card_usage(card, obligation)
-      current_index = obligation.segments.index { (it.started_at...it.ended_at).cover?(timestamp) }
-      billing_segments = obligation.segments.map do |segment|
-        BillingSegments::BuildService.call!(
+      fees = obligation.segments.flat_map do |segment|
+        billing_segment = BillingSegments::BuildService.call!(
           contract_rate_card: card, obligation:, segment:, pricing_units_by_code: @pricing_units_by_code
         ).billing_segment
+        compute_fees(billing_segment)
       end
-      # Keep the existing response's singular pricing metadata effective at the query instant.
       RateCardUsage.new(
         contract_rate_card: card,
         obligation:,
-        billing_segment: billing_segments.fetch(current_index),
         rate_phase: card.rate_phases.find { |phase| phase.code == obligation.cycle.phase.code },
-        fees: billing_segments.flat_map { compute_fees(it) }
+        fees:
       )
     end
 
     # Oldest window first; on the same start, the one closing first.
     def usage_order(usage)
-      [usage.obligation.segments.first.started_at, usage.obligation.segments.last.ended_at, usage.contract_rate_card.rate_card.code]
+      [usage.started_at, usage.ended_at, usage.contract_rate_card.rate_card.code]
     end
 
     def compute_fees(billing_segment)

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe BillingOperations::ResolveSegmentsService do
   describe ".call!" do
-    subject(:segments) { described_class.call!(operation:).segments }
+    subject(:billing_segments) { described_class.call!(operation:).billing_segments }
 
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:, timezone: "UTC") }
@@ -31,9 +31,9 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       create(:rate_card_rate, organization:, rate_card:, rate_model: "standard", rate_properties: {"amount" => "10"})
       operation
 
-      expect { expect(segments).to all(be_a(BillingSegment)) }
+      expect { expect(billing_segments).to all(be_a(BillingSegment)) }
         .not_to change(LegacyBillingSegment, :count)
-      expect(segments).not_to respond_to(:save!)
+      expect(billing_segments).not_to respond_to(:save!)
     end
 
     context "when the planner's next priced cycle follows the stored cycle" do
@@ -52,7 +52,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         resolution = described_class.call!(operation:)
 
         expect(resolution.schedule).to be_a(Billing::RateCards::Schedule)
-        expect(resolution.segments).to be_empty
+        expect(resolution.billing_segments).to be_empty
       end
     end
 
@@ -82,7 +82,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "uses segment end as the regroup date" do
         resolution = described_class.call!(operation:)
 
-        expect(resolution.segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1)])
+        expect(resolution.billing_segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1)])
       end
     end
 
@@ -106,17 +106,17 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         it "returns the advance slice due at the operation date" do
           result = described_class.call!(operation:)
 
-          expect(result.segments.map(&:cycle_started_at).uniq).to eq([Time.utc(2026, 1, 1)])
-          expect(result.segments.map { [it.started_at, it.ended_at, it.proration_ratio] }).to eq(
+          expect(result.billing_segments.map(&:cycle_started_at).uniq).to eq([Time.utc(2026, 1, 1)])
+          expect(result.billing_segments.map { [it.started_at, it.ended_at, it.proration_ratio] }).to eq(
             [[Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)), BigDecimal(14).div(31, 10)]]
             # 14 days of the 31-day January billing cycle.
           )
         end
 
         it "does not replay the newly priced slice" do
-          expect(segments.map(&:rate_card_rate_id)).to eq([rate_card.rates.order(:effective_from).first.id])
-          expect(segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1)])
-          expect(segments.sole.ended_at).to eq(BillingSegment.inclusive_end(Time.utc(2026, 1, 15)))
+          expect(billing_segments.map(&:rate_card_rate_id)).to eq([rate_card.rates.order(:effective_from).first.id])
+          expect(billing_segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1)])
+          expect(billing_segments.sole.ended_at).to eq(BillingSegment.inclusive_end(Time.utc(2026, 1, 15)))
           expect(later_rate).to be_persisted
         end
 
@@ -124,7 +124,15 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           let(:billing_scope) { "cycle" }
 
           it "returns both priced slices owned by the opening operation" do
-            expect(segments.map { [it.rate_card_rate_id, it.started_at, it.ended_at, it.billing_at] }).to eq([
+            resolution = described_class.call!(operation:)
+
+            expect(resolution.obligation).to be_a(Billing::Obligation)
+            expect(resolution.obligation.terms).to be(resolution.schedule.obligation_at(Time.utc(2026, 1, 1)).terms)
+            expect(resolution.obligation.segments.map { [it.started_at, it.ended_at] }).to eq([
+              [Time.utc(2026, 1, 1), Time.utc(2026, 1, 15)],
+              [Time.utc(2026, 1, 15), Time.utc(2026, 2, 1)]
+            ])
+            expect(resolution.billing_segments.map { [it.rate_card_rate_id, it.started_at, it.ended_at, it.billing_at] }).to eq([
               [rate_card.rates.order(:effective_from).first.id, Time.utc(2026, 1, 1),
                 BillingSegment.inclusive_end(Time.utc(2026, 1, 15)), operation.billing_at],
               [later_rate.id, Time.utc(2026, 1, 15),
@@ -153,7 +161,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         end
 
         it "returns only the slice due at the price change" do
-          expect(segments.map { [it.started_at, it.billing_at] }).to eq(
+          expect(billing_segments.map { [it.started_at, it.billing_at] }).to eq(
             [[Time.utc(2026, 1, 1), operation.billing_at]]
           )
         end
@@ -162,7 +170,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           let(:billing_scope) { "cycle" }
 
           it "returns no coverage at the intermediate price change" do
-            expect(segments).to be_empty
+            expect(billing_segments).to be_empty
           end
 
           context "when the operation closes the cycle" do
@@ -173,7 +181,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
             end
 
             it "returns every priced slice at the cycle's billing instant" do
-              expect(segments.map { [it.started_at, it.ended_at, it.billing_at] }).to eq([
+              expect(billing_segments.map { [it.started_at, it.ended_at, it.billing_at] }).to eq([
                 [Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)), operation.billing_at],
                 [Time.utc(2026, 1, 15), BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), operation.billing_at]
               ])
@@ -199,7 +207,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           it "returns only the slices after the previous operation" do
             result = described_class.call!(operation: close)
 
-            expect(result.segments.map(&:started_at)).to eq([Time.utc(2026, 1, 15)])
+            expect(result.billing_segments.map(&:started_at)).to eq([Time.utc(2026, 1, 15)])
             expect(Billing::RateCards::BuildScheduleService).to have_received(:call!).with(
               contract_rate_card:
             )
@@ -212,7 +220,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
             end
 
             it "returns every slice of the cycle" do
-              expect(described_class.call!(operation: close).segments.map(&:started_at))
+              expect(described_class.call!(operation: close).billing_segments.map(&:started_at))
                 .to eq([Time.utc(2026, 1, 1), Time.utc(2026, 1, 15)])
             end
           end
@@ -221,7 +229,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
             before { operation.update!(target_cycle_started_at: Time.utc(2025, 12, 1)) }
 
             it "returns every slice of the cycle" do
-              expect(described_class.call!(operation: close).segments.map(&:started_at))
+              expect(described_class.call!(operation: close).billing_segments.map(&:started_at))
                 .to eq([Time.utc(2026, 1, 1), Time.utc(2026, 1, 15)])
             end
           end
@@ -235,7 +243,10 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           end
 
           it "returns both slices instead of dropping the earlier one" do
-            expect(segments.map { [it.started_at, it.ended_at] }).to eq([
+            resolution = described_class.call!(operation:)
+
+            expect(resolution.obligation.segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1), Time.utc(2026, 1, 15)])
+            expect(resolution.billing_segments.map { [it.started_at, it.ended_at] }).to eq([
               [Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 15))],
               [Time.utc(2026, 1, 15), BillingSegment.inclusive_end(Time.utc(2026, 2, 1))]
             ])
@@ -256,7 +267,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
           result = described_class.call(operation:)
 
           expect(result).to be_success
-          expect(result.segments).to be_empty
+          expect(result.billing_segments).to be_empty
           expect(operation.reload).to have_attributes(processed_at: Time.utc(2026, 1, 1), cancelled_at: nil)
           expect(contract_rate_card.billing_operations.count).to eq(1)
         end
@@ -275,7 +286,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         it "resolves clipped coverage from the saved billing instant without changing operation identity" do
           result = described_class.call!(operation:)
 
-          expect(result.segments.sole).to have_attributes(
+          expect(result.billing_segments.sole).to have_attributes(
             started_at: Time.utc(2026, 1, 1), ended_at: BillingSegment.inclusive_end(Time.utc(2026, 1, 15))
           )
           expect(operation).not_to be_changed
@@ -310,7 +321,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns no match at the contract end" do
         result = described_class.call!(operation:)
 
-        expect(result).to have_attributes(segments: be_empty, schedule: be_present)
+        expect(result).to have_attributes(billing_segments: be_empty, schedule: be_present)
       end
 
       context "when the target cycle starts after contract end" do
@@ -319,7 +330,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         it "returns no match after the contract end" do
           result = described_class.call!(operation:)
 
-          expect(result).to have_attributes(segments: be_empty, schedule: be_present)
+          expect(result).to have_attributes(billing_segments: be_empty, schedule: be_present)
         end
       end
     end
@@ -343,7 +354,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns the slices of its cycle that fell due before it" do
         result = described_class.call!(operation:)
 
-        expect(result.segments.map { [it.started_at, it.billing_at] }).to eq([[Time.utc(2026, 1, 1), operation.billing_at]])
+        expect(result.billing_segments.map { [it.started_at, it.billing_at] }).to eq([[Time.utc(2026, 1, 1), operation.billing_at]])
         expect(Billing::RateCards::BuildScheduleService).to have_received(:call!).with(
           contract_rate_card:
         )
@@ -360,8 +371,8 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
         it "returns only segments from the stored cycle" do
           result = described_class.call!(operation:)
 
-          expect(result.segments.map(&:cycle_started_at)).to eq([Time.utc(2026, 1, 1)])
-          expect(result.segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1)])
+          expect(result.billing_segments.map(&:cycle_started_at)).to eq([Time.utc(2026, 1, 1)])
+          expect(result.billing_segments.map(&:started_at)).to eq([Time.utc(2026, 1, 1)])
         end
       end
     end
@@ -382,7 +393,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns no segments while keeping the schedule for continuation" do
         result = described_class.call!(operation:)
 
-        expect(result).to have_attributes(segments: be_empty, schedule: be_present)
+        expect(result).to have_attributes(billing_segments: be_empty, schedule: be_present)
       end
     end
 
@@ -398,7 +409,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       end
 
       it "does not bill the cycle that merely contains the stored target" do
-        expect(segments).to be_empty
+        expect(billing_segments).to be_empty
         expect(operation.reload).to have_attributes(
           billing_at: Time.utc(2026, 2, 1), target_cycle_started_at: Time.utc(2026, 1, 15),
           processed_at: nil
@@ -426,7 +437,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns the cycle clipped at the termination" do
         result = described_class.call!(operation:)
 
-        expect(result.segments.map { [it.started_at, it.ended_at, it.billing_at] }).to eq(
+        expect(result.billing_segments.map { [it.started_at, it.ended_at, it.billing_at] }).to eq(
           [[Time.utc(2026, 1, 1), BillingSegment.inclusive_end(Time.utc(2026, 1, 15)), operation.billing_at]]
         )
       end
@@ -447,7 +458,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns a successful empty resolution" do
         result = described_class.call!(operation:)
 
-        expect(result).to have_attributes(segments: be_empty, schedule:)
+        expect(result).to have_attributes(billing_segments: be_empty, schedule:, obligation: nil)
       end
     end
 
@@ -486,7 +497,7 @@ RSpec.describe BillingOperations::ResolveSegmentsService do
       it "returns an empty resolution without requiring priced rates" do
         result = described_class.call!(operation:)
 
-        expect(result).to have_attributes(segments: be_empty, schedule: nil)
+        expect(result).to have_attributes(billing_segments: be_empty, schedule: nil, obligation: nil)
       end
     end
 

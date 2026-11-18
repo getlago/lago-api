@@ -5,7 +5,10 @@ require "rails_helper"
 RSpec.describe V2::RateCardUsageSerializer do
   subject(:payload) { described_class.new(usage).serialize }
 
-  let(:usage) { RateCardUsage.new(contract_rate_card:, obligation: instance_double(Billing::Obligation), billing_segment:, rate_phase:, fees:) }
+  let(:usage) { RateCardUsage.new(contract_rate_card:, obligation:, rate_phase:, fees:) }
+  let(:obligation) { Billing::Obligation.new(cycle:, segments:, billing_at: nil, terms: nil) }
+  let(:cycle) { Billing::Cycle.new(index: 0, started_at: segments.first.started_at, ended_at: segments.last.ended_at, phase:, calendar: nil) }
+  let(:phase) { Billing::Phase.new(code: nil, billing_interval_cycle_count: nil, rate_override:) }
   let(:billable_metric) { build_stubbed(:billable_metric, code: "api_calls") }
   let(:product_category) { build_stubbed(:product_category, code: "compute", name: "Compute") }
   let(:product) do
@@ -15,16 +18,10 @@ RSpec.describe V2::RateCardUsageSerializer do
   let(:rate_card) { build_stubbed(:rate_card, product:, product_filter:, code: "api_monthly", name: "API monthly") }
   let(:contract_rate_card) { build_stubbed(:contract_rate_card, rate_card:) }
   let(:rate_override) { nil }
-  let(:billing_segment) do
-    build_stubbed(
-      :billing_segment,
-      contract_rate_card:,
-      rate_card_rate: build_stubbed(:rate_card_rate, rate_card:),
-      rate_override:,
-      rate_properties: {"amount" => "2"},
-      started_at: Time.zone.parse("2027-02-01T00:00:00Z"),
-      ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-03-01T00:00:00Z"))
-    )
+  let(:rate) { build_stubbed(:rate_card_rate, rate_card:, rate_properties: {"amount" => "2"}) }
+  let(:segments) do
+    [Billing::Segments::Segment.new(started_at: Time.zone.parse("2027-02-01T00:00:00Z"),
+      ended_at: Time.zone.parse("2027-03-01T00:00:00Z"), rate:)]
   end
   let(:rate_phase) { nil }
   let(:fees) do
@@ -64,6 +61,22 @@ RSpec.describe V2::RateCardUsageSerializer do
     expect(payload).to eq(flat_payload)
   end
 
+  context "with multiple priced segments" do
+    let(:segments) do
+      [
+        Billing::Segments::Segment.new(started_at: Time.zone.parse("2027-02-01"),
+          ended_at: Time.zone.parse("2027-02-07"), rate:),
+        Billing::Segments::Segment.new(started_at: Time.zone.parse("2027-02-07"),
+          ended_at: Time.zone.parse("2027-03-01"),
+          rate: build_stubbed(:rate_card_rate, rate_card:, rate_model: "package", rate_properties: {"amount" => "5"}))
+      ]
+    end
+
+    it "renders the whole window and the first segment's legacy pricing metadata" do
+      expect(payload).to eq(flat_payload)
+    end
+  end
+
   context "with a product filter" do
     let(:product_filter) do
       build_stubbed(:product_filter, product:, code: "eu", name: "Europe", invoice_display_name: "API usage, Europe")
@@ -77,7 +90,7 @@ RSpec.describe V2::RateCardUsageSerializer do
   end
 
   context "with a phase override" do
-    let(:rate_override) { build_stubbed(:rate_override, rate_model: "package") }
+    let(:rate_override) { build_stubbed(:rate_override, rate_model: "package", rate_properties: {"amount" => "2"}) }
     let(:rate_phase) { build_stubbed(:rate_phase, :contract_level, contract_rate_card:, code: "intro", name: "Intro") }
 
     it "renders the phase and the rate model of its override" do
