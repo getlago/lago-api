@@ -2,8 +2,8 @@
 
 module Types
   module Organizations
-    # The activation status on the shared organization type, which the customer portal and the public invite query
-    # also reach: it is shown only to a viewer who is an active member of the organization.
+    # Shown only to an active member, as the customer portal and the public invite query reach this type. Login and
+    # signup payloads have no session and answer null: clients read it from currentUser or currentOrganization.
     module ActivationFields
       extend ActiveSupport::Concern
       include ViewerMembership
