@@ -179,6 +179,7 @@ describe CatalogWalletSelectors::ReplaceService do
       ["a non boolean filters flag", {type: "product", code: "api_calls", with_product_filters: "yes"}, :with_product_filters, "value_is_invalid"],
       ["a filters flag on another type", {type: "fee_type", code: "metered", with_product_filters: true}, :with_product_filters, "value_is_invalid"],
       ["a product filter without its product", {type: "product_filters", code: "premium_model"}, :product_code, "value_is_mandatory"],
+      ["a product filter whose product code is not a string", {type: "product_filters", product_code: 123, code: "premium_model"}, :product_code, "value_is_invalid"],
       ["a product filter of an unknown product", {type: "product_filters", product_code: "unknown", code: "premium_model"}, :product_code, "product_not_found"],
       ["an unknown product filter", {type: "product_filters", product_code: "api_calls", code: "unknown"}, :code, "product_filter_not_found"]
     ].each do |description, entry, field, error_code, meta|
