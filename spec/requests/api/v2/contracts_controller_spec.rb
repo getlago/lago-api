@@ -761,6 +761,18 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "when the contract is a draft" do
+      let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.ago) }
+
+      it "cancels it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(external_id: contract.external_id, status: "canceled")
+        expect(contract.reload.billing_segments).to be_empty
+      end
+    end
+
     context "when a pending replacement coexists with the active contract" do
       it "terminates the active contract and leaves the replacement live" do
         replacement = create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: contract.external_id)

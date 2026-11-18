@@ -90,7 +90,7 @@ RSpec.describe Contract do
         create(:contract, :draft, organization:, customer:, external_id: "c-1")
 
         expect { create(:contract, :draft, organization:, customer:, external_id: "c-1") }
-          .to raise_error(ActiveRecord::RecordNotUnique, /index_contracts_on_live_external_id_with_draft/)
+          .to raise_error(ActiveRecord::RecordNotUnique, /index_contracts_on_live_external_id/)
       end
 
       it "does not constrain finished contracts" do

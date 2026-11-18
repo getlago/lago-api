@@ -977,7 +977,7 @@ DROP INDEX IF EXISTS public.index_contracts_on_organization_id_name_gin_trgm_ops
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id;
-DROP INDEX IF EXISTS public.index_contracts_on_live_external_id_with_draft;
+DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
 DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
@@ -9793,10 +9793,10 @@ CREATE INDEX index_contracts_on_customer_id ON public.contracts USING btree (cus
 
 
 --
--- Name: index_contracts_on_live_external_id_with_draft; Type: INDEX; Schema: public; Owner: -
+-- Name: index_contracts_on_live_external_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_contracts_on_live_external_id_with_draft ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['draft'::public.contract_status, 'pending'::public.contract_status, 'active'::public.contract_status]));
+CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['draft'::public.contract_status, 'pending'::public.contract_status, 'active'::public.contract_status]));
 
 
 --

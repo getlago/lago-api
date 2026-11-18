@@ -30,10 +30,8 @@ module Contracts
 
       result.contract = contract
 
-      # A draft or pending contract has not started billing, so it has no usage yet.
-      result.rate_card_usages = if contract.draft? || contract.pending?
-        []
-      else
+      # Only a contract that took effect has usage: a draft, a pending or a canceled one never billed.
+      result.rate_card_usages = if contract.active? || contract.terminated?
         cards = selected_cards
         if cards.any?
           ActiveRecord::Associations::Preloader.new(records: cards, associations: [{rate_card: :rates}, {rate_phases: :rate_override}, :organization, :product]).call
@@ -45,6 +43,8 @@ module Contracts
         segments
           .map { |card, billable_segment, billing_segment| rate_card_usage(card, billable_segment, billing_segment) }
           .sort_by { |usage| usage_order(usage) }
+      else
+        []
       end
 
       result.taxes_unavailable = false
