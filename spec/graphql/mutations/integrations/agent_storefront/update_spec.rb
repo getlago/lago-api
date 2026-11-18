@@ -96,6 +96,15 @@ RSpec.describe Mutations::Integrations::AgentStorefront::Update, :premium do
       end
     end
 
+    context "with plans null" do
+      let(:plans) { nil }
+
+      it "keeps the sold plans" do
+        expect(result["data"]["updateAgentStorefrontIntegration"]["plans"].map { it["planCode"] }).to eq(["count_per_call"])
+        expect(integration.reload.plans.map { it["plan_code"] }).to eq(["count_per_call"])
+      end
+    end
+
     context "with a maximum below the minimum" do
       let(:plans) { [{planCode: plan.code, minimumTopupCents: 5000, maximumTopupCents: 2000}] }
 

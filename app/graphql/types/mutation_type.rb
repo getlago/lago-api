@@ -246,6 +246,9 @@ module Types
     field :create_agent_storefront_integration, mutation: Mutations::Integrations::AgentStorefront::Create
     field :update_agent_storefront_integration, mutation: Mutations::Integrations::AgentStorefront::Update
 
+    field :start_agent_claim, mutation: Mutations::AgentClaims::Start
+    field :verify_agent_claim, mutation: Mutations::AgentClaims::Verify
+
     field :create_anrok_integration, mutation: Mutations::Integrations::Anrok::Create
     field :update_anrok_integration, mutation: Mutations::Integrations::Anrok::Update
 

@@ -78,6 +78,8 @@ module Plans
           process_downgraded_subscriptions
           process_pending_subscriptions
         end
+
+        Plans::AgentStorefrontGuardService.call(plan:).raise_if_error!
       end
 
       cascade_subscription_fee_update(old_amount_cents)
