@@ -16,6 +16,8 @@ RSpec.describe Organization do
     it do
       expect(subject).to define_enum_for(:environment).backed_by_column_of_type(:enum).validating
         .with_values(production: "production", sandbox: "sandbox")
+      expect(subject).to define_enum_for(:activation_status).backed_by_column_of_type(:enum).validating.with_prefix
+        .with_values(pending_payment_method: "pending_payment_method", active: "active")
     end
   end
 
@@ -298,9 +300,61 @@ RSpec.describe Organization do
     describe "of the defaults" do
       subject(:organization) { create(:organization) }
 
-      it "is a production organization, not self-serve and unlinked" do
+      it "is an active production organization, not self-serve and unlinked" do
         expect(organization.reload).to have_attributes(self_serve: false, environment: "production",
-          production_organization_id: nil)
+          production_organization_id: nil, activation_status: "active", activated_at: nil)
+      end
+    end
+
+    describe "of activation_status" do
+      context "with a self-serve production organization waiting for a payment method" do
+        subject(:organization) { build(:organization, :self_serve, activation_status: "pending_payment_method") }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "with a regular organization waiting for a payment method" do
+        subject(:organization) { build(:organization, activation_status: "pending_payment_method") }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      context "with a self-serve sandbox waiting for a payment method" do
+        subject(:organization) do
+          build(:organization, :self_serve, :sandbox, production_organization: create(:organization, :self_serve),
+            activation_status: "pending_payment_method")
+        end
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      context "with an unknown value" do
+        before { organization.activation_status = "suspended" }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      it "refuses a waiting regular organization in the database, for writes that skip validations" do
+        regular = create(:organization)
+
+        expect { regular.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
+      end
+
+      it "refuses a waiting sandbox in the database, for writes that skip validations" do
+        sandbox = create(:organization, :self_serve, :sandbox, production_organization: create(:organization, :self_serve))
+
+        expect { sandbox.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
       end
     end
 

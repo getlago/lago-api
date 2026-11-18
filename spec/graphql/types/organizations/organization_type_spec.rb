@@ -17,6 +17,7 @@ RSpec.describe Types::Organizations::OrganizationType do
     expect(subject).to have_field(:can_create_billing_entity).of_type("Boolean!")
     expect(subject).to have_field(:accessible_by_current_session).of_type("Boolean!")
 
+    expect(subject).to have_field(:activation_status).of_type("OrganizationActivationStatusEnum!")
     expect(subject).to have_field(:environment).of_type("OrganizationEnvironmentEnum!")
     expect(subject).to have_field(:production_organization).of_type("LinkedOrganization")
     expect(subject).to have_field(:sandbox_organization).of_type("LinkedOrganization")

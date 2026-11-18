@@ -167,6 +167,12 @@ class Organization < ApplicationRecord
     sandbox: "sandbox"
   }.freeze
 
+  # A self-serve production organization can wait for a payment method before it opens; every other one is active.
+  ACTIVATION_STATUSES = {
+    pending_payment_method: "pending_payment_method",
+    active: "active"
+  }.freeze
+
   EVENTS_STORES = {
     clickhouse: "clickhouse",
     postgres: "postgres"
@@ -219,10 +225,12 @@ class Organization < ApplicationRecord
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
-  # Declared, so the model loads in older migrations that run before the column exists. Saving still fails there:
+  # Declared, so the model loads in older migrations that run before the columns exist. Saving still fails there:
   # the validations read `self_serve` and `production_organization_id`, which do not exist yet either.
   attribute :environment, :string
   enum :environment, ENVIRONMENTS, validate: true
+  attribute :activation_status, :string
+  enum :activation_status, ACTIVATION_STATUSES, prefix: true, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
@@ -257,6 +265,7 @@ class Organization < ApplicationRecord
   validate :validate_customer_portal_locked_fields
   validate :validate_environment_link,
     if: -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }
+  validate :validate_activation_status, if: :activation_status_pending_payment_method?
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -432,6 +441,12 @@ class Organization < ApplicationRecord
     errors.add(:environment, :invalid) if sandbox? && persisted? && sandbox_organization.present?
   end
 
+  # Mirrors check_organizations_on_activation_status: only a self-serve production organization can wait for a
+  # payment method.
+  def validate_activation_status
+    errors.add(:activation_status, :invalid) unless self_serve? && production?
+  end
+
   def set_hmac_key
     loop do
       self.hmac_key = SecureRandom.uuid
@@ -453,6 +468,8 @@ end
 # Database name: primary
 #
 #  id                            :uuid             not null, primary key
+#  activated_at                  :datetime
+#  activation_status             :enum             default("active"), not null
 #  address_line1                 :string
 #  address_line2                 :string
 #  api_key                       :string

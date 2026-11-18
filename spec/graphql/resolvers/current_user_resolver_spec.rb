@@ -110,7 +110,7 @@ RSpec.describe Resolvers::CurrentUserResolver do
           currentUser {
             memberships {
               organization {
-                id selfServe environment
+                id selfServe environment activationStatus
                 productionOrganization { id name slug }
                 sandboxOrganization { id name slug }
               }
@@ -122,7 +122,7 @@ RSpec.describe Resolvers::CurrentUserResolver do
     end
 
     let(:user) { create(:user) }
-    let(:production) { create(:organization, :self_serve) }
+    let(:production) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
     let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: production) }
     let(:other) { create(:organization) }
     # Membership creation dates, oldest first, and the memberships created revoked.
@@ -148,11 +148,12 @@ RSpec.describe Resolvers::CurrentUserResolver do
       result = execute_graphql(current_user: user, query:)
 
       expect(organizations_of(result)).to eq([
-        {"id" => other.id, "selfServe" => false, "environment" => "production", "productionOrganization" => nil,
-         "sandboxOrganization" => nil},
-        {"id" => production.id, "selfServe" => true, "environment" => "production", "productionOrganization" => nil,
+        {"id" => other.id, "selfServe" => false, "environment" => "production", "activationStatus" => "active",
+         "productionOrganization" => nil, "sandboxOrganization" => nil},
+        {"id" => production.id, "selfServe" => true, "environment" => "production",
+         "activationStatus" => "pending_payment_method", "productionOrganization" => nil,
          "sandboxOrganization" => linked(sandbox)},
-        {"id" => sandbox.id, "selfServe" => true, "environment" => "sandbox",
+        {"id" => sandbox.id, "selfServe" => true, "environment" => "sandbox", "activationStatus" => "active",
          "productionOrganization" => linked(production), "sandboxOrganization" => nil}
       ])
       expect(result["data"]["currentUser"]["organizations"].pluck("id")).to eq([other.id, production.id, sandbox.id])
@@ -226,15 +227,15 @@ RSpec.describe Resolvers::CurrentUserResolver do
       let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
       let(:membership_dates) { {production: 3.days.ago, other: 2.days.ago, sandbox: 1.day.ago} }
 
-      it "shows each organization of the pair as a standalone production one, in membership order" do
+      it "shows each organization of the pair as a standalone production one, in membership order, with its stored activation status" do
         result = execute_graphql(current_user: user, query:)
 
         expect(organizations_of(result)).to eq([
           {"id" => production.id, "selfServe" => false, "environment" => "production",
+           "activationStatus" => "pending_payment_method", "productionOrganization" => nil, "sandboxOrganization" => nil},
+          {"id" => other.id, "selfServe" => false, "environment" => "production", "activationStatus" => "active",
            "productionOrganization" => nil, "sandboxOrganization" => nil},
-          {"id" => other.id, "selfServe" => false, "environment" => "production",
-           "productionOrganization" => nil, "sandboxOrganization" => nil},
-          {"id" => sandbox.id, "selfServe" => false, "environment" => "production",
+          {"id" => sandbox.id, "selfServe" => false, "environment" => "production", "activationStatus" => "active",
            "productionOrganization" => nil, "sandboxOrganization" => nil}
         ])
       end

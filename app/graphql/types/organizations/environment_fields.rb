@@ -3,11 +3,13 @@
 module Types
   module Organizations
     # The self-serve environment of an organization and its production or sandbox pair, for the organization types
-    # that show them. With self-serve off, every organization answers as a standalone production one.
+    # that show them. With self-serve off, every organization answers as a standalone production one, but keeps its
+    # stored activation status: an organization waiting for a payment method stays so whatever the setting.
     module EnvironmentFields
       extend ActiveSupport::Concern
 
       included do
+        field :activation_status, Types::Organizations::ActivationStatusEnum, null: false
         field :environment, Types::Organizations::EnvironmentEnum, null: false
         field :production_organization, Types::Organizations::LinkedOrganizationType
         field :sandbox_organization, Types::Organizations::LinkedOrganizationType
