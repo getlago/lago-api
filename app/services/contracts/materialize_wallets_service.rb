@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 module Contracts
-  # Gives the contract its own copy of its plan's wallet templates, with their scope, taxes, metadata and credit
-  # allocation rules. A template stays editable once contracted, so the copy is what keeps a later edit away.
   class MaterializeWalletsService < BaseService
     Result = BaseResult[:wallets]
 
