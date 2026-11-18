@@ -8,6 +8,7 @@ RSpec.describe Webhooks::Wallets::TerminatedService do
   let(:wallet) { create(:wallet, :with_purchase_order_number, :terminated, terminated_at: Time.current) }
 
   before { Timecop.freeze(DateTime.new(2025, 1, 31, 12, 5, 55)) }
+  after { Timecop.return }
 
   describe ".call" do
     it_behaves_like "creates webhook", "wallet.terminated", "wallet", {
