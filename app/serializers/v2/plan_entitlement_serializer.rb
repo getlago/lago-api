@@ -15,9 +15,15 @@ module V2
 
     private
 
+    # A deleted entitlement is rendered with the values it had before the delete, which the caller passes in
+    # `values`: they are discarded with it.
+    def values
+      options[:values] || kept_values
+    end
+
     # Newest privilege first, ties by privilege id, as Feature#ordered_privileges, so that the order does not
     # depend on when each value was written. Sorted in Ruby so that a preloaded association is not queried again.
-    def values
+    def kept_values
       model.values.select(&:privilege)
         .sort { |a, b| [b.privilege.created_at, a.privilege.id] <=> [a.privilege.created_at, b.privilege.id] }
         .map do |entitlement_value|

@@ -20,7 +20,7 @@ module Entitlement
     #       It is set to false when invoked from the plan create/update mutations, where the plan
     #       service already emits the plan event, to avoid duplicates.
     #       A catalog plan gets no plan.updated event: with the entitlement_events flag, each entitlement it changes
-    #       is logged on its own, and without it nothing is logged.
+    #       gets its own activity log and webhook, and without it nothing is sent.
     activity_loggable(
       action: "plan.updated",
       record: -> { plan },
@@ -31,7 +31,7 @@ module Entitlement
       ActiveRecord::Base.transaction do
         lock_plan!(plan)
         stored_before = stored_values_by_entitlement_id if catalog_plan?
-        rendered_before = rendered_values_by_entitlement_id if log_entitlement_changes?
+        rendered_before = rendered_values_by_entitlement_id if render_entitlement_changes?
         delete_missing_entitlements unless partial?
         update_entitlements
         track_entitlement_changes(stored_before, rendered_before) if catalog_plan?
@@ -97,10 +97,17 @@ module Entitlement
       catalog_plan? && organization.feature_flag_enabled?(:entitlement_events)
     end
 
-    # The logs render every entitlement of the plan before and after the call, so they are only built
-    # when they can be sent.
-    def log_entitlement_changes?
-      entitlement_events? && Utils::ActivityLog.available?
+    # The logs and the webhooks render every entitlement of the plan before and after the call, so they are only
+    # built when one of them can be sent.
+    def render_entitlement_changes?
+      entitlement_events? && (Utils::ActivityLog.available? || send_entitlement_webhooks?)
+    end
+
+    # The jobs are enqueued in one bulk push, which skips the endpoint check of SendWebhookJob.perform_later.
+    def send_entitlement_webhooks?
+      return @send_entitlement_webhooks if defined?(@send_entitlement_webhooks)
+
+      @send_entitlement_webhooks = organization.webhook_endpoints.exists?
     end
 
     # The stored values of each kept entitlement of the plan, by privilege id, in two queries: enough to
@@ -129,16 +136,17 @@ module Entitlement
       return if changed_ids.empty?
 
       Entitlement.where(id: changed_ids).touch_all # rubocop:disable Rails/SkipsModelValidations
-      log_entitlement_changes(changed_ids, rendered_before) if rendered_before
+      send_entitlement_events(changed_ids, rendered_before) if rendered_before
     end
 
-    # One activity log per changed entitlement, with the values before and after. Each log gets its render from
-    # here, where the values are preloaded, so that it does not serialize the entitlement on its own after the commit.
-    def log_entitlement_changes(changed_ids, values_before)
+    # One activity log and one webhook per changed entitlement, with the values before and after. Each log gets its
+    # render from here, where the values are preloaded, so that it does not serialize the entitlement on its own after
+    # the commit.
+    def send_entitlement_events(changed_ids, values_before)
       entitlements = Entitlement.with_discarded.where(id: changed_ids)
         .includes(:catalog_plan, :feature, values: :privilege).newest_first
 
-      entitlements.each do |entitlement|
+      webhook_jobs = entitlements.filter_map do |entitlement|
         render = ::V2::PlanEntitlementSerializer.new(entitlement).serialize
         before = values_before[entitlement.id]
         after = entitlement.discarded? ? nil : render[:values]
@@ -151,13 +159,23 @@ module Entitlement
           "updated"
         end
 
-        Utils::ActivityLog.produce_after_commit(
-          entitlement, "plan_entitlement.#{action}",
-          changes: {"values" => [before, after]},
-          # A dropped entitlement is logged with its deletion time and the values it had: they are discarded with it.
-          activity_object: (action == "deleted") ? render.merge(values: before) : render
-        )
+        if Utils::ActivityLog.available?
+          Utils::ActivityLog.produce_after_commit(
+            entitlement, "plan_entitlement.#{action}",
+            changes: {"values" => [before, after]},
+            # A dropped entitlement is logged with its deletion time and the values it had: they are discarded with it.
+            activity_object: (action == "deleted") ? render.merge(values: before) : render
+          )
+        end
+        next unless send_entitlement_webhooks?
+
+        webhook_args = ["plan_entitlement.#{action}", entitlement]
+        # The values of a dropped entitlement are discarded with it: its webhook gets the ones it had before.
+        webhook_args << {values: before} if action == "deleted"
+        SendWebhookJob.new(*webhook_args)
       end
+
+      after_commit { ApplicationJob.perform_all_later(webhook_jobs) } if webhook_jobs.any?
     end
 
     def delete_missing_entitlements
