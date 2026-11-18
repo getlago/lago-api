@@ -5,6 +5,15 @@ module Integrations
     module Taxes
       module Invoices
         class CreateDraftService < BaseService
+          # reuse_tax_rates: the caller only needs an estimate (a wallet ongoing balance), so the
+          # rates of an earlier answer may price it without calling the provider. Invoices and
+          # previews never pass it, they always get the provider's exact answer.
+          def initialize(invoice:, fees: nil, reuse_tax_rates: false)
+            @reuse_tax_rates = reuse_tax_rates
+
+            super(invoice:, fees:)
+          end
+
           def action_name
             case provider
             when "anrok"
@@ -19,10 +28,16 @@ module Integrations
             return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
             return no_taxable_fees_result if taxable_fees.empty?
 
-            body = if cache_taxes?
-              DraftTaxesCacheService.new(integration:, payload:).call { request_taxes }
-            else
-              request_taxes
+            body = rates_cache&.fetch
+
+            unless body
+              body = if cache_taxes?
+                DraftTaxesCacheService.new(integration:, payload:).call { request_taxes }
+              else
+                request_taxes
+              end
+
+              rates_cache&.store(body)
             end
 
             process_response(body)
@@ -44,6 +59,14 @@ module Integrations
           end
 
           private
+
+          attr_reader :reuse_tax_rates
+
+          def rates_cache
+            return unless reuse_tax_rates
+
+            @rates_cache ||= DraftTaxRatesCache.new(integration:, payload:)
+          end
 
           # NOTE: Throttling happens here, so an answer served from the cache doesn't use up the
           #       provider rate limit.

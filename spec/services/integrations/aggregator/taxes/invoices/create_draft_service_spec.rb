@@ -270,6 +270,61 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             expect(WebMock).to have_requested(:post, endpoint).once
           end
         end
+
+        context "with reused tax rates" do
+          subject(:service_call) { described_class.call(invoice:, reuse_tax_rates:) }
+
+          let(:reuse_tax_rates) { true }
+          let(:body) do
+            {
+              "succeededInvoices" => [
+                {
+                  "fees" => [
+                    {"item_id" => fee_add_on.id, "item_code" => "m1", "amount_cents" => 200, "tax_amount_cents" => 20, "tax_breakdown" => [{"name" => "GST/HST", "rate" => "0.10", "tax_amount" => 20, "type" => "tax"}]},
+                    {"item_id" => fee_add_on_two.id, "item_code" => "1", "amount_cents" => 200, "tax_amount_cents" => 30, "tax_breakdown" => [{"name" => "GST/HST", "rate" => "0.15", "tax_amount" => 30, "type" => "tax"}]}
+                  ]
+                }
+              ],
+              "failedInvoices" => []
+            }.to_json
+          end
+
+          before do
+            allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+
+            described_class.call(invoice:, reuse_tax_rates: true)
+
+            # Usage grew since the first answer, within the same amount band
+            fee_add_on.update!(amount_cents: 400, precise_amount_cents: 400)
+            fee_add_on_two.update!(amount_cents: 300, precise_amount_cents: 300)
+            invoice.fees.reload
+          end
+
+          it "prices the new amounts with the rates of the first answer" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees.map { [it.item_id, it.amount_cents, it.tax_amount_cents] }).to eq(
+              [
+                [fee_add_on.id, 400, 40], # 400 * 20 / 200
+                [fee_add_on_two.id, 300, 45] # 300 * 30 / 200
+              ]
+            )
+            expect(WebMock).to have_requested(:post, endpoint).once
+          end
+
+          context "when the caller needs the exact taxes" do
+            let(:reuse_tax_rates) { false }
+
+            before { stub_request(:post, endpoint).and_return(status: 200, body:) }
+
+            it "asks the provider" do
+              service_call
+
+              expect(WebMock).to have_requested(:post, endpoint).twice
+            end
+          end
+        end
       end
 
       context "when taxes are not successfully fetched" do
