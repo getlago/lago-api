@@ -6,7 +6,8 @@
 #
 # For each active subscription of such a customer, it fills the days without a row that have usage,
 # then recomputes the diff of every filled row and of the row that follows one, which held the
-# usage of both days. Dry run by default: nothing is written.
+# usage of both days. Dry run by default: nothing is written, and it lists every day without a row,
+# including days the live run skips because they have no usage.
 class RepairDailyUsageGaps
   AFFECTED_UTC_OFFSET = 3.hours
 
@@ -37,7 +38,7 @@ class RepairDailyUsageGaps
     known_dates = usage_dates(subscription)
     missing = (first_day(subscription)..last_day(subscription)).reject { known_dates.include?(it) }
     return if missing.empty?
-    return entry(subscription, status: :would_fill, days: missing) if dry_run
+    return entry(subscription, status: :days_without_row, days: missing) if dry_run
 
     DailyUsages::FillHistoryService.call!(subscription:, from_date:)
 

@@ -73,8 +73,8 @@ RSpec.describe "migrations:repair_daily_usage_gaps" do # rubocop:disable RSpec/D
           .to output(
             a_string_including(
               "[DRY RUN]",
-              "subscription=#{subscription.id} timezone=Asia/Tokyo status=would_fill days=2024-10-15 recomputed=",
-              "Totals by status: would_fill=1"
+              "subscription=#{subscription.id} timezone=Asia/Tokyo status=days_without_row days=2024-10-15 recomputed=",
+              "Totals by status: days_without_row=1"
             )
           ).to_stdout
           .and not_change(DailyUsage, :count)
