@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 module Entitlement
-  # Removes a privilege value from a subscription (the override owner).
+  # Removes a privilege value from a subscription or a contract (the override owner).
   class SubscriptionFeaturePrivilegeRemoveService < BaseService
     include Concerns::OwnerLockConcern
     include Concerns::OverrideOwnerConcern
 
     Result = BaseResult[:feature_code, :privilege_code]
 
-    # Callers pass `subscription:`, or `owner:` for any override owner.
+    # Subscription callers pass `subscription:`, other owners `owner:`.
     def initialize(feature_code:, privilege_code:, subscription: nil, owner: subscription)
       @owner = owner
       @feature_code = feature_code
@@ -27,16 +27,18 @@ module Entitlement
       return result.not_found_failure!(resource: "privilege") unless privilege
 
       ActiveRecord::Base.transaction do
-        lock_subscription!(owner)
+        lock_override_owner!(owner)
         delete_subscription_entitlement_value_if_exists
         add_privilege_removal_if_privilege_is_in_plan
       end
 
-      SendWebhookJob.perform_after_commit("subscription.updated", subscription)
+      SendWebhookJob.perform_after_commit("subscription.updated", subscription) if subscription
 
       result.feature_code = feature_code
       result.privilege_code = privilege_code
       result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private
