@@ -18,10 +18,10 @@ module PlanWallets
     end
 
     def call
-      return result.not_found_failure!(resource: "wallet") unless plan_wallet
+      return result.not_found_failure!(resource: "plan_wallet") unless plan_wallet
 
       plan_wallet.with_lock do
-        return result.not_found_failure!(resource: "wallet") if plan_wallet.discarded?
+        return result.not_found_failure!(resource: "plan_wallet") if plan_wallet.discarded?
 
         # The taxes, scope and metadata stay on the deleted template, which still renders them.
         plan_wallet.credit_allocations.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
