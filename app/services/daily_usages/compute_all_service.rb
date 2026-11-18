@@ -175,9 +175,9 @@ module DailyUsages
 
     # Daily usages already computed for the customer's local yesterday, the usage_date that
     # ComputeService and ComputeContractService write. In the local 0-2h window the legs select,
-    # that is the UTC date for customers ahead of UTC and the UTC date minus one for the others,
-    # so the indexed usage_date range must reach the UTC date. It pre-filters before the
-    # timezone-aware match, to avoid scanning the org's whole history.
+    # that is the UTC date once the local date is ahead of UTC (always for offsets of +3 or more),
+    # otherwise the UTC date minus one, so the indexed usage_date range must reach the UTC date.
+    # It pre-filters before the timezone-aware match, to avoid scanning the org's whole history.
     def computed_yesterday(organization)
       DailyUsage
         .where(organization_id: organization.id)
