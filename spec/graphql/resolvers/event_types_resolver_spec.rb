@@ -12,6 +12,7 @@ RSpec.describe Resolvers::EventTypesResolver do
       rate_card_rate.created rate_card_rate.updated rate_card_rate.deleted
       plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted
       contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
+      contract_entitlement.created contract_entitlement.updated contract_entitlement.deleted
       contract.created contract.updated contract.started contract.terminated contract.canceled
     ]
   end
@@ -52,7 +53,7 @@ RSpec.describe Resolvers::EventTypesResolver do
   end
 
   context "when product catalog is enabled" do
-    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+    let(:organization) { create(:organization, feature_flags: ["product_catalog", "entitlement_events"]) }
 
     it "includes product catalog event types without requiring a premium license" do
       result = execute_graphql(
@@ -81,10 +82,29 @@ RSpec.describe Resolvers::EventTypesResolver do
       contract_events = %w[
         contract.created contract.updated contract.started contract.terminated contract.canceled
         contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
+        contract_entitlement.created contract_entitlement.updated contract_entitlement.deleted
       ]
 
       expect(categories_by_name.slice(*plan_rate_card_events)).to eq(plan_rate_card_events.index_with("PLANS"))
       expect(categories_by_name.slice(*contract_events)).to eq(contract_events.index_with("CONTRACTS"))
+    end
+  end
+
+  context "when product catalog is enabled without the entitlement_events flag" do
+    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+
+    it "hides the contract entitlement event types" do
+      result = execute_graphql(
+        current_user: user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      event_types_response = result["data"]["eventTypes"].map { |event_type| event_type["name"] }
+      expect(event_types_response).to match_array(
+        WebhookEndpoint::WEBHOOK_EVENT_TYPES - %w[contract_entitlement.created contract_entitlement.updated contract_entitlement.deleted]
+      )
     end
   end
 

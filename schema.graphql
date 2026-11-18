@@ -7221,6 +7221,9 @@ enum EventTypeEnum {
   billable_metric_updated
   contract_canceled
   contract_created
+  contract_entitlement_created
+  contract_entitlement_deleted
+  contract_entitlement_updated
   contract_rate_card_created
   contract_rate_card_deleted
   contract_rate_card_updated
