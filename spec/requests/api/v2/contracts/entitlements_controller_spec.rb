@@ -98,7 +98,6 @@ RSpec.describe Api::V2::Contracts::EntitlementsController do
           expect(json).to eq(
             entitlements: [
               {
-                contract_external_id: contract.external_id,
                 lago_contract_id: contract.id,
                 feature_code: "seats",
                 source: "contract",
