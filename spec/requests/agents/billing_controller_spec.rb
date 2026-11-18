@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Agents::BillingController, :premium, cache: :memory do
-  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront]) }
+  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront], feature_flags: %w[agent_storefront]) }
   let(:storefront) { create(:agent_storefront_integration, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
   let(:base) { "/agents/v1/#{storefront.id}" }

@@ -258,4 +258,17 @@ RSpec.describe Events::Stores::PostgresStore do
       expect(event_store.grouped_weighted_sum.sole.groups).to eq("region" => group_value)
     end
   end
+
+  describe "#resent_after_watermark?" do
+    let(:subscription) { create(:subscription) }
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization: subscription.organization) }
+    let(:event_store) do
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries: {}, filters: {})
+    end
+    let(:period) { RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: Time.current, watermark: Time.current) }
+
+    it "never finds one, as a re-sent transaction_id is rejected" do
+      expect(event_store.resent_after_watermark?(period)).to be(false)
+    end
+  end
 end

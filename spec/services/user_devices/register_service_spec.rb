@@ -99,4 +99,75 @@ RSpec.describe UserDevices::RegisterService do
       expect(security_logger).not_to have_received(:produce)
     end
   end
+
+  context "when another sign-in from the same browser inserts the device first" do
+    # Run as in a request, whose executor caches reads until a write through Active Record.
+    subject(:result) { ActiveRecord::Base.cache { described_class.call(user:, skip_log:) } }
+
+    let(:fingerprint) { Digest::SHA256.hexdigest(device_info[:user_agent]) }
+    let(:passes_validation) { false }
+    let(:concurrent_device) { UserDevice.uncached { UserDevice.find_by!(user:, fingerprint:) } }
+
+    before do
+      freeze_time
+      # The other request commits right after this one's lookup: inserted over the raw connection, as another
+      # connection would, so the cached lookup still answers that there is no device.
+      allow(user.user_devices).to receive(:find_or_initialize_by).and_wrap_original do |original, *args|
+        original.call(*args).tap do |device|
+          ApplicationRecord.connection.raw_connection.exec_params(
+            "INSERT INTO user_devices (id, user_id, fingerprint, last_logged_at, created_at, updated_at) " \
+            "VALUES (gen_random_uuid(), $1, $2, $3, $3, $3)",
+            [user.id, fingerprint, 1.day.ago.iso8601(6)]
+          )
+          allow(device).to receive(:valid?).and_return(true) if passes_validation
+        end
+      end
+    end
+
+    shared_examples "a device registered by the other sign-in" do
+      it "updates the device the other sign-in created" do
+        expect(result).to be_success
+        expect(UserDevice.where(user:).count).to eq(1)
+        expect(concurrent_device).to have_attributes(last_logged_at: Time.current, browser: "Chrome 120", last_ip_address: "192.168.1.1")
+      end
+
+      it "does not log a new device" do
+        result
+
+        expect(security_logger).not_to have_received(:produce)
+      end
+
+      it "leaves the caller's transaction usable" do
+        ActiveRecord::Base.transaction do
+          expect(result).to be_success
+          expect(UserDevice.where(user:).count).to eq(1)
+        end
+      end
+    end
+
+    context "when the other device is committed before the uniqueness validation" do
+      it_behaves_like "a device registered by the other sign-in"
+    end
+
+    context "when both requests pass the uniqueness validation" do
+      let(:passes_validation) { true }
+
+      it_behaves_like "a device registered by the other sign-in"
+    end
+  end
+
+  context "when the write hits another unique index" do
+    let(:devices) { user.user_devices }
+    let(:device) { UserDevice.new(user:) }
+
+    before do
+      allow(user).to receive(:user_devices).and_return(devices)
+      allow(devices).to receive(:find_or_initialize_by).and_return(device)
+      allow(device).to receive(:update!).and_raise(ActiveRecord::RecordNotUnique)
+    end
+
+    it "raises" do
+      expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
 end

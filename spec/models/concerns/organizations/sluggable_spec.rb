@@ -51,6 +51,12 @@ RSpec.describe Organizations::Sluggable do
       end
     end
 
+    it "rejects the path of the self-serve organization step" do
+      organization.slug = "create-organization"
+
+      expect(organization).not_to be_valid
+    end
+
     it "skips slug validations when slug has not changed on persisted record" do
       organization = create(:organization)
       organization.name = "Updated Name"

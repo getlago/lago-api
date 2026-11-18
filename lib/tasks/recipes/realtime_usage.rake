@@ -42,6 +42,7 @@ namespace :recipes do
       kill_switch = ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ENABLED"])
       puts "  LAGO_REALTIME_USAGE_ENABLED: #{kill_switch ? "on" : "off"}"
       puts "  realtime_usage feature flag:  #{organization.feature_flag_enabled?(:realtime_usage) ? "on" : "off"}"
+      puts "  realtime_usage_recurring_sum: #{RealtimeUsage.recurring_sum_enabled?(organization) ? "on" : "off"}"
 
       subscriptions = organization.subscriptions.active.includes(plan: {charges: :billable_metric}).to_a
       if subscriptions.empty?
@@ -79,7 +80,8 @@ namespace :recipes do
       Rails.logger.level = Logger::Severity::ERROR
 
       puts "The realtime usage gate is forced open for the bucket run: the feature flag and the"
-      puts "LAGO_REALTIME_USAGE_ENABLED kill switch are bypassed."
+      puts "LAGO_REALTIME_USAGE_ENABLED kill switch are bypassed. Both runs read the recurring snapshots, whatever"
+      puts "the persisted_recurring_values flag says."
       puts "The stream and the events store collapse duplicates on different keys, so read the"
       puts "duplicate event count of each subscription before concluding on a mismatch."
       puts ""
@@ -108,6 +110,9 @@ namespace :recipes do
       with_cutover_risk = 0
       eligible_charges = 0
       served_charges = 0
+      recurring_eligible_charges = 0
+      recurring_served_charges = 0
+      recurring_fallback_reasons = Hash.new(0)
 
       subscriptions.each do |subscription|
         comparison = RealtimeUsage::CompareUsageService.call(subscription:)
@@ -121,6 +126,9 @@ namespace :recipes do
         compared += 1
         eligible_charges += comparison.eligible_charges_count
         served_charges += comparison.served_charges_count
+        recurring_eligible_charges += comparison.recurring_eligible_charges_count
+        recurring_served_charges += comparison.recurring_served_charges_count
+        comparison.recurring_fallback_reasons.each { |reason, count| recurring_fallback_reasons[reason] += count }
         declined += 1 if comparison.served_charges_count.zero?
         mismatching += 1 if comparison.differences.any?
         with_cutover_risk += 1 if comparison.cutover_risks.any?
@@ -138,6 +146,8 @@ namespace :recipes do
       puts "Summary"
       puts "  subscriptions compared:      #{compared} (#{failed} failed)"
       puts "  charges served from buckets: #{served_charges}/#{eligible_charges} comparable"
+      puts "  recurring charges served:    #{recurring_served_charges}/#{recurring_eligible_charges} comparable"
+      puts "  recurring charges falling back to events: #{realtime_usage_format_reasons(recurring_fallback_reasons)}"
       puts "  subscriptions declined:      #{declined} (nothing was served, nothing was compared)"
       puts "  subscriptions mismatching:   #{mismatching}"
       puts "  of which a re-sent transaction id may explain: #{with_cutover_risk}"
@@ -169,6 +179,10 @@ def realtime_usage_print_comparison(subscription, comparison)
        "#{comparison.served_charges_count}/#{comparison.eligible_charges_count} charges served, " \
        "#{comparison.duplicate_events_count} duplicate event(s), " \
        "#{comparison.differences.size} mismatching leaf/leaves [#{status}]#{recheck}"
+
+  if comparison.recurring_fallback_reasons.any?
+    puts "      recurring charges falling back to events: #{realtime_usage_format_reasons(comparison.recurring_fallback_reasons)}"
+  end
 
   comparison.differences.select(&:mismatch?).group_by(&:charge_id).each do |charge_id, rows|
     puts "      charge #{rows.first.billable_metric_code} (#{charge_id}): #{rows.size} mismatching leaf/leaves, see the CSV"
@@ -203,6 +217,14 @@ def realtime_usage_csv_rows(subscription, comparison)
   end
 end
 
+def realtime_usage_format_reasons(reasons)
+  if reasons.empty?
+    "none"
+  else
+    reasons.sort.map { |reason, count| "#{reason} #{count}" }.join(", ")
+  end
+end
+
 def realtime_usage_print_gate(label, ok)
   puts "  [#{ok ? "x" : " "}] #{label}"
 end
@@ -227,9 +249,10 @@ def realtime_usage_eligibility_report(subscriptions)
     end
 
     served = 0
+    charges_from = realtime_usage_charges_from(subscription) if charges.any?(&:accepts_target_wallet)
     charges.each do |charge|
       charge_ids << charge.id
-      reason = realtime_usage_charge_blocker(charge)
+      reason = realtime_usage_charge_blocker(charge, charges_from)
 
       if reason.nil?
         served += 1
@@ -264,11 +287,18 @@ end
 # The presentation breakdown is not in RealtimeUsage.unsupported_reason because it depends on the
 # caller: one that suppresses the breakdown, like the wallet refresh, still serves the charge.
 # Ordinary current usage asks for it, so the rollout decision has to count it as delegated.
-def realtime_usage_charge_blocker(charge)
+def realtime_usage_charge_blocker(charge, charges_from)
   reason = RealtimeUsage.unsupported_reason(charge)
   return reason if reason
+  return "presentation_breakdown" if charge.presentation_group_keys_values.present?
 
-  "presentation_breakdown" if charge.presentation_group_keys_values.present?
+  if charges_from && RealtimeUsage.wallet_charge_changed_since?(charge, charges_from)
+    "wallet_charge_edited_in_period"
+  end
+end
+
+def realtime_usage_charges_from(subscription)
+  Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true).charges_from_datetime
 end
 
 def realtime_usage_charge_label(charge)

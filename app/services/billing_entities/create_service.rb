@@ -149,7 +149,8 @@ module BillingEntities
     end
 
     def track_billing_entity_created
-      SegmentTrackJob.perform_later(
+      # After commit: a caller's transaction may still roll the billing entity back.
+      SegmentTrackJob.perform_after_commit(
         membership_id: CurrentContext.membership,
         event: "billing_entity_created",
         properties: {

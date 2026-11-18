@@ -16,6 +16,9 @@ module UsageMonitoring
       now = Time.current
 
       alert.with_lock do
+        # NOTE: the lock reloads the alert past its default scope, so an alert deleted since the caller loaded it shows up here
+        next if alert.discarded?
+
         # NOTE: the caller measured usage for one metric, so a metric changed since then makes that usage
         # unrelated to the configuration now held under the lock
         next if stale_metric?
@@ -79,8 +82,7 @@ module UsageMonitoring
     end
 
     def record_trigger(crossed_threshold_values, current, now)
-      triggered_alert = TriggeredAlert.create!(
-        alert:,
+      triggered_alert = alert.all_triggered_alerts.create!(
         organization: alert.organization,
         alertable:,
         current_value: current,
@@ -100,8 +102,7 @@ module UsageMonitoring
       announced = alert.opted_in_thresholds.filter { recovered_values.include?(it.value) && recorded.include?(it.code) }
       return if announced.empty?
 
-      resolved_alert = TriggeredAlert.create!(
-        alert:,
+      resolved_alert = alert.all_triggered_alerts.create!(
         organization: alert.organization,
         alertable:,
         kind: :resolved,

@@ -9,6 +9,7 @@ module Types
       value "toggle_off", "Feature was disabled"
       value "org_created", "Feature set during org creation"
       value "rollback", "Change was rolled back"
+      value "sandbox_linked", "Organization was linked as a sandbox"
     end
   end
 end

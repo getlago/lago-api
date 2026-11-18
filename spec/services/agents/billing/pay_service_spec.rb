@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Agents::Billing::PayService, :premium do
   subject(:result) { described_class.call(storefront:, registration:, params:) }
 
-  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront]) }
+  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront], feature_flags: %w[agent_storefront]) }
   let(:storefront) { create(:agent_storefront_integration, organization:) }
   let(:registration) { create(:agent_registration, storefront:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }

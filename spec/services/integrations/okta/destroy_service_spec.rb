@@ -56,6 +56,77 @@ RSpec.describe Integrations::Okta::DestroyService do
       end
     end
 
+    context "when another change left Okta as the only login method meanwhile" do
+      before do
+        organization.update!(premium_integrations: ["okta"], authentication_methods: %w[email_password okta])
+        Organization.find(organization.id).update!(authentication_methods: ["okta"])
+      end
+
+      it "reads the methods under the lock and refuses" do
+        result = destroy_service.call
+
+        expect(result.error.code).to eq("enabled_authentication_methods_required")
+        expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
+      end
+    end
+
+    context "when the organization has a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+      before do
+        organization.update!(premium_integrations: ["okta"], authentication_methods: %w[email_password okta])
+        sandbox
+        Organizations::SyncSandboxSettingsService.call!(organization:)
+      end
+
+      it "removes the Okta login method from the sandbox too" do
+        expect(sandbox.reload.authentication_methods).to include("okta")
+
+        expect(destroy_service.call).to be_success
+        expect(sandbox.reload.authentication_methods).to eq(["email_password"])
+      end
+
+      context "when the sandbox fails a validation" do
+        before { sandbox.update_column(:document_url_expiration_days, 5) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "answers a validation error and keeps the integration" do
+          result = destroy_service.call
+
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages.keys).to eq([:document_url_expiration_days])
+          expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
+        end
+      end
+    end
+
+    context "when the sandbox sync fails" do
+      before do
+        allow(Organizations::SyncSandboxSettingsService).to receive(:call!)
+          .and_raise(BaseResult.new.service_failure!(code: "sync_failed", message: "Sync failed").error)
+      end
+
+      it "keeps the integration and sends no security log" do
+        result = destroy_service.call
+
+        expect(result.error.code).to eq("sync_failed")
+        expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
+        expect(security_logger).not_to have_received(:produce)
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, premium_integrations: ["okta"], authentication_methods: %w[email_password okta]) }
+      let(:integration) { create(:okta_integration, organization: sandbox) }
+
+      it "refuses to destroy the integration" do
+        result = destroy_service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
+        expect(sandbox.reload.authentication_methods).to eq(%w[email_password okta])
+      end
+    end
+
     context "when okta authentication is disabled" do
       before do
         organization.update(authentication_methods: ["email_password"])

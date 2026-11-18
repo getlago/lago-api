@@ -58,6 +58,56 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       expect(decoded["sso_issuer"]).to eq("foo.okta.com")
     end
 
+    context "with the organization lock" do
+      before { allow(Organizations::SandboxLockService).to receive(:call!).and_call_original }
+
+      it "adds the new member under it" do
+        service.call
+
+        expect(Organizations::SandboxLockService).to have_received(:call!).with(organization: okta_integration.organization)
+      end
+    end
+
+    context "when the integration organization has a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: okta_integration.organization) }
+
+      before { sandbox }
+
+      it "adds the new member to the sandbox too" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(sandbox.memberships.active.where(user: result.user)).to exist
+      end
+    end
+
+    context "when the integration organization is a sandbox" do
+      let(:okta_integration) do
+        create(:okta_integration, domain: "bar.com", organization_name: "foo", organization: create(:organization, :sandbox))
+      end
+
+      it "refuses the sign-in without creating the user" do
+        result = service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(User.where(email: "foo@bar.com")).to be_empty
+        expect(Membership.where(organization: okta_integration.organization)).to be_empty
+      end
+
+      context "when the user is already a member of it" do
+        let(:user) { create(:user, email: "foo@bar.com") }
+
+        before { create(:membership, user:, organization: okta_integration.organization) }
+
+        it "signs them in" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.user).to eq(user)
+        end
+      end
+    end
+
     context "when code is not provided" do
       let(:code) { nil }
 
@@ -172,6 +222,23 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
+    context "when an existing user is stored composed and the typed email is decomposed" do
+      let!(:user) { create(:user, email: "jo\u00E3o@bar.com") }
+      let(:okta_userinfo_response) { {"email" => "Joa\u0303o@bar.com"} }
+
+      before do
+        Rails.cache.write(state, "Joa\u0303o@bar.com")
+        create(:membership, user:, organization: okta_integration.organization)
+      end
+
+      it "signs in the existing user instead of creating a new one" do
+        result = nil
+
+        expect { result = service.call }.not_to change(User, :count)
+        expect(result.user).to eq(user)
+      end
+    end
+
     context "when an existing user differs from the typed email only by casing" do
       let!(:user) { create(:user, email: "Foo@Bar.com") }
 
@@ -217,6 +284,29 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
 
       it "does not create a new user" do
         expect { service.call }.not_to change(User, :count)
+      end
+    end
+
+    context "with an open self-serve signup for the address" do
+      let(:pending_signup) { create(:pending_signup, email: "foo@bar.com") }
+
+      before { pending_signup }
+
+      it "closes it and drops its password digest" do
+        expect(service.call).to be_success
+        expect(pending_signup.reload).to have_attributes(closed_at: be_present, password_digest: nil)
+      end
+    end
+
+    context "when another request holds the address", transaction: false do
+      before { stub_const("BaseLockService::ACQUIRE_LOCK_TIMEOUT", 0.seconds) }
+
+      it "creates no user" do
+        with_email_lock("foo@bar.com") do
+          expect(service.call.error.code).to eq("lock_acquisition_failed")
+        end
+
+        expect(User.where(email: "foo@bar.com")).not_to exist
       end
     end
 

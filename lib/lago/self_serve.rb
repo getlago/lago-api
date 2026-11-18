@@ -19,6 +19,20 @@ module Lago
         value == "true"
       end
 
+      # The host of this region's front (`app.eu.getlago.com`), or nil when LAGO_FRONT_URL has none. Never raises:
+      # with the gate on, validate! already refused a value that is not an https origin.
+      def front_host(url: Rails.application.config.lago_front_url)
+        URI.parse(url.to_s).host&.downcase
+      rescue URI::InvalidURIError
+        nil
+      end
+
+      # The region analytics events carry: this front's host on Lago Cloud, nil on a self-hosted install, whose host
+      # stays out of Lago's analytics.
+      def region(cloud: ENV["LAGO_CLOUD"] == "true")
+        front_host if cloud
+      end
+
       # Run at boot: a malformed value stops the deploy instead of leaving the gate off, and a region never
       # sends verification links, Google redirects or captcha checks to the default US front.
       def validate!(

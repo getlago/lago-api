@@ -47,4 +47,39 @@ RSpec.describe ::V1::AppliedCouponSerializer do
       .to eq(credit.invoice.payment_status)
     expect(result["applied_coupon"]["credits"].first["invoice"]["lago_id"]).to eq(credit.invoice.id)
   end
+
+  context "when the customer is deleted" do
+    subject(:serializer) { described_class.new(AppliedCoupon.find(applied_coupon.id), root_name: "applied_coupon") }
+
+    let(:customer) { create(:customer, :deleted) }
+    let(:applied_coupon) { create(:applied_coupon, customer:) }
+
+    it "serializes the deleted customer" do
+      result = JSON.parse(serializer.to_json)
+      coupon = applied_coupon.coupon
+
+      expect(result["applied_coupon"]).to eq(
+        "lago_id" => applied_coupon.id,
+        "lago_coupon_id" => coupon.id,
+        "coupon_code" => coupon.code,
+        "coupon_name" => coupon.name,
+        "coupon_description" => "Coupon Description",
+        "coupon_status" => "active",
+        "coupon_deleted_at" => nil,
+        "lago_customer_id" => customer.id,
+        "external_customer_id" => customer.external_id,
+        "status" => "active",
+        "amount_cents" => 200,
+        "amount_cents_remaining" => 150, # 200 applied - 50 credited
+        "amount_currency" => "EUR",
+        "percentage_rate" => nil,
+        "frequency" => "once",
+        "frequency_duration" => nil,
+        "frequency_duration_remaining" => nil,
+        "expiration_at" => nil,
+        "created_at" => applied_coupon.created_at.iso8601,
+        "terminated_at" => nil
+      )
+    end
+  end
 end

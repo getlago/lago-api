@@ -145,9 +145,8 @@ module RecurringAggregationSnapshots
     # A bucket without usage at the period has no snapshot, yet starts from the period.
     def snapshot_read?(bucket)
       period = RecurringAggregationSnapshots::FetchService.call!(
-        subscription:,
-        charge: bucket.charge,
-        charge_filter: bucket.charge_filter,
+        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge: bucket.charge),
+        filter: bucket.charge_filter,
         grouped_by_keys: bucket.pricing_group_keys.presence,
         from_datetime: date_service.charges_from_datetime
       ).period
