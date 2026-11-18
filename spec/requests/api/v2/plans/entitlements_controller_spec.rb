@@ -333,6 +333,87 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
       end
     end
 
+    context "with more entitlements or values than a catalog plan holds" do
+      let(:feature_count) { 0 }
+      let(:value_count) { 1 }
+      let(:feature_codes) { bulk_create_features(organization, feature_count).keys }
+      # max and 50 more integer privileges: 51 privileges on seats.
+      let(:seats_privileges) { [privilege, *create_list(:privilege, 50, organization:, feature:, value_type: "integer")] }
+      let(:request_params) do
+        {entitlements: feature_codes.index_with { {} }.merge("seats" => seats_privileges.first(value_count).to_h { [it.code, 1] })}
+      end
+      let(:old_feature) { create(:feature, organization:, code: "sso") }
+      let(:old_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature: old_feature) }
+      let(:old_value) do
+        create(:entitlement_value, organization:, entitlement: old_entitlement, privilege: create(:privilege, organization:, feature: old_feature), value: "okta")
+      end
+
+      before do
+        feature_codes
+        seats_privileges
+        old_value
+      end
+
+      shared_examples "a refused write" do |details|
+        it "returns every crossed limit and writes nothing" do
+          expect { request }
+            .to not_change(Entitlement::Entitlement.with_discarded, :count)
+            .and not_change(Entitlement::EntitlementValue.with_discarded, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details:)
+          expect(old_entitlement.reload).not_to be_discarded
+          expect(old_value.reload).to have_attributes(value: "okta", deleted_at: nil)
+        end
+      end
+
+      context "with 200 entitlements" do
+        let(:feature_count) { 199 }
+
+        it "accepts them" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:plan_entitlements].size).to eq(200) # 199 bulk features + seats, sso dropped
+          expect(catalog_plan.entitlements.count).to eq(200)
+        end
+      end
+
+      context "with 201 entitlements" do
+        let(:feature_count) { 200 }
+
+        include_examples "a refused write",
+          [{code: "too_many_entitlements", field: "base", meta: {max_items: 200}}]
+      end
+
+      context "with 50 values on an entitlement" do
+        let(:value_count) { 50 }
+
+        it "accepts them" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:plan_entitlements].sole[:values].size).to eq(50)
+        end
+      end
+
+      context "with 51 values on an entitlement" do
+        let(:value_count) { 51 }
+
+        include_examples "a refused write",
+          [{code: "too_many_values", field: "entitlements.seats", meta: {max_items: 50}}]
+      end
+
+      context "with both limits crossed" do
+        let(:feature_count) { 200 }
+        let(:value_count) { 51 }
+
+        # The oversized replace is refused before the values are written.
+        include_examples "a refused write",
+          [{code: "too_many_entitlements", field: "base", meta: {max_items: 200}}]
+      end
+    end
+
     context "when the service fails without a failing entry" do
       before do
         allow(Entitlement::PlanEntitlementsUpdateService).to receive(:call)
