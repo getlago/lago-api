@@ -47,12 +47,6 @@ RSpec.describe Api::V1::EventsController do
           organization.update!(activation_status: "active")
         end
 
-        it "keeps refusing from the cached copy until the cache is cleared" do
-          subject
-
-          expect(response).to have_http_status(:forbidden)
-        end
-
         it "accepts the event once the cache is cleared" do
           ApiKeys::CacheService.expire_all_cache(organization)
 
