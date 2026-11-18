@@ -92,6 +92,7 @@ Rails.application.routes.draw do
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
         get :current_usage, on: :member, to: "contracts/usage#current"
+        get :entitlements, on: :member, to: "contracts/entitlements#index"
         patch :entitlements, on: :member, to: "contracts/entitlements#update"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
