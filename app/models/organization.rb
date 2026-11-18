@@ -403,6 +403,16 @@ class Organization < ApplicationRecord
     max_wallets if events_targeting_wallets_enabled?
   end
 
+  # With self-serve off, every organization counts as active, as the GraphQL environment fields answer production.
+  # Everything that shows or enforces the status reads this, never the column, so the UI and the API agree.
+  def effective_activation_status
+    Lago::SelfServe.enabled? ? activation_status : ACTIVATION_STATUSES[:active]
+  end
+
+  def awaiting_payment_method?
+    effective_activation_status == ACTIVATION_STATUSES[:pending_payment_method]
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.

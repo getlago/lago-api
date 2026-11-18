@@ -7,7 +7,7 @@ module Types
 
       description "Current Organization Type"
 
-      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false
+      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false, method: :effective_activation_status
       field :id, ID, null: false
       field :logo_url, String
       field :name, String, null: false
@@ -68,10 +68,6 @@ module Types
       field :accessible_by_current_session, Boolean, null: false
       field :authenticated_method, Types::Organizations::AuthenticationMethodsEnum, null: false
       field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
-
-      def activation_status
-        ActivationFields.activation_status_of(object)
-      end
 
       def feature_flags
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }

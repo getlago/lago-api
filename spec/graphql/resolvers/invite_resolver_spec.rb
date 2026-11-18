@@ -61,6 +61,7 @@ RSpec.describe Resolvers::InviteResolver do
     end
 
     let(:organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+    let(:non_member) { create(:user) }
 
     before { create(:organization, :self_serve, :sandbox, production_organization: organization) }
 
@@ -73,7 +74,7 @@ RSpec.describe Resolvers::InviteResolver do
     end
 
     it "hides the activation status from a logged-in user who is not a member" do
-      result = execute_graphql(current_user: create(:user), query:, variables: {token: invite.token})
+      result = execute_graphql(current_user: non_member, query:, variables: {token: invite.token})
 
       expect(result["data"]["invite"]["organization"]["activationStatus"]).to be_nil
     end

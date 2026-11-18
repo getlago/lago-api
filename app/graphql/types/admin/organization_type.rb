@@ -7,17 +7,13 @@ module Types
 
       include Types::Organizations::EnvironmentFields
 
-      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false
+      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false, method: :effective_activation_status
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :email, String, null: true
       field :feature_flags, [String], null: false
       field :id, ID, null: false
       field :name, String, null: false
       field :premium_integrations, [String], null: false
-
-      def activation_status
-        Types::Organizations::ActivationFields.activation_status_of(object)
-      end
 
       def feature_flags
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }

@@ -944,6 +944,62 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#effective_activation_status" do
+    subject(:organization) { build(:organization, :self_serve, activation_status:) }
+
+    include_context "with self-serve enabled"
+
+    let(:activation_status) { "pending_payment_method" }
+
+    it "is the stored status" do
+      expect(organization.effective_activation_status).to eq("pending_payment_method")
+    end
+
+    context "with an active organization" do
+      let(:activation_status) { "active" }
+
+      it "is active" do
+        expect(organization.effective_activation_status).to eq("active")
+      end
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "is active whatever the stored status" do
+        expect(organization.effective_activation_status).to eq("active")
+      end
+    end
+  end
+
+  describe "#awaiting_payment_method?" do
+    subject(:organization) { build(:organization, :self_serve, activation_status:) }
+
+    include_context "with self-serve enabled"
+
+    let(:activation_status) { "pending_payment_method" }
+
+    it "is true for a pending organization" do
+      expect(organization.awaiting_payment_method?).to be(true)
+    end
+
+    context "with an active organization" do
+      let(:activation_status) { "active" }
+
+      it "is false" do
+        expect(organization.awaiting_payment_method?).to be(false)
+      end
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "is false for a pending organization" do
+        expect(organization.awaiting_payment_method?).to be(false)
+      end
+    end
+  end
+
   describe "#x402_payments_enabled?" do
     subject(:organization) { build(:organization, feature_flags:) }
 
