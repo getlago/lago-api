@@ -185,8 +185,15 @@ module Credits
       @wallets ||= begin
         scope = customer.wallets.active.includes(:wallet_targets).with_positive_balance
         scope = scope.where(balance_currency: invoice.currency) if invoice.currency.present?
-        scope.in_application_order
+        expiring_wallet_first(scope.in_application_order)
       end
+    end
+
+    # The invoice issued when a wallet expires spends that wallet before the customer's other wallets.
+    def expiring_wallet_first(wallets)
+      expiring_wallet_id = invoice.applied_wallet_expiration&.wallet_id if invoice.triggered_by_wallet_expiration?
+
+      wallets.partition { it.id == expiring_wallet_id }.flatten
     end
   end
 end

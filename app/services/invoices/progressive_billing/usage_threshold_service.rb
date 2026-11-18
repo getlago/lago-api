@@ -16,6 +16,10 @@ module Invoices
 
       delegate :subscription, to: :lifetime_usage
 
+      def progressive_billing_trigger
+        :usage_threshold
+      end
+
       def idempotency_values
         {
           # this is required to be here for recurring thresholds. as we'll not have credits across billing periods, this is not enough information for uniqueness otherwise.
