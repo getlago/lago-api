@@ -109,6 +109,7 @@ Rails.application.routes.draw do
         get :current_usage, on: :member, to: "contracts/usage#current"
         post :publish, on: :member
         resources :alerts, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "contracts/alerts"
+        patch :entitlements, on: :member, to: "contracts/entitlements#update"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]

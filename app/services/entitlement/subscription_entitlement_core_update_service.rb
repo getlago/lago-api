@@ -1,15 +1,19 @@
 # frozen_string_literal: true
 
 module Entitlement
-  # Sets the overrides of one feature on a subscription (the override owner).
+  # Sets the overrides of one feature on a subscription or a contract (the override owner).
   class SubscriptionEntitlementCoreUpdateService < BaseService
     include ::Entitlement::Concerns::CreateOrUpdateConcern
     include ::Entitlement::Concerns::OverrideOwnerConcern
+    include ::Entitlement::Concerns::EntryPathConcern
 
-    Result = BaseResult
+    Result = BaseResult[:failed_field]
 
-    def initialize(owner:, plan:, feature:, plan_entitlement:, sub_entitlement:, privilege_params:, partial:)
+    # With `path:`, the path of the entry in the request (entitlements.<feature>), the failures of a privilege are
+    # on entitlements.<feature>.<privilege>.
+    def initialize(owner:, plan:, feature:, plan_entitlement:, sub_entitlement:, privilege_params:, partial:, path: nil)
       @owner = owner
+      @path = path
       @plan = plan
       @feature = feature
       @plan_entitlement = plan_entitlement
@@ -25,6 +29,8 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
+      validate_privilege_params! if path
+
       ActiveRecord::Base.transaction do
         process_single_entitlement
       end
@@ -34,7 +40,7 @@ module Entitlement
 
     private
 
-    attr_reader :owner, :plan, :feature, :plan_entitlement, :sub_entitlement, :privilege_params, :partial
+    attr_reader :owner, :plan, :feature, :plan_entitlement, :sub_entitlement, :privilege_params, :partial, :path
     delegate :organization, to: :owner
     alias_method :partial?, :partial
 
@@ -46,7 +52,7 @@ module Entitlement
       if plan_entitlement.nil? && sub_entitlement.nil?
         owner.entitlement_removals.where(feature:).update_all(discarded_columns) # rubocop:disable Rails/SkipsModelValidations
         create_entitlement_and_values_for_owner
-      elsif plan_entitlement && privilege_params_same_as_plan?(plan_entitlement)
+      elsif plan_entitlement && privilege_params_same_as_plan?(plan_entitlement) && !contract_overrides_outside_params?
         # Restore the plan default by removing all overrides
         sub_entitlement&.values&.update_all(discarded_columns) # rubocop:disable Rails/SkipsModelValidations
         sub_entitlement&.discard!
@@ -60,7 +66,25 @@ module Entitlement
         sub_entitlement = self.sub_entitlement || create_entitlement_for_owner
         remove_missing_entitlement_values(plan_entitlement, sub_entitlement) if full?
         update_values_for_owner(plan_entitlement, sub_entitlement)
+        discard_empty_contract_entitlement(sub_entitlement) if plan_entitlement
       end
+    end
+
+    # A contract row without values over a feature that the catalog plan grants changes nothing: it is discarded.
+    # Subscriptions keep theirs, as v1 always did.
+    def discard_empty_contract_entitlement(entitlement)
+      return unless override_owner_key(owner) == :contract
+      return if EntitlementValue.where(entitlement:).exists?
+
+      entitlement.discard!
+    end
+
+    # A merge into a contract keeps the overrides of the privileges that the body does not name, so the plan
+    # default is only restored as a whole when the contract row has none. Subscriptions keep the v1 behaviour.
+    def contract_overrides_outside_params?
+      return false unless partial? && override_owner_key(owner) == :contract && sub_entitlement
+
+      sub_entitlement.values.any? { !privilege_params.key?(it.privilege.code) }
     end
 
     def create_entitlement_for_owner
@@ -114,7 +138,7 @@ module Entitlement
 
           create_entitlement_value(sub_entitlement, privilege, value)
         elsif sub_val && !value_is_the_same?(privilege.value_type, value, sub_val.value)
-          sub_val.update!(value: validate_value(value, privilege))
+          save_value!(privilege) { sub_val.update!(value: validate_value(value, privilege)) }
         end
       end
     end
@@ -128,11 +152,29 @@ module Entitlement
     end
 
     def create_entitlement_value(entitlement, privilege, value)
-      entitlement.values.create!(
-        organization: organization,
-        privilege: privilege,
-        value: validate_value(value, privilege)
-      )
+      save_value!(privilege) do
+        entitlement.values.create!(
+          organization: organization,
+          privilege: privilege,
+          value: validate_value(value, privilege)
+        )
+      end
+    end
+
+    # Every privilege of the entry is checked before a value is compared with the plan value: an unknown privilege
+    # or a value of the wrong type fails on the path of the privilege.
+    def validate_privilege_params!
+      privilege_params.each do |privilege_code, value|
+        privilege_path = :"#{path}.#{privilege_code}"
+        privilege = feature.privileges.find { it.code == privilege_code } || not_found_at!(privilege_path, "privilege")
+
+        validate_value(value, privilege, path: privilege_path)
+      end
+    end
+
+    # Without a path, the caller gets the ActiveRecord::RecordInvalid of an invalid value.
+    def save_value!(privilege, &)
+      path ? save_value_at!(:"#{path}.#{privilege.code}", &) : yield
     end
 
     def owner_attributes

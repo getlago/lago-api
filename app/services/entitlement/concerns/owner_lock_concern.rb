@@ -2,7 +2,7 @@
 
 module Entitlement
   module Concerns
-    # Serializes the entitlement writes of one plan or subscription. Call a helper first, inside the transaction.
+    # Serializes the entitlement writes of one plan, subscription or contract. Call a helper first, inside the transaction.
     module OwnerLockConcern
       extend ActiveSupport::Concern
 
@@ -24,6 +24,13 @@ module Entitlement
         "idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a" => :privilege
       }.freeze
 
+      CONTRACT_UNIQUE_INDEXES = {
+        "idx_unique_feature_per_contract" => :feature,
+        "idx_unique_feature_removal_per_contract" => :feature,
+        "idx_unique_privilege_removal_per_contract" => :privilege,
+        "idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a" => :privilege
+      }.freeze
+
       private
 
       # Locks a plan or a catalog plan. FOR NO KEY UPDATE does not conflict with the key-share locks that the inserts
@@ -41,6 +48,19 @@ module Entitlement
 
       def lock_subscription!(subscription)
         subscription.lock!("FOR NO KEY UPDATE")
+      end
+
+      # Locks a contract and re-reads its status: only a pending or active contract takes entitlement writes.
+      def lock_contract!(contract)
+        contract.lock!("FOR NO KEY UPDATE")
+        return if Contract::LIVE_STATUSES.include?(contract.status)
+
+        result.single_validation_failure!(field: :base, error_code: "contract_not_editable").raise_if_error!
+      end
+
+      # Locks the subscription or the contract whose entitlements override its plan's.
+      def lock_override_owner!(owner)
+        owner.is_a?(Contract) ? lock_contract!(owner) : lock_subscription!(owner)
       end
     end
   end

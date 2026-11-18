@@ -33,6 +33,8 @@ RSpec.describe Contract do
       expect(contract).to have_many(:wallets).class_name("CatalogWallet")
       expect(contract).to have_many(:daily_usages)
       expect(contract).to have_many(:fees)
+      expect(contract).to have_many(:entitlements).class_name("Entitlement::Entitlement")
+      expect(contract).to have_many(:entitlement_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
       expect(contract).to have_many(:invoices).through(:fees)
       expect(contract).to have_many(:applied_invoice_custom_sections).class_name("Contract::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(contract).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)

@@ -18,6 +18,9 @@ module Entitlement
 
     attribute :privileges
 
+    # The contract of a contract read: its own rows only carry its id, and the plan rows none.
+    attr_accessor :contract
+
     def self.for_subscription(subscription)
       SubscriptionEntitlementQuery.call(
         organization: subscription.organization,
@@ -26,6 +29,17 @@ module Entitlement
           plan_id: subscription.plan.parent_id || subscription.plan.id
         }
       )
+    end
+
+    # Catalog plans have no parent, so there is no fallback as for subscriptions.
+    def self.for_contract(contract)
+      SubscriptionEntitlementQuery.call(
+        organization: contract.organization,
+        filters: {
+          contract_id: contract.id,
+          catalog_plan_id: contract.catalog_plan_id
+        }
+      ).each { it.contract = contract }
     end
 
     def to_h

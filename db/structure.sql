@@ -396,6 +396,7 @@ ALTER TABLE IF EXISTS ONLY public.wallets_invoice_custom_sections DROP CONSTRAIN
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_2ffeff5323;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_2fd7ee65e6;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2fb2147151;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_2f6be314eb;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_2ea4db3a4c;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_2dc6171f57;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_rails_2cad4a133e;
@@ -433,6 +434,7 @@ ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1d112bf8a0;
 ALTER TABLE IF EXISTS ONLY public.recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_1c2315fb03;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_1c069c1c44;
+ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_1b4075efd9;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1b40486fac;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_19c47827ba;
 ALTER TABLE IF EXISTS ONLY public.catalog_plans DROP CONSTRAINT IF EXISTS fk_rails_19759667f5;
@@ -1231,9 +1233,12 @@ DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_subscription_recurrin
 DROP INDEX IF EXISTS public.idx_usage_thresholds_on_amount_plan_recurring;
 DROP INDEX IF EXISTS public.idx_unique_tax_code_per_organization;
 DROP INDEX IF EXISTS public.idx_unique_privilege_removal_per_subscription;
+DROP INDEX IF EXISTS public.idx_unique_privilege_removal_per_contract;
 DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
+DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_contract;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_plan;
+DROP INDEX IF EXISTS public.idx_unique_feature_per_contract;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_catalog_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
 DROP INDEX IF EXISTS public.idx_recurring_aggregation_snapshots_unique;
@@ -4197,7 +4202,8 @@ CREATE TABLE public.entitlement_entitlements (
     updated_at timestamp(6) without time zone NOT NULL,
     subscription_id uuid,
     catalog_plan_id uuid,
-    CONSTRAINT entitlement_check_exactly_one_parent CHECK ((num_nonnulls(plan_id, catalog_plan_id, subscription_id) = 1))
+    contract_id uuid,
+    CONSTRAINT entitlement_check_exactly_one_parent CHECK ((num_nonnulls(plan_id, catalog_plan_id, subscription_id, contract_id) = 1))
 );
 
 
@@ -4243,12 +4249,14 @@ CREATE TABLE public.entitlement_subscription_feature_removals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     entitlement_feature_id uuid,
-    subscription_id uuid NOT NULL,
+    subscription_id uuid,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     entitlement_privilege_id uuid,
-    CONSTRAINT check_exactly_one_feature_or_privilege_removal CHECK (((entitlement_feature_id IS NOT NULL) <> (entitlement_privilege_id IS NOT NULL)))
+    contract_id uuid,
+    CONSTRAINT check_exactly_one_feature_or_privilege_removal CHECK (((entitlement_feature_id IS NOT NULL) <> (entitlement_privilege_id IS NOT NULL))),
+    CONSTRAINT entitlement_removal_check_exactly_one_owner CHECK ((num_nonnulls(subscription_id, contract_id) = 1))
 );
 
 
@@ -10190,6 +10198,13 @@ CREATE UNIQUE INDEX idx_unique_feature_per_catalog_plan ON public.entitlement_en
 
 
 --
+-- Name: idx_unique_feature_per_contract; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_feature_per_contract ON public.entitlement_entitlements USING btree (contract_id, entitlement_feature_id) WHERE ((contract_id IS NOT NULL) AND (deleted_at IS NULL));
+
+
+--
 -- Name: idx_unique_feature_per_plan; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10204,10 +10219,24 @@ CREATE UNIQUE INDEX idx_unique_feature_per_subscription ON public.entitlement_en
 
 
 --
+-- Name: idx_unique_feature_removal_per_contract; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_feature_removal_per_contract ON public.entitlement_subscription_feature_removals USING btree (contract_id, entitlement_feature_id) WHERE ((contract_id IS NOT NULL) AND (deleted_at IS NULL));
+
+
+--
 -- Name: idx_unique_feature_removal_per_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_unique_feature_removal_per_subscription ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_feature_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_unique_privilege_removal_per_contract; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_privilege_removal_per_contract ON public.entitlement_subscription_feature_removals USING btree (contract_id, entitlement_privilege_id) WHERE ((contract_id IS NOT NULL) AND (deleted_at IS NULL));
 
 
 --
@@ -15821,6 +15850,14 @@ ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_alert_thresholds
 
 
 --
+-- Name: entitlement_subscription_feature_removals fk_rails_1b4075efd9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_subscription_feature_removals
+    ADD CONSTRAINT fk_rails_1b4075efd9 FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
+
+
+--
 -- Name: rate_phases fk_rails_1c069c1c44; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16114,6 +16151,14 @@ ALTER TABLE ONLY public.refunds
 
 ALTER TABLE ONLY public.fees
     ADD CONSTRAINT fk_rails_2ea4db3a4c FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
+-- Name: entitlement_entitlements fk_rails_2f6be314eb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlements
+    ADD CONSTRAINT fk_rails_2f6be314eb FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --
@@ -19264,6 +19309,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261116121442'),
 ('20261116121439'),
 ('20261116121436'),
+('20261114014959'),
+('20261114014956'),
+('20261114014953'),
 ('20261113204932'),
 ('20261113162250'),
 ('20261112145548'),

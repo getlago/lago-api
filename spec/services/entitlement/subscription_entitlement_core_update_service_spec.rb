@@ -339,4 +339,129 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
       end
     end
   end
+
+  describe "#call with a contract owner" do
+    subject(:result) do
+      described_class.call(
+        owner: contract,
+        plan: catalog_plan,
+        feature: seats,
+        plan_entitlement: contract_plan_entitlement,
+        sub_entitlement: contract_entitlement,
+        privilege_params:,
+        partial: true,
+        path:
+      )
+    end
+
+    let(:path) { nil }
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:contract) { create(:contract, organization:, catalog_plan:) }
+    let(:catalog_plan_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature: seats) }
+    let(:contract_plan_entitlement) { catalog_plan.entitlements.includes(values: :privilege).find_by(feature: seats) }
+    let(:contract_entitlement) { contract.entitlements.includes(values: :privilege).find_by(feature: seats) }
+
+    def contract_values
+      Entitlement::SubscriptionEntitlement.for_contract(contract).find { it.code == "seats" }
+        &.privileges&.to_h { [it.code, Utils::Entitlement.cast_value(it.value, it.value_type)] }
+    end
+
+    context "when the catalog plan grants the feature" do
+      before { create(:entitlement_value, entitlement: catalog_plan_entitlement, privilege: seats_max, value: 10) }
+
+      context "with another value" do
+        let(:privilege_params) { {seats_max.code => 60} }
+
+        it "stores an override on the contract" do
+          expect(result).to be_success
+          expect(contract_values).to eq("max" => 60)
+          expect(contract.entitlements.sole.values.sole.value).to eq("60")
+          expect(subscription.entitlements).to be_empty
+        end
+      end
+
+      context "with the value of the catalog plan" do
+        let(:privilege_params) { {seats_max.code => 10} }
+
+        let(:override) { create(:entitlement, :contract, organization:, contract:, feature: seats, created_at: 1.day.ago, updated_at: 1.day.ago) }
+        let(:override_value) { create(:entitlement_value, entitlement: override, privilege: seats_max, value: 60, updated_at: 1.day.ago) }
+        let(:removal) do
+          create(:subscription_feature_removal, :contract, organization:, contract:, privilege: seats_reset, updated_at: 1.day.ago)
+        end
+
+        before do
+          override_value
+          override.update_column(:updated_at, 1.day.ago) # rubocop:disable Rails/SkipsModelValidations
+          removal
+        end
+
+        it "drops the override and the removals of the contract" do
+          expect(result).to be_success
+          expect(contract.entitlements.reload).to be_empty
+          expect(contract.entitlement_removals.reload).to be_empty
+          expect(contract_values).to eq("max" => 10)
+        end
+
+        it "sets updated_at on the rows it discards" do
+          freeze_time do
+            result
+
+            expect(Entitlement::EntitlementValue.with_discarded.find(override_value.id).updated_at).to eq(Time.current)
+            expect(Entitlement::SubscriptionFeatureRemoval.with_discarded.find(removal.id).updated_at).to eq(Time.current)
+          end
+        end
+      end
+    end
+
+    context "when only the contract grants the feature" do
+      let(:privilege_params) { {seats_max.code => 60, seats_reset.code => true} }
+
+      it "adds the feature to the contract" do
+        expect(result).to be_success
+        expect(contract.entitlements.sole.feature).to eq(seats)
+        expect(contract_values).to eq("max" => 60, "reset" => true)
+      end
+    end
+
+    context "with the path of the entry" do
+      let(:path) { :"entitlements.seats" }
+
+      before { create(:entitlement_value, entitlement: catalog_plan_entitlement, privilege: seats_max, value: 10) }
+
+      context "with an unknown privilege" do
+        let(:privilege_params) { {seats_max.code => 60, "unknown" => 1} }
+
+        it "fails on the path of the privilege before any write" do
+          expect { result }.to raise_error(BaseService::NotFoundFailure) do |error|
+            expect(error.error_code).to eq("privilege_not_found")
+            expect(error.result.failed_field).to eq(:"entitlements.seats.unknown")
+          end
+          expect(contract.entitlements.reload).to be_empty
+        end
+      end
+
+      context "with a value of the wrong type equal to the catalog plan value once cast" do
+        let(:privilege_params) { {seats_max.code => "10.0"} }
+
+        it "fails on the path of the privilege" do
+          expect { result }.to raise_error(BaseService::ValidationFailure) do |error|
+            expect(error.messages).to eq(max_privilege_value: ["value_is_invalid"])
+            expect(error.codes).to eq("entitlements.seats.max": ["value_is_invalid"])
+          end
+        end
+      end
+
+      context "with a value that the entitlement value refuses" do
+        let(:privilege_params) { {seats_max.code => nil} }
+
+        it "fails on the path of the privilege with the keys of v1" do
+          expect { result }.to raise_error(BaseService::ValidationFailure) do |error|
+            expect(error.messages).to eq("privilege.value": ["value_is_mandatory"])
+            expect(error.codes).to eq("entitlements.seats.max": ["value_is_mandatory"])
+          end
+          expect(contract.entitlements.reload).to be_empty
+        end
+      end
+    end
+  end
 end
