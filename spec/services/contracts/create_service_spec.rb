@@ -136,20 +136,29 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
 
     before { create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:) }
 
-    it "gives the contract its own copy of the wallet" do
-      expect { result }.to change(CatalogWallet, :count).by(1)
-
-      wallet = result.contract.wallets.sole
-      expect(wallet).to have_attributes(code: "ai_credits", customer:)
-      expect(wallet.selectors.sole).to have_attributes(selector_type: "fee_type", fee_type: "metered", plan_wallet_id: nil)
+    it "creates the contract without a wallet" do
+      expect { result }.not_to change(CatalogWallet, :count)
+      expect(result).to be_success
     end
 
-    context "when the contract starts in the future" do
-      let(:params) { super().merge(started_at: 1.month.from_now.iso8601) }
+    context "when the organization has contract wallets enabled" do
+      let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
 
-      it "gives the pending contract its wallet" do
-        expect(result.contract).to be_pending
-        expect(result.contract.wallets.sole.code).to eq("ai_credits")
+      it "gives the contract its own copy of the wallet" do
+        expect { result }.to change(CatalogWallet, :count).by(1)
+
+        wallet = result.contract.wallets.sole
+        expect(wallet).to have_attributes(code: "ai_credits", customer:)
+        expect(wallet.selectors.sole).to have_attributes(selector_type: "fee_type", fee_type: "metered", plan_wallet_id: nil)
+      end
+
+      context "when the contract starts in the future" do
+        let(:params) { super().merge(started_at: 1.month.from_now.iso8601) }
+
+        it "gives the pending contract its wallet" do
+          expect(result.contract).to be_pending
+          expect(result.contract.wallets.sole.code).to eq("ai_credits")
+        end
       end
     end
   end

@@ -121,11 +121,8 @@ module Contracts
         contract.applied_rate_cards.to_a.each do |card|
           ContractRateCards::DestroyService.call!(contract_rate_card: card, emit_events: false)
         end
-        discard_wallets
-        if contract.catalog_plan
-          Contracts::MaterializeRateCardsService.call!(contract:)
-          Contracts::MaterializeWalletsService.call!(contract:)
-        end
+        Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
+        replace_wallets if organization.catalog_wallets_enabled?
       elsif lifecycle_moved
         reseed_rate_cards(previous_billing_anchor_date)
       end
@@ -150,11 +147,12 @@ module Contracts
 
     # The wallets came from the previous plan, as the rate cards did. Their scope, taxes and metadata stay on the
     # discarded wallets.
-    def discard_wallets
+    def replace_wallets
       contract.wallets.find_each do |wallet|
         wallet.credit_allocations.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
         wallet.discard!
       end
+      Contracts::MaterializeWalletsService.call!(contract:) if contract.catalog_plan
     end
 
     def locked_field_changed?

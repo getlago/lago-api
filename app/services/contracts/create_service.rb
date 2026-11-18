@@ -70,7 +70,7 @@ module Contracts
 
         if contract.catalog_plan
           Contracts::MaterializeRateCardsService.call!(contract:)
-          Contracts::MaterializeWalletsService.call!(contract:)
+          Contracts::MaterializeWalletsService.call!(contract:) if organization.catalog_wallets_enabled?
         end
         BillingSegments::ScheduleJob.perform_after_commit(customer.id)
 

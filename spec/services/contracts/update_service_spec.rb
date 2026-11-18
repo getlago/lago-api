@@ -339,21 +339,29 @@ RSpec.describe Contracts::UpdateService do
     context "when the contract has a wallet from its previous plan" do
       let(:old_wallet) { create(:catalog_wallet, organization:, contract:, customer:, code: "ai_credits") }
       let(:old_allocation) { create(:catalog_wallet_credit_allocation, organization:, catalog_wallet: old_wallet) }
+      let(:plan_wallet) { create(:plan_wallet, organization:, catalog_plan: other_plan, code: "ai_credits") }
 
-      before { old_allocation }
-
-      it "discards the wallet along with its rules" do
-        expect(result).to be_success
-
-        expect(old_wallet.reload).to be_discarded
-        expect(old_allocation.reload).to be_discarded
-        expect(contract.reload.wallets).to be_empty
+      before do
+        old_allocation
+        create(:plan_wallet_credit_allocation, organization:, plan_wallet:, code: "monthly_allowance")
       end
 
-      context "when the new plan has a wallet template" do
-        let(:plan_wallet) { create(:plan_wallet, organization:, catalog_plan: other_plan, code: "ai_credits") }
+      it "leaves the contract's wallets as they are" do
+        expect(result).to be_success
 
-        before { create(:plan_wallet_credit_allocation, organization:, plan_wallet:, code: "monthly_allowance") }
+        expect(contract.reload.wallets).to eq([old_wallet])
+        expect(old_allocation.reload).not_to be_discarded
+      end
+
+      context "when the organization has contract wallets enabled" do
+        let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
+
+        it "discards the wallet along with its rules" do
+          expect(result).to be_success
+
+          expect(old_wallet.reload).to be_discarded
+          expect(old_allocation.reload).to be_discarded
+        end
 
         it "gives the contract the new plan's wallet only" do
           expect(result).to be_success
@@ -367,6 +375,7 @@ RSpec.describe Contracts::UpdateService do
     end
 
     context "when the plan is removed" do
+      let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
       let(:params) { {plan_code: nil} }
       let(:wallet) { create(:catalog_wallet, organization:, contract:, customer:) }
 
@@ -556,6 +565,7 @@ RSpec.describe Contracts::UpdateService do
     end
 
     context "when the contract has a wallet" do
+      let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
       let(:wallet) { create(:catalog_wallet, organization:, contract:, customer:) }
 
       before do
