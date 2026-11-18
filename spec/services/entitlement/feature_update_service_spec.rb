@@ -796,6 +796,18 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
+      context "when 51 codes are sent and 3 of them are padded codes of existing privileges" do
+        let(:params) { {privileges: [{code: " max "}, {code: " min"}, {code: "opt "}] + Array.new(48) { |i| {code: "new_#{i}"} }} }
+
+        it "does not count the padded codes as new in the early check" do
+          allow(feature).to receive(:lock!).and_call_original
+
+          expect(subject).to be_failure
+          expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+          expect(feature).to have_received(:lock!)
+        end
+      end
+
       context "when the feature is already above the limit and the update adds no privilege" do
         let(:params) { {name: "Renamed", privileges: [{code: "max", name: "Max."}]} }
 
