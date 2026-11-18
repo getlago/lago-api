@@ -117,7 +117,7 @@ module UsageMonitoring
       def priced_rate_cards
         live_contracts = organization.contracts.live.where(external_id: contract.external_id)
 
-        RateCard.with_discarded.where(
+        RateCard.where(
           organization_id: organization.id,
           id: ContractRateCard.where(contract_id: live_contracts.select(:id)).select(:rate_card_id)
         )
