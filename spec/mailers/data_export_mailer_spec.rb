@@ -40,6 +40,8 @@ RSpec.describe DataExportMailer do
         expect(subject).to match("will be available for 7 days")
         expect(subject).to match(data_export.file_url)
       end
+
+      it_behaves_like "a mail with the Lago logo header"
     end
 
     describe "delivery" do

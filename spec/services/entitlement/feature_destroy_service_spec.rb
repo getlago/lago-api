@@ -54,8 +54,56 @@ RSpec.describe Entitlement::FeatureDestroyService do
     context "when feature is already discarded" do
       before { feature.discard! }
 
-      it "still succeeds" do
-        expect { subject }.to raise_error(Discard::RecordNotDiscarded)
+      it "returns a not found failure" do
+        result = subject
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("feature")
+      end
+    end
+
+    context "when the feature is discarded in the database after it is loaded" do
+      before do
+        # Another instance discards it, so the loaded one is stale.
+        Entitlement::Feature.find(feature.id).discard!
+      end
+
+      it "returns a not found failure and sends no webhook" do
+        result = nil
+        expect { result = subject }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("feature")
+      end
+    end
+
+    context "when a privilege is inserted after the feature is loaded" do
+      let(:late_privilege) { create(:privilege, feature: Entitlement::Feature.find(feature.id), code: "late") }
+
+      before { late_privilege }
+
+      it "discards it with the feature" do
+        expect { subject }.to change { late_privilege.reload.discarded? }.from(false).to(true)
+      end
+    end
+
+    context "when a privilege create runs concurrently" do
+      let(:privileges) { feature.privileges }
+
+      before do
+        # lock! reloads the feature, which drops its cached privileges relation: keep the spied one.
+        allow(feature).to receive(:privileges).and_return(privileges)
+        allow(feature).to receive(:lock!).and_call_original
+        allow(privileges).to receive(:discard_all!).and_call_original
+      end
+
+      it "locks the feature, as the create does, before discarding its privileges" do
+        subject
+
+        expect(feature).to have_received(:lock!).ordered
+        expect(privileges).to have_received(:discard_all!).ordered
       end
     end
 

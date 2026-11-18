@@ -58,15 +58,31 @@ module Invoices
       subscriptions = pending_billing_contexts_with_fees.map(&:subscription)
 
       Subscriptions::InvoiceGroupingService.call!(subscriptions:).subscription_groups.filter_map do |subscriptions_group|
-        create_group_invoice(subscriptions_group.map { |subscription| Billing::Context.from(subscription:) })
+        billing_contexts_group = subscriptions_group.map { |subscription| Billing::Context.from(subscription:) }
+        resolutions = billing_contexts_group.map { |billing_context| resolve_payment_term(billing_context) }
+        sources = resolutions.map(&:source).uniq
+
+        create_group_invoice(
+          billing_contexts_group,
+          payment_term: resolutions.first.payment_term,
+          payment_term_source: sources.many? ? "mixed" : sources.first
+        )
       end
     end
 
-    def create_group_invoice(billing_contexts_group)
+    def resolve_payment_term(billing_context)
+      PaymentTerms::ResolveService.call!(
+        customer: billing_context.customer,
+        subscription: billing_context.subscription,
+        billing_entity: billing_context.applicable_billing_entity
+      )
+    end
+
+    def create_group_invoice(billing_contexts_group, payment_term:, payment_term_source:)
       invoice = nil
 
       ActiveRecord::Base.transaction do
-        invoice = create_generating_invoice(billing_contexts_group)
+        invoice = create_generating_invoice(billing_contexts_group, payment_term:, payment_term_source:)
         Fees::AdvanceChargesService.call!(
           invoice:, billing_contexts:, billing_at:
         )
@@ -92,14 +108,16 @@ module Invoices
       invoice
     end
 
-    def create_generating_invoice(billing_contexts_group)
+    def create_generating_invoice(billing_contexts_group, payment_term:, payment_term_source:)
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :advance_charges,
         currency: billing_contexts_group.first.currency,
         datetime: billing_at, # this is an int we need to convert it
         billing_entity: billing_contexts_group.first.applicable_billing_entity,
-        purchase_order_number: billing_contexts_group.first.purchase_order_number
+        purchase_order_number: billing_contexts_group.first.purchase_order_number,
+        payment_term:,
+        payment_term_source:
       ) do |invoice|
         Invoices::CreateAdvanceChargesInvoiceService.call!(
           invoice:,

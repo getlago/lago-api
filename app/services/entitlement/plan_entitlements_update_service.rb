@@ -3,6 +3,7 @@
 module Entitlement
   class PlanEntitlementsUpdateService < BaseService
     include ::Entitlement::Concerns::CreateOrUpdateConcern
+    include ::Entitlement::Concerns::OwnerLockConcern
 
     Result = BaseResult[:entitlements]
 
@@ -25,9 +26,8 @@ module Entitlement
     )
 
     def call
-      return result.not_found_failure!(resource: "plan") unless plan
-
       ActiveRecord::Base.transaction do
+        lock_plan!(plan)
         delete_missing_entitlements unless partial?
         update_entitlements
       end
@@ -37,8 +37,10 @@ module Entitlement
 
       result.entitlements = plan.entitlements.includes(:feature, values: :privilege).reload
       result
-    rescue ValidationFailure => e
+    rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, PLAN_UNIQUE_INDEXES)
     rescue ActiveRecord::RecordInvalid => e
       if e.record.is_a?(EntitlementValue)
         result.record_validation_failure!(record: e.record) { :"privilege.#{it}" }
@@ -75,13 +77,23 @@ module Entitlement
     def update_entitlements
       return if entitlements_params.blank?
 
+      features_by_code = organization.features
+        .where(code: entitlements_params.keys)
+        .includes(:privileges)
+        .index_by(&:code)
+
+      entitlements_by_feature_id = plan.entitlements
+        .where(entitlement_feature_id: features_by_code.values.map(&:id))
+        .includes(:values)
+        .index_by(&:entitlement_feature_id)
+
       entitlements_params.each do |feature_code, privilege_values|
-        feature = organization.features.includes(:privileges).find { it.code == feature_code }
+        feature = features_by_code[feature_code]
 
         raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
 
         # Find existing entitlement or create new one
-        entitlement = plan.entitlements.includes(:values).find { it.entitlement_feature_id == feature.id }
+        entitlement = entitlements_by_feature_id[feature.id]
 
         if entitlement.nil?
           entitlement = Entitlement.create!(

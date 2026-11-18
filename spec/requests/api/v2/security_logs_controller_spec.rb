@@ -114,6 +114,29 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
       end
     end
 
+    context "with a stored security log that has NULL map values" do
+      before do
+        create_security_log(
+          logged_at: 1.hour.ago,
+          resources: {"name" => nil, "value_ending" => '{"deleted":"A","added":"B"}'},
+          device_info: {"os" => nil, "browser" => "Chrome"}
+        )
+      end
+
+      it "returns the entry with null for the NULL values" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:security_logs]).to eq([
+          expected_payload(
+            stored_security_log,
+            resources: {name: nil, value_ending: {deleted: "A", added: "B"}},
+            device_info: {os: nil, browser: "Chrome"}
+          )
+        ])
+      end
+    end
+
     shared_examples "a tie-breaking cursor walk" do
       before do
         5.times { create(:clickhouse_security_log, organization:, logged_at:) }

@@ -20,6 +20,7 @@ module Wallets
       result.payment_method = payment_method
 
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
+      return result.forbidden_failure! if invoice_usage_on_expiration_forbidden?
       return result unless valid?
 
       code = params[:code]
@@ -42,6 +43,7 @@ module Wallets
         paid_top_up_min_amount_cents: params[:paid_top_up_min_amount_cents],
         paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents],
         purchase_order_number: params[:purchase_order_number],
+        payment_term: params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h,
         traceable: traceable?
       }
 
@@ -50,6 +52,10 @@ module Wallets
 
       if params.key?(:invoice_requires_successful_payment)
         attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment]) || false
+      end
+
+      if params.key?(:invoice_usage_on_expiration)
+        attributes[:invoice_usage_on_expiration] = ActiveModel::Type::Boolean.new.cast(params[:invoice_usage_on_expiration]) || false
       end
 
       if params.key?(:applies_to)
@@ -175,6 +181,11 @@ module Wallets
       !organization_flag_enabled?(flag)
     end
 
+    def invoice_usage_on_expiration_forbidden?
+      ActiveModel::Type::Boolean.new.cast(params[:invoice_usage_on_expiration]) &&
+        (!License.premium? || organization_flag_disabled?(:invoice_usage_on_wallet_expiration))
+    end
+
     def connections_requested?
       return true if params[:connections].present?
 
@@ -182,7 +193,8 @@ module Wallets
     end
 
     def valid?
-      Wallets::ValidateService.new(result, **params).valid?
+      Wallets::ValidateService.new(result, **params).valid? &&
+        PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
     end
 
     def validate_wallet_initial_amount!(wallet)

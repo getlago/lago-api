@@ -14,6 +14,7 @@ module Types
       field :code, String, null: true
       field :currency, Types::CurrencyEnum, null: false
       field :name, String, null: true
+      field :payment_term, Types::PaymentTerms::Object, null: true
       field :priority, Integer, null: false
       field :purchase_order_number, String, null: true
       field :status, Types::Wallets::StatusEnum, null: false
@@ -68,6 +69,12 @@ module Types
 
       def metadata
         object.metadata&.value
+      end
+
+      def payment_term
+        if object.payment_term.present?
+          PaymentTerm.from_h(object.payment_term)
+        end
       end
     end
   end

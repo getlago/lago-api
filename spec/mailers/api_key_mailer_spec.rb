@@ -34,6 +34,8 @@ RSpec.describe ApiKeyMailer do
       it "includes organization's name" do
         expect(subject).to include CGI.escapeHTML(organization.name)
       end
+
+      it_behaves_like "a mail with the Lago logo header"
     end
   end
 
@@ -68,6 +70,8 @@ RSpec.describe ApiKeyMailer do
       it "includes organization's name" do
         expect(subject).to include CGI.escapeHTML(organization.name)
       end
+
+      it_behaves_like "a mail with the Lago logo header"
     end
   end
 
@@ -102,6 +106,8 @@ RSpec.describe ApiKeyMailer do
       it "includes organization's name" do
         expect(subject).to include CGI.escapeHTML(organization.name)
       end
+
+      it_behaves_like "a mail with the Lago logo header"
     end
   end
 end

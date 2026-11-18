@@ -50,6 +50,18 @@ RSpec.describe Invites::JoinService do
       end
     end
 
+    context "when the invite spells the user's composed email decomposed" do
+      let(:user) { create(:user, email: "jo\u00E3o@example.com") }
+      let(:invite) { create(:invite, organization:, email: "Joa\u0303o@example.com") }
+
+      it "creates the membership" do
+        result = join_service.call
+
+        expect(result).to be_success
+        expect(result.membership.user).to eq(user)
+      end
+    end
+
     context "when the invite targets another email" do
       let(:invite) { create(:invite, organization:, email: Faker::Internet.email) }
 

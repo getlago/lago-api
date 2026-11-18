@@ -74,6 +74,9 @@ RSpec.describe Taxes::DestroyService do
       rate_card = create(:rate_card, organization:)
       rate_card_tax = create(:rate_card_applied_tax, rate_card:, tax:, organization:)
 
+      plan_wallet_tax = create(:catalog_wallet_applied_tax, :plan_level, tax:, organization:)
+      catalog_wallet_tax = create(:catalog_wallet_applied_tax, tax:, organization:)
+
       credit_note = create(:credit_note, organization:)
       credit_note_tax = create(:credit_note_applied_tax, credit_note:, tax:)
 
@@ -100,6 +103,8 @@ RSpec.describe Taxes::DestroyService do
       expect { commitment_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
       expect { fixed_charge_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
       expect { rate_card_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+      expect { plan_wallet_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+      expect { catalog_wallet_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
       expect { credit_note_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
 
       # Draft invoice/fee taxes removed

@@ -18,7 +18,7 @@ module Signups
       return result.validation_failure!(errors:) if errors.any?
 
       mailbox_key = validation.mailbox_key
-      return too_many_requests if PendingSignup.mailbox_send_refusal(mailbox_key, Time.current) || mailbox_throttled?(mailbox_key)
+      return too_many_requests if PendingSignup.mailbox_send_state(mailbox_key, Time.current).first || mailbox_throttled?(mailbox_key)
 
       # Hashed only now, after every limit and check, so bcrypt cannot be used to exhaust the CPU.
       password_digest = PendingSignup.digest_password(password)
@@ -27,7 +27,7 @@ module Signups
       created = Users::EmailLockService.call(email: validation.email) do
         now = Time.current
         # Authoritative: the database history holds when the throttling Redis is down.
-        next false if PendingSignup.mailbox_send_refusal(mailbox_key, now)
+        next false if PendingSignup.mailbox_send_state(mailbox_key, now).first
 
         pending_signup = PendingSignup.create!(
           email: stored_email(validation.email),

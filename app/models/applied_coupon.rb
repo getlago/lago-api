@@ -5,7 +5,7 @@ class AppliedCoupon < ApplicationRecord
   include Currencies
 
   belongs_to :coupon, -> { with_discarded }
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
   belongs_to :organization
 
   has_many :credits

@@ -13,6 +13,7 @@ module Mutations
       argument :owner_email, String, required: true
       argument :premium_integrations, [String], required: false
       argument :reason, String, required: true
+      argument :self_serve, Boolean, required: false, description: "Also create the organization's sandbox"
       argument :timezone, Types::TimezoneEnum, required: false
 
       type Types::Admin::CreateOrganizationPayload
@@ -25,7 +26,8 @@ module Mutations
           timezone: args[:timezone],
           premium_integrations: args[:premium_integrations],
           feature_flags: args[:feature_flags],
-          reason: args[:reason]
+          reason: args[:reason],
+          self_serve: args[:self_serve] || false
         )
 
         result.success? ? result : result_error(result)
