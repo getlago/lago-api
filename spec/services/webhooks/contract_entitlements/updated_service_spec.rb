@@ -12,7 +12,6 @@ RSpec.describe Webhooks::ContractEntitlements::UpdatedService do
   # The render of the entitlement as it now applies, as the contract entitlement update service passes it.
   let(:render) do
     {
-      contract_external_id: "contract_123",
       lago_contract_id: contract.id,
       feature_code: "seats",
       source: "plan",
@@ -32,7 +31,6 @@ RSpec.describe Webhooks::ContractEntitlements::UpdatedService do
         "object_type" => "contract_entitlement",
         "organization_id" => organization.id,
         "contract_entitlement" => {
-          "contract_external_id" => "contract_123",
           "lago_contract_id" => contract.id,
           "feature_code" => "seats",
           "source" => "plan",
