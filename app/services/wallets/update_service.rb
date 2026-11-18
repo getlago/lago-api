@@ -23,6 +23,7 @@ module Wallets
       return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
+      return result unless valid_expiration_change?
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
       return result unless valid_payment_method?
@@ -141,6 +142,14 @@ module Wallets
       return true if Validators::ExpirationDateValidator.valid?(expiration_at)
 
       result.single_validation_failure!(field: :expiration_at, error_code: "invalid_date")
+      false
+    end
+
+    # Moving the date would leave the usage after the invoiced expiration without an expiration invoice.
+    def valid_expiration_change?
+      return true unless params.key?(:expiration_at) && wallet.reserved_for_expiration_invoice?
+
+      result.single_validation_failure!(field: :expiration_at, error_code: "expiration_already_invoiced")
       false
     end
 

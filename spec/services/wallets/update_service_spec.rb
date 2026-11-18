@@ -455,6 +455,39 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when the expiration of the expired wallet is invoiced" do
+      let(:wallet) { create(:wallet, customer:, allowed_fee_types: [], expiration_at: 1.hour.ago) }
+
+      before do
+        invoice = create(:invoice, organization:, customer:, status: :failed)
+        create(:applied_wallet_expiration, wallet:, invoice:)
+      end
+
+      it "refuses to push the expiration back" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:expiration_at]).to eq(["expiration_already_invoiced"])
+        expect(wallet.reload.name).not_to eq("new name")
+      end
+
+      context "when expiration_at is removed" do
+        let(:expiration_at) { nil }
+
+        it "refuses to remove the expiration" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:expiration_at]).to eq(["expiration_already_invoiced"])
+        end
+      end
+
+      context "when expiration_at is not sent" do
+        let(:params) { {id: wallet.id, name: "new name"} }
+
+        it "updates the wallet" do
+          expect(result).to be_success
+          expect(wallet.reload.name).to eq("new name")
+        end
+      end
+    end
+
     context "with recurring transaction rules", :premium do
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
       let(:transaction_metadata) { [] }
