@@ -57,13 +57,19 @@ RSpec.describe Organizations::ActivateService do
     end
   end
 
-  context "without an organization" do
-    let(:organization) { nil }
+  context "with a stale copy of an organization that is no longer self-serve" do
+    subject(:result) { described_class.call(organization: stale) }
 
-    it "returns not found" do
+    let(:stale) { Organization.find(organization.id) }
+
+    before do
+      stale
+      organization.update_columns(self_serve: false, activation_status: "active") # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it "refuses from the row read under the lock" do
       expect(result).to be_failure
-      expect(result.error).to be_a(BaseService::NotFoundFailure)
-      expect(result.error.resource).to eq("organization")
+      expect(result.error.code).to eq("organization_not_self_serve_production")
     end
   end
 
@@ -71,9 +77,15 @@ RSpec.describe Organizations::ActivateService do
     it "activates the organization once" do
       organization_id = organization.id
 
-      Array.new(2) { Thread.new { described_class.call(organization: Organization.find(organization_id)) } }
-        .map(&:value)
-        .each { expect(it).to be_success }
+      threads = Array.new(2) do
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(organization: Organization.find(organization_id))
+          end
+        end
+      end
+
+      threads.map(&:value).each { expect(it).to be_success }
 
       expect(organization.reload.activation_status).to eq("active")
       expect(ApiKeys::CacheService).to have_received(:expire_all_cache).once

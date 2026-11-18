@@ -13,17 +13,18 @@ module Organizations
     end
 
     def call
-      return result.not_found_failure!(resource: "organization") unless organization
-      unless organization.self_serve? && organization.production?
-        return result.forbidden_failure!(code: "organization_not_self_serve_production")
-      end
-
       ActiveRecord::Base.transaction do
+        # Reloads the row, so the checks below read what another transaction committed while this one waited.
         organization.lock!(SandboxLockService::LOCK_MODE)
-        activate if organization.activation_status_pending_payment_method?
+
+        if !organization.self_serve? || !organization.production?
+          result.forbidden_failure!(code: "organization_not_self_serve_production")
+        elsif organization.activation_status_pending_payment_method?
+          activate
+        end
       end
 
-      result.organization = organization
+      result.organization = organization unless result.failure?
       result
     end
 
@@ -33,9 +34,12 @@ module Organizations
 
     def activate
       organization.update!(activation_status: Organization::ACTIVATION_STATUSES[:active])
+
       # The REST gate trusts the API key cache: clear it once the new status is visible to other requests.
-      after_commit { ApiKeys::CacheService.expire_all_cache(organization) }
-      Rails.logger.info("Organization #{organization.id} activated")
+      after_commit do
+        ApiKeys::CacheService.expire_all_cache(organization)
+        Rails.logger.info("Organization #{organization.id} activated")
+      end
     end
   end
 end
