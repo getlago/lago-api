@@ -12,20 +12,20 @@ module Api
       UNFILTERED_PARAMS = %i[tax_codes applies_to metadata].freeze
 
       def create
-        result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: wallet_params)
+        result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: plan_wallet_params)
 
         if result.success?
-          render_wallet(result.plan_wallet)
+          render_plan_wallet(result.plan_wallet)
         else
           render_error_response(result)
         end
       end
 
       def update
-        result = ::PlanWallets::UpdateService.call(plan_wallet: find_plan_wallet, params: wallet_params)
+        result = ::PlanWallets::UpdateService.call(plan_wallet: find_plan_wallet, params: plan_wallet_params)
 
         if result.success?
-          render_wallet(result.plan_wallet)
+          render_plan_wallet(result.plan_wallet)
         else
           render_error_response(result)
         end
@@ -35,7 +35,7 @@ module Api
         result = ::PlanWallets::DestroyService.call(plan_wallet: find_plan_wallet)
 
         if result.success?
-          render_wallet(result.plan_wallet)
+          render_plan_wallet(result.plan_wallet)
         else
           render_error_response(result)
         end
@@ -83,9 +83,9 @@ module Api
         plan_wallets&.find_by(code: params[:code])
       end
 
-      def wallet_params
-        wallet = params.require(:wallet)
-        permitted = wallet.permit(
+      def plan_wallet_params
+        plan_wallet = params.require(:plan_wallet)
+        permitted = plan_wallet.permit(
           :code,
           :name,
           :invoice_display_name,
@@ -105,7 +105,7 @@ module Api
         # Strong params drop a null and a value of another shape. The services need both: a null
         # metadata clears it, and another shape is refused instead of ignored.
         UNFILTERED_PARAMS.each do |key|
-          permitted[key] = unfiltered(wallet[key]) if wallet.key?(key) && !permitted.key?(key)
+          permitted[key] = unfiltered(plan_wallet[key]) if plan_wallet.key?(key) && !permitted.key?(key)
         end
 
         permitted

@@ -218,7 +218,7 @@ describe Api::V2::PlanWalletsController do
   end
 
   describe "POST /api/v2/plans/:plan_code/wallets" do
-    subject { post_with_token(organization, "/api/v2/plans/#{plan_code}/wallets", {wallet: create_params}) }
+    subject { post_with_token(organization, "/api/v2/plans/#{plan_code}/wallets", {plan_wallet: create_params}) }
 
     let(:plan_code) { catalog_plan.code }
     let(:product) { create(:product, organization:, code: "api_calls") }
@@ -259,7 +259,7 @@ describe Api::V2::PlanWalletsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:wallet]).to include(
+      expect(json[:plan_wallet]).to include(
         plan_code: "pro",
         code: "ai_credits",
         name: "AI credits",
@@ -272,8 +272,8 @@ describe Api::V2::PlanWalletsController do
         top_up_max_amount_cents: 50_000,
         deleted_at: nil
       )
-      expect(json[:wallet].keys).to eq(flat_keys)
-      expect(catalog_plan.wallets.sole).to have_attributes(id: json[:wallet][:lago_id], taxes: [Tax.find_by(code: "vat_20")])
+      expect(json[:plan_wallet].keys).to eq(flat_keys)
+      expect(catalog_plan.wallets.sole).to have_attributes(id: json[:plan_wallet][:lago_id], taxes: [Tax.find_by(code: "vat_20")])
       expect(catalog_plan.wallets.sole.metadata.value).to eq({"team" => "growth"})
     end
 
@@ -284,7 +284,7 @@ describe Api::V2::PlanWalletsController do
       it "selects the products without their filters" do
         subject
 
-        expect(json[:wallet][:applies_to][:include]).to eq([
+        expect(json[:plan_wallet][:applies_to][:include]).to eq([
           {type: "product", code: "api_calls", with_product_filters: false},
           {type: "product", code: product2.code, with_product_filters: false}
         ])
@@ -298,7 +298,7 @@ describe Api::V2::PlanWalletsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallet][:applies_to]).to eq(include: [])
+        expect(json[:plan_wallet][:applies_to]).to eq(include: [])
       end
     end
 
@@ -369,7 +369,7 @@ describe Api::V2::PlanWalletsController do
   end
 
   describe "PUT /api/v2/plans/:plan_code/wallets/:code" do
-    subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/wallets/#{code}", {wallet: update_params}) }
+    subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/wallets/#{code}", {plan_wallet: update_params}) }
 
     let(:code) { plan_wallet.code }
     let(:update_params) { {code: "credits", priority: 20, applies_to: {include: [{type: "fee_type", code: "fixed"}]}} }
@@ -381,7 +381,7 @@ describe Api::V2::PlanWalletsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:wallet]).to include(
+      expect(json[:plan_wallet]).to include(
         lago_id: plan_wallet.id, code: "credits", priority: 20, applies_to: {include: [{type: "fee_type", code: "fixed"}]}
       )
     end
@@ -404,7 +404,7 @@ describe Api::V2::PlanWalletsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallet][:applies_to][:include].map { it[:type] }).to match_array(%w[product product product_category product_filters])
+        expect(json[:plan_wallet][:applies_to][:include].map { it[:type] }).to match_array(%w[product product product_category product_filters])
       end
     end
 
@@ -446,7 +446,7 @@ describe Api::V2::PlanWalletsController do
         expect { subject }.not_to change { catalog_wallet.reload.attributes }
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallet]).to include(priority: 20, tax_application: "tax_on_purchase")
+        expect(json[:plan_wallet]).to include(priority: 20, tax_application: "tax_on_purchase")
       end
 
       context "when the code changes" do
@@ -479,7 +479,7 @@ describe Api::V2::PlanWalletsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_v2_not_found_error("wallet")
+        expect(response).to be_v2_not_found_error("plan_wallet")
       end
     end
   end
@@ -497,7 +497,7 @@ describe Api::V2::PlanWalletsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallet]).to include(lago_id: plan_wallet.id, deleted_at: Time.current.iso8601(6))
+        expect(json[:plan_wallet]).to include(lago_id: plan_wallet.id, deleted_at: Time.current.iso8601(6))
         expect(catalog_plan.wallets).to be_empty
       end
     end
@@ -522,7 +522,7 @@ describe Api::V2::PlanWalletsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_v2_not_found_error("wallet")
+        expect(response).to be_v2_not_found_error("plan_wallet")
       end
     end
   end
