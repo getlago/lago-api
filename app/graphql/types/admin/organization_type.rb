@@ -15,6 +15,10 @@ module Types
       field :name, String, null: false
       field :premium_integrations, [String], null: false
 
+      def activation_status
+        Types::Organizations::ActivationFields.activation_status_of(object)
+      end
+
       def feature_flags
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }
       end

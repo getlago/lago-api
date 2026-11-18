@@ -69,6 +69,10 @@ module Types
       field :authenticated_method, Types::Organizations::AuthenticationMethodsEnum, null: false
       field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
 
+      def activation_status
+        ActivationFields.activation_status_of(object)
+      end
+
       def feature_flags
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }
       end

@@ -227,12 +227,12 @@ RSpec.describe Resolvers::CurrentUserResolver do
       let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
       let(:membership_dates) { {production: 3.days.ago, other: 2.days.ago, sandbox: 1.day.ago} }
 
-      it "shows each organization of the pair as a standalone production one, in membership order, with its stored activation status" do
+      it "shows each organization of the pair as an active standalone production one, in membership order" do
         result = execute_graphql(current_user: user, query:)
 
         expect(organizations_of(result)).to eq([
-          {"id" => production.id, "selfServe" => false, "environment" => "production",
-           "activationStatus" => "pending_payment_method", "productionOrganization" => nil, "sandboxOrganization" => nil},
+          {"id" => production.id, "selfServe" => false, "environment" => "production", "activationStatus" => "active",
+           "productionOrganization" => nil, "sandboxOrganization" => nil},
           {"id" => other.id, "selfServe" => false, "environment" => "production", "activationStatus" => "active",
            "productionOrganization" => nil, "sandboxOrganization" => nil},
           {"id" => sandbox.id, "selfServe" => false, "environment" => "production", "activationStatus" => "active",
