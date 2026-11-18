@@ -5,7 +5,7 @@ require "rails_helper"
 describe Api::V1::Agents::GateChecksController, :premium do
   subject { post_with_token(organization, "/api/v1/agents/gate_checks", {gate_check: params}) }
 
-  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront events_targeting_wallets]) }
+  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront events_targeting_wallets], feature_flags: %w[agent_storefront]) }
   let(:storefront) { create(:agent_storefront_integration, organization:) }
   let(:registration) { create(:agent_registration, storefront:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }

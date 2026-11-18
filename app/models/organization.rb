@@ -49,7 +49,10 @@ class Organization < ApplicationRecord
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :ai_conversations
   has_many :api_logs, class_name: "Clickhouse::ApiLog"
-  has_many :api_keys
+  # The keys of the organization. The short-lived keys minted for the AI agent are kept apart,
+  # so they never show in the dashboard or replace the organization's own keys.
+  has_many :api_keys, -> { where(membership_id: nil) }
+  has_many :member_api_keys, -> { where.not(membership_id: nil) }, class_name: "ApiKey"
   has_many :security_logs, class_name: "Clickhouse::SecurityLog"
   has_many :billing_entities, -> { active }
   has_many :all_billing_entities, class_name: "BillingEntity"
@@ -83,6 +86,7 @@ class Organization < ApplicationRecord
   has_many :contracts
   has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :invoices
+  has_many :billing_operations
   has_many :credit_notes
   has_many :fees
   has_many :events
@@ -104,6 +108,7 @@ class Organization < ApplicationRecord
   has_many :webhooks
   has_many :cached_aggregations
   has_many :recurring_aggregation_snapshots
+  has_many :contract_recurring_aggregation_snapshots
   has_many :data_exports
   has_many :error_details
   has_many :dunning_campaigns
@@ -145,11 +150,21 @@ class Organization < ApplicationRecord
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
 
+  belongs_to :production_organization, class_name: "Organization", optional: true, inverse_of: :sandbox_organization
+  # No path deletes an organization today; a future one gets an error instead of the foreign key's exception.
+  has_one :sandbox_organization, class_name: "Organization", foreign_key: :production_organization_id,
+    inverse_of: :production_organization, dependent: :restrict_with_error
+
   has_many :invoice_custom_sections
   has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"
   has_many :system_generated_invoice_custom_sections, -> { where(section_type: "system_generated") }, class_name: "InvoiceCustomSection"
 
   has_one_attached :logo
+
+  ENVIRONMENTS = {
+    production: "production",
+    sandbox: "sandbox"
+  }.freeze
 
   EVENTS_STORES = {
     clickhouse: "clickhouse",
@@ -204,6 +219,10 @@ class Organization < ApplicationRecord
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
+  # Declared, so the model loads in older migrations that run before the column exists. Saving still fails there:
+  # the validations read `self_serve` and `production_organization_id`, which do not exist yet either.
+  attribute :environment, :string
+  enum :environment, ENVIRONMENTS, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
@@ -226,10 +245,18 @@ class Organization < ApplicationRecord
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
   validates :hmac_key, uniqueness: true
   validates :hmac_key, presence: true, on: :update
+  validates :self_serve, inclusion: {in: [true, false]}
+  validates :production_organization_id, presence: true, if: :sandbox?
+  validates :production_organization_id, absence: true, if: :production?
+  # The unique index is the race guard; this gives the same answer before the write.
+  validates :production_organization_id, uniqueness: true, allow_nil: true,
+    if: :will_save_change_to_production_organization_id?
 
   validate :validate_premium_integrations
   validate :validate_email_settings
   validate :validate_customer_portal_locked_fields
+  validate :validate_environment_link,
+    if: -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -246,10 +273,27 @@ class Organization < ApplicationRecord
     end
   end
 
+  # Shared with the billing entities. Spaces are left out ("ab Sandbox" gives "AB-4321", not "AB -4321"), and the cut
+  # comes after the upcase, which can lengthen a name ("ßßß" gives "SSS", not "SSSSSS").
+  def self.document_number_prefix_for(name, id)
+    "#{name.first(3).gsub(/[[:space:]]/, "").upcase.first(3)}-#{id.last(4).upcase}"
+  end
+
   # Product catalog (billing v2) is a rollout feature flag, not a license-gated
   # premium integration: it is available to any organization, premium or not.
   def product_catalog_enabled?
     feature_flag_enabled?(:product_catalog)
+  end
+
+  # Whether this organization's events go to the product events topic, and so to the
+  # product ClickHouse tables. Without the topic, a product catalog organization keeps
+  # the subscription pipeline.
+  def product_events_pipeline?
+    product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?
+  end
+
+  def catalog_wallets_enabled?
+    feature_flag_enabled?(:catalog_wallets)
   end
 
   def account_tree_enabled?
@@ -258,6 +302,10 @@ class Organization < ApplicationRecord
 
   def x402_payments_enabled?
     License.premium? && feature_flag_enabled?(:x402_payments)
+  end
+
+  def agent_storefront_enabled?
+    License.premium? && premium_integrations.include?("agent_storefront") && feature_flag_enabled?(:agent_storefront)
   end
 
   def using_lifetime_usage?
@@ -310,6 +358,11 @@ class Organization < ApplicationRecord
     remaining_billing_entities > 0
   end
 
+  # The endpoint that `webhook_url` reads and writes. Ruby side so a preloaded association is reused.
+  def default_webhook_endpoint
+    webhook_endpoints.min_by(&:id)
+  end
+
   def failed_tax_invoices_count
     invoices.where(status: :failed).joins(:error_details).where(error_details: {error_code: "tax_error"}).count
   end
@@ -348,9 +401,9 @@ class Organization < ApplicationRecord
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
-  # Example of expected format is ORG-4321
+  # Example of expected format is ORG-4321.
   def generate_document_number_prefix
-    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
+    update!(document_number_prefix: self.class.document_number_prefix_for(name, id))
   end
 
   def validate_email_settings
@@ -370,6 +423,17 @@ class Organization < ApplicationRecord
     return if premium_integrations.all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
 
     errors.add(:premium_integrations, :inclusion, value: premium_integrations)
+  end
+
+  # A sandbox belongs to an existing production organization, never to itself or to another sandbox, and owns no
+  # sandbox. A missing one is refused here, or saving would raise on the foreign key.
+  def validate_environment_link
+    if production_organization_id.present? &&
+        (production_organization_id == id || production_organization.nil? || production_organization.sandbox?)
+      errors.add(:production_organization_id, :invalid)
+    end
+
+    errors.add(:environment, :invalid) if sandbox? && persisted? && sandbox_organization.present?
   end
 
   def set_hmac_key
@@ -410,6 +474,7 @@ end
 #  document_url_expiration_days  :integer          default(30), not null
 #  email                         :string
 #  email_settings                :string           default([]), not null, is an Array
+#  environment                   :enum             default("production"), not null
 #  eu_tax_management             :boolean          default(FALSE)
 #  feature_flags                 :string           default([]), not null, is an Array
 #  finalize_zero_amount_invoice  :boolean          default(TRUE), not null
@@ -424,6 +489,7 @@ end
 #  net_payment_term              :integer          default(0), not null
 #  pagination_max_page_size      :integer
 #  premium_integrations          :string           default([]), not null, is an Array
+#  self_serve                    :boolean          default(FALSE), not null
 #  slug                          :string           not null
 #  state                         :string
 #  tax_identification_number     :string
@@ -433,10 +499,16 @@ end
 #  zipcode                       :string
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
+#  production_organization_id    :uuid
 #
 # Indexes
 #
-#  index_organizations_on_api_key   (api_key) UNIQUE
-#  index_organizations_on_hmac_key  (hmac_key) UNIQUE
-#  index_organizations_on_slug      (slug) UNIQUE
+#  index_organizations_on_api_key                     (api_key) UNIQUE
+#  index_organizations_on_hmac_key                    (hmac_key) UNIQUE
+#  index_organizations_on_production_organization_id  (production_organization_id) UNIQUE
+#  index_organizations_on_slug                        (slug) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (production_organization_id => organizations.id)
 #

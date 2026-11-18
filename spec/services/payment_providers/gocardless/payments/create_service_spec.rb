@@ -117,6 +117,8 @@ RSpec.describe PaymentProviders::Gocardless::Payments::CreateService do
 
         expect(result.error_message).to eq("error")
         expect(result.error_code).to eq("code")
+        expect(result.reraise).to be(true)
+        expect(result.should_retry).to be_nil
         expect(result.payment.payable_payment_status).to eq("failed")
       end
     end

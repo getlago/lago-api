@@ -295,6 +295,28 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
       end
     end
 
+    context "when a concurrent request removes the same plan feature" do
+      let(:existing_entitlement) { create(:entitlement, organization:, plan:, feature: feature2) }
+      let(:entitlements_params) { {} }
+
+      before do
+        existing_entitlement
+
+        allow(Entitlement::SubscriptionFeatureRemoval).to receive(:create!).and_wrap_original do |original, **attributes|
+          original.call(**attributes)
+          original.call(**attributes)
+        end
+      end
+
+      it "returns the validation error of a taken feature" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(feature: ["value_already_exist"])
+        expect(subscription.entitlement_removals.count).to eq(0)
+        expect(SendWebhookJob).not_to have_been_enqueued
+        expect(Utils::ActivityLog).not_to have_produced("subscription.updated")
+      end
+    end
+
     context "when subscription does not exist" do
       let(:subscription) { nil }
 

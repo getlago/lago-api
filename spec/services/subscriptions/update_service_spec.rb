@@ -56,6 +56,114 @@ RSpec.describe Subscriptions::UpdateService do
       end
     end
 
+    context "with payment_term" do
+      let(:params) { {payment_term: {term_type: "net", days: 45}} }
+
+      it "updates the payment_term" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.payment_term).to eq({"term_type" => "net", "days" => 45})
+      end
+
+      context "when payment_term is nil" do
+        let(:subscription) { create(:subscription, payment_term: {term_type: "net", days: 45}) }
+        let(:params) { {payment_term: nil} }
+
+        it "clears the payment_term" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.payment_term).to be_nil
+        end
+      end
+
+      context "when payment_term is omitted" do
+        let(:subscription) { create(:subscription, payment_term: {term_type: "net", days: 30}) }
+        let(:params) { {name: "new name"} }
+
+        it "keeps the stored payment_term" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.reload.payment_term).to eq({"term_type" => "net", "days" => 30})
+        end
+      end
+
+      context "when payment_term is invalid" do
+        let(:params) { {payment_term: {term_type: "net", days: -1}} }
+
+        it "fails with a validation error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_term]).to eq(["invalid_days"])
+        end
+      end
+
+      context "with a pending downgrade" do
+        let(:subscription) { create(:subscription, payment_term: {term_type: "net", days: 30}) }
+        let(:successor) do
+          create(
+            :subscription,
+            :pending,
+            customer: subscription.customer,
+            previous_subscription: subscription,
+            external_id: subscription.external_id,
+            payment_term: successor_payment_term
+          )
+        end
+
+        before { successor }
+
+        context "when the successor carried the term over" do
+          let(:successor_payment_term) { {term_type: "net", days: 30} }
+
+          it "propagates the new term to the successor" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(successor.reload.payment_term).to eq({"term_type" => "net", "days" => 45})
+          end
+
+          context "when payment_term is nil" do
+            let(:params) { {payment_term: nil} }
+
+            it "clears the successor term too" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(successor.reload.payment_term).to be_nil
+            end
+          end
+        end
+
+        context "when the successor has its own term" do
+          let(:successor_payment_term) { {term_type: "end_of_month"} }
+
+          it "leaves the successor term unchanged" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(successor.reload.payment_term).to eq({"term_type" => "end_of_month"})
+          end
+        end
+
+        context "when the successor is canceled" do
+          let(:successor_payment_term) { {term_type: "net", days: 30} }
+
+          before { successor.mark_as_canceled! }
+
+          it "leaves the successor term unchanged" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(successor.reload.payment_term).to eq({"term_type" => "net", "days" => 30})
+          end
+        end
+      end
+    end
+
     context "with purchase_order_number" do
       let(:params) { {purchase_order_number: "PO-123"} }
 

@@ -90,5 +90,32 @@ RSpec.describe PasswordResets::ResetService do
         before { reset_service.call(new_password: reset_args[:new_password], token: expired_password_reset.token) }
       end
     end
+
+    context "with a self-serve user who never had an organization" do
+      let(:user) { create(:user, :self_serve, password: "HelloLago!1") }
+
+      context "when self-serve is on" do
+        include_context "with self-serve enabled"
+
+        it "changes the password and opens a session that needs an organization" do
+          result = reset_service.call(**reset_args)
+
+          expect(result).to be_success
+          expect(result.token).to be_present
+          expect(result.user.needs_organization?).to be(true)
+          expect(PasswordReset.where(id: password_reset.id)).not_to exist
+          expect(SegmentIdentifyJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when self-serve is off" do
+        it "changes the password but refuses the session, as today" do
+          result = reset_service.call(**reset_args)
+
+          expect(result.error.messages).to eq(base: ["incorrect_login_or_password"])
+          expect(user.reload.authenticate(reset_args[:new_password])).to be_truthy
+        end
+      end
+    end
   end
 end

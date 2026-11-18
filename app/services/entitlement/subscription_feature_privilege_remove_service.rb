@@ -2,6 +2,8 @@
 
 module Entitlement
   class SubscriptionFeaturePrivilegeRemoveService < BaseService
+    include Concerns::OwnerLockConcern
+
     Result = BaseResult[:feature_code, :privilege_code]
 
     def initialize(subscription:, feature_code:, privilege_code:)
@@ -22,6 +24,7 @@ module Entitlement
       return result.not_found_failure!(resource: "privilege") unless privilege
 
       ActiveRecord::Base.transaction do
+        lock_subscription!(subscription)
         delete_subscription_entitlement_value_if_exists
         add_privilege_removal_if_privilege_is_in_plan
       end

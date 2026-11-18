@@ -160,6 +160,20 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
       end
     end
 
+    context "when dunning campaign belongs to another organization" do
+      let(:applied_dunning_campaign_id) { create(:dunning_campaign, organization: create(:organization)).id }
+
+      it "returns a not found failure and does not apply the campaign" do
+        result = nil
+
+        expect { result = update_service.call }.not_to change { billing_entity.reload.applied_dunning_campaign_id }
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("dunning_campaign_not_found")
+      end
+    end
+
     context "when dunning campaign is not found" do
       let(:applied_dunning_campaign_id) { "nonexistent-id" }
 

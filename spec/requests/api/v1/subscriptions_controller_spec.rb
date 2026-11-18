@@ -63,6 +63,43 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
     include_examples "requires API permission", "subscription", "write"
 
+    context "with payment_term" do
+      let(:params) { super().merge(payment_term: {term_type: "net", days: 45}) }
+
+      it "stores and returns the payment_term" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:subscription][:payment_term]).to eq({term_type: "net", days: 45})
+
+        subscription = Subscription.find_by(external_id: json[:subscription][:external_id])
+        expect(subscription.payment_term).to eq({"term_type" => "net", "days" => 45})
+      end
+
+      context "when the payment_term is null" do
+        let(:params) { super().merge(payment_term: nil) }
+
+        it "creates the subscription without an override" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:subscription][:payment_term]).to be_nil
+          expect(Subscription.find_by(external_id: json[:subscription][:external_id]).payment_term).to be_nil
+        end
+      end
+
+      context "when the payment_term is invalid" do
+        let(:params) { super().merge(payment_term: {term_type: "unknown"}) }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:payment_term]).to eq(["invalid_term_type"])
+        end
+      end
+    end
+
     it "returns a success" do
       create(:plan, code: plan.code, parent_id: plan.id, organization:, description: "foo")
       create(:entitlement, organization:, plan:)
@@ -337,6 +374,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(response).to have_http_status(:ok)
           subscription = Subscription.find_by(external_id: params[:external_id])
           expect(subscription.billing_entity_id).to eq(billing_entity.id)
+          expect(json[:subscription][:billing_entity_code]).to eq(billing_entity.code)
         end
 
         context "when binding via billing_entity_id instead of code" do
@@ -376,6 +414,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           expect(response).to have_http_status(:ok)
           subscription = Subscription.find_by(external_id: params[:external_id])
           expect(subscription.billing_entity_id).to be_nil
+          expect(json[:subscription][:billing_entity_code]).to eq(customer.billing_entity.code)
         end
       end
     end
@@ -1841,6 +1880,45 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
       end
     end
 
+    context "when updating payment_term" do
+      let(:update_params) { {payment_term: {term_type: "end_of_month"}} }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      it "updates the payment_term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription][:payment_term]).to eq({term_type: "end_of_month"})
+        expect(subscription.reload.payment_term).to eq({"term_type" => "end_of_month"})
+      end
+
+      context "when payment_term is null" do
+        let(:subscription) { create(:subscription, customer:, plan:, payment_term: {term_type: "net", days: 30}) }
+        let(:update_params) { {payment_term: nil} }
+
+        it "clears the payment_term" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:payment_term]).to be_nil
+          expect(subscription.reload.payment_term).to be_nil
+        end
+      end
+
+      context "when payment_term is omitted" do
+        let(:subscription) { create(:subscription, customer:, plan:, payment_term: {term_type: "net", days: 30}) }
+        let(:update_params) { {name: "subscription name new"} }
+
+        it "keeps the stored payment_term" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:payment_term]).to eq({term_type: "net", days: 30})
+          expect(subscription.reload.payment_term).to eq({"term_type" => "net", "days" => 30})
+        end
+      end
+    end
+
     context "when updating purchase_order_number" do
       let(:update_params) { {purchase_order_number: "PO-123"} }
       let(:subscription) { create(:subscription, customer:, plan:) }
@@ -1969,6 +2047,7 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
 
               expect(response).to have_http_status(:success)
               expect(subscription.reload.billing_entity_id).to eq(new_billing_entity.id)
+              expect(json[:subscription][:billing_entity_code]).to eq(new_billing_entity.code)
             end
           end
 

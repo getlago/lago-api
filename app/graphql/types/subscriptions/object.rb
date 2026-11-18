@@ -9,6 +9,7 @@ module Types
       field :customer, Types::Customers::Object, null: false
       field :external_id, String, null: false
       field :id, ID, null: false
+      field :payment_term, Types::PaymentTerms::Object, null: true
       field :plan, Types::Plans::Object, null: false
 
       field :name, String, null: true
@@ -124,6 +125,12 @@ module Types
 
         fcs.map do |fc|
           ::Subscription::FixedChargePresenter.new(fc, object, effective_units: effective_units_by_id[fc.id])
+        end
+      end
+
+      def payment_term
+        if object.payment_term.present?
+          PaymentTerm.from_h(object.payment_term)
         end
       end
 

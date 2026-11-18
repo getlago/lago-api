@@ -3,6 +3,8 @@
 RSpec.shared_examples "an invoice index endpoint" do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
+  # Customers whose invoices the endpoint lists in the metadata context: a customer-scoped endpoint lists only `customer`
+  let(:listed_customers) { [customer, other_customer] }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
 
   before { tax }
@@ -487,6 +489,39 @@ RSpec.shared_examples "an invoice index endpoint" do
         expect(invoice[:metadata]).to be_present
         expect(invoice[:file_url]).to be_present
         expect(invoice[:xml_url]).to be_present
+      end
+    end
+  end
+
+  context "with invoices of several customers with metadata", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:params) { {} }
+    let(:other_customer) { create(:customer, organization:) }
+
+    before do
+      [customer, other_customer].each do |invoice_customer|
+        create(:customer_metadata, customer: invoice_customer, key: "lead_name", value: invoice_customer.external_id)
+        create(:customer_metadata, customer: invoice_customer, key: "region", value: "eu")
+        create_pair(:invoice, customer: invoice_customer, organization:)
+      end
+    end
+
+    it "loads the customer metadata in one query" do
+      # Counts the statements that read metadata rows: a preload selects `"customer_metadata".*`, while the
+      # customer-scoped list joins the customers and eager loads the metadata columns in the invoices query
+      metadata_queries = capture_sql { subject }.grep(/"customer_metadata"\.(\*|"value")/)
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoices].count).to eq(2 * listed_customers.count)
+      expect(json[:invoices].map { it[:customer][:lago_id] }.uniq).to match_array(listed_customers.map(&:id))
+      expect(metadata_queries.count).to eq(1)
+
+      json[:invoices].each do |invoice|
+        rendered_customer = invoice[:customer]
+        expected_customer = listed_customers.find { it.id == rendered_customer[:lago_id] }
+
+        expect(rendered_customer[:metadata].map { it.slice(:key, :value) }).to match_array(
+          [{key: "lead_name", value: expected_customer.external_id}, {key: "region", value: "eu"}]
+        )
       end
     end
   end

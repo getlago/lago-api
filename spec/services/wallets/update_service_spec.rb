@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Wallets::UpdateService do
   subject(:result) { described_class.call(wallet:, params:) }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
   let(:customer) { create_default(:customer, organization:) }
   let(:subscription) { create_default(:subscription, customer:) }
@@ -83,6 +83,35 @@ RSpec.describe Wallets::UpdateService do
       it "updates the wallet purchase order number" do
         expect(result).to be_success
         expect(result.wallet.reload.purchase_order_number).to eq("PO-WALLET-123")
+      end
+    end
+
+    context "when a payment_term is sent" do
+      let(:params) { super().merge(payment_term: {term_type: "end_of_month"}) }
+
+      it "updates the wallet payment term" do
+        expect(result).to be_success
+        expect(result.wallet.reload.payment_term).to eq("term_type" => "end_of_month")
+      end
+
+      context "when the payment_term is null" do
+        let(:params) { super().merge(payment_term: nil) }
+
+        before { wallet.update!(payment_term: {"term_type" => "net", "days" => 30}) }
+
+        it "clears the wallet payment term" do
+          expect(result).to be_success
+          expect(result.wallet.reload.payment_term).to be_nil
+        end
+      end
+
+      context "when the payment_term is invalid" do
+        let(:params) { super().merge(payment_term: {term_type: "net", days: -1}) }
+
+        it "returns a validation error" do
+          expect(result).to be_failure
+          expect(result.error.messages[:payment_term]).to eq(["invalid_days"])
+        end
       end
     end
 
@@ -262,6 +291,43 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "with invoice_usage_on_expiration", :premium do
+      let(:params) { {id: wallet.id, invoice_usage_on_expiration: true} }
+      let(:feature_flag_enabled) { true }
+
+      before { organization.enable_feature_flag!(:invoice_usage_on_wallet_expiration) if feature_flag_enabled }
+
+      it "follows the value" do
+        expect(result).to be_success
+        expect(result.wallet.invoice_usage_on_expiration).to eq(true)
+      end
+
+      context "when the value is blank" do
+        let(:params) { {id: wallet.id, invoice_usage_on_expiration: ""} }
+
+        it "returns a validation failure" do
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:invoice_usage_on_expiration]).to eq(["value_is_reserved"])
+        end
+      end
+
+      context "when the feature flag is disabled" do
+        let(:feature_flag_enabled) { false }
+
+        it "returns a forbidden failure" do
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(wallet.reload.invoice_usage_on_expiration).to eq(false)
+        end
+      end
+
+      context "without a premium license", premium: false do
+        it "returns a forbidden failure" do
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(wallet.reload.invoice_usage_on_expiration).to eq(false)
+        end
+      end
+    end
+
     context "with x402_enabled" do
       let(:wallet) { create(:wallet, customer:, currency: "EUR", allowed_fee_types: []) }
       let(:params) { {id: wallet.id, x402_enabled: true} }
@@ -422,6 +488,39 @@ RSpec.describe Wallets::UpdateService do
           expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
 
           expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+      end
+    end
+
+    context "when the expiration of the expired wallet is invoiced" do
+      let(:wallet) { create(:wallet, customer:, allowed_fee_types: [], expiration_at: 1.hour.ago) }
+
+      before do
+        invoice = create(:invoice, organization:, customer:, status: :failed)
+        create(:applied_wallet_expiration, wallet:, invoice:)
+      end
+
+      it "refuses to push the expiration back" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:expiration_at]).to eq(["expiration_already_invoiced"])
+        expect(wallet.reload.name).not_to eq("new name")
+      end
+
+      context "when expiration_at is removed" do
+        let(:expiration_at) { nil }
+
+        it "refuses to remove the expiration" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:expiration_at]).to eq(["expiration_already_invoiced"])
+        end
+      end
+
+      context "when expiration_at is not sent" do
+        let(:params) { {id: wallet.id, name: "new name"} }
+
+        it "updates the wallet" do
+          expect(result).to be_success
+          expect(wallet.reload.name).to eq("new name")
         end
       end
     end
