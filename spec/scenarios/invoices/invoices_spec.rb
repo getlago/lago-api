@@ -1443,6 +1443,82 @@ describe "Invoices Scenarios" do
     end
   end
 
+  context "when a $0 pay in arrears subscription fee comes with a pay in advance recurring charge" do
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
+    let(:customer) { create(:customer, organization:) }
+    let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 0, amount_currency: "USD", pay_in_advance: false) }
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "seats")
+    end
+
+    before do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        pay_in_advance: true,
+        invoiceable: true,
+        prorated: false,
+        properties: {amount: "15"}
+      )
+    end
+
+    it "renders only the period heading of the displayed charge fee on the v4 invoice" do
+      travel_to(Time.zone.parse("2026-09-01T10:00:00")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: "calendar"
+          }
+        )
+        perform_billing
+      end
+
+      subscription = customer.subscriptions.sole
+
+      travel_to(Time.zone.parse("2026-09-10T10:00:00")) do
+        create_event(
+          {
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            properties: {seats: 12}
+          }
+        )
+      end
+
+      travel_to(Time.zone.parse("2026-10-01T00:10:00")) do
+        perform_billing
+      end
+
+      invoice = subscription.invoices.subscription.where(issuing_date: Date.new(2026, 10, 1)).sole
+
+      subscription_fee = invoice.fees.subscription.sole
+      expect(subscription_fee.amount_cents).to eq(0)
+      expect(subscription_fee.properties["from_datetime"].to_date).to eq(Date.new(2026, 9, 1))
+      expect(subscription_fee.properties["to_datetime"].to_date).to eq(Date.new(2026, 9, 30))
+
+      charge_fee = invoice.fees.charge.sole
+      expect(charge_fee.amount_cents).to eq(12 * 15_00) # 12 seats x 15.00
+      expect(charge_fee.date_boundaries[:from_date].to_date).to eq(Date.new(2026, 10, 1))
+      expect(charge_fee.date_boundaries[:to_date].to_date).to eq(Date.new(2026, 10, 31))
+
+      expect(invoice).to have_attributes(
+        fees_amount_cents: 0 + 18_000, # $0 subscription fee + seats charge fee
+        sub_total_excluding_taxes_amount_cents: 18_000,
+        taxes_amount_cents: 0, # 0% tax
+        total_amount_cents: 18_000
+      )
+
+      html = Slim::Template.new(Rails.root.join("app/views/templates/invoices/v4.slim").to_s, 1, pretty: true).render(invoice)
+
+      expect(html).not_to include("Fees from Sep 01, 2026 to Sep 30, 2026")
+      expect(html).to include("Fees from Oct 01, 2026 to Oct 31, 2026")
+      expect(html).to include("$180.00")
+    end
+  end
+
   context "when invoice is paid in advance and grace period" do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
