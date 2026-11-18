@@ -1,13 +1,16 @@
 # frozen_string_literal: true
 
 module Entitlement
+  # Sets the overrides of one feature on a subscription (the override owner).
   class SubscriptionEntitlementCoreUpdateService < BaseService
     include ::Entitlement::Concerns::CreateOrUpdateConcern
+    include ::Entitlement::Concerns::OverrideOwnerConcern
 
     Result = BaseResult
 
-    def initialize(subscription:, plan:, feature:, plan_entitlement:, sub_entitlement:, privilege_params:, partial:)
-      @subscription = subscription
+    # Callers pass `subscription:`, or `owner:` for any override owner.
+    def initialize(plan:, feature:, plan_entitlement:, sub_entitlement:, privilege_params:, partial:, subscription: nil, owner: subscription)
+      @owner = owner
       @plan = plan
       @feature = feature
       @plan_entitlement = plan_entitlement
@@ -32,8 +35,8 @@ module Entitlement
 
     private
 
-    attr_reader :subscription, :plan, :feature, :plan_entitlement, :sub_entitlement, :privilege_params, :partial
-    delegate :organization, to: :subscription
+    attr_reader :owner, :plan, :feature, :plan_entitlement, :sub_entitlement, :privilege_params, :partial
+    delegate :organization, to: :owner
     alias_method :partial?, :partial
 
     def full?
@@ -42,35 +45,35 @@ module Entitlement
 
     def process_single_entitlement
       if plan_entitlement.nil? && sub_entitlement.nil?
-        subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
-        create_entitlement_and_values_for_subscription
+        owner.entitlement_removals.where(feature:).update_all(discarded_columns) # rubocop:disable Rails/SkipsModelValidations
+        create_entitlement_and_values_for_owner
       elsif plan_entitlement && privilege_params_same_as_plan?(plan_entitlement)
         # Restore the plan default by removing all overrides
-        sub_entitlement&.values&.update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+        sub_entitlement&.values&.update_all(discarded_columns) # rubocop:disable Rails/SkipsModelValidations
         sub_entitlement&.discard!
-        SubscriptionFeatureRemoval.where(subscription: subscription).merge(
+        SubscriptionFeatureRemoval.where(owner_attributes).merge(
           SubscriptionFeatureRemoval.where(feature:)
             .or(SubscriptionFeatureRemoval.where(privilege: feature.privileges))
-        ).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+        ).update_all(discarded_columns) # rubocop:disable Rails/SkipsModelValidations
       else
-        subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+        owner.entitlement_removals.where(feature:).update_all(discarded_columns) # rubocop:disable Rails/SkipsModelValidations
 
-        sub_entitlement = self.sub_entitlement || create_entitlement_for_subscription
+        sub_entitlement = self.sub_entitlement || create_entitlement_for_owner
         remove_missing_entitlement_values(plan_entitlement, sub_entitlement) if full?
-        update_values_for_subscription(plan_entitlement, sub_entitlement)
+        update_values_for_owner(plan_entitlement, sub_entitlement)
       end
     end
 
-    def create_entitlement_for_subscription
+    def create_entitlement_for_owner
       Entitlement.create!(
         organization: organization,
-        subscription: subscription,
-        feature: feature
+        feature: feature,
+        **owner_attributes
       )
     end
 
-    def create_entitlement_and_values_for_subscription
-      entitlement = create_entitlement_for_subscription
+    def create_entitlement_and_values_for_owner
+      entitlement = create_entitlement_for_owner
 
       privilege_params.each do |privilege_code, value|
         privilege = find_privilege!(privilege_code)
@@ -91,13 +94,13 @@ module Entitlement
         sub_val&.discard!
         plan_val = plan_entitlement&.values&.find { it.privilege.code == privilege_code }
 
-        if plan_val && !SubscriptionFeatureRemoval.where(organization:, privilege: plan_val.privilege, subscription:).exists?
-          SubscriptionFeatureRemoval.create!(organization:, privilege: plan_val.privilege, subscription: subscription)
+        if plan_val && !SubscriptionFeatureRemoval.where(organization:, privilege: plan_val.privilege, **owner_attributes).exists?
+          SubscriptionFeatureRemoval.create!(organization:, privilege: plan_val.privilege, **owner_attributes)
         end
       end
     end
 
-    def update_values_for_subscription(plan_entitlement, sub_entitlement)
+    def update_values_for_owner(plan_entitlement, sub_entitlement)
       privilege_params.each do |privilege_code, value|
         privilege = find_privilege!(privilege_code)
 
@@ -122,7 +125,7 @@ module Entitlement
     end
 
     def delete_all_privilege_entitlement_removals(privilege)
-      subscription.entitlement_removals.where(privilege:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+      owner.entitlement_removals.where(privilege:).update_all(discarded_columns) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def create_entitlement_value(entitlement, privilege, value)
@@ -131,6 +134,10 @@ module Entitlement
         privilege: privilege,
         value: validate_value(value, privilege)
       )
+    end
+
+    def owner_attributes
+      {override_owner_key(owner) => owner}
     end
 
     def find_privilege!(privilege_code)
