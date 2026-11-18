@@ -8,6 +8,7 @@ RSpec.describe "Advance graduated usage before the first priced segment" do
       api_call(perform_jobs: false) do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "unpriced-contract", external_customer_id: customer.external_id,
+          code: "default",
           plan_code: "unpriced-plan", started_at: cycle_started_at.iso8601
         }})
       end

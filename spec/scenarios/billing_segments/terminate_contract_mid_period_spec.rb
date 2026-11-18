@@ -84,6 +84,7 @@ describe "A contract terminated mid-period is invoiced for the period it served"
       api_call do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "terminated-contract",
+          code: "default",
           external_customer_id: "terminated-customer",
           plan_code: "terminated-plan",
           started_at: started_at.iso8601

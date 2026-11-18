@@ -51,6 +51,7 @@ describe "A contract terminates at its planned end", :premium do
       api_call do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "ending-contract", external_customer_id: "ending-customer", plan_code: "ending-plan",
+          code: "default",
           started_at: started_at.iso8601, ended_at: ended_at.iso8601
         }})
       end
