@@ -33,6 +33,7 @@ describe "A scheduled contract billed in advance invoices when it starts" do
           params: {
             external_customer_id: customer.external_id,
             external_id: "contract-scheduled",
+            code: "initial",
             plan_code: catalog_plan.code,
             started_at: "2026-01-20T00:00:00Z"
           }

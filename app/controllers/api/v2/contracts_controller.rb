@@ -106,6 +106,7 @@ module Api
         params.require(:contract).permit(
           :external_customer_id,
           :external_id,
+          :code,
           :name,
           :plan_code,
           :billing_time,

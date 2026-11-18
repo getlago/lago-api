@@ -50,6 +50,7 @@ RSpec.describe Webhooks::Contracts::CreatedService do
         "contract" => {
           "lago_id" => contract.id,
           "external_id" => "contract_external_id",
+          "code" => contract.code,
           "lago_customer_id" => contract.customer_id,
           "external_customer_id" => contract.customer.external_id,
           "name" => "Annual agreement",

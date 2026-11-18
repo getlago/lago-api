@@ -9,7 +9,7 @@ RSpec.describe Api::V2::ContractsController do
   # A contract is never deleted, so it renders no deleted_at.
   let(:flat_keys) do
     %i[
-      lago_id external_id lago_customer_id external_customer_id name plan_code status billing_time
+      lago_id external_id code lago_customer_id external_customer_id name plan_code status billing_time
       consolidate_invoice purchase_order_number billing_anchor_date effective_billing_anchor_date started_at
       ended_at terminated_at canceled_at skip_invoice_custom_sections created_at updated_at
     ]
@@ -22,6 +22,7 @@ RSpec.describe Api::V2::ContractsController do
       {
         external_customer_id: customer.external_id,
         external_id: "contract-1",
+        code: "initial",
         plan_code: catalog_plan.code
       }
     end
@@ -47,7 +48,7 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:contract]).to include(external_id: "contract-1", plan_code: catalog_plan.code, status: "active")
+        expect(json[:contract]).to include(external_id: "contract-1", code: "initial", plan_code: catalog_plan.code, status: "active")
         expect(json[:contract].keys).to match_array(flat_keys)
 
         get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[applied_rate_cards]})
@@ -100,7 +101,7 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     context "without a plan" do
-      let(:create_params) { {external_customer_id: customer.external_id, external_id: "contract-1"} }
+      let(:create_params) { super().except(:plan_code) }
 
       it "creates a plan-less contract, without rate cards" do
         subject
@@ -129,6 +130,28 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:details]).to eq([{code: "value_already_exists", field: "external_id", meta: {}}])
+      end
+    end
+
+    context "without a code" do
+      let(:create_params) { super().except(:code) }
+
+      it "returns a validation error without creating a contract" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "code", meta: {}}])
+      end
+    end
+
+    context "when a historical contract uses the same external id and code" do
+      before { create(:contract, :terminated, organization:, customer:, external_id: "contract-1", code: "initial") }
+
+      it "does not reuse its code" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_already_exist", field: "code", meta: {}}])
       end
     end
   end
@@ -248,6 +271,7 @@ RSpec.describe Api::V2::ContractsController do
         expect(json[:contract]).to eq(
           lago_id: contract.id,
           external_id: contract.external_id,
+          code: contract.code,
           lago_customer_id: customer.id,
           external_customer_id: customer.external_id,
           name: nil,
@@ -631,6 +655,19 @@ RSpec.describe Api::V2::ContractsController do
         expect { subject }.not_to change { contract.reload.attributes }
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(code: "validation_errors", details: [{code: "concurrency_conflict", field: "base", meta: {}}])
+      end
+    end
+
+    context "when attempting to change the code" do
+      let(:update_params) { super().merge(code: "replacement") }
+
+      it "leaves the code unchanged" do
+        original_code = contract.code
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:code]).to eq(original_code)
+        expect(contract.reload.code).to eq(original_code)
       end
     end
 
