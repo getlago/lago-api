@@ -39,7 +39,16 @@ module Resolvers
 
       return result_error(result) unless result.success?
 
-      result.wallet_transactions
+      result.wallet_transactions.preload(
+        :invoice,
+        :voided_invoice,
+        :selected_invoice_custom_sections,
+        billing_object_connections: [:payment_provider_customer, :integration_customer],
+        wallet: [
+          :billing_object_connections,
+          {customer: [:payment_provider_customers, :integration_customers]}
+        ]
+      )
     end
   end
 end

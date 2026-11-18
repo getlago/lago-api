@@ -45,7 +45,7 @@ module Api
           json: ::CollectionSerializer.new(
             result.wallet_transactions.includes(
               :billing_entity,
-              :billing_object_connections,
+              billing_object_connections: [:payment_provider_customer, :integration_customer],
               wallet: [
                 :billing_object_connections,
                 {customer: [:billing_entity, :payment_provider_customers, :integration_customers]}
