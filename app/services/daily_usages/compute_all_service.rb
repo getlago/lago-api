@@ -173,10 +173,11 @@ module DailyUsages
       computed_yesterday(organization).where.not(contract_id: nil).distinct.pluck(:contract_id)
     end
 
-    # Daily usages already computed for yesterday in the customer's timezone, the usage_date
-    # ComputeService writes. For customers ahead of UTC it can be two UTC days back.
-    # Pre-filters on the indexed raw usage_date before the timezone-aware match, to avoid scanning
-    # the org's whole history.
+    # Daily usages already computed for the customer's local yesterday, the usage_date that
+    # ComputeService and ComputeContractService write. In the local 0-2h window the legs select,
+    # that is the UTC date for customers ahead of UTC and the UTC date minus one for the others,
+    # so the indexed usage_date range must reach the UTC date. It pre-filters before the
+    # timezone-aware match, to avoid scanning the org's whole history.
     def computed_yesterday(organization)
       DailyUsage
         .where(organization_id: organization.id)
