@@ -231,7 +231,7 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
 
     # The entitlement of the contract, in the v2 contract entitlement shape.
     def contract_entitlement_render(**fields)
-      {contract_external_id: "contract_123", lago_contract_id: contract.id, feature_code: "test_feature", **fields}
+      {lago_contract_id: contract.id, feature_code: "test_feature", **fields}
     end
 
     def sent_webhooks
