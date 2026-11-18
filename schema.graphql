@@ -168,6 +168,21 @@ enum ActivityTypeEnum {
   contract_updated
 
   """
+  contract_wallet.created
+  """
+  contract_wallet_created
+
+  """
+  contract_wallet.deleted
+  """
+  contract_wallet_deleted
+
+  """
+  contract_wallet.updated
+  """
+  contract_wallet_updated
+
+  """
   coupon.created
   """
   coupon_created
@@ -14907,6 +14922,11 @@ enum ResourceTypeEnum {
   ContractRateCard
   """
   contract_rate_card
+
+  """
+  CatalogWallet
+  """
+  contract_wallet
 
   """
   Coupon

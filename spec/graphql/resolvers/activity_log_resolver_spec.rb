@@ -72,6 +72,40 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
       expect(activity_log_response["activityObjectChanges"]).to eq("foo" => {"old" => "bar", "new" => "baz"})
     end
 
+    context "when the resource has no GraphQL type" do
+      let(:query) do
+        <<~GQL
+          query($activityLogId: ID!) {
+            activityLog(activityId: $activityLogId) {
+              activityId
+              resource { ... on Customer { id } }
+            }
+          }
+        GQL
+      end
+
+      [:plan_wallet, :catalog_wallet].each do |factory|
+        context "with a #{factory}" do
+          let(:clickhouse_activity_log) do
+            create(:clickhouse_activity_log, membership:, organization:, resource: create(factory, organization:))
+          end
+
+          it "returns the activity log without its resource" do
+            result = execute_graphql(
+              current_user: membership.user,
+              current_organization: organization,
+              permissions: required_permission,
+              query:,
+              variables: {activityLogId: clickhouse_activity_log.activity_id}
+            )
+
+            expect(result["errors"]).to be_nil
+            expect(result["data"]["activityLog"]).to eq("activityId" => clickhouse_activity_log.activity_id, "resource" => nil)
+          end
+        end
+      end
+    end
+
     context "when activity log is not found" do
       it "returns an error" do
         result = execute_graphql(
