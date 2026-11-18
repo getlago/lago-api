@@ -14,6 +14,7 @@ module Webhooks
 
     def call
       webhook.endpoint = webhook.webhook_endpoint.webhook_url
+      return mark_webhook_as_missing_signing_key if missing_signing_key?
 
       response = http_client.post_with_response(webhook.payload, webhook.generate_headers)
 
@@ -85,6 +86,19 @@ module Webhooks
       webhook.last_retried_at = Time.zone.now
       webhook.status = retrying ? :retrying : :failed
       webhook.save!
+    end
+
+    def missing_signing_key?
+      webhook.webhook_endpoint.standard_webhooks? && webhook.signing_key.nil?
+    end
+
+    # Retrying cannot help until the endpoint gets a key, and a raise would send the job to the dead set.
+    def mark_webhook_as_missing_signing_key
+      webhook.store_response("Webhook endpoint has no signing key")
+      webhook.status = :failed
+      webhook.save!
+
+      result
     end
 
     # Net::HTTP bodies are binary, so invalid UTF-8 would fail the JSON storage after the endpoint got the webhook.

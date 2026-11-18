@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
+RSpec.describe Invoices::ProgressiveBilling::UsageThresholdService, transaction: false do
   subject(:create_service) { described_class.new(sorted_usage_thresholds:, lifetime_usage:, timestamp:) }
 
   let(:sorted_usage_thresholds) { [create(:usage_threshold, plan:)] }
@@ -61,9 +61,22 @@ RSpec.describe Invoices::ProgressiveBillingService, transaction: false do
       expect(invoice.invoice_subscriptions.count).to eq(1)
       expect(invoice.fees.count).to eq(1)
       expect(invoice.applied_usage_thresholds.count).to eq(1)
+      expect(invoice.progressive_billing_trigger).to eq("usage_threshold")
 
       expect(invoice.applied_usage_thresholds.first.lifetime_usage_amount_cents)
         .to eq(lifetime_usage.total_amount_cents)
+    end
+
+    context "when another progressive billing invoice of the subscription holds its lock" do
+      before { stub_const("Subscriptions::LockService::ACQUIRE_LOCK_TIMEOUT", 0) }
+
+      it "fails to acquire the lock and creates no invoice" do
+        with_advisory_lock("subscription-#{subscription.id}", lock_released_after: 2.seconds) do
+          expect { create_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
+        end
+
+        expect(customer.invoices).to be_empty
+      end
     end
 
     it "makes sure that only 1 invoice is generated for a given threshold" do

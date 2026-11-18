@@ -33,6 +33,34 @@ RSpec.describe Invites::CreateService do
       before { create_service.call }
     end
 
+    context "when the organization was linked as a sandbox after it was loaded" do
+      let(:production) { create(:organization) }
+      let(:create_args) { super().merge(current_organization: production, skip_admin_check: true) }
+
+      before do
+        production
+        Organization.find(production.id).update!(environment: "sandbox", production_organization: create(:organization))
+      end
+
+      it "refuses it" do
+        result = create_service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(Invite.count).to eq(0)
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:create_args) { super().merge(current_organization: create(:organization, :sandbox), skip_admin_check: true) }
+
+      it "refuses it, even without the admin check" do
+        result = create_service.call
+
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(Invite.count).to eq(0)
+      end
+    end
+
     context "when non-admin invites with admin role" do
       let_it_be(:non_admin_membership) { create(:membership, organization:) }
       let(:create_args) do

@@ -3,6 +3,8 @@
 module Types
   module Organizations
     class CurrentOrganizationType < BaseOrganizationType
+      include EnvironmentFields
+
       description "Current Organization Type"
 
       field :id, ID, null: false
@@ -82,7 +84,7 @@ module Types
       end
 
       def webhook_url
-        object.webhook_endpoints.map(&:webhook_url).first
+        object.default_webhook_endpoint&.webhook_url
       end
 
       def api_key

@@ -43,6 +43,18 @@ RSpec.describe Invites::RevokeService do
       end
     end
 
+    context "when an acceptance committed after the invite was loaded" do
+      before { Invite.find(invite.id).update!(status: :accepted, accepted_at: Time.current) }
+
+      it "returns an error and keeps the invite accepted" do
+        result = revoke_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("invite_not_found")
+        expect(Invite.find(invite.id)).to have_attributes(status: "accepted", revoked_at: nil)
+      end
+    end
+
     context "when invite is accepted" do
       let(:invite) { create(:invite, organization:, status: "accepted") }
 

@@ -39,6 +39,8 @@ module Signups
       return refuse!("missing_token") unless self.class.sendable?(token)
       return unavailable!("missing_secret") if secret_key.blank?
       return unavailable!("invalid_min_score") unless min_score
+      # Google can answer with no hostname: an empty expected one would then match it.
+      return unavailable!("missing_front_host") if expected_hostname.blank?
 
       response = siteverify
       return unavailable!("unexpected_response") unless response.is_a?(Hash)
@@ -72,7 +74,7 @@ module Signups
     end
 
     def expected_hostname
-      URI(Rails.application.config.lago_front_url).host.to_s.downcase
+      Lago::SelfServe.front_host.to_s
     end
 
     # Short timeouts and no retry: a slow Google must not hold one of the few Puma threads.

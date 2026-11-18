@@ -15,6 +15,7 @@ RSpec.describe Invoice do
   describe "associations" do
     it do
       expect(invoice).to have_many(:billing_segments)
+      expect(invoice).to have_many(:billing_operations)
       expect(invoice).to have_many(:contracts).through(:billing_segments)
       expect(invoice).to belong_to(:x402_connection).class_name("X402::Connection").optional
       expect(invoice).to have_many(:x402_settlements).class_name("X402::Settlement").inverse_of(:invoice)

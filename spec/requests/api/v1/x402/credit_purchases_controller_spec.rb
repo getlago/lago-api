@@ -75,13 +75,15 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
       end
     end
 
-    context "when the API log is produced" do
-      before { allow(Utils::ApiLog).to receive(:produce) }
+    context "when the API log is produced", :capture_kafka_messages do
+      include_context "with API log infrastructure"
 
       it "filters the idempotency key out of the logged params" do
         subject
-        expect(Utils::ApiLog).to have_received(:produce)
-          .with(anything, anything, organization:, filtered_params: [:idempotency_key])
+
+        expect(api_log_payload["request_body"]["credit_purchase"]).to include(
+          "plan_code" => "agent_api", "idempotency_key" => "[FILTERED]"
+        )
       end
     end
 

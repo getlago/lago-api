@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Organizations::Update do
+  include_context "with mocked security logger"
+
   let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:user) { create_default(:user) }
   let_it_be(:membership, refind: true) { create_default(:membership) }
@@ -129,6 +131,7 @@ RSpec.describe Mutations::Organizations::Update do
       organization = membership.organization
       original_authentication_methods = organization.authentication_methods
       original_email_settings = organization.email_settings
+      original_endpoints = organization.webhook_endpoints.order(:id).pluck(:id, :webhook_url)
 
       result = execute_graphql(
         current_user: membership.user,
@@ -157,6 +160,73 @@ RSpec.describe Mutations::Organizations::Update do
       expect(organization.invoice_footer).to be_nil
       expect(organization.email_settings).to eq(original_email_settings)
       expect(organization.webhook_endpoints.pluck(:webhook_url)).not_to include("https://app.test.dev")
+      expect(organization.webhook_endpoints.order(:id).pluck(:id, :webhook_url)).to eq(original_endpoints)
+      expect(security_logger).not_to have_received(:produce).with(hash_including(log_type: "webhook_endpoint"))
+    end
+  end
+
+  context "with developers:manage" do
+    subject(:result) do
+      execute_graphql(
+        current_user: target_membership.user,
+        current_organization: target_membership.organization,
+        current_membership: target_membership,
+        permissions: %w[organization:update developers:manage],
+        query: mutation,
+        variables: {input: {webhookUrl: webhook_url}}
+      )
+    end
+
+    let(:target_organization) { create(:organization) }
+    let(:target_membership) { create(:membership, organization: target_organization) }
+    let(:webhook_url) { "https://hooks.example.com/new" }
+
+    it "updates the endpoint" do
+      target_endpoint = target_organization.webhook_endpoints.order(:id).first
+
+      expect(result["data"]["updateOrganization"]["webhookUrl"]).to eq(webhook_url)
+      expect(target_endpoint.reload.webhook_url).to eq(webhook_url)
+      expect(security_logger).to have_received(:produce).with(hash_including(log_event: "webhook_endpoint.updated"))
+    end
+
+    context "when the organization has several webhook endpoints" do
+      let(:other_endpoint) { create(:webhook_endpoint, organization: target_organization) }
+      let(:target_endpoint) { target_organization.webhook_endpoints.order(:id).first }
+      let(:untouched_endpoint) { target_organization.webhook_endpoints.order(:id).last }
+      let(:untouched_url) { untouched_endpoint.webhook_url }
+
+      before do
+        other_endpoint
+        untouched_url
+      end
+
+      it "updates only the endpoint with the lowest id" do
+        expect(result["data"]["updateOrganization"]["webhookUrl"]).to eq(webhook_url)
+        expect(target_endpoint.reload.webhook_url).to eq(webhook_url)
+        expect(untouched_endpoint.reload.webhook_url).to eq(untouched_url)
+      end
+    end
+
+    context "when the organization has no webhook endpoint" do
+      let(:target_organization) { create(:organization, webhook_url: nil) }
+
+      it "creates the endpoint" do
+        expect(result["data"]["updateOrganization"]["webhookUrl"]).to eq(webhook_url)
+        expect(target_organization.webhook_endpoints.pluck(:webhook_url)).to eq([webhook_url])
+        expect(security_logger).to have_received(:produce).with(hash_including(log_event: "webhook_endpoint.created"))
+      end
+    end
+
+    context "when the url is invalid" do
+      let(:webhook_url) { "foobar" }
+
+      it "returns the validation error and leaves the endpoint unchanged" do
+        endpoints_before = target_organization.webhook_endpoints.order(:id).pluck(:id, :webhook_url)
+
+        expect_unprocessable_entity(result, details: {webhookUrl: ["url_is_invalid"]})
+        expect(target_organization.webhook_endpoints.order(:id).pluck(:id, :webhook_url)).to eq(endpoints_before)
+        expect(security_logger).not_to have_received(:produce).with(hash_including(log_type: "webhook_endpoint"))
+      end
     end
   end
 

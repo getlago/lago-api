@@ -50,6 +50,16 @@ RSpec.describe Integrations::Okta::UpdateService do
         end
       end
 
+      context "when the organization is a sandbox" do
+        let(:sandbox) { create(:organization, :sandbox, premium_integrations: ["okta"]) }
+        let(:integration) { create(:okta_integration, organization: sandbox) }
+
+        it "refuses the update" do
+          expect { expect(service_call.error.code).to eq("sandbox_managed_by_production") }
+            .not_to change { integration.reload.domain }
+        end
+      end
+
       context "with okta premium integration present" do
         before { organization.update!(premium_integrations: ["okta"]) }
 
