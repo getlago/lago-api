@@ -106,11 +106,15 @@ RSpec.describe Agents::ClaimsController, :premium, cache: :memory do
   end
 
   describe "throttles on the owner's calls" do
-    let(:claim) { create(:agent_claim, registration: create(:agent_registration, storefront:), code: "ABCD2345") }
+    let(:claim) { create(:agent_claim, registration: enrolled_registration, code: "ABCD2345") }
 
     before do
       claim
       Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new
+    end
+
+    def enrolled_registration
+      create(:agent_registration, storefront:).tap { create(:customer, organization:, external_id: "agent_#{it.id}") }
     end
 
     it "mails a code three times per claim code, then refuses" do
@@ -125,7 +129,7 @@ RSpec.describe Agents::ClaimsController, :premium, cache: :memory do
     end
 
     it "mails a mailbox three times an hour, whatever the codes" do
-      create(:agent_claim, registration: create(:agent_registration, storefront:), code: "EFGH2345")
+      create(:agent_claim, registration: enrolled_registration, code: "EFGH2345")
       %w[ABCD2345 EFGH2345 ABCD2345].each do |code|
         post("#{base}/claims/start", params: {claim_code: code, email: "owner@example.com"}, as: :json)
         expect(response).to have_http_status(:ok)
