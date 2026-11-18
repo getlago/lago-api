@@ -175,6 +175,18 @@ RSpec.describe Entitlement::FeatureCreateService do
       end
     end
 
+    context "when a padded code and its stripped twin are sent" do
+      let(:params) { {code: "seats", privileges: [{code: " max"}, {code: "max"}]} }
+
+      it "returns a validation failure, as no stored code keeps them apart" do
+        result = subject
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:"privilege.code"]).to eq ["value_is_duplicated"]
+        expect(Entitlement::Privilege.count).to eq(0)
+      end
+    end
+
     context "with 50 privileges" do
       let(:params) { {code: "seats", privileges: Array.new(50) { |i| {code: "privilege_#{i}"} }} }
 

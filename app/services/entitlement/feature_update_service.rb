@@ -27,7 +27,7 @@ module Entitlement
         return result.not_found_failure!(resource: "feature") if feature.discarded?
 
         # Read under the lock: the stored codes decide whether a padded code and its stripped twin may both be sent.
-        if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges], stored_codes: feature.privileges.map(&:code))
+        if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges], stored_codes: privileges_by_code.keys)
           result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated").raise_if_error!
         end
 
@@ -67,14 +67,14 @@ module Entitlement
     attr_reader :feature, :params, :partial
     alias_method :partial?, :partial
 
-    # A code that is not a string is left to the model validation.
-    def stripped(code)
-      code.is_a?(String) ? code.strip : code
+    # Built once, under the feature lock. The duplicate check makes sure no param reaches a privilege created later.
+    def privileges_by_code
+      @privileges_by_code ||= feature.privileges.index_by(&:code)
     end
 
     # Codes are saved stripped, but privileges saved before that keep their padded code: the exact code wins.
     def find_privilege(code)
-      feature.privileges.find { it.code == code } || feature.privileges.find { it.code == stripped(code) }
+      privileges_by_code[code] || privileges_by_code[Utils::Entitlement.stripped_code(code)]
     end
 
     def update_feature_attributes
@@ -106,7 +106,7 @@ module Entitlement
     def create_privilege(privilege_params)
       privilege = feature.privileges.new(
         organization: feature.organization,
-        code: stripped(privilege_params[:code]),
+        code: Utils::Entitlement.stripped_code(privilege_params[:code]),
         name: privilege_params[:name]
       )
       privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type
@@ -150,7 +150,7 @@ module Entitlement
       EntitlementValue.where(privilege: feature.privileges.where(code: missing_privilege_codes)).discard_all!
       feature.privileges.where(code: missing_privilege_codes).discard_all!
       missing_privilege_codes.each do |code|
-        privilege = feature.privileges.find { it[:code] == code }
+        privilege = privileges_by_code[code]
         next unless privilege
         privilege.discard!
       end

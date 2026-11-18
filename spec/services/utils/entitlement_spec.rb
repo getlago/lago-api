@@ -51,12 +51,34 @@ RSpec.describe Utils::Entitlement do
         it { expect(duplicated).to be(true) }
       end
 
+      context "when the feature stores only the padded one and both are sent" do
+        let(:privileges_params) { [{code: " max"}, {code: "max"}] }
+        let(:stored_codes) { [" max"] }
+
+        it { expect(duplicated).to be(false) }
+      end
+
+      context "when the feature stores only the padded one and two other forms are sent" do
+        let(:privileges_params) { [{code: "max"}, {code: " max "}] }
+        let(:stored_codes) { [" max"] }
+
+        it { expect(duplicated).to be(true) }
+      end
+
       context "when the feature stores each of them" do
         let(:privileges_params) { [{code: " max"}, {code: "max"}] }
         let(:stored_codes) { ["max", " max"] }
 
         it { expect(duplicated).to be(false) }
       end
+    end
+  end
+
+  describe ".stripped_code" do
+    it "strips a string and keeps any other value" do
+      expect(utils_entitlement.stripped_code(" max ")).to eq("max")
+      expect(utils_entitlement.stripped_code(nil)).to be_nil
+      expect(utils_entitlement.stripped_code(1)).to eq(1)
     end
   end
 

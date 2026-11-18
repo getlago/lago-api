@@ -34,7 +34,7 @@ module Entitlement
       ActiveRecord::Base.transaction do
         feature = Feature.create!(
           organization:,
-          code: stripped(params[:code]),
+          code: Utils::Entitlement.stripped_code(params[:code]),
           name: params[:name],
           description: params[:description]
         )
@@ -64,16 +64,11 @@ module Entitlement
 
     attr_reader :organization, :params
 
-    # A code that is not a string is left to the model validation.
-    def stripped(code)
-      code.is_a?(String) ? code.strip : code
-    end
-
     def create_privileges(feature, privileges_params)
       privileges_params.each do |privilege_params|
         privilege = feature.privileges.new(
           organization:,
-          code: stripped(privilege_params[:code]),
+          code: Utils::Entitlement.stripped_code(privilege_params[:code]),
           name: privilege_params[:name]
         )
         privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type
