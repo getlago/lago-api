@@ -55,5 +55,35 @@ describe CatalogWallet do
         expect(build(:catalog_wallet, organization: existing.organization, code: "credits")).to be_valid
       end
     end
+
+    describe "currency validation" do
+      subject(:catalog_wallet) { build(:catalog_wallet, contract:, customer:, currency:) }
+
+      let(:customer) { create(:customer, currency: "USD") }
+      let(:contract) { create(:contract, customer:) }
+      let(:currency) { "USD" }
+
+      it "accepts the currency of the contract" do
+        expect(catalog_wallet).to be_valid
+      end
+
+      context "with another currency" do
+        let(:currency) { "EUR" }
+
+        it "rejects it" do
+          expect(catalog_wallet).not_to be_valid
+          expect(catalog_wallet.errors.where(:currency, :currency_does_not_match)).to be_present
+        end
+      end
+
+      context "with an unknown currency" do
+        let(:currency) { "XXX" }
+
+        it "only reports the unknown currency" do
+          expect(catalog_wallet).not_to be_valid
+          expect(catalog_wallet.errors.details[:currency].map { it[:error] }).to eq([:inclusion])
+        end
+      end
+    end
   end
 end

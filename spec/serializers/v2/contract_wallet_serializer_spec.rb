@@ -6,9 +6,9 @@ describe V2::ContractWalletSerializer do
   subject(:payload) { described_class.new(contract_wallet, options).serialize }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:, external_id: "acme") }
-  let_it_be(:contract) { create(:contract, organization:, customer:, external_id: "acme-pro") }
 
+  let(:customer) { create(:customer, organization:, external_id: "acme", currency:) }
+  let(:contract) { create(:contract, organization:, customer:, external_id: "acme-pro") }
   let(:contract_wallet) do
     create(:catalog_wallet, organization:, customer:, contract:, code: "ai_credits", name: "AI credits",
       invoice_display_name: "Prepaid credits", currency: "USD", tax_application: "tax_on_purchase", priority: 10,
