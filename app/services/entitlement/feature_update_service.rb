@@ -121,8 +121,11 @@ module Entitlement
     def too_many_new_privileges?
       return false if params[:privileges].blank?
 
-      existing_codes = feature.privileges.pluck(:code)
-      params[:privileges].count { !existing_codes.include?(it[:code]) } > PrivilegeCreateService::MAX_PRIVILEGES
+      existing_codes = feature.privileges.pluck(:code).to_set
+      new_codes = params[:privileges].count do
+        !existing_codes.include?(it[:code]) && !existing_codes.include?(Utils::Entitlement.stripped_code(it[:code]))
+      end
+      new_codes > PrivilegeCreateService::MAX_PRIVILEGES
     end
 
     def too_many_privileges_failure
