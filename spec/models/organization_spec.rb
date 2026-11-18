@@ -302,7 +302,7 @@ RSpec.describe Organization do
 
       it "is an active production organization, not self-serve and unlinked" do
         expect(organization.reload).to have_attributes(self_serve: false, environment: "production",
-          production_organization_id: nil, activation_status: "active", activated_at: nil)
+          production_organization_id: nil, activation_status: "active")
       end
     end
 
@@ -338,17 +338,6 @@ RSpec.describe Organization do
         end
       end
 
-      context "with a self-serve production organization waiting for a payment method with an activation date" do
-        subject(:organization) do
-          build(:organization, :self_serve, activation_status: "pending_payment_method", activated_at: Time.current)
-        end
-
-        it "is invalid" do
-          expect(organization).not_to be_valid
-          expect(organization.errors.to_hash).to eq(activated_at: ["value_is_invalid"])
-        end
-      end
-
       context "with an unknown value" do
         before { organization.activation_status = "suspended" }
 
@@ -366,12 +355,6 @@ RSpec.describe Organization do
       it "refuses a waiting sandbox in the database, for writes that skip validations" do
         expect { sandbox.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
           .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
-      end
-
-      it "refuses a waiting organization with an activation date in the database, for writes that skip validations" do
-        expect do
-          self_serve_production.update_columns(activation_status: "pending_payment_method", activated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-        end.to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
       end
     end
 

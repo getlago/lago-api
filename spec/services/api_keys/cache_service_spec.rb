@@ -137,7 +137,7 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
       context "with an entry written before a column was added" do
         before do
           stale_organization = organization.attributes
-            .except("self_serve", "environment", "production_organization_id", "activation_status", "activated_at")
+            .except("self_serve", "environment", "production_organization_id", "activation_status")
           Rails.cache.write(cache_service.cache_key, {api_key: api_key.attributes, organization: stale_organization}.to_json)
         end
 
@@ -149,7 +149,7 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
           expect(result.last.activation_status).to eq("active")
           # The database answered: the entry is written again with the new columns.
           expect(JSON.parse(Rails.cache.read(cache_service.cache_key))["organization"])
-            .to include("activation_status" => "active", "activated_at" => nil)
+            .to include("activation_status" => "active")
         end
       end
 
