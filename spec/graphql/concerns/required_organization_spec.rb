@@ -136,5 +136,22 @@ RSpec.describe RequiredOrganization do
         expect(result["data"]["renameThing"]["name"]).to eq("new name")
       end
     end
+
+    context "with its sandbox as the current organization" do
+      let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: organization) }
+      let(:membership) { create(:membership, organization: sandbox) }
+
+      let(:result) do
+        RequiredOrganizationSpec::TestApiSchema.execute(
+          mutation,
+          variables: {input: {newName: "new name"}},
+          context: {current_user: membership.user, current_organization: sandbox, current_membership: membership}
+        )
+      end
+
+      it "runs the operation, as the sandbox stays open" do
+        expect(result["data"]["renameThing"]["name"]).to eq("new name")
+      end
+    end
   end
 end

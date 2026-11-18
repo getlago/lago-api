@@ -48,11 +48,8 @@ module Api
     end
 
     # A self-serve production organization waiting for a payment method opens only once billing-accounts activates it.
-    # A cached copy may predate the activation, so the database decides before refusing.
+    # Whatever changes the activation status clears the API key cache, so the cached copy can be trusted.
     def refuse_inactive_organization
-      return unless current_organization.awaiting_payment_method?
-
-      current_organization.reload
       forbidden_error(code: "organization_inactive") if current_organization.awaiting_payment_method?
     end
 

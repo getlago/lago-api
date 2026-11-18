@@ -86,16 +86,13 @@ RSpec.describe Api::BaseController, type: :controller do
       end
     end
 
-    context "with a cached copy of the organization from before its activation" do
-      let(:stale_organization) { Organization.find(waiting_organization.id) }
-
-      before do
-        stale_organization
-        waiting_organization.update!(activation_status: "active")
-        allow(ApiKeys::CacheService).to receive(:call).and_return([api_key, stale_organization])
+    context "with the sandbox of an organization waiting for a payment method" do
+      let(:sandbox) do
+        create(:organization, :self_serve, :sandbox, production_organization: waiting_organization)
       end
+      let(:api_key) { create(:api_key, organization: sandbox) }
 
-      it "reads the organization again and lets the request through" do
+      it "lets the request through, as the sandbox stays open" do
         get :index
 
         expect(response).to have_http_status(:success)

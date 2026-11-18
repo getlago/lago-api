@@ -41,17 +41,44 @@ RSpec.describe Api::V1::EventsController do
         expect(json).to eq(status: 403, error: "Forbidden", code: "organization_inactive")
       end
 
-      context "when the organization was activated after its api key was cached" do
+      context "when the organization is activated after its api key was cached" do
         before do
           ApiKeys::CacheService.call(organization.api_keys.first.value, with_cache: true)
           organization.update!(activation_status: "active")
         end
 
-        it "accepts the event" do
+        it "keeps refusing from the cached copy until the cache is cleared" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+        end
+
+        it "accepts the event once the cache is cleared" do
+          ApiKeys::CacheService.expire_all_cache(organization)
+
           subject
 
           expect(response).to have_http_status(:success)
         end
+      end
+    end
+
+    context "with an active organization whose api key is cached, then made to wait for a payment method", cache: :memory do
+      include_context "with self-serve enabled"
+
+      let(:organization) { create(:organization, :self_serve) }
+
+      before do
+        ApiKeys::CacheService.call(organization.api_keys.first.value, with_cache: true)
+        organization.update!(activation_status: "pending_payment_method")
+        ApiKeys::CacheService.expire_all_cache(organization)
+      end
+
+      it "refuses the event" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(status: 403, error: "Forbidden", code: "organization_inactive")
       end
     end
 

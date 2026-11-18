@@ -55,7 +55,9 @@ module Types
 
       def access_allowed?
         membership = Membership.active.find_by(id: current_membership.id)
-        return false unless membership&.organization&.accessible_by_session?(**context[:session_claims])
+        organization = membership&.organization
+        return false unless organization&.accessible_by_session?(**context[:session_claims]) &&
+          !organization.awaiting_payment_method?
 
         membership.permissions_hash[REQUIRED_PERMISSION]
       end

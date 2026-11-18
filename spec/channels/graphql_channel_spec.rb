@@ -89,6 +89,16 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
         expect_ended_with_error(stream_chunk, code: "forbidden", status: 403)
       end
 
+      context "with self-serve enabled" do
+        include_context "with self-serve enabled"
+
+        it "ends the subscription with an error once the organization waits for a payment method" do
+          organization.update!(self_serve: true, activation_status: "pending_payment_method")
+
+          expect_ended_with_error(stream_chunk, code: "forbidden", status: 403)
+        end
+      end
+
       it "ends the subscription with an error once the membership is revoked" do
         revoke_membership
 
