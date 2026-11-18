@@ -8,10 +8,14 @@ RSpec.describe Agents::Claims::StartService, :premium do
   let(:organization) { create(:organization, premium_integrations: %w[agent_storefront], feature_flags: %w[agent_storefront]) }
   let(:storefront) { create(:agent_storefront_integration, organization:) }
   let(:registration) { create(:agent_registration, storefront:) }
+  let(:customer) { create(:customer, organization:, external_id: "agent_#{registration.id}") }
   let(:claim) { create(:agent_claim, registration:, code: "ABCD2345") }
   let(:params) { {claim_code: "abcd-2345", email: "Owner@Example.com"} }
 
-  before { claim }
+  before do
+    customer
+    claim
+  end
 
   it "keeps the address on the claim and mails the verification code" do
     expect { result }.to have_enqueued_mail(Agents::ClaimMailer, :verification).with(params: {claim_id: claim.id}, args: [])
@@ -69,6 +73,17 @@ RSpec.describe Agents::Claims::StartService, :premium do
 
     it "refuses" do
       expect(result.error.messages).to eq(base: ["registration_inactive"])
+    end
+  end
+
+  context "when the customer was deleted meanwhile" do
+    before { customer.discard! }
+
+    it "refuses instead of promising a mail nobody sends" do
+      expect { result }.not_to have_enqueued_mail(Agents::ClaimMailer, :verification)
+
+      expect(result.error.messages).to eq(base: ["enrollment_required"])
+      expect(claim.reload).to be_issued
     end
   end
 
