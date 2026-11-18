@@ -3497,7 +3497,7 @@ CREATE TABLE public.contracts (
     consolidate_invoice boolean DEFAULT true NOT NULL,
     payment_method_type public.contract_payment_method_type DEFAULT 'provider'::public.contract_payment_method_type NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    code character varying
+    code character varying NOT NULL
 );
 
 
@@ -18124,6 +18124,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261118185633'),
+('20261118185631'),
 ('20261118162728'),
 ('20261118162726'),
 ('20261118155959'),

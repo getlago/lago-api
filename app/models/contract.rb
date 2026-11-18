@@ -174,7 +174,7 @@ end
 #  billing_anchor_date          :date
 #  billing_time                 :enum             default("calendar"), not null
 #  canceled_at                  :datetime
-#  code                         :string
+#  code                         :string           not null
 #  consolidate_invoice          :boolean          default(TRUE), not null
 #  ended_at                     :datetime
 #  name                         :string

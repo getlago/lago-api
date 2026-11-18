@@ -79,6 +79,7 @@ RSpec.describe Contract do
       let(:organization) { create(:organization) }
       let(:customer) { create(:customer, organization:) }
       let(:existing) { create(:contract, :terminated, organization:, customer:, external_id: "contract-1", code: "initial") }
+      let(:contract_without_code) { build(:contract, code: nil) }
 
       before { existing }
 
@@ -108,13 +109,8 @@ RSpec.describe Contract do
         expect(existing.reload.code).to eq("initial")
       end
 
-      context "when an older API instance created the contract without a code" do
-        before { described_class.where(id: existing.id).update_all(code: nil, updated_at: Time.current) } # rubocop:disable Rails/SkipsModelValidations
-
-        it "still allows updating its other fields during rollout" do
-          expect(existing.reload.update(name: "Renamed")).to be(true)
-          expect(existing.reload).to have_attributes(name: "Renamed", code: nil)
-        end
+      it "requires a code in the database when model validation is skipped" do
+        expect { contract_without_code.save!(validate: false) }.to raise_error(ActiveRecord::NotNullViolation)
       end
 
       it "enforces uniqueness in the database when model validation is skipped" do
