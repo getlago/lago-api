@@ -59,11 +59,11 @@ RSpec.describe Api::V2::Contracts::EntitlementsController do
 
     context "with a feature that only the contract grants and several privileges" do
       before do
-        newer_privilege = create(:privilege, organization:, feature:, code: "admins", name: "Admins", value_type: "integer")
+        newer_privilege = create(:privilege, organization:, feature:, code: "admins", name: "Admins", value_type: "integer", created_at: 1.day.ago)
         create(:entitlement_value, organization:, entitlement: plan_entitlement, privilege: newer_privilege, value: 3)
         storage = create(:feature, organization:, code: "storage", name: "Storage", description: nil)
         limit = create(:privilege, organization:, feature: storage, code: "limit", name: "Limit", value_type: "integer")
-        contract_entitlement = create(:entitlement, :contract, organization:, contract:, feature: storage)
+        contract_entitlement = create(:entitlement, :contract, organization:, contract:, feature: storage, created_at: 1.day.ago)
         create(:entitlement_value, organization:, entitlement: contract_entitlement, privilege: limit, value: 10)
       end
 
