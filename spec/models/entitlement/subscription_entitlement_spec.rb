@@ -45,6 +45,25 @@ RSpec.describe Entitlement::SubscriptionEntitlement do
     end
   end
 
+  describe ".for_contract" do
+    let(:organization) { create(:organization) }
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:contract) { create(:contract, organization:, customer: create(:customer, organization:), catalog_plan:) }
+
+    it "returns the result from SubscriptionEntitlementQuery with the contract" do
+      entitlement = described_class.new(code: "seats")
+      allow(Entitlement::SubscriptionEntitlementQuery).to receive(:call).with(
+        organization: contract.organization,
+        filters: {contract_id: contract.id, catalog_plan_id: catalog_plan.id}
+      ).and_return([entitlement])
+
+      result = described_class.for_contract(contract)
+
+      expect(result).to eq([entitlement])
+      expect(entitlement.contract).to eq(contract)
+    end
+  end
+
   describe "#to_h" do
     it "returns a hash" do
       privilege = Entitlement::SubscriptionEntitlementPrivilege.new(code: "max")
