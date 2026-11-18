@@ -61,6 +61,23 @@ RSpec.describe Admin::OrganizationActivationsController, type: [:request, :admin
     end
 
     {
+      "a lowercase scheme" => "bearer billing-accounts-key-used-in-specs-only",
+      "extra spaces after the scheme" => "Bearer   billing-accounts-key-used-in-specs-only",
+      "trailing whitespace" => "Bearer billing-accounts-key-used-in-specs-only  "
+    }.each do |description, authorization|
+      context "with #{description}" do
+        let(:headers) { {"Authorization" => authorization} }
+
+        it "opens the organization" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(organization.reload.activation_status).to eq("active")
+        end
+      end
+    end
+
+    {
       "ADMIN_API_KEY" => {"Authorization" => "Bearer #{AdminHelper::ADMIN_API_KEY}"},
       "ADMIN_API_KEY in its own header" => {"X-Admin-API-Key" => AdminHelper::ADMIN_API_KEY},
       "a wrong key" => {"Authorization" => "Bearer another-key"},
@@ -111,16 +128,16 @@ RSpec.describe Admin::OrganizationActivationsController, type: [:request, :admin
   end
 
   it "draws only the activation route outside local environments" do
+    # config/routes.rb drawn into a route set of its own, so the application's routes stay as they are.
+    route_set = ActionDispatch::Routing::RouteSet.new
+    route_set.draw_paths = Rails.application.routes.draw_paths
+    allow(Rails.application).to receive(:routes).and_return(route_set)
     allow(Rails.env).to receive(:local?).and_return(false)
-    Rails.application.reload_routes!
+    load Rails.root.join("config/routes.rb")
 
-    post("/admin/organizations/#{organization.id}/activate", headers:)
-    expect(response).to have_http_status(:ok)
-
-    admin_put("/admin/organizations/#{organization.id}", {name: "Renamed"}, admin_headers)
-    expect(response).to have_http_status(:not_found)
-  ensure
-    allow(Rails.env).to receive(:local?).and_call_original
-    Rails.application.reload_routes!
+    expect(route_set.recognize_path("/admin/organizations/#{organization.id}/activate", method: :post))
+      .to include(controller: "admin/organization_activations", action: "create")
+    expect(route_set.recognize_path("/admin/organizations/#{organization.id}", method: :put))
+      .to include(controller: "application", action: "not_found")
   end
 end

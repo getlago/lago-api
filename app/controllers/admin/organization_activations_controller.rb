@@ -17,7 +17,8 @@ module Admin
     private
 
     def authenticate
-      token = request.headers["Authorization"].to_s[/\ABearer (.+)\z/, 1]
+      # The scheme is case-insensitive (RFC 7235), and spacing around the token is not significant.
+      token = request.headers["Authorization"].to_s[/\Abearer\s+(\S+)\s*\z/i, 1]
       expected = Lago::SelfServe.billing_accounts_key
 
       if token.present? && expected.present? && same_key?(token, expected)
