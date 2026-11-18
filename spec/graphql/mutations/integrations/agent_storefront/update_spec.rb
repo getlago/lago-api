@@ -42,7 +42,7 @@ RSpec.describe Mutations::Integrations::AgentStorefront::Update, :premium do
 
   before do
     integration.update!(plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000, free_credits_cents: 1000}])
-    organization.update!(premium_integrations: %w[agent_storefront events_targeting_wallets])
+    organization.update!(premium_integrations: %w[agent_storefront events_targeting_wallets], feature_flags: %w[agent_storefront])
   end
 
   it_behaves_like "requires current user"

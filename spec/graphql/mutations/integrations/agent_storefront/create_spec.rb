@@ -59,7 +59,7 @@ RSpec.describe Mutations::Integrations::AgentStorefront::Create, :premium do
 
   before do
     stripe_provider
-    organization.update!(premium_integrations:)
+    organization.update!(premium_integrations:, feature_flags: %w[agent_storefront])
     allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with("LAGO_REDIS_CACHE_URL").and_return("redis://redis:6379")
     allow(ENV).to receive(:[]).with("LAGO_DISABLE_WALLET_REFRESH").and_return(nil)
