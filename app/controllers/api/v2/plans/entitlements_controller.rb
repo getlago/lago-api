@@ -3,14 +3,20 @@
 module Api
   module V2
     module Plans
-      # Replaces the entitlements of a catalog plan, with the v1 body, and the v2 response and errors.
+      # Lists and replaces the entitlements of a catalog plan, with the v1 body, and the v2 response and errors.
       # The other entitlement routes of a plan still reach the v1 controller.
       class EntitlementsController < Api::V2::BaseController
         serializable_with ::V2::PlanEntitlementSerializer, root: :plan_entitlement, expand_on: []
 
         # Before the lookup, like the cursor of the paginated lists.
-        before_action :reject_pagination!, only: :create
+        before_action :reject_pagination!, only: %i[index create]
         before_action :find_catalog_plan
+
+        # Bounded by the entitlement limit of a catalog plan: returned whole, without pagination.
+        # The join drops the entitlements of a discarded feature, as v1 does.
+        def index
+          render_plan_entitlements(catalog_plan.entitlements.joins(:feature).includes(:catalog_plan, :feature, values: :privilege).newest_first)
+        end
 
         def create
           permitted = params.slice(:entitlements).permit(entitlements: {})

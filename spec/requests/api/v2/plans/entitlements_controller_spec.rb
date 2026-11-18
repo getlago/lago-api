@@ -516,6 +516,218 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
     end
   end
 
+  describe "GET /api/v2/plans/:plan_code/entitlements" do
+    subject(:request) { get_with_token(organization, "/api/v2/plans/#{plan_code}/entitlements#{query}") }
+
+    let(:plan_code) { catalog_plan.code }
+    let(:query) { "" }
+    let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
+    let(:sso) { create(:feature, organization:, code: "sso", name: "SSO", description: "Single sign-on") }
+    let(:sso_privilege) { create(:privilege, organization:, feature: sso, code: "enabled", name: "Enabled", value_type: "boolean") }
+    let(:sso_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature: sso, created_at: 1.day.ago) }
+    let(:seats_body) { plan_entitlement_json(entitlement, [{privilege_code: "max", value: 50}]) }
+    let(:sso_body) { plan_entitlement_json(sso_entitlement, [{privilege_code: "enabled", value: true}]) }
+
+    before do
+      create(:entitlement_value, organization:, entitlement:, privilege:, value: "50")
+      create(:entitlement_value, organization:, entitlement: sso_entitlement, privilege: sso_privilege, value: "true")
+    end
+
+    include_examples "requires API permission", "plan", "read"
+
+    it "lists every entitlement of the catalog plan, newest first, without pagination", :bullet do
+      request
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(plan_entitlements: [seats_body, sso_body])
+    end
+
+    context "with two values on an entitlement" do
+      let(:admins) do
+        create(:privilege, organization:, feature:, code: "admins", name: "Admins", value_type: "integer", created_at: 1.day.ago)
+      end
+
+      before do
+        # Its value is written after the max one, but its privilege is older: the order comes from the privileges.
+        create(:entitlement_value, organization:, entitlement:, privilege: admins, value: "5")
+      end
+
+      it "lists its privileges newest privilege first" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan_entitlements].first[:values].pluck(:privilege_code)).to eq(%w[max admins])
+      end
+    end
+
+    context "with two entitlements created at the same time" do
+      let(:sso_entitlement) do
+        create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature: sso, created_at: entitlement.created_at)
+      end
+
+      it "orders them by id" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan_entitlements]).to eq([[entitlement.id, seats_body], [sso_entitlement.id, sso_body]].sort_by(&:first).map(&:last))
+      end
+    end
+
+    context "with a discarded entitlement" do
+      before { sso_entitlement.discard! }
+
+      it "does not list it" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(plan_entitlements: [seats_body])
+      end
+    end
+
+    context "with an entitlement of a discarded feature" do
+      before { sso.discard! }
+
+      it "does not list it" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(plan_entitlements: [seats_body])
+        expect(sso_entitlement.reload).not_to be_discarded
+      end
+    end
+
+    context "with a discarded privilege and a discarded value" do
+      let(:min_privilege) { create(:privilege, organization:, feature:, code: "min", value_type: "integer") }
+      let(:burst_privilege) { create(:privilege, organization:, feature:, code: "burst", value_type: "integer") }
+
+      before do
+        create(:entitlement_value, organization:, entitlement:, privilege: min_privilege, value: "10")
+        create(:entitlement_value, organization:, entitlement:, privilege: burst_privilege, value: "5").discard!
+        min_privilege.discard!
+      end
+
+      it "lists only the kept values of kept privileges", :bullet do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(plan_entitlements: [seats_body, sso_body])
+      end
+    end
+
+    context "with an entitlement of another catalog plan" do
+      let(:sso_entitlement) do
+        create(:entitlement, :catalog_plan, organization:, catalog_plan: create(:catalog_plan, organization:, code: "other"), feature: sso)
+      end
+
+      it "does not list it" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(plan_entitlements: [seats_body])
+      end
+    end
+
+    context "without entitlements" do
+      let(:plan_code) { create(:catalog_plan, organization:, code: "empty").code }
+
+      it "returns an empty list" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(plan_entitlements: [])
+      end
+    end
+
+    context "with expands" do
+      let(:query) { "?expands[]=feature" }
+
+      it "returns expand_not_supported" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["feature"]}}]
+        )
+      end
+    end
+
+    [
+      ["limit", "1"],
+      ["page", "1"],
+      ["per_page", "1"],
+      ["after", "x"],
+      ["before", "x"],
+      ["include_total_count", "true"]
+    ].each do |name, value|
+      context "with the #{name} pagination parameter" do
+        let(:query) { "?#{name}=#{value}" }
+
+        it "returns a not_paginated error" do
+          request
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "invalid_pagination_parameter", details: [{code: "not_paginated", field: name, meta: {}}])
+        end
+      end
+    end
+
+    context "with an unknown plan code" do
+      let(:plan_code) { "unknown" }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "with the catalog plan of another organization" do
+      let(:plan_code) { create(:catalog_plan, organization: create(:organization), code: "shared").code }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "with a legacy plan code" do
+      let(:legacy_plan) { create(:plan, organization:, code: "legacy") }
+      let(:plan_code) { legacy_plan.code }
+
+      before do
+        legacy_entitlement = create(:entitlement, organization:, plan: legacy_plan, feature:)
+        create(:entitlement_value, organization:, entitlement: legacy_entitlement, privilege:, value: "30")
+      end
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "with a deleted catalog plan" do
+      let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium", deleted_at: Time.current) }
+
+      it "returns not found" do
+        request
+
+        expect(response).to be_v2_not_found_error("plan")
+      end
+    end
+
+    context "without the product catalog", product_catalog: false do
+      it "returns feature_unavailable" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "feature_unavailable", details: [])
+      end
+    end
+  end
+
   # The v2 render of a plan entitlement, with its datetimes to the microsecond as native v2 renders them.
   def plan_entitlement_json(entitlement, values)
     entitlement = Entitlement::Entitlement.with_discarded.find(entitlement.id)
