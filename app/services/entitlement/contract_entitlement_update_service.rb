@@ -21,8 +21,11 @@ module Entitlement
 
       ActiveRecord::Base.transaction do
         lock_override_owner!(contract)
+        # NOTE: Without entitlement_events, the write logs nothing.
+        entitlements_before = SubscriptionEntitlement.for_contract(contract) if log_entitlement_changes?
         update_entitlements
         result.entitlements = SubscriptionEntitlement.for_contract(contract)
+        log_entitlement_changes(entitlements_before, result.entitlements) if log_entitlement_changes?
       end
 
       result
@@ -40,6 +43,15 @@ module Entitlement
 
     attr_reader :contract, :entitlements_params
     delegate :organization, to: :contract
+
+    def entitlement_events?
+      organization.feature_flag_enabled?(:entitlement_events)
+    end
+
+    # The logs render the contract entitlements before the call, so they are only built when they can be sent.
+    def log_entitlement_changes?
+      entitlement_events? && Utils::ActivityLog.available?
+    end
 
     def update_entitlements
       return if entitlements_params.blank?
@@ -84,6 +96,41 @@ module Entitlement
       return if privilege_params.is_a?(Hash)
 
       result.single_validation_failure!(field: path, error_code: "value_is_invalid").raise_if_error!
+    end
+
+    # One activity log per entitlement of the body whose values that apply changed (value, plan value or source),
+    # filed under the contract, with the entitlement before and after. An entitlement left as it was gets none.
+    def log_entitlement_changes(entitlements_before, entitlements_after)
+      feature_codes = entitlements_params.keys
+      before = entitlements_before.select { feature_codes.include?(it.code) }.index_by(&:code)
+      after = entitlements_after.select { feature_codes.include?(it.code) }.index_by(&:code)
+      changed_codes = (before.keys | after.keys).reject { rendered_values(before[it]) == rendered_values(after[it]) }
+
+      # Newest first, in the order of the contract read.
+      ordered_codes = after.keys.select { changed_codes.include?(it) } + (changed_codes - after.keys)
+      ordered_codes.each do |code|
+        action = if before[code].nil?
+          "created"
+        elsif after[code].nil?
+          "deleted"
+        else
+          "updated"
+        end
+
+        Utils::ActivityLog.produce_after_commit(
+          contract, "contract_entitlement.#{action}",
+          activity_object: contract_entitlement_render(after[code] || before[code]),
+          changes: {"values" => [rendered_values(before[code]), rendered_values(after[code])]}
+        )
+      end
+    end
+
+    def contract_entitlement_render(contract_entitlement)
+      ::V2::ContractEntitlementSerializer.new(contract_entitlement).serialize
+    end
+
+    def rendered_values(contract_entitlement)
+      contract_entitlement_render(contract_entitlement)[:values] if contract_entitlement
     end
   end
 end

@@ -68,6 +68,14 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         plan_entitlement_deleted: "plan_entitlement.deleted"
       )
     end
+
+    it "defines the contract entitlement activity types" do
+      expect(described_class::ACTIVITY_TYPES.slice(:contract_entitlement_created, :contract_entitlement_updated, :contract_entitlement_deleted)).to eq(
+        contract_entitlement_created: "contract_entitlement.created",
+        contract_entitlement_updated: "contract_entitlement.updated",
+        contract_entitlement_deleted: "contract_entitlement.deleted"
+      )
+    end
   end
 
   describe "#resource" do
