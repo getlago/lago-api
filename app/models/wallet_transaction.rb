@@ -139,6 +139,10 @@ class WalletTransaction < ApplicationRecord
 
     update!(status: :failed, failed_at: timestamp)
   end
+
+  def fallback_connection(category)
+    wallet.effective_connection(category)
+  end
 end
 
 # == Schema Information
