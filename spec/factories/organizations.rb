@@ -43,6 +43,23 @@ FactoryBot.define do
       premium_integrations { Organization::PREMIUM_INTEGRATIONS }
     end
 
+    trait :self_serve do
+      self_serve { true }
+    end
+
+    trait :with_sandbox do
+      after(:create) do |organization|
+        create(:organization, :sandbox, production_organization: organization, name: "#{organization.name} Sandbox",
+          self_serve: organization.self_serve)
+      end
+    end
+
+    # Pass production_organization: explicitly when create_default(:organization) is in play, or it links to it.
+    trait :sandbox do
+      environment { "sandbox" }
+      production_organization { association(:organization) }
+    end
+
     trait :with_invoice_custom_sections do
       after :create do |org|
         create_list(:invoice_custom_section, 3, organization: org)

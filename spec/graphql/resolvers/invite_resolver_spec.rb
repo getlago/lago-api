@@ -47,6 +47,32 @@ RSpec.describe Resolvers::InviteResolver do
     expect(result["data"]["invite"]["token"]).to be_nil
   end
 
+  context "when the organization has a sandbox" do
+    include_context "with self-serve enabled"
+
+    let(:query) do
+      <<~GQL
+        query($token: String!) {
+          invite(token: $token) {
+            organization { selfServe environment sandboxOrganization { id } }
+          }
+        }
+      GQL
+    end
+
+    let(:organization) { create(:organization, :self_serve) }
+
+    before { create(:organization, :self_serve, :sandbox, production_organization: organization) }
+
+    it "shows the environment but not the sandbox to an anonymous caller" do
+      result = execute_graphql(query:, variables: {token: invite.token})
+
+      expect(result["data"]["invite"]["organization"]).to eq(
+        "selfServe" => true, "environment" => "production", "sandboxOrganization" => nil
+      )
+    end
+  end
+
   context "when the invited email belongs to an existing user" do
     before { create(:user, email: invite.email) }
 

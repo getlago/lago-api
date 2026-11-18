@@ -18,6 +18,12 @@ module Entitlement
       return result.not_found_failure!(resource: "privilege") unless privilege
 
       ActiveRecord::Base.transaction do
+        # Serializes with the privilege writes and the feature delete, which take the same lock, so
+        # nothing is discarded twice or written after the discard.
+        # The default scope hides a discarded feature, so it is read without it.
+        feature = Feature.unscoped.lock.find_by(id: privilege.entitlement_feature_id)
+        return result.not_found_failure!(resource: "privilege") if feature.nil? || feature.discarded? || privilege.reload.discarded?
+
         privilege.values.discard_all!
         privilege.discard!
       end

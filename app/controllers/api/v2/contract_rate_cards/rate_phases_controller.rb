@@ -6,6 +6,8 @@ module Api
       class RatePhasesController < Api::V2::BaseController
         serializable_with ::V2::RatePhaseSerializer
 
+        before_action :reject_pagination!, only: :index
+
         def index
           return not_found_error(resource: "applied_rate_card") unless contract_rate_card
 

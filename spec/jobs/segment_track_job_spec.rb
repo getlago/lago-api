@@ -1,9 +1,35 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "active_job/json_log_subscriber"
 
 describe SegmentTrackJob, job: true do
   subject { described_class }
+
+  describe "logging" do
+    let(:log_output) { StringIO.new }
+    let(:job) do
+      described_class.new(membership_id: "membership/1", event: "organization_registered",
+        properties: {email: "jane@getlago.com", role: "founder"})
+    end
+
+    around do |example|
+      original_logger = ActiveSupport::LogSubscriber.logger
+      ActiveSupport::LogSubscriber.logger = ActiveSupport::Logger.new(log_output)
+      example.run
+    ensure
+      ActiveSupport::LogSubscriber.logger = original_logger
+    end
+
+    it "keeps its properties out of the job logs" do
+      ActiveJob::JsonLogSubscriber.new.enqueue(
+        ActiveSupport::Notifications::Event.new("enqueue.active_job", nil, nil, "transaction_id", {job:})
+      )
+
+      expect(JSON.parse(log_output.string.lines.first)["arguments"]).to eq({})
+      expect(log_output.string).not_to include("jane@getlago.com")
+    end
+  end
 
   describe ".perform" do
     let(:membership_id) { "membership/#{SecureRandom.uuid}" }

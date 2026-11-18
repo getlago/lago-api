@@ -78,41 +78,31 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
 
     let(:permissions) { ["developers:manage", "developers:keys:manage"] }
 
-    it "refuses it without the standard_webhooks_signature flag" do
-      expect { result }.not_to change { webhook_endpoint.reload.signature_algo }
-
-      expect_unprocessable_entity(result, details: {signatureAlgo: ["value_is_invalid"]})
+    it "switches the endpoint to standard_webhooks with one signing key" do
+      expect(result["data"]["updateWebhookEndpoint"]).to include("signatureAlgo" => "standard_webhooks")
+      expect(webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
+      expect(webhook_endpoint.signing_keys.count).to eq(1)
     end
 
-    context "with the standard_webhooks_signature flag" do
-      before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+    it "returns the signing key of the endpoint" do
+      signing_keys = result["data"]["updateWebhookEndpoint"]["signingKeys"]
+      signing_key = webhook_endpoint.signing_keys.sole
 
-      it "switches the endpoint to standard_webhooks with one signing key" do
-        expect(result["data"]["updateWebhookEndpoint"]).to include("signatureAlgo" => "standard_webhooks")
-        expect(webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
-        expect(webhook_endpoint.signing_keys.count).to eq(1)
-      end
+      expect(signing_keys).to eq(
+        [{"id" => signing_key.id, "secretKey" => signing_key.secret, "createdAt" => signing_key.created_at.iso8601}]
+      )
+      expect(signing_key.secret).to start_with("whsec_")
+    end
 
-      it "returns the signing key of the endpoint" do
-        signing_keys = result["data"]["updateWebhookEndpoint"]["signingKeys"]
-        signing_key = webhook_endpoint.signing_keys.sole
+    context "when the user cannot manage keys" do
+      let(:permissions) { "developers:manage" }
 
-        expect(signing_keys).to eq(
-          [{"id" => signing_key.id, "secretKey" => signing_key.secret, "createdAt" => signing_key.created_at.iso8601}]
-        )
-        expect(signing_key.secret).to start_with("whsec_")
-      end
+      it "returns null signing keys and the other fields" do
+        webhook_endpoint_response = result["data"]["updateWebhookEndpoint"]
 
-      context "when the user cannot manage keys" do
-        let(:permissions) { "developers:manage" }
-
-        it "returns null signing keys and the other fields" do
-          webhook_endpoint_response = result["data"]["updateWebhookEndpoint"]
-
-          expect(webhook_endpoint_response["signingKeys"]).to be_nil
-          expect(webhook_endpoint_response["id"]).to eq(webhook_endpoint.id)
-          expect(webhook_endpoint_response["signatureAlgo"]).to eq("standard_webhooks")
-        end
+        expect(webhook_endpoint_response["signingKeys"]).to be_nil
+        expect(webhook_endpoint_response["id"]).to eq(webhook_endpoint.id)
+        expect(webhook_endpoint_response["signatureAlgo"]).to eq("standard_webhooks")
       end
     end
   end
@@ -140,7 +130,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
     end
   end
 
-  context "when a standard_webhooks endpoint of an organization without the flag is renamed" do
+  context "when a standard_webhooks endpoint is renamed" do
     subject(:result) do
       execute_graphql(
         current_user: membership.user,
@@ -162,8 +152,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update do
       expect(webhook_endpoint.reload.name).to eq("Renamed")
     end
 
-    it "returns the signing keys without the flag" do
-      expect(organization.feature_flag_enabled?(:standard_webhooks_signature)).to be(false)
+    it "returns the signing keys" do
       expect(result["data"]["updateWebhookEndpoint"]["signingKeys"]).to eq(
         [{"id" => signing_key.id, "secretKey" => signing_key.secret, "createdAt" => signing_key.created_at.iso8601}]
       )

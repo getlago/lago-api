@@ -15,23 +15,29 @@ module Roles
     end
 
     def call
-      return result.forbidden_failure! unless License.premium?
-      return result.forbidden_failure!(code: "premium_integration_missing") unless organization.custom_roles_enabled?
-      return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
+      ActiveRecord::Base.transaction do
+        Organizations::SandboxLockService.call!(organization:)
+        return result.forbidden_failure! unless License.premium?
+        return result.forbidden_failure!(code: "premium_integration_missing") unless organization.custom_roles_enabled?
+        return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
 
-      role = organization.roles.create!(
-        code:,
-        name:,
-        description:,
-        permissions:
-      )
+        role = organization.roles.create!(
+          code:,
+          name:,
+          description:,
+          permissions:
+        )
+        Roles::SyncSandboxService.call!(role:, actor: acting_membership.user)
 
-      register_security_log(role)
+        after_commit { register_security_log(role) }
+        result.role = role
+      end
 
-      result.role = role
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     end
 
     private

@@ -91,6 +91,60 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       expect(priority_wallet.reload.balance_cents).to eq(1000)
     end
 
+    context "when the invoice was issued for the expiration of a wallet" do
+      let(:invoice) do
+        create(
+          :invoice,
+          customer:,
+          currency: "EUR",
+          invoice_type: :progressive_billing,
+          progressive_billing_trigger: :wallet_expiration,
+          taxes_amount_cents:,
+          total_amount_cents: amount_cents
+        )
+      end
+      let(:wallets) { [normal_wallet, priority_wallet] }
+
+      before { create(:applied_wallet_expiration, invoice:, wallet: normal_wallet) }
+
+      it "spends the expiring wallet before the wallets with a higher priority" do
+        expect(result.wallet_transactions).to eq({normal_wallet => 100})
+      end
+    end
+
+    context "when an expired wallet still has an unsettled expiration invoice" do
+      let(:wallets) { [normal_wallet, priority_wallet] }
+
+      before do
+        priority_wallet.update!(expiration_at: 1.hour.ago)
+        create(:applied_wallet_expiration, wallet: priority_wallet, invoice: create(:invoice, customer:, status: :failed))
+      end
+
+      it "keeps that wallet for its expiration invoice" do
+        expect(result.wallet_transactions).to eq({normal_wallet => 100})
+      end
+
+      context "when the invoice is an expiration invoice of that wallet" do
+        let(:invoice) do
+          create(
+            :invoice,
+            customer:,
+            currency: "EUR",
+            invoice_type: :progressive_billing,
+            progressive_billing_trigger: :wallet_expiration,
+            taxes_amount_cents:,
+            total_amount_cents: amount_cents
+          )
+        end
+
+        before { create(:applied_wallet_expiration, invoice:, wallet: priority_wallet) }
+
+        it "spends that wallet" do
+          expect(result.wallet_transactions).to eq({priority_wallet => 100})
+        end
+      end
+    end
+
     context "when customer has no applicable wallets" do
       let(:wallets) { [] }
 

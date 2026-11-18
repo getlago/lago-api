@@ -11,12 +11,15 @@ module Events
 
       # `recurring` charges sum every period since the subscription started: the buckets only answer
       # the window opening at `charges_from_datetime`, on top of the snapshot of the period before it.
-      def initialize(store, usage_buckets:, charge_id:, charge_filter_id:, recurring: false, charges_from_datetime: nil)
+      # `late_events_scan` reads the late events of every filter of the charge at once (see ChargeFiltersScan).
+      def initialize(store, usage_buckets:, charge_id:, charge_filter_id:, recurring: false, charges_from_datetime: nil,
+        late_events_scan: nil)
         @usage_buckets = usage_buckets
         @charge_id = charge_id
         @charge_filter_id = charge_filter_id
         @recurring = recurring
         @charges_from_datetime = charges_from_datetime
+        @late_events_scan = late_events_scan
 
         super(store)
       end
@@ -69,19 +72,27 @@ module Events
       end
 
       # Why the delta from `period` must come from the events: a late ingestion is an event the
-      # snapshot missed. Snapshots the buckets can never complete are refused by the Provider.
-      # The events tell it, not the buckets: their ingestion time is not the one the watermark bounds.
+      # snapshot missed, and a re-send one it holds, maybe in another filter. Snapshots the buckets can
+      # never complete are refused by the Provider. The events tell it, not the buckets: their ingestion
+      # time is not the one the watermark bounds.
       def recurring_fallback_reason(period)
-        return "no_period" if period.nil?
-        return "not_adjacent" unless adjacent?(period)
-
-        "late_ingestion" if late_ingestion?(period)
+        if period.nil?
+          "no_period"
+        elsif !adjacent?(period)
+          "not_adjacent"
+        elsif late_ingestion?(period)
+          "late_ingestion"
+        elsif resent_for_fallback?(period)
+          "resent_after_watermark"
+        end
       end
 
       # Asked again by the recurring reads of the same period
       def late_ingestion?(period)
         @late_ingestion ||= {}
-        @late_ingestion.fetch(period) { @late_ingestion[period] = super }
+        @late_ingestion.fetch(period) do
+          @late_ingestion[period] = late_events_scanned? ? late_events_scan.late_ingestion?(__getobj__, period) : super
+        end
       end
 
       def max(with_count: true)
@@ -130,7 +141,25 @@ module Events
 
       private
 
-      attr_reader :usage_buckets, :charge_id, :charge_filter_id, :recurring, :charges_from_datetime
+      attr_reader :usage_buckets, :charge_id, :charge_filter_id, :recurring, :charges_from_datetime, :late_events_scan
+
+      # Asked again by the recurring reads of the same period. Only the fallback reason reads it: a delta read from
+      # the events asks the store it wraps after reading it (see SumService#resent_after_watermark?), as a copy
+      # re-sent in between would be counted twice.
+      def resent_for_fallback?(period)
+        @resent_for_fallback ||= {}
+        @resent_for_fallback.fetch(period) do
+          @resent_for_fallback[period] = if late_events_scanned?
+            late_events_scan.resent_after_watermark?(__getobj__, period)
+          else
+            __getobj__.resent_after_watermark?(period)
+          end
+        end
+      end
+
+      def late_events_scanned?
+        late_events_scan.present? && !grouped_by_values? && late_events_scan.covers_late_events?(__getobj__)
+      end
 
       # The parity comparison would otherwise compare the events with themselves and report a match:
       # its decision and its bucket run read the buckets apart, so a late ingestion can land between.

@@ -153,6 +153,22 @@ RSpec.describe "recipes:clickhouse:enable_clickhouse_events_store", clickhouse: 
           expect(RecurringAggregationSnapshot.all).to eq([other_snapshot])
         end
       end
+
+      context "with contract recurring aggregation snapshots" do
+        let(:contract_snapshot) { create(:contract_recurring_aggregation_snapshot, organization:) }
+        let(:other_contract_snapshot) { create(:contract_recurring_aggregation_snapshot, organization: create(:organization)) }
+
+        before do
+          contract_snapshot
+          other_contract_snapshot
+        end
+
+        it "deletes the organization's contract snapshots only" do
+          task.invoke
+
+          expect(ContractRecurringAggregationSnapshot.all).to eq([other_contract_snapshot])
+        end
+      end
     end
 
     context "when a job started before the switch writes a snapshot after it" do

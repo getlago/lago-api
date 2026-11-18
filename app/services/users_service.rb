@@ -61,27 +61,32 @@ class UsersService < BaseService
       return result
     end
 
-    ActiveRecord::Base.transaction do
-      result.user = User.create!(email:, password:)
+    # Rescued outside the block, so a failure rolls back the user it already created.
+    begin
+      ActiveRecord::Base.transaction do
+        result.user = User.create!(email:, password:)
 
-      result.organization = Organizations::CreateService
-        .call!(name: organization_name, document_numbering: "per_organization")
-        .organization
+        result.organization = Organizations::CreateService
+          .call!(name: organization_name, document_numbering: "per_organization")
+          .organization
 
-      result.membership = Membership.create!(
-        user: result.user,
-        organization: result.organization
-      )
+        result.membership = Membership.create!(
+          user: result.user,
+          organization: result.organization
+        )
 
-      MembershipRole.create!(
-        organization: result.organization,
-        membership: result.membership,
-        role: Role.admins.first!
-      )
+        MembershipRole.create!(
+          organization: result.organization,
+          membership: result.membership,
+          role: Role.admins.first!
+        )
 
-      result.token = generate_token
+        result.token = generate_token
+      end
     rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+      return result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      return result.fail_with_error!(e)
     end
 
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
@@ -133,6 +138,9 @@ class UsersService < BaseService
     result
   rescue BaseLockService::FailedToAcquireLock
     result.lock_acquisition_failure!(message: "email lock not acquired")
+  rescue BaseService::FailedResult => e
+    # Raised inside the transaction, so a refused acceptance creates no user.
+    result.fail_with_error!(e)
   end
 
   def generate_token
@@ -152,7 +160,10 @@ class UsersService < BaseService
       properties: {
         organization_name: organization.name,
         organization_id: organization.id,
-        email: membership.user.email
+        email: membership.user.email,
+        # Same shape as the self-serve signup event, so a report split by these keys counts every new organization.
+        self_serve: false,
+        region: Lago::SelfServe.region
       }
     )
   end
