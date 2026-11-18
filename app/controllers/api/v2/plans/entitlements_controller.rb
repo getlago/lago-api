@@ -6,6 +6,8 @@ module Api
       # Lists, shows, replaces, merges and removes the entitlements of a catalog plan, and removes one of their privilege
       # values, with the v1 body, and the v2 response and errors.
       class EntitlementsController < Api::V2::BaseController
+        include Api::EntitlementsErrors
+
         serializable_with ::V2::PlanEntitlementSerializer, root: :plan_entitlement, expand_on: []
 
         # Before the lookup, like the cursor of the paginated lists.
@@ -101,16 +103,6 @@ module Api
         def find_catalog_plan
           @catalog_plan = current_organization.catalog_plans.find_by(code: params[:plan_code])
           not_found_error(resource: "plan") unless @catalog_plan
-        end
-
-        # The service renders its validation failures on the path of the entry for native v2. An unknown
-        # feature or privilege of the body, a 404 on v1, is a 422 on entitlements.<feature>[.<privilege>].
-        def render_entitlements_error(result)
-          field = result.failed_field
-          error = result.error
-          return render_error_response(result) unless field && error.is_a?(BaseService::NotFoundFailure)
-
-          validation_errors(errors: {field => ["resource_not_found"]}, meta: {field => {resource: error.resource}})
         end
 
         def resource_name
