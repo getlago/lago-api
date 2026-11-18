@@ -42,6 +42,7 @@ end
 #
 # Indexes
 #
+#  index_catalog_wallets_by_cursor                (contract_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_catalog_wallets_on_contract_id_and_code  (contract_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #  index_catalog_wallets_on_customer_id           (customer_id)
 #  index_catalog_wallets_on_organization_id       (organization_id)
