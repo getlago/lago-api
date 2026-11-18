@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Agents::ClaimMailer, :premium do
   subject(:mail) { described_class.with(claim_id: claim.id).verification }
 
-  let(:organization) { create(:organization, name: "Acme", premium_integrations: %w[agent_storefront]) }
+  let(:organization) { create(:organization, name: "Acme", premium_integrations: %w[agent_storefront], feature_flags: %w[agent_storefront]) }
   let(:storefront) { create(:agent_storefront_integration, organization:, name: "Acme API") }
   let(:registration) { create(:agent_registration, storefront:) }
   let(:customer) { create(:customer, organization:, external_id: "agent_#{registration.id}") }
