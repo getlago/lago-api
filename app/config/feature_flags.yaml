@@ -77,3 +77,7 @@ sso_cross_organization_sessions:
 recurring_aggregation_snapshots:
   description: "Persist the units of recurring sum and weighted sum charges at the end of each billed period, so later periods can start from them instead of the full event history"
   owners: ["@vincent-pochet"]
+
+agent_storefront:
+  description: "Enable the Agent Storefront: storefront connections, agent signup, enrollment, gate checks, funding and claims"
+  owners: ["@anassg-lago"]
