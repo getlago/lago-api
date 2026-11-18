@@ -37871,6 +37871,24 @@
               "deprecationReason": null
             },
             {
+              "name": "contract_entitlement_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_entitlement_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_entitlement_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract_created",
               "description": null,
               "isDeprecated": false,

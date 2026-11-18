@@ -21,16 +21,16 @@ module Entitlement
 
       ActiveRecord::Base.transaction do
         lock_override_owner!(contract)
-        # NOTE: Without entitlement_events, the write logs nothing.
-        log_changes = entitlements_params.present? && log_entitlement_changes?
-        if log_changes
-          # A catalog plan write committed between the two reads would be logged as a change of this call.
+        # NOTE: Without entitlement_events, the write logs and sends nothing.
+        render_changes = entitlements_params.present? && render_entitlement_changes?
+        if render_changes
+          # A catalog plan write committed between the two reads would be sent as a change of this call.
           contract.catalog_plan&.lock!("FOR SHARE")
           entitlements_before = SubscriptionEntitlement.for_contract(contract)
         end
         update_entitlements
         result.entitlements = SubscriptionEntitlement.for_contract(contract)
-        log_entitlement_changes(entitlements_before, result.entitlements) if log_changes
+        send_entitlement_events(entitlements_before, result.entitlements) if render_changes
       end
 
       result
@@ -53,9 +53,17 @@ module Entitlement
       organization.feature_flag_enabled?(:entitlement_events)
     end
 
-    # The logs render the contract entitlements before the call, so they are only built when they can be sent.
-    def log_entitlement_changes?
-      entitlement_events? && Utils::ActivityLog.available?
+    # The logs and the webhooks render the contract entitlements before the call, so they are only built when one
+    # of them can be sent.
+    def render_entitlement_changes?
+      entitlement_events? && (Utils::ActivityLog.available? || send_entitlement_webhooks?)
+    end
+
+    # The jobs are enqueued in one bulk push, which skips the endpoint check of SendWebhookJob.perform_later.
+    def send_entitlement_webhooks?
+      return @send_entitlement_webhooks if defined?(@send_entitlement_webhooks)
+
+      @send_entitlement_webhooks = organization.webhook_endpoints.exists?
     end
 
     def update_entitlements
@@ -103,17 +111,18 @@ module Entitlement
       result.single_validation_failure!(field: path, error_code: "value_is_invalid").raise_if_error!
     end
 
-    # One activity log per entitlement of the body whose values that apply changed (value, plan value or source),
-    # filed under the contract, with the entitlement before and after. An entitlement left as it was gets none.
-    # A feature granted back after its removal from the contract is logged as created.
-    def log_entitlement_changes(entitlements_before, entitlements_after)
-      before = renders_by_code(entitlements_before)
-      after = renders_by_code(entitlements_after)
+    # One activity log and one webhook per entitlement of the body whose values that apply changed (value, plan value
+    # or source), with the entitlement before and after. An entitlement left as it was gets none. A removed entitlement
+    # is sent as it applied before the write. A feature granted back after its removal from the contract is created.
+    def send_entitlement_events(entitlements_before, entitlements_after)
+      feature_codes = entitlements_params.keys
+      before = render_by_code(entitlements_before.select { feature_codes.include?(it.code) })
+      after = render_by_code(entitlements_after.select { feature_codes.include?(it.code) })
       changed_codes = (before.keys | after.keys).reject { before[it]&.dig(:values) == after[it]&.dig(:values) }
 
       # Newest first, in the order of the contract read.
       ordered_codes = after.keys.select { changed_codes.include?(it) } + (changed_codes - after.keys)
-      ordered_codes.each do |code|
+      webhook_jobs = ordered_codes.filter_map do |code|
         action = if before[code].nil?
           "created"
         elsif after[code].nil?
@@ -121,21 +130,25 @@ module Entitlement
         else
           "updated"
         end
+        render = after[code] || before[code]
 
-        Utils::ActivityLog.produce_after_commit(
-          contract, "contract_entitlement.#{action}",
-          activity_object: after[code] || before[code],
-          changes: {"values" => [before[code]&.dig(:values), after[code]&.dig(:values)]}
-        )
+        if Utils::ActivityLog.available?
+          Utils::ActivityLog.produce_after_commit(
+            contract, "contract_entitlement.#{action}",
+            activity_object: render,
+            changes: {"values" => [before[code]&.dig(:values), after[code]&.dig(:values)]}
+          )
+        end
+        next unless send_entitlement_webhooks?
+
+        SendWebhookJob.new("contract_entitlement.#{action}", contract, {contract_entitlement: render})
       end
+
+      after_commit { ApplicationJob.perform_all_later(webhook_jobs) } if webhook_jobs.any?
     end
 
-    # The entitlements of the body, rendered once each, in the order of the contract read.
-    def renders_by_code(entitlements)
-      feature_codes = entitlements_params.keys
-      entitlements.select { feature_codes.include?(it.code) }.to_h do |entitlement|
-        [entitlement.code, ::V2::ContractEntitlementSerializer.new(entitlement).serialize]
-      end
+    def render_by_code(contract_entitlements)
+      contract_entitlements.to_h { [it.code, ::V2::ContractEntitlementSerializer.new(it).serialize] }
     end
   end
 end

@@ -470,6 +470,27 @@ contract_rate_card_deleted:
   category: Contracts
   deprecated: false
   product_catalog_only: true
+contract_entitlement_created:
+  name: contract_entitlement.created
+  description: A feature entitlement has been added to a contract
+  category: Contracts
+  deprecated: false
+  product_catalog_only: true
+  feature_flag: entitlement_events
+contract_entitlement_updated:
+  name: contract_entitlement.updated
+  description: A feature entitlement has been updated on a contract
+  category: Contracts
+  deprecated: false
+  product_catalog_only: true
+  feature_flag: entitlement_events
+contract_entitlement_deleted:
+  name: contract_entitlement.deleted
+  description: A feature entitlement has been removed from a contract
+  category: Contracts
+  deprecated: false
+  product_catalog_only: true
+  feature_flag: entitlement_events
 contract_created:
   name: contract.created
   description: A new contract has been created

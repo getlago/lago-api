@@ -96,7 +96,11 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
       end
 
       context "when activity logs cannot be sent" do
-        before { allow(Utils::ActivityLog).to receive(:available?).and_return(false) }
+        before do
+          allow(Utils::ActivityLog).to receive(:available?).and_return(false)
+          # Without an endpoint, no webhook needs the entitlements before the write either.
+          organization.webhook_endpoints.destroy_all
+        end
 
         it "logs nothing and reads the contract entitlements once" do
           allow(Entitlement::SubscriptionEntitlement).to receive(:for_contract).and_call_original
@@ -164,8 +168,158 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
       end
     end
 
-    it "sends no webhook" do
+    it "sends no webhook without the entitlement_events feature flag" do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(organization.webhook_endpoints).to exist
+      expect(effective_values("seats")).to eq("max" => 60, "sso" => true)
+    end
+
+    context "with the contract_entitlement webhooks" do
+      let(:bulk_pushes) { [] }
+      let(:catalog_plan_locks) { [] }
+      let(:api) { create(:feature, organization:, code: "api") }
+      let(:api_calls) { create(:privilege, organization:, feature: api, code: "calls", value_type: "integer") }
+
+      # The organization factory also creates a webhook endpoint.
+      before { organization.update!(feature_flags: organization.feature_flags | ["entitlement_events"]) }
+
+      # The SQL of the call that locks the catalog plan row, and its bulk pushes of jobs.
+      def call_and_watch
+        lock_watcher = lambda do |*, payload|
+          catalog_plan_locks << payload[:sql] if payload[:sql].match?(/FROM "catalog_plans".* FOR (NO KEY )?UPDATE/)
+        end
+        push_watcher = ->(*, payload) { bulk_pushes << payload[:jobs].size }
+
+        ActiveSupport::Notifications.subscribed(lock_watcher, "sql.active_record") do
+          ActiveSupport::Notifications.subscribed(push_watcher, "enqueue_all.active_job") { result }
+        end
+      end
+
+      def sent_webhooks
+        ActiveJob::Base.queue_adapter.enqueued_jobs
+          .select { it[:job] == SendWebhookJob }
+          .map { ActiveJob::Arguments.deserialize(it[:args]) }
+      end
+
+      it "sends contract_entitlement.updated after commit with the entitlement as it now applies" do
+        expect { call_and_watch }.to have_enqueued_job_after_commit(SendWebhookJob).with(
+          "contract_entitlement.updated",
+          contract,
+          {
+            contract_entitlement: {
+              contract_external_id: contract.external_id,
+              lago_contract_id: contract.id,
+              feature_code: "seats",
+              source: "plan",
+              values: [
+                {privilege_code: "sso", value: true, plan_value: true, source: "plan"},
+                {privilege_code: "max", value: 60, plan_value: 50, source: "contract"}
+              ]
+            }
+          }
+        )
+        expect(SendWebhookJob).to have_been_enqueued.once
+        expect(catalog_plan_locks).to be_empty
+      end
+
+      context "with an added, a changed and a removed entitlement" do
+        let(:entitlements_params) { {"seats" => {"max" => 50}, "storage" => {"limit" => 10}, "api" => {"calls" => 200}} }
+
+        before do
+          api_entitlement = create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature: api)
+          create(:entitlement_value, organization:, entitlement: api_entitlement, privilege: api_calls, value: "100")
+
+          # No contract PATCH removes a feature: a removal written with the override stands for a later remover.
+          allow(Entitlement::SubscriptionEntitlementCoreUpdateService).to receive(:call!).and_wrap_original do |original, **kwargs|
+            original.call(**kwargs).tap do
+              create(:subscription_feature_removal, :contract, organization:, contract:, feature: seats) if kwargs[:feature] == seats
+            end
+          end
+        end
+
+        it "sends one webhook per changed entitlement in one bulk push, newest first" do
+          call_and_watch
+
+          expect(sent_webhooks).to eq(
+            [
+              [
+                "contract_entitlement.created", contract,
+                {
+                  contract_entitlement: {
+                    contract_external_id: contract.external_id, lago_contract_id: contract.id, feature_code: "storage", source: "contract",
+                    values: [{privilege_code: "limit", value: 10, plan_value: nil, source: "contract"}]
+                  }
+                }
+              ],
+              [
+                "contract_entitlement.updated", contract,
+                {
+                  contract_entitlement: {
+                    contract_external_id: contract.external_id, lago_contract_id: contract.id, feature_code: "api", source: "plan",
+                    values: [{privilege_code: "calls", value: 200, plan_value: 100, source: "contract"}]
+                  }
+                }
+              ],
+              [
+                "contract_entitlement.deleted", contract,
+                {
+                  # The entitlement as it applied before the write.
+                  contract_entitlement: {
+                    contract_external_id: contract.external_id, lago_contract_id: contract.id, feature_code: "seats", source: "plan",
+                    values: [
+                      {privilege_code: "sso", value: true, plan_value: true, source: "plan"},
+                      {privilege_code: "max", value: 50, plan_value: 50, source: "plan"}
+                    ]
+                  }
+                }
+              ]
+            ]
+          )
+          expect(bulk_pushes).to eq([3])
+          expect(catalog_plan_locks).to be_empty
+        end
+      end
+
+      context "when the same write runs again" do
+        before { described_class.call(contract:, entitlements_params:) }
+
+        it "sends nothing" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+          expect(result).to be_success
+        end
+      end
+
+      context "when the value equals the catalog plan value without an override" do
+        let(:entitlements_params) { {"seats" => {"max" => 50}} }
+
+        it "sends nothing" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+          expect(result).to be_success
+        end
+      end
+
+      context "without a webhook endpoint" do
+        before { organization.webhook_endpoints.destroy_all }
+
+        it "writes the override, sends nothing and takes no lock on the catalog plan" do
+          expect { call_and_watch }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(result).to be_success
+          expect(effective_values("seats")).to eq("max" => 60, "sso" => true)
+          expect(catalog_plan_locks).to be_empty
+          expect(bulk_pushes).to be_empty
+        end
+      end
+
+      context "with a failed write" do
+        let(:entitlements_params) { {"storage" => {"limit" => 10}, "unknown" => {"max" => 1}} }
+
+        it "sends nothing" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+          expect(result.error.error_code).to eq("feature_not_found")
+        end
+      end
     end
 
     context "with an existing override" do
