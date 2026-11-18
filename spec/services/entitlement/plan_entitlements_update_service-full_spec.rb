@@ -27,6 +27,16 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       expect(result).to be_success
     end
 
+    context "when a feature value is null" do
+      let(:entitlements_params) { {"seats" => nil} }
+
+      it "adds the entitlement with no values, as before" do
+        expect(result).to be_success
+        expect(plan.entitlements.count).to eq(1)
+        expect(plan.entitlements.first.values).to be_empty
+      end
+    end
+
     it "creates entitlements for the plan" do
       expect { result }.to change { plan.entitlements.count }.by(1)
     end

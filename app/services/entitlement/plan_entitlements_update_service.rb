@@ -262,6 +262,7 @@ module Entitlement
         path = :"entitlements.#{feature_code}"
         validate_privilege_values_shape!(path, privilege_values)
         feature = features_by_code[feature_code] || not_found_at!(path, "feature")
+        refuse_null_merge!(path, privilege_values)
 
         # Find existing entitlement or create new one
         entitlement = entitlements_by_feature_id[feature.id]
@@ -279,6 +280,14 @@ module Entitlement
     # The privilege values of a feature are a map of privilege codes to values, or empty for none.
     def validate_privilege_values_shape!(path, privilege_values)
       return if privilege_values.blank? || privilege_values.is_a?(Hash)
+
+      result.single_validation_failure!(field: path, error_code: "value_is_invalid").raise_if_error!
+    end
+
+    # Only the merge of a catalog plan (native v2): a null feature value is refused, not read as an empty map.
+    # A replace, a legacy plan and the GraphQL mutations keep accepting it.
+    def refuse_null_merge!(path, privilege_values)
+      return unless catalog_plan? && partial? && privilege_values.nil?
 
       result.single_validation_failure!(field: path, error_code: "value_is_invalid").raise_if_error!
     end

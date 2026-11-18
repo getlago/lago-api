@@ -392,6 +392,16 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       end
     end
 
+    context "when a feature value is null on a legacy plan" do
+      let(:new_feature) { create(:feature, organization:, code: "storage") }
+      let(:entitlements_params) { {new_feature.code => nil} }
+
+      it "adds the entitlement with no values, as before" do
+        expect(result).to be_success
+        expect(plan.entitlements.find_by(feature: new_feature).values).to be_empty
+      end
+    end
+
     context "when another unique index refuses the write" do
       let(:new_feature) { create(:feature, organization:, code: "storage") }
       let(:entitlements_params) { {new_feature.code => {}} }
