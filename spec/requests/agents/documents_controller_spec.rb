@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Agents::DocumentsController, :premium do
   subject { get("/agents/v1/#{storefront_id}/AUTH.md") }
 
-  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront]) }
+  let(:organization) { create(:organization, premium_integrations: %w[agent_storefront], feature_flags: %w[agent_storefront]) }
   let(:storefront) { create(:agent_storefront_integration, organization:) }
   let(:storefront_id) { storefront.id }
 
