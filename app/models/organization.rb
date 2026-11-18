@@ -260,6 +260,10 @@ class Organization < ApplicationRecord
     License.premium? && feature_flag_enabled?(:x402_payments)
   end
 
+  def agent_storefront_enabled?
+    License.premium? && premium_integrations.include?("agent_storefront") && feature_flag_enabled?(:agent_storefront)
+  end
+
   def using_lifetime_usage?
     lifetime_usage_enabled? || progressive_billing_enabled?
   end
