@@ -52,7 +52,11 @@ module UsageMonitoring
       end
 
       def cast_thresholds
-        thresholds.map { it.merge(value: BigDecimal(it[:value].to_s).round(5)) }
+        thresholds.map do
+          value = BigDecimal(it[:value].to_s).round(5)
+          # -0 equals 0 but hashes apart, so the duplicate check would keep both
+          it.merge(value: value.zero? ? BigDecimal(0) : value)
+        end
       end
     end
   end

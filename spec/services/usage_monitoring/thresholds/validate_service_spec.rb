@@ -109,6 +109,16 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
     end
   end
 
+  ["-0", -0.0, "-0.000001"].each do |value|
+    context "with 0 and #{value.inspect}" do
+      let(:thresholds) { [{value: 0}, {value:}] }
+
+      it "returns duplicate_threshold_values" do
+        expect(result.error.messages).to eq({thresholds: ["duplicate_threshold_values"]})
+      end
+    end
+  end
+
   context "with the same value once recurring and once not" do
     let(:thresholds) { [{value: 2000}, {value: 2000, recurring: true}] }
 
