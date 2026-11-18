@@ -7,7 +7,9 @@ module Types
 
       description "Current Organization Type"
 
-      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false, method: :effective_activation_status
+      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false, method: :effective_activation_status,
+        description: "Always active when reachable: an organization waiting for a payment method is refused with " \
+          "organization_inactive. Clients read the waiting status from currentUser."
       field :id, ID, null: false
       field :logo_url, String
       field :name, String, null: false

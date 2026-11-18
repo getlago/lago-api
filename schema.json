@@ -24365,7 +24365,7 @@
             },
             {
               "name": "activationStatus",
-              "description": null,
+              "description": "Always active when reachable: an organization waiting for a payment method is refused with organization_inactive. Clients read the waiting status from currentUser.",
               "args": [],
               "type": {
                 "kind": "NON_NULL",
