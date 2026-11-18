@@ -51,9 +51,9 @@ describe PlanWallets::UpdateService do
   context "when the wallet template does not exist" do
     let(:plan_wallet) { nil }
 
-    it "returns a wallet not found failure" do
+    it "returns a plan wallet not found failure" do
       expect(result).not_to be_success
-      expect(result.error.resource).to eq("wallet")
+      expect(result.error.resource).to eq("plan_wallet")
     end
   end
 
@@ -67,9 +67,9 @@ describe PlanWallets::UpdateService do
       PlanWallets::DestroyService.call!(plan_wallet:)
     end
 
-    it "returns a wallet not found failure and changes nothing" do
+    it "returns a plan wallet not found failure and changes nothing" do
       expect(result).not_to be_success
-      expect(result.error.resource).to eq("wallet")
+      expect(result.error.resource).to eq("plan_wallet")
       expect(plan_wallet.reload.code).to eq("ai_credits")
     end
   end

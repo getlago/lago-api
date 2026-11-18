@@ -20,7 +20,7 @@ module PlanWallets
     end
 
     def call
-      return result.not_found_failure!(resource: "wallet") unless plan_wallet
+      return result.not_found_failure!(resource: "plan_wallet") unless plan_wallet
 
       if params.key?(:rate_amount)
         return result.single_validation_failure!(field: :rate_amount, error_code: "not_supported")
@@ -39,7 +39,7 @@ module PlanWallets
       end
 
       plan_wallet.with_lock do
-        return result.not_found_failure!(resource: "wallet") if plan_wallet.discarded?
+        return result.not_found_failure!(resource: "plan_wallet") if plan_wallet.discarded?
 
         # Contracts find their wallet by the template's code, so it freezes with the first contract.
         if code_change_requested? && catalog_plan.attached_to_contracts?
