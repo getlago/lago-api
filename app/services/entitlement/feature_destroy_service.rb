@@ -17,13 +17,16 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
-      plans = feature.plans.to_a
+      plans = []
 
       ActiveRecord::Base.transaction do
         # Serializes with Entitlement::PrivilegeCreateService, so no kept privilege is added to a discarded feature.
         feature.lock!
         return result.not_found_failure!(resource: "feature") if feature.discarded?
 
+        # Read under the lock to include plans of writes committed while waiting, and before the
+        # entitlements are discarded, as feature.plans goes through kept entitlements.
+        plans = feature.plans.to_a
         feature.entitlement_values.discard_all!
         feature.entitlements.discard_all!
         feature.privileges.discard_all!

@@ -339,6 +339,35 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("feature_not_found")
       end
+
+      context "when the subscription has entitlements that the replace would remove" do
+        let(:plan_entitlement) { create(:entitlement, organization:, plan:, feature:) }
+        let(:sub_entitlement) { create(:entitlement, organization:, plan: nil, subscription:, feature: feature2) }
+        let(:sub_value) { create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege2, value: "10", organization:) }
+
+        before do
+          plan_entitlement
+          sub_value
+        end
+
+        it "stores nothing" do
+          expect(result).not_to be_success
+          expect(result.error.error_code).to eq("feature_not_found")
+          expect(Entitlement::SubscriptionFeatureRemoval.where(subscription:).count).to eq(0)
+          expect(sub_entitlement.reload.deleted_at).to be_nil
+          expect(sub_value.reload.deleted_at).to be_nil
+          expect(SendWebhookJob).not_to have_been_enqueued
+          expect(Utils::ActivityLog).not_to have_produced("subscription.updated")
+        end
+
+        # The features are locked before the removals start, so a missing one fails before any entitlement write.
+        it "fails before writing the removals" do
+          allow(Entitlement::SubscriptionFeatureRemoval).to receive(:create!).and_call_original
+
+          expect(result.error.error_code).to eq("feature_not_found")
+          expect(Entitlement::SubscriptionFeatureRemoval).not_to have_received(:create!)
+        end
+      end
     end
 
     context "when privilege does not exist" do

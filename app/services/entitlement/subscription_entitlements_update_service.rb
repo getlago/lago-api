@@ -24,6 +24,7 @@ module Entitlement
 
       ActiveRecord::Base.transaction do
         lock_subscription!(subscription)
+        @features_by_code = lock_features!(entitlements_params.keys)
         remove_or_delete_missing_features if full?
         update_entitlements
       end
@@ -54,7 +55,7 @@ module Entitlement
 
     private
 
-    attr_reader :subscription, :entitlements_params, :partial
+    attr_reader :subscription, :entitlements_params, :partial, :features_by_code
     delegate :organization, to: :subscription
     alias_method :partial?, :partial
 
@@ -91,16 +92,6 @@ module Entitlement
 
       plan = subscription.plan.parent || subscription.plan
 
-      features_by_code = organization.features
-        .where(code: entitlements_params.keys)
-        .includes(:privileges)
-        .index_by(&:code)
-
-      # NOTE: Some feature code were not found
-      if features_by_code.size != entitlements_params.size
-        return result.not_found_failure!(resource: "feature")
-      end
-
       feature_ids = features_by_code.values.map(&:id)
 
       plan_entitlements_by_feature_id = plan.entitlements
@@ -114,7 +105,7 @@ module Entitlement
         .index_by(&:entitlement_feature_id)
 
       entitlements_params.each do |feature_code, privilege_params|
-        feature = features_by_code[feature_code]
+        feature = features_by_code.fetch(feature_code)
 
         SubscriptionEntitlementCoreUpdateService.call!(
           subscription:,

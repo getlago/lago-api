@@ -28,6 +28,7 @@ module Entitlement
     def call
       ActiveRecord::Base.transaction do
         lock_plan!(plan)
+        @features_by_code = lock_features!(entitlements_params.keys)
         delete_missing_entitlements unless partial?
         update_entitlements
       end
@@ -59,7 +60,7 @@ module Entitlement
 
     private
 
-    attr_reader :organization, :plan, :entitlements_params, :partial, :send_webhook
+    attr_reader :organization, :plan, :entitlements_params, :partial, :send_webhook, :features_by_code
     alias_method :partial?, :partial
 
     def delete_missing_entitlements
@@ -77,20 +78,13 @@ module Entitlement
     def update_entitlements
       return if entitlements_params.blank?
 
-      features_by_code = organization.features
-        .where(code: entitlements_params.keys)
-        .includes(:privileges)
-        .index_by(&:code)
-
       entitlements_by_feature_id = plan.entitlements
         .where(entitlement_feature_id: features_by_code.values.map(&:id))
         .includes(:values)
         .index_by(&:entitlement_feature_id)
 
       entitlements_params.each do |feature_code, privilege_values|
-        feature = features_by_code[feature_code]
-
-        raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
+        feature = features_by_code.fetch(feature_code)
 
         # Find existing entitlement or create new one
         entitlement = entitlements_by_feature_id[feature.id]
