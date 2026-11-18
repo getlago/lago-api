@@ -26,6 +26,7 @@ module Entitlement
 
         feature.entitlement_values.discard_all!
         feature.entitlements.discard_all!
+        discard_contract_removals
         feature.privileges.discard_all!
         feature.discard!
       end
@@ -48,5 +49,16 @@ module Entitlement
     private
 
     attr_reader :feature
+
+    # Only contract removals are discarded: subscription removals keep their existing behaviour.
+    def discard_contract_removals
+      now = Time.current
+      contract_removals = SubscriptionFeatureRemoval.where(organization_id: feature.organization_id).where.not(contract_id: nil)
+
+      contract_removals
+        .where(entitlement_feature_id: feature.id)
+        .or(contract_removals.where(entitlement_privilege_id: feature.privileges.select(:id)))
+        .update_all(deleted_at: now, updated_at: now) # rubocop:disable Rails/SkipsModelValidations
+    end
   end
 end

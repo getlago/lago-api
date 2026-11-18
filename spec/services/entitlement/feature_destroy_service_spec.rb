@@ -118,6 +118,37 @@ RSpec.describe Entitlement::FeatureDestroyService do
       end
     end
 
+    context "with removals" do
+      let(:contract) { create(:contract, organization:) }
+      let(:other_feature) { create(:feature, organization:) }
+      let(:other_organization_feature) { create(:feature, organization: create(:organization)) }
+      let(:feature_removal) { create(:subscription_feature_removal, :contract, contract:, feature:) }
+      let(:privilege_removal) { create(:subscription_feature_removal, :contract, contract:, privilege: privilege1) }
+      let(:other_feature_removal) { create(:subscription_feature_removal, :contract, contract:, feature: other_feature) }
+      let(:other_organization_removal) { create(:subscription_feature_removal, :contract, feature: other_organization_feature) }
+      let(:subscription_removal) { create(:subscription_feature_removal, feature:) }
+
+      before do
+        feature_removal
+        privilege_removal
+        other_feature_removal
+        other_organization_removal
+        subscription_removal
+      end
+
+      it "discards the contract removals of the feature and of its privileges only" do
+        freeze_time do
+          subject
+
+          expect(feature_removal.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+          expect(privilege_removal.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+          expect(other_feature_removal.reload.deleted_at).to be_nil
+          expect(other_organization_removal.reload.deleted_at).to be_nil
+          expect(subscription_removal.reload.deleted_at).to be_nil
+        end
+      end
+    end
+
     context "when feature is attached to a plan" do
       let(:entitlement) { create(:entitlement, feature:) }
       let(:privilege1_value) { create(:entitlement_value, entitlement:, privilege: privilege1, value: 10) }
