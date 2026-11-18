@@ -17,6 +17,7 @@ module Agents
       def call
         return invalid_claim_code unless claim
         return result.single_validation_failure!(error_code: "registration_inactive") unless claim.registration.active?
+        return result.single_validation_failure!(error_code: "enrollment_required") unless claim.registration.customer
         return result.single_validation_failure!(field: :email, error_code: "invalid_email_format") unless valid_email?
         # Counted once the code is good, so bogus codes sent with someone's address cannot use up their mailbox budget.
         return result.not_allowed_failure!(code: "too_many_requests") if mailbox_throttled?
