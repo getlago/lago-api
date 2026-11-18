@@ -45,9 +45,22 @@ describe Api::V2::PlanWalletsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:wallets].map { it[:lago_id] }).to eq([plan_wallet.id])
-      expect(json[:wallets].sole.keys).to eq(flat_keys)
+      expect(json[:plan_wallets].map { it[:lago_id] }).to eq([plan_wallet.id])
+      expect(json[:plan_wallets].sole.keys).to eq(flat_keys)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "when another organization has a plan with the same code" do
+      let(:other_plan) { create(:catalog_plan, organization: create(:organization), code: "pro") }
+
+      before { create(:plan_wallet, organization: other_plan.organization, catalog_plan: other_plan, code: "foreign") }
+
+      it "leaves its wallet templates out" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan_wallets].map { it[:code] }).to eq(["ai_credits"])
+      end
     end
 
     context "when a wallet template has selectors", :bullet do
@@ -65,7 +78,7 @@ describe Api::V2::PlanWalletsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallets].sole[:applies_to][:include].map { it[:type] }).to match_array(%w[fee_type product product_category product_filters])
+        expect(json[:plan_wallets].sole[:applies_to][:include].map { it[:type] }).to match_array(%w[fee_type product product_category product_filters])
       end
     end
 
@@ -79,20 +92,21 @@ describe Api::V2::PlanWalletsController do
       end
     end
 
-    it_behaves_like "a cursor paginated v2 endpoint", collection: :wallets, model: PlanWallet do
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :plan_wallets, model: PlanWallet do
       let(:paginated_path) { "/api/v2/plans/#{catalog_plan.code}/wallets" }
       let(:create_paginated_record) { ->(created_at) { create(:plan_wallet, organization:, catalog_plan:, created_at:) } }
     end
 
-    it_behaves_like "a v2 list filtered on created_at", collection: :wallets do
+    it_behaves_like "a v2 list filtered on created_at", collection: :plan_wallets do
       let(:filtered_path) { "/api/v2/plans/#{catalog_plan.code}/wallets" }
       let(:create_filtered_record) { ->(created_at) { create(:plan_wallet, organization:, catalog_plan:, created_at:) } }
     end
   end
 
   describe "GET /api/v2/plans/:plan_code/wallets/:code" do
-    subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/wallets/#{code}", query) }
+    subject { get_with_token(organization, "/api/v2/plans/#{plan_code}/wallets/#{code}", query) }
 
+    let(:plan_code) { catalog_plan.code }
     let(:code) { plan_wallet.code }
     let(:query) { {} }
 
@@ -103,11 +117,11 @@ describe Api::V2::PlanWalletsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:wallet]).to include(
+      expect(json[:plan_wallet]).to include(
         lago_id: plan_wallet.id, plan_code: "pro", code: "ai_credits", currency: "USD",
         tax_application: "tax_on_consumption", priority: 10, applies_to: {include: []}, deleted_at: nil
       )
-      expect(json[:wallet].keys).to eq(flat_keys)
+      expect(json[:plan_wallet].keys).to eq(flat_keys)
     end
 
     context "when the wallet template has selectors", :bullet do
@@ -126,7 +140,7 @@ describe Api::V2::PlanWalletsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallet][:applies_to][:include].map { it[:type] }).to match_array(%w[product product product_category product_filters])
+        expect(json[:plan_wallet][:applies_to][:include].map { it[:type] }).to match_array(%w[product product product_category product_filters])
       end
     end
 
@@ -143,9 +157,9 @@ describe Api::V2::PlanWalletsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:wallet].keys).to eq(flat_keys + %i[taxes metadata])
-        expect(json[:wallet][:taxes].map { it[:code] }).to eq(["vat_20"])
-        expect(json[:wallet][:metadata]).to eq(team: "growth")
+        expect(json[:plan_wallet].keys).to eq(flat_keys + %i[taxes metadata])
+        expect(json[:plan_wallet][:taxes].map { it[:code] }).to eq(["vat_20"])
+        expect(json[:plan_wallet][:metadata]).to eq(team: "growth")
       end
     end
 
@@ -155,7 +169,7 @@ describe Api::V2::PlanWalletsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_v2_not_found_error("wallet")
+        expect(response).to be_v2_not_found_error("plan_wallet")
       end
     end
 
@@ -165,7 +179,40 @@ describe Api::V2::PlanWalletsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_v2_not_found_error("wallet")
+        expect(response).to be_v2_not_found_error("plan_wallet")
+      end
+    end
+
+    context "when it is deleted" do
+      let(:code) { create(:plan_wallet, organization:, catalog_plan:, code: "old", deleted_at: Time.current).code }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("plan_wallet")
+      end
+    end
+
+    context "when the plan does not exist" do
+      let(:plan_code) { "unknown" }
+
+      it "returns a not found error on the wallet template" do
+        subject
+
+        expect(response).to be_v2_not_found_error("plan_wallet")
+      end
+    end
+
+    context "when it belongs to a plan of another organization with the same code" do
+      let(:other_plan) { create(:catalog_plan, organization: create(:organization), code: "pro") }
+      let(:code) { create(:plan_wallet, organization: other_plan.organization, catalog_plan: other_plan, code: "foreign").code }
+
+      before { catalog_plan }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("plan_wallet")
       end
     end
   end
