@@ -491,6 +491,18 @@ RSpec.describe Customers::UpdateService do
       end
     end
 
+    context "with a provider customer id but no payment provider" do
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:update_args) { {name: "Foo Bar", provider_customer: {provider_customer_id: "cus_12345"}} }
+
+      it "updates the customer without a provider customer" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(result.customer).to have_attributes(name: "Foo Bar", payment_provider: nil, provider_customer: nil)
+      end
+    end
+
     context "when removing payment provider" do
       let(:stripe_provider) { create(:stripe_provider, organization:, code: payment_provider_code) }
       let(:customer) do
@@ -1020,7 +1032,7 @@ RSpec.describe Customers::UpdateService do
           last_dunning_campaign_attempt_at: 2.days.ago
         )
       end
-      let(:dunning_campaign) { create(:dunning_campaign) }
+      let(:dunning_campaign) { create(:dunning_campaign, organization:) }
 
       let(:update_args) do
         {
@@ -1067,6 +1079,22 @@ RSpec.describe Customers::UpdateService do
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
           expect(customers_service.call).to be_success
+        end
+
+        context "when the dunning campaign belongs to another organization" do
+          let(:dunning_campaign) { create(:dunning_campaign, organization: create(:organization)) }
+
+          it "returns a not found failure and does not apply the campaign" do
+            result = nil
+
+            expect { result = customers_service.call }
+              .to not_change { customer.reload.applied_dunning_campaign_id }
+              .and not_change { customer.reload.exclude_from_dunning_campaign }
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq("dunning_campaign_not_found")
+          end
         end
 
         context "with exclude from dunning campaign" do

@@ -5,10 +5,21 @@ module Events
     # Answers from the pre-aggregated usage buckets the aggregations they cover, and delegates the
     # rest to the store it wraps.
     class UsageBucketStore < SimpleDelegator
-      def initialize(store, usage_buckets:, charge_id:, charge_filter_id:)
+      # A snapshot this close before the window is the one of the subscription's previous period:
+      # its `to_datetime` is the last microsecond of that period.
+      ADJACENT_SNAPSHOT_GAP = 1.second
+
+      # `recurring` charges sum every period since the subscription started: the buckets only answer
+      # the window opening at `charges_from_datetime`, on top of the snapshot of the period before it.
+      # `late_events_scan` reads the late events of every filter of the charge at once (see ChargeFiltersScan).
+      def initialize(store, usage_buckets:, charge_id:, charge_filter_id:, recurring: false, charges_from_datetime: nil,
+        late_events_scan: nil)
         @usage_buckets = usage_buckets
         @charge_id = charge_id
         @charge_filter_id = charge_filter_id
+        @recurring = recurring
+        @charges_from_datetime = charges_from_datetime
+        @late_events_scan = late_events_scan
 
         super(store)
       end
@@ -21,12 +32,67 @@ module Events
         aggregation_result
       end
 
+      # Without a snapshot, the window alone would be served as the recurring total.
       def sum(with_count: true)
+        return events_fallback { super } if recurring
+
         aggregation_result
       end
 
       def sum_precise_total_amount_cents
+        return events_fallback { super } if recurring
+
         usage_buckets.precise_total_amount_cents_for(charge_id:, charge_filter_id:)
+      end
+
+      # Current usage persists no snapshot, so the result carries no snapshot units.
+      def recurring_sum(watermark:, period: nil)
+        return events_fallback { super } if recurring_fallback_reason(period)
+
+        BaseStore::RecurringAggregationResult.new(
+          value: aggregation_result.value,
+          snapshot_value: 0,
+          events_count: aggregation_result.events_count,
+          snapshot_events_count: 0
+        )
+      end
+
+      def grouped_recurring_sum(watermark:, period: nil)
+        return events_fallback { super } if recurring_fallback_reason(period)
+
+        grouped_aggregation_results.map do |result|
+          BaseStore::GroupedRecurringAggregationResult.new(
+            groups: result.groups,
+            value: result.value,
+            snapshot_value: 0,
+            events_count: result.events_count,
+            snapshot_events_count: 0
+          )
+        end
+      end
+
+      # Why the delta from `period` must come from the events: a late ingestion is an event the
+      # snapshot missed, and a re-send one it holds, maybe in another filter. Snapshots the buckets can
+      # never complete are refused by the Provider. The events tell it, not the buckets: their ingestion
+      # time is not the one the watermark bounds.
+      def recurring_fallback_reason(period)
+        if period.nil?
+          "no_period"
+        elsif !adjacent?(period)
+          "not_adjacent"
+        elsif late_ingestion?(period)
+          "late_ingestion"
+        elsif resent_for_fallback?(period)
+          "resent_after_watermark"
+        end
+      end
+
+      # Asked again by the recurring reads of the same period
+      def late_ingestion?(period)
+        @late_ingestion ||= {}
+        @late_ingestion.fetch(period) do
+          @late_ingestion[period] = late_events_scanned? ? late_events_scan.late_ingestion?(__getobj__, period) : super
+        end
       end
 
       def max(with_count: true)
@@ -49,11 +115,15 @@ module Events
 
       def grouped_sum(columns = nil, with_count: true)
         return super if columns
+        # Without columns, so the wrapped store groups on its own keys rather than on nil.
+        return events_fallback { __getobj__.grouped_sum(with_count:) } if recurring
 
         grouped_aggregation_results
       end
 
       def grouped_sum_precise_total_amount_cents
+        return events_fallback { super } if recurring
+
         usage_buckets.grouped_precise_total_amount_cents_for(charge_id:, charge_filter_id:)
       end
 
@@ -71,7 +141,39 @@ module Events
 
       private
 
-      attr_reader :usage_buckets, :charge_id, :charge_filter_id
+      attr_reader :usage_buckets, :charge_id, :charge_filter_id, :recurring, :charges_from_datetime, :late_events_scan
+
+      # Asked again by the recurring reads of the same period. Only the fallback reason reads it: a delta read from
+      # the events asks the store it wraps after reading it (see SumService#resent_after_watermark?), as a copy
+      # re-sent in between would be counted twice.
+      def resent_for_fallback?(period)
+        @resent_for_fallback ||= {}
+        @resent_for_fallback.fetch(period) do
+          @resent_for_fallback[period] = if late_events_scanned?
+            late_events_scan.resent_after_watermark?(__getobj__, period)
+          else
+            __getobj__.resent_after_watermark?(period)
+          end
+        end
+      end
+
+      def late_events_scanned?
+        late_events_scan.present? && !grouped_by_values? && late_events_scan.covers_late_events?(__getobj__)
+      end
+
+      # The parity comparison would otherwise compare the events with themselves and report a match:
+      # its decision and its bucket run read the buckets apart, so a late ingestion can land between.
+      def events_fallback
+        raise RealtimeUsage::RecurringFallbackError, "charge #{charge_id} fell back to the events" if RealtimeUsage.forced_gate?
+
+        yield
+      end
+
+      def adjacent?(period)
+        gap = charges_from_datetime - period.to_datetime
+
+        gap.positive? && gap <= ADJACENT_SNAPSHOT_GAP
+      end
 
       def aggregation_result
         usage_buckets.aggregation_result_for(charge_id:, charge_filter_id:)

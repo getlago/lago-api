@@ -16,6 +16,7 @@ RSpec.shared_examples "a subscription index endpoint" do
     expect(response).to have_http_status(:success)
     expect(json[:subscriptions].count).to eq(1)
     expect(json[:subscriptions].first[:lago_id]).to eq(subscription.id)
+    expect(json[:subscriptions].first[:billing_entity_code]).to eq(customer.billing_entity.code)
   end
 
   context "with next and previous subscriptions" do
@@ -216,14 +217,15 @@ RSpec.shared_examples "a subscription index endpoint" do
 
   context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
     before do
-      create(:subscription, customer:, plan: create(:plan, organization:))
+      billing_entity = create(:billing_entity, organization:)
+      create(:subscription, customer:, plan: create(:plan, organization:), billing_entity:)
 
       prev = create(:subscription, customer:, plan: create(:plan, organization:), status: :terminated)
       nxt = create(:subscription, customer:, plan: create(:plan, organization:), status: :pending)
       subscription.update!(previous_subscription: prev, next_subscriptions: [nxt])
     end
 
-    it "does not trigger N+1 queries on plan, customer, or related subscriptions" do
+    it "does not trigger N+1 queries on plan, billing entity, customer, or related subscriptions" do
       subject
 
       expect(response).to have_http_status(:success)

@@ -160,6 +160,50 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
+      context "when subscriptions resolve to different payment terms" do
+        let(:customer) { create(:customer, organization:, billing_entity:) }
+        let(:plan1) { create(:plan, organization:, interval: "monthly") }
+        let(:plan2) { create(:plan, organization:, interval: "monthly") }
+        let(:subscriptions) { [subscription1, subscription2] }
+        let(:subscription1) do
+          create(:subscription, plan: plan1, customer:, subscription_at: timestamp, started_at: timestamp, created_at: timestamp, billing_time: "calendar", payment_term: {term_type: "net", days: 30})
+        end
+        let(:subscription2) do
+          create(:subscription, plan: plan2, customer:, subscription_at: timestamp, started_at: timestamp, created_at: timestamp, billing_time: "calendar", payment_term: {term_type: "end_of_month"})
+        end
+
+        before { organization.update!(premium_integrations: ["preview"]) }
+
+        it "returns a validation error" do
+          travel_to(timestamp + 5.days) do
+            result = preview_service.call
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:base]).to include("subscription_payment_terms_do_not_match")
+          end
+        end
+
+        context "when the terms share a grouping key" do
+          let(:subscription1) do
+            create(:subscription, plan: plan1, customer:, subscription_at: timestamp, started_at: timestamp, created_at: timestamp, billing_time: "calendar", payment_term: {term_type: "net", days: 0})
+          end
+          let(:subscription2) do
+            create(:subscription, plan: plan2, customer:, subscription_at: timestamp, started_at: timestamp, created_at: timestamp, billing_time: "calendar", payment_term: {term_type: "due_on_receipt"})
+          end
+
+          it "previews one invoice for both subscriptions" do
+            travel_to(timestamp + 5.days) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions.map(&:id)).to match_array([subscription1.id, subscription2.id])
+              expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 0)
+              expect(result.invoice.payment_term_source).to eq("subscription")
+            end
+          end
+        end
+      end
+
       context "with a customer payment term" do
         let(:customer) { build(:customer, organization:, billing_entity:, payment_term: {term_type: "net", days: 5}, net_payment_term: 5) }
 
@@ -198,6 +242,32 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
             expect(result.invoice.billing_entity).to eq(other_billing_entity)
             expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
             expect(result.invoice.payment_term_source).to eq("billing_entity")
+          end
+        end
+      end
+
+      context "with a subscription payment term overriding the customer's" do
+        let(:customer) { build(:customer, organization:, billing_entity:, payment_term: {term_type: "net", days: 5}, net_payment_term: 5) }
+        let(:subscription) do
+          build(
+            :subscription,
+            customer:,
+            plan:,
+            billing_time:,
+            subscription_at: timestamp,
+            started_at: timestamp,
+            created_at: timestamp,
+            payment_term: {"term_type" => "end_of_month"}
+          )
+        end
+
+        it "stamps the subscription term" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+            expect(result.invoice.payment_term_source).to eq("subscription")
+            expect(result.invoice.payment_due_date).to eq(result.invoice.issuing_date.end_of_month)
           end
         end
       end

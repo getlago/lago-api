@@ -37,6 +37,8 @@ module Types
     field :contract, resolver: Resolvers::ContractResolver
     field :contract_applied_rate_card, resolver: Resolvers::ContractAppliedRateCardResolver
     field :contract_applied_rate_cards, resolver: Resolvers::ContractAppliedRateCardsResolver
+    field :contract_current_usage_total, resolver: Resolvers::ContractCurrentUsageTotalResolver
+    field :contract_usages, resolver: Resolvers::ContractUsagesResolver
     field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
@@ -130,6 +132,8 @@ module Types
     field :selectable_billable_metrics, resolver: Resolvers::SelectableBillableMetricsResolver
     field :selectable_plans, resolver: Resolvers::SelectablePlansResolver
     field :signup_email_check, resolver: Resolvers::Signups::EmailCheckResolver
+    field :signup_status, resolver: Resolvers::Signups::StatusResolver
+    field :signup_verification, resolver: Resolvers::Signups::VerificationResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscription_alert, resolver: Resolvers::Subscriptions::AlertResolver
     field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver

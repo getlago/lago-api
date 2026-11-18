@@ -21,6 +21,7 @@ module Auth
         check_userinfo(result.email)
 
         return login_method_not_authorized_failure unless integration_organization_allows_login_method?
+        return result.forbidden_failure!(code: "sandbox_managed_by_production") if sandbox_refuses_new_member?
 
         find_or_create_user
         return login_method_not_authorized_failure unless user_trusted_by_integration?(result.user)
@@ -32,6 +33,10 @@ module Auth
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)
         result
+      rescue BaseLockService::FailedToAcquireLock
+        result.lock_acquisition_failure!(message: "email lock not acquired")
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
       end
 
       private
@@ -54,19 +59,25 @@ module Auth
       #       invited address creates a second user with no role. An exact match wins, then the
       #       oldest case-insensitive match.
       def find_or_create_user
-        user = User.find_by(email: result.email) ||
-          User.where("LOWER(email) = ?", result.email.downcase).order(:created_at).first
-
-        if user.nil?
-          user = User.new(email: result.email, password: SecureRandom.hex(16))
-          user.save!
-        end
-
-        result.user = user
+        result.user = find_user || create_user
       end
 
-      def find_or_create_membership
-        result.user.memberships.find_or_create_by(organization_id: result.entra_id_integration.organization_id)
+      def find_user
+        User.lookup_by_email(result.email)
+      end
+
+      # Under the email lock, as every user creation, which also ends the address's open self-serve signups.
+      def create_user
+        user = User.new(email: result.email, password: SecureRandom.hex(16)) # bcrypt runs here, outside the lock
+
+        Users::EmailLockService.call(email: result.email) do
+          existing_user = find_user
+          next existing_user if existing_user
+
+          user.save!
+          Signups::CloseAttemptsService.call!(normalized_email: PendingSignup.normalize_email(result.email))
+          user
+        end.value
       end
     end
   end

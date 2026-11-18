@@ -15,12 +15,13 @@ module Utils
         ENV["LAGO_KAFKA_API_LOGS_TOPIC"].present?
     end
 
-    def initialize(request, response, organization:, filtered_params: [], &block)
+    def initialize(request, response, organization:, filtered_params: [], filtered_response: [], &block)
       @request = request
       @response = response
       @organization = organization
       @request_id = request.request_id.presence || SecureRandom.uuid
       @filtered_params = filtered_params
+      @filtered_response = filtered_response
       @block = block
     end
 
@@ -38,7 +39,7 @@ module Utils
 
     private
 
-    attr_reader :request, :response, :organization, :request_id, :filtered_params, :block
+    attr_reader :request, :response, :organization, :request_id, :filtered_params, :filtered_response, :block
 
     def key
       "#{organization.id}--#{request_id}"
@@ -83,9 +84,15 @@ module Utils
 
     def response_data
       {
-        request_response: response.body.present? ? JSON.parse(response.body) : nil,
+        request_response: response.body.present? ? mask_response(JSON.parse(response.body)) : nil,
         http_status: response.status
       }
+    end
+
+    # Anchored regexps match the exact key name; filter_param also walks a top-level array.
+    def mask_response(value)
+      ActiveSupport::ParameterFilter.new(filtered_response.map { /\A#{Regexp.escape(it.to_s)}\z/ })
+        .filter_param(nil, value)
     end
 
     def api_version
