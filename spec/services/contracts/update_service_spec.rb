@@ -335,6 +335,50 @@ RSpec.describe Contracts::UpdateService do
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.deleted", any_args)
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.created", any_args)
     end
+
+    context "when the contract has a wallet from its previous plan" do
+      let(:old_wallet) { create(:catalog_wallet, organization:, contract:, customer:, code: "ai_credits") }
+      let(:old_allocation) { create(:catalog_wallet_credit_allocation, organization:, catalog_wallet: old_wallet) }
+
+      before { old_allocation }
+
+      it "discards the wallet along with its rules" do
+        expect(result).to be_success
+
+        expect(old_wallet.reload).to be_discarded
+        expect(old_allocation.reload).to be_discarded
+        expect(contract.reload.wallets).to be_empty
+      end
+
+      context "when the new plan has a wallet template" do
+        let(:plan_wallet) { create(:plan_wallet, organization:, catalog_plan: other_plan, code: "ai_credits") }
+
+        before { create(:plan_wallet_credit_allocation, organization:, plan_wallet:, code: "monthly_allowance") }
+
+        it "gives the contract the new plan's wallet only" do
+          expect(result).to be_success
+
+          wallet = contract.reload.wallets.sole
+          expect(wallet).not_to eq(old_wallet)
+          expect(wallet).to have_attributes(code: "ai_credits", customer:)
+          expect(wallet.credit_allocations.sole.code).to eq("monthly_allowance")
+        end
+      end
+    end
+
+    context "when the plan is removed" do
+      let(:params) { {plan_code: nil} }
+      let(:wallet) { create(:catalog_wallet, organization:, contract:, customer:) }
+
+      before { wallet }
+
+      it "discards the contract's wallets" do
+        expect(result).to be_success
+
+        expect(contract.reload.catalog_plan).to be_nil
+        expect(wallet.reload).to be_discarded
+      end
+    end
   end
 
   context "when moving the start of a pending contract" do
@@ -509,6 +553,21 @@ RSpec.describe Contracts::UpdateService do
     it "accepts the edit" do
       expect(result).to be_success
       expect(contract.reload.name).to eq("Renamed")
+    end
+
+    context "when the contract has a wallet" do
+      let(:wallet) { create(:catalog_wallet, organization:, contract:, customer:) }
+
+      before do
+        wallet
+        create(:plan_wallet, organization:, catalog_plan:)
+      end
+
+      it "keeps the contract's wallets as they are" do
+        expect(result).to be_success
+
+        expect(contract.reload.wallets).to eq([wallet])
+      end
     end
   end
 
