@@ -7,10 +7,7 @@ module Api
 
       cursor_paginated_index(PlanWallet)
       date_range_filtered_index(:created_at)
-      serializable_with ::V2::PlanWalletSerializer, root: :wallet
-
-      # What a selector renders its target from.
-      SELECTOR_TARGETS = [:product_category, :product, {product_filter: :product}].freeze
+      serializable_with ::V2::PlanWalletSerializer
 
       UNFILTERED_PARAMS = %i[tax_codes applies_to metadata].freeze
 
@@ -45,11 +42,11 @@ module Api
       end
 
       def show
-        plan_wallet = plan_wallets&.includes(selectors: SELECTOR_TARGETS)&.find_by(code: params[:code])
+        plan_wallet = plan_wallets&.includes(selectors: ::V2::PlanWalletSerializer::SELECTOR_TARGETS)&.find_by(code: params[:code])
 
-        return not_found_error(resource: "wallet") unless plan_wallet
+        return not_found_error(resource: "plan_wallet") unless plan_wallet
 
-        render_wallet(plan_wallet)
+        render_plan_wallet(plan_wallet)
       end
 
       def index
@@ -62,8 +59,8 @@ module Api
         )
 
         if result.success?
-          render_wallets(
-            result.plan_wallets.includes(:catalog_plan, selectors: SELECTOR_TARGETS)
+          render_plan_wallets(
+            result.plan_wallets.includes(:catalog_plan, selectors: ::V2::PlanWalletSerializer::SELECTOR_TARGETS)
           )
         else
           render_error_response(result)
