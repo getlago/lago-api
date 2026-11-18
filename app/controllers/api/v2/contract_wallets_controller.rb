@@ -5,10 +5,44 @@ module Api
     class ContractWalletsController < Api::V2::BaseController
       include Api::RequiresCatalogWallets
       include Api::V2::ContractLookup
+      include Api::CatalogWalletParams
 
       cursor_paginated_index(CatalogWallet)
       date_range_filtered_index(:created_at)
       serializable_with ::V2::ContractWalletSerializer
+
+      def create
+        result = ::ContractWallets::CreateService.call(
+          contract: find_contract(params[:contract_external_id]),
+          params: contract_wallet_params
+        )
+
+        if result.success?
+          render_contract_wallet(result.contract_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def update
+        result = ::ContractWallets::UpdateService.call(contract_wallet: find_contract_wallet, params: contract_wallet_params)
+
+        if result.success?
+          render_contract_wallet(result.contract_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def destroy
+        result = ::ContractWallets::DestroyService.call(contract_wallet: find_contract_wallet)
+
+        if result.success?
+          render_contract_wallet(result.contract_wallet)
+        else
+          render_error_response(result)
+        end
+      end
 
       def show
         contract_wallet = find_contract_wallet
@@ -40,6 +74,10 @@ module Api
       def find_contract_wallet
         contract = find_contract(params[:contract_external_id])
         contract&.wallets&.find_by(code: params[:code])
+      end
+
+      def contract_wallet_params
+        catalog_wallet_params(:contract_wallet)
       end
 
       def resource_name
