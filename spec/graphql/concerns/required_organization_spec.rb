@@ -106,4 +106,35 @@ RSpec.describe RequiredOrganization do
       expect(result["errors"]).to include hash_including(partial_error)
     end
   end
+
+  context "with a self-serve production organization waiting for a payment method" do
+    include_context "with self-serve enabled"
+
+    let(:organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+    let(:membership) { create(:membership, organization:) }
+
+    let(:result) do
+      RequiredOrganizationSpec::TestApiSchema.execute(
+        mutation,
+        variables: {input: {newName: "new name"}},
+        context: {current_user: membership.user, current_organization: organization, current_membership: membership}
+      )
+    end
+
+    it "refuses the operation" do
+      expect(result["data"]["renameThing"]).to be_nil
+      expect(result["errors"]).to include hash_including(
+        "message" => "forbidden",
+        "extensions" => {"status" => 403, "code" => "organization_inactive"}
+      )
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "runs the operation, as the organization counts as active" do
+        expect(result["data"]["renameThing"]["name"]).to eq("new name")
+      end
+    end
+  end
 end

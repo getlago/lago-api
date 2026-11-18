@@ -17,6 +17,7 @@ module Api
     prepend_before_action :set_beta_header!, if: :api_v2_request?
 
     before_action :authenticate
+    before_action :refuse_inactive_organization
     before_action :set_context_source
     before_action :track_api_key_usage
     before_action :authorize
@@ -44,6 +45,15 @@ module Api
 
       @current_organization = organization
       true
+    end
+
+    # A self-serve production organization waiting for a payment method opens only once billing-accounts activates it.
+    # A cached copy may predate the activation, so the database decides before refusing.
+    def refuse_inactive_organization
+      return unless current_organization.awaiting_payment_method?
+
+      current_organization.reload
+      forbidden_error(code: "organization_inactive") if current_organization.awaiting_payment_method?
     end
 
     def auth_token
