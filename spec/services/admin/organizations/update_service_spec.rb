@@ -27,6 +27,58 @@ RSpec.describe Admin::Organizations::UpdateService do
       expect(organization.premium_integrations).to include("okta")
     end
 
+    describe "API key caches" do
+      before { allow(ApiKeys::CacheService).to receive(:expire_all_cache) }
+
+      it "expires them when the premium integrations change" do
+        update_service.call
+
+        expect(ApiKeys::CacheService).to have_received(:expire_all_cache).with(organization)
+      end
+
+      context "with a rename only" do
+        let(:params) { {name: "FooBar"} }
+
+        it "keeps them" do
+          update_service.call
+
+          expect(ApiKeys::CacheService).not_to have_received(:expire_all_cache)
+        end
+      end
+    end
+
+    context "when the organization has a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+      before { sandbox }
+
+      it "gives the sandbox the same premium integrations" do
+        update_service.call
+
+        expect(sandbox.reload.premium_integrations).to eq(["okta"])
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:organization) { create(:organization, :sandbox) }
+
+      it "refuses premium integrations but accepts a rename" do
+        expect(update_service.call.error.code).to eq("sandbox_managed_by_production")
+        expect(described_class.call(organization: organization.reload, params: {name: "Renamed"})).to be_success
+        expect(organization.reload).to have_attributes(name: "Renamed", premium_integrations: [])
+      end
+
+      context "when the same premium integrations are resubmitted with a rename" do
+        let(:organization) { create(:organization, :sandbox, premium_integrations: %w[okta netsuite]) }
+        let(:params) { {name: "Renamed", premium_integrations: %w[netsuite okta]} }
+
+        it "renames the sandbox" do
+          expect(update_service.call).to be_success
+          expect(organization.reload).to have_attributes(name: "Renamed", premium_integrations: contain_exactly("okta", "netsuite"))
+        end
+      end
+    end
+
     context "when organization is nil" do
       let(:organization) { nil }
 

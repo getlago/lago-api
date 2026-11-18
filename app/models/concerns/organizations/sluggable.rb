@@ -7,7 +7,7 @@ module Organizations
     SLUG_FORMAT = /\A[a-z0-9]([a-z0-9-]*[a-z0-9])?\z/
 
     RESERVED_SLUGS = %w[
-      auth login sign-up forgot-password reset-password invitation verify-email
+      auth login sign-up forgot-password reset-password invitation verify-email create-organization
       customer-portal 404 forbidden api admin graphql webhooks google okta entra
       settings new design-system devtool
       customers customer plans plan invoices invoice subscriptions

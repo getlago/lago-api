@@ -36,26 +36,29 @@ module Invoices
 
         invoice.update!(payment_attempts: invoice.payment_attempts + 1)
 
-        payment ||= Payment.create_with(
-          organization_id: invoice.organization_id,
-          payment_provider_id: current_payment_provider.id,
-          payment_provider_customer_id: current_payment_provider_customer.id,
-          amount_cents: invoice.total_due_amount_cents,
-          amount_currency: invoice.currency,
-          status: "pending",
-          customer_id: invoice.customer_id
-        ).find_or_create_by!(
-          payable: invoice,
-          payable_payment_status: "pending"
-        )
+        payment = Payment.find_or_initialize_by(payable: invoice, payable_payment_status: "pending")
+        payment.status = "pending" if payment.new_record?
 
-        payment.payment_method_id = determine_payment_method&.id
+        # A reused pending payment takes the current provider customer: the stored one may have been
+        # discarded, or the customer may have moved to another provider.
+        payment.assign_attributes(
+          organization_id: invoice.organization_id,
+          customer_id: invoice.customer_id,
+          payment_provider: current_payment_provider,
+          payment_provider_customer: current_payment_provider_customer,
+          payment_method_id: determine_payment_method&.id
+        )
+        # Providers keep the answer of the idempotency key `payment-<id>` for a while, and refuse the same
+        # key with another amount, so the amount only follows the invoice on a new provider customer.
+        if payment.new_record? || payment.payment_provider_customer_id_changed?
+          payment.assign_attributes(amount_cents: invoice.total_due_amount_cents, amount_currency: invoice.currency)
+        end
         payment.save!
 
         result.payment = payment
 
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
-          provider:,
+          provider: current_provider_type,
           payment:,
           reference: payment_reference,
           metadata: {
@@ -131,7 +134,7 @@ module Invoices
       # and double-charge; skip flows that pay synchronously (gated subs, auto wallet top-ups).
       def defer_for_checkout_organization?
         return false unless invoice.payment_attempts.zero?
-        return false if invoice.credit? && skip_credit_invoice_delay?
+        return false if (invoice.credit? || invoice.one_off?) && skip_credit_invoice_delay?
         return false if invoice.subscription? && invoice.subscription_payment_gated?
         return false if non_manual_wallet_topup?
 
@@ -182,6 +185,12 @@ module Invoices
 
       def current_payment_provider
         @current_payment_provider ||= payment_provider(customer)
+      end
+
+      # Unlike `provider`, which can be the type named by the job when it was enqueued, this is the type
+      # of the provider the payment is charged through, set even when `customer.payment_provider` is nil.
+      def current_provider_type
+        current_payment_provider.payment_type.to_sym
       end
 
       def current_payment_provider_customer

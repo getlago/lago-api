@@ -30,6 +30,12 @@ RSpec.describe Auth::AttemptsThrottle do
       expect(described_class.hit!(:password_reset_per_email, "jane-doe@example.com")).to be(true)
     end
 
+    it "counts the Unicode spellings of one address together" do
+      ["jo\u00E3o@example.com", "Joa\u0303o@example.com", "JO\u00C3O@example.com"].each { described_class.hit!(:password_reset_per_email, it) }
+
+      expect(described_class.hit!(:password_reset_per_email, "joa\u0303o@example.com")).to be(true)
+    end
+
     it "keeps rules and identifiers separate" do
       3.times { described_class.hit!(:password_reset_per_email, "user@example.com") }
 
@@ -110,6 +116,16 @@ RSpec.describe Auth::AttemptsThrottle do
         50.times { described_class.hit!(:signup_per_ip_block, "203.0.113.10") }
         expect(described_class.hit!(:signup_per_ip_block, "203.0.113.11")).to be(false)
       end
+    end
+
+    it "counts self-serve login attempts per IPv6 /64 and per IPv4 address" do
+      30.times { described_class.hit!(:login_per_ip_network, "2001:db8:1:2::#{(it + 1).to_s(16)}") }
+
+      expect(described_class.hit!(:login_per_ip_network, "2001:db8:1:2::ffff")).to be(true)
+      expect(described_class.hit!(:login_per_ip_network, "2001:db8:1:3::a")).to be(false)
+
+      30.times { described_class.hit!(:login_per_ip_network, "203.0.113.10") }
+      expect(described_class.hit!(:login_per_ip_network, "203.0.113.11")).to be(false)
     end
 
     it "still counts IPv6 per address for a rule keyed on the IP" do

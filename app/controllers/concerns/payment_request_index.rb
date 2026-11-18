@@ -27,7 +27,10 @@ module PaymentRequestIndex
     if result.success?
       render(
         json: ::CollectionSerializer.new(
-          result.payment_requests.preload(:customer, invoices: :organization),
+          result.payment_requests.preload(
+            customer: ::V1::CustomerSerializer::PRELOADS,
+            invoices: [:organization, :billing_entity]
+          ),
           ::V1::PaymentRequestSerializer,
           collection_name: "payment_requests",
           meta: pagination_metadata(result.payment_requests),

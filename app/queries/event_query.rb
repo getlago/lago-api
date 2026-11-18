@@ -9,6 +9,16 @@ class EventQuery < BaseQuery
     :timestamp
   ]
 
+  def self.event_model(organization:)
+    if !organization.clickhouse_events_store?
+      Event
+    elsif organization.product_events_pipeline?
+      Clickhouse::ProductEventsRaw
+    else
+      Clickhouse::EventsRaw
+    end
+  end
+
   def call
     return result.single_validation_failure!(field: :transaction_id, error_code: "value_is_mandatory") if filters.transaction_id.blank?
 
@@ -43,7 +53,7 @@ class EventQuery < BaseQuery
   end
 
   def event_model
-    clickhouse_events? ? Clickhouse::EventsRaw : Event
+    self.class.event_model(organization:)
   end
 
   def order_column

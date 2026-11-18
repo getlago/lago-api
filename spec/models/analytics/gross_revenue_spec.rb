@@ -232,6 +232,116 @@ RSpec.describe Analytics::GrossRevenue do
         end
       end
     end
+
+    context "with pay_in_advance product fees not invoiced yet", cache: :null do
+      let(:contract_customer) { create(:customer, organization:, external_id: "contract_customer") }
+      let(:contract) { create(:contract, organization:, customer: contract_customer) }
+
+      def create_product_fee(billing_entity:, amount_cents:, currency: "EUR")
+        rate_card = create(:rate_card, :advance, organization:)
+        create(
+          :product_fee,
+          invoice: nil,
+          subscription: nil,
+          organization:,
+          billing_entity:,
+          contract:,
+          contract_rate_card: create(:contract_rate_card, organization:, contract:, rate_card:),
+          rate_card_rate: create(:rate_card_rate, organization:, rate_card:),
+          invoiceable_id: rate_card.product_id,
+          pay_in_advance: true,
+          amount_cents:,
+          amount_currency: currency,
+          created_at: 1.month.ago
+        )
+      end
+
+      before do
+        create_product_fee(billing_entity: billing_entity1, amount_cents: 500)
+        create_product_fee(billing_entity: billing_entity2, amount_cents: 700)
+      end
+
+      context "without filters" do
+        let(:args) { {} }
+
+        it "includes the product fees" do
+          expect(gross_revenues).to include(hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "billing_entity_id" => billing_entity1.id,
+            "invoices_count" => 1,
+            "amount_cents" => 1500.0
+          }), hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "billing_entity_id" => billing_entity2.id,
+            "invoices_count" => 1,
+            "amount_cents" => 2700.0
+          }))
+        end
+      end
+
+      context "when filtering by billing_entity_id" do
+        let(:args) { {billing_entity_id: billing_entity2.id} }
+
+        it "returns the product fees of the billing entity only" do
+          expect(gross_revenues).to include(hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "billing_entity_id" => billing_entity2.id,
+            "amount_cents" => 2700.0
+          }))
+          expect(gross_revenues.map { it["billing_entity_id"] }.uniq).to eq([billing_entity2.id])
+        end
+      end
+
+      context "when filtering by external_customer_id" do
+        let(:args) { {external_customer_id: contract_customer.external_id} }
+
+        it "returns the product fees of the contract customer" do
+          expect(gross_revenues).to match_array([hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "billing_entity_id" => billing_entity1.id,
+            "invoices_count" => 0,
+            "amount_cents" => 500.0
+          }), hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "billing_entity_id" => billing_entity2.id,
+            "invoices_count" => 0,
+            "amount_cents" => 700.0
+          })])
+        end
+      end
+
+      context "with a deleted product fee" do
+        let(:args) { {external_customer_id: contract_customer.external_id} }
+
+        before { create_product_fee(billing_entity: billing_entity1, amount_cents: 900).discard! }
+
+        it "leaves it out" do
+          expect(gross_revenues).to include(hash_including({
+            "billing_entity_id" => billing_entity1.id,
+            "amount_cents" => 500.0
+          }))
+        end
+      end
+
+      context "when filtering by currency" do
+        let(:args) { {currency: "USD"} }
+
+        before { create_product_fee(billing_entity: billing_entity1, amount_cents: 300, currency: "USD") }
+
+        it "returns the product fees in the currency only" do
+          expect(gross_revenues).to match_array([hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "USD",
+            "billing_entity_id" => billing_entity1.id,
+            "amount_cents" => 300.0
+          })])
+        end
+      end
+    end
   end
 
   describe ".expire_cache_for_customer", cache: :redis do

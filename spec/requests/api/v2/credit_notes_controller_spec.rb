@@ -258,7 +258,8 @@ RSpec.describe Api::V2::CreditNotesController do
       it "generates the PDF instead of returning the XML", v2_timestamps: false do
         expect { request }.to have_enqueued_job(CreditNotes::GeneratePdfJob).with(credit_note)
 
-        expect(response).to have_http_status(:ok)
+        expect(response).to have_http_status(:accepted)
+        expect(response.body).to be_empty
       end
     end
   end
@@ -274,7 +275,8 @@ RSpec.describe Api::V2::CreditNotesController do
       it "generates the XML instead of returning the PDF", v2_timestamps: false do
         expect { request }.to have_enqueued_job(CreditNotes::GenerateXmlJob).with(credit_note)
 
-        expect(response).to have_http_status(:ok)
+        expect(response).to have_http_status(:accepted)
+        expect(response.body).to be_empty
       end
     end
 
@@ -633,7 +635,7 @@ RSpec.describe Api::V2::CreditNotesController do
         it "returns the existing credit note file response" do
           subject
 
-          expect(response).to have_http_status(:success)
+          expect(response).to have_http_status(:ok)
           expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
         end
 

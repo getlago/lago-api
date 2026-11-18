@@ -50,10 +50,12 @@ module QuoteVersions
       I18n.t("quote_version.mention_variables.term_duration.#{value["unit"]}", count: value["count"])
     end
 
+    # Snapshots approved before structured payment terms hold the legacy days integer.
     def format_payment_terms(value)
       return if value.blank?
+      return I18n.t("quote_version.mention_variables.payment_terms", count: value) if value.is_a?(Integer)
 
-      I18n.t("quote_version.mention_variables.payment_terms", count: value)
+      PaymentTerm.from_h(value).label
     end
 
     def format_address(value)

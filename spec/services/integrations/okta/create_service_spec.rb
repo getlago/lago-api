@@ -50,6 +50,46 @@ RSpec.describe Integrations::Okta::CreateService do
         end
       end
 
+      context "when the organization has a sandbox" do
+        let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+        before do
+          organization.update!(premium_integrations: ["okta"])
+          sandbox
+        end
+
+        it "gives the sandbox the Okta login method, without an integration of its own" do
+          expect(service_call).to be_success
+          expect(sandbox.reload).to have_attributes(premium_integrations: ["okta"],
+            authentication_methods: include("okta"))
+          expect(sandbox.integrations).to be_empty
+        end
+      end
+
+      context "when the organization is a sandbox" do
+        let(:organization) { create(:organization, :sandbox, premium_integrations: ["okta"]) }
+
+        it "refuses the integration" do
+          expect(service_call.error.code).to eq("sandbox_managed_by_production")
+          expect(Integrations::OktaIntegration.count).to eq(0)
+        end
+      end
+
+      context "when okta is turned off after the organization was loaded" do
+        before do
+          organization.update!(premium_integrations: ["okta"])
+          stale = Organization.find(organization.id)
+          Organization.find(organization.id).update!(premium_integrations: [])
+          allow(Organization).to receive(:find_by).and_call_original
+          allow(Organization).to receive(:find_by).with(id: organization.id).and_return(stale)
+        end
+
+        it "reads the premium integrations under the lock and creates nothing" do
+          expect(service_call.error.code).to eq("premium_integration_missing")
+          expect(Integrations::OktaIntegration.count).to eq(0)
+        end
+      end
+
       context "with okta premium integration present" do
         before { organization.update!(premium_integrations: ["okta"]) }
 

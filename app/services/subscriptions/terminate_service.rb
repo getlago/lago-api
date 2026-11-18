@@ -74,6 +74,7 @@ module Subscriptions
         end
 
         cancel_next_subscription if subscription_changed
+        delete_recurring_snapshots if subscription_changed
       end
 
       return result if result.failure? || cancel_incomplete_subscription
@@ -127,6 +128,14 @@ module Subscriptions
       return if next_subscription.nil?
 
       next_subscription.mark_as_canceled!
+    end
+
+    # The termination invoice deletes them once its fees read them, unless it ran before the next subscription
+    # was canceled above, or is not generated at all
+    def delete_recurring_snapshots
+      if !(bill_in_arrears_fees? && async) && subscription.ended_without_next_subscription?
+        RecurringAggregationSnapshots::DeleteService.call!(subscription:)
+      end
     end
 
     def bill_subscription

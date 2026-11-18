@@ -437,6 +437,25 @@ RSpec.describe Customers::RefreshWalletsService do
         expect(result).to be_success
         expect(result.wallets).to match_array(customer.wallets.active)
       end
+
+      context "when a wallet is reserved for its expiration invoices" do
+        before do
+          first_wallet.update!(expiration_at: 1.hour.ago)
+          create(:applied_wallet_expiration, wallet: first_wallet)
+        end
+
+        it "allocates no ongoing usage to it" do
+          allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_call_original
+          allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_call_original
+
+          subject
+
+          expect(Wallets::Balance::AllocateOngoingUsageByWalletsService)
+            .to have_received(:call!).with(hash_including(wallets: satisfy { |wallets| wallets.exclude?(first_wallet) }))
+          expect(Wallets::Balance::RefreshOngoingUsageService)
+            .to have_received(:call!).with(hash_including(wallet: first_wallet, ongoing_usage_amount_cents: 0))
+        end
+      end
     end
 
     context "when there are wallet billable metric limitations" do
