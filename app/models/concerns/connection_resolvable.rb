@@ -48,7 +48,7 @@ module ConnectionResolvable
       override = overrides[category]
 
       connection = if override.nil?
-        fallback_connection(category)
+        fallback_routing_connection(category)
       elsif override.skip?
         nil
       else
@@ -68,11 +68,21 @@ module ConnectionResolvable
 
     if override
       return nil if override.skip?
-
       return override_connection(override, category)
     end
 
     fallback_connection(category)
+  end
+
+  def effective_routing_connection(category)
+    override = billing_object_connections.detect { it.category == category.to_s }
+
+    if override
+      return nil if override.skip?
+      return override_connection(override, category)
+    end
+
+    fallback_routing_connection(category)
   end
 
   private
@@ -95,6 +105,14 @@ module ConnectionResolvable
   def fallback_connection(category)
     if fallback_record
       fallback_record.effective_connection(category)
+    else
+      customer_default_connection(category)
+    end
+  end
+
+  def fallback_routing_connection(category)
+    if fallback_record
+      fallback_record.effective_routing_connection(category)
     else
       customer_default_connection(category)
     end
