@@ -22,10 +22,6 @@ module PlanWallets
     def call
       return result.not_found_failure!(resource: "plan_wallet") unless plan_wallet
 
-      if params.key?(:rate_amount)
-        return result.single_validation_failure!(field: :rate_amount, error_code: "not_supported")
-      end
-
       if (field = malformed_param)
         return result.single_validation_failure!(field:, error_code: "value_is_invalid")
       end
