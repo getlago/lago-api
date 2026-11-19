@@ -54,6 +54,22 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
         )
     end
 
+    context "when an unsettled expiration invoice still has to spend the expired wallet" do
+      let(:interval) { :weekly }
+      let(:current_date) do
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
+      end
+
+      it "does not top up the wallet" do
+        travel_to(current_date) do
+          wallet.update!(expiration_at: 1.hour.ago)
+          create(:applied_wallet_expiration, wallet:, invoice: create(:invoice, customer:, status: :failed))
+
+          expect { create_interval_transactions_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+    end
+
     context "when recurring transactions should be created weekly" do
       let(:interval) { :weekly }
 
