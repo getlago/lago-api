@@ -88,8 +88,16 @@ module ConnectionResolvable
     end
   end
 
+  def fallback_record
+    nil
+  end
+
   def fallback_connection(category)
-    customer_default_connection(category)
+    if fallback_record
+      fallback_record.effective_connection(category)
+    else
+      customer_default_connection(category)
+    end
   end
 
   def customer_default_connection(category)
