@@ -134,6 +134,8 @@ class Organization < ApplicationRecord
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
+  has_many :contract_alerts, class_name: "UsageMonitoring::ContractAlert"
+  has_many :contract_activities, class_name: "UsageMonitoring::ContractActivity"
   has_many :pending_vies_checks
 
   has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"

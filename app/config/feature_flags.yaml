@@ -93,3 +93,7 @@ standard_webhooks_signature:
 invoice_usage_on_wallet_expiration:
   description: "When a wallet with invoice_usage_on_expiration expires, invoice the usage until its expiration so its remaining credits pay for it"
   owners: ["@annvelents"]
+
+contract_alerts:
+  description: "Enable usage alerts on contracts (alerts v2) on the v2 API and GraphQL, on top of product_catalog"
+  owners: ["@lovrocolic"]

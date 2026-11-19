@@ -341,8 +341,9 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             # both zero-amount fees (empty + free usage) stay in the usage response
             expect(result.usage.fees.map(&:amount_cents)).to match_array([0, 0, 2532])
             # only the taxable (positive-amount) fee is sent to the provider
-            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:|
+            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to have_received(:call) do |invoice:, fees:, reuse_tax_rates:|
               expect(fees.map(&:amount_cents)).to match_array([2532])
+              expect(reuse_tax_rates).to be(false)
             end
           end
         end

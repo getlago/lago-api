@@ -57,6 +57,7 @@ module ApiKeys
         read: %w[plans:view rate_cards:view],
         write: crud("plans")[:write] + crud("rate_cards")[:write] + CHARGES_WRITE
       },
+      "plan_wallet" => {read: %w[plans:view], write: crud("plans")[:write]},
       "product" => crud("products"),
       "product_category" => crud("products"),
       "quote" => {

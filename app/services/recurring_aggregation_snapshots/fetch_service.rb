@@ -8,7 +8,27 @@ module RecurringAggregationSnapshots
       end
     end
 
-    Period = Data.define(:to_datetime, :watermark)
+    # inherited: the period was closed by the previous subscription, whose invoices are not this one's
+    # reads_older: the key can tell whether an invoice closed a later period (SubscriptionKey only)
+    Period = Data.define(:to_datetime, :watermark, :inherited, :reads_older) do
+      def initialize(inherited: false, reads_older: true, **)
+        super
+      end
+
+      # Whether a weighted sum starts from this period's level. An older period misses the levels of the
+      # periods closed since: only an own period no invoice closed a later one after, as the events dated
+      # since then are added to it. last_billed_charges_to_datetime is a block, as it queries the invoices.
+      def weighted_sum_start?(from_datetime)
+        if to_datetime.between?(from_datetime - 1.second, from_datetime)
+          true
+        elsif inherited || !reads_older || to_datetime >= from_datetime
+          false
+        else
+          last_billed_charges_to_datetime = yield
+          !last_billed_charges_to_datetime&.after?(to_datetime)
+        end
+      end
+    end
 
     Result = BaseResult[:snapshots, :period]
 
@@ -38,10 +58,14 @@ module RecurringAggregationSnapshots
     # Returns the snapshots of the latest period closed before from_datetime, one per group with
     # units or events, and that period. Both are nil when the aggregation must fall back to a full scan.
     def call
-      marker, records = own_period || previous_period
+      own = own_period
+      marker, records = own || previous_period
       return result unless marker && records.all? { same_grouped_by_keys?(it) }
 
-      result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark)
+      result.period = Period.new(
+        to_datetime: marker.to_datetime, watermark: marker.watermark, inherited: own.nil?,
+        reads_older: key.weighted_sum_reads_older_periods?
+      )
       result.snapshots = records.select { in_group?(it) }.map { to_snapshot(it) }
       result
     end
