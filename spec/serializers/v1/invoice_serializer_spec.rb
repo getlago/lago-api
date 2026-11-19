@@ -41,6 +41,7 @@ RSpec.describe ::V1::InvoiceSerializer do
       "currency" => invoice.currency,
       "fees_amount_cents" => invoice.fees_amount_cents,
       "progressive_billing_credit_amount_cents" => invoice.progressive_billing_credit_amount_cents,
+      "progressive_billing_trigger" => invoice.progressive_billing_trigger,
       "coupons_amount_cents" => invoice.coupons_amount_cents,
       "credit_notes_amount_cents" => invoice.credit_notes_amount_cents,
       "prepaid_credit_amount_cents" => invoice.prepaid_credit_amount_cents,
@@ -86,6 +87,22 @@ RSpec.describe ::V1::InvoiceSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["invoice"]["applied_usage_thresholds"].count).to eq(1)
+    end
+
+    it "reports a usage threshold trigger when none was recorded" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["invoice"]["progressive_billing_trigger"]).to eq("usage_threshold")
+    end
+
+    context "when the invoice was triggered by a wallet expiration" do
+      let(:invoice) { create(:invoice, invoice_type: :progressive_billing, progressive_billing_trigger: :wallet_expiration) }
+
+      it "serializes the recorded trigger" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["invoice"]["progressive_billing_trigger"]).to eq("wallet_expiration")
+      end
     end
   end
 

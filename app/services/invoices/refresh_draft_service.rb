@@ -153,7 +153,7 @@ module Invoices
         .includes(contract_rate_card: [
           :organization,
           :terms,
-          {product: {filters: {values: :billable_metric_filter}}},
+          {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]},
           {contract: :customer},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override}

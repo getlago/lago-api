@@ -5,8 +5,9 @@ require "rails_helper"
 RSpec.describe Entitlement::PlanEntitlementDestroyService do
   subject(:result) { described_class.call(entitlement:) }
 
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:plan) { create(:plan, organization:) }
+  # Plain lets: the thread examples run without a transaction, where shared records would stay uncommitted.
+  let(:organization) { create(:organization) }
+  let(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:) }
   let(:privilege) { create(:privilege, organization:, feature:) }
   let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
@@ -51,13 +52,120 @@ RSpec.describe Entitlement::PlanEntitlementDestroyService do
       end
     end
 
+    context "when the plan is discarded" do
+      before do
+        plan.discard!
+        entitlement.reload
+      end
+
+      it "returns a not found plan failure and discards nothing" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("plan")
+        expect(entitlement.reload).not_to be_discarded
+        expect(entitlement_value.reload).not_to be_discarded
+      end
+
+      it "sends no webhook and produces no activity log" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+        expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+      end
+    end
+
+    context "with threads", transaction: false do
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      # Frees a lock holder left waiting by a failed expectation.
+      after { release << ->(_) {} }
+
+      def destroy(entitlement_id)
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(entitlement: Entitlement::Entitlement.find(entitlement_id))
+          end
+        end
+      end
+
+      # Holds the plan row lock in another connection until `release` receives the block to run before the commit.
+      def hold_plan_lock(plan_id)
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              locked_plan = Plan.lock("FOR NO KEY UPDATE").find(plan_id)
+              locked << true
+              release.pop.call(locked_plan)
+            end
+          end
+        end
+      end
+
+      it "waits for the plan lock, then deletes the entitlement" do
+        holder = hold_plan_lock(plan.id)
+        locked.pop
+
+        destroyer = destroy(entitlement.id)
+        expect(destroyer.join(0.5)).to be_nil
+        expect(Entitlement::Entitlement.where(id: entitlement.id)).to exist
+
+        release << ->(_) {}
+        holder.join
+        expect(destroyer.value).to be_success
+        expect(Entitlement::Entitlement.where(id: entitlement.id)).not_to exist
+        expect(Entitlement::EntitlementValue.where(id: entitlement_value.id)).not_to exist
+      end
+
+      it "deletes once and answers not found to the second of two concurrent deletes" do
+        holder = hold_plan_lock(plan.id)
+        locked.pop
+
+        destroyers = Array.new(2) { destroy(entitlement.id) }
+        expect(destroyers.map { it.join(0.5).nil? }).to eq([true, true])
+
+        release << ->(_) {}
+        holder.join
+        results = destroyers.map(&:value)
+
+        expect(results.count(&:success?)).to eq(1)
+        failure = results.find(&:failure?)
+        expect(failure.error).to be_a(BaseService::NotFoundFailure)
+        expect(failure.error.resource).to eq("entitlement")
+        expect(Entitlement::Entitlement.unscoped.where(id: entitlement.id).pick(:deleted_at)).to be_present
+        expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", plan).once
+      end
+
+      it "refuses a delete on a plan discarded while it waits for the lock" do
+        holder = hold_plan_lock(plan.id)
+        locked.pop
+
+        destroyer = destroy(entitlement.id)
+        expect(destroyer.join(0.5)).to be_nil
+
+        release << ->(locked_plan) { locked_plan.update_columns(deleted_at: Time.current) } # rubocop:disable Rails/SkipsModelValidations
+        holder.join
+        result = destroyer.value
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("plan")
+        expect(Entitlement::Entitlement.where(id: entitlement.id)).to exist
+        expect(Entitlement::EntitlementValue.where(id: entitlement_value.id)).to exist
+      end
+    end
+
     context "when entitlement is already deleted" do
       before do
         entitlement.discard!
       end
 
-      it "still soft deletes the entitlement values" do
-        expect { result }.to raise_error(Discard::RecordNotDiscarded)
+      it "returns a not found failure and keeps the first deletion" do
+        deleted_at = entitlement.reload.deleted_at
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("entitlement")
+        expect(entitlement.reload.deleted_at).to eq(deleted_at)
+        expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
   end

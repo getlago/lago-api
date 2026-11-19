@@ -94,6 +94,7 @@ RSpec.describe Wallet do
     it { is_expected.to validate_numericality_of(:rate_amount).is_greater_than(0) }
     it { is_expected.to validate_inclusion_of(:currency).in_array(described_class.currency_list) }
     it { is_expected.to validate_exclusion_of(:invoice_requires_successful_payment).in_array([nil]) }
+    it { is_expected.to validate_exclusion_of(:invoice_usage_on_expiration).in_array([nil]) }
     it { is_expected.to validate_numericality_of(:paid_top_up_min_amount_cents).is_greater_than(0).allow_nil }
     it { is_expected.to validate_numericality_of(:paid_top_up_max_amount_cents).is_greater_than(0).allow_nil }
     it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }
@@ -242,6 +243,66 @@ RSpec.describe Wallet do
     end
   end
 
+  describe "#reserved_for_expiration_invoice?" do
+    subject(:wallet) { create(:wallet, expiration_at:) }
+
+    let(:expiration_at) { 1.hour.ago }
+    let(:invoice_status) { :failed }
+
+    before do
+      invoice = create(:invoice, organization: wallet.organization, customer: wallet.customer, status: invoice_status)
+      create(:applied_wallet_expiration, wallet:, invoice:)
+    end
+
+    it "is true once the expiration of the expired wallet is invoiced" do
+      expect(wallet).to be_reserved_for_expiration_invoice
+    end
+
+    context "when its expiration invoice is settled" do
+      let(:invoice_status) { :finalized }
+
+      it { expect(wallet).to be_reserved_for_expiration_invoice }
+    end
+
+    context "when the wallet is not expired" do
+      let(:expiration_at) { 1.hour.from_now }
+
+      it { expect(wallet).not_to be_reserved_for_expiration_invoice }
+    end
+
+    context "when the expiration of the wallet is not invoiced" do
+      before { AppliedWalletExpiration.where(wallet:).delete_all }
+
+      it { expect(wallet).not_to be_reserved_for_expiration_invoice }
+    end
+  end
+
+  describe "#expiration_invoicing_enabled?", :premium do
+    subject(:wallet) { build(:wallet, organization:, invoice_usage_on_expiration:) }
+
+    let(:organization) { build(:organization, feature_flags:) }
+    let(:feature_flags) { ["invoice_usage_on_wallet_expiration"] }
+    let(:invoice_usage_on_expiration) { true }
+
+    it { expect(wallet.expiration_invoicing_enabled?).to be(true) }
+
+    context "when the wallet does not invoice its usage on expiration" do
+      let(:invoice_usage_on_expiration) { false }
+
+      it { expect(wallet.expiration_invoicing_enabled?).to be(false) }
+    end
+
+    context "when the feature flag is disabled" do
+      let(:feature_flags) { [] }
+
+      it { expect(wallet.expiration_invoicing_enabled?).to be(false) }
+    end
+
+    context "without a premium license", premium: false do
+      it { expect(wallet.expiration_invoicing_enabled?).to be(false) }
+    end
+  end
+
   describe "#paid_top_up_min_credits" do
     it "converts min amount cents to credits using the wallet rate" do
       wallet.rate_amount = 25
@@ -280,6 +341,7 @@ RSpec.describe Wallet do
       depleted_ongoing_balance
       expiration_at
       invoice_requires_successful_payment
+      invoice_usage_on_expiration
       last_balance_sync_at
       last_consumed_credit_at
       last_ongoing_balance_sync_at
