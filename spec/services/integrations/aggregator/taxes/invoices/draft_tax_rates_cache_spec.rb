@@ -160,14 +160,15 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
       end
     end
 
-    context "when the line tax was rounded down to zero" do
-      let(:amounts) { [4, 30_000] }
+    context "when the line tax was rounded to the cent" do
+      let(:amounts) { [15, 30_000] }
       let(:answer) do
         {
           "succeededInvoices" => [
             {
               "fees" => [
-                {"item_id" => "id_1", "amount_cents" => 4, "tax_amount_cents" => 0, "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 0.4, "type" => "tax"}]},
+                # 1.5 cents of tax booked as 2: the booked amount alone would give a 13.3% rate
+                {"item_id" => "id_1", "amount_cents" => 15, "tax_amount_cents" => 2, "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 1.5, "type" => "tax"}]},
                 {"item_id" => "id_2", "amount_cents" => 30_000, "tax_amount_cents" => 0, "tax_breakdown" => []}
               ]
             }
@@ -181,9 +182,32 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
         lines = rates_for(anrok_payload([25_000, 30_000])).dig("succeededInvoices", 0, "fees")
 
         expect(lines.first).to include(
-          "tax_amount_cents" => 2_500, # 25_000 * 0.4 / 4
+          "tax_amount_cents" => 2_500, # 25_000 * 1.5 / 15
           "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 2_500.0, "type" => "tax"}]
         )
+      end
+    end
+
+    context "when less than a cent of tax was booked as zero" do
+      let(:amounts) { [4, 30_000] }
+      let(:answer) do
+        {
+          "succeededInvoices" => [
+            {
+              "fees" => [
+                # Rounded down, or paid by the seller: the answer looks the same either way
+                {"item_id" => "id_1", "amount_cents" => 4, "tax_amount_cents" => 0, "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 0.4, "type" => "tax"}]},
+                {"item_id" => "id_2", "amount_cents" => 30_000, "tax_amount_cents" => 0, "tax_breakdown" => []}
+              ]
+            }
+          ]
+        }
+      end
+
+      before { rates_cache.store(answer) }
+
+      it "waits for a larger answer" do
+        expect(rates_for(anrok_payload([25_000, 30_000]))).to be_nil
       end
     end
 

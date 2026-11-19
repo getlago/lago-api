@@ -59,8 +59,14 @@ module Integrations
             answered = body.is_a?(Hash) ? body.dig("succeededInvoices", 0, "fees") : nil
             return if answered.blank? || keys.empty?
 
+            by_key = answered.select { it["item_key"].present? }.index_by { it["item_key"] }
+            by_id = answered.select { it["item_id"].present? }.index_by { it["item_id"].to_s }
+
+            # Matched on identifiers rather than position, as the base service does, so that a
+            # provider listing lines in another order cannot cache one product's rate for another.
             entries = request_lines.zip(keys).each_with_object({}) do |(line, key), memo|
-              rates = (answer = answered_line(answered, line)) && line_rates(answer)
+              answer = by_key[line["item_key"]] || by_id[line["item_id"].to_s]
+              rates = answer && line_rates(answer)
               memo[key] = rates if rates
             end
             return if entries.empty?
@@ -127,13 +133,6 @@ module Integrations
             end
           end
 
-          # Matched on identifiers rather than position, as the base service does, so that a
-          # provider listing lines in another order cannot cache one product's rate for another.
-          def answered_line(answered, line)
-            answered.find { |answer| answer["item_key"].present? && answer["item_key"] == line["item_key"] } ||
-              answered.find { |answer| answer["item_id"].present? && answer["item_id"].to_s == line["item_id"].to_s }
-          end
-
           # Stores each tax as a share of the line amount, so it applies to any amount of the band.
           # The shares come from the unrounded breakdown amounts: the line tax is rounded to the
           # cent, so a small line (the start of a period) would store a skewed or zero rate.
@@ -143,6 +142,11 @@ module Integrations
 
             breakdown = Array(line["tax_breakdown"])
             precise_tax = breakdown.sum { it["tax_amount"].to_d }
+
+            # No tax booked on less than a cent of tax: rounded down, or paid by the seller. The two
+            # can't be told apart, so the rate waits for a larger answer.
+            return if line["tax_amount_cents"].to_d.zero? && precise_tax.positive? && breakdown.all? { it["tax_amount"].to_d < 1 }
+
             line_tax = precise_tax.positive? ? precise_tax : line["tax_amount_cents"].to_d
 
             {
