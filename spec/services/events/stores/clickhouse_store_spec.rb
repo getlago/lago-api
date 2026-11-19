@@ -25,6 +25,26 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
+  # One insert for many events, so a large total is built without one request per event.
+  def insert_events(count, timestamp:, value:, properties: {})
+    rows = Array.new(count) do
+      {
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: properties.merge(billable_metric.field_name => value.to_s),
+        value: value.to_s,
+        decimal_value: value.to_d,
+        precise_total_amount_cents: value.to_d,
+        enriched_at: Time.current
+      }
+    end
+
+    Clickhouse::EventsEnriched.insert_all(rows) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   def format_timestamp(timestamp, precision: 3)
     Time.zone.parse(timestamp).strftime("%Y-%m-%d %H:%M:%S.%#{precision}L")
   end
@@ -829,6 +849,128 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
       expect(result.value).to eq(BigDecimal("2000000000000")) # 250 events x 8e9
       expect(result.events_count).to eq(250)
+    end
+
+    context "with 570 events" do
+      before do
+        insert_events(320, timestamp: subscription.started_at + 1.day, value: 8_000_000_000)
+      end
+
+      it "returns the exact total past twice the limit" do
+        result = event_store.sum
+
+        expect(result.value).to eq(BigDecimal("4560000000000")) # 570 events x 8e9
+        expect(result.events_count).to eq(570)
+      end
+    end
+  end
+
+  describe "other sums above the Decimal128 limit" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        filters: {grouped_by:}
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+    let(:grouped_by) { nil }
+    let(:events_count) { 250 }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      insert_events(events_count, timestamp: subscription.started_at + 1.day, value: 8_000_000_000, properties: {"region" => "europe"})
+    end
+
+    describe "#grouped_sum" do
+      let(:grouped_by) { %w[region] }
+
+      it "returns the exact total of the group" do
+        expect(event_store.grouped_sum).to eq([
+          Events::Stores::BaseStore::GroupedAggregationResult.new(
+            groups: {"region" => "europe"},
+            value: BigDecimal("2000000000000"), # 250 events x 8e9
+            events_count: 250
+          )
+        ])
+      end
+    end
+
+    describe "#recurring_sum" do
+      it "returns the exact total and snapshot total" do
+        expect(event_store.recurring_sum(watermark: Time.current + 1.hour)).to eq(
+          Events::Stores::BaseStore::RecurringAggregationResult.new(
+            value: BigDecimal("2000000000000"), # 250 events x 8e9
+            snapshot_value: BigDecimal("2000000000000"), # all 250 events enriched before the watermark
+            events_count: 250,
+            snapshot_events_count: 250
+          )
+        )
+      end
+    end
+
+    describe "#grouped_recurring_sum" do
+      let(:grouped_by) { %w[region] }
+
+      it "returns the exact total and snapshot total of the group" do
+        expect(event_store.grouped_recurring_sum(watermark: Time.current + 1.hour)).to eq([
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(
+            groups: {"region" => "europe"},
+            value: BigDecimal("2000000000000"), # 250 events x 8e9
+            snapshot_value: BigDecimal("2000000000000"), # all 250 events enriched before the watermark
+            events_count: 250,
+            snapshot_events_count: 250
+          )
+        ])
+      end
+    end
+
+    describe "#sum_date_breakdown" do
+      it "returns the exact total of the day" do
+        expect(event_store.sum_date_breakdown).to eq([
+          {date: Date.new(2023, 3, 16), value: BigDecimal("2000000000000")} # 250 events x 8e9
+        ])
+      end
+    end
+
+    describe "#prorated_sum" do
+      let(:events_count) { 500 }
+
+      it "returns the exact total and prorated total" do
+        result = event_store.prorated_sum(period_duration: 30, persisted_duration: 15)
+
+        expect(result.value).to eq(BigDecimal("4000000000000")) # 500 events x 8e9
+        expect(result.prorated_value).to eq(BigDecimal("2000000000000")) # 4e12 x 15 / 30
+        expect(result.events_count).to eq(500)
+      end
+    end
+
+    describe "#grouped_prorated_sum" do
+      let(:events_count) { 500 }
+      let(:grouped_by) { %w[region] }
+
+      it "returns the exact total and prorated total of the group" do
+        result = event_store.grouped_prorated_sum(period_duration: 30, persisted_duration: 15)
+
+        expect(result.map(&:groups)).to eq([{"region" => "europe"}])
+        expect(result.first.value).to eq(BigDecimal("4000000000000")) # 500 events x 8e9
+        expect(result.first.prorated_value).to eq(BigDecimal("2000000000000")) # 4e12 x 15 / 30
+        expect(result.first.events_count).to eq(500)
+      end
     end
   end
 
