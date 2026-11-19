@@ -94,6 +94,7 @@ module Signups
           email: user.email,
           self_serve: true,
           sandbox_organization_id: sandbox.id,
+          activation_status: membership.organization.activation_status,
           role:,
           source: referral_source,
           region: Lago::SelfServe.region

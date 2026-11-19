@@ -86,8 +86,12 @@ RSpec.describe Lago::SelfServe do
   describe ".validate!" do
     let(:front_url) { "https://app.getlago.com" }
 
-    # Examples that leave disable_signup out read the variable, which the runner's environment must not decide.
-    before { stub_const("ENV", ENV.to_h.except("LAGO_DISABLE_SIGNUP")) }
+    # Examples that leave a variable out read it, which the runner's environment (or its .env) must not decide.
+    before do
+      stub_const("ENV", ENV.to_h.except(
+        "LAGO_DISABLE_SIGNUP", "LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD", "LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY"
+      ))
+    end
 
     it "accepts unset, empty, true and false" do
       [nil, "", "true", "false", " False "].each do |value|
@@ -182,10 +186,16 @@ RSpec.describe Lago::SelfServe do
         end
       end
 
-      it "refuses any other value" do
+      it "refuses any other value while self-serve is on" do
         %w[1 yes].each do |require_payment_method|
           expect { validate(require_payment_method:) }
             .to raise_error(ArgumentError, /LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD must be true or false/)
+        end
+      end
+
+      it "ignores any other value while self-serve is off, as self-hosted does" do
+        %w[1 yes].each do |require_payment_method|
+          expect { validate(value: nil, require_payment_method:, billing_accounts_key: nil) }.not_to raise_error
         end
       end
 

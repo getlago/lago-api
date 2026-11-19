@@ -76,6 +76,7 @@ RSpec.describe Organizations::CreateWithInviteService do
     context "with the payment method switch on" do
       let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD" => "true") }
 
+      # Fails if the shared CreateSelfServeService ever reads the switch itself: only signup passes the pending status.
       it "still opens both organizations, as only signup waits for a payment method" do
         expect(result.organization.reload.activation_status).to eq("active")
         expect(result.sandbox_organization.reload.activation_status).to eq("active")

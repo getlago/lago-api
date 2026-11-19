@@ -44,6 +44,14 @@ RSpec.describe Signups::CreateOrganizationService do
       expect(result.organization.reload.activation_status).to eq("pending_payment_method")
       expect(result.sandbox_organization.reload.activation_status).to eq("active")
     end
+
+    it "tells analytics the production waits for a payment method" do
+      result
+
+      expect(SegmentTrackJob).to have_been_enqueued
+        .with(hash_including(event: "organization_registered",
+          properties: hash_including(activation_status: "pending_payment_method")))
+    end
   end
 
   it "answers with a user who no longer needs an organization" do
@@ -73,6 +81,7 @@ RSpec.describe Signups::CreateOrganizationService do
         email: "jane@getlago.com",
         self_serve: true,
         sandbox_organization_id: result.sandbox_organization.id,
+        activation_status: "active",
         role: "engineering",
         source: "github",
         region: "app.eu.getlago.com"

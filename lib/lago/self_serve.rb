@@ -11,13 +11,13 @@ module Lago
     class << self
       # Only "true" turns the gate on (any case, surrounding spaces ignored): a security gate errs toward off.
       def enabled?(value: ENV[ENV_VAR])
-        normalize(value) == "true"
+        true_value?(value)
       end
 
       # Whether signup creates its production organization waiting for a payment method. Read like enabled?, off by
       # default; validate! refuses it on without self-serve or without the key that lets billing-accounts activate.
       def require_payment_method?(value: ENV[REQUIRE_PAYMENT_METHOD_ENV_VAR])
-        normalize(value) == "true"
+        true_value?(value)
       end
 
       # Exactly "true", as the API and lago-front have always read LAGO_DISABLE_SIGNUP. With the gate on,
@@ -56,7 +56,7 @@ module Lago
         billing_accounts_key: ENV["LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY"],
         local: Rails.env.local?
       )
-        unless ACCEPTED_VALUES.include?(normalize(value))
+        unless accepted_value?(value)
           raise ArgumentError, "#{ENV_VAR} must be true or false, got #{value.inspect}"
         end
 
@@ -79,10 +79,16 @@ module Lago
 
       def normalize(value) = value.to_s.strip.downcase
 
-      # Pending organizations that nothing can activate would lock every new signup out of production.
+      def true_value?(value) = normalize(value) == "true"
+
+      def accepted_value?(value) = ACCEPTED_VALUES.include?(normalize(value))
+
+      # Pending organizations that nothing can activate would lock every new signup out of production. With self-serve
+      # off, only true matters: a self-hosted install never fails to boot over this Cloud-only switch.
       def validate_require_payment_method!(value, enabled:, key:)
-        unless ACCEPTED_VALUES.include?(normalize(value))
-          raise ArgumentError, "#{REQUIRE_PAYMENT_METHOD_ENV_VAR} must be true or false, got #{value.inspect}"
+        if enabled && !accepted_value?(value)
+          raise ArgumentError,
+            "#{REQUIRE_PAYMENT_METHOD_ENV_VAR} must be true or false when #{ENV_VAR} is true; got #{value.inspect}"
         end
         return unless require_payment_method?(value:)
 
