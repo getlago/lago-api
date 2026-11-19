@@ -10,7 +10,7 @@ module Api
       serializable_with ::V2::PlanWalletSerializer
 
       def show
-        plan_wallet = plan_wallets&.preload(::V2::PlanWalletSerializer::PRELOADS)&.find_by(code: params[:code])
+        plan_wallet = find_plan_wallet
 
         return not_found_error(resource: "plan_wallet") unless plan_wallet
 
@@ -43,6 +43,10 @@ module Api
 
       def plan_wallets
         find_catalog_plan&.wallets
+      end
+
+      def find_plan_wallet
+        plan_wallets&.find_by(code: params[:code])
       end
 
       def resource_name
