@@ -187,6 +187,19 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       expect(result.contract.selected_invoice_custom_sections).to eq([section])
       expect(result.contract.skip_invoice_custom_sections).to be(false)
     end
+
+    context "when attaching a section violates another unique index" do
+      before do
+        allow(InvoiceCustomSections::AttachToResourceService).to receive(:call!).and_wrap_original do |original, **arguments|
+          original.call(**arguments)
+          create(:contract_applied_invoice_custom_section, contract: arguments[:resource], invoice_custom_section: section)
+        end
+      end
+
+      it "does not hide the database error" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique, /index_contracts_invoice_custom_sections_unique/)
+      end
+    end
   end
 
   context "when skipping invoice custom sections" do
@@ -349,11 +362,26 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
   end
 
   context "when a live contract already uses the external id" do
-    before { create(:contract, organization:, customer:, external_id: "contract-1") }
+    before { create(:contract, :pending, organization:, customer:, external_id: "contract-1") }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:external_id]).to eq(["value_already_exists"])
+    end
+
+    context "when only the database catches the duplicate" do
+      let(:live_contracts) { organization.contracts.where(status: %w[pending active], external_id: params[:external_id]) }
+
+      before do
+        allow(organization.contracts).to receive(:where)
+          .with(status: %w[pending active], external_id: params[:external_id]).and_return(live_contracts)
+        allow(live_contracts).to receive(:exists?).and_return(false)
+      end
+
+      it "returns the same validation error instead of raising" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages).to eq(external_id: ["value_already_exists"])
+      end
     end
   end
 
