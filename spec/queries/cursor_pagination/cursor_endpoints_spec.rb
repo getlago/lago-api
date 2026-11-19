@@ -320,6 +320,19 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     it_behaves_like "a keyset-paginated query", table: "plan_rate_cards", index: "index_plan_rate_cards_by_cursor"
   end
 
+  context "with PlanWalletsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PlanWalletsQuery.call(organization:, pagination:, filters: {plan_id: SecureRandom.uuid, created_at_from: "2026-01-01"}).plan_wallets
+      end
+    end
+    let(:default_scope) do
+      ->(pagination) { PlanWalletsQuery.call(organization:, pagination:, filters: {plan_id: SecureRandom.uuid}).plan_wallets }
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "plan_wallets", index: "index_plan_wallets_by_cursor"
+  end
+
   context "with ProductFeesQuery" do
     let(:filtered_scope) do
       lambda do |pagination|

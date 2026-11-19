@@ -42,7 +42,7 @@ module Api
       end
 
       def show
-        plan_wallet = plan_wallets&.preload(::V2::PlanWalletSerializer::PRELOADS)&.find_by(code: params[:code])
+        plan_wallet = find_plan_wallet
 
         return not_found_error(resource: "plan_wallet") unless plan_wallet
 

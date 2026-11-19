@@ -63,22 +63,28 @@ describe Api::V2::PlanWalletsController do
       end
     end
 
-    context "when a wallet template has selectors", :bullet do
+    context "when wallet templates have selectors", :bullet do
+      let(:other_plan_wallet) { create(:plan_wallet, organization:, catalog_plan:, code: "support_credits", currency: "USD", priority: 20) }
+
       before do
         product = create(:product, organization:)
-        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:)
-        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product", fee_type: nil, product:)
-        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product_category", fee_type: nil,
-          product_category: product.product_category)
-        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product_filters", fee_type: nil,
-          product_filter: create(:product_filter, organization:, product:))
+
+        [plan_wallet, other_plan_wallet].each do |wallet|
+          create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet: wallet)
+          create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet: wallet, selector_type: "product", fee_type: nil, product:)
+          create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet: wallet, selector_type: "product_category", fee_type: nil,
+            product_category: product.product_category)
+          create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet: wallet, selector_type: "product_filters", fee_type: nil,
+            product_filter: create(:product_filter, organization:, product:))
+        end
       end
 
-      it "renders its scope without a query per selector" do
+      it "renders their scopes without a query per wallet template or selector" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:plan_wallets].sole[:applies_to][:include].map { it[:type] }).to match_array(%w[fee_type product product_category product_filters])
+        expect(json[:plan_wallets].map { it[:applies_to][:include].map { |entry| entry[:type] }.sort })
+          .to eq([%w[fee_type product product_category product_filters]] * 2)
       end
     end
 
