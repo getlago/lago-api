@@ -89,13 +89,21 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_rede
   end
 
   describe "#effective_tax_connection" do
-    it "returns the customer default" do
+    let!(:default_connection) do
+      create(:anrok_customer, customer: resolution_customer, organization:, is_default: true)
+    end
+
+    it "returns the customer default tax connection" do
       expect(resolvable.effective_tax_connection).to eq(default_connection)
     end
   end
 
   describe "#effective_crm_connection" do
-    it "returns the customer default" do
+    let!(:default_connection) do
+      create(:hubspot_customer, customer: resolution_customer, organization:, is_default: true)
+    end
+
+    it "returns the customer default crm connection" do
       expect(resolvable.effective_crm_connection).to eq(default_connection)
     end
   end
