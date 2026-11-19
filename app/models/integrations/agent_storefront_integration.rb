@@ -6,12 +6,18 @@ module Integrations
     validate :https_urls
     validate :stripe_provider_exists
 
+    has_many :agent_registrations, class_name: "Agents::Registration", foreign_key: :integration_id, dependent: :delete_all
+
     settings_accessors :payment_provider_code, :resource_endpoint, :resource_instructions, :scope
 
     scope :with_payment_provider_code, ->(code) { where("settings->>'payment_provider_code' = ?", code) }
 
     def stripe_provider
       organization&.stripe_payment_providers&.find_by(code: payment_provider_code)
+    end
+
+    def agent_url
+      "#{ENV["LAGO_API_URL"]}/agents/v1/#{id}"
     end
 
     private
