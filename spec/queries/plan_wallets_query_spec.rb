@@ -49,11 +49,14 @@ describe PlanWalletsQuery, type: :query do
     end
   end
 
-  context "with a page size" do
-    let(:pagination) { {page: 1, limit: 2} }
+  context "with cursor pagination" do
+    let(:pagination) { CursorPagination::Cursor.new(table: "plan_wallets", limit: 2) }
 
-    it "returns that many wallet templates" do
-      expect(result.plan_wallets).to eq([plan_wallet, other_plan_wallet])
+    it "returns a page of that size, with a cursor to the next one" do
+      page = CursorPagination::Page.new(records: result.plan_wallets, cursor: pagination)
+
+      expect(page.records).to eq([plan_wallet, other_plan_wallet])
+      expect(page.meta[:next_cursor]).to be_present
     end
   end
 end
