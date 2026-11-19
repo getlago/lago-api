@@ -34,6 +34,8 @@ class Contract < ApplicationRecord
   belongs_to :payment_method, optional: true
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
+  has_many :wallets, class_name: "CatalogWallet"
+  has_many :daily_usages
   has_many :fees
   has_many :invoices, -> { distinct }, through: :fees
   has_many :applied_invoice_custom_sections,

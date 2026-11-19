@@ -13,7 +13,7 @@ module Types
           field :plan_code, String, null: false
           field :plan_deleted_at, GraphQL::Types::ISO8601DateTime, null: true
           field :plan_id, ID, null: false
-          field :plan_interval, Types::Plans::IntervalEnum, null: false
+          field :plan_interval, Types::Plans::IntervalEnum, null: true, description: "Interval of the plan. Null for product catalog plans and contracts without a plan, whose rate cards each have their own interval"
           field :plan_name, String, null: false
 
           field :active_customers_count, GraphQL::Types::BigInt, null: false
