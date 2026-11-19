@@ -37,7 +37,8 @@ module PlanWallets
       plan_wallet.with_lock do
         return result.not_found_failure!(resource: "plan_wallet") if plan_wallet.discarded?
 
-        # Contracts find their wallet by the template's code, so it freezes with the first contract.
+        # Each contract copies the template with its code. Freezing it with the first contract keeps one
+        # code across the plan's contracts.
         if code_change_requested? && catalog_plan.attached_to_contracts?
           return result.single_validation_failure!(field: :code, error_code: "plan_locked")
         end
