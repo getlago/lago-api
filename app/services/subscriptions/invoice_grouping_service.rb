@@ -6,15 +6,6 @@ module Subscriptions
   class InvoiceGroupingService < BaseService
     Result = BaseResult[:subscription_groups]
 
-    CONNECTION_ID_ATTRIBUTES = {
-      payment: :payment_provider_customer_id,
-      tax: :integration_customer_id,
-      accounting: :integration_customer_id,
-      crm: :integration_customer_id
-    }.freeze
-
-    CONNECTION_CATEGORIES = CONNECTION_ID_ATTRIBUTES.keys.freeze
-
     def initialize(subscriptions:)
       @subscriptions = subscriptions
 
@@ -124,48 +115,7 @@ module Subscriptions
     end
 
     def connection_key(subscription)
-      CONNECTION_CATEGORIES.map { |category| effective_connection_id(subscription, category) }
-    end
-
-    def effective_connection_id(subscription, category)
-      override = subscription.billing_object_connections.find { |c| c.category == category.to_s }
-
-      if override.nil?
-        default_connection_id(subscription, category)
-      elsif override.specific?
-        override.public_send(CONNECTION_ID_ATTRIBUTES.fetch(category))
-      end
-    end
-
-    def default_connection_id(subscription, category)
-      key = [subscription.customer_id, category]
-
-      default_connection_ids.fetch(key) do
-        default_connection_ids[key] = resolve_default_connection_id(subscription.customer, category)
-      end
-    end
-
-    def default_connection_ids
-      @default_connection_ids ||= {}
-    end
-
-    def resolve_default_connection_id(customer, category)
-      connections = customer_connections(customer, category)
-
-      if connections.one?
-        connections.first.id
-      else
-        connections.find(&:is_default?)&.id
-      end
-    end
-
-    def customer_connections(customer, category)
-      if category == :payment
-        customer.payment_provider_customers.to_a
-      else
-        types = IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE.select { |_, c| c == category.to_s }.keys
-        customer.integration_customers.select { it.type.in?(types) }
-      end
+      subscription.connection_routing.map(&:connection_id)
     end
 
     # NOTE: Returns array of subscription groups
