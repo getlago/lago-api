@@ -87,6 +87,8 @@ RSpec.describe Organization do
       expect(subject).to have_many(:orders)
       expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
         .conditions(kind: "triggered")
+      expect(subject).to have_many(:contract_alerts).class_name("UsageMonitoring::ContractAlert")
+      expect(subject).to have_many(:contract_activities).class_name("UsageMonitoring::ContractActivity")
     end
   end
 
