@@ -18,7 +18,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
   let(:organization) { membership.organization }
   let(:contract) { create(:contract, :pending, organization:) }
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, units: 5) }
-  let(:input) { {id: contract_rate_card.id, units: 20} }
+  let(:input) { {id: contract_rate_card.id, units: 20, billingScope: "segment"} }
 
   let(:mutation) do
     <<~GQL
@@ -27,6 +27,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
           id
           units
           billingAnchorDate
+          billingScope
           nextBillingAt
         }
       }
@@ -37,11 +38,12 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "contracts:update"
 
-  it "updates the units" do
+  it "updates the units and billing scope" do
     response = execution["data"]["updateContractAppliedRateCard"]
 
     expect(response["id"]).to eq(contract_rate_card.id)
     expect(response["units"]).to eq(20.0)
+    expect(response["billingScope"]).to eq("segment")
     expect(contract_rate_card.reload.terms.sole.units).to eq(20)
   end
 
@@ -103,6 +105,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
       expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
 
       expect(contract_rate_card.reload.terms.sole.units).to eq(5)
+      expect(contract_rate_card.billing_scope).to eq("cycle")
     end
   end
 

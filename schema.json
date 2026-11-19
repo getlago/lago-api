@@ -11269,6 +11269,22 @@
               "deprecationReason": null
             },
             {
+              "name": "billingScope",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "ContractAppliedRateCardBillingScopeEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract",
               "description": null,
               "args": [],
@@ -11448,6 +11464,29 @@
           "inputFields": null,
           "interfaces": [],
           "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "ContractAppliedRateCardBillingScopeEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "cycle",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "segment",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
           "possibleTypes": null
         },
         {
@@ -15118,6 +15157,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601Date",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingScope",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "ContractAppliedRateCardBillingScopeEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -87314,6 +87365,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601Date",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingScope",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "ContractAppliedRateCardBillingScopeEnum",
                 "ofType": null
               },
               "defaultValue": null,
