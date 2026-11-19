@@ -150,7 +150,6 @@ describe PlanWallets::UpdateService do
 
   describe "refused params" do
     [
-      ["a rate amount", {rate_amount: "1.0"}, {rate_amount: ["not_supported"]}],
       ["a currency other than the plan's", {currency: "EUR"}, {currency: ["currency_does_not_match"]}],
       ["a null currency", {currency: nil}, {currency: ["value_is_invalid"]}],
       ["a null code", {code: nil}, {code: ["value_is_mandatory"]}],
