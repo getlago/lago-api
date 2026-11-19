@@ -8,8 +8,9 @@ RSpec.describe RecurringTransactionRule do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer) }
 
-  it_behaves_like "a connection-resolvable billing object" do
+  it_behaves_like "a connection-resolvable billing object", fallback_redefined: true do
     let(:resolvable) { create(:recurring_transaction_rule) }
+    let(:fallback) { resolvable.wallet }
   end
 
   describe "associations" do

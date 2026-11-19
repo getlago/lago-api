@@ -48,7 +48,7 @@ module ConnectionResolvable
       override = overrides[category]
 
       connection = if override.nil?
-        customer_default_connection(category)
+        fallback_connection(category)
       elsif override.skip?
         nil
       else
@@ -63,8 +63,6 @@ module ConnectionResolvable
     end
   end
 
-  private
-
   def effective_connection(category)
     override = billing_object_connections.find_by(category:)
 
@@ -74,15 +72,24 @@ module ConnectionResolvable
       return override_connection(override, category)
     end
 
-    customer_default_connection(category)
+    fallback_connection(category)
   end
 
+  private
+
+  # PaymentProviders::DestroyService soft-deletes provider customers with update_all
+  # and leaves their billing_object_connections, which results in payment_provider_customer
+  # resolving to nil here. In this case we return fallback_connection.
   def override_connection(override, category)
     if category == CATEGORIES[:payment]
-      override.payment_provider_customer
+      override.payment_provider_customer || fallback_connection(category)
     else
       override.integration_customer
     end
+  end
+
+  def fallback_connection(category)
+    customer_default_connection(category)
   end
 
   def customer_default_connection(category)
