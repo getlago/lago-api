@@ -9,6 +9,7 @@ module Agents
 
     belongs_to :organization
     belongs_to :storefront, class_name: "Integrations::AgentStorefrontIntegration", foreign_key: :integration_id
+    has_many :claims, class_name: "Agents::Claim", dependent: :delete_all
 
     enum :status, STATUSES, validate: true
 

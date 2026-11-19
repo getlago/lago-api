@@ -8,7 +8,7 @@ module Agents
 
     private
 
-    attr_reader :storefront
+    attr_reader :storefront, :registration
 
     def find_storefront
       @storefront = Integrations::AgentStorefrontIntegration.find_by(id: params[:storefront_id])
@@ -17,6 +17,15 @@ module Agents
 
     def bearer_token
       request.authorization.to_s[/\ABearer (.+)\z/i, 1]
+    end
+
+    def authenticate_billing_token
+      result = Agents::Auth::VerifyTokenService.call(storefront:, token: bearer_token, scope: Agents::Auth::ChallengeService::BILLING_SCOPE)
+      if result.success?
+        @registration = result.registration
+      else
+        render_error_response(result)
+      end
     end
 
     def throttled?(rule, identifier)

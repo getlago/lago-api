@@ -66,6 +66,10 @@ module Agents
       end
 
       def create_customer
+        # The owner's e-mail lives on the customer, so a claim belongs to the customer it was verified on. The
+        # merchant deleted the previous one: the new customer starts unclaimed, and the owner can claim it again.
+        registration.claims.delete_all
+
         ::Customers::CreateService.call!(
           organization_id: storefront.organization_id,
           external_id: Agents::ExternalIds.customer(registration),
