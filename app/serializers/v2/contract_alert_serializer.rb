@@ -24,9 +24,10 @@ module V2
     private
 
     def contract
-      ::Contract.where(organization_id: model.organization_id, external_id: model.contract_external_id)
-        .order(Arel.sql("status IN ('pending', 'active') DESC"), created_at: :desc, id: :desc)
-        .first
+      contracts = ::Contract.where(organization_id: model.organization_id, external_id: model.contract_external_id)
+
+      contracts.terminatable_by_external_id(model.contract_external_id) ||
+        contracts.order(created_at: :desc).first
     end
 
     def thresholds

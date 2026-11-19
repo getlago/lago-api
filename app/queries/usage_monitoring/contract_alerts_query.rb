@@ -8,7 +8,7 @@ module UsageMonitoring
     def call
       alerts = ContractAlert.where(organization:, contract_external_id: filters.contract_external_id)
         .includes(:thresholds, :product, :product_filter)
-        .order(created_at: :desc, id: :desc)
+      alerts = apply_consistent_ordering(alerts)
       alerts = with_date_range(alerts, :created_at)
 
       result.contract_alerts = paginate(alerts)

@@ -97,6 +97,16 @@ RSpec.describe V2::ContractAlertSerializer do
     end
   end
 
+  context "with a newer pending contract next to the active one" do
+    let(:new_customer) { create(:customer, organization:, external_id: "globex") }
+
+    before { create(:contract, :pending, organization:, customer: new_customer, external_id: "ctr_123") }
+
+    it "renders the customer of the active contract" do
+      expect(payload[:external_customer_id]).to eq("acme_ai")
+    end
+  end
+
   context "when every contract with the external id has ended" do
     let(:new_customer) { create(:customer, organization:, external_id: "globex") }
 

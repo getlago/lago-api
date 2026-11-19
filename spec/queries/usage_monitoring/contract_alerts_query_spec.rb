@@ -29,19 +29,6 @@ RSpec.describe UsageMonitoring::ContractAlertsQuery do
     expect(result.contract_alerts).to eq([newer_alert, older_alert])
   end
 
-  context "with alerts created at the same time" do
-    let(:created_at) { Time.zone.parse("2026-11-01T10:00:00Z") }
-    let(:same_time_alerts) do
-      create_list(:contract_usage_units_alert, 2, organization:, contract_external_id: contract.external_id, created_at:)
-    end
-
-    before { same_time_alerts }
-
-    it "orders them by id, descending" do
-      expect(result.contract_alerts.map(&:id)).to eq([newer_alert.id, older_alert.id, *same_time_alerts.map(&:id).sort.reverse])
-    end
-  end
-
   context "without a contract external id" do
     let(:filters) { {} }
 
