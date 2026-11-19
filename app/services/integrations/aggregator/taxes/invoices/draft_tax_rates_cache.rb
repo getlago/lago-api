@@ -18,13 +18,16 @@ module Integrations
         # it moves to another band.
         #
         # Rates also change on the provider side without Lago knowing (new registration, local rate
-        # update), which the TTL bounds. The TTL is randomized so that customers refreshed during
-        # the same burst do not all expire, and call the provider, at the same time.
+        # update), which the TTL bounds. Each entry lives between the TTL and one and a half times
+        # it, so that customers refreshed during the same burst do not all expire, and call the
+        # provider, at the same time.
+        #
+        # A line with no amount carries no tax and is answered without the provider. A negative line
+        # (a credit) is left to the provider, as is the whole request it belongs to.
         class DraftTaxRatesCache
           # IMPORTANT: bump when the key or the stored value changes, so old entries are ignored.
           CACHE_KEY_VERSION = "1"
-          TTL = 24.hours
-          TTL_JITTER = 12.hours
+          DEFAULT_TTL = 24.hours
 
           BAND_WIDTH = 500
           WIDE_BAND_FROM = 5_000
@@ -33,31 +36,42 @@ module Integrations
           TRANSACTION_DATES = %w[issuing_date tax_date].freeze
           LINE_VARIABLES = %w[item_key item_id amount_cents amount unit].freeze
 
+          # A zero TTL turns the cache off, reads included, so that a bad entry stops being served
+          # without a deploy.
+          def self.ttl
+            value = ENV["LAGO_DRAFT_TAX_RATES_CACHE_TTL_SECONDS"]
+            value.present? ? value.to_i.seconds : DEFAULT_TTL
+          end
+
+          def self.enabled?
+            ttl > 0
+          end
+
           def initialize(integration:, payload:)
             @integration = integration
             @payload = payload
           end
 
+          # Whether rates can price this request: every line has an amount, and none is negative.
+          def cacheable?
+            transaction.present? && request_lines.all? { |line| line_amount(line)&.negative? == false }
+          end
+
           # Returns a provider-like answer built from the cached rates, or nil when one line has no
           # rate, in which case the provider must answer the whole request.
           def fetch
-            return if keys.empty?
+            return unless cacheable?
 
-            cached = Rails.cache.read_multi(*keys)
-            lines = keys.map { |key| cached[key] }
+            cached = Rails.cache.read_multi(*keys.compact)
+            rates = keys.map { |key| key && cached[key] }
+            return unless keys.zip(rates).all? { |key, line_rates| key.nil? || line_rates }
 
-            if lines.all?
-              track(:hit)
-              build_body(lines)
-            else
-              track(:miss)
-              nil
-            end
+            build_body(rates)
           end
 
           def store(body)
             answered = body.is_a?(Hash) ? body.dig("succeededInvoices", 0, "fees") : nil
-            return if answered.blank? || keys.empty?
+            return if answered.blank? || !cacheable?
 
             by_key = answered.select { it["item_key"].present? }.index_by { it["item_key"] }
             by_id = answered.select { it["item_id"].present? }.index_by { it["item_id"].to_s }
@@ -65,13 +79,16 @@ module Integrations
             # Matched on identifiers rather than position, as the base service does, so that a
             # provider listing lines in another order cannot cache one product's rate for another.
             entries = request_lines.zip(keys).each_with_object({}) do |(line, key), memo|
+              next unless key
+
               answer = by_key[line["item_key"]] || by_id[line["item_id"].to_s]
               rates = answer && line_rates(answer)
               memo[key] = rates if rates
             end
             return if entries.empty?
 
-            Rails.cache.write_multi(entries, expires_in: TTL + rand(TTL_JITTER.to_i).seconds)
+            ttl = self.class.ttl
+            Rails.cache.write_multi(entries, expires_in: ttl + rand((ttl / 2).to_i).seconds)
           end
 
           private
@@ -86,12 +103,9 @@ module Integrations
             Array(transaction&.dig("fees"))
           end
 
+          # One key per line, nil for a line with no amount: it needs no rate.
           def keys
-            @keys ||= if transaction && request_lines.all? { |line| line_amount(line)&.positive? }
-              request_lines.map { |line| line_key(line) }
-            else
-              []
-            end
+            @keys ||= request_lines.map { |line| line_amount(line).positive? ? line_key(line) : nil }
           end
 
           def line_key(line)
@@ -167,6 +181,7 @@ module Integrations
           def build_body(rates)
             fees = request_lines.zip(rates).map do |line, line_rates|
               amount_cents = request_amount_cents(line)
+              line_rates ||= {"seller_pays" => false, "tax_ratio" => "0", "tax_breakdown" => []}
 
               {
                 "item_key" => line["item_key"],
@@ -189,10 +204,6 @@ module Integrations
 
           def request_amount_cents(line)
             line_amount(line) * subunit_to_unit
-          end
-
-          def track(outcome)
-            Yabeda.tax_providers.draft_tax_rates_cache_total.increment({provider: integration.provider_key, outcome:})
           end
         end
       end

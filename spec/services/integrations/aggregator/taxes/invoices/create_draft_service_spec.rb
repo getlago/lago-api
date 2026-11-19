@@ -275,6 +275,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           subject(:service_call) { described_class.call(invoice:, reuse_tax_rates:) }
 
           let(:reuse_tax_rates) { true }
+          let(:counter) { Yabeda.tax_providers.draft_tax_rates_cache_total }
           let(:body) do
             {
               "succeededInvoices" => [
@@ -291,6 +292,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
           before do
             allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+            allow(counter).to receive(:increment)
 
             described_class.call(invoice:, reuse_tax_rates: true)
 
@@ -311,6 +313,54 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
               ]
             )
             expect(WebMock).to have_requested(:post, endpoint).once
+            expect(counter).to have_received(:increment).with({provider: "anrok", outcome: :miss}).once
+            expect(counter).to have_received(:increment).with({provider: "anrok", outcome: :hit}).once
+          end
+
+          context "when the amounts did not change" do
+            before do
+              fee_add_on.update!(amount_cents: 200, precise_amount_cents: 200.0000000001)
+              fee_add_on_two.update!(amount_cents: 200, precise_amount_cents: 200.0000000001)
+              invoice.fees.reload
+            end
+
+            it "prefers the exact answer to an estimate" do
+              result = service_call
+
+              expect(result.fees.map(&:tax_amount_cents)).to eq([20, 30])
+              expect(WebMock).to have_requested(:post, endpoint).once
+              expect(counter).to have_received(:increment).with({provider: "anrok", outcome: :exact}).once
+              expect(counter).not_to have_received(:increment).with({provider: "anrok", outcome: :hit})
+            end
+          end
+
+          context "when a fee is negative" do
+            before do
+              stub_request(:post, endpoint).and_return(status: 200, body:)
+              fee_add_on_two.update!(amount_cents: -100, precise_amount_cents: -100)
+              invoice.fees.reload
+            end
+
+            it "asks the provider and counts the request as skipped" do
+              service_call
+
+              expect(WebMock).to have_requested(:post, endpoint).twice
+              expect(counter).to have_received(:increment).with({provider: "anrok", outcome: :skipped}).once
+            end
+          end
+
+          context "when the rates cache is turned off" do
+            before do
+              stub_request(:post, endpoint).and_return(status: 200, body:)
+              stub_const("ENV", ENV.to_h.merge("LAGO_DRAFT_TAX_RATES_CACHE_TTL_SECONDS" => "0"))
+            end
+
+            it "asks the provider" do
+              service_call
+
+              expect(WebMock).to have_requested(:post, endpoint).twice
+              expect(counter).to have_received(:increment).once # the first call only
+            end
           end
 
           context "when the exact cache answered the first request" do

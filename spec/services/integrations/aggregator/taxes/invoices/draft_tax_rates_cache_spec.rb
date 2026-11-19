@@ -6,7 +6,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
   subject(:rates_cache) { described_class.new(integration:, payload:) }
 
   let(:integration) { build_stubbed(:anrok_integration) }
-  let(:counter) { Yabeda.tax_providers.draft_tax_rates_cache_total }
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
   let(:amounts) { [20_000, 30_000] }
 
@@ -69,13 +68,11 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
 
   before do
     allow(Rails).to receive(:cache).and_return(cache)
-    allow(counter).to receive(:increment)
   end
 
   describe "#fetch" do
     it "returns nil before any answer is stored" do
       expect(rates_cache.fetch).to be_nil
-      expect(counter).to have_received(:increment).with({provider: "anrok", outcome: :miss})
     end
 
     context "when an answer was stored" do
@@ -110,7 +107,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
           ],
           "failedInvoices" => []
         )
-        expect(counter).to have_received(:increment).with({provider: "anrok", outcome: :hit})
       end
 
       it "ignores the dates" do
@@ -155,7 +151,27 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
     context "when a line has no amount" do
       let(:amounts) { [20_000, 0] }
 
-      it "returns nil" do
+      before { rates_cache.store(answer) }
+
+      it "prices it with no tax, without a stored rate" do
+        lines = rates_for(anrok_payload([25_000, 0])).dig("succeededInvoices", 0, "fees")
+
+        expect(lines.map { it.slice("item_id", "amount_cents", "tax_amount_cents", "tax_breakdown") }).to eq(
+          [
+            {"item_id" => "id_1", "amount_cents" => 25_000, "tax_amount_cents" => 2_500, "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 2_500, "type" => "tax"}]},
+            {"item_id" => "id_2", "amount_cents" => 0, "tax_amount_cents" => 0, "tax_breakdown" => []}
+          ]
+        )
+      end
+    end
+
+    context "when a line is negative" do
+      let(:amounts) { [20_000, -500] }
+
+      before { rates_cache.store(answer) }
+
+      it "leaves the request to the provider" do
+        expect(rates_cache).not_to be_cacheable
         expect(rates_cache.fetch).to be_nil
       end
     end
@@ -279,7 +295,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
         lines = rates_for(avalara_payload("300.0")).dig("succeededInvoices", 0, "fees")
 
         expect(lines.first).to include("amount_cents" => 30_000, "tax_amount_cents" => 2_250) # 30_000 * 1_500 / 20_000
-        expect(counter).to have_received(:increment).with({provider: "avalara", outcome: :hit})
       end
 
       it "asks the provider when the billing entity address changes" do
@@ -302,6 +317,17 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
       end
     end
 
+    it "keeps the rates for the configured TTL" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_DRAFT_TAX_RATES_CACHE_TTL_SECONDS" => "3600"))
+      allow(cache).to receive(:write_multi).and_call_original
+
+      rates_cache.store(answer)
+
+      expect(cache).to have_received(:write_multi) do |_entries, expires_in:|
+        expect(expires_in).to be_between(1.hour, 90.minutes)
+      end
+    end
+
     it "skips a failed answer" do
       rates_cache.store({"succeededInvoices" => [], "failedInvoices" => [{"validation_errors" => {"type" => "customerAddressCouldNotResolve"}}]})
 
@@ -312,6 +338,20 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
       rates_cache.store(answer.deep_dup.tap { it["succeededInvoices"].first["fees"].pop })
 
       expect(rates_cache.fetch).to be_nil
+    end
+  end
+
+  describe ".enabled?" do
+    it "is turned off by a zero TTL" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_DRAFT_TAX_RATES_CACHE_TTL_SECONDS" => "0"))
+
+      expect(described_class).not_to be_enabled
+    end
+
+    it "is on by default" do
+      stub_const("ENV", ENV.to_h.except("LAGO_DRAFT_TAX_RATES_CACHE_TTL_SECONDS"))
+
+      expect(described_class).to be_enabled
     end
   end
 

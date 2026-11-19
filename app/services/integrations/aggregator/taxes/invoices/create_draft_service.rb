@@ -28,20 +28,7 @@ module Integrations
             return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
             return no_taxable_fees_result if taxable_fees.empty?
 
-            body = rates_cache&.fetch
-
-            unless body
-              body = if cache_taxes?
-                DraftTaxesCacheService.new(integration:, payload:).call { request_taxes }
-              else
-                request_taxes
-              end
-
-              # An exact-cache answer may already be a day old: storing its rates would extend
-              # their life past the rates cache TTL.
-              rates_cache&.store(body) if provider_answered
-            end
-
+            body = rates_cache ? estimated_taxes : exact_taxes
             process_response(body)
 
             result
@@ -65,9 +52,48 @@ module Integrations
           attr_reader :reuse_tax_rates, :provider_answered
 
           def rates_cache
-            return unless reuse_tax_rates
+            return unless reuse_tax_rates && DraftTaxRatesCache.enabled?
 
             @rates_cache ||= DraftTaxRatesCache.new(integration:, payload:)
+          end
+
+          def exact_cache
+            @exact_cache ||= DraftTaxesCacheService.new(integration:, payload:)
+          end
+
+          def exact_taxes
+            cache_taxes? ? exact_cache.call { request_taxes } : request_taxes
+          end
+
+          # An exact answer for these very amounts beats an estimate, then rates of earlier answers
+          # beat a provider call.
+          def estimated_taxes
+            if cache_taxes? && (body = exact_cache.read)
+              track_rates(:exact)
+              return body
+            end
+
+            unless rates_cache.cacheable?
+              track_rates(:skipped)
+              return exact_taxes
+            end
+
+            if (body = rates_cache.fetch)
+              track_rates(:hit)
+              return body
+            end
+
+            track_rates(:miss)
+            body = exact_taxes
+
+            # An exact-cache answer may already be a day old: storing its rates would extend their
+            # life past the rates cache TTL.
+            rates_cache.store(body) if provider_answered
+            body
+          end
+
+          def track_rates(outcome)
+            Yabeda.tax_providers.draft_tax_rates_cache_total.increment({provider: integration.provider_key, outcome:})
           end
 
           # NOTE: Throttling happens here, so an answer served from the cache doesn't use up the
