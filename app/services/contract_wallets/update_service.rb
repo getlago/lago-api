@@ -33,7 +33,7 @@ module ContractWallets
 
       # Locked so the status check holds: the clock may end the contract meanwhile.
       contract.with_lock do
-        return result.forbidden_failure!(code: "contract_not_live") unless contract.wallets_editable?
+        return result.forbidden_failure!(code: "contract_not_live") unless Contract::LIVE_STATUSES.include?(contract.status)
 
         contract_wallet.lock!
         return result.not_found_failure!(resource: "contract_wallet") if contract_wallet.discarded?
