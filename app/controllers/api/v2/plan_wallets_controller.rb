@@ -42,7 +42,7 @@ module Api
       end
 
       def show
-        plan_wallet = plan_wallets&.includes(selectors: ::V2::PlanWalletSerializer::SELECTOR_TARGETS)&.find_by(code: params[:code])
+        plan_wallet = plan_wallets&.preload(::V2::PlanWalletSerializer::PRELOADS)&.find_by(code: params[:code])
 
         return not_found_error(resource: "plan_wallet") unless plan_wallet
 
@@ -59,9 +59,7 @@ module Api
         )
 
         if result.success?
-          render_plan_wallets(
-            result.plan_wallets.includes(:catalog_plan, selectors: ::V2::PlanWalletSerializer::SELECTOR_TARGETS)
-          )
+          render_plan_wallets(result.plan_wallets.preload(::V2::PlanWalletSerializer::PRELOADS))
         else
           render_error_response(result)
         end
