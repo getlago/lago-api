@@ -40,6 +40,23 @@ RSpec.describe Product do
         .class_name("IntegrationMappings::XeroMapping")
         .dependent(:destroy)
     end
+
+    context "with contract alerts" do
+      let(:product) { create(:product) }
+      let(:organization) { product.organization }
+      let(:alert) { create(:contract_usage_units_alert, organization:, product:) }
+
+      before do
+        alert
+        create(:contract_usage_units_alert, organization:, product:, code: "discarded", deleted_at: Time.current)
+        create(:contract_usage_units_alert, organization:, product: create(:product, organization:))
+        create(:contract_usage_units_alert, organization: create(:organization), product:)
+      end
+
+      it "lists the kept alerts on the product in its organization only" do
+        expect(product.contract_alerts).to eq([alert])
+      end
+    end
   end
 
   describe "Scopes" do
