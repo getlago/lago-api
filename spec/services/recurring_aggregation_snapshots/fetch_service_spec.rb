@@ -90,7 +90,7 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
       it "returns the latest period of the product filter's bucket, marked by its own snapshot" do
         result = fetch_service.call
 
-        expect(result.period).to eq(described_class::Period.new(to_datetime: previous_to_datetime, watermark:))
+        expect(result.period).to eq(described_class::Period.new(to_datetime: previous_to_datetime, watermark:, reads_older: false))
         expect(result.snapshots.map(&:units)).to eq([10])
       end
 
@@ -108,7 +108,7 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         it "returns the latest period of the bucket without filter, marked by its own snapshot" do
           result = fetch_service.call
 
-          expect(result.period).to eq(described_class::Period.new(to_datetime: previous_to_datetime, watermark:))
+          expect(result.period).to eq(described_class::Period.new(to_datetime: previous_to_datetime, watermark:, reads_older: false))
           expect(result.snapshots.map(&:units)).to eq([10])
         end
       end
