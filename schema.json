@@ -36783,12 +36783,12 @@
               "deprecationReason": null
             },
             {
-              "name": "originalFee",
+              "name": "originalFeeId",
               "description": null,
               "args": [],
               "type": {
-                "kind": "OBJECT",
-                "name": "Fee",
+                "kind": "SCALAR",
+                "name": "ID",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -70129,6 +70129,35 @@
                   "name": "FeatureObjectCollection",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fee",
+              "description": "Query a single fee of an organization",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the fee",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Fee",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null

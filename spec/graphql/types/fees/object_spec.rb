@@ -22,7 +22,7 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:subscription).of_type("Subscription")
     expect(subject).to have_field(:true_up_fee).of_type("Fee")
     expect(subject).to have_field(:true_up_parent_fee).of_type("Fee")
-    expect(subject).to have_field(:original_fee).of_type("Fee")
+    expect(subject).to have_field(:original_fee_id).of_type("ID")
     expect(subject).to have_field(:wallet_transaction).of_type("WalletTransaction")
 
     expect(subject).to have_field(:creditable_amount_cents).of_type("BigInt!")
@@ -109,15 +109,15 @@ RSpec.describe Types::Fees::Object do
     end
   end
 
-  describe "#original_fee" do
-    subject { run_graphql_field("Fee.originalFee", fee) }
+  describe "#original_fee_id" do
+    subject { run_graphql_field("Fee.originalFeeId", fee) }
 
     context "when fee has an original_fee" do
       let(:root_fee) { create(:charge_fee) }
       let(:fee) { create(:charge_fee, original_fee: root_fee) }
 
-      it "returns the root fee" do
-        expect(subject).to eq(root_fee)
+      it "returns the root fee's id" do
+        expect(subject).to eq(root_fee.id)
       end
     end
 
