@@ -64,6 +64,55 @@ RSpec.describe Billing::Context do
     end
   end
 
+  describe "#last_billed_charges_to_datetime" do
+    subject(:context) { described_class.from(subscription:) }
+
+    let(:subscription) { create(:subscription) }
+    let(:before) { Time.zone.parse("2026-06-01") }
+    let(:may_end) { Time.zone.parse("2026-05-31").end_of_day.floor(6) }
+    let(:april_end) { Time.zone.parse("2026-04-30").end_of_day.floor(6) }
+
+    def invoice_period(charges_to_datetime, invoicing_reason: :subscription_periodic)
+      create(:invoice_subscription, subscription:, invoicing_reason:,
+        charges_from_datetime: charges_to_datetime.beginning_of_month, charges_to_datetime:)
+    end
+
+    before do
+      invoice_period(april_end - 1.month)
+      invoice_period(april_end)
+      invoice_period(may_end, invoicing_reason: :progressive_billing)
+      invoice_period(before.end_of_month.floor(6))
+    end
+
+    it "returns the end of the latest period billed before the time, progressive billing aside" do
+      expect(context.last_billed_charges_to_datetime(before:)).to eq(april_end)
+    end
+
+    it "loads it once per time" do
+      context.last_billed_charges_to_datetime(before:)
+      invoice_period(may_end)
+
+      expect(context.last_billed_charges_to_datetime(before:)).to eq(april_end)
+      expect(context.last_billed_charges_to_datetime(before: before + 1.second)).to eq(may_end)
+    end
+
+    context "with a terminating invoice" do
+      before { invoice_period(may_end, invoicing_reason: :subscription_terminating) }
+
+      it "counts it as billed" do
+        expect(context.last_billed_charges_to_datetime(before:)).to eq(may_end)
+      end
+    end
+
+    context "with a contract" do
+      subject(:context) { described_class.from(contract: build_stubbed(:contract)) }
+
+      it "returns nil" do
+        expect(context.last_billed_charges_to_datetime(before:)).to be_nil
+      end
+    end
+  end
+
   context "with a contract" do
     subject(:context) { described_class.from(contract:) }
 

@@ -784,6 +784,256 @@ RSpec.describe "templates/invoices/v4.slim" do
     end
   end
 
+  context "when the hidden $0 subscription fee is alone in its billing period" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+
+    let(:plan) do
+      create(
+        :plan,
+        organization:,
+        interval: "monthly",
+        pay_in_advance: false,
+        amount_cents: 0,
+        invoice_display_name: "Seats Plan"
+      )
+    end
+
+    let(:subscription) { create(:subscription, customer:, plan:, status: "active") }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, pay_in_advance: true, invoice_display_name: "Seats") }
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        number: "LAGO-202611-001",
+        payment_due_date: Date.parse("2026-10-03"),
+        issuing_date: Date.parse("2026-10-03"),
+        invoice_type: :subscription,
+        total_amount_cents: 18000,
+        currency: "USD",
+        fees_amount_cents: 18000,
+        sub_total_excluding_taxes_amount_cents: 18000,
+        sub_total_including_taxes_amount_cents: 18000
+      )
+    end
+
+    # The subscription fee is billed in arrears for the past period, the seats charge in advance for the next one
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription:,
+        from_datetime: Time.zone.parse("2026-09-03 00:00:00"),
+        to_datetime: Time.zone.parse("2026-10-02 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2026-10-03 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2026-11-02 23:59:59"),
+        timestamp: Time.zone.parse("2026-10-03 00:00:00")
+      )
+    end
+
+    let(:subscription_fee) do
+      create(
+        :fee,
+        invoice:,
+        subscription:,
+        fee_type: :subscription,
+        amount_cents: 0,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 0,
+        precise_unit_amount: 0,
+        invoice_display_name: nil,
+        properties: {
+          from_datetime: "2026-09-03 00:00:00",
+          to_datetime: "2026-10-02 23:59:59"
+        }
+      )
+    end
+
+    let(:seats_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        subscription:,
+        charge:,
+        pay_in_advance: true,
+        amount_cents: 18000,
+        amount_currency: "USD",
+        units: 12,
+        unit_amount_cents: 1500,
+        precise_unit_amount: 15,
+        total_aggregated_units: 12,
+        invoice_display_name: "Seats",
+        properties: {
+          "timestamp" => "2026-10-03 00:00:00",
+          "charges_from_datetime" => "2026-10-03 00:00:00",
+          "charges_to_datetime" => "2026-11-02 23:59:59"
+        }
+      )
+    end
+
+    before do
+      invoice_subscription
+      subscription_fee
+      seats_fee
+    end
+
+    it "renders only the billing period of the displayed fees" do
+      expect(rendered_template).not_to include("Fees from Sep 03, 2026 to Oct 02, 2026")
+      expect(rendered_template).to include("Fees from Oct 03, 2026 to Nov 02, 2026")
+      expect(rendered_template).to include("Seats")
+      expect(rendered_template).to include("$180.00")
+    end
+
+    # Each rendered billing period section, by heading, with the names of its fee rows and its CSS classes
+    def billing_period_sections
+      Nokogiri::HTML(rendered_template).css(".invoice-resume > table.invoice-resume-table").map do |table|
+        {
+          heading: table.at_css("tr.first_child > td").text.strip,
+          fees: table.css("tr.fee > td:first-child").map { it.text.strip },
+          classes: table.parent["class"].split
+        }
+      end
+    end
+
+    it "renders the first displayed billing period without a top margin" do
+      expect(billing_period_sections).to eq([
+        {heading: "Fees from Oct 03, 2026 to Nov 02, 2026", fees: ["Seats"], classes: ["invoice-resume", "overflow-auto"]}
+      ])
+    end
+
+    context "when the subscription fee has a positive amount" do
+      let(:subscription_fee) do
+        create(
+          :fee,
+          invoice:,
+          subscription:,
+          fee_type: :subscription,
+          amount_cents: 5000,
+          amount_currency: "USD",
+          units: 1,
+          unit_amount_cents: 5000,
+          precise_unit_amount: 50,
+          invoice_display_name: "Platform access",
+          properties: {
+            from_datetime: "2026-09-03 00:00:00",
+            to_datetime: "2026-10-02 23:59:59"
+          }
+        )
+      end
+
+      it "renders the subscription fee in its billing period" do
+        expect(billing_period_sections).to eq([
+          {heading: "Fees from Sep 03, 2026 to Oct 02, 2026", fees: ["Platform access"], classes: ["invoice-resume", "overflow-auto"]},
+          {heading: "Fees from Oct 03, 2026 to Nov 02, 2026", fees: ["Seats"], classes: ["invoice-resume", "overflow-auto", "mt-24"]}
+        ])
+      end
+    end
+
+    context "when the $0 subscription fee is the only fee of the invoice" do
+      let(:seats_fee) { nil }
+
+      it "renders the $0 subscription fee in its billing period" do
+        expect(billing_period_sections).to eq([
+          {heading: "Fees from Sep 03, 2026 to Oct 02, 2026", fees: ["Monthly subscription - Seats Plan"], classes: ["invoice-resume", "overflow-auto"]}
+        ])
+        expect(rendered_template).to include("$0.00")
+      end
+    end
+
+    context "when a charge fee shares the billing period of the hidden subscription fee" do
+      let(:api_calls_charge) { create(:standard_charge, plan:, billable_metric:, pay_in_advance: false, invoice_display_name: "API calls") }
+      let(:api_calls_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge: api_calls_charge,
+          amount_cents: 1000,
+          amount_currency: "USD",
+          units: 100,
+          unit_amount_cents: 10,
+          precise_unit_amount: 0.1,
+          total_aggregated_units: 100,
+          invoice_display_name: "API calls",
+          properties: {
+            "charges_from_datetime" => "2026-09-03 00:00:00",
+            "charges_to_datetime" => "2026-10-02 23:59:59"
+          }
+        )
+      end
+
+      before { api_calls_fee }
+
+      it "keeps the billing period heading with the charge fee only" do
+        expect(billing_period_sections).to eq([
+          {heading: "Fees from Sep 03, 2026 to Oct 02, 2026", fees: ["API calls"], classes: ["invoice-resume", "overflow-auto"]},
+          {heading: "Fees from Oct 03, 2026 to Nov 02, 2026", fees: ["Seats"], classes: ["invoice-resume", "overflow-auto", "mt-24"]}
+        ])
+      end
+    end
+
+    context "when a fixed charge fee shares the billing period of the hidden subscription fee" do
+      let(:add_on) { create(:add_on, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, invoice_display_name: "Support") }
+      let(:support_fee) do
+        create(
+          :fixed_charge_fee,
+          invoice:,
+          fixed_charge:,
+          subscription:,
+          amount_cents: 2000,
+          amount_currency: "USD",
+          units: 1,
+          unit_amount_cents: 2000,
+          precise_unit_amount: 20,
+          invoice_display_name: "Support",
+          properties: {
+            fixed_charges_from_datetime: "2026-09-03 00:00:00",
+            fixed_charges_to_datetime: "2026-10-02 23:59:59"
+          }
+        )
+      end
+
+      before { support_fee }
+
+      it "keeps the billing period heading with the fixed charge fee only" do
+        expect(billing_period_sections).to eq([
+          {heading: "Fees from Sep 03, 2026 to Oct 02, 2026", fees: ["Support"], classes: ["invoice-resume", "overflow-auto"]},
+          {heading: "Fees from Oct 03, 2026 to Nov 02, 2026", fees: ["Seats"], classes: ["invoice-resume", "overflow-auto", "mt-24"]}
+        ])
+      end
+    end
+
+    context "when a minimum commitment fee shares the billing period of the hidden subscription fee" do
+      let(:commitment_fee) do
+        create(
+          :minimum_commitment_fee,
+          invoice:,
+          subscription:,
+          amount_cents: 3000,
+          amount_currency: "USD",
+          invoice_display_name: "Minimum Commitment Fee",
+          properties: {
+            from_datetime: "2026-09-03 00:00:00",
+            to_datetime: "2026-10-02 23:59:59"
+          }
+        )
+      end
+
+      before { commitment_fee }
+
+      it "keeps the billing period heading with the commitment fee only" do
+        expect(billing_period_sections).to eq([
+          {heading: "Fees from Sep 03, 2026 to Oct 02, 2026", fees: ["Minimum Commitment Fee"], classes: ["invoice-resume", "overflow-auto"]},
+          {heading: "Fees from Oct 03, 2026 to Nov 02, 2026", fees: ["Seats"], classes: ["invoice-resume", "overflow-auto", "mt-24"]}
+        ])
+      end
+    end
+  end
+
   context "when invoice_type is subscription and plan is paid in advance" do
     let(:organization) { create(:organization, :with_static_values) }
     let(:customer) { create(:customer, :with_static_values, organization:) }

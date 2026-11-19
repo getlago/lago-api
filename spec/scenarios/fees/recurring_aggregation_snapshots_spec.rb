@@ -133,7 +133,7 @@ describe "Recurring aggregation snapshots", transaction: false do
     april_invoice = bill_at(Time.utc(2026, 5, 1, 1))
 
     send_event(4, at: Time.utc(2026, 5, 10))
-    # May is not billed yet: the usage of June starts from the April snapshot
+    # May is not billed yet: the usage of June starts from the April snapshot, plus the events dated in May
     june_usage = usage_at(Time.utc(2026, 6, 1, 0, 30))
 
     {march_invoice:, april_usage:, april_invoice:, june_usage:, may_invoice: bill_at(Time.utc(2026, 6, 1, 1))}
@@ -376,9 +376,10 @@ describe "Recurring aggregation snapshots", transaction: false do
         # A weighted sum ignores events dated in a billed period: (16 × 14 + 21 × 16) / 30 days
         april_usage: {amount_cents: 1867, units: BigDecimal("18.6666666667"), events_count: 1},
         april_invoice: [{amount_cents: 1867, units: BigDecimal("18.6666666667"), events_count: 1}],
+        # April's level plus the unbilled May event: 21 + 4
+        june_usage: {amount_cents: 2500, units: 25, events_count: 0},
         # (21 × 9 + 25 × 22) / 31 days
         may_invoice: [{amount_cents: 2384, units: BigDecimal("23.8387096774"), events_count: 1}]
-        # No June usage: after an unbilled period it misses that period's events with every flag
       }
     end
     let(:snapshots) do

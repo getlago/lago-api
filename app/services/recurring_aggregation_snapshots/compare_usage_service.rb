@@ -99,6 +99,10 @@ module RecurringAggregationSnapshots
       starts_from_period?(bucket.billable_metric, period, date_service.charges_from_datetime)
     end
 
+    def billing_context
+      @billing_context ||= Billing::Context.from(subscription:)
+    end
+
     def compared_charges
       @compared_charges ||= subscription.plan.charges.includes(:billable_metric, :filters).select do |charge|
         charge.billable_metric.recurring? &&
