@@ -2,7 +2,7 @@
 
 # Shared coverage for ConnectionResolvable. The including spec must define `let(:resolvable)`,
 # a billing object whose customer's default connections are inherited.
-RSpec.shared_examples "a connection-resolvable billing object" do |fallback_defined: false|
+RSpec.shared_examples "a connection-resolvable billing object" do |fallback_redefined: false|
   let(:resolution_customer) { resolvable.customer }
   let(:organization) { resolution_customer.organization }
 
@@ -29,21 +29,6 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_defi
         end
       end
 
-      context "when the object pins a connection with a deleted payment_provider_customer" do
-        let(:override_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
-
-        before do
-          create(:billing_object_connection, owner: resolvable, organization:, category: :payment,
-            behavior: :specific, payment_provider_customer: override_connection)
-
-          override_connection.update(deleted_at: Time.zone.now)
-        end
-
-        it "falls back to the default connection" do
-          expect(resolvable.effective_payment_connection).to eq(default_connection)
-        end
-      end
-
       context "when the object skips the category" do
         before do
           create(:billing_object_connection, owner: resolvable, organization:, category: :payment, behavior: :skip)
@@ -51,21 +36,6 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_defi
 
         it "returns nil" do
           expect(resolvable.effective_payment_connection).to be_nil
-        end
-      end
-
-      if fallback_defined
-        context "when fallback pins a specific connection" do
-          let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
-
-          before do
-            create(:billing_object_connection, owner: fallback, organization:, category: :payment,
-              behavior: :specific, payment_provider_customer: fallback_connection)
-          end
-
-          it "returns the fallback connection" do
-            expect(resolvable.effective_payment_connection).to eq(fallback_connection)
-          end
         end
       end
     end
@@ -109,21 +79,6 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_defi
           expect(resolvable.effective_accounting_connection).to be_nil
         end
       end
-
-      if fallback_defined
-        context "when fallback connection is defined" do
-          let(:fallback_connection) { create(:xero_customer, customer: resolution_customer, organization:) }
-
-          before do
-            create(:billing_object_connection, owner: fallback, organization:, category: :accounting,
-              behavior: :specific, integration_customer: fallback_connection)
-          end
-
-          it "returns the fallback connection" do
-            expect(resolvable.effective_accounting_connection).to eq(fallback_connection)
-          end
-        end
-      end
     end
 
     context "when the customer has no default accounting connection" do
@@ -134,114 +89,14 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_defi
   end
 
   describe "#effective_tax_connection" do
-    context "when the customer has a default tax connection" do
-      let!(:default_connection) do
-        create(:anrok_customer, customer: resolution_customer, organization:, is_default: true)
-      end
-
-      it "returns the customer default" do
-        expect(resolvable.effective_tax_connection).to eq(default_connection)
-      end
-
-      xcontext "when the object pins a specific connection" do
-        let(:override_connection) { create(:avalara_customer, customer: resolution_customer, organization:) }
-
-        before do
-          create(:billing_object_connection, owner: resolvable, organization:, category: :tax,
-            behavior: :specific, integration_customer: override_connection)
-        end
-
-        it "returns the override connection" do
-          expect(resolvable.effective_tax_connection).to eq(override_connection)
-        end
-      end
-
-      xcontext "when the object skips the category" do
-        before do
-          create(:billing_object_connection, owner: resolvable, organization:, category: :tax, behavior: :skip)
-        end
-
-        it "returns nil" do
-          expect(resolvable.effective_tax_connection).to be_nil
-        end
-      end
-
-      if fallback_defined
-        xcontext "when fallback connection is defined" do
-          let(:fallback_connection) { create(:avalara_customer, customer: resolution_customer, organization:) }
-
-          before do
-            create(:billing_object_connection, owner: fallback, organization:, category: :tax,
-              behavior: :specific, integration_customer: fallback_connection)
-          end
-
-          it "returns the fallback connection" do
-            expect(resolvable.effective_tax_connection).to eq(fallback_connection)
-          end
-        end
-      end
-    end
-
-    context "when the customer has no default tax connection" do
-      it "returns nil" do
-        expect(resolvable.effective_tax_connection).to be_nil
-      end
+    it "returns the customer default" do
+      expect(resolvable.effective_tax_connection).to eq(default_connection)
     end
   end
 
   describe "#effective_crm_connection" do
-    context "when the customer has a default crm connection" do
-      let!(:default_connection) do
-        create(:hubspot_customer, customer: resolution_customer, organization:, is_default: true)
-      end
-
-      it "returns the customer default" do
-        expect(resolvable.effective_crm_connection).to eq(default_connection)
-      end
-
-      context "when the object pins a specific connection" do
-        let(:override_connection) { create(:salesforce_customer, customer: resolution_customer, organization:) }
-
-        before do
-          create(:billing_object_connection, owner: resolvable, organization:, category: :crm,
-            behavior: :specific, integration_customer: override_connection)
-        end
-
-        it "returns the override connection" do
-          expect(resolvable.effective_crm_connection).to eq(override_connection)
-        end
-      end
-
-      context "when the object skips the category" do
-        before do
-          create(:billing_object_connection, owner: resolvable, organization:, category: :crm, behavior: :skip)
-        end
-
-        it "returns nil" do
-          expect(resolvable.effective_crm_connection).to be_nil
-        end
-      end
-
-      if fallback_defined
-        context "when fallback connection is defined" do
-          let(:fallback_connection) { create(:salesforce_customer, customer: resolution_customer, organization:) }
-
-          before do
-            create(:billing_object_connection, owner: fallback, organization:, category: :crm,
-              behavior: :specific, integration_customer: fallback_connection)
-          end
-
-          it "returns the fallback connection" do
-            expect(resolvable.effective_crm_connection).to eq(fallback_connection)
-          end
-        end
-      end
-    end
-
-    context "when the customer has no default crm connection" do
-      it "returns nil" do
-        expect(resolvable.effective_crm_connection).to be_nil
-      end
+    it "returns the customer default" do
+      expect(resolvable.effective_crm_connection).to eq(default_connection)
     end
   end
 

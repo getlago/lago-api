@@ -8,7 +8,7 @@ RSpec.describe WalletTransaction do
 
   it_behaves_like "a model with a purchase order number"
 
-  it_behaves_like "a connection-resolvable billing object", fallback_defined: true do
+  it_behaves_like "a connection-resolvable billing object", fallback_redefined: true do
     let(:resolvable) { create(:wallet_transaction) }
     let(:fallback) { resolvable.wallet }
   end
