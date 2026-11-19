@@ -8,8 +8,9 @@ RSpec.describe Clock::ExpirePendingTopUpsJob, job: true do
   let(:wallet) { create(:wallet) }
   let(:stale) { build_top_up({}) }
 
-  def build_top_up(attributes, invoice_status: :open)
-    invoice = create(:invoice, :credit, customer: wallet.customer, organization: wallet.organization, status: invoice_status)
+  def build_top_up(attributes, invoice_status: :open, total_paid_amount_cents: 0)
+    invoice = create(:invoice, :credit, customer: wallet.customer, organization: wallet.organization,
+      status: invoice_status, total_amount_cents: 1_000, total_paid_amount_cents:)
 
     create(:wallet_transaction, {wallet:, invoice:, status: :pending, settled_at: nil, transaction_status: :purchased,
                                  invoice_requires_successful_payment: true, created_at: 2.hours.ago}.merge(attributes))
@@ -58,6 +59,17 @@ RSpec.describe Clock::ExpirePendingTopUpsJob, job: true do
 
       expect(WalletTransactions::ExpirePendingJob).not_to have_been_enqueued.with(generating)
       expect(WalletTransactions::ExpirePendingJob).not_to have_been_enqueued.with(tax_failed)
+    end
+  end
+
+  context "when a merchant recorded part of its invoice manually" do
+    let(:partly_paid) { build_top_up({}, total_paid_amount_cents: 400) }
+
+    before { partly_paid }
+
+    it "skips it, since the merchant is collecting it" do
+      expect { job.perform_now }
+        .not_to have_enqueued_job(WalletTransactions::ExpirePendingJob).with(partly_paid)
     end
   end
 

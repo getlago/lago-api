@@ -33,6 +33,8 @@ module WalletTransactions
 
       # Not open yet, still generating: its payment has not started
       return result unless invoice&.open?
+      # A merchant recorded part of the amount: they are collecting it, so its payment paths stay open
+      return result if partly_paid?
 
       payment = open_payment
       return result if payment && !stop_payment(payment)
@@ -45,9 +47,8 @@ module WalletTransactions
         # Invoices::PrepaidCreditJob then settles the failed top-up: the customer gets the credits.
         closed = invoice.with_lock do
           next false unless invoice.open? && !invoice.payment_succeeded?
-          # A merchant recorded part of the amount: closing would bury that money on an
-          # invisible invoice that can no longer be paid
-          next false if invoice.total_paid_amount_cents.positive?
+          # Recorded meanwhile: closing would bury that money on an invisible invoice that can no longer be paid
+          next false if partly_paid?
 
           invoice.closed!
           true
@@ -72,6 +73,10 @@ module WalletTransactions
 
     def invoice
       @invoice ||= wallet_transaction.invoice
+    end
+
+    def partly_paid?
+      invoice.total_paid_amount_cents.positive?
     end
 
     # A partial unique index allows at most one provider payment in (pending, processing) per invoice
