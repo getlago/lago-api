@@ -37,7 +37,9 @@ module Integrations
                 request_taxes
               end
 
-              rates_cache&.store(body)
+              # An exact-cache answer may already be a day old: storing its rates would extend
+              # their life past the rates cache TTL.
+              rates_cache&.store(body) if provider_answered
             end
 
             process_response(body)
@@ -60,7 +62,7 @@ module Integrations
 
           private
 
-          attr_reader :reuse_tax_rates
+          attr_reader :reuse_tax_rates, :provider_answered
 
           def rates_cache
             return unless reuse_tax_rates
@@ -74,6 +76,7 @@ module Integrations
             throttle!(:anrok, :avalara)
 
             response = trigger_action(payload)
+            @provider_answered = true
             parse_response(response)
           end
 

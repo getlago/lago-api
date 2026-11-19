@@ -160,14 +160,53 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
       end
     end
 
+    context "when the line tax was rounded down to zero" do
+      let(:amounts) { [4, 30_000] }
+      let(:answer) do
+        {
+          "succeededInvoices" => [
+            {
+              "fees" => [
+                {"item_id" => "id_1", "amount_cents" => 4, "tax_amount_cents" => 0, "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 0.4, "type" => "tax"}]},
+                {"item_id" => "id_2", "amount_cents" => 30_000, "tax_amount_cents" => 0, "tax_breakdown" => []}
+              ]
+            }
+          ]
+        }
+      end
+
+      before { rates_cache.store(answer) }
+
+      it "keeps the rate of the unrounded taxes" do
+        lines = rates_for(anrok_payload([25_000, 30_000])).dig("succeededInvoices", 0, "fees")
+
+        expect(lines.first).to include(
+          "tax_amount_cents" => 2_500, # 25_000 * 0.4 / 4
+          "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 2_500.0, "type" => "tax"}]
+        )
+      end
+    end
+
+    context "when the provider lists the lines in another order" do
+      before do
+        rates_cache.store(answer.deep_dup.tap { it["succeededInvoices"].first["fees"].reverse! })
+      end
+
+      it "stores each rate under its own line" do
+        lines = rates_for(anrok_payload([25_000, 35_000])).dig("succeededInvoices", 0, "fees")
+
+        expect(lines.map { it["tax_amount_cents"] }).to eq([2_500, 0])
+      end
+    end
+
     context "with the seller paying the taxes" do
       let(:answer) do
         {
           "succeededInvoices" => [
             {
               "fees" => [
-                {"amount_cents" => 20_000, "tax_amount_cents" => 0, "tax_breakdown" => [{"name" => "Tax", "rate" => "0.10", "tax_amount" => 2_000, "type" => "tax"}]},
-                {"amount_cents" => 30_000, "tax_amount_cents" => 0, "tax_breakdown" => []}
+                {"item_id" => "id_1", "amount_cents" => 20_000, "tax_amount_cents" => 0, "tax_breakdown" => [{"name" => "Tax", "rate" => "0.10", "tax_amount" => 2_000, "type" => "tax"}]},
+                {"item_id" => "id_2", "amount_cents" => 30_000, "tax_amount_cents" => 0, "tax_breakdown" => []}
               ]
             }
           ]
@@ -193,7 +232,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
       let(:answer) do
         {
           "succeededInvoices" => [
-            {"fees" => [{"amount_cents" => 20_000, "tax_amount_cents" => 1_500, "tax_breakdown" => [{"name" => "Sales tax", "rate" => "0.075", "tax_amount" => 1_500, "type" => "tax"}]}]}
+            {"fees" => [{"item_key" => "key_1", "amount_cents" => 20_000, "tax_amount_cents" => 1_500, "tax_breakdown" => [{"name" => "Sales tax", "rate" => "0.075", "tax_amount" => 1_500, "type" => "tax"}]}]}
           ]
         }
       end

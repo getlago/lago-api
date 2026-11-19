@@ -57,10 +57,10 @@ module Integrations
 
           def store(body)
             answered = body.is_a?(Hash) ? body.dig("succeededInvoices", 0, "fees") : nil
-            return if answered.blank? || answered.size != request_lines.size
+            return if answered.blank? || keys.empty?
 
-            entries = keys.zip(answered).each_with_object({}) do |(key, line), memo|
-              rates = line_rates(line)
+            entries = request_lines.zip(keys).each_with_object({}) do |(line, key), memo|
+              rates = (answer = answered_line(answered, line)) && line_rates(answer)
               memo[key] = rates if rates
             end
             return if entries.empty?
@@ -127,14 +127,30 @@ module Integrations
             end
           end
 
+          # Matched on identifiers rather than position, as the base service does, so that a
+          # provider listing lines in another order cannot cache one product's rate for another.
+          def answered_line(answered, line)
+            answered.find { |answer| answer["item_key"].present? && answer["item_key"] == line["item_key"] } ||
+              answered.find { |answer| answer["item_id"].present? && answer["item_id"].to_s == line["item_id"].to_s }
+          end
+
           # Stores each tax as a share of the line amount, so it applies to any amount of the band.
+          # The shares come from the unrounded breakdown amounts: the line tax is rounded to the
+          # cent, so a small line (the start of a period) would store a skewed or zero rate.
           def line_rates(line)
             amount_cents = line["amount_cents"].to_d
             return unless amount_cents.positive? && line["tax_amount_cents"]
 
+            breakdown = Array(line["tax_breakdown"])
+            precise_tax = breakdown.sum { it["tax_amount"].to_d }
+            line_tax = precise_tax.positive? ? precise_tax : line["tax_amount_cents"].to_d
+
             {
-              "tax_ratio" => (line["tax_amount_cents"].to_d / amount_cents).to_s,
-              "tax_breakdown" => Array(line["tax_breakdown"]).map do |item|
+              # Taxes booked at zero while the provider computed at least one cent: the seller pays
+              # them, and the line must keep showing no tax (see Taxes::BaseService#tax_breakdown).
+              "seller_pays" => line["tax_amount_cents"].to_d.zero? && breakdown.any? { it["tax_amount"].to_d >= 1 },
+              "tax_ratio" => (line_tax / amount_cents).to_s,
+              "tax_breakdown" => breakdown.map do |item|
                 if item["tax_amount"]
                   item.except("tax_amount").merge("tax_ratio" => (item["tax_amount"].to_d / amount_cents).to_s)
                 else
@@ -153,11 +169,13 @@ module Integrations
                 "item_id" => line["item_id"],
                 "item_code" => line["item_code"],
                 "amount_cents" => amount_cents.to_i,
-                "tax_amount_cents" => (amount_cents * line_rates["tax_ratio"].to_d).round.to_i,
+                "tax_amount_cents" => line_rates["seller_pays"] ? 0 : (amount_cents * line_rates["tax_ratio"].to_d).round.to_i,
+                # Breakdown amounts stay unrounded, as the provider sends them: they become the
+                # precise taxes of the fee.
                 "tax_breakdown" => line_rates["tax_breakdown"].map do |item|
                   ratio = item["tax_ratio"]
                   item = item.except("tax_ratio")
-                  ratio ? item.merge("tax_amount" => (amount_cents * ratio.to_d).round.to_i) : item
+                  ratio ? item.merge("tax_amount" => (amount_cents * ratio.to_d).round(6).to_f) : item
                 end
               }
             end

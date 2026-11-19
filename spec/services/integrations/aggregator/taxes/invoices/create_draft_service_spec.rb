@@ -313,6 +313,32 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             expect(WebMock).to have_requested(:post, endpoint).once
           end
 
+          context "when the exact cache answered the first request" do
+            before do
+              stub_request(:post, endpoint).and_return(status: 200, body:)
+
+              Rails.cache.clear
+              fee_add_on.update!(amount_cents: 200, precise_amount_cents: 200)
+              fee_add_on_two.update!(amount_cents: 200, precise_amount_cents: 200)
+              invoice.fees.reload
+
+              # Fills the exact cache only, then answers the same request from it
+              described_class.call(invoice:)
+              described_class.call(invoice:, reuse_tax_rates: true)
+
+              fee_add_on.update!(amount_cents: 400, precise_amount_cents: 400)
+              fee_add_on_two.update!(amount_cents: 300, precise_amount_cents: 300)
+              invoice.fees.reload
+            end
+
+            it "does not keep its rates" do
+              service_call
+
+              # first call of the outer context, the exact-cache fill, then this one
+              expect(WebMock).to have_requested(:post, endpoint).times(3)
+            end
+          end
+
           context "when the caller needs the exact taxes" do
             let(:reuse_tax_rates) { false }
 
