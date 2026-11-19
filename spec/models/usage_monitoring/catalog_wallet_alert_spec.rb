@@ -44,6 +44,13 @@ RSpec.describe UsageMonitoring::CatalogWalletAlert do
     end
   end
 
+  describe "direction" do
+    it "watches a balance going down" do
+      expect(alert).to be_decreasing
+      expect(alert).not_to be_increasing
+    end
+  end
+
   describe "database constraints" do
     let(:existing) { create(:catalog_wallet_alert, alert_type: "balance", code: "low") }
 

@@ -11,6 +11,7 @@ module UsageMonitoring
 
     included do
       include CatalogCodeFormat
+      include ThresholdEvaluation
 
       belongs_to :organization
 
@@ -24,6 +25,15 @@ module UsageMonitoring
     # job skips itself.
     def discarded?
       false
+    end
+
+    # Both metrics watch a balance going down
+    def increasing?
+      false
+    end
+
+    def decreasing?
+      true
     end
   end
 end
