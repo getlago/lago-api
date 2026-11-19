@@ -101,6 +101,33 @@ RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodServ
       end
     end
 
+    context "when customer has no default, an older card and a newer non-card payment method in Stripe" do
+      let(:provider_customer) do
+        create(
+          :stripe_customer,
+          customer:,
+          provider_customer_id:,
+          payment_provider: create(:stripe_provider, organization:),
+          payment_method_id: nil,
+          provider_payment_methods: %w[card sepa_debit]
+        )
+      end
+
+      it "returns the card" do
+        stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
+          status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
+        )
+        stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
+          status: 200, body: get_stripe_fixtures("customer_list_payment_methods_response.json") do |res|
+            res["data"][0]["type"] = "sepa_debit" # created 1741883924, the newer one
+          end
+        )
+
+        result = subject.call
+        expect(result.payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
+      end
+    end
+
     context "when customer has no payment method in Stripe" do
       it do
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
