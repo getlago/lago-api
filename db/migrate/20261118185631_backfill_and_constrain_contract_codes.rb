@@ -5,12 +5,12 @@ class BackfillAndConstrainContractCodes < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
   def up
+    add_check_constraint :contracts, "code IS NOT NULL",
+      name: "contracts_code_not_null", validate: false, if_not_exists: true
+
     Contract.unscoped.where(code: nil).in_batches do |contracts|
       contracts.update_all("code = id::text, updated_at = CURRENT_TIMESTAMP") # rubocop:disable Rails/SkipsModelValidations
     end
-
-    add_check_constraint :contracts, "code IS NOT NULL",
-      name: "contracts_code_not_null", validate: false, if_not_exists: true
   end
 
   def down

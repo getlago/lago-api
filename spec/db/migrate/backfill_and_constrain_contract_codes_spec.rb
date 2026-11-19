@@ -20,7 +20,9 @@ RSpec.describe BackfillAndConstrainContractCodes do
   end
 
   it "backfills remaining codes across statuses and organizations without changing existing codes" do
-    migration.up
+    expect { migration.up }
+      .to change { foreign_contract.reload.updated_at }
+      .and not_change { named_contract.reload.updated_at }
 
     [*contracts, foreign_contract].each do |contract|
       expect(contract.reload.code).to eq(contract.id)
@@ -34,13 +36,20 @@ RSpec.describe BackfillAndConstrainContractCodes do
     expect { migration.up }.not_to change { Contract.order(:id).pluck(:id, :code, :updated_at) }
   end
 
-  it "rejects new null codes before the constraint is validated" do
+  it "rejects new null codes before backfilling existing rows" do
+    allow(ActiveRecord::Base.connection).to receive(:add_check_constraint).and_wrap_original do |original, *args, **options|
+      original.call(*args, **options)
+
+      expect(Contract.where(code: nil)).to exist
+      expect do
+        Contract.transaction(requires_new: true) do
+          named_contract.update_column(:code, nil) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end.to raise_error(ActiveRecord::StatementInvalid, /contracts_code_not_null/)
+    end
+
     migration.up
 
-    expect do
-      Contract.transaction(requires_new: true) do
-        named_contract.update_column(:code, nil) # rubocop:disable Rails/SkipsModelValidations
-      end
-    end.to raise_error(ActiveRecord::StatementInvalid, /contracts_code_not_null/)
+    expect(ActiveRecord::Base.connection).to have_received(:add_check_constraint)
   end
 end

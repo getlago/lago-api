@@ -97,7 +97,7 @@ class Contract < ApplicationRecord
 
   validates :external_id, presence: true
   validates :code, presence: true, on: :create
-  validates :code, uniqueness: {scope: [:organization_id, :external_id]}, allow_nil: true, if: :will_save_change_to_code?
+  validates :code, uniqueness: {scope: [:organization_id, :external_id]}, if: :will_save_change_to_code?
 
   validate :validate_started_before_ended
   validate :validate_code_unchanged, on: :update
