@@ -17,7 +17,7 @@ module UsageMonitoring
       def call
         return result.not_found_failure!(resource: "contract") unless contract
         return result.forbidden_failure! unless License.premium? && organization.feature_flag_enabled?(:contract_alerts)
-        return result.not_allowed_failure!(code: "contract_not_live") unless Contract::LIVE_STATUSES.include?(contract.status)
+        return result.forbidden_failure!(code: "contract_not_live") unless Contract::LIVE_STATUSES.include?(contract.status)
 
         if params[:alert_type].blank?
           return result.single_validation_failure!(field: :alert_type, error_code: "value_is_mandatory")

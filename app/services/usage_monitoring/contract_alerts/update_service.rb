@@ -21,7 +21,7 @@ module UsageMonitoring
         sent = UNCHANGEABLE_FIELDS.select { params.key?(it) }
         return result.validation_failure!(errors: sent.index_with { ["value_cannot_be_changed"] }) if sent.any?
 
-        return result.not_allowed_failure!(code: "contract_not_live") unless contracts.live.exists?
+        return result.forbidden_failure!(code: "contract_not_live") unless contracts.live.exists?
 
         if params.key?(:thresholds)
           thresholds_result = UsageMonitoring::Thresholds::ValidateService.call(thresholds: params[:thresholds])
@@ -29,6 +29,8 @@ module UsageMonitoring
         end
 
         alert.with_lock do
+          next result.not_found_failure!(resource: "alert") if alert.discarded?
+
           alert.name = params[:name] if params.key?(:name)
           alert.save!
 
@@ -36,6 +38,7 @@ module UsageMonitoring
             replace_thresholds(alert, contracts.active.take, keep_previous_notify_on(alert, params[:thresholds]))
           end
         end
+        return result unless result.success?
 
         result.alert = alert
         result

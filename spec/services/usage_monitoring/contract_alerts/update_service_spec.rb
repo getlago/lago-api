@@ -68,6 +68,18 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
     end
   end
 
+  context "when the alert is deleted while the update waits for its lock" do
+    before { UsageMonitoring::DestroyAlertService.call(alert: UsageMonitoring::ContractAlert.find(alert.id)) }
+
+    it "returns a not found failure and recreates no thresholds" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.error_code).to eq("alert_not_found")
+      expect(UsageMonitoring::ContractAlertThreshold.where(contract_alert_id: alert.id)).to be_empty
+      expect(UsageMonitoring::ContractAlert.with_discarded.find(alert.id).name).to eq("Spend")
+    end
+  end
+
   {
     code: "new_code",
     alert_type: "usage_units",
@@ -105,7 +117,7 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
 
       it "returns contract_not_live" do
         expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("contract_not_live")
         expect(alert.reload.name).to eq("Spend")
       end
@@ -128,6 +140,22 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
       it "returns a validation failure on thresholds" do
         expect(result.error.messages).to eq({thresholds: ["value_is_mandatory"]})
       end
+    end
+  end
+
+  context "when an edit moves a threshold under the current usage" do
+    let(:alert) do
+      create(:contract_alert, organization:, contract_external_id: contract.external_id, previous_value: 40, thresholds: nil)
+    end
+    let(:params) { {thresholds: [{code: "warn", value: 30}]} }
+
+    it "records it as seeded on the active contract, without a webhook" do
+      expect(result).to be_success
+
+      seeded = alert.all_triggered_alerts.sole
+      expect(seeded).to have_attributes(kind: "seeded", contract:, current_value: 40, previous_value: 40)
+      expect(seeded.crossed_thresholds).to eq([{"code" => "warn", "value" => "30.0", "recurring" => false}])
+      expect(SendWebhookJob).not_to have_been_enqueued
     end
   end
 

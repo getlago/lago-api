@@ -152,7 +152,7 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
 
       it "returns contract_not_live" do
         expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("contract_not_live")
       end
     end
