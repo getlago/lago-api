@@ -44,6 +44,12 @@ module Integrations
       organization.subscriptions.active.where(external_id: external_ids).exists?
     end
 
+    # An agent that paid has a Stripe customer on the connection, which outlives its subscription.
+    def agents_with_stripe_customer?
+      external_ids = agent_registrations.select(:id).map { Agents::ExternalIds.customer(it) }
+      organization.customers.joins(:stripe_customer).where(external_id: external_ids).exists?
+    end
+
     private
 
     def plans_changed?

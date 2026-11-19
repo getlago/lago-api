@@ -61,6 +61,13 @@ RSpec.describe PaymentProviders::StripeProvider do
     end
   end
 
+  describe "#seller_profile" do
+    it "assigns and retrieve a setting" do
+      stripe_provider.seller_profile = "profile_test_123"
+      expect(stripe_provider.seller_profile).to eq("profile_test_123")
+    end
+  end
+
   describe "#retriable_authentication_failure?" do
     subject(:method_call) { stripe_provider.retriable_authentication_failure?(error_code, payment:) }
 
