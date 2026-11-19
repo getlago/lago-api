@@ -15,11 +15,24 @@ module Agents
       not_found_error(resource: "agent_storefront") unless storefront&.organization&.agent_storefront_enabled?
     end
 
+    def bearer_token
+      request.authorization.to_s[/\ABearer (.+)\z/i, 1]
+    end
+
     def throttled?(rule, identifier)
       return false unless ::Auth::AttemptsThrottle.hit!(rule, identifier)
 
-      render(json: {status: 429, error: "Too Many Requests", code: "too_many_requests"}, status: :too_many_requests)
+      render_too_many_requests
       true
+    end
+
+    # A service counts an attempt itself when the limit only applies once its checks passed.
+    def too_many_requests?(result)
+      result.error.is_a?(BaseService::MethodNotAllowedFailure) && result.error.code == "too_many_requests"
+    end
+
+    def render_too_many_requests
+      render(json: {status: 429, error: "Too Many Requests", code: "too_many_requests"}, status: :too_many_requests)
     end
   end
 end

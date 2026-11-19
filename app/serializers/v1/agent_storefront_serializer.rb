@@ -12,6 +12,7 @@ module V1
         resource_endpoint: model.resource_endpoint,
         resource_instructions: model.resource_instructions,
         scope: model.scope,
+        plans: model.plans,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }
