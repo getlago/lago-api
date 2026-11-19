@@ -498,12 +498,31 @@ RSpec.describe Wallets::ThresholdTopUpService do
             wallet:,
             source: :threshold,
             failed_at: 10.minutes.ago,
-            invoice: create(:invoice, :credit, customer: wallet.customer, organization: wallet.organization, status: :voided)
+            invoice: create(:invoice, :credit, customer: wallet.customer, organization: wallet.organization,
+              status: :voided, voided_at: 11.minutes.ago)
           )
         end
 
         it "calls wallet transaction create job, since nothing was declined" do
           expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when the top-up was declined and its invoice voided afterwards" do
+        let(:failed_top_up) do
+          create(
+            :wallet_transaction,
+            :failed,
+            wallet:,
+            source: :threshold,
+            failed_at: 10.minutes.ago,
+            invoice: create(:invoice, :credit, customer: wallet.customer, organization: wallet.organization,
+              status: :voided, voided_at: 5.minutes.ago)
+          )
+        end
+
+        it "does not call wallet transaction create job, since the card just declined" do
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
         end
       end
 

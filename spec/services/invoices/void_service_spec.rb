@@ -224,7 +224,7 @@ RSpec.describe Invoices::VoidService do
           end
 
           context "when its top-up is still pending" do
-            # No invoice_id, as on transactions created before it was populated: found through the credit fee
+            # Found through the credit fee, as Invoices::PrepaidCreditJob does
             let(:pending_top_up) do
               create(:wallet_transaction, wallet:, status: :pending, settled_at: nil, transaction_status: :purchased, amount: 50, credit_amount: 50)
             end

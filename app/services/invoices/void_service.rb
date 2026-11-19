@@ -92,7 +92,7 @@ module Invoices
 
     # A voided top-up invoice will never be paid, so its pending top-up must fail.
     # Left pending, it keeps counting in the wallet's threshold check and blocks the auto top-up.
-    # Found through the credit fee, as Invoices::PrepaidCreditJob does: older transactions have no invoice_id.
+    # Found through the credit fee, as Invoices::PrepaidCreditJob does.
     def fail_pending_top_ups
       return unless invoice.credit?
 
