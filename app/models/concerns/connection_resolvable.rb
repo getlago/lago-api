@@ -48,7 +48,7 @@ module ConnectionResolvable
       override = overrides[category]
 
       connection = if override.nil?
-        customer_default_connection(category)
+        fallback_connection(category)
       elsif override.skip?
         nil
       else
