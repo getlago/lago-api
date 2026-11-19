@@ -7414,6 +7414,7 @@ type Fee implements InvoiceItem {
   fixedCharge: FixedCharge
   groupedBy: JSON!
   id: ID!
+  invoice: Invoice
   invoiceDisplayName: String
   invoiceId: ID
   invoiceName: String
