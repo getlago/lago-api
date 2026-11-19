@@ -2,6 +2,8 @@
 
 module UsageMonitoring
   class ContractActivity < ApplicationRecord
+    belongs_to :organization
+    belongs_to :contract
   end
 end
 

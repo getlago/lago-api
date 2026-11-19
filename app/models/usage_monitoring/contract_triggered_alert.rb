@@ -2,6 +2,21 @@
 
 module UsageMonitoring
   class ContractTriggeredAlert < ApplicationRecord
+    include TriggeredAlertRecord
+
+    belongs_to :organization
+    belongs_to :contract
+    belongs_to :alert,
+      -> { with_discarded },
+      foreign_key: :contract_alert_id,
+      class_name: "UsageMonitoring::ContractAlert"
+
+    def alertable=(alertable)
+      case alertable
+      when Contract then self.contract = alertable
+      else raise ArgumentError, "unsupported alertable: #{alertable.class}"
+      end
+    end
   end
 end
 
