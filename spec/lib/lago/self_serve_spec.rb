@@ -31,6 +31,26 @@ RSpec.describe Lago::SelfServe do
     end
   end
 
+  describe ".require_payment_method?" do
+    it "is off when the variable is unset, empty or false" do
+      expect([nil, "", "false"].map { described_class.require_payment_method?(value: it) }).to all(be(false))
+    end
+
+    it "is on for true, whatever its case and surrounding spaces" do
+      expect(["true", " TRUE ", "True\n"].map { described_class.require_payment_method?(value: it) }).to all(be(true))
+    end
+
+    it "is off for other truthy-looking values" do
+      expect(%w[1 yes on no].map { described_class.require_payment_method?(value: it) }).to all(be(false))
+    end
+
+    it "reads LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD" => "true"))
+
+      expect(described_class.require_payment_method?).to be(true)
+    end
+  end
+
   describe ".signup_disabled?" do
     it "is true for true only, with the exact comparison of the legacy check" do
       expect(described_class.signup_disabled?(value: "true")).to be(true)
@@ -183,6 +203,7 @@ RSpec.describe Lago::SelfServe do
       it "accepts it unset, empty or false whatever the rest" do
         [nil, "", "false", " False "].each do |require_payment_method|
           expect { validate(value: nil, require_payment_method:, billing_accounts_key: nil) }.not_to raise_error
+          expect { validate(require_payment_method:, billing_accounts_key: nil) }.not_to raise_error
         end
       end
 
