@@ -8,18 +8,22 @@ module RecurringAggregationSnapshots
 
     unique :until_executed, on_conflict: :log
 
-    # A rerun replaces the snapshots of every charge, so retrying the subscription is safe
+    # A rerun replaces the snapshots of every charge or rate card, so retrying the owner is safe
     retry_on ChargesFailedError, wait: :polynomially_longer, attempts: 3
 
-    def perform(subscription)
-      result = BackfillService.call(subscription:)
+    # owner: a subscription, or a contract
+    def perform(owner)
+      contract = owner.is_a?(Contract)
+      result = contract ? ContractBackfillService.call(contract: owner) : BackfillService.call(subscription: owner)
+
       # Terminated since it was enqueued: its snapshots are no longer read
-      return if result.failure? && result.error.code == "subscription_not_active"
+      return if result.failure? && result.error.code.in?(%w[subscription_not_active contract_not_active])
 
       result.raise_if_error!
-      return if result.failed_charges.empty?
+      failed = contract ? result.failed_rate_cards : result.failed_charges
+      return if failed.empty?
 
-      raise ChargesFailedError, "Charges #{result.failed_charges.map(&:id).join(", ")} failed to backfill"
+      raise ChargesFailedError, "#{contract ? "Rate cards" : "Charges"} #{failed.map(&:id).join(", ")} failed to backfill"
     end
   end
 end

@@ -26,9 +26,12 @@ module TaskPrompt
     organization
   end
 
+  def self.ask_for_ids(prompt)
+    ask(prompt).split(/[\s,]+/).reject(&:empty?)
+  end
+
   def self.ask_for_subscription_ids
-    input = ask("Subscription IDs to refill (comma or space separated, leave blank to fill a whole organization): ")
-    input.split(/[\s,]+/).reject(&:empty?)
+    ask_for_ids("Subscription IDs to refill (comma or space separated, leave blank to fill a whole organization): ")
   end
 
   # The listed subscriptions of the organization, or a random sample of its active ones
