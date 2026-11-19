@@ -77,7 +77,23 @@ RSpec.describe Organizations::ActivateService do
     it "activates the organization once" do
       organization_id = organization.id
 
-      threads = Array.new(2) do
+      # The first call pauses after its checks, holding the row lock, so the second one starts while the first
+      # activation is not committed yet.
+      first_call = Queue.new
+      first_call << true
+      checked = Queue.new
+      resume = Queue.new
+
+      allow_any_instance_of(described_class).to receive(:activate).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+        if first_call.pop(timeout: 0)
+          checked << true
+          resume.pop
+        end
+
+        original.call(*args)
+      end
+
+      activate = lambda do
         Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
             described_class.call(organization: Organization.find(organization_id))
@@ -85,8 +101,13 @@ RSpec.describe Organizations::ActivateService do
         end
       end
 
-      threads.map(&:value).each { expect(it).to be_success }
+      first = activate.call
+      checked.pop
+      second = activate.call
+      sleep 0.5
+      resume << true
 
+      expect([first.value, second.value]).to all(be_success)
       expect(organization.reload.activation_status).to eq("active")
       expect(ApiKeys::CacheService).to have_received(:expire_all_cache).once
     end
