@@ -83,7 +83,14 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
-        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets"
+        # The route with an alert code is drawn first, so an alert coded `alerts` is not read as a
+        # wallet code by the index.
+        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets" do
+          scope module: :plan_wallets do
+            resources :alerts, param: :code, code: /.*/, only: %i[show]
+            resources :alerts, only: %i[index]
+          end
+        end
         draw(:plan_nested_api)
       end
       # The constraint mirrors v1: without it, an external id containing a
