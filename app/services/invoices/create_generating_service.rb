@@ -4,7 +4,7 @@ module Invoices
   class CreateGeneratingService < BaseService
     Result = BaseResult[:invoice]
 
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false, billing_entity: nil, purchase_order_number: nil, payment_term: nil, payment_term_source: nil, subscription: nil, progressive_billing_trigger: nil) # rubocop:disable Metrics/ParameterLists
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil, invoicing_reason: nil, subscription_gated: false, billing_entity: nil, purchase_order_number: nil, payment_term: nil, payment_term_source: nil, subscription: nil, progressive_billing_trigger: nil, connections: nil) # rubocop:disable Metrics/ParameterLists
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
@@ -20,6 +20,7 @@ module Invoices
       @payment_term_source = payment_term_source
       @subscription = subscription
       @progressive_billing_trigger = progressive_billing_trigger
+      @connections = connections
 
       super
     end
@@ -53,6 +54,9 @@ module Invoices
         Invoices::RefreshSearchTermsService.call!(invoice:)
 
         yield invoice if block_given?
+
+        # Runs after the block, which attaches the invoice subscriptions the snapshot reads.
+        Invoices::SnapshotService.call!(invoice:, connections:)
       end
 
       result
@@ -62,6 +66,7 @@ module Invoices
 
     attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id, :recurring
     attr_accessor :subscription_gated, :billing_entity, :purchase_order_number, :subscription, :progressive_billing_trigger
+    attr_reader :connections
 
     delegate :organization, to: :customer
 
