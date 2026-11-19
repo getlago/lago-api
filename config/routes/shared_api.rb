@@ -158,6 +158,8 @@ resources :webhook_endpoints, only: %i[create index show destroy update]
 
 resources :x402_connections, param: :code, code: /.*/, controller: "x402/connections", only: %i[index show create update destroy]
 
+resources :agent_storefronts, param: :code, code: /.*/, only: %i[index show create update destroy]
+
 namespace :x402 do
   resources :gate_checks, only: :create
   resources :credit_purchases, only: :create

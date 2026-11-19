@@ -93,3 +93,7 @@ standard_webhooks_signature:
 invoice_usage_on_wallet_expiration:
   description: "When a wallet with invoice_usage_on_expiration expires, invoice the usage until its expiration so its remaining credits pay for it"
   owners: ["@annvelents"]
+
+agent_storefront:
+  description: "Enable the Agent Storefront: storefront connections, agent signup, enrollment, gate checks, funding and claims"
+  owners: ["@anassg-lago"]

@@ -72,4 +72,48 @@ RSpec.describe Resolvers::IntegrationsResolver do
       expect(integrations_response["metadata"]["totalCount"]).to eq(1)
     end
   end
+
+  context "when types is agent_storefront" do
+    let(:agent_storefront_integration) { create(:agent_storefront_integration, organization:, code: "acme_api") }
+    let(:query) do
+      <<~GQL
+        query {
+          integrations(limit: 5, types: [agent_storefront]) {
+            collection {
+              ... on AgentStorefrontIntegration {
+                id
+                code
+                scope
+                __typename
+              }
+            }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before { agent_storefront_integration }
+
+    it "returns the agent storefront integrations" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      integrations_response = result["data"]["integrations"]
+
+      expect(integrations_response["collection"]).to eq([
+        {
+          "id" => agent_storefront_integration.id,
+          "code" => "acme_api",
+          "scope" => "acme_api:use",
+          "__typename" => "AgentStorefrontIntegration"
+        }
+      ])
+      expect(integrations_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end
