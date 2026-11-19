@@ -328,12 +328,22 @@ describe Api::V2::PlanWalletsController do
       end
     end
 
+    context "with a rate amount" do
+      let(:create_params) { super().merge(rate_amount: "1.0") }
+
+      it "ignores it" do
+        expect { subject }.to change(PlanWallet, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan_wallet].keys).to eq(flat_keys)
+      end
+    end
+
     describe "validations" do
       [
         ["a priority below 1", {priority: 0}, "value_is_out_of_range", "priority", {min: 1}],
         ["a priority above 50", {priority: 51}, "value_is_out_of_range", "priority", {max: 50}],
         ["a priority that is not a number", {priority: "high"}, "value_is_invalid", "priority"],
-        ["a rate amount", {rate_amount: "1.0"}, "not_supported", "rate_amount"],
         ["a currency other than the plan's", {currency: "EUR"}, "currency_does_not_match", "currency"],
         ["a scope that is not an object", {applies_to: [{type: "fee_type", code: "fixed"}]}, "value_is_invalid", "applies_to"],
         ["tax codes that are not a list", {tax_codes: "vat_20"}, "value_is_invalid", "tax_codes"],
@@ -469,13 +479,14 @@ describe Api::V2::PlanWalletsController do
     end
 
     context "with a rate amount" do
-      let(:update_params) { {rate_amount: "1.0"} }
+      let(:update_params) { {rate_amount: "1.0", priority: 20} }
 
-      it "returns a validation error on rate_amount" do
+      it "ignores it" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:details]).to eq([{code: "not_supported", field: "rate_amount", meta: {}}])
+        expect(response).to have_http_status(:success)
+        expect(json[:plan_wallet]).to include(lago_id: plan_wallet.id, priority: 20)
+        expect(json[:plan_wallet].keys).to eq(flat_keys)
       end
     end
 

@@ -92,9 +92,6 @@ module Api
           :priority,
           :top_up_min_amount_cents,
           :top_up_max_amount_cents,
-          # Passes through so that the services refuse it explicitly instead of strong params
-          # dropping it, as they do for an `exclude` inside `applies_to`.
-          :rate_amount,
           tax_codes: [],
           applies_to: {},
           metadata: {}
