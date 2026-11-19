@@ -214,6 +214,58 @@ RSpec.describe Invoices::VoidService do
             expect(wallet.reload.credits_balance).to eq(100)
             expect(WalletTransactions::RecreditService).not_to have_received(:call)
           end
+
+          it "does not fail a settled top-up" do
+            create(:credit_fee, invoice:, wallet_transaction:)
+
+            void_service.call
+
+            expect(wallet_transaction.reload).to be_settled
+          end
+
+          context "when its top-up is still pending" do
+            # No invoice_id, as on transactions created before it was populated: found through the credit fee
+            let(:pending_top_up) do
+              create(:wallet_transaction, wallet:, status: :pending, settled_at: nil, transaction_status: :purchased, amount: 50, credit_amount: 50)
+            end
+            let(:other_pending_top_up) do
+              create(:wallet_transaction, wallet:, status: :pending, settled_at: nil, transaction_status: :purchased, amount: 20, credit_amount: 20)
+            end
+
+            before do
+              create(:credit_fee, invoice:, wallet_transaction: pending_top_up)
+              other_pending_top_up
+            end
+
+            it "fails the pending top-up and sends its webhook" do
+              void_service.call
+
+              expect(pending_top_up.reload).to be_failed
+              expect(pending_top_up.failed_at).to be_present
+              expect(SendWebhookJob).to have_been_enqueued.with("wallet_transaction.updated", pending_top_up)
+            end
+
+            it "leaves the pending top-ups of other invoices alone" do
+              void_service.call
+
+              expect(other_pending_top_up.reload).to be_pending
+            end
+          end
+        end
+
+        context "when a subscription invoice has a pending top-up fee" do
+          let(:payment_status) { :pending }
+          let(:pending_top_up) do
+            create(:wallet_transaction, status: :pending, settled_at: nil, transaction_status: :purchased)
+          end
+
+          before { create(:credit_fee, invoice:, wallet_transaction: pending_top_up) }
+
+          it "leaves the top-up alone" do
+            void_service.call
+
+            expect(pending_top_up.reload).to be_pending
+          end
         end
       end
     end

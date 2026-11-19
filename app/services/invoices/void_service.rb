@@ -34,6 +34,7 @@ module Invoices
         invoice.void!
         flag_lifetime_usage_for_refresh
         cancel_open_provider_payment
+        fail_pending_top_ups
 
         invoice.credits.each do |credit|
           AppliedCoupons::RecreditService.call!(credit:) if credit.applied_coupon_id.present?
@@ -86,6 +87,21 @@ module Invoices
 
       if payment
         PaymentProviders::CancelPaymentJob.perform_after_commit(payment)
+      end
+    end
+
+    # A voided top-up invoice will never be paid, so its pending top-up must fail.
+    # Left pending, it keeps counting in the wallet's threshold check and blocks the auto top-up.
+    # Found through the credit fee, as Invoices::PrepaidCreditJob does: older transactions have no invoice_id.
+    def fail_pending_top_ups
+      return unless invoice.credit?
+
+      invoice.fees.where(fee_type: :credit).includes(:invoiceable).find_each do |fee|
+        wallet_transaction = fee.invoiceable
+        next unless wallet_transaction.is_a?(WalletTransaction)
+        next unless wallet_transaction.inbound? && wallet_transaction.pending?
+
+        WalletTransactions::MarkAsFailedService.call!(wallet_transaction:)
       end
     end
 
