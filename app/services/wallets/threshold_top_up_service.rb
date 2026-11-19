@@ -67,8 +67,10 @@ module Wallets
       @pending_transactions_amount ||= wallet.wallet_transactions.pending.sum(:credit_amount)
     end
 
+    # A top-up failed because its invoice was voided was not declined: the customer chose to drop it
     def backing_off_after_decline?
-      last_decline_at = automatic_top_ups.failed.maximum(:failed_at)
+      voided_invoice = Invoice.voided.where("invoices.id = wallet_transactions.invoice_id")
+      last_decline_at = automatic_top_ups.failed.where.not(voided_invoice.arel.exists).maximum(:failed_at)
 
       return false if last_decline_at.nil?
       return false if last_decline_at < DECLINE_BACKOFF.ago

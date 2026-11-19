@@ -490,6 +490,40 @@ RSpec.describe Wallets::ThresholdTopUpService do
         end
       end
 
+      context "when the top-up failed because its invoice was voided" do
+        let(:failed_top_up) do
+          create(
+            :wallet_transaction,
+            :failed,
+            wallet:,
+            source: :threshold,
+            failed_at: 10.minutes.ago,
+            invoice: create(:invoice, :credit, customer: wallet.customer, organization: wallet.organization, status: :voided)
+          )
+        end
+
+        it "calls wallet transaction create job, since nothing was declined" do
+          expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
+      context "when the declined top-up has a finalized invoice" do
+        let(:failed_top_up) do
+          create(
+            :wallet_transaction,
+            :failed,
+            wallet:,
+            source: :threshold,
+            failed_at: 10.minutes.ago,
+            invoice: create(:invoice, :credit, customer: wallet.customer, organization: wallet.organization, status: :finalized)
+          )
+        end
+
+        it "does not call wallet transaction create job while the failure is recent" do
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+
       context "when a top-up settled after the failure" do
         before { create(:wallet_transaction, wallet:, source: :threshold, created_at: 1.minute.ago) }
 
