@@ -104,7 +104,10 @@ module Subscriptions
 
       ActiveRecord::Associations::Preloader.new(
         records: shared_groups.flatten,
-        associations: [:billing_object_connections, {customer: :integration_customers}]
+        associations: {
+          billing_object_connections: %i[payment_provider_customer integration_customer],
+          customer: %i[payment_provider_customers integration_customers]
+        }
       ).call
 
       subscription_groups.flat_map do |subscriptions|
