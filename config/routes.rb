@@ -139,6 +139,7 @@ Rails.application.routes.draw do
       # let unsupported actions fall through to their v1 beta equivalents.
       match "credit_notes(/*path)", to: "/application#not_found", via: :all
       match "agent_storefronts(/*path)", to: "/application#not_found", via: :all
+      match "agents(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do

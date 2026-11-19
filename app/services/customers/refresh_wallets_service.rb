@@ -56,14 +56,14 @@ module Customers
     attr_reader :customer, :include_generating_invoices, :refresh_claim
 
     def capture_reservations
-      x402_wallets = all_wallets.select(&:x402_enabled)
+      gated_wallets = all_wallets.select { it.x402_enabled || it.code == Agents::Registration::WALLET_CODE }
 
-      if x402_wallets.any? && X402::ReservationCounter.enabled?(customer.organization)
+      if gated_wallets.any? && X402::ReservationCounter.enabled?(customer.organization)
         @refresh_claim = X402::RefreshClaim.acquire(customer)
       end
 
       if refresh_claim
-        x402_wallets.index_with { X402::ReservationCounter.new(it).capture }.reject { |_, cents| cents.zero? }
+        gated_wallets.index_with { X402::ReservationCounter.new(it).capture }.reject { |_, cents| cents.zero? }
       else
         {}
       end
