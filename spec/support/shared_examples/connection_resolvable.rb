@@ -2,7 +2,7 @@
 
 # Shared coverage for ConnectionResolvable. The including spec must define `let(:resolvable)`,
 # a billing object whose customer's default connections are inherited.
-RSpec.shared_examples "a connection-resolvable billing object" do |fallback_redefined: false|
+RSpec.shared_examples "a connection-resolvable billing object" do |fallback: false|
   let(:resolution_customer) { resolvable.customer }
   let(:organization) { resolution_customer.organization }
 
@@ -54,12 +54,12 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_rede
         end
       end
 
-      if fallback_redefined
+      if fallback
         context "when fallback_connection is redefined and pins a specific connection" do
           let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
 
           before do
-            create(:billing_object_connection, owner: fallback, organization:, category: :payment,
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment,
               behavior: :specific, payment_provider_customer: fallback_connection)
           end
 
@@ -110,12 +110,12 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_rede
         end
       end
 
-      if fallback_redefined
+      if fallback
         context "when fallback_connection is redefined and pins a specific connection" do
           let(:fallback_connection) { create(:xero_customer, customer: resolution_customer, organization:) }
 
           before do
-            create(:billing_object_connection, owner: fallback, organization:, category: :accounting,
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :accounting,
               behavior: :specific, integration_customer: fallback_connection)
           end
 
@@ -166,12 +166,12 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_rede
         end
       end
 
-      if fallback_redefined
+      if fallback
         context "when fallback_connection is redefined and pins a specific connection", skip: "Unskip it when IntegrationCustomer#only_one_tax_integration_per_customer is removed" do
           let(:fallback_connection) { create(:avalara_customer, customer: resolution_customer, organization:) }
 
           before do
-            create(:billing_object_connection, owner: fallback, organization:, category: :tax,
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :tax,
               behavior: :specific, integration_customer: fallback_connection)
           end
 
@@ -222,12 +222,12 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_rede
         end
       end
 
-      if fallback_redefined
+      if fallback
         context "when fallback_connection is redefined and pins a specific connection" do
           let(:fallback_connection) { create(:salesforce_customer, customer: resolution_customer, organization:) }
 
           before do
-            create(:billing_object_connection, owner: fallback, organization:, category: :crm,
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :crm,
               behavior: :specific, integration_customer: fallback_connection)
           end
 
@@ -293,14 +293,14 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_rede
       end
     end
 
-    if fallback_redefined
+    if fallback
       context "when fallback_connection is redefined and pins a specific connection" do
         let(:fallback_connection) do
           create(:gocardless_customer, customer: resolution_customer, organization:, code: "gocardless_eu")
         end
 
         before do
-          create(:billing_object_connection, owner: fallback, organization:, category: :payment,
+          create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment,
             behavior: :specific, payment_provider_customer: fallback_connection)
         end
 

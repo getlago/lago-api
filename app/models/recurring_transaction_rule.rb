@@ -118,8 +118,8 @@ class RecurringTransactionRule < ApplicationRecord
     purchase_order_number.presence || wallet.purchase_order_number
   end
 
-  def fallback_connection(category)
-    wallet.effective_connection(category)
+  def fallback_record
+    wallet
   end
 
   private
