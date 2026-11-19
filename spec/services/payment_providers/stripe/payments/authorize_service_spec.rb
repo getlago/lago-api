@@ -125,8 +125,10 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
         let(:payment_method) { nil }
         let(:payment_method_id) { nil }
 
-        it "fetch stripe default payment method" do
+        it "fetch stripe default payment method, falling back to cards only" do
           expect(result).to eq("pm_from_stripe")
+          expect(PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService)
+            .to have_received(:call!).with(provider_customer:, types: %w[card])
         end
       end
     end

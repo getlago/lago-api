@@ -50,7 +50,11 @@ module PaymentProviders
           elsif provider_customer.payment_method_id.present?
             provider_customer.payment_method_id
           else
-            PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService.call!(provider_customer:).payment_method_id
+            # Cards only: the pre-authorization is a manual-capture hold, which bank debits cannot do
+            PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService.call!(
+              provider_customer:,
+              types: %w[card]
+            ).payment_method_id
           end
         end
 

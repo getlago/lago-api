@@ -80,6 +80,17 @@ RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodServ
         end
       end
 
+      context "when the caller restricts the types to cards" do
+        subject { described_class.new(provider_customer:, types: %w[card]) }
+
+        let(:provider_payment_methods) { %w[card link sepa_debit] }
+
+        it "returns no payment method" do
+          result = subject.call
+          expect(result.payment_method_id).to be_nil
+        end
+      end
+
       context "when none of the types is allowed on the customer" do
         let(:provider_payment_methods) { %w[card] }
 
