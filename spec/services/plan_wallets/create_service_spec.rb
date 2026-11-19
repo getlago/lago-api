@@ -97,7 +97,6 @@ describe PlanWallets::CreateService do
 
   describe "refused params" do
     [
-      ["a rate amount", {rate_amount: "1.0"}, {rate_amount: ["not_supported"]}],
       ["a currency other than the plan's", {currency: "EUR"}, {currency: ["currency_does_not_match"]}],
       ["no currency", {currency: nil}, {currency: ["value_is_invalid"]}],
       ["no code", {code: nil}, {code: ["value_is_mandatory"]}],

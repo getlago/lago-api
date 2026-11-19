@@ -22,11 +22,6 @@ module PlanWallets
     def call
       return result.not_found_failure!(resource: "plan") unless catalog_plan
 
-      # Credit is counted in the wallet currency, never derived from the price paid.
-      if params.key?(:rate_amount)
-        return result.single_validation_failure!(field: :rate_amount, error_code: "not_supported")
-      end
-
       if (field = malformed_param)
         return result.single_validation_failure!(field:, error_code: "value_is_invalid")
       end
