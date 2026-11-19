@@ -14,10 +14,12 @@ FactoryBot.define do
     trait :started do
       status { "started" }
       email { "owner@example.com" }
+      email_hash { Agents::Claim.mailbox_digest("owner@example.com") }
     end
 
     trait :verified do
       status { "verified" }
+      email_hash { Agents::Claim.mailbox_digest("owner@example.com") }
       verified_at { Time.current }
     end
   end
