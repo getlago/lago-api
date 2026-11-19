@@ -49,6 +49,14 @@ module Integrations
             end
           end
 
+          # Returns the cached answer, or nil, without calling the provider nor storing anything.
+          def read
+            return unless expires_in > 0
+
+            cached = Rails.cache.read(cache_key)
+            unwrap(cached) if cached
+          end
+
           def cache_key
             [
               "anrok-draft-taxes",
