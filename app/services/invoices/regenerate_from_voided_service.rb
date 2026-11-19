@@ -166,7 +166,7 @@ module Invoices
             )
           )
         else
-          fee.invoice_display_name = adjusted_fee.invoice_display_name if adjusted_fee.invoice_display_name.present?
+          fee.invoice_display_name = adjusted_fee.invoice_display_name
           fee.charge_id = adjusted_fee.charge_id if adjusted_fee.charge_id.present?
           fee.subscription_id = adjusted_fee.subscription_id if adjusted_fee.subscription_id.present?
           fee.units = adjusted_fee.units if adjusted_fee.units.present?
