@@ -169,6 +169,41 @@ RSpec.describe Lago::SelfServe do
           .to raise_error(ArgumentError, /LAGO_FRONT_URL/)
       end
     end
+
+    context "with the payment method switch" do
+      def validate(value: "true", require_payment_method: "true", billing_accounts_key: "key")
+        described_class.validate!(value:, front_url:, disable_signup: "false", require_payment_method:,
+          billing_accounts_key:, local: false)
+      end
+
+      it "accepts it unset, empty or false whatever the rest" do
+        [nil, "", "false", " False "].each do |require_payment_method|
+          expect { validate(value: nil, require_payment_method:, billing_accounts_key: nil) }.not_to raise_error
+        end
+      end
+
+      it "refuses any other value" do
+        %w[1 yes].each do |require_payment_method|
+          expect { validate(require_payment_method:) }
+            .to raise_error(ArgumentError, /LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD must be true or false/)
+        end
+      end
+
+      it "accepts it on with self-serve on and the activation key set" do
+        expect { validate }.not_to raise_error
+      end
+
+      it "refuses it on while self-serve is off" do
+        expect { validate(value: "false") }.to raise_error(ArgumentError, /needs LAGO_SELF_SERVE_ENABLED/)
+      end
+
+      it "refuses it on without the activation key" do
+        [nil, "", "  "].each do |billing_accounts_key|
+          expect { validate(billing_accounts_key:) }
+            .to raise_error(ArgumentError, /needs LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY/)
+        end
+      end
+    end
   end
 
   describe "initializer" do

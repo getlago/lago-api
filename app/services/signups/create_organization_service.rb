@@ -31,7 +31,7 @@ module Signups
         user.memberships.reset
         next result.forbidden_failure!(code: "user_not_eligible") unless user.needs_organization?
 
-        pair = Organizations::CreateSelfServeService.call!(name:)
+        pair = Organizations::CreateSelfServeService.call!(name:, activation_status:)
         membership = create_admin_membership(pair.organization)
 
         result.organization = pair.organization
@@ -54,6 +54,15 @@ module Signups
 
     # Not `source`: BaseService already names the caller (GraphQL, API) that way.
     attr_reader :user, :name, :role, :referral_source
+
+    # With the switch on, the production waits for billing-accounts to confirm a card; the sandbox is open either way.
+    def activation_status
+      if Lago::SelfServe.require_payment_method?
+        Organization::ACTIVATION_STATUSES[:pending_payment_method]
+      else
+        Organization::ACTIVATION_STATUSES[:active]
+      end
+    end
 
     # Admin of production, then the sandbox mirrors it, as for every member. No lock first: no other transaction can
     # see the organization yet, and the sync locks the pair before it reads.

@@ -5,11 +5,18 @@ module Lago
   # LAGO_SELF_SERVE_ENABLED unset, which keeps the single-screen signup.
   module SelfServe
     ENV_VAR = "LAGO_SELF_SERVE_ENABLED"
+    REQUIRE_PAYMENT_METHOD_ENV_VAR = "LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD"
     ACCEPTED_VALUES = ["", "true", "false"].freeze
 
     class << self
       # Only "true" turns the gate on (any case, surrounding spaces ignored): a security gate errs toward off.
       def enabled?(value: ENV[ENV_VAR])
+        normalize(value) == "true"
+      end
+
+      # Whether signup creates its production organization waiting for a payment method. Read like enabled?, off by
+      # default; validate! refuses it on without self-serve or without the key that lets billing-accounts activate.
+      def require_payment_method?(value: ENV[REQUIRE_PAYMENT_METHOD_ENV_VAR])
         normalize(value) == "true"
       end
 
@@ -45,6 +52,8 @@ module Lago
         value: ENV[ENV_VAR],
         front_url: ENV["LAGO_FRONT_URL"],
         disable_signup: ENV["LAGO_DISABLE_SIGNUP"],
+        require_payment_method: ENV[REQUIRE_PAYMENT_METHOD_ENV_VAR],
+        billing_accounts_key: ENV["LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY"],
         local: Rails.env.local?
       )
         unless ACCEPTED_VALUES.include?(normalize(value))
@@ -62,11 +71,26 @@ module Lago
           raise ArgumentError,
             "LAGO_DISABLE_SIGNUP must be exactly true or false when #{ENV_VAR} is true; got #{disable_signup.inspect}"
         end
+
+        validate_require_payment_method!(require_payment_method, enabled: enabled?(value:), key: billing_accounts_key)
       end
 
       private
 
       def normalize(value) = value.to_s.strip.downcase
+
+      # Pending organizations that nothing can activate would lock every new signup out of production.
+      def validate_require_payment_method!(value, enabled:, key:)
+        unless ACCEPTED_VALUES.include?(normalize(value))
+          raise ArgumentError, "#{REQUIRE_PAYMENT_METHOD_ENV_VAR} must be true or false, got #{value.inspect}"
+        end
+        return unless require_payment_method?(value:)
+
+        raise ArgumentError, "#{REQUIRE_PAYMENT_METHOD_ENV_VAR} needs #{ENV_VAR} to be true" unless enabled
+        if billing_accounts_key(value: key).nil?
+          raise ArgumentError, "#{REQUIRE_PAYMENT_METHOD_ENV_VAR} needs LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY to be set"
+        end
+      end
 
       # Development and test fall back to a local front and accept http.
       def valid_front_url?(url, local:)

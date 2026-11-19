@@ -73,6 +73,15 @@ RSpec.describe Organizations::CreateWithInviteService do
       expect(Invite.pluck(:organization_id, :email)).to eq([[production.id, "owner@hooli.test"]])
     end
 
+    context "with the payment method switch on" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD" => "true") }
+
+      it "still opens both organizations, as only signup waits for a payment method" do
+        expect(result.organization.reload.activation_status).to eq("active")
+        expect(result.sandbox_organization.reload.activation_status).to eq("active")
+      end
+    end
+
     context "with a name that reads as a domain" do
       let(:name) { "Hooli.com" }
 

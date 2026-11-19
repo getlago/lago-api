@@ -31,6 +31,21 @@ RSpec.describe Signups::CreateOrganizationService do
       .to match_array([[result.organization.id, ["admin"]], [result.sandbox_organization.id, ["admin"]]])
   end
 
+  it "opens the production organization while the payment method switch is off" do
+    expect(result.organization.reload.activation_status).to eq("active")
+    expect(result.sandbox_organization.reload.activation_status).to eq("active")
+  end
+
+  context "with the payment method switch on" do
+    let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD" => "true") }
+
+    it "creates the production waiting for a payment method and the sandbox open" do
+      expect(result).to be_success
+      expect(result.organization.reload.activation_status).to eq("pending_payment_method")
+      expect(result.sandbox_organization.reload.activation_status).to eq("active")
+    end
+  end
+
   it "answers with a user who no longer needs an organization" do
     expect(result.user).to eq(user)
     expect(result.user.needs_organization?).to be(false)
