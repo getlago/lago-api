@@ -29,6 +29,17 @@ module Billing
         end
       end
 
+      # Select by priced coverage but keep the entire obligation, even for a partial-cycle preview.
+      def each_obligation_overlapping(from:, to:)
+        return if from > to
+
+        walker.walk_to(to, from:).each do |cycle|
+          obligations_for(cycle).each do |obligation|
+            yield obligation if obligation.segments.any? { |segment| segment.started_at <= to && segment.ended_at > from }
+          end
+        end
+      end
+
       def next_obligation(from:)
         obligations(from:).find { it.starts_on_or_after?(from) }
       end

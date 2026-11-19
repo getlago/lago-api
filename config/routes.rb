@@ -103,12 +103,18 @@ Rails.application.routes.draw do
         # Drawn last so the greedy :plan_code does not take charge or metadata paths ending in "entitlements".
         delete :entitlements, to: "/application#not_found"
       end
+      # Without an ID list, "operations" can still be a contract's external ID.
+      get "contracts/operations", to: "contracts/billing#operations",
+        constraints: ->(request) { request.query_parameters.key?("external_ids") || request.query_parameters.key?("contract_external_ids") }
+      post "contracts/bill", to: "contracts/billing#bill"
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
         get :current_usage, on: :member, to: "contracts/usage#current"
         post :publish, on: :member
         resources :alerts, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "contracts/alerts"
+        get :operations, on: :member, to: "contracts/billing#operations"
+        post :bill, on: :member, to: "contracts/billing#bill"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]

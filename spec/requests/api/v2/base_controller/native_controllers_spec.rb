@@ -12,7 +12,8 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
     .transform_values { |defaults| defaults.map { it[:action] }.uniq }
   native_controllers = native_actions.keys
 
-  hand_rendered_actions = {}
+  # Preview adds a top-level next billing instant; bill returns v1 invoices with fees.
+  hand_rendered_actions = {Api::V2::Contracts::BillingController => %w[operations bill]}
 
   # The Api::V1Errors renderers that the callers v1 and v2 share reach, which Api::V2Errors defines
   # under the same names, and the ones it must not define: render_error_response renders those
