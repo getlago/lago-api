@@ -15,7 +15,8 @@ module Api
               apply_taxes:,
               usage_filters:,
               use_usage_buckets: true,
-              cache_prefilter: true
+              cache_prefilter: true,
+              rescue_tax_provider_errors: true
             ).call
 
           if result.success?

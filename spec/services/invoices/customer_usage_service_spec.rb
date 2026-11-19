@@ -185,6 +185,11 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
 
     context "when there is tax provider integration" do
+      subject(:usage_service) do
+        described_class.new(customer:, subscription:, apply_taxes:, rescue_tax_provider_errors:)
+      end
+
+      let(:rescue_tax_provider_errors) { false }
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
       let(:endpoint) { "https://api.nango.dev/action/trigger" }
@@ -419,6 +424,104 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture: Service failure"])
+        end
+
+        context "when the caller asks for tax provider errors as failures" do
+          let(:rescue_tax_provider_errors) { true }
+
+          it "returns tax error" do
+            result = usage_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture: Service failure"])
+          end
+        end
+      end
+
+      context "when the provider fails with a transient error" do
+        before { stub_request(:post, endpoint).to_return(status: 502, body: "Bad Gateway") }
+
+        it "raises the error so that the jobs retry it" do
+          expect { usage_service.call }.to raise_error(Integrations::Aggregator::BadGatewayError)
+        end
+
+        context "when the caller asks for tax provider errors as failures" do
+          let(:rescue_tax_provider_errors) { true }
+
+          it "returns a failure of the provider" do
+            result = usage_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+            expect(result.error).to have_attributes(third_party: "anrok", error_code: nil, error_message: start_with("HTTP 502"))
+          end
+        end
+      end
+
+      context "when the provider does not answer in time" do
+        before { stub_request(:post, endpoint).to_raise(Net::ReadTimeout) }
+
+        it "raises the error so that the jobs retry it" do
+          expect { usage_service.call }.to raise_error(Integrations::Aggregator::TimeoutError)
+        end
+
+        context "when the caller asks for tax provider errors as failures" do
+          let(:rescue_tax_provider_errors) { true }
+
+          it "returns a failure of the provider" do
+            result = usage_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+            expect(result.error).to have_attributes(third_party: "anrok", error_code: nil, error_message: start_with("Net::ReadTimeout"))
+          end
+        end
+      end
+
+      context "when the provider request limit is exceeded" do
+        before do
+          stub_request(:post, endpoint).to_return(status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json)
+        end
+
+        it "raises the error so that the jobs retry it" do
+          expect { usage_service.call }.to raise_error(Integrations::Aggregator::RequestLimitError)
+        end
+
+        context "when the caller asks for tax provider errors as failures" do
+          let(:rescue_tax_provider_errors) { true }
+
+          it "returns a too many provider requests failure" do
+            result = usage_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::TooManyProviderRequestsFailure)
+            expect(result.error).to have_attributes(provider_name: "anrok", error: an_instance_of(Integrations::Aggregator::RequestLimitError))
+          end
+        end
+      end
+
+      context "when the caller looks the customer up by external ids and asks for tax provider errors as failures" do
+        subject(:usage_service) do
+          described_class.with_external_ids(
+            customer_external_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            organization_id: organization.id,
+            apply_taxes:,
+            rescue_tax_provider_errors:
+          )
+        end
+
+        let(:rescue_tax_provider_errors) { true }
+
+        before { stub_request(:post, endpoint).to_return(status: 502, body: "Bad Gateway") }
+
+        it "returns a failure of the provider" do
+          result = usage_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+          expect(result.error).to have_attributes(third_party: "anrok", error_code: nil)
         end
       end
     end

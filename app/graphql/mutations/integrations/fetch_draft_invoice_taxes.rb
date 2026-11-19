@@ -23,6 +23,15 @@ module Mutations
         ).call
 
         result.success? ? result.fees : validation_error(messages: {tax_error: [result.error.code]})
+      # CreateDraftService raises these for the tax jobs to retry, which a request cannot wait for.
+      rescue *::Integrations::Aggregator::BaseService.retryable_errors => error
+        result_error(
+          BaseService::Result.new.third_party_failure!(
+            third_party: customer.tax_customer.integration.provider_key,
+            error_code: nil,
+            error_message: error.message
+          )
+        )
       end
 
       private

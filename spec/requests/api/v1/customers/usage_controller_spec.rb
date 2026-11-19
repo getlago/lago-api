@@ -139,6 +139,100 @@ RSpec.describe Api::V1::Customers::UsageController do
           expect(response.body).to match(/anrok.*Try again later/)
         end
       end
+
+      context "when the anrok provider fails with a transient error" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+        before do
+          integration_customer
+          stub_request(:post, "https://api.nango.dev/action/trigger").to_return(status: 502, body: "Bad Gateway")
+        end
+
+        it "returns a third party error naming the provider" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:code]).to eq("third_party_error")
+          expect(json[:error_details]).to match(third_party: "anrok", thirdparty_error: start_with("HTTP 502"))
+        end
+      end
+
+      context "when the anrok provider times out" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+        before do
+          integration_customer
+          stub_request(:post, "https://api.nango.dev/action/trigger").to_raise(Net::ReadTimeout)
+        end
+
+        it "returns a third party error naming the provider" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:code]).to eq("third_party_error")
+          expect(json[:error_details]).to match(third_party: "anrok", thirdparty_error: a_kind_of(String))
+        end
+      end
+
+      context "when the avalara provider fails with a transient error" do
+        let(:integration) { create(:avalara_integration, organization:) }
+        let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+
+        before do
+          integration_customer
+          stub_request(:post, "https://api.nango.dev/action/trigger").to_return(status: 502, body: "Bad Gateway")
+        end
+
+        it "returns a third party error naming the provider" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:code]).to eq("third_party_error")
+          expect(json[:error_details]).to match(third_party: "avalara", thirdparty_error: start_with("HTTP 502"))
+        end
+      end
+
+      context "when the anrok provider request limit is exceeded" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+        before do
+          integration_customer
+          stub_request(:post, "https://api.nango.dev/action/trigger")
+            .to_return(status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json)
+        end
+
+        it "returns a too many provider requests error naming the provider" do
+          subject
+
+          expect(response).to have_http_status(:too_many_requests)
+          expect(json[:code]).to eq("too_many_provider_requests")
+          expect(json[:error_details]).to include(provider_name: "anrok")
+        end
+      end
+
+      context "when the anrok provider refuses the taxes" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+        let(:body) do
+          File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json"))
+        end
+
+        before do
+          integration_customer
+          stub_request(:post, "https://api.nango.dev/action/trigger").to_return(status: 200, body:)
+        end
+
+        it "returns a tax error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:code]).to eq("validation_errors")
+          expect(json[:error_details]).to include(:tax_error)
+        end
+      end
     end
 
     context "with charge and group filtering" do

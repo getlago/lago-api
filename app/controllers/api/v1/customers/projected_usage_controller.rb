@@ -14,7 +14,8 @@ module Api
               apply_taxes:,
               with_projection: true,
               usage_filters: UsageFilters.init_from_params_for_projected_usage(params),
-              use_usage_buckets: true
+              use_usage_buckets: true,
+              rescue_tax_provider_errors: true
             ).call
 
           if result.success?
