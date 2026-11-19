@@ -41,6 +41,20 @@ RSpec.describe Contract do
       expect(contract).to have_many(:invoices).through(:billing_segments)
       expect(contract).to have_many(:applied_invoice_custom_sections).class_name("Contract::AppliedInvoiceCustomSection").dependent(:destroy)
       expect(contract).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
+      expect(contract).to have_many(:contract_alerts).class_name("UsageMonitoring::ContractAlert")
+        .with_foreign_key(:contract_external_id).with_primary_key(:external_id)
+      expect(contract).to have_one(:contract_activity).class_name("UsageMonitoring::ContractActivity")
+    end
+
+    it "lists the kept alerts of its external id in its organization only" do
+      contract = create(:contract)
+      organization = contract.organization
+      alert = create(:contract_alert, organization:, contract_external_id: contract.external_id)
+      create(:contract_alert, organization:, contract_external_id: contract.external_id, code: "discarded", deleted_at: Time.current)
+      create(:contract_alert, organization:)
+      create(:contract_alert, organization: create(:organization), contract_external_id: contract.external_id)
+
+      expect(contract.contract_alerts).to eq([alert])
     end
 
     it "resolves a discarded customer and catalog plan" do
