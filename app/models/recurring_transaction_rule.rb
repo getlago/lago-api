@@ -118,6 +118,10 @@ class RecurringTransactionRule < ApplicationRecord
     purchase_order_number.presence || wallet.purchase_order_number
   end
 
+  def fallback_connection(category)
+    wallet.effective_connection(category)
+  end
+
   private
 
   def target_ongoing_balance_not_below_threshold
