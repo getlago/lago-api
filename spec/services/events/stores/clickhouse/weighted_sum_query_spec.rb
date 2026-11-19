@@ -52,6 +52,15 @@ RSpec.describe Events::Stores::Clickhouse::WeightedSumQuery, clickhouse: {clean_
   end
 
   describe "#query" do
+    # The UNION ALL takes the widest type of its branches, so the results alone cannot show a missing cast
+    it "casts difference to Decimal256 in every branch of events_data" do
+      sql = described_class.new(store: event_store).query
+
+      expect(sql).to include("toDecimal256(:initial_value, 26) as difference")
+      expect(sql).to include("toDecimal256(events_enriched.decimal_value, 26) AS difference")
+      expect(sql).to include("toDecimal256(0, 26) as difference")
+    end
+
     context "with one event of 1,000,000 held the whole period" do
       let(:events_values) { [1_000_000] }
 
@@ -89,6 +98,15 @@ RSpec.describe Events::Stores::Clickhouse::WeightedSumQuery, clickhouse: {clean_
     let(:grouped_by) { %w[region] }
     let(:groups) { {"region" => "europe"} }
     let(:initial_values) { [{groups:, value: 0}] }
+
+    # The UNION ALL takes the widest type of its branches, so the results alone cannot show a missing cast
+    it "casts difference to Decimal256 in every branch of events_data" do
+      sql = described_class.new(store: event_store).grouped_query(initial_values:)
+
+      expect(sql).to include("toDateTime64(:from_datetime, 5, 'UTC'), toDecimal256('0.0', 26))")
+      expect(sql).to include("toDecimal256(events_enriched.decimal_value, 26) AS difference")
+      expect(sql).to include("toDateTime64(:to_datetime, 5, 'UTC'), toDecimal256(0, 26))")
+    end
 
     context "with one event of 1,000,000 held the whole period" do
       let(:events_values) { [1_000_000] }
