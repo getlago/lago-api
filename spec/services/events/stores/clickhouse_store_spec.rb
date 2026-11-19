@@ -850,19 +850,6 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       expect(result.value).to eq(BigDecimal("2000000000000")) # 250 events x 8e9
       expect(result.events_count).to eq(250)
     end
-
-    context "with 570 events" do
-      before do
-        insert_events(320, timestamp: subscription.started_at + 1.day, value: 8_000_000_000)
-      end
-
-      it "returns the exact total past twice the limit" do
-        result = event_store.sum
-
-        expect(result.value).to eq(BigDecimal("4560000000000")) # 570 events x 8e9
-        expect(result.events_count).to eq(570)
-      end
-    end
   end
 
   describe "other sums above the Decimal128 limit" do
@@ -894,6 +881,17 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       event_store.numeric_property = true
 
       insert_events(events_count, timestamp: subscription.started_at + 1.day, value: 8_000_000_000, properties: {"region" => "europe"})
+    end
+
+    describe "#sum" do
+      let(:events_count) { 570 }
+
+      it "returns the exact total past twice the limit" do
+        result = event_store.sum
+
+        expect(result.value).to eq(BigDecimal("4560000000000")) # 570 events x 8e9
+        expect(result.events_count).to eq(570)
+      end
     end
 
     describe "#grouped_sum" do
