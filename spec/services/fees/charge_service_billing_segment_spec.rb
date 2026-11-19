@@ -741,13 +741,14 @@ RSpec.describe Fees::ChargeService do
       let(:organization) { create(:organization, feature_flags: %w[recurring_aggregation_snapshots persisted_recurring_values]) }
       let(:previous_watermark) { watermark - 30.seconds } # after both events were ingested
       let(:previous_priced_ids) { [] }
+      let(:previous_to_datetime) { BillingSegment.inclusive_end(billing_segment.started_at) }
       let(:contract_rate_card) do
         create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: Date.new(2026, 8, 1), created_at: previous_watermark - 1.day)
       end
 
       before do
         create(:contract_recurring_aggregation_snapshot, organization:, contract:, product:, product_filter:, units: 100,
-          events_count: 1, to_datetime: BillingSegment.inclusive_end(billing_segment.started_at), watermark: previous_watermark,
+          events_count: 1, to_datetime: previous_to_datetime, watermark: previous_watermark,
           priced_product_filter_ids: previous_priced_ids)
       end
 
@@ -840,6 +841,15 @@ RSpec.describe Fees::ChargeService do
         it "starts from the snapshot units" do
           # 100 for the 11 days before the August event, 106 for the 20 days after it, over 31 days
           expect(result.fees.sole.units.round(5)).to eq(BigDecimal("103.87097")) # (100 * 11 + 106 * 20) / 31
+        end
+
+        context "when the snapshot closes an older period" do
+          let(:previous_to_datetime) { BillingSegment.inclusive_end(Time.utc(2026, 7, 1)) }
+
+          it "reads the full history" do
+            # 4 from the July event for the 11 days before the August event, 4 + 6 for the 20 days after it, over 31 days
+            expect(result.fees.sole.units.round(5)).to eq(BigDecimal("7.87097")) # (4 * 11 + 10 * 20) / 31
+          end
         end
       end
 

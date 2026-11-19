@@ -9,8 +9,9 @@ module RecurringAggregationSnapshots
     end
 
     # inherited: the period was closed by the previous subscription, whose invoices are not this one's
-    Period = Data.define(:to_datetime, :watermark, :inherited) do
-      def initialize(inherited: false, **)
+    # reads_older: the key can tell whether an invoice closed a later period (SubscriptionKey only)
+    Period = Data.define(:to_datetime, :watermark, :inherited, :reads_older) do
+      def initialize(inherited: false, reads_older: true, **)
         super
       end
 
@@ -20,7 +21,7 @@ module RecurringAggregationSnapshots
       def weighted_sum_start?(from_datetime)
         if to_datetime.between?(from_datetime - 1.second, from_datetime)
           true
-        elsif inherited || to_datetime >= from_datetime
+        elsif inherited || !reads_older || to_datetime >= from_datetime
           false
         else
           last_billed_charges_to_datetime = yield
@@ -61,7 +62,10 @@ module RecurringAggregationSnapshots
       marker, records = own || previous_period
       return result unless marker && records.all? { same_grouped_by_keys?(it) }
 
-      result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark, inherited: own.nil?)
+      result.period = Period.new(
+        to_datetime: marker.to_datetime, watermark: marker.watermark, inherited: own.nil?,
+        reads_older: key.weighted_sum_reads_older_periods?
+      )
       result.snapshots = records.select { in_group?(it) }.map { to_snapshot(it) }
       result
     end

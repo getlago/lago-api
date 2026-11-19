@@ -38,6 +38,10 @@ module RecurringAggregationSnapshots
       model.filters_changed_since?(organization_id:, charge_ids: charge.id, watermark:)
     end
 
+    def weighted_sum_reads_older_periods?
+      true
+    end
+
     # An upgrade or downgrade keeps the external id, so the events counted by the previous
     # subscription are the ones this one reads.
     def previous_period(filter:, all_buckets:, grouped_by_values:, grouped_by_keys:)
