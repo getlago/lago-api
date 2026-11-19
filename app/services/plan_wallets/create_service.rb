@@ -43,8 +43,14 @@ module PlanWallets
         plan_wallet = catalog_plan.wallets.create!(organization:, **params.slice(*ATTRIBUTES).compact.symbolize_keys)
 
         replace_metadata!(plan_wallet) unless params[:metadata].nil?
-        CatalogWallets::ApplyTaxesService.call!(wallet: plan_wallet, tax_codes: params[:tax_codes]) unless params[:tax_codes].nil?
-        CatalogWalletSelectors::ReplaceService.call!(wallet: plan_wallet, applies_to: params[:applies_to]) unless params[:applies_to].nil?
+
+        if params.key?(:tax_codes) && !params[:tax_codes].nil?
+          CatalogWallets::ApplyTaxesService.call!(wallet: plan_wallet, tax_codes: params[:tax_codes])
+        end
+
+        if params.key?(:applies_to) && !params[:applies_to].nil?
+          CatalogWalletSelectors::ReplaceService.call!(wallet: plan_wallet, applies_to: params[:applies_to])
+        end
 
         result.plan_wallet = plan_wallet
       end
