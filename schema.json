@@ -28954,16 +28954,12 @@
             },
             {
               "name": "planInterval",
-              "description": null,
+              "description": "Interval of the plan. Null for product catalog plans and contracts without a plan, whose rate cards each have their own interval",
               "args": [],
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "PlanInterval",
-                  "ofType": null
-                }
+                "kind": "ENUM",
+                "name": "PlanInterval",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -29855,16 +29851,12 @@
             },
             {
               "name": "planInterval",
-              "description": null,
+              "description": "Interval of the plan. Null for product catalog plans and contracts without a plan, whose rate cards each have their own interval",
               "args": [],
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "PlanInterval",
-                  "ofType": null
-                }
+                "kind": "ENUM",
+                "name": "PlanInterval",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -36228,6 +36220,12 @@
             },
             {
               "name": "standard_webhooks_signature",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_usage_on_wallet_expiration",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
