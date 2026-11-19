@@ -794,6 +794,44 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
+  # decimal_value is a Decimal(38, 26), so a sum held in that type wraps above 2^127 / 10^26 (~1.70e12).
+  describe "#sum above the Decimal128 limit" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        filters: {}
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      250.times { create_event(timestamp: subscription.started_at + 1.day, value: 8_000_000_000) }
+    end
+
+    it "returns the exact total" do
+      result = event_store.sum
+
+      expect(result.value).to eq(BigDecimal("2000000000000")) # 250 events x 8e9
+      expect(result.events_count).to eq(250)
+    end
+  end
+
   # Events from the API keep their JSON types, while events_enriched stores every property as text.
   describe "#active_unique_property? with a numeric property" do
     subject(:event_store) do
