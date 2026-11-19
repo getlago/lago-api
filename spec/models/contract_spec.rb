@@ -334,15 +334,6 @@ RSpec.describe Contract do
     end
   end
 
-  describe "#wallets_editable?" do
-    it "is true until the contract ends" do
-      expect(build(:contract, :pending).wallets_editable?).to be(true)
-      expect(build(:contract, status: :active).wallets_editable?).to be(true)
-      expect(build(:contract, :terminated).wallets_editable?).to be(false)
-      expect(build(:contract, :canceled).wallets_editable?).to be(false)
-    end
-  end
-
   describe "#currency" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:, currency: "USD") }

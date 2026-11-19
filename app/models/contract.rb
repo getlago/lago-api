@@ -110,11 +110,6 @@ class Contract < ApplicationRecord
     pending?
   end
 
-  # Wallets follow the agreement while it is in force: they change until it ends, unlike its rate cards.
-  def wallets_editable?
-    LIVE_STATUSES.include?(status)
-  end
-
   # The currency fees bill in: the plan's when there is one, otherwise the
   # customer's (a plan-less contract), falling back to the organization default.
   def currency
