@@ -78,6 +78,8 @@ module Plans
           process_downgraded_subscriptions
           process_pending_subscriptions
         end
+
+        Plans::AgentStorefrontGuardService.call(plan:).raise_if_error!
       end
 
       cascade_subscription_fee_update(old_amount_cents)
@@ -392,12 +394,17 @@ module Plans
       end
     end
 
+    # A rename changes nothing about what the storefront sells, so it bypasses the sold-plan validations
+    # (a plan given a fee after it was sold would otherwise block it), as the Stripe code rename does.
     def rename_in_agent_storefronts
       old_code, new_code = plan.saved_change_to_code
 
-      plan.organization.agent_storefront_integrations.with_plan_code(old_code).find_each do |storefront|
-        storefront.update!(plans: storefront.plans.map { (it["plan_code"] == old_code) ? it.merge("plan_code" => new_code) : it })
-      end
+      plan.organization.agent_storefront_integrations.with_plan_code(old_code).update_all([<<~SQL.squish, old_code, new_code, Time.current]) # rubocop:disable Rails/SkipsModelValidations
+        settings = jsonb_set(settings, '{plans}', (
+          SELECT jsonb_agg(CASE WHEN sold->>'plan_code' = ? THEN jsonb_set(sold, '{plan_code}', to_jsonb(?::text)) ELSE sold END)
+          FROM jsonb_array_elements(settings->'plans') AS sold
+        )), updated_at = ?
+      SQL
     end
   end
 end

@@ -26,6 +26,14 @@ module Integrations
       "#{ENV["LAGO_API_URL"]}/agents/v1/#{id}"
     end
 
+    def auth_document_url
+      "#{agent_url}/AUTH.md"
+    end
+
+    def billing_document_url
+      "#{agent_url}/BILLING.md"
+    end
+
     # The lago-front page where a person claims one of this storefront's agents.
     def claim_url
       "#{Rails.application.config.lago_front_url}/agent-claim/#{id}"
@@ -45,14 +53,12 @@ module Integrations
     end
 
     def enrolled_agents?
-      external_ids = agent_registrations.select(:id).map { Agents::ExternalIds.subscription(it) }
-      organization.subscriptions.active.where(external_id: external_ids).exists?
+      organization.subscriptions.active.where(external_id: Agents::ExternalIds.of(agent_registrations)).exists?
     end
 
     # An agent that paid has a Stripe customer on the connection, which outlives its subscription.
     def agents_with_stripe_customer?
-      external_ids = agent_registrations.select(:id).map { Agents::ExternalIds.customer(it) }
-      organization.customers.joins(:stripe_customer).where(external_id: external_ids).exists?
+      organization.customers.joins(:stripe_customer).where(external_id: Agents::ExternalIds.of(agent_registrations)).exists?
     end
 
     private
@@ -63,11 +69,15 @@ module Integrations
 
     def validate_plans
       codes = plans.map { it["plan_code"] }
+      sellable = plans_for_sale.to_a
 
       if codes.uniq.size != codes.size || !plans.all? { valid_topup_bounds?(it) && valid_free_credits?(it) }
         errors.add(:plans, "value_is_invalid")
-      elsif !(codes - plans_for_sale.pluck(:code)).empty?
+      elsif !(codes - sellable.map(&:code)).empty?
         errors.add(:plans, "plan_not_found")
+      elsif !sellable.all? { X402::PlanEligibility.usage_only?(it) }
+        # Agents prepay a wallet and are charged per use, as the enrollment checks again.
+        errors.add(:plans, "plan_not_usage_only")
       end
     end
 

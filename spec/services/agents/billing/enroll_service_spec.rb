@@ -142,7 +142,8 @@ RSpec.describe Agents::Billing::EnrollService, :premium do
   end
 
   context "with a plan that has a subscription fee" do
-    let(:plan) { create(:plan, organization:, amount_cents: 2_000, amount_currency: "USD") }
+    # Sold while usage-only, then given a fee: the sale is refused otherwise.
+    before { plan.update!(amount_cents: 2_000) }
 
     it "refuses without creating anything" do
       expect(result.error.messages).to eq(plan_code: ["plan_not_usage_only"])

@@ -13,6 +13,10 @@ module V1
         resource_instructions: model.resource_instructions,
         scope: model.scope,
         plans: model.plans,
+        agent_url: model.agent_url,
+        auth_document_url: model.auth_document_url,
+        billing_document_url: model.billing_document_url,
+        claim_url: model.claim_url,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }
