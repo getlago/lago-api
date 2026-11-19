@@ -100,6 +100,10 @@ RSpec.describe ApiKeys::MemberPermissions do
         expect(permissions["plan"]).to eq(["read"])
       end
 
+      it "grants write on their wallet templates" do
+        expect(permissions["plan_wallet"]).to eq(%w[read write])
+      end
+
       it "lists every resource, so that the key is valid" do
         expect(permissions.keys).to match_array(ApiKey::RESOURCES)
       end

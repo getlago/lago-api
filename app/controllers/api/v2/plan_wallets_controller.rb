@@ -9,6 +9,38 @@ module Api
       date_range_filtered_index(:created_at)
       serializable_with ::V2::PlanWalletSerializer
 
+      UNFILTERED_PARAMS = %i[tax_codes applies_to metadata].freeze
+
+      def create
+        result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: plan_wallet_params)
+
+        if result.success?
+          render_plan_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def update
+        result = ::PlanWallets::UpdateService.call(plan_wallet: find_plan_wallet, params: plan_wallet_params)
+
+        if result.success?
+          render_plan_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def destroy
+        result = ::PlanWallets::DestroyService.call(plan_wallet: find_plan_wallet)
+
+        if result.success?
+          render_plan_wallet(result.plan_wallet)
+        else
+          render_error_response(result)
+        end
+      end
+
       def show
         plan_wallet = find_plan_wallet
 
@@ -47,6 +79,39 @@ module Api
 
       def find_plan_wallet
         plan_wallets&.find_by(code: params[:code])
+      end
+
+      def plan_wallet_params
+        plan_wallet = params.require(:plan_wallet)
+        permitted = plan_wallet.permit(
+          :code,
+          :name,
+          :invoice_display_name,
+          :currency,
+          :tax_application,
+          :priority,
+          :top_up_min_amount_cents,
+          :top_up_max_amount_cents,
+          tax_codes: [],
+          applies_to: {},
+          metadata: {}
+        ).to_h
+
+        # Strong params drop a null and a value of another shape. The services need both: a null
+        # metadata clears it, and another shape is refused instead of ignored.
+        UNFILTERED_PARAMS.each do |key|
+          permitted[key] = unfiltered(plan_wallet[key]) if plan_wallet.key?(key) && !permitted.key?(key)
+        end
+
+        permitted
+      end
+
+      def unfiltered(value)
+        case value
+        when ActionController::Parameters then value.to_unsafe_h
+        when Array then value.map { unfiltered(it) }
+        else value
+        end
       end
 
       def resource_name
