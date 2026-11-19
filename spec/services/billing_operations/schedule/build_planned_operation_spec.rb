@@ -41,7 +41,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
       cycle_started_at: Time.utc(2026, 11, 1, 7),
       billing_at: Time.utc(2026, 11, 1, 7)
     )
-    expect(result.planned_operation).to be_a(described_class::PlannedOperation)
+    expect(result.planned_operation).to be_a(BillingOperations::Schedule::PlannedOperation)
   end
 
   context "when billing in arrears" do

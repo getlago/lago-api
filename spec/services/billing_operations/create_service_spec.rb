@@ -11,7 +11,7 @@ RSpec.describe BillingOperations::CreateService do
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
   let(:started_at) { Time.zone.parse("2026-10-01") }
   let(:planned_operation) do
-    BillingOperations::Schedule::BuildPlannedOperation::PlannedOperation.new(
+    BillingOperations::Schedule::PlannedOperation.new(
       cycle_started_at: started_at, billing_at: started_at
     )
   end
