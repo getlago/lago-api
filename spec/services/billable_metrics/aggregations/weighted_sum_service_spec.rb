@@ -284,6 +284,20 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           end
         end
 
+        # An upgrade whose terminating invoice skipped the charge kept by the new plan: the new
+        # subscription has no invoice of its own, so no invoice tells the snapshot is outdated
+        context "when the snapshot is the previous subscription's" do
+          let(:initial_period) do
+            RecurringAggregationSnapshots::FetchService::Period.new(
+              to_datetime: snapshot_to_datetime, watermark: snapshot_to_datetime, inherited: true
+            )
+          end
+
+          it "uses the persisted recurring value, as without snapshots" do
+            expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+          end
+        end
+
         context "when using presentation_by" do
           let(:presentation_by) { ["region"] }
 

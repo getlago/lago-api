@@ -156,16 +156,14 @@ module BillableMetrics
       end
 
       # Not a period closing after this one starts (previous subscription terminated on upgrade): the variation
-      # reads its events again. Nor an older one that an invoice closed since, without a snapshot: its cached
-      # aggregation holds the level. Without snapshots, the period still tells that the bucket had no active units.
+      # reads its events again. Nor an older one that an invoice closed since, or the previous subscription's,
+      # whose cached aggregation holds the level. Without snapshots, the period still tells that the bucket had
+      # no active units.
       def latest_snapshots
         return @latest_snapshots if defined?(@latest_snapshots)
         return @latest_snapshots = nil unless initial_period
 
-        closed_at = initial_period.to_datetime
-        readable = closed_at.between?(from_datetime - 1.second, from_datetime) ||
-          (closed_at < from_datetime && !last_billed_charges_to_datetime&.after?(closed_at))
-
+        readable = initial_period.weighted_sum_start?(from_datetime) { last_billed_charges_to_datetime }
         @latest_snapshots = initial_value if readable
       end
 
