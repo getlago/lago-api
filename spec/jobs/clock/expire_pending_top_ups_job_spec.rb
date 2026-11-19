@@ -8,8 +8,10 @@ RSpec.describe Clock::ExpirePendingTopUpsJob, job: true do
   let(:wallet) { create(:wallet) }
   let(:stale) { build_top_up({}) }
 
-  def build_top_up(attributes)
-    create(:wallet_transaction, {wallet:, status: :pending, settled_at: nil, transaction_status: :purchased,
+  def build_top_up(attributes, invoice_status: :open)
+    invoice = create(:invoice, :credit, customer: wallet.customer, organization: wallet.organization, status: invoice_status)
+
+    create(:wallet_transaction, {wallet:, invoice:, status: :pending, settled_at: nil, transaction_status: :purchased,
                                  invoice_requires_successful_payment: true, created_at: 2.hours.ago}.merge(attributes))
   end
 
@@ -21,7 +23,7 @@ RSpec.describe Clock::ExpirePendingTopUpsJob, job: true do
   end
 
   context "when the top-up was created minutes ago" do
-    let(:fresh) { build_top_up(created_at: 10.minutes.ago) }
+    let(:fresh) { build_top_up({created_at: 10.minutes.ago}) }
 
     before { fresh }
 
@@ -32,7 +34,7 @@ RSpec.describe Clock::ExpirePendingTopUpsJob, job: true do
   end
 
   context "when the top-up does not require a successful payment" do
-    let(:finalized) { build_top_up(invoice_requires_successful_payment: false) }
+    let(:finalized) { build_top_up({invoice_requires_successful_payment: false}) }
 
     before { finalized }
 
@@ -42,9 +44,26 @@ RSpec.describe Clock::ExpirePendingTopUpsJob, job: true do
     end
   end
 
+  context "when its invoice is not open" do
+    let(:generating) { build_top_up({}, invoice_status: :generating) }
+    let(:tax_failed) { build_top_up({}, invoice_status: :failed) }
+
+    before do
+      generating
+      tax_failed
+    end
+
+    it "skips them, since they cannot expire" do
+      job.perform_now
+
+      expect(WalletTransactions::ExpirePendingJob).not_to have_been_enqueued.with(generating)
+      expect(WalletTransactions::ExpirePendingJob).not_to have_been_enqueued.with(tax_failed)
+    end
+  end
+
   context "when the top-up is settled or failed" do
-    let(:settled) { build_top_up(status: :settled, settled_at: Time.current) }
-    let(:failed) { build_top_up(status: :failed, failed_at: Time.current) }
+    let(:settled) { build_top_up({status: :settled, settled_at: Time.current}) }
+    let(:failed) { build_top_up({status: :failed, failed_at: Time.current}) }
 
     before do
       settled

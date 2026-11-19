@@ -40,10 +40,14 @@ module WalletTransactions
       PaymentIntents::ExpireService.call!(invoice:)
 
       ActiveRecord::Base.transaction do
-        # Locked as in Subscriptions::ActivationRules::CancelService: a payment that lands
-        # meanwhile updates the invoice under the same lock
+        # with_lock reloads the invoice, so a payment recorded since it was read is seen here.
+        # A payment that lands after the commit still marks the invoice paid, and
+        # Invoices::PrepaidCreditJob then settles the failed top-up: the customer gets the credits.
         closed = invoice.with_lock do
           next false unless invoice.open? && !invoice.payment_succeeded?
+          # A merchant recorded part of the amount: closing would bury that money on an
+          # invisible invoice that can no longer be paid
+          next false if invoice.total_paid_amount_cents.positive?
 
           invoice.closed!
           true
@@ -66,11 +70,8 @@ module WalletTransactions
         wallet_transaction.created_at <= TIMEOUT.ago
     end
 
-    # Found through the credit fee, as Invoices::PrepaidCreditJob does: older transactions have no invoice_id
     def invoice
-      @invoice ||= wallet_transaction.invoice ||
-        Fee.where(organization_id: wallet_transaction.organization_id)
-          .find_by(fee_type: :credit, invoiceable: wallet_transaction)&.invoice
+      @invoice ||= wallet_transaction.invoice
     end
 
     # A partial unique index allows at most one provider payment in (pending, processing) per invoice

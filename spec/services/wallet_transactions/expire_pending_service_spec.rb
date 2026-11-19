@@ -100,13 +100,15 @@ RSpec.describe WalletTransactions::ExpirePendingService do
     end
   end
 
-  context "when the top-up predates invoice_id and is found through its credit fee" do
-    before do
-      wallet_transaction.update!(invoice: nil)
-      create(:credit_fee, invoice:, wallet_transaction:, organization:)
-    end
+  context "when a merchant recorded part of the amount manually" do
+    before { invoice.update!(total_amount_cents: 1_000, total_paid_amount_cents: 400) }
 
-    it_behaves_like "fails the top-up"
+    it "keeps the invoice open so the rest can still be recorded" do
+      result
+
+      expect(invoice.reload).to be_open
+      expect(wallet_transaction.reload).to be_pending
+    end
   end
 
   context "when the invoice was paid meanwhile" do

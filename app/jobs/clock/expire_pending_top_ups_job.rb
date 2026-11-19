@@ -19,14 +19,17 @@ module Clock
 
     private
 
-    # Matches index_wallet_transactions_pending_gated_top_ups. Payments still moving are picked
-    # again every hour, and left alone by the service until they settle.
+    # Matches index_wallet_transactions_pending_gated_top_ups. Only open invoices: the others
+    # (generating, failed, or finalized when the organization is not premium) can never expire.
+    # Payments still moving are picked again every hour, and left alone until they settle.
     def candidates
       WalletTransaction
         .inbound
         .pending
         .where(invoice_requires_successful_payment: true)
         .where(created_at: ..WalletTransactions::ExpirePendingService::TIMEOUT.ago)
+        .joins(:invoice)
+        .where(invoices: {status: :open})
     end
   end
 end
