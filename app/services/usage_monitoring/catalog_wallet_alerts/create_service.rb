@@ -14,6 +14,9 @@ module UsageMonitoring
       def call
         return result.not_found_failure!(resource: "plan_wallet") unless plan_wallet
 
+        validate_single_values(params, %i[code name])
+        return result unless result.success?
+
         if params[:alert_type].blank?
           return result.single_validation_failure!(field: :alert_type, error_code: "value_is_mandatory")
         end

@@ -87,8 +87,8 @@ Rails.application.routes.draw do
         # wallet code by the index.
         resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets" do
           scope module: :plan_wallets do
-            resources :alerts, param: :code, code: /.*/, only: %i[show]
-            resources :alerts, only: %i[index]
+            resources :alerts, param: :code, code: /.*/, only: %i[show update destroy]
+            resources :alerts, only: %i[index create]
           end
         end
         draw(:plan_nested_api)

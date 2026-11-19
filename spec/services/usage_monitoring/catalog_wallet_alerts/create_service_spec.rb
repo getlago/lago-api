@@ -162,6 +162,18 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
     end
   end
 
+  {code: ["low_balance"], name: {text: "Low balance"}}.each do |field, value|
+    context "with a #{field} that is not a single value" do
+      before { params[field] = value }
+
+      it "fails on it and creates nothing" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq({field => ["value_is_invalid"]})
+        expect(plan_wallet.alerts).to be_empty
+      end
+    end
+  end
+
   context "with a code that cannot address the alert in its route" do
     before { params[:code] = "low balance" }
 

@@ -64,6 +64,16 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
     end
   end
 
+  context "with a name that is a list" do
+    let(:params) { {name: ["Running low"]} }
+
+    it "fails and keeps the name" do
+      expect(result).to be_failure
+      expect(result.error.messages).to eq({name: ["value_is_invalid"]})
+      expect(alert.reload.name).to eq("Low balance")
+    end
+  end
+
   context "with an empty list of thresholds" do
     let(:params) { {thresholds: []} }
 
