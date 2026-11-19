@@ -2,7 +2,7 @@
 
 module BillingOperations
   class ProcessService < BaseService
-    Result = BaseResult[:invoices]
+    Result = BaseResult[:invoices, :processed_operations_count]
     EmptyInvoice = Class.new(StandardError)
     def initialize(customer:, timestamp:)
       @customer = customer
@@ -12,6 +12,7 @@ module BillingOperations
 
     def call
       result.invoices = []
+      result.processed_operations_count = 0
       Customers::LockService.call!(customer:, scope: :billing_schedule, transaction: false) do
         due_operations.group_by { [invoice_kind(it), invoice_group_key(it)] }.each_value do |batch|
           invoice = process_invoice_batch(batch)
@@ -106,6 +107,7 @@ module BillingOperations
           end
         end
         complete_operations(operation_resolutions)
+        result.processed_operations_count += operation_resolutions.size
       end
       invoice
     end
