@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 module Organizations
-  # Opens a self-serve production organization that was waiting for a payment method. The only writer of
-  # `activation_status`, called by billing-accounts once the customer saved a card.
+  # Opens a self-serve production organization that was waiting for a payment method. Signup sets
+  # `activation_status` at creation; this is the only service that changes it afterwards, called by
+  # billing-accounts once the customer saved a card.
   class ActivateService < BaseService
     Result = BaseResult[:organization]
 
