@@ -27,6 +27,7 @@ RSpec.describe Webhooks::ContractRateCards::UpdatedService do
     phase
     contract_rate_card.terms.first.update!(units: 4)
     contract_rate_card.update!(
+      billing_scope: "segment",
       effective_date: Date.new(2026, 2, 4),
       next_billing_at: Time.zone.parse("2026-03-06T07:08:09Z"),
       billing_anchor_date: Date.new(2026, 2, 5)
@@ -48,6 +49,7 @@ RSpec.describe Webhooks::ContractRateCards::UpdatedService do
           "units" => "4.0",
           "effective_date" => "2026-02-04",
           "billing_anchor_date" => "2026-02-05",
+          "billing_scope" => "segment",
           "next_billing_at" => "2026-03-06T07:08:09Z",
           "created_at" => contract_rate_card.created_at.iso8601,
           "updated_at" => contract_rate_card.updated_at.iso8601,

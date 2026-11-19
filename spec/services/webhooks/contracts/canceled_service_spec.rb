@@ -53,6 +53,7 @@ RSpec.describe Webhooks::Contracts::CanceledService do
             "units" => "2.0",
             "effective_date" => "2026-01-01",
             "billing_anchor_date" => "2026-01-01",
+            "billing_scope" => "cycle",
             "next_billing_at" => "2026-02-01T00:00:00Z",
             "created_at" => applied_rate_card.created_at.iso8601,
             "updated_at" => applied_rate_card.updated_at.iso8601,
