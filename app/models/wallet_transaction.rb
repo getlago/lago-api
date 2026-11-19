@@ -175,14 +175,15 @@ end
 #
 # Indexes
 #
-#  idx_wallet_transactions_available_inbound       (wallet_id, priority, (\nCASE\n    WHEN (transaction_status = 1) THEN 0\n    ELSE 1\nEND), created_at) WHERE ((remaining_amount_cents > 0) AND (transaction_type = 0) AND (status = 1))
-#  index_wallet_transactions_on_billing_entity_id  (billing_entity_id)
-#  index_wallet_transactions_on_credit_note_id     (credit_note_id)
-#  index_wallet_transactions_on_invoice_id         (invoice_id)
-#  index_wallet_transactions_on_organization_id    (organization_id)
-#  index_wallet_transactions_on_payment_method_id  (payment_method_id)
-#  index_wallet_transactions_on_voided_invoice_id  (voided_invoice_id)
-#  index_wallet_transactions_on_wallet_id          (wallet_id)
+#  idx_wallet_transactions_available_inbound        (wallet_id, priority, (\nCASE\n    WHEN (transaction_status = 1) THEN 0\n    ELSE 1\nEND), created_at) WHERE ((remaining_amount_cents > 0) AND (transaction_type = 0) AND (status = 1))
+#  index_wallet_transactions_on_billing_entity_id   (billing_entity_id)
+#  index_wallet_transactions_on_credit_note_id      (credit_note_id)
+#  index_wallet_transactions_on_invoice_id          (invoice_id)
+#  index_wallet_transactions_on_organization_id     (organization_id)
+#  index_wallet_transactions_on_payment_method_id   (payment_method_id)
+#  index_wallet_transactions_on_voided_invoice_id   (voided_invoice_id)
+#  index_wallet_transactions_on_wallet_id           (wallet_id)
+#  index_wallet_transactions_pending_gated_top_ups  (created_at) WHERE ((status = 0) AND (transaction_type = 0) AND invoice_requires_successful_payment)
 #
 # Foreign Keys
 #

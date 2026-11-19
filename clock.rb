@@ -238,6 +238,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:expire_pending_top_ups", at: "*:50") do
+    Clock::ExpirePendingTopUpsJob
+      .set(sentry: {"slug" => "lago_expire_pending_top_ups", "cron" => "50 */1 * * *"})
+      .perform_later
+  end
+
   every(1.hour, "schedule:process_dunning_campaigns", at: "*:45") do
     Clock::ProcessDunningCampaignsJob
       .set(sentry: {"slug" => "lago_process_dunning_campaigns", "cron" => "45 */1 * * *"})
