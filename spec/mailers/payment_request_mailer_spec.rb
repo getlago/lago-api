@@ -110,5 +110,24 @@ RSpec.describe PaymentRequestMailer do
         expect(mailer.body.encoded).not_to include("Pay balance")
       end
     end
+
+    context "when the payment provider lookup fails" do
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code: nil) }
+
+      before do
+        create(:stripe_provider, code: "stripe_1", organization:)
+        create(:stripe_provider, code: "stripe_2", organization:)
+
+        allow(::PaymentRequests::Payments::GeneratePaymentUrlService).to receive(:call).and_call_original
+      end
+
+      it "sends the email without the payment link" do
+        parsed_body = Nokogiri::HTML(mailer.body.encoded)
+
+        expect(mailer.to).to eq([payment_request.email])
+        expect(parsed_body.css("a#payment_link")).not_to be_present
+        expect(mailer.body.encoded).not_to include("Pay balance")
+      end
+    end
   end
 end
