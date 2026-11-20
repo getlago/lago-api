@@ -81,6 +81,15 @@ describe ContractWallets::DestroyService do
     end
   end
 
+  context "when a pending entry takes credit out of the wallet" do
+    before { create(:catalog_wallet_transaction, :pending, :invoice_application, organization:, catalog_wallet: contract_wallet) }
+
+    it "soft deletes the wallet" do
+      expect(result).to be_success
+      expect(result.contract_wallet).to be_discarded
+    end
+  end
+
   context "when a purchase for the wallet has failed" do
     before { create(:catalog_wallet_transaction, :failed, organization:, catalog_wallet: contract_wallet) }
 
