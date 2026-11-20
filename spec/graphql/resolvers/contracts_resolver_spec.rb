@@ -155,8 +155,8 @@ RSpec.describe Resolvers::ContractsResolver do
     it "loads the cards in one query, not one per contract" do
       cards_queries = count_queries("contract_rate_cards") { execution }
 
-      # one batched query for the whole page, not one per contract
-      expect(cards_queries.size).to eq(1)
+      # The clock's history-existence query also mentions contract_rate_cards.
+      expect(cards_queries.count { it.include?('"contract_rate_cards"."contract_id"') }).to eq(1)
       counts = execution["data"]["contracts"]["collection"].map { it["appliedRateCardsCount"] }
       expect(counts.sum).to eq(2)
     end

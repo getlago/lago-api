@@ -451,7 +451,7 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
     let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
     let(:billing_segment) do
-      create(:billing_segment, organization:, customer: contract.customer, contract:, contract_rate_card:, rate_card_rate:)
+      build(:billing_segment, organization:, customer: contract.customer, contract:, contract_rate_card:, rate_card_rate:)
     end
 
     def create_filter(**attributes)
@@ -466,13 +466,13 @@ RSpec.describe Events::BillingPeriodFilters::MatchingAndIgnoredService do
     end
 
     def build_target(filter, reload: false, preload: false)
-      source = if preload
-        BillingSegment.includes(contract_rate_card: {product: {filters: {values: :billable_metric_filter}}})
-          .find(billing_segment.id)
+      source = billing_segment.dup
+      source.contract_rate_card = if preload
+        ContractRateCard.includes(product: {filters: {values: :billable_metric_filter}}).find(contract_rate_card.id)
       elsif reload
-        BillingSegment.find(billing_segment.id)
+        ContractRateCard.find(contract_rate_card.id)
       else
-        billing_segment
+        contract_rate_card
       end
       Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment: source, filter:)
     end

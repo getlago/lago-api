@@ -704,6 +704,7 @@ DROP INDEX IF EXISTS public.index_plans_on_created_at;
 DROP INDEX IF EXISTS public.index_plans_on_bill_fixed_charges_monthly;
 DROP INDEX IF EXISTS public.index_plan_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_plan_wallets_on_catalog_plan_id_and_code;
+DROP INDEX IF EXISTS public.index_plan_wallets_by_cursor;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_one_ongoing_balance;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_on_wallet_and_code;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_on_organization_id;
@@ -727,6 +728,7 @@ DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_live_pending_signup_i
 DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_expires_at;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_customer_date;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_and_date;
+DROP INDEX IF EXISTS public.index_pending_billing_operations_on_card_and_date;
 DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
@@ -1825,7 +1827,8 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 --
 
 CREATE TYPE public.billing_operation_cancellation_reason AS ENUM (
-    'contract_termination'
+    'contract_termination',
+    'rate_change'
 );
 
 
@@ -12630,6 +12633,13 @@ CREATE INDEX index_pending_active_subscriptions_on_plan_id_and_status ON public.
 
 
 --
+-- Name: index_pending_billing_operations_on_card_and_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_billing_operations_on_card_and_date ON public.billing_operations USING btree (contract_rate_card_id, billing_at) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL));
+
+
+--
 -- Name: index_pending_billing_operations_on_org_and_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12788,6 +12798,13 @@ CREATE UNIQUE INDEX index_plan_wallet_credit_allocations_on_wallet_and_code ON p
 --
 
 CREATE UNIQUE INDEX index_plan_wallet_credit_allocations_one_ongoing_balance ON public.plan_wallet_credit_allocations USING btree (plan_wallet_id) WHERE ((trigger = 'ongoing_balance'::public.plan_wallet_credit_allocation_trigger) AND (deleted_at IS NULL));
+
+
+--
+-- Name: index_plan_wallets_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_wallets_by_cursor ON public.plan_wallets USING btree (catalog_plan_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -18090,7 +18107,10 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261116121439'),
 ('20261116121436'),
 ('20261113204932'),
+('20261113162250'),
+('20261112145548'),
 ('20261112092027'),
+('20261111173450'),
 ('20261111172228'),
 ('20261111172225'),
 ('20261111172221'),

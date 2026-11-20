@@ -35,16 +35,21 @@ class Contract < ApplicationRecord
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
   has_many :wallets, class_name: "CatalogWallet"
-  has_many :billing_segments
   has_many :daily_usages
   has_many :fees
-  has_many :invoices, -> { distinct }, through: :billing_segments
+  has_many :invoices, -> { distinct }, through: :fees
   has_many :applied_invoice_custom_sections,
     class_name: "Contract::AppliedInvoiceCustomSection",
     dependent: :destroy
   has_many :selected_invoice_custom_sections,
     through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
+  has_many :contract_alerts,
+    ->(contract) { where(organization_id: contract.organization_id) },
+    class_name: "UsageMonitoring::ContractAlert",
+    foreign_key: :contract_external_id,
+    primary_key: :external_id
+  has_one :contract_activity, class_name: "UsageMonitoring::ContractActivity"
 
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
@@ -52,8 +57,8 @@ class Contract < ApplicationRecord
 
   LIVE_STATUSES = %w[pending active].freeze
 
-  # Which contracts the billing clock may produce segments for. A terminated contract's
-  # final arrears period is the termination path's, so it is not billable from the clock.
+  # Live contracts accepting rate changes and usage billing. Terminated cards with owed
+  # coverage remain discoverable separately through their billing cursors.
   BILLABLE_STATUSES = %w[active].freeze
 
   # The live contracts for an external id: at most one per status (the partial
@@ -101,6 +106,11 @@ class Contract < ApplicationRecord
   # customer's midnight.
   def effective_billing_anchor_date
     billing_anchor_date || started_at&.in_time_zone(customer.applicable_timezone)&.to_date
+  end
+
+  # Billing stops at the planned end or the termination, whichever comes first.
+  def billing_ends_at
+    [ended_at, terminated_at].compact.min
   end
 
   # Rate cards are authored while pending only: once the agreement is active

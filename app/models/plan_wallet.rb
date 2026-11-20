@@ -8,6 +8,16 @@ class PlanWallet < ApplicationRecord
   has_many :credit_allocations, class_name: "PlanWalletCreditAllocation"
 
   validates :code, uniqueness: {scope: :catalog_plan_id, conditions: -> { where(deleted_at: nil) }}
+  validate :currency_matches_plan, if: -> { currency_changed? || catalog_plan_id_changed? }
+
+  private
+
+  # A contract is invoiced in its plan's currency, so a wallet in another one could never pay.
+  def currency_matches_plan
+    if catalog_plan && self.class.currency_list.include?(currency) && currency != catalog_plan.currency
+      errors.add(:currency, :currency_does_not_match)
+    end
+  end
 end
 
 # == Schema Information
@@ -32,6 +42,7 @@ end
 #
 # Indexes
 #
+#  index_plan_wallets_by_cursor                    (catalog_plan_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_plan_wallets_on_catalog_plan_id_and_code  (catalog_plan_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #  index_plan_wallets_on_organization_id           (organization_id)
 #

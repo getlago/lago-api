@@ -25,6 +25,10 @@ RSpec.describe RateCardRates::UpdateService do
       expect(result.rate_card_rate.billing_interval_count).to eq(3)
     end
 
+    it "replans the cards using the rate after commit" do
+      expect { result }.to have_enqueued_job_after_commit(RateCardRates::ApplyRateChangeJob).with(rate_card_rate.id)
+    end
+
     it "publishes rate_card_rate.updated to both channels" do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card_rate.updated", rate_card_rate)
 
@@ -141,6 +145,7 @@ RSpec.describe RateCardRates::UpdateService do
           end
         end.not_to have_enqueued_job(SendWebhookJob)
 
+        expect(RateCardRates::ApplyRateChangeJob).not_to have_been_enqueued
         expect(rate_card_rate.reload.rate_properties).to eq("amount" => "10")
         expect(kafka_messages).to be_empty
       end

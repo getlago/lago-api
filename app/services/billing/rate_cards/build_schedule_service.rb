@@ -28,6 +28,7 @@ module Billing
             rates:,
             terms:,
             phases:,
+            due_on_coverage_end: contract_rate_card.regroups_paid_fees?,
             starts_at: contract_rate_card.effective_date.in_time_zone(timezone),
             ends_at: schedule_ends_at,
             anchor_date: contract_rate_card.billing_anchor_date,
@@ -49,9 +50,7 @@ module Billing
       end
 
       def schedule_ends_at
-        contract = contract_rate_card.contract
-
-        [ends_at, contract.ended_at, contract.terminated_at].compact.min
+        [ends_at, contract_rate_card.contract.billing_ends_at].compact.min
       end
 
       def phases

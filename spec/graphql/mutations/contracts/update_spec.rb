@@ -47,6 +47,15 @@ RSpec.describe Mutations::Contracts::Update do
     expect(result_data["name"]).to eq("Renamed")
   end
 
+  context "when the billing schedule is locked" do
+    before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+    it "returns the existing concurrency error without changing the contract" do
+      expect { execution }.not_to change { contract.reload.attributes }
+      expect(execution["errors"].sole["extensions"]["code"]).to eq("lock_acquisition_failed")
+    end
+  end
+
   context "with invoice custom sections" do
     let(:section) { create(:invoice_custom_section, organization:) }
     let(:input) { {externalId: contract.external_id, invoiceCustomSection: {invoiceCustomSectionIds: [section.id]}} }

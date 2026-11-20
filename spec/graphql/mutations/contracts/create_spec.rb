@@ -60,6 +60,15 @@ RSpec.describe Mutations::Contracts::Create do
     expect(result_data["appliedRateCardsCount"]).to eq(1)
   end
 
+  context "when the billing schedule is locked" do
+    before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+    it "returns the existing concurrency error" do
+      expect(execution["errors"].sole["extensions"]["code"]).to eq("lock_acquisition_failed")
+      expect(organization.contracts).to be_empty
+    end
+  end
+
   context "with invoice custom sections" do
     let(:section) { create(:invoice_custom_section, organization:) }
     let(:input) { super().merge(invoiceCustomSection: {invoiceCustomSectionIds: [section.id]}) }
