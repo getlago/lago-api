@@ -4,6 +4,10 @@ module UsageMonitoring
   module CatalogWalletAlerts
     # Gives a contract wallet its own copy of the alert templates of the plan wallet it was copied from. A copy has
     # no observed value and no history: it is evaluated once the contract is active and its first credits are in.
+    #
+    # The caller reads the plan wallet under a FOR SHARE lock, as Contracts::MaterializeWalletsService does, and
+    # preloads its alerts with their thresholds. Template writes lock the plan wallet first, so the copy is one
+    # version of the templates, never a mix of two.
     class CopyTemplatesService < BaseService
       Result = BaseResult[:alerts]
 
@@ -21,15 +25,7 @@ module UsageMonitoring
         # Only a wallet the caller has just inserted, so running the copy again never duplicates its alerts
         return result unless catalog_wallet.previously_new_record?
 
-        ActiveRecord::Base.transaction do
-          # Template writes lock the plan wallet first: this waits for one in flight and holds the next one until the
-          # copy commits, so the copy never mixes two versions of a template
-          PlanWallet.where(id: plan_wallet.id).lock("FOR SHARE").pick(:id)
-
-          templates = plan_wallet.alerts.includes(:thresholds).order(:created_at, :id)
-          result.alerts = templates.map { copy(it) }
-        end
-
+        result.alerts = plan_wallet.alerts.sort_by { [it.created_at, it.id] }.map { copy(it) }
         result
       end
 

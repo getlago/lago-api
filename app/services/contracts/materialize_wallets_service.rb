@@ -28,7 +28,7 @@ module Contracts
         # Every write to a template, its scope, taxes, rules, metadata and alerts included, locks the template's row first:
         # the copy waits for it, so it never mixes two versions of a template.
         templates = contract.catalog_plan.wallets.lock("FOR SHARE")
-        templates.includes(:selectors, :applied_taxes, :credit_allocations, :metadata).find_each do |plan_wallet|
+        templates.includes(:selectors, :applied_taxes, :credit_allocations, :metadata, alerts: :thresholds).find_each do |plan_wallet|
           wallets << copy(plan_wallet)
         end
       end

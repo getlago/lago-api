@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
-  subject(:result) { described_class.call(plan_wallet:, catalog_wallet:) }
+  subject(:result) { described_class.call(plan_wallet: load_plan_wallet, catalog_wallet:) }
 
-  # `let` rather than `let_it_be`: the race contexts run without a transaction and delete every row afterwards
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+
   let(:plan_wallet) { create(:plan_wallet, organization:) }
   let(:catalog_wallet) { create(:catalog_wallet, organization:) }
 
@@ -47,10 +47,6 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
 
   it "leaves the template untouched" do
     expect { result }.not_to change { template.reload.thresholds.order(:value).pluck(:id, :value, :catalog_wallet_alert_id) }
-  end
-
-  it "locks the plan wallet while copying" do
-    expect(capture_sql { result }).to include(a_string_matching(/FROM "plan_wallets".*FOR SHARE/m))
   end
 
   context "when the plan wallet has several templates" do
@@ -100,7 +96,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
     let(:earlier_wallet) { create(:catalog_wallet, organization:) }
 
     before do
-      described_class.call!(plan_wallet:, catalog_wallet: earlier_wallet)
+      described_class.call!(plan_wallet: load_plan_wallet, catalog_wallet: earlier_wallet)
       UsageMonitoring::CatalogWalletAlerts::UpdateService.call!(alert: template, params: {name: "Running low", thresholds: [{value: "500"}]})
     end
 
@@ -124,7 +120,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
     let(:earlier_wallet) { create(:catalog_wallet, organization:) }
 
     before do
-      described_class.call!(plan_wallet:, catalog_wallet: earlier_wallet)
+      described_class.call!(plan_wallet: load_plan_wallet, catalog_wallet: earlier_wallet)
       UsageMonitoring::CatalogWalletAlerts::DestroyService.call!(alert: template)
     end
 
@@ -140,85 +136,8 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
     end
   end
 
-  context "when a template edit is in flight", transaction: false do
-    let(:edit) { {name: "Running low", thresholds: [{value: "500"}]} }
-
-    before { catalog_wallet }
-
-    it "waits for the edit and copies the edited version" do
-      locked = Queue.new
-      release = Queue.new
-
-      editor = Thread.new do
-        ApplicationRecord.connection_pool.with_connection do
-          ApplicationRecord.transaction do
-            UsageMonitoring::CatalogWalletAlerts::UpdateService.call!(alert: template, params: edit)
-            locked << true
-            release.pop
-          end
-        end
-      end
-      Timeout.timeout(10) { locked.pop }
-
-      copier = Thread.new do
-        ApplicationRecord.connection_pool.with_connection { described_class.call(plan_wallet:, catalog_wallet:) }
-      end
-      begin
-        Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? }
-      ensure
-        release << true
-      end
-      Timeout.timeout(10) { editor.join }
-      copy = Timeout.timeout(10) { copier.value }.alerts.sole
-
-      expect(copy.name).to eq("Running low")
-      expect(copy.thresholds.pluck(:code, :value)).to eq([[nil, 500]])
-    end
-  end
-
-  context "when a copy is in flight", transaction: false do
-    let(:edit) { {name: "Running low", thresholds: [{value: "500"}]} }
-
-    before { catalog_wallet }
-
-    it "holds the edit until the copy commits, so the copy keeps the version before it" do
-      locked = Queue.new
-      release = Queue.new
-
-      copier = Thread.new do
-        ApplicationRecord.connection_pool.with_connection do
-          ApplicationRecord.transaction do
-            described_class.call!(plan_wallet:, catalog_wallet:)
-            locked << true
-            release.pop
-          end
-        end
-      end
-      Timeout.timeout(10) { locked.pop }
-
-      editor = Thread.new do
-        ApplicationRecord.connection_pool.with_connection do
-          UsageMonitoring::CatalogWalletAlerts::UpdateService.call!(alert: template, params: edit)
-        end
-      end
-      begin
-        Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? }
-      ensure
-        release << true
-      end
-      Timeout.timeout(10) { copier.join }
-      Timeout.timeout(10) { editor.join }
-
-      copy = catalog_wallet.alerts.sole
-      expect(copy.name).to eq("Low balance")
-      expect(copy.thresholds.pluck(:value)).to contain_exactly(2_000, 10_000)
-      expect(template.reload.name).to eq("Running low")
-    end
-  end
-
-  def lock_waits
-    ApplicationRecord.connection.select_value(
-      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
-    )
+  # Each copy reads the plan wallet again with its templates, as Contracts::MaterializeWalletsService does under its lock
+  def load_plan_wallet
+    PlanWallet.includes(alerts: :thresholds).find(plan_wallet.id)
   end
 end
