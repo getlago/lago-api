@@ -201,6 +201,46 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
+      context "when a privilege code is padded with spaces" do
+        let(:privilege3) { create(:privilege, feature:, code: "opt", value_type: "select", config: {select_options: %w[zero one]}) }
+        let(:plan_value) { create(:entitlement_value, entitlement: create(:entitlement, feature:), privilege: privilege3, value: "one") }
+        let(:subscription_value) { create(:entitlement_value, entitlement: create(:entitlement, :subscription, feature:), privilege: privilege3, value: "zero") }
+        let(:params) { {privileges: [{code: " opt ", name: "Opt."}]} }
+
+        before do
+          plan_value
+          subscription_value
+        end
+
+        it "updates the stored privilege in place and keeps its entitlement values" do
+          result = subject
+
+          expect(result).to be_success
+          expect(feature.privileges.reload.pluck(:id, :code, :name, :config)).to eq([
+            [privilege3.id, "opt", "Opt.", {"select_options" => %w[zero one]}]
+          ])
+          expect(Entitlement::Privilege.with_discarded.count).to eq(3) # max and min discarded, no privilege created
+          expect(Entitlement::EntitlementValue.where(privilege: privilege3)).to match_array([plan_value, subscription_value])
+        end
+      end
+
+      context "when two privilege codes are equal once stripped" do
+        let(:params) { {name: "Renamed", privileges: [{code: "max", name: "A"}, {code: " max ", name: "B"}]} }
+
+        it "returns a validation failure and writes nothing" do
+          result = subject
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:"privilege.code"]).to eq ["value_is_duplicated"]
+          expect(feature.reload.name).not_to eq("Renamed")
+          expect(Entitlement::Privilege.with_discarded.pluck(:id, :code, :name, :deleted_at)).to match_array([
+            [privilege1.id, "max", "Maximum", nil],
+            [privilege2.id, "min", "Minimum", nil],
+            [privilege3.id, "opt", "Optional", nil]
+          ])
+        end
+      end
+
       context "when new privileges is provided" do
         let(:new_privilege_code) { "     new_privilege     " }
         let(:params) do
@@ -498,6 +538,21 @@ RSpec.describe Entitlement::FeatureUpdateService do
           expect(privilege1.reload.name).to eq(original_name)
           expect(privilege2.reload.name).to eq("Min.")
         end
+
+        context "when the privilege code is padded with spaces" do
+          let(:params) { {privileges: [{code: " max ", name: "Max."}]} }
+
+          it "updates the stored privilege in place" do
+            result = subject
+
+            expect(result).to be_success
+            expect(feature.privileges.reload.pluck(:id, :code, :name)).to match_array([
+              [privilege1.id, "max", "Max."],
+              [privilege2.id, "min", "Minimum"],
+              [privilege3.id, "opt", "Optional"]
+            ])
+          end
+        end
       end
 
       context "when updating select_options of a privilege" do
@@ -538,6 +593,23 @@ RSpec.describe Entitlement::FeatureUpdateService do
           expect(result.feature.description).to eq("Updated feature description")
           expect(privilege1.reload.name).to eq("Max.")
           expect(privilege2.reload.name).to eq("Minimum") # unchanged
+        end
+      end
+
+      context "when two privilege codes are equal once stripped" do
+        let(:params) { {name: "Renamed", privileges: [{code: "max", name: "A"}, {code: " max ", name: "B"}]} }
+
+        it "returns a validation failure and writes nothing" do
+          result = subject
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:"privilege.code"]).to eq ["value_is_duplicated"]
+          expect(feature.reload.name).not_to eq("Renamed")
+          expect(Entitlement::Privilege.with_discarded.pluck(:id, :code, :name, :deleted_at)).to match_array([
+            [privilege1.id, "max", "Maximum", nil],
+            [privilege2.id, "min", "Minimum", nil],
+            [privilege3.id, "opt", "Optional", nil]
+          ])
         end
       end
 
@@ -597,6 +669,18 @@ RSpec.describe Entitlement::FeatureUpdateService do
         it "counts only the new codes" do
           expect(subject).to be_success
           expect(feature.privileges.count).to eq(50)
+        end
+      end
+
+      context "when 51 codes are sent and 3 of them are padded codes of existing privileges" do
+        let(:params) { {privileges: [{code: " max "}, {code: " min"}, {code: "opt "}] + Array.new(48) { |i| {code: "new_#{i}"} }} }
+
+        it "does not count the padded codes as new in the early check" do
+          allow(feature).to receive(:lock!).and_call_original
+
+          expect(subject).to be_failure
+          expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+          expect(feature).to have_received(:lock!)
         end
       end
 

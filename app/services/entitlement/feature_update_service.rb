@@ -66,9 +66,14 @@ module Entitlement
     attr_reader :feature, :params, :partial
     alias_method :partial?, :partial
 
-    # A code that is not a string is left to the model validation.
-    def stripped(code)
-      code.is_a?(String) ? code.strip : code
+    # Built once, under the feature lock. The duplicate check makes sure no param reaches a privilege created later.
+    def privileges_by_code
+      @privileges_by_code ||= feature.privileges.index_by(&:code)
+    end
+
+    # Stored codes are stripped, so a request code reaches the privilege with the same stripped code.
+    def find_privilege(code)
+      privileges_by_code[Utils::Entitlement.stripped_code(code)]
     end
 
     def update_feature_attributes
@@ -80,7 +85,7 @@ module Entitlement
       return if params[:privileges].blank?
 
       params[:privileges].each do |privilege_params|
-        privilege = feature.privileges.find { it[:code] == privilege_params[:code] }
+        privilege = find_privilege(privilege_params[:code])
 
         if privilege.nil?
           create_privilege(privilege_params)
@@ -100,7 +105,7 @@ module Entitlement
     def create_privilege(privilege_params)
       privilege = feature.privileges.new(
         organization: feature.organization,
-        code: stripped(privilege_params[:code]),
+        code: Utils::Entitlement.stripped_code(privilege_params[:code]),
         name: privilege_params[:name]
       )
       privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type
@@ -115,8 +120,9 @@ module Entitlement
     def too_many_new_privileges?
       return false if params[:privileges].blank?
 
-      existing_codes = feature.privileges.pluck(:code)
-      params[:privileges].count { !existing_codes.include?(it[:code]) } > PrivilegeCreateService::MAX_PRIVILEGES
+      existing_codes = feature.privileges.pluck(:code).to_set
+      new_codes = params[:privileges].count { !existing_codes.include?(Utils::Entitlement.stripped_code(it[:code])) }
+      new_codes > PrivilegeCreateService::MAX_PRIVILEGES
     end
 
     def too_many_privileges_failure
@@ -139,11 +145,12 @@ module Entitlement
       # Find privileges that are in the database but not in the params
       # Delete all EntitlementValues associated with those privileges
       # Then delete the privileges themselves
-      missing_privilege_codes = feature.privileges.pluck(:code) - (params[:privileges] || []).pluck(:code)
+      kept_privilege_codes = (params[:privileges] || []).filter_map { find_privilege(it[:code])&.code }
+      missing_privilege_codes = feature.privileges.pluck(:code) - kept_privilege_codes
       EntitlementValue.where(privilege: feature.privileges.where(code: missing_privilege_codes)).discard_all!
       feature.privileges.where(code: missing_privilege_codes).discard_all!
       missing_privilege_codes.each do |code|
-        privilege = feature.privileges.find { it[:code] == code }
+        privilege = privileges_by_code[code]
         next unless privilege
         privilege.discard!
       end
