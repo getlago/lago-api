@@ -64,6 +64,44 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
       started_at: rate_changed_at, ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-02-01")))
   end
 
+  ContractRateCard::BILLING_SCOPES.each_value do |scope|
+    context "with #{scope} billing" do
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope: scope,
+          effective_date:, billing_anchor_date: effective_date)
+      end
+
+      it "uses the new slice and its terms-based billing anchor at the rate change" do
+        expect(billing_segments.sole).to have_attributes(rate_card_rate: second_rate,
+          cycle_started_at: Time.zone.parse("2027-01-01"), started_at: rate_changed_at,
+          ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-02-01")), billing_at: rate_changed_at,
+          rate_properties: second_rate.properties)
+      end
+
+      context "when the first rate starts later in the same cycle" do
+        let(:first_rate) do
+          create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-01-20"))
+        end
+        let(:rate_changed_at) { Time.zone.parse("2027-02-15") }
+
+        it "returns no segment" do
+          expect(billing_segments).to eq([])
+        end
+      end
+
+      context "when the first priced cycle is later" do
+        let(:first_rate) do
+          create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-01"))
+        end
+        let(:rate_changed_at) { Time.zone.parse("2027-02-15") }
+
+        it "does not search forward for a segment" do
+          expect(billing_segments).to eq([])
+        end
+      end
+    end
+  end
+
   context "when two cards price the same metric" do
     let(:other_card) { create(:rate_card, organization:, product:, billing_timing: :advance) }
     let(:other_effective_date) { Date.new(2027, 1, 15) }

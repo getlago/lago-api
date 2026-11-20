@@ -18,14 +18,18 @@ require "rails_helper"
 # The previous engine stored `period_to` inclusively; this one is half-open, so every
 # expectation below is the old one with the end moved to the next instant.
 RSpec.describe Billing::RateCards::BuildScheduleService do
-  def due_segments(schedule, by:)
-    cycle = schedule.cycle_at(contract_rate_card.effective_date.in_time_zone("UTC"))
-    segments = []
-    while cycle && cycle.started_at <= by
-      segments.concat(schedule.segments_due_in_cycle(cycle.started_at, by:))
-      cycle = schedule.cycle_at(cycle.ended_at)
+  def due_obligations(schedule, by:)
+    obligations = []
+    obligation = schedule.next_obligation(from: contract_rate_card.effective_date.in_time_zone("UTC"))
+    while obligation && obligation.billing_at <= by
+      obligations << obligation
+      obligation = schedule.next_obligation(from: obligation.cycle.started_at, after: obligation.billing_at)
     end
-    segments
+    obligations
+  end
+
+  def due_segments(schedule, by:)
+    due_obligations(schedule, by:).flat_map(&:segments)
   end
 
   describe "cadence from the rates in force" do
@@ -151,22 +155,22 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     # pairs that denominator with the amount charged for that same window, never with a
     # differently-cadenced rate's amount. (B) has no support in Notion, Slack or Linear.
     #
-    # So: do not "fix" these numbers to match Dive-In 1 without a ruling, and do not wire a
-    # fee computation onto them without reading this. The mixing is latent today - nothing
-    # outside app/services/billing reads proration_ratio.
+    # So: do not "fix" these numbers to match Dive-In 1 without a ruling.
     describe "a cut whose slices are priced on different cadences" do
-      # The card above does not prorate, so every slice of a cut cycle reads 1.0 and the
-      # question cannot arise on it. It needs a PRORATING card, which is what makes the
-      # denominator observable at all.
+      # A prorating fixed card makes the cycle denominator relevant to pricing.
       let(:rate_card) do
         create(:rate_card, :advance, organization:, proration: true,
           product: create(:product, :fixed, organization:))
       end
 
       def ratios_by_slice(from, to)
-        due_segments(schedule, by: to)
-          .select { |segment| segment.started_at >= from && segment.started_at < to }
-          .map { |segment| [segment.rate.code, segment.proration_ratio] }
+        due_obligations(schedule, by: to).flat_map do |obligation|
+          obligation.segments.filter_map do |segment|
+            next unless segment.started_at >= from && segment.started_at < to
+
+            [segment.rate.code, obligation.cycle.calendar.proration_ratio(segment.started_at, segment.ended_at)]
+          end
+        end
       end
 
       it "measures the slice against the cycle it sits in, not against its own rate's interval" do
@@ -191,7 +195,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     # The advance segment is already due and still carries the re-anchored end of its cycle.
     it "runs the cadence in force through to the re-anchored boundary" do
       at = Time.utc(2026, 5, 20)
-      in_force = schedule.segment_covering(at)
+      in_force = schedule.obligation_at(at).segments.find { (it.started_at...it.ended_at).cover?(at) }
 
       expect(in_force.ended_at).to eq(Time.utc(2026, 6, 6))
     end
@@ -237,8 +241,8 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     # Aug 3 through Jul 27, Jul 20, Jul 13 and Jul 6, and the card's own start opens the first
     # cycle on Jul 1 rather than on the boundary before it.
     it "puts the cycles on the anchor's grid and clamps the first to the card start" do
-      windows = due_segments(schedule, by: Time.utc(2026, 8, 20)).group_by(&:cycle_started_at)
-        .map { |started_at, group| [started_at.to_fs(:db), group.last.ended_at.to_fs(:db)] }
+      windows = due_obligations(schedule, by: Time.utc(2026, 8, 20))
+        .map { |obligation| [obligation.cycle.started_at.to_fs(:db), obligation.segments.last.ended_at.to_fs(:db)] }
 
       expect(windows).to eq(
         [
@@ -322,7 +326,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "stops producing cycles after the termination" do
-      expect(schedule.next_obligation(after: Time.utc(2027, 1, 1))&.billing_at).to be_nil
+      expect(schedule.next_obligation(from: Time.utc(2027, 1, 1), after: Time.utc(2027, 1, 1))&.billing_at).to be_nil
     end
   end
 end

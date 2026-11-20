@@ -35,12 +35,26 @@ RSpec.describe V2::ContractUsageSerializer do
 
   context "with a rate card usage" do
     let(:contract_rate_card) { build_stubbed(:contract_rate_card, contract:) }
+    let(:rate) { build_stubbed(:rate_card_rate, rate_card: contract_rate_card.rate_card) }
+    let(:segments) do
+      [Billing::Segments::Segment.new(started_at: Time.utc(2027, 2, 1), ended_at: Time.utc(2027, 3, 1), rate:)]
+    end
+    let(:cycle) do
+      Billing::Cycle.new(index: 0, started_at: segments.first.started_at, ended_at: segments.last.ended_at,
+        phase: Billing::Phase.default, calendar: nil)
+    end
+    let(:obligation) { Billing::Obligation.new(cycle:, segments:, billing_at: nil, terms: nil) }
     let(:rate_card_usage) do
       RateCardUsage.new(
         contract_rate_card:,
-        billing_segment: build_stubbed(:billing_segment, contract:, contract_rate_card:),
+        obligation:,
         rate_phase: nil,
-        fees: [build_stubbed(:fee, amount_cents: 700, taxes_amount_cents: 140)]
+        segments: [
+          RateCardUsageSegment.new(
+            billing_segment: build_stubbed(:billing_segment, contract_rate_card:, rate_card_rate: rate),
+            fees: [build_stubbed(:fee, amount_cents: 700, taxes_amount_cents: 140)]
+          )
+        ]
       )
     end
     let(:rate_card_usages) { [rate_card_usage] }

@@ -13,22 +13,21 @@ module Billing
 
       def call
         rate_card = contract_rate_card.rate_card
-        rates = if rate_card.rates.loaded?
-          rate_card.rates.sort_by(&:effective_from)
-        else
-          rate_card.ordered_rates.to_a
-        end
+        rates = rate_card.rates.to_a
 
         if rates.empty?
           result.not_found_failure!(resource: "rate")
         else
-          terms = Terms.new(timing: rate_card.billing_timing, prorated: rate_card.proration?)
+          terms = Terms.new(
+            timing: rate_card.billing_timing, prorated: rate_card.proration?,
+            billing_scope: contract_rate_card.billing_scope,
+            due_on_coverage_end: contract_rate_card.regroups_paid_fees?
+          )
 
           result.schedule = Schedule.new(
             rates:,
             terms:,
             phases:,
-            due_on_coverage_end: contract_rate_card.regroups_paid_fees?,
             starts_at: contract_rate_card.effective_date.in_time_zone(timezone),
             ends_at: schedule_ends_at,
             anchor_date: contract_rate_card.billing_anchor_date,

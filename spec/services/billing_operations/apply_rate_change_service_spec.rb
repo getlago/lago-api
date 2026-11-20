@@ -10,9 +10,10 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1)) }
   let(:product) { create(:product, :fixed, organization:) }
   let(:billing_timing) { "arrears" }
+  let(:billing_scope) { "segment" }
   let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:, proration: true, currency: "USD") }
   let(:contract_rate_card) do
-    create(:contract_rate_card, organization:, contract:, rate_card:,
+    create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
       effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1), units: 1)
   end
   let(:old_rate) do
@@ -62,6 +63,28 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     result
     expect { described_class.call!(customer:, rate_card_rate_id: new_rate.id) }.not_to change(BillingOperation, :count)
     expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
+  end
+
+  context "when the scope covers the cycle" do
+    let(:billing_scope) { "cycle" }
+
+    it "keeps the cycle close and bills both prices on the same invoice" do
+      expect(result).to be_success
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+      expect(bill(effective_from)).to be_empty
+
+      invoice = bill(Time.utc(2026, 12, 1)).sole
+      expect(invoice.total_amount_cents).to eq(1400 + 3200) # $30 * 14/30 days, then $60 * 16/30 days.
+      expect(invoice.fees.order(:amount_cents).pluck(:rate_card_rate_id, :amount_cents)).to eq([
+        [old_rate.id, 1400], [new_rate.id, 3200]
+      ])
+      expect(invoice.billing_operations.sole).to have_attributes(
+        target_cycle_started_at: Time.utc(2026, 11, 1), billing_at: Time.utc(2026, 12, 1)
+      )
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
+      expect(bill(Time.utc(2026, 12, 1))).to be_empty
+      expect(contract_rate_card.fees.count).to eq(2)
+    end
   end
 
   context "when the rate starts on the boundary of the close still owed" do

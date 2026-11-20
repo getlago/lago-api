@@ -39,8 +39,9 @@ RSpec.describe BillingOperations::ScheduleJob, job: true do
     let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1)) }
     let(:product) { create(:product, :fixed, organization:) }
     let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "arrears", currency: "USD", proration: true) }
+    let(:billing_scope) { "segment" }
     let(:contract_rate_card) do
-      create(:contract_rate_card, organization:, contract:, rate_card:, next_billing_at: Time.utc(2026, 11, 15),
+      create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:, next_billing_at: Time.utc(2026, 11, 15),
         effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1))
     end
 
@@ -74,6 +75,46 @@ RSpec.describe BillingOperations::ScheduleJob, job: true do
         expect(BillingOperation.where(customer:)).to be_empty
         expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 15))
         expect(BillingOperations::ProcessJob).not_to have_been_enqueued
+      end
+    end
+  end
+
+  context "when a cycle-scoped rate changes within a billing cycle" do
+    let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1)) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "arrears", currency: "USD", proration: true) }
+    let(:next_billing_at) { Time.utc(2026, 11, 15) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope: "cycle",
+        next_billing_at:, effective_date: Date.new(2026, 11, 1),
+        billing_anchor_date: Date.new(2026, 11, 1))
+    end
+
+    before do
+      travel_to(Time.utc(2026, 11, 15))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 1), rate_properties: {"amount" => "31"})
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 15), rate_properties: {"amount" => "62"})
+      contract_rate_card
+    end
+
+    it "replans at the rate change without dispatching processing" do
+      expect { perform_job }.not_to have_enqueued_job(BillingOperations::ProcessJob)
+      expect(contract_rate_card.billing_operations).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+    end
+
+    context "when the cycle closes" do
+      let(:next_billing_at) { Time.utc(2026, 12, 1) }
+
+      before { travel_to(Time.utc(2026, 12, 1)) }
+
+      it "persists the cycle operation and dispatches processing" do
+        expect { perform_job }.to have_enqueued_job(BillingOperations::ProcessJob).with(customer.id)
+        expect(contract_rate_card.billing_operations.sole).to have_attributes(
+          action_type: "close_fixed_arrears", reason: "periodic_continuation",
+          billing_at: Time.utc(2026, 12, 1), target_cycle_started_at: Time.utc(2026, 11, 1),
+          processed_at: nil
+        )
       end
     end
   end

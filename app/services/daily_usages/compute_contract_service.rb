@@ -19,8 +19,8 @@ module DailyUsages
       return result if Rails.cache.exist?(computed_cache_key)
 
       daily_usages = rate_card_usages.filter_map do |rate_card_usage|
-        rate_card_usage = rate_card_usage.with(fees: rate_card_usage.fees.select(&:non_zero?))
-        next if rate_card_usage.fees.empty?
+        rate_card_usage = with_usage_only(rate_card_usage)
+        next if rate_card_usage.segments.empty?
 
         DailyUsage.new(
           organization: contract.organization,
@@ -29,8 +29,8 @@ module DailyUsages
           contract_rate_card: rate_card_usage.contract_rate_card,
           external_contract_id: contract.external_id,
           usage: ::V1::DailyUsages::RateCardUsageSerializer.new(rate_card_usage).serialize,
-          from_datetime: rate_card_usage.billing_segment.started_at,
-          to_datetime: rate_card_usage.billing_segment.ended_at,
+          from_datetime: rate_card_usage.started_at,
+          to_datetime: rate_card_usage.ended_at,
           refreshed_at: timestamp,
           usage_date:
         )
@@ -61,25 +61,35 @@ module DailyUsages
     # across the boundary, but contract usage is computed from the billing segment without that
     # cache. The next day reads the new window, whose diff restarts from its full usage.
     #
-    # A segment also ends inside the day when a rate takes effect then. Each segment aggregates
-    # from its own start, so the one that ended is read at its last instant too, otherwise its
-    # events since the previous day would be in no row.
+    # A segment-scoped card's window also ends inside the day when a rate takes effect then. Each
+    # window aggregates from its own start, so the one that ended is read at its last instant too,
+    # otherwise its events since the previous day would be in no row. A cycle-scoped card keeps
+    # its window across the rate change, and prices both segments in it.
     def rate_card_usages
       day_start = usage_date.in_time_zone(timezone).beginning_of_day
 
       current_usages(usage_timestamp).flat_map do |usage|
         usages = [usage]
-        # Walk back each card's segments that started inside the day: the one before each of
+        # Walk back each card's windows that started inside the day: the one before each of
         # them ended there, and is read at its last instant.
-        while (boundary = usages.last.billing_segment.started_at) > day_start
+        while (boundary = usages.last.started_at) > day_start
           previous = current_usages(BillingSegment.inclusive_end(boundary))
             .find { |u| u.contract_rate_card.id == usage.contract_rate_card.id }
-          break unless previous && previous.billing_segment.started_at < boundary
+          break unless previous && previous.started_at < boundary
 
           usages << previous
         end
         usages
       end
+    end
+
+    def with_usage_only(rate_card_usage)
+      segments = rate_card_usage.segments.filter_map do |segment|
+        fees = segment.fees.select(&:non_zero?)
+        segment.with(fees:) if fees.any?
+      end
+
+      rate_card_usage.with(segments:)
     end
 
     def current_usages(at)

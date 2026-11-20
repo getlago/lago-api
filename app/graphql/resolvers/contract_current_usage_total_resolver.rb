@@ -35,13 +35,13 @@ module Resolvers
     private
 
     def totals(result)
-      billing_segments = result.rate_card_usages.map(&:billing_segment)
+      usages = result.rate_card_usages
 
       Totals.new(
         amount_cents: result.amount_cents, taxes_amount_cents: result.taxes_amount_cents,
         total_amount_cents: result.total_amount_cents, taxes_unavailable: result.taxes_unavailable,
-        from_datetime: billing_segments.map(&:started_at).min,
-        to_datetime: billing_segments.map(&:ended_at).max
+        from_datetime: usages.map(&:started_at).min,
+        to_datetime: usages.map(&:ended_at).max
       )
     end
   end

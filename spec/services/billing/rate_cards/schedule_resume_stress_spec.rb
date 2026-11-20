@@ -49,7 +49,7 @@ RSpec.describe Billing::RateCards::Schedule do
   def build(timezone:, timing:, anchor:)
     described_class.new(
       anchor_date: anchor, starts_at: anchor.in_time_zone(timezone), timezone:,
-      phases:, rates:, terms: Billing::Terms.new(timing:, prorated: true)
+      phases:, rates:, terms: Billing::Terms.new(timing:, prorated: true, billing_scope: "segment")
     )
   end
 
@@ -61,6 +61,16 @@ RSpec.describe Billing::RateCards::Schedule do
 
   def walk(from: nil, **shape)
     build_walker(**shape).walk_to(asked_at, from:)
+  end
+
+  def scheduled_segments(schedule, cycle)
+    segments = []
+    obligation = schedule.next_obligation(from: cycle.started_at)
+    while obligation && obligation.cycle.started_at == cycle.started_at && obligation.billing_at <= asked_at
+      segments.concat(obligation.segments.map { |segment| [obligation, segment] })
+      obligation = schedule.next_obligation(from: cycle.started_at, after: obligation.billing_at)
+    end
+    segments
   end
 
   def state_of(cycle)
@@ -75,10 +85,11 @@ RSpec.describe Billing::RateCards::Schedule do
   end
 
   def segment_values(segments)
-    segments.map do |segment|
-      [segment.cycle_index, segment.cycle_started_at, segment.started_at, segment.ended_at,
-        segment.billing_at, segment.proration_ratio, segment.rate_phase_code,
-        segment.rate.effective_from, segment.rate_override&.billing_interval_unit]
+    segments.map do |obligation, segment|
+      cycle = obligation.cycle
+      [cycle.index, cycle.started_at, segment.started_at, segment.ended_at,
+        obligation.billing_at, cycle.calendar.proration_ratio(segment.started_at, segment.ended_at),
+        cycle.phase.code, segment.rate.effective_from, cycle.phase.rate_override&.billing_interval_unit]
     end
   end
 
@@ -87,7 +98,7 @@ RSpec.describe Billing::RateCards::Schedule do
     cycles.flat_map do |cycle|
       Billing::Segments.within(cycle, rates:).filter_map do |segment|
         next unless segment.rate
-        billing_at = terms.billing_at_for(segment)
+        billing_at = terms.pricing_anchor_for(segment)
         next if billing_at > asked_at
 
         [cycle.index, cycle.started_at, segment.started_at, segment.ended_at, billing_at,
@@ -159,7 +170,7 @@ RSpec.describe Billing::RateCards::Schedule do
         full = oracle_segments(cycles, timing: shape[:timing])
 
         mismatches = cycles.filter_map do |cycle|
-          jumped = segment_values(schedule.segments_due_in_cycle(cycle.started_at, by: asked_at))
+          jumped = segment_values(scheduled_segments(schedule, cycle))
           walked = full.select { |values| values.first == cycle.index }
           next if jumped == walked
 

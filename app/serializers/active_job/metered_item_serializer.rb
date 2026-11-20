@@ -24,6 +24,8 @@ module ActiveJob
           "properties_override" => source.properties_override
         }
       elsif source.is_a?(Fees::ChargeService::Sources::BillingSegment)
+        # Jobs carry a pricing-input snapshot, not its scheduling obligation.
+        # Keep previously queued snapshots readable when changing BillingSegment attributes.
         {
           "source_type" => "billing_segment",
           "billing_segment" => source.billing_segment.attributes,

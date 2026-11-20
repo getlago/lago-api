@@ -5,7 +5,19 @@ require "rails_helper"
 RSpec.describe V1::DailyUsages::RateCardUsageSerializer do
   subject(:payload) { described_class.new(usage).serialize }
 
-  let(:usage) { RateCardUsage.new(contract_rate_card:, billing_segment:, rate_phase: nil, fees:) }
+  let(:usage) do
+    RateCardUsage.new(contract_rate_card:, obligation:, rate_phase: nil,
+      segments: [RateCardUsageSegment.new(billing_segment:, fees:)])
+  end
+  let(:segments) do
+    [Billing::Segments::Segment.new(started_at: Time.zone.parse("2027-02-01T00:00:00Z"),
+      ended_at: Time.zone.parse("2027-03-01T00:00:00Z"), rate: billing_segment.rate_card_rate)]
+  end
+  let(:cycle) do
+    Billing::Cycle.new(index: 0, started_at: segments.first.started_at, ended_at: segments.last.ended_at,
+      phase: Billing::Phase.default, calendar: nil)
+  end
+  let(:obligation) { Billing::Obligation.new(cycle:, segments:, billing_at: Time.zone.parse("2027-03-01T00:00:00Z"), terms: nil) }
   let(:customer) { build_stubbed(:customer, timezone: "UTC") }
   let(:billable_metric) { build_stubbed(:billable_metric, code: "api_calls", name: "API calls", aggregation_type: "sum_agg") }
   let(:product) { build_stubbed(:product, billable_metric:, code: "api") }
@@ -19,18 +31,13 @@ RSpec.describe V1::DailyUsages::RateCardUsageSerializer do
       end
     end
   end
-  let(:rate_card) { build_stubbed(:rate_card, product:, product_filter:, code: "api_monthly") }
-  let(:contract_rate_card) { build_stubbed(:contract_rate_card, rate_card:) }
+  let(:rate_card) { build_stubbed(:rate_card, product:, product_filter:, code: "api_monthly", currency: "EUR") }
+  let(:contract_rate_card) { build_stubbed(:contract_rate_card, rate_card:, contract: build_stubbed(:contract, customer:)) }
   let(:billing_segment) do
     build_stubbed(
       :billing_segment,
-      customer:,
       contract_rate_card:,
-      rate_card_rate: build_stubbed(:rate_card_rate, rate_card:, rate_model: "standard"),
-      currency: "EUR",
-      started_at: Time.zone.parse("2027-02-01T00:00:00Z"),
-      ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-03-01T00:00:00Z")),
-      billing_at: Time.zone.parse("2027-03-01T00:00:00Z")
+      rate_card_rate: build_stubbed(:rate_card_rate, rate_card:, rate_model: "standard")
     )
   end
   let(:fees) do
