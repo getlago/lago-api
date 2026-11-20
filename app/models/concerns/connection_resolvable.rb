@@ -42,73 +42,43 @@ module ConnectionResolvable
   # loaded once rather than per category, so `includes(:billing_object_connections)` on a
   # collection keeps this to one query.
   def connection_routing
-    overrides = billing_object_connections.index_by(&:category)
-    fallbacks = fallback_billing_object_connections.index_by(&:cateogory)
-
     CATEGORIES.each_value.map do |category|
-      override = overrides[category]
-      fallback = fallbacks[category]
+      override = billing_object_connection(category, cache: true)
 
-      Routing.new(
-        category: category,
-        behavior: routing_behavior(override, fallback),
-        code: routing_connection(override, category)&.code
-      )
+      behavior = routing_behavior(override, category)
+      connection = routing_connection(override, category)
+
+      Routing.new(category:, behavior:, code: connection&.code)
     end
   end
 
-  def effective_connection(category)
-    override = billing_object_connections.find_by(category:)
+  def effective_connection(category, cache: false)
+    override = billing_object_connection(category, cache:)
 
     if override
       return nil if override.skip?
-      return override_connection(override, category)
+      return override_connection(override, category, cache:)
     end
 
-    fallback_connection(category)
+    fallback_connection(category, cache:)
   end
 
-  def effective_routing_connection(category)
-    override = billing_object_connections.detect { it.category == category.to_s }
-
-    if override
-      return nil if override.skip?
-      return override_connection(override, category)
+  def billing_object_connection(category, cache:)
+    if cache
+      billing_object_connections.detect { it.category == category.to_s }
+    else
+      billing_object_connections.find_by(category:)
     end
-
-    fallback_routing_connection(category)
   end
 
   private
 
-  # If the fallback record defines a skip behavior, show "skip" in
-  # connection_routing instead of "inherit".
-  def routing_behavior(override, fallback)
-    if override
-      override.behavior
-    elsif fallback&.skip?
-      fallback.behavior
-    else
-      INHERIT_BEHAVIOR
-    end
-  end
-
-  def routing_connection(override, category)
-    if override.nil?
-      fallback_routing_connection(category)
-    elsif override.skip?
-      nil
-    else
-      override_connection(override, category)
-    end
-  end
-
   # PaymentProviders::DestroyService soft-deletes provider customers with update_all
   # and leaves their billing_object_connections, which results in payment_provider_customer
   # resolving to nil here. In this case we return fallback_connection.
-  def override_connection(override, category)
+  def override_connection(override, category, cache:)
     if category == CATEGORIES[:payment]
-      override.payment_provider_customer || fallback_connection(category)
+      override.payment_provider_customer || fallback_connection(category, cache:)
     else
       override.integration_customer
     end
@@ -118,21 +88,9 @@ module ConnectionResolvable
     nil
   end
 
-  def fallback_billing_object_connections
-    fallback_record&.billing_object_connections || []
-  end
-
-  def fallback_connection(category)
+  def fallback_connection(category, cache:)
     if fallback_record
-      fallback_record.effective_connection(category)
-    else
-      customer_default_connection(category)
-    end
-  end
-
-  def fallback_routing_connection(category)
-    if fallback_record
-      fallback_record.effective_routing_connection(category)
+      fallback_record.effective_connection(category, cache:)
     else
       customer_default_connection(category)
     end
@@ -152,5 +110,29 @@ module ConnectionResolvable
     return connections.first if connections.one?
 
     connections.detect(&:is_default?)
+  end
+
+  # If the fallback record defines a skip behavior, show "skip" in
+  # connection_routing instead of "inherit".
+  def routing_behavior(override, category)
+    return override.behavior if override
+
+    fallback = fallback_record&.billing_object_connection(category, cache: true)
+
+    if fallback&.skip?
+      fallback.behavior
+    else
+      INHERIT_BEHAVIOR
+    end
+  end
+
+  def routing_connection(override, category)
+    if override.nil?
+      fallback_connection(category, cache: true)
+    elsif override.skip?
+      nil
+    else
+      override_connection(override, category, cache: true)
+    end
   end
 end
