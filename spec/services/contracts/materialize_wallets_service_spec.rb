@@ -50,27 +50,41 @@ describe Contracts::MaterializeWalletsService do
     expect { result }.not_to change { plan_wallet.reload.attributes }
   end
 
+  it "locks the templates while copying them" do
+    expect(capture_sql { result }).to include(a_string_matching(/FROM "plan_wallets".*FOR SHARE/m))
+  end
+
   context "when the template has a scope" do
+    let(:product_category) { create(:product_category, organization:) }
     let(:product) { create(:product, organization:) }
+    let(:product_filter) { create(:product_filter, organization:) }
 
     before do
       create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:)
+      create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product_category", fee_type: nil, product_category:)
       create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product", fee_type: nil, product:, with_product_filters: true)
+      create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product_filters", fee_type: nil, product_filter:)
     end
 
     it "copies each selector onto the contract's wallet" do
-      expect { result }.to change(CatalogWalletSelector, :count).by(2)
+      expect { result }.to change(CatalogWalletSelector, :count).by(4)
 
       selectors = result.wallets.sole.selectors
-      expect(selectors.map { [it.organization, it.selector_type, it.fee_type, it.product, it.with_product_filters] })
-        .to contain_exactly([organization, "fee_type", "metered", nil, false], [organization, "product", nil, product, true])
+      expect(selectors.map { [it.selector_type, it.fee_type, it.product_category, it.product, it.product_filter, it.with_product_filters] })
+        .to contain_exactly(
+          ["fee_type", "metered", nil, nil, nil, false],
+          ["product_category", nil, product_category, nil, nil, false],
+          ["product", nil, nil, product, nil, true],
+          ["product_filters", nil, nil, nil, product_filter, false]
+        )
+      expect(selectors.map(&:organization)).to all(eq(organization))
       expect(selectors.map(&:plan_wallet_id)).to all(be_nil)
     end
 
     it "keeps the template's own selectors" do
       result
 
-      expect(plan_wallet.selectors.count).to eq(2)
+      expect(plan_wallet.selectors.count).to eq(4)
     end
   end
 
@@ -143,6 +157,18 @@ describe Contracts::MaterializeWalletsService do
 
     it "grants no credit" do
       expect { result }.not_to change(CatalogWalletTransaction, :count)
+    end
+
+    context "when a rule is sourced by a product filter" do
+      let(:product_filter) { create(:product_filter, organization:) }
+
+      before { create(:plan_wallet_credit_allocation, organization:, plan_wallet:, product: nil, product_filter:, code: "filter_allowance") }
+
+      it "copies the rule with its filter" do
+        rule = result.wallets.sole.credit_allocations.find_by(code: "filter_allowance")
+
+        expect(rule).to have_attributes(product: nil, product_filter:)
+      end
     end
 
     context "when a rule was deleted from the template" do
