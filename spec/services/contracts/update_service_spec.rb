@@ -344,6 +344,81 @@ RSpec.describe Contracts::UpdateService do
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.deleted", any_args)
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.created", any_args)
     end
+
+    context "when the contract has a wallet from its previous plan" do
+      let(:old_wallet) { create(:catalog_wallet, organization:, contract:, customer:, code: "ai_credits") }
+      let(:old_allocation) { create(:catalog_wallet_credit_allocation, organization:, catalog_wallet: old_wallet) }
+      let(:plan_wallet) { create(:plan_wallet, organization:, catalog_plan: other_plan, code: "ai_credits") }
+
+      before do
+        old_allocation
+        create(:plan_wallet_credit_allocation, organization:, plan_wallet:, code: "monthly_allowance")
+      end
+
+      it "discards the wallet along with its rules" do
+        expect(result).to be_success
+
+        expect(old_wallet.reload).to be_discarded
+        expect(old_allocation.reload).to be_discarded
+      end
+
+      it "gives the contract no wallet from the new plan" do
+        expect(result).to be_success
+
+        expect(contract.reload.wallets).to be_empty
+      end
+
+      context "when the contract has a second wallet" do
+        let(:second_wallet) { create(:catalog_wallet, organization:, contract:, customer:, code: "support_credits") }
+
+        before { second_wallet }
+
+        it "discards each of them" do
+          expect(result).to be_success
+
+          expect([old_wallet, second_wallet].map(&:reload)).to all(be_discarded)
+        end
+      end
+
+      context "when another contract of the customer has a wallet" do
+        let(:other_wallet) { create(:catalog_wallet, organization:, customer:, code: "ai_credits") }
+
+        before { other_wallet }
+
+        it "keeps that wallet" do
+          expect(result).to be_success
+
+          expect(other_wallet.reload).not_to be_discarded
+        end
+      end
+
+      context "when the organization has contract wallets enabled" do
+        let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
+
+        it "gives the contract the new plan's wallet only" do
+          expect(result).to be_success
+
+          wallet = contract.reload.wallets.sole
+          expect(wallet).not_to eq(old_wallet)
+          expect(wallet).to have_attributes(code: "ai_credits", customer:)
+          expect(wallet.credit_allocations.sole.code).to eq("monthly_allowance")
+        end
+      end
+    end
+
+    context "when the plan is removed" do
+      let(:params) { {plan_code: nil} }
+      let(:wallet) { create(:catalog_wallet, organization:, contract:, customer:) }
+
+      before { wallet }
+
+      it "discards the contract's wallets" do
+        expect(result).to be_success
+
+        expect(contract.reload.catalog_plan).to be_nil
+        expect(wallet.reload).to be_discarded
+      end
+    end
   end
 
   context "when moving the start of a pending contract" do
@@ -554,6 +629,22 @@ RSpec.describe Contracts::UpdateService do
     it "accepts the edit" do
       expect(result).to be_success
       expect(contract.reload.name).to eq("Renamed")
+    end
+
+    context "when the contract has a wallet" do
+      let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
+      let(:wallet) { create(:catalog_wallet, organization:, contract:, customer:) }
+
+      before do
+        wallet
+        create(:plan_wallet, organization:, catalog_plan:)
+      end
+
+      it "keeps the contract's wallets as they are" do
+        expect(result).to be_success
+
+        expect(contract.reload.wallets).to eq([wallet])
+      end
     end
   end
 

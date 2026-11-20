@@ -2,7 +2,7 @@
 
 module Contracts
   # Edits a contract's authoring fields. A pending contract is fully editable,
-  # and changing its plan re-materialises its rate cards onto the contract.
+  # and changing its plan re-materialises its rate cards and wallets onto the contract.
   # Moving a pending contract's start or anchor re-seeds its cards' lifecycle,
   # and a start moved to today or earlier activates it. Once active, its
   # pricing and schedule are signed: only the administrative fields in
@@ -127,6 +127,10 @@ module Contracts
           ContractRateCards::DestroyService.call!(contract_rate_card: card, emit_events: false)
         end
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
+        discard_wallets
+        if contract.catalog_plan && organization.catalog_wallets_enabled?
+          Contracts::MaterializeWalletsService.call!(contract:)
+        end
       elsif lifecycle_moved
         reseed_rate_cards(previous_billing_anchor_date)
       end
@@ -146,6 +150,15 @@ module Contracts
       contract.applied_rate_cards.find_each do |card|
         own_anchor = card.inherited_billing_anchor?(previous_billing_anchor_date) ? nil : card.billing_anchor_date
         ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
+      end
+    end
+
+    # The wallets came from the previous plan, as the rate cards did. Their scope, taxes and metadata stay on the
+    # discarded wallets.
+    def discard_wallets
+      contract.wallets.find_each do |wallet|
+        wallet.credit_allocations.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        wallet.discard!
       end
     end
 

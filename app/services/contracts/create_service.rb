@@ -69,7 +69,10 @@ module Contracts
           contract.save!
           InvoiceCustomSections::AttachToResourceService.call!(resource: contract, params:)
 
-          Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
+          if contract.catalog_plan
+            Contracts::MaterializeRateCardsService.call!(contract:)
+            Contracts::MaterializeWalletsService.call!(contract:) if organization.catalog_wallets_enabled?
+          end
           result.contract = contract
           Utils::ActivityLog.produce_after_commit(contract, "contract.created")
           SendWebhookJob.perform_after_commit("contract.created", contract)
