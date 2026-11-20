@@ -44,6 +44,19 @@ RSpec.describe Lago::SelfServe do
     end
   end
 
+  describe ".billing_accounts_key" do
+    it "is the key, stripped, or nil when it is blank" do
+      expect(described_class.billing_accounts_key(value: " key ")).to eq("key")
+      expect([nil, "", "  "].map { described_class.billing_accounts_key(value: it) }).to all(be_nil)
+    end
+
+    it "reads LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY" => "key"))
+
+      expect(described_class.billing_accounts_key).to eq("key")
+    end
+  end
+
   describe ".front_host" do
     it "is the downcased host of the front URL" do
       expect(described_class.front_host(url: "https://App.EU.getlago.com")).to eq("app.eu.getlago.com")

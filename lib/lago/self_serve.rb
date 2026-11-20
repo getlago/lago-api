@@ -19,6 +19,12 @@ module Lago
         value == "true"
       end
 
+      # The key billing-accounts sends to activate a production organization, one per region; nil when unset, which
+      # leaves the activation route undrawn.
+      def billing_accounts_key(value: ENV["LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY"])
+        value.to_s.strip.presence
+      end
+
       # The host of this region's front (`app.eu.getlago.com`), or nil when LAGO_FRONT_URL has none. Never raises:
       # with the gate on, validate! already refused a value that is not an https origin.
       def front_host(url: Rails.application.config.lago_front_url)

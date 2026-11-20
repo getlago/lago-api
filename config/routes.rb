@@ -160,6 +160,13 @@ Rails.application.routes.draw do
     post "invoice_payments/:token", to: "invoice_payments#create"
   end
 
+  # The only admin route outside local environments, drawn when self-serve is on and its key is set; anything else
+  # falls through to the 404 below, so self-hosted installs never expose it.
+  post "admin/organizations/:id/activate",
+    to: "admin/organization_activations#create",
+    as: :admin_organization_activation,
+    constraints: ->(_request) { Lago::SelfServe.enabled? && Lago::SelfServe.billing_accounts_key.present? }
+
   if Rails.env.local?
     namespace :admin do
       resources :memberships, only: %i[create]

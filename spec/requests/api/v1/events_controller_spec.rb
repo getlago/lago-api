@@ -44,12 +44,10 @@ RSpec.describe Api::V1::EventsController do
       context "when the organization is activated after its api key was cached" do
         before do
           ApiKeys::CacheService.call(organization.api_keys.first.value, with_cache: true)
-          organization.update!(activation_status: "active")
+          Organizations::ActivateService.call!(organization:)
         end
 
-        it "accepts the event once the cache is cleared" do
-          ApiKeys::CacheService.expire_all_cache(organization)
-
+        it "accepts the event, as activation clears the cache" do
           subject
 
           expect(response).to have_http_status(:success)
