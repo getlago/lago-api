@@ -33,12 +33,13 @@ RSpec.describe InvoiceProductFeesQuery do
     product_fee(annual, hamburger, amount_cents: 3_001)
   end
 
-  def product_fee(contract, product, amount_cents:, product_filter: nil, true_up_parent_fee: nil, fee_invoice: invoice)
+  def product_fee(contract, product, amount_cents:, product_filter: nil, true_up_parent_fee: nil, fee_invoice: invoice, from_datetime: "2026-10-01T00:00:00Z", **attributes)
     rate_card = create(:rate_card, organization:, product:, product_filter:)
     contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card:)
 
     create(
       :fee,
+      **attributes,
       invoice: fee_invoice,
       organization: fee_invoice.organization,
       subscription: nil,
@@ -51,7 +52,7 @@ RSpec.describe InvoiceProductFeesQuery do
       product_filter: true_up_parent_fee ? nil : product_filter,
       true_up_parent_fee:,
       amount_cents:,
-      properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"}
+      properties: {"from_datetime" => from_datetime, "to_datetime" => "2026-10-31T23:59:59Z"}
     )
   end
 
@@ -109,6 +110,29 @@ RSpec.describe InvoiceProductFeesQuery do
 
   it "lists the groups in the order of the product catalog tree" do
     expect(fee_groups).to eq(tree_groups & fee_groups)
+  end
+
+  context "with two periods in one product" do
+    # The highest id puts the earlier period last if the query sorted on ids alone.
+    before { product_fee(annual, hamburger, amount_cents: 9, from_datetime: "2026-09-01T00:00:00Z", id: "ffffffff-ffff-4fff-bfff-ffffffffffff") }
+
+    it "lists the earlier period first" do
+      expect(amounts).to eq([9, 3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+  end
+
+  context "with a name in lower case" do
+    let(:apple) { create(:product, organization:, product_category: food, name: "apple", code: "apple", invoice_display_name: nil) }
+
+    before { product_fee(annual, apple, amount_cents: 8) }
+
+    it "sorts it regardless of case, as the PDF and the tree do" do
+      expect(amounts).to eq([8, 3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+
+    it "lists the groups in the order of the product catalog tree" do
+      expect(fee_groups).to eq(tree_groups & fee_groups)
+    end
   end
 
   context "with a contract without a name or a plan" do
@@ -218,11 +242,27 @@ RSpec.describe InvoiceProductFeesQuery do
     end
   end
 
-  context "with a search term" do
+  context "with empty id lists" do
+    let(:filters) { {invoice_id: invoice.id, contract_id: "", product_category_id: "", product_ids: [], product_filter_ids: []} }
+
+    it "does not filter" do
+      expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+  end
+
+  context "with a search term matching a product" do
+    let(:search_term) { "HAMB" }
+
+    it "returns the fees of that product, true-ups included" do
+      expect(amounts).to eq([3_001, 6_000, 3_000])
+    end
+  end
+
+  context "with a search term matching a filter" do
     let(:search_term) { "caes" }
 
-    it "matches the product and filter names and codes" do
-      expect(amounts).to eq([14_000])
+    it "returns the whole product in the contracts where the filter matched, so the rows add up to the product header" do
+      expect(amounts).to eq([14_000, 10_000])
     end
   end
 
