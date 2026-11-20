@@ -1,0 +1,9 @@
+---
+sk:
+  activerecord:
+    errors:
+      models:
+        webhook_endpoint:
+          attributes:
+            base:
+              exceeded_limit: Bol dosiahnutý maximálny počet koncových bodov webhookov.

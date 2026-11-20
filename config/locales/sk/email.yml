@@ -1,0 +1,86 @@
+---
+sk:
+  email:
+    api_key:
+      created:
+        access_warning: Ak ste však túto zmenu neschválili, okamžite si zmeňte heslo a odstráňte kľúč API, aby ste ochránili svoj účet.
+        change_notice: Ak túto akciu vykonal niekto z vášho tímu, môžete tento kľúč API začať používať na automatizáciu fakturácie.
+        email_info: Tento e-mail ste dostali, pretože vo vašej inštancii Lago bol vytvorený nový kľúč API a máte oprávnenia správcu.
+        greetings: Dobrý deň,
+        key_has_been_created: Pre vašu organizáciu %{organization_name} bol vytvorený nový kľúč API.
+        subject: Bol vytvorený nový kľúč API Lago
+      destroyed:
+        access_warning: Ak ste túto požiadavku neschválili, okamžite si zmeňte heslo, aby ste ochránili svoj účet.
+        change_notice: Ak túto zmenu vykonal niekto z vášho tímu, nemusíte robiť nič ďalšie.
+        email_info: Tento e-mail ste dostali, pretože vo vašej inštancii Lago bol odstránený kľúč API a máte oprávnenia správcu.
+        greetings: Dobrý deň,
+        key_has_been_destroyed: Pre vašu organizáciu %{organization_name} bol odstránený kľúč API.
+        subject: Kľúč API Lago bol odstránený
+      rotated:
+        access_warning: Ak ste túto požiadavku neschválili, okamžite si zmeňte heslo a obnovte kľúč API, aby ste ochránili svoj účet.
+        change_notice: Ak túto zmenu vykonal niekto z vášho tímu, nemusíte robiť nič ďalšie. Aby fakturácia fungovala bez prerušenia, čo najskôr nastavte aplikáciu tak, aby používala nový token.
+        email_info: Tento e-mail ste dostali, pretože vo vašej inštancii Lago bol obnovený kľúč API a máte oprávnenia správcu.
+        greetings: Dobrý deň,
+        key_has_been_rotated: Kľúč API vašej organizácie %{organization_name} bol obnovený.
+        subject: Váš kľúč API Lago bol obnovený
+    credit_note:
+      created:
+        credit_note_from: Dobropis od %{billing_entity_name}
+        credit_note_number: Číslo dobropisu
+        credited_notice: Pripísané k zostatku zákazníka dňa %{date}
+        download: Podrobnosti nájdete v dobropise na stiahnutie
+        invoice_number: Číslo faktúry
+        issue_date: Dátum vystavenia
+        issued_notice: Vystavené dňa %{date}
+        offset_invoice_notice: Započítané voči faktúre %{invoice_number} dňa %{date}
+        refunded_notice: Vrátené dňa %{date}
+        subject: Váš dobropis č. %{credit_note_number} od %{billing_entity_name}
+    data_export:
+      completed:
+        fallback_text: Ak platnosť odkazu vypršala, vytvorte si nový na hlavnom paneli.
+        greetings: Dobrý deň
+        intro: Váš export údajov typu %{resource_type} je pripravený. Môžete si ho stiahnuť pomocou odkazu nižšie, ktorý bude platný 7 dní.
+        lago_team: Tím Lago
+        main_cta_label: Stiahnuť export
+        subject: Váš export údajov typu %{resource_type} z Lago je pripravený
+        thanks: Ďakujeme,
+    invoice:
+      finalized:
+        download: Podrobnosti nájdete vo faktúre na stiahnutie
+        due_date: splatné dňa %{date}
+        invoice_from: Faktúra od %{billing_entity_name}
+        invoice_number: Číslo faktúry
+        issue_date: Dátum vystavenia
+        issued_on: vystavené dňa %{date}
+        subject: Vaša faktúra č. %{invoice_number} od %{billing_entity_name}
+    organization:
+      authentication_methods_updated:
+        changes: Používateľ %{user_email} vykonal nasledujúce zmeny spôsobov overovania.
+        disabled: 'Vypnutý spôsob prihlásenia: %{login_method}'
+        email_info: Ak ste túto zmenu neočakávali, skontrolujte nastavenia overovania.
+        enabled: 'Zapnutý spôsob prihlásenia: %{login_method}'
+        reasoning: Túto správu ste dostali, pretože ste správcom organizácie.
+        subject: Spôsob prihlásenia vo vašom pracovnom priestore Lago bol zmenený
+    password_reset:
+      subject: Zmena hesla do Lago
+    payment_receipt:
+      created:
+        payment_receipt_from: Potvrdenie o platbe od %{billing_entity_name}
+        subject: Vaše potvrdenie o platbe č. %{payment_receipt_number} od %{billing_entity_name}
+    payment_request:
+      requested:
+        already_paid: Ak ste už platbu uhradili, tento e-mail ignorujte.
+        hello: Dobrý deň, %{customer_name},
+        pay_amount: Uhradiť dlžnú sumu
+        remaining_amount: Zostáva uhradiť
+        reminder_overdue_balance: Finančné oddelenie spoločnosti %{billing_entity_name} vám pripomína, že niektoré faktúry sú po splatnosti.
+        subject: Vaša dlžná suma po splatnosti voči %{billing_entity_name}
+        thank_you: Ďakujeme.
+        total_amount_due: Celková suma na úhradu je %{amount}.
+    powered_by: Využíva technológiu
+    questions: Máte otázky? Kontaktujte nás na adrese
+    signup:
+      account_exists:
+        subject: Účet Lago už máte
+      verification:
+        subject: Overte svoj e-mail a dokončite vytvorenie účtu Lago
