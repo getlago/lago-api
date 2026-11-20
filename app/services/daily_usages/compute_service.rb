@@ -70,22 +70,21 @@ module DailyUsages
     end
 
     def existing_daily_usage
-      @existing_daily_usage ||= DailyUsage.usage_date_in_timezone(usage_date)
-        .find_by(subscription_id: subscription.id)
+      @existing_daily_usage ||= subscription.daily_usages.find_by(usage_date:)
     end
 
     def diff_usage(daily_usage)
       DailyUsages::ComputeDiffService.call!(daily_usage:).usage_diff
     end
 
+    # Charges billed monthly on a longer plan have their own billing days, when the invoice fills
+    # the closing day as well.
     def subscription_billing_day?
-      previous_billing_date_in_timezone = Subscriptions::DatesService
-        .new_instance(subscription, timestamp, current_usage: true)
-        .previous_beginning_of_period
-        .in_time_zone(customer.applicable_timezone)
-        .to_date
+      dates_service = Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: true)
+      period_starts = [dates_service.previous_beginning_of_period]
+      period_starts << dates_service.charges_from_datetime if subscription.plan.charges_billed_in_monthly_split_intervals?
 
-      date_in_timezone == previous_billing_date_in_timezone
+      period_starts.compact.any? { it.in_time_zone(customer.applicable_timezone).to_date == date_in_timezone }
     end
 
     def date_in_timezone

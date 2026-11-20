@@ -113,7 +113,7 @@ module DailyUsages
       @to ||= if subscription.terminated?
         subscription.terminated_at.in_time_zone(timezone).to_date
       else
-        to_date || Time.zone.yesterday.in_time_zone(timezone).to_date
+        to_date || Time.current.in_time_zone(timezone).to_date - 1.day
       end
     end
 

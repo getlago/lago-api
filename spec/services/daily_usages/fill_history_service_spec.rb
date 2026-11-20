@@ -316,6 +316,30 @@ RSpec.describe DailyUsages::FillHistoryService do
         it "returns yesterday" do
           expect(subject).to eq(Time.zone.yesterday)
         end
+
+        context "when the customer is behind UTC" do
+          let(:subscription) { create(:subscription, customer:, started_at: Time.current - 1.month) }
+          let(:customer) { create(:customer, timezone: "America/Los_Angeles") }
+
+          it "returns yesterday in the customer timezone" do
+            # 2024-11-17 19:00 in Los Angeles
+            travel_to(Time.zone.parse("2024-11-18 03:00:00")) do
+              expect(subject).to eq(Date.new(2024, 11, 16))
+            end
+          end
+        end
+
+        context "when the customer is ahead of UTC" do
+          let(:subscription) { create(:subscription, customer:, started_at: Time.current - 1.month) }
+          let(:customer) { create(:customer, timezone: "Asia/Tokyo") }
+
+          it "returns yesterday in the customer timezone" do
+            # 2024-11-19 05:00 in Tokyo
+            travel_to(Time.zone.parse("2024-11-18 20:00:00")) do
+              expect(subject).to eq(Date.new(2024, 11, 18))
+            end
+          end
+        end
       end
     end
   end
