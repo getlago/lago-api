@@ -22,7 +22,7 @@ module Integrations
           return result.single_validation_failure!(error_code: "events_targeting_wallets_disabled")
         end
 
-        unless wallet_refresh_available?
+        unless Agents::WalletRefresh.available?
           return result.single_validation_failure!(error_code: "wallet_refresh_unavailable")
         end
 
@@ -45,12 +45,6 @@ module Integrations
         result.record_validation_failure!(record: e.record)
       rescue ActiveRecord::RecordNotUnique => e
         unique_index_failure!(e, "index_integrations_on_code_and_organization_id" => :code)
-      end
-
-      private
-
-      def wallet_refresh_available?
-        ENV["LAGO_REDIS_CACHE_URL"].present? && ENV["LAGO_DISABLE_WALLET_REFRESH"] != "true"
       end
     end
   end

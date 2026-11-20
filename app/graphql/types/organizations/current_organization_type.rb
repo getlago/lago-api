@@ -48,6 +48,7 @@ module Types
 
       field :feature_flags, [Types::Organizations::FeatureFlagEnum], null: false
       field :realtime_usage_enabled, Boolean, null: false, description: "True when usage reports can be served from the real-time usage buckets"
+      field :wallet_refresh_enabled, Boolean, null: false, description: "True when the deployment refreshes wallet balances in real time, a requirement of the Agent Storefront"
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, permission: "organization:invoices:view"
       field :customer_portal_locked_fields, [Types::Organizations::CustomerPortalFieldEnum], null: false
@@ -74,6 +75,10 @@ module Types
 
       def realtime_usage_enabled
         ::RealtimeUsage.enabled?(object)
+      end
+
+      def wallet_refresh_enabled
+        Agents::WalletRefresh.available?
       end
 
       # The organization column is no longer written when the default billing entity's term changes.
