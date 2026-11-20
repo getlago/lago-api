@@ -901,4 +901,144 @@ RSpec.describe Events::Stores::Provider do
       end
     end
   end
+
+  describe "#store_for, with a billing segment" do
+    subject(:provider) do
+      described_class.new(
+        organization:,
+        billing_context:,
+        serve_current_usage_from_buckets:,
+        billing_segments: prefetched_segments
+      )
+    end
+
+    include_context "with realtime usage availability"
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: %w[realtime_usage product_catalog])
+    end
+    let(:serve_current_usage_from_buckets) { true }
+    let(:contract) { create(:contract, organization:) }
+    let(:billing_context) { Billing::Context.from(contract:) }
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:product) { create(:product, :metered, organization:, billable_metric:) }
+    let(:billing_timing) { :arrears }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:billing_segment) do
+      build(:billing_segment, organization:, customer: contract.customer, contract:, contract_rate_card:,
+        rate_properties: {"amount" => "1"})
+    end
+    let(:prefetched_segments) { [billing_segment] }
+    let(:segment_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:) }
+    let(:segment_boundaries) { segment_item.aggregation_boundaries }
+    let(:store) { provider.store_for(metered_item: segment_item, boundaries: segment_boundaries, filters:) }
+    let(:filters) { {} }
+    let(:totals) do
+      Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum", units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current)
+    end
+    let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[contract_rate_card.id, ""] => totals}) }
+
+    before do
+      ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw"
+      allow(RealtimeUsage::FetchProductBucketsService).to receive(:call)
+        .and_return(RealtimeUsage::FetchProductBucketsService::Result.new.tap { it.usage_buckets = bucket_set })
+    end
+
+    after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+    it "serves the segment from the product buckets, keyed by its card" do
+      expect(store).to be_a(Events::Stores::UsageBucketStore)
+      expect(store.sum.value).to eq(BigDecimal("42.5"))
+      expect(store.__getobj__).to be_a(Events::Stores::ClickhouseStore)
+      expect(provider.may_precompute_charge?(metered_item: segment_item, boundaries: segment_boundaries)).to be(true)
+    end
+
+    it "reads the buckets once, for every segment it was given" do
+      provider.store_for(metered_item: segment_item, boundaries: segment_boundaries)
+      provider.store_for(metered_item: segment_item, boundaries: segment_boundaries)
+
+      expect(RealtimeUsage::FetchProductBucketsService).to have_received(:call).once
+        .with(contract:, billing_segments: [billing_segment])
+    end
+
+    context "without the opt-in" do
+      let(:serve_current_usage_from_buckets) { false }
+
+      it "reads events, without asking clickhouse for buckets" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchProductBucketsService).not_to have_received(:call)
+      end
+    end
+
+    context "when the organization is not on the product events pipeline" do
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "reads events, as only that pipeline writes the product buckets" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchProductBucketsService).not_to have_received(:call)
+      end
+    end
+
+    context "with a segment the caller did not prefetch" do
+      let(:prefetched_segments) { [build(:billing_segment, organization:, contract:)] }
+
+      it "reads events" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with a segment whose window is off the bucket walls" do
+      let(:billing_segment) do
+        build(:billing_segment, organization:, customer: contract.customer, contract:, contract_rate_card:,
+          rate_properties: {"amount" => "1"}, started_at: Time.current.beginning_of_day + 7.minutes)
+      end
+
+      it "reads events rather than a window the buckets cannot cut" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchProductBucketsService).not_to have_received(:call)
+      end
+    end
+
+    context "with another window than the prefetched segment's" do
+      let(:segment_boundaries) { segment_item.aggregation_boundaries.merge(from_datetime: billing_segment.started_at + 1.day) }
+
+      it "reads events" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with a recurring metric" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+
+      it "reads events, as the product buckets hold no snapshot to carry the units over" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with a card billed in advance" do
+      let(:billing_timing) { :advance }
+
+      it "reads events" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+        expect(RealtimeUsage::FetchProductBucketsService).not_to have_received(:call)
+      end
+    end
+
+    context "with the event of a pay-in-advance fee" do
+      let(:filters) { {event: build(:common_event)} }
+
+      it "reads events" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the buckets hold nothing for the window" do
+      let(:bucket_set) { Events::Stores::UsageBucketSet.new }
+
+      it "reads events, as an empty read is no proof the pipeline wrote the window" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+  end
 end
