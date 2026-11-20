@@ -49,7 +49,51 @@ module UsageMonitoring
       STI_MAPPING.invert.fetch(name)
     end
 
+    # The whole contract counts every metered card, a product its default card and each of its filter cards,
+    # a product filter its one card. A contract prices each slice once per date, so no event counts twice.
+    def cards_in_scope(usage)
+      usage.rate_card_usages.select do |card_usage|
+        rate_card = card_usage.contract_rate_card.rate_card
+
+        if product_id.nil?
+          rate_card.product.metered?
+        else
+          rate_card.product_id == product_id && (product_filter_id.nil? || rate_card.product_filter_id == product_filter_id)
+        end
+      end
+    end
+
+    # nil when no card prices the scope, so the alert is skipped rather than evaluated at 0
+    def find_value(usage)
+      cards = cards_in_scope(usage)
+      cards.sum(BigDecimal(0)) { card_value(it) } if cards.any?
+    end
+
+    # Each card in scope, keyed by its id, with the start of the window it measures and its value, in the shape
+    # previous_windows stores them. A recurring metric carries its usage over renewals, so its card has no window.
+    def windows_in_scope(usage)
+      cards_in_scope(usage).to_h do |card_usage|
+        started_at = card_usage.billing_segment.started_at.utc.iso8601(6) unless recurring_card?(card_usage)
+        [card_usage.contract_rate_card.id, {"started_at" => started_at, "value" => card_value(card_usage).to_s("F")}]
+      end
+    end
+
+    # False once the card left the scope (a new version of the slice, a replacement contract) or renewed its window
+    def same_window?(contract_rate_card_id, window)
+      previous_windows.key?(contract_rate_card_id) && !window.nil? &&
+        previous_windows[contract_rate_card_id]["started_at"] == window["started_at"]
+    end
+
+    def card_value(_card_usage)
+      raise NotImplementedError
+    end
+
     private
+
+    def recurring_card?(card_usage)
+      billable_metric = card_usage.contract_rate_card.rate_card.product.billable_metric
+      billable_metric.present? && billable_metric.recurring?
+    end
 
     # Units of different products do not add up, and a filter only narrows its own product
     def need_product?
