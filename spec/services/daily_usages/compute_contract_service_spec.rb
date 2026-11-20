@@ -12,8 +12,9 @@ RSpec.describe DailyUsages::ComputeContractService do
   let(:product) { create(:product, :metered, organization:, billable_metric:) }
   let(:product_filter) { nil }
   let(:rate_card) { create(:rate_card, organization:, product:, product_filter:, currency: "EUR") }
+  let(:billing_scope) { "cycle" }
   let(:contract_rate_card) do
-    create(:contract_rate_card, organization:, contract:, rate_card:,
+    create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
       effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
   end
   let(:timestamp) { Time.zone.parse("2027-02-11 00:05:00") }
@@ -312,19 +313,36 @@ RSpec.describe DailyUsages::ComputeContractService do
       create_event(Time.zone.parse("2027-02-10 03:00:00")) # Feb 10, 12:00 in Tokyo, after it
     end
 
-    it "records the segment that ended during the day and the one that started" do
-      daily_usages = result.daily_usages.map(&:reload).sort_by(&:from_datetime)
+    it "records the cycle in one row, with the usage of both rates" do
+      daily_usage = result.daily_usages.sole.reload
 
-      expect(daily_usages.map(&:usage_date)).to eq([Date.new(2027, 2, 10)] * 2)
+      expect(daily_usage).to have_attributes(
+        usage_date: Date.new(2027, 2, 10),
+        from_datetime: Time.zone.parse("2027-01-31 15:00:00"), # Feb 1 in Tokyo
+        to_datetime: BillingSegment.inclusive_end(Time.zone.parse("2027-02-28 15:00:00"))
+      )
+      # The Feb 5 and Feb 10 05:00 events at 2 EUR, and the Feb 10 12:00 event at 3 EUR.
+      expect(daily_usage.usage["amount_cents"]).to eq(700)
+      expect(daily_usage.usage_diff["amount_cents"]).to eq(500) # 700 - 200 on Feb 5
+    end
 
-      ended, started = daily_usages
-      expect(ended.to_datetime).to eq(BillingSegment.inclusive_end(boundary))
-      expect(ended.usage["amount_cents"]).to eq(400) # the Feb 5 and Feb 10 05:00 events at 2 EUR
-      expect(ended.usage_diff["amount_cents"]).to eq(200) # 400 - 200 on Feb 5
+    context "with segment billing" do
+      let(:billing_scope) { "segment" }
 
-      expect(started.from_datetime).to eq(boundary)
-      expect(started.usage["amount_cents"]).to eq(300) # the Feb 10 12:00 event at 3 EUR
-      expect(started.usage_diff).to eq(started.usage)
+      it "records the segment that ended during the day and the one that started" do
+        daily_usages = result.daily_usages.map(&:reload).sort_by(&:from_datetime)
+
+        expect(daily_usages.map(&:usage_date)).to eq([Date.new(2027, 2, 10)] * 2)
+
+        ended, started = daily_usages
+        expect(ended.to_datetime).to eq(BillingSegment.inclusive_end(boundary))
+        expect(ended.usage["amount_cents"]).to eq(400) # the Feb 5 and Feb 10 05:00 events at 2 EUR
+        expect(ended.usage_diff["amount_cents"]).to eq(200) # 400 - 200 on Feb 5
+
+        expect(started.from_datetime).to eq(boundary)
+        expect(started.usage["amount_cents"]).to eq(300) # the Feb 10 12:00 event at 3 EUR
+        expect(started.usage_diff).to eq(started.usage)
+      end
     end
   end
 
@@ -339,11 +357,22 @@ RSpec.describe DailyUsages::ComputeContractService do
       create_event(Time.zone.parse("2027-02-10 14:00:00"))
     end
 
-    it "records each of the three segments of the day" do
-      daily_usages = result.daily_usages.map(&:reload).sort_by(&:from_datetime)
+    it "records the cycle in one row, named by the latest rate that priced it" do
+      daily_usage = result.daily_usages.sole.reload
 
-      expect(daily_usages.map { |du| du.usage["amount_cents"] }).to eq([200, 300, 500])
-      expect(daily_usages.drop(1).map(&:from_datetime)).to eq([Time.zone.parse("2027-02-10 06:00:00"), Time.zone.parse("2027-02-10 12:00:00")])
+      expect(daily_usage.from_datetime).to eq(Time.zone.parse("2027-02-01"))
+      expect(daily_usage.usage["amount_cents"]).to eq(1000) # one event at 2 EUR, one at 3 EUR and one at 5 EUR
+    end
+
+    context "with segment billing" do
+      let(:billing_scope) { "segment" }
+
+      it "records each of the three segments of the day" do
+        daily_usages = result.daily_usages.map(&:reload).sort_by(&:from_datetime)
+
+        expect(daily_usages.map { |du| du.usage["amount_cents"] }).to eq([200, 300, 500])
+        expect(daily_usages.drop(1).map(&:from_datetime)).to eq([Time.zone.parse("2027-02-10 06:00:00"), Time.zone.parse("2027-02-10 12:00:00")])
+      end
     end
   end
 end
