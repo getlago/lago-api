@@ -172,6 +172,19 @@ describe ContractWallets::CreateService do
         expect(result).to be_success
       end
     end
+
+    context "when a concurrent request wrote it after the uniqueness check" do
+      let(:uniqueness_check) { CatalogWallet.validators_on(:code).grep(ActiveRecord::Validations::UniquenessValidator).sole }
+
+      before { allow(uniqueness_check).to receive(:validate_each) }
+
+      it "fails on the code and writes nothing" do
+        expect { result }.not_to change(CatalogWallet, :count)
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({code: ["value_already_exist"]})
+      end
+    end
   end
 
   context "when another contract has a wallet with that code" do

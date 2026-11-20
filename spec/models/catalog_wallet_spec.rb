@@ -84,6 +84,33 @@ describe CatalogWallet do
           expect(catalog_wallet.errors.details[:currency].map { it[:error] }).to eq([:inclusion])
         end
       end
+
+      context "when the contract has a plan in another currency than its customer" do
+        let(:contract) { create(:contract, customer:, catalog_plan: create(:catalog_plan, currency: "EUR")) }
+
+        it "rejects the currency of the customer" do
+          expect(catalog_wallet).not_to be_valid
+          expect(catalog_wallet.errors.where(:currency, :currency_does_not_match)).to be_present
+        end
+
+        context "with the currency of the plan" do
+          let(:currency) { "EUR" }
+
+          it "accepts it" do
+            expect(catalog_wallet).to be_valid
+          end
+        end
+      end
+
+      context "when a saved wallet no longer has the currency of its contract" do
+        let(:currency) { "EUR" }
+
+        before { catalog_wallet.save!(validate: false) }
+
+        it "accepts other changes" do
+          expect(catalog_wallet.update(name: "Renamed")).to be(true)
+        end
+      end
     end
   end
 end
