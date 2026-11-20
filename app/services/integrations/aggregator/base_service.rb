@@ -11,6 +11,8 @@ module Integrations
       TASK_IN_PROGRESS_PATTERN = /\bTask\b.*\bis in progress\b/
       TASK_EXPIRED_PATTERN = /\bTask\b.*\bexpired\b/
       ORCHESTRATOR_FAILURE_PATTERN = %r{POST https?://nango-orchestrator-svc\.nango/v1/immediate failed}
+      # NOTE: Providers whose throttled jobs wait for the next rate limit window instead of backing off
+      NEXT_WINDOW_RETRY_PROVIDERS = %i[quickbooks].freeze
 
       def self.retryable_errors
         [
@@ -74,10 +76,18 @@ module Integrations
       def throttle!(*providers)
         providers.each do |provider_name|
           if provider == provider_name.to_s
-            raise BaseService::ThrottlingError.new(provider_name:) \
+            raise throttling_error(provider_name) \
               unless Throttling.for(provider_name.to_sym).check(:client, throttle_key)
           end
         end
+      end
+
+      def throttling_error(provider_name)
+        if NEXT_WINDOW_RETRY_PROVIDERS.include?(provider_name.to_sym)
+          return BaseService::NextWindowThrottlingError.new(provider_name:)
+        end
+
+        BaseService::ThrottlingError.new(provider_name:)
       end
 
       def throttle_key

@@ -32,6 +32,25 @@ class BaseService
     end
   end
 
+  # Raised when a provider's rate limit is reached and the job should simply wait for the next window.
+  # It deliberately does not inherit from ThrottlingError, so existing `retry_on` and `rescue` are unaffected.
+  class NextWindowThrottlingError < StandardError
+    DEFAULT_RETRY_AFTER = 60.seconds
+
+    attr_reader :provider_name, :retry_after
+
+    def initialize(provider_name: nil, retry_after: DEFAULT_RETRY_AFTER)
+      @provider_name = provider_name
+      @retry_after = retry_after
+
+      super(message)
+    end
+
+    def message
+      "Service #{provider_name} is rate limited. Retrying at the next window."
+    end
+  end
+
   class NotFoundFailure < FailedResult
     attr_reader :resource
 
