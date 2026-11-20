@@ -2,6 +2,10 @@
 
 module UsageMonitoring
   class ContractUsageAmountAlert < ContractAlert
+    # Before tax, in cents of the contract currency, like the thresholds
+    def card_value(card_usage)
+      BigDecimal(card_usage.amount_cents)
+    end
   end
 end
 

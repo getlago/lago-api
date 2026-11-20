@@ -2,6 +2,9 @@
 
 module UsageMonitoring
   class ContractUsageUnitsAlert < ContractAlert
+    def card_value(card_usage)
+      card_usage.units
+    end
   end
 end
 
