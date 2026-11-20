@@ -63,11 +63,15 @@ RSpec.describe Api::V2::ContractRateCardsController do
     end
 
     context "when a terminated contract reuses the external id" do
+      subject do
+        post_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards?contract_code=#{contract.code}", {applied_rate_card: create_params})
+      end
+
       let!(:terminated) do
         create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
       end
 
-      it "attaches to the live contract, not the terminated sibling" do
+      it "attaches to the contract identified by its code" do
         subject
 
         expect(response).to have_http_status(:success)
