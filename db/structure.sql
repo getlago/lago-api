@@ -522,6 +522,7 @@ DROP INDEX IF EXISTS public.index_wallets_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallets_invoice_custom_sections_on_organization_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_pending_gated_top_ups;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_payment_method_id;
@@ -14104,6 +14105,13 @@ CREATE INDEX index_wallet_transactions_on_wallet_id ON public.wallet_transaction
 
 
 --
+-- Name: index_wallet_transactions_pending_gated_top_ups; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_transactions_pending_gated_top_ups ON public.wallet_transactions USING btree (created_at) WHERE ((status = 0) AND (transaction_type = 0) AND invoice_requires_successful_payment);
+
+
+--
 -- Name: index_wallets_invoice_custom_sections_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -18124,6 +18132,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261119120000'),
 ('20261118162728'),
 ('20261118162726'),
 ('20261118155959'),

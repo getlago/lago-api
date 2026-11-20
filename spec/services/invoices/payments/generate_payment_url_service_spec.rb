@@ -101,6 +101,18 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       end
     end
 
+    context "when invoice is closed" do
+      before { invoice.update!(status: :closed) }
+
+      it "returns an error" do
+        result = generate_payment_url_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["invalid_invoice_status_or_payment_status"])
+      end
+    end
+
     context "when provider service return a third party error" do
       let(:provider) { "cashfree" }
       let(:code) { "cashfree_1" }

@@ -26,6 +26,7 @@ module Wallets
         pending_credits: pending_transactions_amount
       )
       return result if paid_credits.positive? && backing_off_after_decline?
+      return result if paid_credits.positive? && cannot_be_charged?
 
       burst_top_ups = top_ups_since(BURST_WINDOW)
       if burst_top_ups >= BURST_TOP_UPS
@@ -59,6 +60,8 @@ module Wallets
 
     attr_reader :wallet, :state_changed
 
+    delegate :customer, to: :wallet
+
     def rule
       @rule ||= wallet.recurring_transaction_rules.active.where(trigger: :threshold).first
     end
@@ -74,6 +77,41 @@ module Wallets
       return false if last_decline_at < DECLINE_BACKOFF.ago
 
       !paid_top_up_settled_since?(last_decline_at)
+    end
+
+    # A top-up that requires a successful payment and that nothing charges expires after an hour
+    # (WalletTransactions::ExpirePendingService), and the rule would then start another one, endlessly.
+    # Same conditions as Invoices::Payments::CreateService#should_process_payment?: the rule waits
+    # until the customer can be charged. A rule or wallet paid by hand (manual) is left alone.
+    def cannot_be_charged?
+      return false unless rule.invoice_requires_successful_payment?
+      return false if rule.payment_method_type == "manual" || wallet.payment_method_type == "manual"
+
+      provider_customer = customer.provider_customer
+      return true if provider_customer&.provider_customer_id.blank?
+      return false if stripe_customer_balance_only?(provider_customer)
+      return false if provider_payment_method_pending_backfill?(provider_customer)
+
+      top_up_payment_method.nil?
+    end
+
+    def top_up_payment_method
+      payment_method_id = rule.payment_method_id || wallet.payment_method_id
+      return customer.payment_methods.find_by(id: payment_method_id) if payment_method_id
+
+      customer.default_payment_method
+    end
+
+    # A Stripe bank transfer customer has no payment method, and is still charged through its cash balance
+    def stripe_customer_balance_only?(provider_customer)
+      provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
+        provider_customer.provider_payment_methods == ["customer_balance"]
+    end
+
+    def provider_payment_method_pending_backfill?(provider_customer)
+      legacy_id = provider_customer.legacy_provider_method_id
+      legacy_id.present? &&
+        provider_customer.payment_methods.with_discarded.where(provider_method_id: legacy_id).none?
     end
 
     def paid_top_up_settled_since?(timestamp)

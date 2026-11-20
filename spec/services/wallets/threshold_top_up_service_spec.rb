@@ -83,6 +83,17 @@ RSpec.describe Wallets::ThresholdTopUpService do
           invoice_requires_successful_payment: true
         )
       end
+      let(:customer) { wallet.customer }
+      let(:stripe_provider) { create(:stripe_provider, organization: customer.organization) }
+      let(:stripe_customer) do
+        create(:stripe_customer, customer:, organization: customer.organization, payment_provider: stripe_provider, provider_payment_methods:)
+      end
+      let(:provider_payment_methods) { %w[card] }
+
+      before do
+        customer.update!(payment_provider: :stripe, payment_provider_code: stripe_provider.code)
+        create(:payment_method, customer:, payment_provider_customer: stripe_customer)
+      end
 
       it "calls wallet transaction create job with expected params" do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
@@ -91,6 +102,45 @@ RSpec.describe Wallets::ThresholdTopUpService do
             params: hash_including(invoice_requires_successful_payment: true),
             unique_transaction: true
           )
+      end
+
+      # Otherwise the top-up expires after an hour and the rule starts another one, endlessly
+      context "when the customer has no payment method to charge" do
+        before { customer.payment_methods.each(&:discard!) }
+
+        it "does not call wallet transaction create job" do
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+
+        context "when the customer pays by bank transfer" do
+          let(:provider_payment_methods) { %w[customer_balance] }
+
+          it "calls wallet transaction create job, since the cash balance pays it" do
+            expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          end
+        end
+
+        context "when the rule is paid by hand" do
+          before { recurring_transaction_rule.update!(payment_method_type: :manual) }
+
+          it "calls wallet transaction create job" do
+            expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          end
+        end
+      end
+
+      context "when the customer has no payment provider" do
+        before { customer.update!(payment_provider: nil, payment_provider_code: nil) }
+
+        it "does not call wallet transaction create job" do
+          expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+        end
+      end
+    end
+
+    context "when the rule does not require a successful payment and the customer has no payment method" do
+      it "calls wallet transaction create job, as before" do
+        expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
       end
     end
 
