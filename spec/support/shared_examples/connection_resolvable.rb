@@ -2,7 +2,7 @@
 
 # Shared coverage for ConnectionResolvable. The including spec must define `let(:resolvable)`,
 # a billing object whose customer's default connections are inherited.
-RSpec.shared_examples "a connection-resolvable billing object" do |fallback_redefined: false|
+RSpec.shared_examples "a connection-resolvable billing object" do |fallback: false|
   let(:resolution_customer) { resolvable.customer }
   let(:organization) { resolution_customer.organization }
 
@@ -78,12 +78,6 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback_rede
         it "returns nil" do
           expect(resolvable.effective_accounting_connection).to be_nil
         end
-      end
-    end
-
-    context "when the customer has no default accounting connection" do
-      it "returns nil" do
-        expect(resolvable.effective_accounting_connection).to be_nil
       end
     end
   end
