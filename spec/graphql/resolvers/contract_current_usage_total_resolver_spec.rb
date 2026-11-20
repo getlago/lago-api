@@ -79,6 +79,68 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
       )
     end
 
+    context "with rate cards in and out of a product category" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!) {
+            contractCurrentUsageTotal(contractId: $contractId) {
+              amountCents
+              taxesAmountCents
+              totalAmountCents
+              productCategoryTotals {
+                productCategory { id name }
+                amountCents
+                taxesAmountCents
+                totalAmountCents
+                fromDatetime
+                toDatetime
+              }
+            }
+          }
+        GQL
+      end
+      let(:product_category) { create(:product_category, organization:, name: "Compute") }
+      let(:category_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+      let(:category_product) do
+        create(:product, :metered, organization:, product_category:, billable_metric: category_metric)
+      end
+      let(:category_rate_card) do
+        create(:rate_card, organization:, product: category_product, billing_timing: :arrears, currency: "EUR")
+      end
+
+      before do
+        create(:contract_rate_card, organization:, contract:, rate_card: category_rate_card,
+          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 15))
+        create(:rate_card_rate, organization:, rate_card: category_rate_card,
+          effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "3"})
+        create(:rate_card_applied_tax, rate_card: category_rate_card, tax: create(:tax, organization:, rate: 20))
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: category_metric.code, timestamp: Time.zone.parse("2027-02-05"))
+      end
+
+      it "splits the total by product category, each with its own taxes and window" do
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:, variables: {contractId: contract.id}
+        )
+
+        totals = result["data"]["contractCurrentUsageTotal"]
+        expect(totals).to include("amountCents" => "500", "taxesAmountCents" => "60", "totalAmountCents" => "560")
+        expect(totals["productCategoryTotals"]).to contain_exactly(
+          {
+            "productCategory" => nil,
+            "amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200",
+            "fromDatetime" => "2027-02-01T00:00:00Z", "toDatetime" => "2027-02-28T23:59:59Z"
+          },
+          {
+            "productCategory" => {"id" => product_category.id, "name" => "Compute"},
+            "amountCents" => "300", "taxesAmountCents" => "60", "totalAmountCents" => "360",
+            "fromDatetime" => "2027-01-15T00:00:00Z", "toDatetime" => "2027-02-14T23:59:59Z"
+          }
+        )
+      end
+    end
+
     context "when the tax provider fails" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:endpoint) { "https://api.nango.dev/action/trigger" }

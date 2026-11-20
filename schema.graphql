@@ -2056,6 +2056,30 @@ type ContractCollection {
 }
 
 """
+The share of a contract's current usage total priced by one product category
+"""
+type ContractCurrentUsageCategoryTotal {
+  amountCents: BigInt!
+
+  """
+  Earliest billing window start across the category's rate cards
+  """
+  fromDatetime: ISO8601DateTime!
+
+  """
+  Null for the products that belong to no category
+  """
+  productCategory: ProductCategory
+  taxesAmountCents: BigInt!
+
+  """
+  Latest billing window end across the category's rate cards
+  """
+  toDatetime: ISO8601DateTime!
+  totalAmountCents: BigInt!
+}
+
+"""
 The contract's total computed usage for the current billing period, unfiltered
 """
 type ContractCurrentUsageTotal {
@@ -2065,6 +2089,11 @@ type ContractCurrentUsageTotal {
   Earliest billing window start across the contract's rate cards, null with no usage
   """
   fromDatetime: ISO8601DateTime
+
+  """
+  The total split by product category, each one priced and taxed in the same pass as the total
+  """
+  productCategoryTotals: [ContractCurrentUsageCategoryTotal!]!
   taxesAmountCents: BigInt!
 
   """
