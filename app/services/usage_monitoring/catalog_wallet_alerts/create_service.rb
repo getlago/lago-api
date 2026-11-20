@@ -2,7 +2,7 @@
 
 module UsageMonitoring
   module CatalogWalletAlerts
-    class CreateService < UsageMonitoring::BaseService
+    class CreateService < BaseService
       Result = BaseResult[:alert]
 
       def initialize(plan_wallet:, params:)
@@ -22,12 +22,8 @@ module UsageMonitoring
           return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
         end
 
-        thresholds_result = Thresholds::ValidateService.call(thresholds: params[:thresholds])
-        return result.fail_with_error!(thresholds_result.error) unless thresholds_result.success?
-
-        unless wallet_thresholds?
-          return result.single_validation_failure!(field: :thresholds, error_code: "value_is_invalid")
-        end
+        validate_thresholds(params[:thresholds], params[:alert_type].to_s)
+        return result unless result.success?
 
         # Template writes lock the plan wallet, so a contract copying its templates sees one version of them
         plan_wallet.with_lock do
@@ -55,25 +51,6 @@ module UsageMonitoring
       attr_reader :plan_wallet, :params
 
       delegate :organization, to: :plan_wallet
-
-      # Wallet values are cents: a fraction is refused rather than truncated. A balance never goes below 0, so a
-      # balance alert has no line below it either, a recurring one included
-      def wallet_thresholds?
-        params[:thresholds].all? { BigDecimal(it[:value].to_s).frac.zero? } &&
-          (params[:alert_type].to_s != "balance" || lowest_line(params[:thresholds]) >= 0)
-      end
-
-      # A recurring step adds lines below the lowest one-time threshold, from 0 when there is none
-      def lowest_line(thresholds)
-        recurring, one_time = thresholds.partition { ActiveModel::Type::Boolean.new.cast(it[:recurring]) }
-        lowest = one_time.map { BigDecimal(it[:value].to_s) }.min
-
-        if recurring.empty?
-          lowest
-        else
-          (lowest || 0) - BigDecimal(recurring.first[:value].to_s)
-        end
-      end
     end
   end
 end
