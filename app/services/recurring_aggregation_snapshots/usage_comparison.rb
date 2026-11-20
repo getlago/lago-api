@@ -70,10 +70,10 @@ module RecurringAggregationSnapshots
       (values || {}).transform_values { it&.to_s }
     end
 
-    # BillableMetrics::Aggregations::WeightedSumService#latest_snapshots, SumService#delta_period:
-    # a weighted sum only starts from a period closing right before its own.
+    # Sum reads any period (SumService#delta_period), weighted sum WeightedSumService#latest_snapshots' rule
     def starts_from_period?(billable_metric, period, from_datetime)
-      !billable_metric.weighted_sum_agg? || period.to_datetime.between?(from_datetime - 1.second, from_datetime)
+      !billable_metric.weighted_sum_agg? ||
+        period.weighted_sum_start?(from_datetime) { billing_context.last_billed_charges_to_datetime(before: from_datetime) }
     end
   end
 end
