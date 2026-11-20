@@ -86,7 +86,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
   context "when the wallet was inserted before" do
     let(:catalog_wallet) { CatalogWallet.find(create(:catalog_wallet, organization:).id) }
 
-    it "copies nothing, so running the copy again cannot duplicate alerts" do
+    it "copies nothing onto a wallet it did not just insert" do
       expect { result }.not_to change(UsageMonitoring::CatalogWalletAlert, :count)
       expect(result.alerts).to be_empty
     end
