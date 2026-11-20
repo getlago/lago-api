@@ -47,6 +47,10 @@ RSpec.describe BillingEntities::CreateService do
         before { result }
       end
 
+      it "tracks the creation only after commit" do
+        expect { result }.to have_enqueued_job_after_commit(SegmentTrackJob)
+      end
+
       it "mirrors the default alias into the structured payment term when net_payment_term is not provided" do
         expect(result).to be_success
         expect(result.billing_entity.reload.net_payment_term).to eq(0)

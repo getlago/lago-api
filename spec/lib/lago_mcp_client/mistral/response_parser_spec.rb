@@ -43,6 +43,16 @@ RSpec.describe LagoMcpClient::Mistral::ResponseParser do
         expect(chunks).to be_empty
       end
 
+      it "yields only the text of structured content" do
+        chunks = []
+
+        parser.process({type: "message.output.delta", content: {type: "thinking", thinking: [{type: "text", text: "Let me check"}]}}.to_json) { |c| chunks << c }
+        parser.process({type: "message.output.delta", content: {type: "text", text: "Here are"}}.to_json) { |c| chunks << c }
+        parser.process({type: "message.output.delta", content: [{type: "text", text: " the invoices"}]}.to_json) { |c| chunks << c }
+
+        expect(chunks).to eq(["Here are", " the invoices"])
+      end
+
       it "does not yield when no block given" do
         expect { parser.process({type: "message.output.delta", content: "Hello"}.to_json) }.not_to raise_error
       end

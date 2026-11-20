@@ -55,6 +55,59 @@ RSpec.describe Roles::UpdateService do
       end
     end
 
+    context "when the organization has a sandbox" do
+      let(:production) { create(:organization, :with_sandbox) }
+      let(:acting_membership) { create(:membership, organization: production, roles: %i[admin]) }
+      let(:role) { create(:role, organization: production, code: "old_role", name: "Old Name", permissions: %w[customers:view]) }
+
+      before { create(:role, organization: production.sandbox_organization, code: "old_role", name: "Old Name", permissions: %w[customers:view]) }
+
+      it "updates the sandbox copy" do
+        expect(result).to be_success
+        expect(production.sandbox_organization.roles.sole).to have_attributes(name: "New Name",
+          description: "New description", permissions: %w[customers:view plans:view])
+      end
+    end
+
+    context "when another edit committed after the role was loaded" do
+      let(:params) { {name: "New Name"} }
+
+      before do
+        role
+        Role.find(role.id).update!(name: "Other Name", permissions: %w[customers:view])
+      end
+
+      it "logs the diff from the committed edit and keeps its other changes" do
+        expect(result).to be_success
+        expect(role.reload).to have_attributes(name: "New Name", permissions: %w[customers:view])
+        expect(security_logger).to have_received(:produce).with(organization:, log_type: "role",
+          log_event: "role.updated", resources: {role_code: "old_role", name: {deleted: "Other Name", added: "New Name"}})
+      end
+    end
+
+    context "when the role was deleted after it was loaded" do
+      before do
+        role
+        Role.find(role.id).discard!
+      end
+
+      it "answers that the role is not found" do
+        expect(result.error.error_code).to eq("role_not_found")
+        expect(Role.with_discarded.find(role.id).name).to eq("Old Name")
+      end
+    end
+
+    context "when the role belongs to a sandbox" do
+      let(:sandbox) { create(:organization, :sandbox) }
+      let(:acting_membership) { create(:membership, organization: sandbox, roles: %i[admin]) }
+      let(:role) { create(:role, organization: sandbox, name: "Old Name") }
+
+      it "refuses it" do
+        expect(result.error.code).to eq("sandbox_managed_by_production")
+        expect(role.reload.name).to eq("Old Name")
+      end
+    end
+
     context "when the acting member is not an admin" do
       let(:acting_membership) { create(:membership, organization:, role: acting_role) }
       let(:acting_role) { create(:role, :custom, organization:, permissions: %w[roles:update customers:view customers:create addons:view]) }

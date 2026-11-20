@@ -23,6 +23,19 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(json[:rate_phases].map { |phase| phase[:code] }).to eq([rate_phase.code])
     end
 
+    context "with pagination parameters" do
+      subject do
+        get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases", {page: 2, limit: 1})
+      end
+
+      it "returns a bad request error for each parameter" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details]).to eq([{code: "not_paginated", field: "page", meta: {}}, {code: "not_paginated", field: "limit", meta: {}}])
+      end
+    end
+
     context "when the plan rate card does not exist" do
       subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/unknown/rate_phases") }
 

@@ -129,6 +129,20 @@ module Billing
       raise_contract_context_not_supported(:downgraded?)
     end
 
+    # End of the latest charges period a periodic or terminating invoice billed before the time given.
+    # Loaded once per context, as every filter and group of a charge aggregates with the same one.
+    def last_billed_charges_to_datetime(before:)
+      return unless subscription?
+
+      @last_billed_charges_to_datetime ||= {}
+      return @last_billed_charges_to_datetime[before] if @last_billed_charges_to_datetime.key?(before)
+
+      @last_billed_charges_to_datetime[before] = record.invoice_subscriptions
+        .where(invoicing_reason: %i[subscription_periodic subscription_terminating])
+        .where(charges_to_datetime: ...before)
+        .maximum(:charges_to_datetime)
+    end
+
     private
 
     attr_reader :record

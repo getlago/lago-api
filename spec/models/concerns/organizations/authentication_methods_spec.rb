@@ -118,6 +118,23 @@ RSpec.describe Organizations::AuthenticationMethods do
       end
     end
 
+    context "with a sandbox" do
+      let(:sandbox) do
+        create(:organization, :sandbox, production_organization: organization, authentication_methods: %w[email_password okta])
+      end
+
+      it "lets the sandbox accept the SSO sessions of its production, not the reverse" do
+        expect(sandbox.accessible_by_session?(login_method: okta, sso_organization_id: organization.id)).to be(true)
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: sandbox.id)).to be(false)
+      end
+
+      it "still requires the login method on the sandbox" do
+        sandbox.update!(authentication_methods: %w[email_password])
+
+        expect(sandbox.accessible_by_session?(login_method: okta, sso_organization_id: organization.id)).to be(false)
+      end
+    end
+
     context "when the organization allows Okta without an Okta integration" do
       it "refuses a session from another organization" do
         expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: SecureRandom.uuid, sso_issuer: "acme.okta.com")).to be(false)

@@ -29,6 +29,9 @@ module CatalogPlans
         catalog_plan.applied_rate_cards.to_a.each do |plan_rate_card|
           PlanRateCards::DestroyService.call!(plan_rate_card:, emit_events: false)
         end
+        catalog_plan.wallets.to_a.each do |plan_wallet|
+          PlanWallets::DestroyService.call!(plan_wallet:, emit_events: false)
+        end
         catalog_plan.discard!
         SendWebhookJob.perform_after_commit("plan.deleted", catalog_plan)
       end

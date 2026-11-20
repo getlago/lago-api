@@ -34,6 +34,8 @@ class Contract < ApplicationRecord
   belongs_to :payment_method, optional: true
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
+  has_many :wallets, class_name: "CatalogWallet"
+  has_many :daily_usages
   has_many :fees
   has_many :invoices, -> { distinct }, through: :fees
   has_many :applied_invoice_custom_sections,
@@ -42,6 +44,12 @@ class Contract < ApplicationRecord
   has_many :selected_invoice_custom_sections,
     through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
+  has_many :contract_alerts,
+    ->(contract) { where(organization_id: contract.organization_id) },
+    class_name: "UsageMonitoring::ContractAlert",
+    foreign_key: :contract_external_id,
+    primary_key: :external_id
+  has_one :contract_activity, class_name: "UsageMonitoring::ContractActivity"
 
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
