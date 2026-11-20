@@ -11,10 +11,11 @@ describe V2::ContractWalletSerializer do
 
   let(:contract_wallet) do
     create(:catalog_wallet, organization:, customer:, contract:, code: "ai_credits", name: "AI credits",
-      invoice_display_name: "Prepaid credits", currency:, tax_application: "tax_on_purchase", priority: 10,
-      top_up_min_amount_cents: 1000, top_up_max_amount_cents: 50_000, balance_cents: 43_000, terminated_at:, deleted_at:)
+      invoice_display_name: "Prepaid credits", currency: "USD", tax_application: "tax_on_purchase", priority: 10,
+      top_up_min_amount_cents: 1000, top_up_max_amount_cents: 50_000, balance_cents: 43_000, ongoing_balance_cents: 41_500,
+      last_ongoing_balance_sync_at:, terminated_at:, deleted_at:)
   end
-  let(:currency) { "USD" }
+  let(:last_ongoing_balance_sync_at) { Time.zone.parse("2026-09-30 08:30:00") }
   let(:terminated_at) { nil }
   let(:deleted_at) { nil }
   let(:options) { {} }
@@ -32,8 +33,9 @@ describe V2::ContractWalletSerializer do
       applies_to: {include: []},
       top_up_min_amount_cents: 1000,
       top_up_max_amount_cents: 50_000,
-      balance: "430.00",
-      ongoing_balance: "430.00",
+      balance_cents: 43_000,
+      ongoing_balance_cents: 41_500,
+      last_ongoing_balance_sync_at: "2026-09-30T08:30:00Z",
       terminated_at: nil,
       created_at: contract_wallet.created_at.iso8601,
       updated_at: contract_wallet.updated_at.iso8601,
@@ -41,15 +43,15 @@ describe V2::ContractWalletSerializer do
     }
   end
 
-  it "serializes the wallet, open to every fee, with its balances as decimal strings" do
+  it "serializes the wallet, open to every fee, with its stored balances" do
     expect(payload).to eq(flat_payload)
   end
 
-  context "when the currency has no minor unit" do
-    let(:currency) { "JPY" }
+  context "when the ongoing balance was never synced" do
+    let(:last_ongoing_balance_sync_at) { nil }
 
-    it "renders the balances without decimals" do
-      expect(payload).to eq(flat_payload.merge(currency: "JPY", balance: "43000", ongoing_balance: "43000"))
+    it "renders a null sync timestamp" do
+      expect(payload).to eq(flat_payload.merge(last_ongoing_balance_sync_at: nil))
     end
   end
 

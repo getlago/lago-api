@@ -4,7 +4,7 @@ module V2
   class ContractWalletSerializer < ModelSerializer
     include WalletAppliesTo
 
-    timestamps :terminated_at, :created_at, :updated_at, :deleted_at
+    timestamps :last_ongoing_balance_sync_at, :terminated_at, :created_at, :updated_at, :deleted_at
 
     expandable :taxes, serializer: ::V2::TaxSerializer
     expandable :metadata, serializer: ::V1::MetadataSerializer
@@ -25,16 +25,12 @@ module V2
         applies_to:,
         top_up_min_amount_cents: model.top_up_min_amount_cents,
         top_up_max_amount_cents: model.top_up_max_amount_cents,
-        balance:,
-        # Usage not invoiced yet is not deducted so far, so the ongoing balance reads as the balance.
-        ongoing_balance: balance
+        balance_cents: model.balance_cents,
+        ongoing_balance_cents: model.ongoing_balance_cents
       }
     end
 
     private
-
-    # A decimal string in the wallet currency, at its minor-unit precision.
-    def balance = Money.new(model.balance_cents, model.currency).to_s
 
     # The kept taxes, latest linked first.
     def taxes = model.taxes.merge(::CatalogWalletAppliedTax.order(::CursorPagination::DEFAULT_SORT))
