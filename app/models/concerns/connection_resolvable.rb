@@ -78,12 +78,9 @@ module ConnectionResolvable
     customer_default_connection(category)
   end
 
-  # PaymentProviders::DestroyService soft-deletes provider customers with update_all
-  # and leaves their billing_object_connections resulting in payment_provider_customer
-  # resolving to nil. In this case we return customer_default_connection.
   def override_connection(override, category)
     if category == CATEGORIES[:payment]
-      override.payment_provider_customer || customer_default_connection(category)
+      override.payment_provider_customer
     else
       override.integration_customer
     end
