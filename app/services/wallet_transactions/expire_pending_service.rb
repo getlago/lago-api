@@ -16,6 +16,8 @@ module WalletTransactions
     Result = BaseResult[:wallet_transaction]
 
     TIMEOUT = 1.hour
+    # Paid by hand (manual payment method): nothing charges it, the merchant records the payment
+    PAID_BY_HAND_TIMEOUT = 24.hours
     # The provider never expires a bank transfer waiting for its wire
     BANK_TRANSFER_TIMEOUT = 7.days
 
@@ -73,7 +75,22 @@ module WalletTransactions
       wallet_transaction.inbound? &&
         wallet_transaction.pending? &&
         wallet_transaction.invoice_requires_successful_payment? &&
-        wallet_transaction.created_at <= TIMEOUT.ago
+        wallet_transaction.created_at <= (paid_by_hand? ? PAID_BY_HAND_TIMEOUT : TIMEOUT).ago
+    end
+
+    # Same order as PaymentMethods::DetermineService#determine_credit_payment_method: the top-up's own
+    # payment method, then the active rule's for an automatic top-up, then the wallet's
+    def paid_by_hand?
+      return true if wallet_transaction.payment_method_type == "manual"
+      return false if wallet_transaction.payment_method_id.present?
+
+      if wallet_transaction.source.to_s.in?(%w[interval threshold])
+        rule = wallet_transaction.wallet.recurring_transaction_rules.active.first
+        return true if rule&.payment_method_type == "manual"
+        return false if rule&.payment_method_id.present?
+      end
+
+      wallet_transaction.wallet.payment_method_type == "manual"
     end
 
     def invoice

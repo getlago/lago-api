@@ -65,6 +65,44 @@ RSpec.describe WalletTransactions::ExpirePendingService do
     it_behaves_like "leaves the top-up pending"
   end
 
+  context "when the top-up is paid by hand" do
+    before { wallet_transaction.update!(payment_method_type: :manual) }
+
+    context "when it was created 2 hours ago" do
+      it_behaves_like "leaves the top-up pending"
+    end
+
+    context "when it was created more than 24 hours ago" do
+      let(:created_at) { 25.hours.ago }
+
+      it_behaves_like "fails the top-up"
+    end
+  end
+
+  context "when its auto top-up rule is paid by hand" do
+    before do
+      wallet_transaction.update!(source: :threshold)
+      create(:recurring_transaction_rule, wallet:, trigger: :threshold, threshold_credits: "5", payment_method_type: :manual)
+    end
+
+    it_behaves_like "leaves the top-up pending"
+
+    context "when the top-up has its own payment method" do
+      before do
+        payment_method = create(:payment_method, customer:, organization:)
+        wallet_transaction.update!(payment_method:)
+      end
+
+      it_behaves_like "fails the top-up"
+    end
+  end
+
+  context "when its wallet is paid by hand" do
+    before { wallet.update!(payment_method_type: :manual) }
+
+    it_behaves_like "leaves the top-up pending"
+  end
+
   context "when the top-up does not require a successful payment" do
     let(:invoice) { create(:invoice, :credit, organization:, customer:, status: :finalized, payment_status: :pending) }
 
