@@ -90,6 +90,60 @@ RSpec.describe Integrations::EntraIdIntegration do
     end
   end
 
+  describe ".for_login" do
+    let(:tenant_id) { SecureRandom.uuid }
+    let(:email) { "user@foo.test" }
+    let(:first_integration) { create(:entra_id_integration, tenant_id:, created_at: 2.days.ago) }
+    let(:second_integration) { create(:entra_id_integration, tenant_id:, created_at: 1.day.ago) }
+
+    before do
+      first_integration
+      second_integration
+    end
+
+    it "returns the oldest integration when the user belongs to none of their organizations" do
+      expect(described_class.for_login(email:)).to eq(first_integration)
+    end
+
+    it "returns the integration of an organization the user is an active member of" do
+      create(:membership, user: create(:user, email:), organization: second_integration.organization)
+
+      expect(described_class.for_login(email:)).to eq(second_integration)
+    end
+
+    context "when the oldest member organization does not allow Entra ID" do
+      let(:first_integration) do
+        create(:entra_id_integration, tenant_id:, created_at: 2.days.ago,
+          organization: create(:organization, authentication_methods: %w[email_password]))
+      end
+      let(:second_integration) do
+        create(:entra_id_integration, tenant_id:, created_at: 1.day.ago,
+          organization: create(:organization, authentication_methods: %w[email_password entra_id]))
+      end
+
+      before do
+        user = create(:user, email:)
+        create(:membership, user:, organization: first_integration.organization)
+        create(:membership, user:, organization: second_integration.organization)
+      end
+
+      it "returns the integration of the member organization that allows it" do
+        expect(described_class.for_login(email:)).to eq(second_integration)
+      end
+    end
+
+    it "returns the integration of the invite's organization first" do
+      expect(described_class.for_login(email:, organization_id: second_integration.organization_id)).to eq(second_integration)
+    end
+
+    it "prefers an exact primary domain match over an additional domain" do
+      additional = create(:entra_id_integration, domain: "other.test", additional_domains: ["bar.test"], created_at: 3.days.ago)
+      exact = create(:entra_id_integration, domain: "bar.test", tenant_id: additional.tenant_id, created_at: 1.day.ago)
+
+      expect(described_class.for_login(email: "user@bar.test")).to eq(exact)
+    end
+  end
+
   describe "validations" do
     it "validates uniqueness of domain" do
       expect(entra_id_integration).to be_valid
@@ -101,6 +155,29 @@ RSpec.describe Integrations::EntraIdIntegration do
       it "does not validate the record" do
         expect(entra_id_integration).not_to be_valid
         expect(entra_id_integration.errors).to include(:domain)
+      end
+    end
+
+    context "when domain already exists with the same Entra tenant" do
+      subject(:entra_id_integration) { build(:entra_id_integration, tenant_id:, additional_domains: ["de.foo.test"]) }
+
+      let(:tenant_id) { SecureRandom.uuid }
+
+      before { create(:entra_id_integration, tenant_id: tenant_id.upcase, additional_domains: ["de.foo.test"]) }
+
+      it "accepts the shared domains" do
+        expect(entra_id_integration).to be_valid
+      end
+    end
+
+    context "when domain already exists with a multi-tenant alias" do
+      subject(:entra_id_integration) { build(:entra_id_integration, tenant_id: "common") }
+
+      before { create(:entra_id_integration, tenant_id: "common") }
+
+      it "does not validate the record" do
+        expect(entra_id_integration).not_to be_valid
+        expect(entra_id_integration.errors.details[:domain]).to include(error: "domain_not_unique")
       end
     end
 
