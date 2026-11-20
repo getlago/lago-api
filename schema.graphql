@@ -383,6 +383,21 @@ enum ActivityTypeEnum {
   plan_updated
 
   """
+  plan_wallet.created
+  """
+  plan_wallet_created
+
+  """
+  plan_wallet.deleted
+  """
+  plan_wallet_deleted
+
+  """
+  plan_wallet.updated
+  """
+  plan_wallet_updated
+
+  """
   product_category.created
   """
   product_category_created
@@ -7357,6 +7372,7 @@ enum FeatureFlagEnum {
   account_tree
   catalog_wallets
   charge_filters_single_scan
+  contract_alerts
   fixed_charge_usage_delta_migration
   incremental_charge_cache
   invoice_usage_on_wallet_expiration
@@ -14799,6 +14815,11 @@ enum ResourceTypeEnum {
   PlanRateCard
   """
   plan_rate_card
+
+  """
+  PlanWallet
+  """
+  plan_wallet
 
   """
   Product

@@ -24,6 +24,9 @@ class Product < ApplicationRecord
   has_many :rate_cards
   has_many :plan_applied_rate_cards, through: :rate_cards
   has_many :contract_applied_rate_cards, through: :rate_cards
+  has_many :contract_alerts,
+    ->(product) { where(organization_id: product.organization_id) },
+    class_name: "UsageMonitoring::ContractAlert"
 
   enum :product_type, PRODUCT_TYPES, validate: true
 

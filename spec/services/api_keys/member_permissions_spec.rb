@@ -83,6 +83,14 @@ RSpec.describe ApiKeys::MemberPermissions do
       end
     end
 
+    context "when the member can view plans" do
+      let(:role) { create(:role, organization:, permissions: %w[plans:view]) }
+
+      it "grants read on their wallet templates" do
+        expect(permissions["plan_wallet"]).to eq(["read"])
+      end
+    end
+
     context "when the member can edit plans but not their charges" do
       let(:role) do
         create(:role, organization:, permissions: %w[plans:view plans:create plans:update plans:delete])
@@ -90,6 +98,10 @@ RSpec.describe ApiKeys::MemberPermissions do
 
       it "grants no write on plans" do
         expect(permissions["plan"]).to eq(["read"])
+      end
+
+      it "grants write on their wallet templates" do
+        expect(permissions["plan_wallet"]).to eq(%w[read write])
       end
 
       it "lists every resource, so that the key is valid" do

@@ -149,14 +149,26 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     end
   end
 
-  context "when the aggregation would not start from the snapshot" do
+  context "when a weighted sum snapshot closes an older period no invoice closed since" do
     let(:billable_metric) { create(:weighted_sum_billable_metric, organization:, recurring: true, field_name: "value") }
     let(:snapshot_to_datetime) { Time.zone.parse("2022-03-31").end_of_day }
     let(:snapshot_units) { 20 }
 
-    it "does not count it as read from a snapshot nor report its difference" do
-      expect(result.snapshot_charges_count).to eq(0)
-      expect(result.rows).to be_empty
+    it "counts it as read from a snapshot and reports its difference" do
+      expect(result.snapshot_charges_count).to eq(1)
+      expect(result.differences.sole).to have_attributes(charge_id: charge.id, snapshot_read: true)
+    end
+
+    context "when an invoice closed a later period" do
+      before do
+        create(:invoice_subscription, subscription:, invoicing_reason: :subscription_periodic,
+          charges_from_datetime: Time.zone.parse("2022-04-01"), charges_to_datetime: Time.zone.parse("2022-04-30").end_of_day)
+      end
+
+      it "does not count it as read from a snapshot nor report its difference" do
+        expect(result.snapshot_charges_count).to eq(0)
+        expect(result.rows).to be_empty
+      end
     end
   end
 

@@ -30,6 +30,7 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
         quote
         order_form
         order
+        plan_wallet
       ]
     )
   end
