@@ -16,6 +16,7 @@ RSpec.describe V2::ContractSerializer do
       customer:,
       catalog_plan:,
       external_id: "contract-42",
+      code: "annual",
       name: "Annual deal",
       billing_time: :anniversary,
       consolidate_invoice: false,
@@ -33,6 +34,7 @@ RSpec.describe V2::ContractSerializer do
     {
       lago_id: contract.id,
       external_id: "contract-42",
+      code: "annual",
       lago_customer_id: customer.id,
       external_customer_id: customer.external_id,
       name: "Annual deal",

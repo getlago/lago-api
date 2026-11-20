@@ -96,8 +96,11 @@ class Contract < ApplicationRecord
   end
 
   validates :external_id, presence: true
+  validates :code, presence: true, on: :create
+  validates :code, uniqueness: {scope: [:organization_id, :external_id]}, allow_nil: true, if: :will_save_change_to_code?
 
   validate :validate_started_before_ended
+  validate :validate_code_unchanged, on: :update
 
   # The anchor every attached rate card inherits by default: the explicit
   # anchor when one was signed, otherwise the day the contract starts — in
@@ -148,6 +151,12 @@ class Contract < ApplicationRecord
 
   private
 
+  def validate_code_unchanged
+    if will_save_change_to_code?
+      errors.add(:code, :value_is_not_editable)
+    end
+  end
+
   def validate_started_before_ended
     return if started_at.blank? || ended_at.blank?
     return if started_at <= ended_at
@@ -165,6 +174,7 @@ end
 #  billing_anchor_date          :date
 #  billing_time                 :enum             default("calendar"), not null
 #  canceled_at                  :datetime
+#  code                         :string
 #  consolidate_invoice          :boolean          default(TRUE), not null
 #  ended_at                     :datetime
 #  name                         :string
@@ -193,6 +203,7 @@ end
 #  index_contracts_on_live_external_id                          (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
 #  index_contracts_on_organization_id                           (organization_id)
 #  index_contracts_on_organization_id_and_external_id           (organization_id,external_id)
+#  index_contracts_on_organization_id_external_id_code          (organization_id,external_id,code) UNIQUE
 #  index_contracts_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) USING gin
 #  index_contracts_on_organization_id_name_gin_trgm_ops         (organization_id,name) USING gin
 #  index_contracts_on_payment_method_id                         (payment_method_id)

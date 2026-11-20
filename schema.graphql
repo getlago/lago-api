@@ -1973,6 +1973,7 @@ type Contract {
   billingEntityId: ID
   billingTime: ContractBillingTimeEnum!
   canceledAt: ISO8601DateTime
+  code: String
   consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
 
@@ -3689,6 +3690,7 @@ input CreateContractInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String!
   consolidateInvoice: Boolean
   endedAt: ISO8601DateTime
   externalCustomerId: String!
