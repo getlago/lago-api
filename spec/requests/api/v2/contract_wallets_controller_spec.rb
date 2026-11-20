@@ -103,6 +103,31 @@ describe Api::V2::ContractWalletsController do
       end
     end
 
+    context "when the contract has ended" do
+      let(:contract) { create(:contract, :terminated, organization:, customer:, external_id: "acme-pro") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("contract")
+      end
+    end
+
+    context "when an ended contract reuses the external id" do
+      let(:ended_contract) do
+        create(:contract, :terminated, organization:, customer:, external_id: "acme-pro", started_at: 2.months.ago)
+      end
+
+      before { create(:catalog_wallet, organization:, customer:, contract: ended_contract, code: "old_credits") }
+
+      it "leaves its wallets out" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract_wallets].map { it[:code] }).to eq(["ai_credits"])
+      end
+    end
+
     it_behaves_like "a cursor paginated v2 endpoint", collection: :contract_wallets, model: CatalogWallet do
       let(:paginated_path) { "/api/v2/contracts/#{contract.external_id}/wallets" }
       let(:create_paginated_record) { ->(created_at) { create(:catalog_wallet, organization:, customer:, contract:, created_at:) } }
