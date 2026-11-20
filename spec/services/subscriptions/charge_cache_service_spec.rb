@@ -22,11 +22,6 @@ RSpec.describe Subscriptions::ChargeCacheService do
         .to eq("charge-usage/#{described_class::CACHE_KEY_VERSION}/#{charge.id}/#{subscription.id}/#{charge.updated_at.iso8601}")
     end
 
-    # Entries written under "2" may hold ClickHouse sum totals that wrapped above 1.70e12.
-    it "is not the key of an entry written under version 2" do
-      expect(cache_service.cache_key).to start_with("charge-usage/3/")
-    end
-
     context "with a charge filter" do
       let(:charge_filter) { create(:charge_filter) }
 

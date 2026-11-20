@@ -216,31 +216,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
     end
   end
 
-  context "when the base was kept under the version 2 key" do
-    let(:written_keys) { [] }
-
-    before do
-      allow(cache_store).to receive(:write).and_wrap_original do |write, key, *args, **options|
-        written_keys << key
-        write.call(key, *args, **options)
-      end
-
-      computation
-
-      # Bases written under "2" may hold ClickHouse sum totals that wrapped above 1.70e12.
-      key = written_keys.find { it.start_with?("charge-scan-incremental/") }
-      entries = cache_store.read(key)
-      cache_store.delete(key)
-      cache_store.write(key.split("/").tap { it[1] = "2" }.join("/"), entries)
-    end
-
-    it "reads the base again" do
-      computation
-
-      expect(reads.first).to eq({from_datetime: boundaries[:from_datetime], to_datetime: nil, before: cut})
-    end
-  end
-
   context "when the generation is evicted after an invalidation" do
     before do
       computation

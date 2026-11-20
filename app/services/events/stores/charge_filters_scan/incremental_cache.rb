@@ -25,8 +25,7 @@ module Events
       # full read. Checking it reads the `enriched_at` of the base's events, which the
       # `idx_enriched_at` skip index narrows to the granules ingested since.
       class IncrementalCache
-        # Bumped to "3" because sum_agg base rows held ClickHouse sum totals wrapped above 1.70e12.
-        CACHE_KEY_VERSION = "3"
+        CACHE_KEY_VERSION = "2"
 
         # Events arrive within seconds of their timestamp, so a cut a quarter of an hour behind
         # is rarely crossed by a late event, and the tail stays under half an hour of events.

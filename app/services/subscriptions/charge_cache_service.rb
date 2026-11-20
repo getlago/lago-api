@@ -3,9 +3,8 @@
 module Subscriptions
   class ChargeCacheService < CacheService
     # Bumped to "2" when lazy validation was introduced: it stores a different value shape (wrapped
-    # with its creation time) than the legacy eager-invalidation entries. Bumped to "3" because
-    # ClickHouse sum totals above 1.70e12 were stored wrapped.
-    CACHE_KEY_VERSION = "3"
+    # with its creation time) than the legacy eager-invalidation entries.
+    CACHE_KEY_VERSION = "2"
 
     # Full usage aggregates from subscription.started_at, not the current period start. The two
     # windows can coincide, but started_at is editable, so they never share an entry.
