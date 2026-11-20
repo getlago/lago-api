@@ -14,6 +14,7 @@ RSpec.describe AddCodeToContracts do
   let(:named_contract) { create(:contract, organization:, code: "user-provided") }
 
   before do
+    ActiveRecord::Base.connection.change_column_null(:contracts, :code, true)
     Contract.where(id: [*contracts.map(&:id), foreign_contract.id]).update_all(code: nil, updated_at: 1.day.ago) # rubocop:disable Rails/SkipsModelValidations
     named_contract
   end

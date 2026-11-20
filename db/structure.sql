@@ -1024,7 +1024,6 @@ DROP INDEX IF EXISTS public.index_contracts_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_code;
-DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
@@ -3497,7 +3496,7 @@ CREATE TABLE public.contracts (
     consolidate_invoice boolean DEFAULT true NOT NULL,
     payment_method_type public.contract_payment_method_type DEFAULT 'provider'::public.contract_payment_method_type NOT NULL,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
-    code character varying
+    code character varying NOT NULL
 );
 
 
@@ -10580,13 +10579,6 @@ CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USIN
 --
 
 CREATE INDEX index_contracts_on_organization_id ON public.contracts USING btree (organization_id);
-
-
---
--- Name: index_contracts_on_organization_id_and_external_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_contracts_on_organization_id_and_external_id ON public.contracts USING btree (organization_id, external_id);
 
 
 --
@@ -18124,6 +18116,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261118191148'),
+('20261118185633'),
+('20261118185631'),
 ('20261118162728'),
 ('20261118162726'),
 ('20261118155959'),
