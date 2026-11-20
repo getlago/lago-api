@@ -1056,13 +1056,11 @@ module Events
       end
 
       # ClickHouse rewrites sum(x * ratio) into sum(x) * ratio, so the value is widened before the product.
-      # The ratio is a decimal too, as in the PostgreSQL store: a Float64 ratio makes the product inexact.
-      # It is converted from its text, as converting a Float64 to a decimal goes through a float product.
       def prorated_decimal_value(ratio)
         Arel::Nodes::InfixOperation.new(
           "*",
           Arel::Nodes::SqlLiteral.new(wide_decimal_sql("#{arel_table.name}.decimal_value")),
-          Arel::Nodes::SqlLiteral.new(wide_decimal_sql("toString(#{ratio})"))
+          Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
         )
       end
 

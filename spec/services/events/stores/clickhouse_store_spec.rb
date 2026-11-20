@@ -875,12 +875,13 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
     let(:grouped_by) { nil }
     let(:events_count) { 250 }
+    let(:event_value) { 8_000_000_000 }
 
     before do
       event_store.aggregation_property = billable_metric.field_name
       event_store.numeric_property = true
 
-      insert_events(events_count, timestamp: subscription.started_at + 1.day, value: 8_000_000_000, properties: {"region" => "europe"})
+      insert_events(events_count, timestamp: subscription.started_at + 1.day, value: event_value, properties: {"region" => "europe"})
     end
 
     describe "#sum" do
@@ -952,8 +953,26 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         result = event_store.prorated_sum(period_duration: 30, persisted_duration: 15)
 
         expect(result.value).to eq(BigDecimal("4000000000000")) # 500 events x 8e9
-        expect(result.prorated_value).to eq(BigDecimal("2000000000000")) # 4e12 x 15 / 30
+        expect(result.prorated_value).to be_within(0.01).of(2_000_000_000_000) # 4e12 x 15 / 30, Float64 ratio product
         expect(result.events_count).to eq(500)
+      end
+
+      it "returns the exact total and prorates each event over its remaining days" do
+        result = event_store.prorated_sum(period_duration: 31)
+
+        expect(result.value).to eq(BigDecimal("4000000000000")) # 500 events x 8e9
+        expect(result.prorated_value).to be_within(0.01).of(4_000_000_000_000 * 16.fdiv(31)) # 16 to 31 March, 16 of 31 days
+      end
+
+      context "with a ratio whose decimal text rounds up" do
+        let(:events_count) { 1 }
+        let(:event_value) { 31 }
+
+        it "keeps the prorated value at or below the exact product" do
+          result = event_store.prorated_sum(period_duration: 31, persisted_duration: 15)
+
+          expect(result.prorated_value.ceil(5)).to eq(15) # 31 x 15 / 31
+        end
       end
     end
 
@@ -966,7 +985,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
         expect(result.map(&:groups)).to eq([{"region" => "europe"}])
         expect(result.first.value).to eq(BigDecimal("4000000000000")) # 500 events x 8e9
-        expect(result.first.prorated_value).to eq(BigDecimal("2000000000000")) # 4e12 x 15 / 30
+        expect(result.first.prorated_value).to be_within(0.01).of(2_000_000_000_000) # 4e12 x 15 / 30, Float64 ratio product
         expect(result.first.events_count).to eq(500)
       end
     end
