@@ -8136,6 +8136,7 @@ enum IntegrationTypeEnum {
   preview
   progressive_billing
   projected_usage
+  quickbooks
   remove_branding_watermark
   revenue_analytics
   revenue_recognition
@@ -12335,6 +12336,7 @@ enum PremiumIntegrationTypeEnum {
   preview
   progressive_billing
   projected_usage
+  quickbooks
   remove_branding_watermark
   revenue_analytics
   revenue_recognition

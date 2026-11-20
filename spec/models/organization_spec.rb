@@ -59,6 +59,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:hubspot_integrations)
       expect(subject).to have_many(:netsuite_integrations)
       expect(subject).to have_many(:xero_integrations)
+      expect(subject).to have_many(:quickbooks_integrations)
       expect(subject).to have_one(:salesforce_integration)
       expect(subject).to have_many(:data_exports)
       expect(subject).to have_many(:dunning_campaigns)
@@ -430,6 +431,12 @@ RSpec.describe Organization do
 
       context "when it includes a valid integration" do
         subject(:organization) { build(:organization, :premium) }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "when it includes quickbooks" do
+        subject(:organization) { build(:organization, premium_integrations: ["quickbooks"]) }
 
         it { is_expected.to be_valid }
       end

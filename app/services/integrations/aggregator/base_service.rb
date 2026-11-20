@@ -53,6 +53,8 @@ module Integrations
           "avalara"
         when "Integrations::HubspotIntegration"
           "hubspot"
+        when "Integrations::QuickbooksIntegration"
+          "quickbooks"
         end
       end
 
@@ -68,6 +70,8 @@ module Integrations
           Rails.env.production? ? "avalara" : "avalara-sandbox"
         when "Integrations::HubspotIntegration"
           "hubspot"
+        when "Integrations::QuickbooksIntegration"
+          integration.sandbox? ? "quickbooks-sandbox" : "quickbooks"
         end
       end
 
