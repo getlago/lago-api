@@ -93,8 +93,11 @@ module Invoices
     # A voided top-up invoice will never be paid, so its pending top-up must fail.
     # Left pending, it keeps counting in the wallet's threshold check and blocks the auto top-up.
     # Found through the credit fee, as Invoices::PrepaidCreditJob does.
+    # A payment still processing (a SEPA or ACH debit) cannot be cancelled: the top-up stays pending
+    # and the provider's webhook settles or fails it, so the wallet cannot be topped up twice.
     def fail_pending_top_ups
       return unless invoice.credit?
+      return if invoice.payments.where(payable_payment_status: :processing).exists?
 
       invoice.fees.where(fee_type: :credit).includes(:invoiceable).find_each do |fee|
         wallet_transaction = fee.invoiceable

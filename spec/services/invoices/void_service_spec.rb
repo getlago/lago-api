@@ -250,6 +250,20 @@ RSpec.describe Invoices::VoidService do
 
               expect(other_pending_top_up.reload).to be_pending
             end
+
+            context "when its payment is still processing, as a SEPA debit" do
+              before do
+                create(:payment, payable: invoice, customer: invoice.customer, organization: invoice.organization,
+                  status: "processing", payable_payment_status: :processing)
+              end
+
+              it "leaves the top-up pending for the provider's webhook to settle or fail" do
+                void_service.call
+
+                expect(pending_top_up.reload).to be_pending
+                expect(SendWebhookJob).not_to have_been_enqueued.with("wallet_transaction.updated", pending_top_up)
+              end
+            end
           end
         end
 
