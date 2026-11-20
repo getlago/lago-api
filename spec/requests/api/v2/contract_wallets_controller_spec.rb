@@ -8,13 +8,14 @@ describe Api::V2::ContractWalletsController do
   let(:customer) { create(:customer, organization:, external_id: "acme", currency: "USD") }
   let(:contract) { create(:contract, organization:, customer:, external_id: "acme-pro") }
   let(:contract_wallet) do
-    create(:catalog_wallet, organization:, customer:, contract:, code: "ai_credits", currency: "USD", priority: 10, balance_cents: 43_000)
+    create(:catalog_wallet, organization:, customer:, contract:, code: "ai_credits", currency: "USD", priority: 10,
+      balance_cents: 43_000, ongoing_balance_cents: 41_500)
   end
   let(:flat_keys) do
     %i[
       lago_id external_contract_id external_customer_id code name invoice_display_name currency tax_application priority
-      applies_to top_up_min_amount_cents top_up_max_amount_cents balance ongoing_balance terminated_at created_at updated_at
-      deleted_at
+      applies_to top_up_min_amount_cents top_up_max_amount_cents balance_cents ongoing_balance_cents
+      last_ongoing_balance_sync_at terminated_at created_at updated_at deleted_at
     ]
   end
 
@@ -123,14 +124,15 @@ describe Api::V2::ContractWalletsController do
     include_examples "requires API permission", "contract_wallet", "read"
     include_examples "requires the catalog_wallets flag"
 
-    it "returns the wallet with its balances as decimal strings" do
+    it "returns the wallet with its stored balances" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:contract_wallet]).to include(
         lago_id: contract_wallet.id, external_contract_id: "acme-pro", external_customer_id: "acme", code: "ai_credits",
         currency: "USD", tax_application: "tax_on_consumption", priority: 10, applies_to: {include: []},
-        balance: "430.00", ongoing_balance: "430.00", terminated_at: nil, deleted_at: nil
+        balance_cents: 43_000, ongoing_balance_cents: 41_500, last_ongoing_balance_sync_at: nil, terminated_at: nil,
+        deleted_at: nil
       )
       expect(json[:contract_wallet].keys).to eq(flat_keys)
     end
