@@ -3,7 +3,8 @@
 module Types
   module Organizations
     # Shown only to an active member, as the customer portal and the public invite query reach this type. Login and
-    # signup payloads have no session and answer null: clients read it from currentUser or currentOrganization.
+    # signup payloads have no session and answer null: clients read it from currentUser, which keeps answering for a
+    # pending organization while the organization-scoped queries refuse it.
     module ActivationFields
       extend ActiveSupport::Concern
       include ViewerMembership

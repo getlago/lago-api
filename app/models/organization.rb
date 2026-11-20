@@ -168,6 +168,8 @@ class Organization < ApplicationRecord
   }.freeze
 
   # A self-serve production organization can wait for a payment method before it opens; every other one is active.
+  # The API key cache keeps the organization's attributes, so a change of status calls
+  # `ApiKeys::CacheService.expire_all_cache(organization)` in an `after_commit` block, or REST reads the old one.
   ACTIVATION_STATUSES = {
     pending_payment_method: "pending_payment_method",
     active: "active"
