@@ -28,6 +28,8 @@ module Invoices
         )
       end
 
+      expire_top_up_payment_links
+
       invoice.with_lock do
         return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
 
@@ -88,6 +90,14 @@ module Invoices
       if payment
         PaymentProviders::CancelPaymentJob.perform_after_commit(payment)
       end
+    end
+
+    # A payment link opened before the void could still pay the invoice, and settle the top-up failed
+    # below. Expired first, outside the lock since it calls the provider: when it fails, so does the void.
+    def expire_top_up_payment_links
+      return unless invoice.credit? && invoice.finalized?
+
+      PaymentIntents::ExpireService.call!(invoice:)
     end
 
     # A voided top-up invoice will never be paid, so its pending top-up must fail.

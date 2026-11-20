@@ -251,6 +251,34 @@ RSpec.describe Invoices::VoidService do
               expect(other_pending_top_up.reload).to be_pending
             end
 
+            context "when a payment link was opened before the void" do
+              let(:payment_intent) { create(:payment_intent, invoice:, status: :active) }
+
+              before { payment_intent }
+
+              it "expires the payment link, so it cannot settle the failed top-up" do
+                void_service.call
+
+                expect(payment_intent.reload).to be_expired
+                expect(pending_top_up.reload).to be_failed
+              end
+
+              context "when the provider refuses to expire it" do
+                before do
+                  allow(PaymentIntents::ExpireService).to receive(:call!)
+                    .and_raise(BaseService::ServiceFailure.new(BaseResult.new, code: "stripe_error", error_message: "boom"))
+                end
+
+                it "does not void the invoice, so the link cannot pay a failed top-up" do
+                  result = void_service.call
+
+                  expect(result).not_to be_success
+                  expect(invoice.reload).to be_finalized
+                  expect(pending_top_up.reload).to be_pending
+                end
+              end
+            end
+
             context "when its payment is still processing, as a SEPA debit" do
               before do
                 create(:payment, payable: invoice, customer: invoice.customer, organization: invoice.organization,
