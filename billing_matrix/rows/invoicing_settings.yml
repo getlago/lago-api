@@ -1,0 +1,98 @@
+# Precedence between a setting on the billing entity and the same setting on the customer.
+# Every override row is paired with the row where the customer inherits, so a red row says
+# whether the customer value was ignored or the entity value never took.
+
+- id: invoicing_settings/finalize-zero-amount/entity-skip-customer-finalize
+  area: invoicing_settings
+  axes: {finalize_zero_amount_invoice: finalize, invoice_type: subscription, status: finalized, invoicing_reason: subscription_periodic}
+  control: invoicing_settings/finalize-zero-amount/entity-skip-customer-inherit
+  setup:
+    billing_entity: {finalize_zero_amount_invoice: false}
+    plan: {code: p_zero_fin, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    customer: {external_id: cust_zero_fin, finalize_zero_amount_invoice: finalize}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_zero_fin, plan_code: p_zero_fin}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 0
+      total_amount_cents: 0
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+  math: >-
+    A 0¢ plan with no charges bills a 0¢ subscription fee. No grace period, so
+    Invoices::SubscriptionService#set_invoice_generated_status hands the invoice to
+    Invoices::TransitionToFinalStatusService, whose should_finalize_invoice? reads the customer's
+    explicit `finalize` before the entity's false and finalizes it.
+
+- id: invoicing_settings/finalize-zero-amount/entity-skip-customer-inherit
+  area: invoicing_settings
+  axes: {finalize_zero_amount_invoice: inherit, invoice_type: subscription, status: closed, invoicing_reason: subscription_periodic}
+  setup:
+    billing_entity: {finalize_zero_amount_invoice: false}
+    plan: {code: p_zero_inh, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    customer: {external_id: cust_zero_inh}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_zero_inh, plan_code: p_zero_inh}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: closed
+      fees_amount_cents: 0
+      total_amount_cents: 0
+  math: >-
+    Control for the tri-state: the customer stays at the default `inherit`, so
+    Invoices::TransitionToFinalStatusService#should_finalize_invoice? falls through to
+    billing_entity.finalize_zero_amount_invoice (false) and the 0¢ invoice is closed instead of
+    finalized. It is still a persisted invoice, hence invoices: 1.
+
+- id: invoicing_settings/grace-period/entity-3-customer-0
+  area: invoicing_settings
+  axes: {invoice_grace_period: customer-zero-overrides-entity, invoice_type: subscription, status: finalized, invoicing_reason: subscription_periodic}
+  control: invoicing_settings/grace-period/entity-3-customer-inherit
+  setup:
+    billing_entity: {billing_configuration: {invoice_grace_period: 3}}
+    plan: {code: p_gp0, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_gp0, invoice_grace_period: 0}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_gp0, plan_code: p_gp0}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: finalized
+      fees_amount_cents: 5000
+      total_amount_cents: 5000
+  math: >-
+    5_000¢/month in arrears. The entity carries a 3-day grace period but the customer says 0
+    explicitly; Customer#applicable_invoice_grace_period returns the customer's value whenever
+    `invoice_grace_period.present?`, and 0.present? is true, so
+    Invoices::SubscriptionService#grace_period? is false and the invoice is finalized on billing day.
+
+- id: invoicing_settings/grace-period/entity-3-customer-inherit
+  area: invoicing_settings
+  axes: {invoice_grace_period: entity-only, invoice_type: subscription, status: draft, invoicing_reason: subscription_periodic}
+  setup:
+    billing_entity: {billing_configuration: {invoice_grace_period: 3}}
+    plan: {code: p_gp_inh, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_gp_inh}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_gp_inh, plan_code: p_gp_inh}
+    - {at: 2026-04-01, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: draft
+      fees_amount_cents: 5000
+      total_amount_cents: 5000
+  math: >-
+    Control for the grace-period precedence: the customer's invoice_grace_period is nil, so
+    Customer#applicable_invoice_grace_period falls back to the entity's 3 days and the 5_000¢
+    invoice is held as a draft.
