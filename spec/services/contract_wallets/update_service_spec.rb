@@ -64,6 +64,19 @@ describe ContractWallets::UpdateService do
     end
   end
 
+  context "when the contract has ended since the wallet was loaded" do
+    before do
+      contract_wallet
+      Contract.find(contract.id).update!(status: :terminated, terminated_at: Time.current)
+    end
+
+    it "refuses it and changes nothing" do
+      expect(result).not_to be_success
+      expect(result.error.code).to eq("contract_not_live")
+      expect(contract_wallet.reload.priority).to eq(10)
+    end
+  end
+
   context "when the wallet does not exist" do
     let(:contract_wallet) { nil }
 
@@ -127,6 +140,23 @@ describe ContractWallets::UpdateService do
         expect(contract_wallet.selectors.map { [it.selector_type, it.product_id] }).to eq([["product", product.id]])
         expect(contract_wallet.metadata.value).to eq({"team" => "growth"})
         expect(contract_wallet.updated_at).to eq(Time.current)
+      end
+    end
+
+    {
+      tax_codes: ["vat_20"],
+      applies_to: {include: [{type: "product", code: "api_calls"}]},
+      metadata: {team: "growth"}
+    }.each do |key, value|
+      context "when only #{key} is sent" do
+        let(:params) { {key => value} }
+
+        it "dates the edit" do
+          freeze_time do
+            expect(result).to be_success
+            expect(contract_wallet.reload.updated_at).to eq(Time.current)
+          end
+        end
       end
     end
 
