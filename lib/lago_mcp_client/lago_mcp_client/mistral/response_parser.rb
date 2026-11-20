@@ -51,7 +51,7 @@ module LagoMcpClient
 
       # Yields streamed content to the caller for real-time output.
       def stream_content(parsed_data)
-        content = parsed_data["content"]
+        content = Content.text(parsed_data["content"])
         yield content if content.present? && block_given?
       end
 

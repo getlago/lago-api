@@ -214,6 +214,12 @@ module Events
         raise NotImplementedError
       end
 
+      # NOTE: whether an event dated up to the end of `period` and ingested after its watermark re-sends one
+      #       ingested by it. The snapshots of the period hold the first copy, so the delta would count it twice.
+      def resent_after_watermark?(period)
+        raise NotImplementedError
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         raise NotImplementedError
       end

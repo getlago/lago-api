@@ -24,18 +24,47 @@ RSpec.describe UsersService do
       )
     end
 
-    it "calls SegmentTrackJob" do
-      result = described_class.call(:register, "user@email.com", "password", "organization_name")
+    context "when tracking the registration" do
+      before do
+        allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
+        stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "false"))
+      end
 
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: "membership/#{result.membership.id}",
-        event: "organization_registered",
-        properties: {
-          organization_name: result.organization.name,
-          organization_id: result.organization.id,
-          email: result.user.email
-        }
-      )
+      it "calls SegmentTrackJob without the front host on a self-hosted install" do
+        result = described_class.call(:register, "user@email.com", "password", "organization_name")
+
+        expect(SegmentTrackJob).to have_been_enqueued.with(
+          membership_id: "membership/#{result.membership.id}",
+          event: "organization_registered",
+          properties: {
+            organization_name: result.organization.name,
+            organization_id: result.organization.id,
+            email: result.user.email,
+            self_serve: false,
+            region: nil
+          }
+        )
+      end
+
+      context "when on Lago Cloud" do
+        before { stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "true")) }
+
+        it "calls SegmentTrackJob with the front host as the region" do
+          result = described_class.call(:register, "user@email.com", "password", "organization_name")
+
+          expect(SegmentTrackJob).to have_been_enqueued.with(
+            membership_id: "membership/#{result.membership.id}",
+            event: "organization_registered",
+            properties: {
+              organization_name: result.organization.name,
+              organization_id: result.organization.id,
+              email: result.user.email,
+              self_serve: false,
+              region: "app.eu.getlago.com"
+            }
+          )
+        end
+      end
     end
 
     it_behaves_like "produces a security log", "user.signed_up" do
@@ -110,6 +139,39 @@ RSpec.describe UsersService do
 
       it_behaves_like "does not produce a security log" do
         before { described_class.call(:register, "email", "password", "organization_name") }
+      end
+    end
+
+    context "when the organization fails to save" do
+      it "rolls the user back and returns the validation failure" do
+        result = nil
+
+        expect { result = described_class.call(:register, "email", "password", "") }.not_to change(User, :count)
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(name: ["value_is_mandatory"])
+        expect(SegmentIdentifyJob).not_to have_been_enqueued
+        expect(SegmentTrackJob).not_to have_been_enqueued
+        expect(UserDevices::RegisterService).not_to have_received(:call!)
+      end
+    end
+
+    context "when a record raises a validation error" do
+      before do
+        allow(Membership).to receive(:create!)
+          .and_raise(ActiveRecord::RecordInvalid.new(Membership.new.tap(&:validate)))
+      end
+
+      it "rolls the user back and returns the validation failure" do
+        result = nil
+
+        expect { result = described_class.call(:register, "email", "password", "Foobar") }.not_to change(User, :count)
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(organization: ["relation_must_exist"], user: ["relation_must_exist"])
+        expect(SegmentIdentifyJob).not_to have_been_enqueued
+        expect(SegmentTrackJob).not_to have_been_enqueued
+        expect(UserDevices::RegisterService).not_to have_received(:call!)
       end
     end
   end

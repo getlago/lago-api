@@ -46,8 +46,9 @@ class FeeBoundariesHelper
 
     attr_reader :billing_period, :subscription_fee, :fixed_charge_fees, :charge_fees, :commitment_fee
 
-    def has_any_fees?
-      subscription_fee.present? ||
+    # The subscription fee can be hidden for the whole invoice subscription (FeeDisplayHelper), so the caller decides
+    def has_displayable_fees?(display_subscription_fee:)
+      (subscription_fee.present? && display_subscription_fee) ||
         fixed_charge_fees.any? ||
         charge_fees.any? ||
         commitment_fee.present?

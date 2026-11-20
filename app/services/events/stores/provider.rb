@@ -30,9 +30,11 @@ module Events
         )
         if served_from_buckets?(metered_item:, boundaries:, filters:)
           recurring = RealtimeUsage.recurring_charge?(metered_item.charge)
-          # A recurring charge falls back to events per snapshot period, through the same scan as today.
-          if recurring && (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
-            store = ChargeFiltersScanStore.new(store, scan:)
+          if recurring
+            # A recurring charge falls back to events per snapshot period, through the same scan as today.
+            scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:)
+            store = ChargeFiltersScanStore.new(store, scan:) if scan
+            late_events_scan = scan || late_events_scan(metered_item:, filters:, aggregated_filter_ids:)
           end
 
           UsageBucketStore.new(
@@ -41,7 +43,8 @@ module Events
             charge_id: metered_item.charge.id,
             charge_filter_id: filters[:charge_filter]&.id || "", # clickhouse stores an empty string instead of nil
             recurring:,
-            charges_from_datetime: boundaries[:from_datetime]
+            charges_from_datetime: boundaries[:from_datetime],
+            late_events_scan:
           )
         elsif (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
           ChargeFiltersScanStore.new(store, scan:)
@@ -167,6 +170,20 @@ module Events
         @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge, incremental: incremental_charge_cache)
           ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids, incremental: incremental_cache(charge))
         end
+      end
+
+      # Every recurring read the buckets serve asks each filter's store for its late events. When the charge has no
+      # scan to aggregate its filters, it still gets one that only reads those, so that the filters share one read.
+      def late_events_scan(metered_item:, filters:, aggregated_filter_ids:)
+        return unless scan_available?
+        return unless filters[:event].blank? && filters[:grouped_by_values].blank?
+
+        charge = metered_item.charge
+        return if filters[:charge_filter].nil? && charge.filters.any?
+
+        @late_events_scans ||= {}
+        @late_events_scans[[charge.id, aggregated_filter_ids]] ||=
+          ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids)
       end
 
       def incremental_cache(charge)

@@ -27,7 +27,7 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
           page: $page
           limit: $limit
         ) {
-          collection { id action actorEmail organizationId organizationName featureKey featureType rolledBack }
+          collection { id action actorEmail organizationId organizationName featureKey featureType rolledBack rollbackable }
           metadata { currentPage totalCount }
         }
       }
@@ -199,6 +199,7 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
     logs = fetch(actorUserIds: [admin_user.id])
 
     expect(logs["collection"].map { |log| log["rolledBack"] }).to eq([false])
+    expect(logs["collection"].map { |log| log["rollbackable"] }).to eq([true])
   end
 
   it "reports logs that were rolled back", :premium do
@@ -207,6 +208,7 @@ RSpec.describe Resolvers::Admin::AuditLogsResolver do
     logs = fetch(actorUserIds: [admin_user.id])
 
     expect(logs["collection"].map { |log| log["rolledBack"] }).to eq([true])
+    expect(logs["collection"].map { |log| log["rollbackable"] }).to eq([false])
   end
 
   it_behaves_like "a CS admin operation" do

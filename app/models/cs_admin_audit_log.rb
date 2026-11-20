@@ -6,7 +6,7 @@ class CsAdminAuditLog < ApplicationRecord
   belongs_to :rollback_of, class_name: "CsAdminAuditLog", optional: true
   has_one :rollback, class_name: "CsAdminAuditLog", foreign_key: :rollback_of_id, inverse_of: :rollback_of
 
-  ACTIONS = %i[toggle_on toggle_off org_created rollback].freeze
+  ACTIONS = %i[toggle_on toggle_off org_created rollback sandbox_linked].freeze
   FEATURE_TYPES = %i[premium_integration feature_flag organization].freeze
   TOGGLEABLE_FEATURE_TYPES = %w[premium_integration feature_flag].freeze
 
@@ -23,6 +23,13 @@ class CsAdminAuditLog < ApplicationRecord
 
   def rolled_back?
     rollback.present?
+  end
+
+  # Whether a rollback can be asked for. A sandbox's settings follow its production's, so its entries (the mirrors of
+  # production's toggles) are rolled back through production's. A superseded entry still answers true: the rollback
+  # refuses it then.
+  def rollbackable?
+    TOGGLEABLE_FEATURE_TYPES.include?(feature_type) && !rollback? && !rolled_back? && !organization.sandbox?
   end
 end
 
