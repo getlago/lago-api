@@ -24,6 +24,15 @@ RSpec.describe Organizations::ActivateService do
     expect(ApiKeys::CacheService).not_to have_received(:expire_all_cache)
   end
 
+  context "with an organization that no longer passes its validations" do
+    before { organization.update_column(:invoice_footer, "a" * 601) } # rubocop:disable Rails/SkipsModelValidations
+
+    it "opens it all the same" do
+      expect(result).to be_success
+      expect(organization.reload.activation_status).to eq("active")
+    end
+  end
+
   context "with an active organization" do
     let(:organization) { create(:organization, :self_serve) }
 
