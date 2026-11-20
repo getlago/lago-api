@@ -44,7 +44,7 @@ RSpec.describe Resolvers::OrganizationResolver do
       <<~GQL
         query {
           organization {
-            selfServe environment
+            selfServe environment activationStatus
             productionOrganization { id name slug }
             sandboxOrganization { id name slug }
           }
@@ -53,7 +53,7 @@ RSpec.describe Resolvers::OrganizationResolver do
     end
 
     let(:user) { create(:user) }
-    let(:production) { create(:organization, :self_serve) }
+    let(:production) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
     let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: production) }
     # The user's membership status in the sandbox, nil for none.
     let(:sandbox_membership_status) { :active }
@@ -70,11 +70,12 @@ RSpec.describe Resolvers::OrganizationResolver do
 
     it "links each organization to the other one for a member of both" do
       expect(fetch(production)).to eq(
-        "selfServe" => true, "environment" => "production", "productionOrganization" => nil,
+        "selfServe" => true, "environment" => "production", "activationStatus" => "pending_payment_method",
+        "productionOrganization" => nil,
         "sandboxOrganization" => {"id" => sandbox.id, "name" => sandbox.name, "slug" => sandbox.slug}
       )
       expect(fetch(sandbox)).to eq(
-        "selfServe" => true, "environment" => "sandbox", "sandboxOrganization" => nil,
+        "selfServe" => true, "environment" => "sandbox", "activationStatus" => "active", "sandboxOrganization" => nil,
         "productionOrganization" => {"id" => production.id, "name" => production.name, "slug" => production.slug}
       )
     end
@@ -90,10 +91,11 @@ RSpec.describe Resolvers::OrganizationResolver do
     context "with self-serve disabled" do
       let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
       let(:standalone) do
-        {"selfServe" => false, "environment" => "production", "productionOrganization" => nil, "sandboxOrganization" => nil}
+        {"selfServe" => false, "environment" => "production", "activationStatus" => "active",
+         "productionOrganization" => nil, "sandboxOrganization" => nil}
       end
 
-      it "shows each organization as a standalone production one" do
+      it "shows each organization as an active standalone production one" do
         expect(fetch(production)).to eq(standalone)
         expect(fetch(sandbox)).to eq(standalone)
       end

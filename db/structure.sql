@@ -1704,6 +1704,7 @@ DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
 DROP TYPE IF EXISTS public.organization_environment;
+DROP TYPE IF EXISTS public.organization_activation_status;
 DROP TYPE IF EXISTS public.order_status;
 DROP TYPE IF EXISTS public.order_form_void_reason;
 DROP TYPE IF EXISTS public.order_form_status;
@@ -2135,6 +2136,16 @@ CREATE TYPE public.order_status AS ENUM (
     'created',
     'executed',
     'failed'
+);
+
+
+--
+-- Name: organization_activation_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.organization_activation_status AS ENUM (
+    'pending_payment_method',
+    'active'
 );
 
 
@@ -4423,6 +4434,8 @@ CREATE TABLE public.organizations (
     self_serve boolean DEFAULT false NOT NULL,
     environment public.organization_environment DEFAULT 'production'::public.organization_environment NOT NULL,
     production_organization_id uuid,
+    activation_status public.organization_activation_status DEFAULT 'active'::public.organization_activation_status NOT NULL,
+    CONSTRAINT check_organizations_on_activation_status CHECK (((activation_status = 'active'::public.organization_activation_status) OR (self_serve AND (environment = 'production'::public.organization_environment)))),
     CONSTRAINT check_organizations_on_environment_link CHECK ((((environment = 'production'::public.organization_environment) AND (production_organization_id IS NULL)) OR ((environment = 'sandbox'::public.organization_environment) AND (production_organization_id IS NOT NULL)))),
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0)),
@@ -18102,6 +18115,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261118162728'),
+('20261118162726'),
 ('20261116121445'),
 ('20261116121442'),
 ('20261116121439'),

@@ -7,6 +7,7 @@ module Types
 
       description "Current Organization Type"
 
+      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false, method: :effective_activation_status
       field :id, ID, null: false
       field :logo_url, String
       field :name, String, null: false

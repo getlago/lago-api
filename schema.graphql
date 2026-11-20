@@ -837,6 +837,7 @@ type AdminLinkSandboxOrganizationPayload {
 }
 
 type AdminOrganization {
+  activationStatus: OrganizationActivationStatusEnum!
   createdAt: ISO8601DateTime!
   email: String
   environment: OrganizationEnvironmentEnum!
@@ -5397,6 +5398,7 @@ Current Organization Type
 """
 type CurrentOrganization {
   accessibleByCurrentSession: Boolean!
+  activationStatus: OrganizationActivationStatusEnum!
   addressLine1: String
   addressLine2: String
   adyenPaymentProviders: [AdyenProvider!]
@@ -11599,6 +11601,7 @@ Safe Organization Type
 """
 type Organization {
   accessibleByCurrentSession: Boolean!
+  activationStatus: OrganizationActivationStatusEnum
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!
@@ -11611,6 +11614,21 @@ type Organization {
   selfServe: Boolean!
   slug: String!
   timezone: TimezoneEnum
+}
+
+"""
+Whether an organization is open, or a self-serve production organization waiting for a payment method
+"""
+enum OrganizationActivationStatusEnum {
+  """
+  Open
+  """
+  active
+
+  """
+  Waiting for a payment method before it opens
+  """
+  pending_payment_method
 }
 
 type OrganizationBillingConfiguration {
