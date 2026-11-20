@@ -158,17 +158,17 @@ module Contracts
     end
 
     def rate_card_usage(card, obligation)
-      fees = obligation.segments.flat_map do |segment|
+      segments = obligation.segments.map do |segment|
         billing_segment = BillingSegments::BuildService.call!(
           contract_rate_card: card, obligation:, segment:, pricing_units_by_code: @pricing_units_by_code
         ).billing_segment
-        compute_fees(billing_segment)
+        RateCardUsageSegment.new(billing_segment:, fees: compute_fees(billing_segment))
       end
       RateCardUsage.new(
         contract_rate_card: card,
         obligation:,
         rate_phase: card.rate_phases.find { |phase| phase.code == obligation.cycle.phase.code },
-        fees:
+        segments:
       )
     end
 

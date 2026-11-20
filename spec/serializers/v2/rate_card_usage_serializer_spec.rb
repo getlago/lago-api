@@ -5,7 +5,16 @@ require "rails_helper"
 RSpec.describe V2::RateCardUsageSerializer do
   subject(:payload) { described_class.new(usage).serialize }
 
-  let(:usage) { RateCardUsage.new(contract_rate_card:, obligation:, rate_phase:, fees:) }
+  let(:usage) { RateCardUsage.new(contract_rate_card:, obligation:, rate_phase:, segments: usage_segments) }
+  let(:usage_segments) do
+    segments.zip(segment_fees).map do |segment, fees|
+      RateCardUsageSegment.new(
+        billing_segment: build_stubbed(:billing_segment, contract_rate_card:, rate_card_rate: segment.rate, rate_override:,
+          started_at: segment.started_at, ended_at: BillingSegment.inclusive_end(segment.ended_at)),
+        fees:
+      )
+    end
+  end
   let(:obligation) { Billing::Obligation.new(cycle:, segments:, billing_at: nil, terms: nil) }
   let(:cycle) { Billing::Cycle.new(index: 0, started_at: segments.first.started_at, ended_at: segments.last.ended_at, phase:, calendar: nil) }
   let(:phase) { Billing::Phase.new(code: nil, billing_interval_cycle_count: nil, rate_override:) }
@@ -24,11 +33,22 @@ RSpec.describe V2::RateCardUsageSerializer do
       ended_at: Time.zone.parse("2027-03-01T00:00:00Z"), rate:)]
   end
   let(:rate_phase) { nil }
-  let(:fees) do
-    [
+  let(:segment_fees) do
+    [[
       build_stubbed(:fee, units: BigDecimal("2.5"), events_count: 3, amount_cents: 500),
       build_stubbed(:fee, units: BigDecimal(1), events_count: 1, amount_cents: 200)
-    ]
+    ]]
+  end
+  let(:segment_payload) do
+    {
+      from_datetime: "2027-02-01T00:00:00Z",
+      to_datetime: "2027-02-28T23:59:59Z",
+      rate_model: "standard",
+      rate_properties: {"amount" => "2"},
+      units: "3.5",
+      events_count: 4,
+      amount_cents: 700
+    }
   end
   let(:flat_payload) do
     {
@@ -49,11 +69,10 @@ RSpec.describe V2::RateCardUsageSerializer do
       rate_phase_code: nil,
       rate_phase_name: nil,
       rate_source: "rate",
-      rate_model: "standard",
-      rate_properties: {"amount" => "2"},
       units: "3.5",
       events_count: 4,
-      amount_cents: 700
+      amount_cents: 700,
+      segments: [segment_payload]
     }
   end
 
@@ -72,8 +91,24 @@ RSpec.describe V2::RateCardUsageSerializer do
       ]
     end
 
-    it "renders the whole window and the first segment's legacy pricing metadata" do
-      expect(payload).to eq(flat_payload)
+    let(:segment_fees) do
+      [
+        [build_stubbed(:fee, units: BigDecimal("2.5"), events_count: 3, amount_cents: 500)],
+        [build_stubbed(:fee, units: BigDecimal(1), events_count: 1, amount_cents: 200)]
+      ]
+    end
+
+    it "renders the whole window, and each segment with its own rate and usage" do
+      expect(payload).to eq(
+        flat_payload.merge(
+          segments: [
+            {from_datetime: "2027-02-01T00:00:00Z", to_datetime: "2027-02-06T23:59:59Z", rate_model: "standard",
+             rate_properties: {"amount" => "2"}, units: "2.5", events_count: 3, amount_cents: 500},
+            {from_datetime: "2027-02-07T00:00:00Z", to_datetime: "2027-02-28T23:59:59Z", rate_model: "package",
+             rate_properties: {"amount" => "5"}, units: "1.0", events_count: 1, amount_cents: 200}
+          ]
+        )
+      )
     end
   end
 
@@ -93,9 +128,10 @@ RSpec.describe V2::RateCardUsageSerializer do
     let(:rate_override) { build_stubbed(:rate_override, rate_model: "package", rate_properties: {"amount" => "2"}) }
     let(:rate_phase) { build_stubbed(:rate_phase, :contract_level, contract_rate_card:, code: "intro", name: "Intro") }
 
-    it "renders the phase and the rate model of its override" do
+    it "renders the phase, and the rate model of its override on the segment" do
       expect(payload).to eq(
-        flat_payload.merge(rate_phase_code: "intro", rate_phase_name: "Intro", rate_source: "phase_override", rate_model: "package")
+        flat_payload.merge(rate_phase_code: "intro", rate_phase_name: "Intro", rate_source: "phase_override",
+          segments: [segment_payload.merge(rate_model: "package")])
       )
     end
   end

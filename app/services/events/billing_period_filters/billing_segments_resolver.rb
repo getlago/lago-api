@@ -13,6 +13,11 @@ module Events
         return {} if target_segments.empty?
         return {} if metric_codes_by_contract_id.empty?
 
+        ActiveRecord::Associations::Preloader.new(
+          records: target_segments.map { |segment| filter_target_for(segment).billable_metric },
+          associations: :filters
+        ).call
+
         # Event stores are scoped to a contract's external_id, so combinations must only
         # be matched against targets from that contract, even when products share a code.
         # For example, Contract A and Contract B can both use product "api_calls", while
