@@ -277,6 +277,59 @@ RSpec.describe Invoices::VoidService do
                   expect(pending_top_up.reload).to be_pending
                 end
               end
+
+              context "when Stripe cannot be reached" do
+                before do
+                  allow(PaymentIntents::ExpireService).to receive(:call!).and_raise(::Stripe::APIConnectionError.new("timeout"))
+                end
+
+                it "fails cleanly without voiding, so it can be retried" do
+                  result = void_service.call
+
+                  expect(result).not_to be_success
+                  expect(result.error.code).to eq("payment_link_expiration_failed")
+                  expect(invoice.reload).to be_finalized
+                  expect(pending_top_up.reload).to be_pending
+                end
+              end
+
+              context "when the customer's payment provider was removed" do
+                let(:payment_intent) { create(:payment_intent, invoice:, status: :active, provider_session_id: "cs_test_123") }
+
+                before { invoice.customer.update!(payment_provider: nil) }
+
+                it "expires the link on Lago's side and voids the invoice" do
+                  result = void_service.call
+
+                  expect(result).to be_success
+                  expect(invoice.reload).to be_voided
+                  expect(payment_intent.reload).to be_expired
+                  expect(pending_top_up.reload).to be_failed
+                end
+              end
+
+              context "when the customer moved to a provider that cannot expire links" do
+                before do
+                  allow(PaymentIntents::ExpireService).to receive(:call!)
+                    .and_raise(ArgumentError, "Invoices::Payments::GocardlessService: :expire_payment_url is not declared in RESULTS")
+                end
+
+                it "expires the link on Lago's side and voids the invoice" do
+                  result = void_service.call
+
+                  expect(result).to be_success
+                  expect(payment_intent.reload).to be_expired
+                  expect(pending_top_up.reload).to be_failed
+                end
+              end
+
+              context "when an unrelated ArgumentError is raised" do
+                before { allow(PaymentIntents::ExpireService).to receive(:call!).and_raise(ArgumentError, "bug") }
+
+                it "does not hide it" do
+                  expect { void_service.call }.to raise_error(ArgumentError, "bug")
+                end
+              end
             end
 
             context "when its payment is still processing, as a SEPA debit" do

@@ -28,7 +28,9 @@ module Invoices
         )
       end
 
-      expire_top_up_payment_links
+      if (expiry_error = expire_top_up_payment_links)
+        return result.service_failure!(code: "payment_link_expiration_failed", message: expiry_error)
+      end
 
       invoice.with_lock do
         return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
@@ -93,11 +95,25 @@ module Invoices
     end
 
     # A payment link opened before the void could still pay the invoice, and settle the top-up failed
-    # below. Expired first, outside the lock since it calls the provider: when it fails, so does the void.
+    # below. Expired first, outside the lock since it calls the provider.
+    # Returns an error message when the provider cannot be reached: the void then fails, and can be retried.
     def expire_top_up_payment_links
       return unless invoice.credit? && invoice.finalized?
 
       PaymentIntents::ExpireService.call!(invoice:)
+      nil
+    rescue NotImplementedError, ArgumentError => e
+      # ArgumentError: the customer's new provider cannot expire links (not declared in its RESULTS)
+      raise if e.is_a?(ArgumentError) && !e.message.include?("is not declared in RESULTS")
+
+      # The customer's provider was removed or changed, so it cannot expire the link, and Lago no
+      # longer receives that provider's payments: the link is expired on Lago's side only
+      PaymentIntent.active.where(invoice:).find_each do |payment_intent|
+        payment_intent.update!(status: :expired, expires_at: Time.current)
+      end
+      nil
+    rescue ::Stripe::StripeError => e
+      e.message
     end
 
     # A voided top-up invoice will never be paid, so its pending top-up must fail.
