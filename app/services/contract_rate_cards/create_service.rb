@@ -57,6 +57,7 @@ module ContractRateCards
         contract_rate_card = contract.applied_rate_cards.create!(
           organization:,
           rate_card:,
+          **params.slice(:billing_scope),
           **contract.default_rate_card_lifecycle(billing_anchor_date: params[:billing_anchor_date].presence)
         )
         contract_rate_card.terms.create!(organization:, units: params[:units], effective_date: contract_rate_card.effective_date) if params[:units].present?

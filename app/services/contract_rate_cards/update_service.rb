@@ -34,7 +34,7 @@ module ContractRateCards
 
         contract_rate_card.lock!
         contract_rate_card.terms.delete_all(:delete_all) if params.key?(:units)
-        contract_rate_card.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
+        contract_rate_card.assign_attributes(params.slice(:billing_anchor_date, :billing_scope))
         contract_rate_card.updated_at = Time.current if params.key?(:units)
         contract_rate_card.save!
         if params.key?(:units) && params[:units].present?
@@ -45,8 +45,7 @@ module ContractRateCards
           )
         end
 
-        # The clock was seeded from the previous anchor.
-        if contract_rate_card.saved_change_to_billing_anchor_date?
+        if contract_rate_card.saved_change_to_billing_anchor_date? || contract_rate_card.saved_change_to_billing_scope?
           ContractRateCards::SeedLifecycleService.call!(
             contract_rate_card:,
             billing_anchor_date: contract_rate_card.billing_anchor_date
