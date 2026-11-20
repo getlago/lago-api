@@ -82,6 +82,21 @@ RSpec.describe Api::V1::Plans::MetadataController do
         expect(plan.reload.metadata).to eq(nil)
       end
     end
+
+    context "when the plan is yearly with monthly billing flags" do
+      let(:plan) do
+        create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+
+      before { create(:item_metadata, owner: plan, organization:, value: {"old" => "value"}) }
+
+      it "keeps the stored flags" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+    end
   end
 
   describe "PATCH /api/v1/plans/:code/metadata" do
@@ -160,6 +175,21 @@ RSpec.describe Api::V1::Plans::MetadataController do
         expect(plan.reload.metadata).to be_nil
       end
     end
+
+    context "when the plan is yearly with monthly billing flags" do
+      let(:plan) do
+        create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+
+      before { create(:item_metadata, owner: plan, organization:, value: {"old" => "value"}) }
+
+      it "keeps the stored flags" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+    end
   end
 
   describe "DELETE /api/v1/plans/:code/metadata" do
@@ -197,6 +227,21 @@ RSpec.describe Api::V1::Plans::MetadataController do
         expect(response).to have_http_status(:success)
         expect(json[:metadata]).to be_nil
         expect(plan.reload.metadata).to be_nil
+      end
+    end
+
+    context "when the plan is yearly with monthly billing flags" do
+      let(:plan) do
+        create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+
+      before { create(:item_metadata, owner: plan, organization:, value: {"foo" => "bar"}) }
+
+      it "keeps the stored flags" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: false)
       end
     end
   end
