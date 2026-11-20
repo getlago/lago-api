@@ -32,6 +32,21 @@ describe Api::V2::ContractWalletsController do
     end
   end
 
+  shared_examples "refuses an ended contract" do
+    context "when the contract has ended" do
+      let(:contract) { create(:contract, :terminated, organization:, customer:, external_id: "acme-pro") }
+
+      before { contract_wallet }
+
+      it "returns a forbidden error and changes nothing" do
+        expect { subject }.not_to change { CatalogWallet.unscoped.order(:id).map(&:attributes) }
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "contract_not_live", details: [])
+      end
+    end
+  end
+
   describe "GET /api/v2/contracts/:external_id/wallets" do
     subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/wallets") }
 
@@ -342,6 +357,7 @@ describe Api::V2::ContractWalletsController do
 
     include_examples "requires API permission", "contract_wallet", "write"
     include_examples "requires the catalog_wallets flag"
+    include_examples "refuses an ended contract"
 
     it "adds an empty wallet to the contract" do
       subject
@@ -491,6 +507,7 @@ describe Api::V2::ContractWalletsController do
 
     include_examples "requires API permission", "contract_wallet", "write"
     include_examples "requires the catalog_wallets flag"
+    include_examples "refuses an ended contract"
 
     it "updates the wallet and keeps its balances" do
       subject
@@ -624,6 +641,7 @@ describe Api::V2::ContractWalletsController do
 
     include_examples "requires API permission", "contract_wallet", "write"
     include_examples "requires the catalog_wallets flag"
+    include_examples "refuses an ended contract"
 
     it "soft deletes the wallet" do
       freeze_time do
