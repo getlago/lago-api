@@ -106,10 +106,11 @@ describe Api::V2::ContractWalletsController do
     context "when the contract has ended" do
       let(:contract) { create(:contract, :terminated, organization:, customer:, external_id: "acme-pro") }
 
-      it "returns a not found error" do
+      it "returns its wallets" do
         subject
 
-        expect(response).to be_v2_not_found_error("contract")
+        expect(response).to have_http_status(:success)
+        expect(json[:contract_wallets].map { it[:lago_id] }).to eq([contract_wallet.id])
       end
     end
 
@@ -120,11 +121,22 @@ describe Api::V2::ContractWalletsController do
 
       before { create(:catalog_wallet, organization:, customer:, contract: ended_contract, code: "old_credits") }
 
-      it "leaves its wallets out" do
+      it "asks for the contract code" do
         subject
 
-        expect(response).to have_http_status(:success)
-        expect(json[:contract_wallets].map { it[:code] }).to eq(["ai_credits"])
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "contract_code", meta: {}}])
+      end
+
+      context "with the contract code" do
+        subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/wallets", {contract_code: contract.code}) }
+
+        it "returns the wallets of that contract only" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:contract_wallets].map { it[:code] }).to eq(["ai_credits"])
+        end
       end
     end
 
@@ -255,10 +267,27 @@ describe Api::V2::ContractWalletsController do
     context "when the contract has ended" do
       let(:contract) { create(:contract, :terminated, organization:, customer:, external_id: "acme-pro") }
 
-      it "returns a not found error on the wallet" do
+      it "returns the wallet" do
         subject
 
-        expect(response).to be_v2_not_found_error("contract_wallet")
+        expect(response).to have_http_status(:success)
+        expect(json[:contract_wallet][:lago_id]).to eq(contract_wallet.id)
+      end
+    end
+
+    context "when an ended contract reuses the external id" do
+      let(:ended_contract) do
+        create(:contract, :terminated, organization:, customer:, external_id: "acme-pro", started_at: 2.months.ago)
+      end
+      let(:query) { {contract_code: contract.code} }
+
+      before { create(:catalog_wallet, organization:, customer:, contract: ended_contract, code: "ai_credits") }
+
+      it "returns the wallet of the contract with that code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract_wallet][:lago_id]).to eq(contract_wallet.id)
       end
     end
 
