@@ -44,11 +44,33 @@ RSpec.describe Entitlement::PrivilegeDestroyService do
       end
     end
 
-    context "when privilege is already discarded" do
-      before { privilege.discard! }
+    context "when the privilege is discarded between its lookup and the lock" do
+      before do
+        # Another instance discards it, so the loaded one is stale.
+        Entitlement::Privilege.find(privilege.id).discard!
+      end
 
-      it "still succeeds" do
-        expect { subject }.to raise_error(Discard::RecordNotDiscarded)
+      it "returns a not found failure and sends no webhook" do
+        expect { subject }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(subject).to be_failure
+        expect(subject.error).to be_a(BaseService::NotFoundFailure)
+        expect(subject.error.resource).to eq("privilege")
+      end
+    end
+
+    context "when the feature is discarded between the lookup and the lock" do
+      before do
+        # Another instance discards it, so the loaded one is stale.
+        Entitlement::Feature.find(feature.id).discard!
+      end
+
+      it "returns a not found failure and sends no webhook" do
+        expect { subject }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(subject).to be_failure
+        expect(subject.error.resource).to eq("privilege")
+        expect(Entitlement::Privilege.find(privilege.id)).not_to be_discarded
       end
     end
 

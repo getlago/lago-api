@@ -18,6 +18,8 @@ module Types
       field :organization_name, String, null: false
       field :reason, String, null: false
       field :rollback_of_id, ID, null: true
+      field :rollbackable, Boolean, null: false, method: :rollbackable?,
+        description: "False for a rollback, an entry already rolled back, an organization creation, or an entry of a sandbox, whose settings follow its production"
       field :rolled_back, Boolean, null: false, method: :rolled_back?
 
       def organization_name

@@ -21,6 +21,7 @@ module Auth
         check_userinfo(result.email)
 
         return login_method_not_authorized_failure unless integration_organization_allows_login_method?
+        return result.forbidden_failure!(code: "sandbox_managed_by_production") if sandbox_refuses_new_member?
 
         find_or_create_user
         return login_method_not_authorized_failure unless user_trusted_by_integration?(result.user)
@@ -34,6 +35,8 @@ module Auth
         result
       rescue BaseLockService::FailedToAcquireLock
         result.lock_acquisition_failure!(message: "email lock not acquired")
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
       end
 
       private
@@ -75,10 +78,6 @@ module Auth
           Signups::CloseAttemptsService.call!(normalized_email: PendingSignup.normalize_email(result.email))
           user
         end.value
-      end
-
-      def find_or_create_membership
-        result.user.memberships.find_or_create_by(organization_id: result.entra_id_integration.organization_id)
       end
     end
   end

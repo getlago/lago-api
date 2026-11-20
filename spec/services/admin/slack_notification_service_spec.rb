@@ -48,6 +48,135 @@ RSpec.describe Admin::SlackNotificationService do
         }).to have_been_made.once
       end
 
+      context "when a sandbox was linked" do
+        let(:audit_log) do
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "Test Org")
+          create(:cs_admin_audit_log, organization: sandbox, action: :sandbox_linked, feature_type: "organization",
+            feature_key: organization.id, before_value: false, actor_email: "admin@lago.com",
+            reason: "Enabling for customer onboarding POC")
+        end
+
+        it "names both organizations" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("Sandbox linked] *Test Org* is now the sandbox of *ACME Corp*")
+          }).to have_been_made.once
+        end
+      end
+
+      context "when a sandbox was created" do
+        let(:audit_log) do
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME Corp Sandbox")
+          create(:cs_admin_audit_log, organization: sandbox, action: :org_created, feature_type: "organization",
+            feature_key: "organization", before_value: nil, actor_email: "admin@lago.com",
+            reason: "Enabling for customer onboarding POC")
+        end
+
+        it "names the sandbox and its production organization" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("Sandbox created] *ACME Corp Sandbox* for *ACME Corp*")
+          }).to have_been_made.once
+        end
+      end
+
+      context "when the change was mirrored to a sandbox" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :toggle_on, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Enabling for customer onboarding POC", batch_id:)
+        end
+
+        before do
+          audit_log
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME <Sandbox>")
+          create(:cs_admin_audit_log, organization: sandbox, action: :toggle_on, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Enabling for customer onboarding POC", batch_id:)
+        end
+
+        it "names the sandbox, escaped" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("(mirrored to *ACME &lt;Sandbox&gt;*)")
+          }).to have_been_made.once
+        end
+      end
+
+      context "when a rollback shares the batch of an entry mirrored before it" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :rollback, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Rolling back the onboarding POC", batch_id:)
+        end
+
+        before do
+          sandbox = create(:organization, :sandbox, production_organization: organization)
+          create(:cs_admin_audit_log, organization: sandbox, action: :toggle_on, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Enabling for customer onboarding POC", batch_id:,
+            created_at: 1.day.ago)
+        end
+
+        it "does not say it was mirrored" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("mirrored")
+          }).not_to have_been_made
+        end
+      end
+
+      context "when a setting is set on a new pair" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :org_created, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "New customer", batch_id:)
+        end
+
+        before do
+          audit_log
+          sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME Sandbox")
+          create(:cs_admin_audit_log, organization: sandbox, action: :org_created, feature_type: :organization,
+            feature_key: "organization", before_value: nil, actor_email: "admin@lago.com", reason: "New customer", batch_id:)
+        end
+
+        it "names the sandbox created with it" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"]
+              .start_with?("[✅ netsuite set on new org] on *ACME Corp* (mirrored to *ACME Sandbox*) by admin@lago.com")
+          }).to have_been_made.once
+        end
+      end
+
+      context "when another rollback of the same batch was mirrored after this one" do
+        let(:batch_id) { SecureRandom.uuid }
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :rollback, feature_key: "netsuite",
+            actor_email: "admin@lago.com", reason: "Rolling back the onboarding POC", batch_id:)
+        end
+
+        before do
+          audit_log
+          sandbox = create(:organization, :sandbox, production_organization: organization)
+          create(:cs_admin_audit_log, organization:, action: :rollback, feature_key: "xero",
+            actor_email: "admin@lago.com", reason: "Rolling back the onboarding POC", batch_id:)
+          create(:cs_admin_audit_log, organization: sandbox, action: :toggle_off, feature_key: "xero",
+            actor_email: "admin@lago.com", reason: "Rolling back the onboarding POC", batch_id:)
+        end
+
+        it "does not say it was mirrored" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"].include?("mirrored")
+          }).not_to have_been_made
+        end
+      end
+
       context "when action is toggle_off" do
         let(:audit_log) do
           create(:cs_admin_audit_log,

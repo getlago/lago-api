@@ -8,26 +8,45 @@ module RecurringAggregationSnapshots
       end
     end
 
-    Period = Data.define(:to_datetime, :watermark)
+    # inherited: the period was closed by the previous subscription, whose invoices are not this one's
+    Period = Data.define(:to_datetime, :watermark, :inherited) do
+      def initialize(inherited: false, **)
+        super
+      end
+
+      # Whether a weighted sum starts from this period's level. An older period misses the levels of the
+      # periods closed since: only an own period no invoice closed a later one after, as the events dated
+      # since then are added to it. last_billed_charges_to_datetime is a block, as it queries the invoices.
+      def weighted_sum_start?(from_datetime)
+        if to_datetime.between?(from_datetime - 1.second, from_datetime)
+          true
+        elsif inherited || to_datetime >= from_datetime
+          false
+        else
+          last_billed_charges_to_datetime = yield
+          !last_billed_charges_to_datetime&.after?(to_datetime)
+        end
+      end
+    end
 
     Result = BaseResult[:snapshots, :period]
 
-    # charge_period: a ChargePeriod shared by the charge filters of the charge, loaded once for all of them
+    # key: a SubscriptionKey or ContractKey; filter: the bucket read, a charge filter or a product filter
+    # charge_period: a ChargePeriod shared by the buckets of the key, loaded once for all of them
     # grouped_by_values: returns only the snapshots of that group, as pay in advance reads one group
-    # all_buckets: false loads only the charge filter's bucket, as pay in advance reads one. A charge_period
-    # given carries its own choice, which the previous subscription lookup follows too.
+    # all_buckets: false loads only the filter's bucket, as pay in advance reads one. A charge_period
+    # given carries its own choice, which the previous owner lookup follows too.
     def initialize(
-      subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, charge_period: nil, grouped_by_values: nil, all_buckets: true
+      key:, filter:, grouped_by_keys:, from_datetime:, charge_period: nil, grouped_by_values: nil, all_buckets: true
     )
-      @subscription = subscription
-      @charge = charge
-      @charge_filter = charge_filter
+      @key = key
+      @filter = filter
       @grouped_by_keys = grouped_by_keys
       @from_datetime = from_datetime
       @grouped_by_values = grouped_by_values.presence && normalized_group(grouped_by_values)
       @charge_period = charge_period || ChargePeriod.new(
-        subscription:, charge:, from_datetime:, grouped_by_values: @grouped_by_values, grouped_by_keys: Array(grouped_by_keys),
-        charge_filter_ids: (all_buckets ? nil : [charge_filter&.id].compact)
+        key:, from_datetime:, grouped_by_values: @grouped_by_values, grouped_by_keys: Array(grouped_by_keys),
+        filter_ids: (all_buckets ? nil : [filter&.id].compact)
       )
 
       super
@@ -36,30 +55,27 @@ module RecurringAggregationSnapshots
     # Returns the snapshots of the latest period closed before from_datetime, one per group with
     # units or events, and that period. Both are nil when the aggregation must fall back to a full scan.
     def call
-      marker, records = own_period || previous_subscription_period
+      own = own_period
+      marker, records = own || previous_period
       return result unless marker && records.all? { same_grouped_by_keys?(it) }
 
-      result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark)
+      result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark, inherited: own.nil?)
       result.snapshots = records.select { in_group?(it) }.map { to_snapshot(it) }
       result
     end
 
     private
 
-    attr_reader :subscription, :charge, :charge_filter, :grouped_by_keys, :from_datetime, :charge_period, :grouped_by_values
+    attr_reader :key, :filter, :grouped_by_keys, :from_datetime, :charge_period, :grouped_by_values
 
     def own_period
-      period = charge_period.period(charge_filter:)
+      period = charge_period.period(filter:)
       marker, records = period
       (marker && records.empty? && filter_edited_since?(marker)) ? [] : period
     end
 
-    # An upgrade or downgrade keeps the external id, so the events counted by the previous
-    # subscription are the ones this one reads.
-    def previous_subscription_period
-      subscription.previous_recurring_aggregation_snapshots.period(
-        charge:, charge_filter:, all_buckets: charge_period.all_buckets?, grouped_by_values:, grouped_by_keys: Array(grouped_by_keys)
-      )
+    def previous_period
+      key.previous_period(filter:, all_buckets: charge_period.all_buckets?, grouped_by_values:, grouped_by_keys: Array(grouped_by_keys))
     end
 
     # Snapshots grouped on other keys cannot be regrouped, only a full scan can. Checked on the
@@ -71,7 +87,7 @@ module RecurringAggregationSnapshots
     # An empty bucket has no row to compare grouping keys with, and an edit of the filter's
     # properties can regroup units that netted to zero into non-zero groups
     def filter_edited_since?(marker)
-      charge_filter.present? && charge_filter.updated_at > marker.watermark
+      filter.present? && filter.updated_at > marker.watermark
     end
 
     # A group without a snapshot had neither units nor events at the period, so it starts from zero.

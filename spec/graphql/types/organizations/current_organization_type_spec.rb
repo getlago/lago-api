@@ -57,5 +57,10 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
 
     expect(subject).to have_field(:feature_flags).of_type("[FeatureFlagEnum!]!")
     expect(subject).to have_field(:realtime_usage_enabled).of_type("Boolean!")
+
+    expect(subject).to have_field(:environment).of_type("OrganizationEnvironmentEnum!")
+    expect(subject).to have_field(:production_organization).of_type("LinkedOrganization")
+    expect(subject).to have_field(:sandbox_organization).of_type("LinkedOrganization")
+    expect(subject).to have_field(:self_serve).of_type("Boolean!")
   end
 end

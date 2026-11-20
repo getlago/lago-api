@@ -190,6 +190,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         let(:rate_card_rate) { create(:rate_card_rate, organization:) }
         let(:plan_rate_card) { create(:plan_rate_card, organization:) }
         let(:contract_rate_card) { create(:contract_rate_card, organization:) }
+        let(:plan_wallet) { create(:plan_wallet, organization:) }
 
         it "serializes a rate without assuming a customer association" do
           activity_log.produce(rate_card_rate, "rate_card_rate.created")
@@ -225,6 +226,16 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             payload = JSON.parse(args[:payload])
             expect(payload).to include("resource_type" => "PlanRateCard", "external_customer_id" => nil)
             expect(payload.fetch("activity_object")).to include("lago_id" => plan_rate_card.id)
+          end
+        end
+
+        it "serializes a plan wallet template with its taxes and metadata, without a customer association" do
+          activity_log.produce(plan_wallet, "plan_wallet.created")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "PlanWallet", "external_customer_id" => nil)
+            expect(payload.fetch("activity_object")).to include("lago_id" => plan_wallet.id, "taxes" => [], "metadata" => nil)
           end
         end
 

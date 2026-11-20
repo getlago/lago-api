@@ -170,6 +170,20 @@ RSpec.describe Api::V1::OrganizationsController do
       end
     end
 
+    context "with the self-serve and sandbox fields" do
+      let(:update_params) do
+        {legal_name: "Acme", self_serve: true, environment: "sandbox", production_organization_id: create(:organization).id}
+      end
+
+      it "ignores them" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(organization.reload).to have_attributes(legal_name: "Acme", self_serve: false, environment: "production",
+          production_organization_id: nil)
+      end
+    end
+
     context "with a document url expiration window above 120 days" do
       let(:update_params) { {document_url_expiration_days: 365} }
 

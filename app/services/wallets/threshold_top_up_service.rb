@@ -17,6 +17,7 @@ module Wallets
     def call
       return result unless state_changed
       return result if rule.nil?
+      return result if wallet.reserved_for_expiration_invoice?
       return result if wallet.credits_ongoing_balance > rule.threshold_credits
       return result if (pending_transactions_amount + wallet.credits_ongoing_balance) > rule.threshold_credits
 
