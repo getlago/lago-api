@@ -7,7 +7,7 @@ describe Contracts::MaterializeWalletsService do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:catalog_plan) { create(:catalog_plan, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:, currency: "USD") }
   let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
 
   let(:settings) do
