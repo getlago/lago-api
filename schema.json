@@ -15787,14 +15787,14 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "externalId",
-              "description": "External id of the contract",
+              "name": "contractId",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "ID",
                   "ofType": null
                 }
               },
@@ -86343,14 +86343,14 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "externalId",
-              "description": "External id of the contract to terminate",
+              "name": "id",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "ID",
                   "ofType": null
                 }
               },
@@ -88912,14 +88912,14 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "externalId",
-              "description": "External id of the contract to update",
+              "name": "id",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "ID",
                   "ofType": null
                 }
               },

@@ -22,7 +22,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Create do
   let(:customer) { create(:customer, organization:, currency: rate_card.currency) }
   let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan: nil) }
 
-  let(:input) { {externalId: contract.external_id, rateCardCode: rate_card.code, units: 10.0} }
+  let(:input) { {contractId: contract.id, rateCardCode: rate_card.code, units: 10.0} }
 
   let(:mutation) do
     <<~GQL
@@ -55,7 +55,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Create do
   context "with nested rate phases" do
     let(:input) do
       {
-        externalId: contract.external_id,
+        contractId: contract.id,
         rateCardCode: rate_card.code,
         ratePhases: [
           {code: "launch", position: 1, name: "Launch", billingIntervalCycleCount: 3},
@@ -88,18 +88,75 @@ RSpec.describe Mutations::ContractAppliedRateCards::Create do
     it "rejects the attachment as locked" do
       expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
     end
+
+    context "with a pending replacement" do
+      let(:replacement) { create(:contract, :pending, organization:, customer:, external_id: contract.external_id) }
+
+      before { replacement }
+
+      it "does not attach to the pending replacement instead" do
+        expect { execution }.not_to change(ContractRateCard, :count)
+        expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
+        expect(replacement.reload.applied_rate_cards).to be_empty
+      end
+    end
   end
 
-  context "when no live contract matches the external id" do
-    let(:input) { {externalId: "unknown", rateCardCode: rate_card.code} }
+  context "when the contract id does not exist" do
+    let(:input) { super().merge(contractId: SecureRandom.uuid) }
 
     it "returns a not found error" do
-      expect_not_found(execution)
+      expect_not_found(execution, details: {contract: ["not_found"]})
+    end
+  end
+
+  %i[terminated canceled].each do |status|
+    context "when the selected contract is #{status}" do
+      let(:contract) { create(:contract, status, organization:, customer:) }
+      let(:replacement) { create(:contract, :pending, organization:, customer:, external_id: contract.external_id) }
+
+      before { replacement }
+
+      it "does not attach to the pending replacement instead" do
+        expect { execution }.not_to change(ContractRateCard, :count)
+        expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
+        expect(replacement.reload.applied_rate_cards).to be_empty
+      end
+    end
+  end
+
+  context "when the contract belongs to another organization" do
+    let(:foreign_contract) { create(:contract, :pending, external_id: contract.external_id) }
+    let(:input) { super().merge(contractId: foreign_contract.id) }
+
+    it "does not attach a card to either organization's contract" do
+      expect { execution }.not_to change(ContractRateCard, :count)
+      expect_not_found(execution, details: {contract: ["not_found"]})
+      expect(foreign_contract.reload.applied_rate_cards).to be_empty
+      expect(contract.reload.applied_rate_cards).to be_empty
+    end
+  end
+
+  context "when an external id is sent as the contract id" do
+    let(:input) { super().merge(contractId: contract.external_id) }
+
+    it "does not use an external-id fallback" do
+      expect { execution }.not_to change(ContractRateCard, :count)
+      expect_not_found(execution, details: {contract: ["not_found"]})
+    end
+  end
+
+  context "when only externalId is supplied" do
+    let(:input) { {externalId: contract.external_id, rateCardCode: rate_card.code} }
+
+    it "rejects the input without attaching a card" do
+      expect { execution }.not_to change(ContractRateCard, :count)
+      expect(execution["errors"]).not_to be_empty
     end
   end
 
   context "with an explicit billing anchor date" do
-    let(:input) { {externalId: contract.external_id, rateCardCode: rate_card.code, billingAnchorDate: "2026-10-01"} }
+    let(:input) { {contractId: contract.id, rateCardCode: rate_card.code, billingAnchorDate: "2026-10-01"} }
 
     it "anchors the card on the provided date" do
       expect(execution["data"]["createContractAppliedRateCard"]["billingAnchorDate"]).to eq("2026-10-01")
@@ -107,7 +164,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Create do
   end
 
   context "with an explicitly empty rate phase list" do
-    let(:input) { {externalId: contract.external_id, rateCardCode: rate_card.code, ratePhases: []} }
+    let(:input) { {contractId: contract.id, rateCardCode: rate_card.code, ratePhases: []} }
 
     it "rejects the attachment" do
       expect_unprocessable_entity(execution)
