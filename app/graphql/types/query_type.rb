@@ -69,6 +69,7 @@ module Types
     field :events, resolver: Resolvers::EventsResolver
     field :feature, resolver: Resolvers::Entitlement::FeatureResolver
     field :features, resolver: Resolvers::Entitlement::FeaturesResolver
+    field :fee, resolver: Resolvers::FeeResolver
     field :google_auth_url, resolver: Resolvers::Auth::Google::AuthUrlResolver
     field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
     field :integration, resolver: Resolvers::IntegrationResolver
