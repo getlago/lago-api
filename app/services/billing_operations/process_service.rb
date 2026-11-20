@@ -117,7 +117,7 @@ module BillingOperations
         records: operations.map(&:contract_rate_card),
         associations: [
           :organization,
-          {product: {filters: {values: :billable_metric_filter}}},
+          {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override},
           {contract: :customer}
