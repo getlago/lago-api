@@ -5,6 +5,11 @@ module UsageMonitoring
     include CatalogWalletAlertSettings
 
     belongs_to :plan_wallet, -> { with_discarded }, inverse_of: :alerts
+
+    has_many :thresholds,
+      class_name: "UsageMonitoring::CatalogWalletAlertThreshold",
+      dependent: :delete_all,
+      inverse_of: :plan_wallet_alert
   end
 end
 

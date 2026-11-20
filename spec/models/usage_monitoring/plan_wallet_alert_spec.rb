@@ -20,6 +20,7 @@ RSpec.describe UsageMonitoring::PlanWalletAlert do
     it do
       expect(alert).to belong_to(:organization)
       expect(alert).to belong_to(:plan_wallet).inverse_of(:alerts)
+      expect(alert).to have_many(:thresholds).class_name("UsageMonitoring::CatalogWalletAlertThreshold").dependent(:delete_all).inverse_of(:plan_wallet_alert)
     end
   end
 
