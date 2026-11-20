@@ -1,14 +1,11 @@
 # frozen_string_literal: true
 
-# One rate card's obligation, with fees from its eligible pricing slices.
-RateCardUsage = Data.define(:contract_rate_card, :obligation, :rate_phase, :fees) do
-  delegate :properties, to: :rate, prefix: true
-
+# One rate card's obligation, priced segment by segment.
+RateCardUsage = Data.define(:contract_rate_card, :obligation, :rate_phase, :segments) do
   def started_at = obligation.segments.first.started_at
   def ended_at = BillingSegment.inclusive_end(obligation.segments.last.ended_at)
 
-  # Singular pricing metadata represents the first segment for legacy consumers.
-  def rate = obligation.cycle.phase.rate_override || obligation.segments.first.rate
+  def fees = segments.flat_map(&:fees)
 
   def units
     fees.sum(BigDecimal(0), &:units)

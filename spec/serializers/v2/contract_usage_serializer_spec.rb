@@ -49,7 +49,12 @@ RSpec.describe V2::ContractUsageSerializer do
         contract_rate_card:,
         obligation:,
         rate_phase: nil,
-        fees: [build_stubbed(:fee, amount_cents: 700, taxes_amount_cents: 140)]
+        segments: [
+          RateCardUsageSegment.new(
+            billing_segment: build_stubbed(:billing_segment, contract_rate_card:, rate_card_rate: rate),
+            fees: [build_stubbed(:fee, amount_cents: 700, taxes_amount_cents: 140)]
+          )
+        ]
       )
     end
     let(:rate_card_usages) { [rate_card_usage] }

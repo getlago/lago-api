@@ -115,6 +115,60 @@ RSpec.describe Events::BillingPeriodFilters::BillingSegmentsResolver do
       expect(Events::BillingPeriodFilters::FilterTarget).to have_received(:from_billing_segment).once
     end
 
+    context "with several cards and metrics" do
+      let(:second_metric) { create(:billable_metric, organization:) }
+      let(:second_product) { create(:product, organization:, billable_metric: second_metric) }
+      let(:second_rate_card) { create(:rate_card, organization:, product: second_product) }
+      let(:cards) do
+        [
+          contract_rate_card,
+          create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:)),
+          create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card)
+        ]
+      end
+      let(:segments) do
+        cards.map do |card|
+          segment = billing_segment.dup
+          segment.contract_rate_card = ContractRateCard.find(card.id)
+          segment.billable_metric_code = card.product.billable_metric.code
+          segment
+        end
+      end
+      let(:resolver) { described_class.new(billing_segments: segments) }
+      let(:first_event) do
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, properties: {region: "eu"}, timestamp: billing_segment.started_at + 1.hour)
+      end
+      let(:second_event) do
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: second_metric.code, properties: {region: "us"}, timestamp: billing_segment.started_at + 2.hours)
+      end
+
+      before do
+        create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us])
+        create(:billable_metric_filter, organization:, billable_metric: second_metric, key: "region", values: %w[eu us])
+        first_event
+        second_event
+        ActiveRecord::Associations::Preloader.new(
+          records: segments.map(&:contract_rate_card),
+          associations: {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]}
+        ).call
+      end
+
+      it "loads metric filters in one query and preserves each target" do
+        queries = []
+        subscriber = ->(*, payload) { queries << payload[:sql] if payload[:sql].match?(/FROM "billable_metric_filters"/) && payload[:name] != "SCHEMA" }
+
+        targets = ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { filter_targets }
+
+        expect(queries.size).to eq(1)
+        expect(targets).to eq(
+          segments[0].target_key => {nil => first_event.created_at},
+          segments[2].target_key => {nil => second_event.created_at}
+        )
+      end
+    end
+
     context "when matching a product filter priced by a rate card" do
       let(:priced_filter) { create(:product_filter, organization:, product:) }
       let(:specific_filter) { create(:product_filter, organization:, product:) }

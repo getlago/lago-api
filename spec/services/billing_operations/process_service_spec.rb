@@ -18,6 +18,7 @@ RSpec.describe BillingOperations::ProcessService do
   end
   let(:cursor) { Time.utc(2026, 2, 1) }
   let(:timestamp) { cursor }
+  let(:target_cycle_started_at) { Time.utc(2026, 1, 1) }
   let(:contract_rate_card) do
     create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:, units: 1, next_billing_at: cursor,
       effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
@@ -25,7 +26,7 @@ RSpec.describe BillingOperations::ProcessService do
   let(:operation) do
     create(:billing_operation, organization:, customer:, contract_rate_card:,
       action_type: contract_rate_card.periodic_billing_action, reason: "periodic_continuation",
-      billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
+      billing_at: cursor, target_cycle_started_at:)
   end
 
   before do
@@ -641,17 +642,19 @@ RSpec.describe BillingOperations::ProcessService do
 
   context "with two cards on separate contracts" do
     let(:other_contract) { create(:contract, organization:, customer:, started_at: contract.started_at, consolidate_invoice:) }
+    let(:other_rate_card) { rate_card }
+    let(:other_billing_at) { cursor }
     let(:other_card) do
-      create(:contract_rate_card, organization:, contract: other_contract, rate_card:, units: 1,
-        next_billing_at: cursor, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+      create(:contract_rate_card, organization:, contract: other_contract, rate_card: other_rate_card, units: 1,
+        next_billing_at: other_billing_at, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+    end
+    let(:other_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card: other_card,
+        action_type: "close_fixed_arrears", reason: "periodic_continuation", billing_at: other_billing_at,
+        target_cycle_started_at:)
     end
 
-    before do
-      other_card
-      create(:billing_operation, organization:, customer:, contract_rate_card: other_card,
-        action_type: "close_fixed_arrears", reason: "periodic_continuation", billing_at: cursor,
-        target_cycle_started_at: Time.utc(2026, 1, 1))
-    end
+    before { other_operation }
 
     it "keeps invoices separate for persisted operations" do
       expect(result.invoices.map(&:total_amount_cents)).to eq([3100, 3100])
@@ -665,6 +668,105 @@ RSpec.describe BillingOperations::ProcessService do
         expect(invoice.total_amount_cents).to eq(6200) # Two $31 cards.
         expect(invoice.billing_operations.pluck(:contract_rate_card_id)).to match_array([contract_rate_card.id, other_card.id])
         expect(other_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+      end
+
+      shared_examples "separate invoice groups" do
+        it "links each operation to its own invoice" do
+          expect(result).to be_success
+          expect(result.invoices.size).to eq(2)
+          expect(result.invoices.map { |invoice| invoice.fees.count }).to eq([1, 1])
+          expect(operation.reload.invoice_id).not_to eq(other_operation.reload.invoice_id)
+          expect(result.invoices.map(&:id)).to match_array([operation.invoice_id, other_operation.invoice_id])
+        end
+      end
+
+      context "when billing instants fall on different customer-local dates" do
+        let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+        let(:target_cycle_started_at) { Time.utc(2026, 1, 1, 5) }
+        let(:contract) { create(:contract, organization:, customer:, started_at: target_cycle_started_at, consolidate_invoice:) }
+        let(:cursor) { Time.utc(2026, 2, 2, 4, 30) }
+        let(:other_billing_at) { Time.utc(2026, 2, 2, 5, 30) }
+        let(:timestamp) { other_billing_at }
+
+        it_behaves_like "separate invoice groups"
+      end
+
+      context "when the currencies differ" do
+        let(:other_rate_card) { create(:rate_card, organization:, product:, billing_timing:, currency: "EUR", proration: true) }
+
+        before do
+          create(:rate_card_rate, organization:, rate_card: other_rate_card,
+            effective_from: Time.utc(2026, 1, 1), rate_properties: {"amount" => "31"})
+        end
+
+        it_behaves_like "separate invoice groups"
+      end
+
+      context "when billing entities differ" do
+        before { other_contract.update!(billing_entity: create(:billing_entity, organization:)) }
+
+        it_behaves_like "separate invoice groups"
+      end
+
+      context "when purchase orders differ" do
+        before do
+          contract.update!(purchase_order_number: "PO-1")
+          other_contract.update!(purchase_order_number: "PO-2")
+        end
+
+        it_behaves_like "separate invoice groups"
+
+        it "sets the purchase order on each invoice" do
+          expect(result.invoices.map(&:purchase_order_number)).to match_array(["PO-1", "PO-2"])
+        end
+      end
+
+      context "with a default payment method" do
+        let(:default_method) { create(:payment_method, organization:, customer:, is_default: true) }
+
+        before { default_method }
+
+        context "when the other contract explicitly selects the default" do
+          before { other_contract.update!(payment_method: default_method, payment_method_type: "provider") }
+
+          it "consolidates the operations" do
+            expect(result.invoices.sole.billing_operations.pluck(:id)).to match_array([operation.id, other_operation.id])
+          end
+        end
+
+        context "when the other contract explicitly selects another method" do
+          let(:other_method) { create(:payment_method, organization:, customer:, is_default: false) }
+
+          before { other_contract.update!(payment_method: other_method, payment_method_type: "provider") }
+
+          it_behaves_like "separate invoice groups"
+        end
+
+        context "when the other contract uses manual payment" do
+          before { other_contract.update!(payment_method_type: "manual") }
+
+          it_behaves_like "separate invoice groups"
+        end
+      end
+
+      context "without a default payment method" do
+        before { other_contract.update!(payment_method_type: "manual") }
+
+        it_behaves_like "separate invoice groups"
+      end
+
+      context "when both contracts select custom sections" do
+        let(:first_section) { create(:invoice_custom_section, organization:) }
+        let(:second_section) { create(:invoice_custom_section, organization:) }
+
+        before do
+          create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: first_section)
+          create(:contract_applied_invoice_custom_section, organization:, contract: other_contract, invoice_custom_section: second_section)
+        end
+
+        it "applies both selections to the consolidated invoice" do
+          expect(result.invoices.sole.applied_invoice_custom_sections.pluck(:code)).to match_array([first_section.code, second_section.code])
+        end
       end
 
       it "loads the rates both schedules read in one query" do
@@ -881,6 +983,63 @@ RSpec.describe BillingOperations::ProcessService do
       expect(result.invoices.sole.fees.sole).to have_attributes(units: 1, amount_cents: 3100)
       expect(contract_rate_card.billing_operations.sole.action_type).to eq("close_metered_arrears")
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+    end
+  end
+
+  context "with a draft invoice" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC", invoice_grace_period: 3) }
+
+    it "enqueues draft notifications and records the expected finalization date" do
+      invoice = result.invoices.sole
+
+      expect(invoice).to have_attributes(status: "draft", expected_finalization_date: Date.new(2026, 2, 4))
+      expect(operation.reload).to have_attributes(invoice_id: invoice.id, processed_at: timestamp)
+      expect(SendWebhookJob).to have_been_enqueued.with("invoice.drafted", invoice)
+      expect(SendWebhookJob).to have_been_enqueued.with("invoice.ready_to_finalize", invoice)
+    end
+  end
+
+  context "when the contract billing entity has a grace period" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC", invoice_grace_period: nil) }
+    let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
+
+    before { contract.update!(billing_entity:) }
+
+    it "uses that billing entity's grace period" do
+      expect(result.invoices.sole).to have_attributes(
+        billing_entity:, status: "draft", expected_finalization_date: Date.new(2026, 2, 4)
+      )
+    end
+  end
+
+  context "with invoice custom sections" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+
+    context "when the contract selects a section" do
+      before { create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section) }
+
+      it "copies the selection onto the invoice" do
+        expect(result.invoices.sole.applied_invoice_custom_sections.pluck(:code)).to eq([section.code])
+      end
+    end
+
+    context "when the contract has no selection" do
+      before do
+        create(:billing_entity_applied_invoice_custom_section, organization:,
+          billing_entity: customer.billing_entity, invoice_custom_section: section)
+      end
+
+      it "uses the customer billing entity's fallback" do
+        expect(result.invoices.sole.applied_invoice_custom_sections.pluck(:code)).to eq([section.code])
+      end
+
+      context "when the contract skips sections" do
+        before { contract.update!(skip_invoice_custom_sections: true) }
+
+        it "does not apply the fallback" do
+          expect(result.invoices.sole.applied_invoice_custom_sections).to be_empty
+        end
+      end
     end
   end
 
