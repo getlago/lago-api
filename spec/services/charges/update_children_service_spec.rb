@@ -13,11 +13,11 @@ RSpec.describe Charges::UpdateChildrenService do
     )
   end
 
-  let_it_be(:organization, refind: true) { create_default(:organization) }
-  let_it_be(:billable_metric, refind: true) { create(:billable_metric) }
-  let_it_be(:plan, refind: true) { create(:plan, organization:) }
-  let_it_be(:parent_id, refind: true) { plan.id }
-  let_it_be(:child_plan, refind: true) { create(:plan, organization:, parent_id:) }
+  # Not let_it_be: the concurrent examples read these records from other database connections.
+  let(:organization) { create_default(:organization) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:plan) { create(:plan, organization:) }
+  let(:child_plan) { create(:plan, organization:, parent_id: plan.id) }
   let(:old_parent_attrs) { charge&.attributes }
   let(:charge_parent_id) { charge.id }
   let(:child_ids) { [child_charge&.id] }
@@ -151,6 +151,91 @@ RSpec.describe Charges::UpdateChildrenService do
         expect(child_charge.reload).to have_attributes(
           properties: {"amount" => "300"}
         )
+      end
+    end
+
+    context "when another batch is updating a child concurrently", transaction: false do
+      let(:cascade_args) { {charge:, params:, old_parent_attrs:, old_parent_applied_pricing_unit_attrs:} }
+      let(:next_cascade_args) do
+        cascade_args.merge(
+          params: params.merge(properties: {amount: "500"}),
+          old_parent_attrs: old_parent_attrs.merge("properties" => {"amount" => "400"}),
+          child_ids: [child_charge.id]
+        )
+      end
+      let(:sibling_charge) do
+        create(
+          :standard_charge,
+          plan: create(:plan, organization:, parent_id: plan.id),
+          parent_id: charge.id,
+          billable_metric:,
+          properties: {amount: "300"}
+        )
+      end
+      let(:update_started) { Queue.new }
+      let(:resume_update) { Queue.new }
+
+      before do
+        pause_token = Queue.new
+        pause_token << true
+        started = update_started
+        resume = resume_update
+
+        allow(Charges::UpdateService).to receive(:call!).and_wrap_original do |original, **kwargs|
+          if pause_token.pop(timeout: 0)
+            started << true
+            resume.pop(timeout: 10)
+          end
+
+          original.call(**kwargs)
+        end
+      end
+
+      def call_in_thread(**args)
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection { described_class.call(**args) }
+        end
+      end
+
+      it "does not wait for another batch of the same cascade" do
+        sibling_batch = call_in_thread(**cascade_args, child_ids: [sibling_charge.id])
+        update_started.pop(timeout: 10)
+
+        expect(described_class.call(**cascade_args, child_ids: [child_charge.id])).to be_success
+        expect(child_charge.reload.properties).to eq("amount" => "400")
+
+        resume_update << true
+
+        expect(sibling_batch.value).to be_success
+        expect(sibling_charge.reload.properties).to eq("amount" => "400")
+      end
+
+      it "does not update the child while another cascade of the same parent holds it" do
+        stub_const("#{described_class}::LOCK_TIMEOUT_SECONDS", 0)
+
+        previous_cascade = call_in_thread(**cascade_args, child_ids: [child_charge.id])
+        update_started.pop(timeout: 10)
+
+        expect { described_class.call(**next_cascade_args) }.to raise_error(WithAdvisoryLock::FailedToAcquireLock)
+
+        resume_update << true
+
+        expect(previous_cascade.value).to be_success
+        expect(child_charge.reload.properties).to eq("amount" => "400")
+        expect(described_class.call(**next_cascade_args)).to be_success
+        expect(child_charge.reload.properties).to eq("amount" => "500")
+      end
+
+      it "applies a cascade that waited for the lock on top of the previous one" do
+        previous_cascade = call_in_thread(**cascade_args, child_ids: [child_charge.id])
+        update_started.pop(timeout: 10)
+        next_cascade = call_in_thread(**next_cascade_args)
+        sleep 0.5
+
+        resume_update << true
+
+        expect([previous_cascade.value, next_cascade.value]).to all(be_success)
+        expect(child_charge.reload.properties).to eq("amount" => "500")
       end
     end
   end
