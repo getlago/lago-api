@@ -32,11 +32,11 @@ class InvoiceProductFeesQuery < BaseQuery
     end
 
     fees = base_scope
-    fees = with_contract(fees) unless filters.contract_id.nil?
-    fees = with_product_category(fees) unless filters.product_category_id.nil?
+    fees = with_contract(fees) if filters.contract_id.present?
+    fees = with_product_category(fees) if filters.product_category_id.present?
     fees = fees.where(products: {product_category_id: nil}) if standalone_products?
-    fees = with_products(fees) unless filters.product_ids.nil?
-    fees = with_product_filter(fees) if !filters.product_filter_ids.nil? || without_product_filter?
+    fees = with_products(fees) if filters.product_ids.present?
+    fees = with_product_filter(fees) if filters.product_filter_ids.present? || without_product_filter?
     fees = fees.where("products.product_type = ?", filters.product_type) if filters.product_type.present?
     fees = with_search_term(fees) if search_term.present?
 
@@ -85,12 +85,16 @@ class InvoiceProductFeesQuery < BaseQuery
     end
   end
 
+  # A filter that matches brings in the whole product of its contract, so the rows add up to the
+  # product header of the tree.
   def with_search_term(scope)
-    scope.where(
+    matching_products = base_scope.where(
       "products.name ILIKE :term OR products.code ILIKE :term OR products.invoice_display_name ILIKE :term " \
       "OR product_filters.name ILIKE :term OR product_filters.code ILIKE :term OR product_filters.invoice_display_name ILIKE :term",
       term: "%#{Fee.sanitize_sql_like(search_term)}%"
-    )
+    ).select("fees.contract_id, fees.invoiceable_id")
+
+    scope.where("(fees.contract_id, fees.invoiceable_id) IN (?)", matching_products)
   end
 
   # The names compare bytewise (COLLATE "C"), as the PDF and the tree compare them in Ruby, whatever the
