@@ -7,14 +7,19 @@
 # Consumes two apko-built bases from https://github.com/getlago/lago-packages.
 # Both are public, multi-arch and cosign-signed, so building this file needs no
 # registry credentials:
-#   - ghcr.io/getlago/lago-api-build:latest  — ruby-4-dev, rust, build-base, node
-#   - ghcr.io/getlago/lago-api-base:latest   — ruby-4, jemalloc, libpq, pdfcpu, git
+#   - ghcr.io/getlago/lago-api-build          — ruby-4-dev, rust, build-base, node
+#   - ghcr.io/getlago/lago-api-base           — ruby-4, jemalloc, libpq, pdfcpu, git
 #
 # The bases carry no shell history, no apt, no distro cruft; every package
 # has an SBOM and is signed. This Dockerfile just bundles gems and copies code.
 
-ARG BUILD_IMAGE=ghcr.io/getlago/lago-api-build:latest
-ARG RUNTIME_IMAGE=ghcr.io/getlago/lago-api-base:latest
+# BASE PIN: `:<YYYYMMDD>-r<run>@sha256:<index digest>`, an immutable
+# lago-packages publish. Docker builds from the digest, so a build is
+# reproducible. Renovate (getlago/lago-packages renovate/lago-bases) moves tag
+# and digest together when a newer base is published; the base refresh
+# rebuilds deployed tags with a newer RUNTIME_IMAGE in between.
+ARG BUILD_IMAGE=ghcr.io/getlago/lago-api-build:20261023-r68@sha256:1be707d0b9d93d10f8bab391bb030dc2d9e048566ce6137e5ba7800aa16c9b88
+ARG RUNTIME_IMAGE=ghcr.io/getlago/lago-api-base:20261023-r68@sha256:5848809572ac6168901c318af2dc85b121cc74b75901a06a51d9d7eacbd2fbfc
 
 FROM ${BUILD_IMAGE} AS build
 
