@@ -64,11 +64,8 @@ module Credits
       invoice_fees = invoice.fees.select { |fee| fee.charge? && fee.subscription_id == subscription.id }
       progressive_billing_invoice.fees.order(amount_cents: :desc).each do |progressive_fee|
         available_amount = [progressive_fee.creditable_amount_cents, 0].max
-        fee = invoice_fees.find { |f|
-          f.charge_id == progressive_fee.charge_id &&
-            f.charge_filter_id == progressive_fee.charge_filter_id &&
-            f.grouped_by == progressive_fee.grouped_by
-        }
+        fee = invoice_fees.find { |f| same_charge?(f, progressive_fee) } ||
+          invoice_fees.find { |f| same_charge_code?(f, progressive_fee) }
 
         if fee
           amount = [remaining_amount, available_amount, fee.amount_cents - fee.precise_coupons_amount_cents].min.clamp(0, remaining_amount)
@@ -90,6 +87,19 @@ module Credits
       end
 
       [applied_amount, credit_note_items]
+    end
+
+    def same_charge?(fee, progressive_fee)
+      fee.charge_id == progressive_fee.charge_id &&
+        fee.charge_filter_id == progressive_fee.charge_filter_id &&
+        fee.grouped_by == progressive_fee.grouped_by
+    end
+
+    # charges and filters deleted and recreated during the period keep their code but get a new id
+    def same_charge_code?(fee, progressive_fee)
+      fee.charge&.code == progressive_fee.charge&.code &&
+        fee.charge_filter&.code == progressive_fee.charge_filter&.code &&
+        fee.grouped_by == progressive_fee.grouped_by
     end
   end
 end
