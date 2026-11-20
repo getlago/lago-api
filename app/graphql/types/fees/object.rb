@@ -84,7 +84,7 @@ module Types
       end
 
       def applied_taxes
-        if object.applied_taxes.any? { |t| !t.persisted? }
+        if object.applied_taxes.loaded? || object.applied_taxes.any? { |t| !t.persisted? }
           object.applied_taxes.sort_by { |tax| -tax.tax_rate.to_f }
         else
           object.applied_taxes.order(tax_rate: :desc)
