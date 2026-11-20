@@ -39,6 +39,8 @@ class Charge < ApplicationRecord
 
   REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
 
+  CASCADED_ATTRIBUTES = %w[code charge_model properties accepts_target_wallet].freeze
+
   enum :charge_model, CHARGE_MODELS, validate: true
 
   attribute :regroup_paid_fees, :integer
@@ -95,6 +97,11 @@ class Charge < ApplicationRecord
     return false unless applied_pricing_unit && another_charge.applied_pricing_unit
 
     applied_pricing_unit.conversion_rate == another_charge.applied_pricing_unit.conversion_rate
+  end
+
+  def cascaded_attributes_changed?(old_attrs, old_applied_pricing_unit_attrs)
+    attributes.slice(*CASCADED_ATTRIBUTES) != old_attrs.slice(*CASCADED_ATTRIBUTES) ||
+      applied_pricing_unit&.conversion_rate != old_applied_pricing_unit_attrs&.dig("conversion_rate")
   end
 
   def target_key
