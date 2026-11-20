@@ -6,6 +6,7 @@ class PlanWallet < ApplicationRecord
   belongs_to :catalog_plan, -> { with_discarded }
 
   has_many :credit_allocations, class_name: "PlanWalletCreditAllocation"
+  has_many :alerts, class_name: "UsageMonitoring::PlanWalletAlert", dependent: :delete_all, inverse_of: :plan_wallet
 
   validates :code, uniqueness: {scope: :catalog_plan_id, conditions: -> { where(deleted_at: nil) }}
   validate :currency_matches_plan, if: -> { currency_changed? || catalog_plan_id_changed? }
