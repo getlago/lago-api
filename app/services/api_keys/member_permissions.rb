@@ -28,7 +28,7 @@ module ApiKeys
       "billing_entity" => crud("billing_entities"),
       "contract" => {read: %w[contracts:view], write: %w[contracts:create contracts:update contracts:terminate]},
       "contract_rate_card" => {read: %w[contracts:view], write: %w[contracts:create contracts:update]},
-      "contract_wallet" => {read: %w[contracts:view]},
+      "contract_wallet" => {read: %w[contracts:view], write: %w[contracts:create contracts:update]},
       "coupon" => crud("coupons"),
       "credit_note" => {
         read: %w[credit_notes:view],
