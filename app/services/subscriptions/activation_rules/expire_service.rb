@@ -11,6 +11,10 @@ module Subscriptions
       end
 
       def call
+        result.subscription = subscription
+        # The clock enqueued this against an earlier state: VIES may have resolved and restarted the timeout since.
+        return result unless Subscription.expirable.exists?(id: subscription.id)
+
         cancel_result = CancelService.call(
           subscription:,
           rule_status: :expired,
@@ -18,10 +22,7 @@ module Subscriptions
         )
 
         if cancel_result.failure?
-          if subscription_already_resolved?(cancel_result)
-            result.subscription = subscription
-            return result
-          end
+          return result if subscription_already_resolved?(cancel_result)
 
           cancel_result.raise_if_error!
         end
