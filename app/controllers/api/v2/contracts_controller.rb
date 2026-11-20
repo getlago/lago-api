@@ -73,7 +73,7 @@ module Api
       end
 
       def show
-        # No status filter resolves to the live contract (pending or active),
+        # No status filter resolves to the live contract (draft, pending or active),
         # so a pending contract is visible on its own detail URL and matches
         # what the nested applied-rate-card endpoints operate on. An explicit
         # status reads a specific one, including terminated/canceled history.

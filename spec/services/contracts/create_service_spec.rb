@@ -355,6 +355,15 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     end
   end
 
+  context "when a draft contract already uses the external id" do
+    before { create(:contract, :draft, organization:, customer:, external_id: "contract-1") }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:external_id]).to eq(["value_already_exists"])
+    end
+  end
+
   context "when a terminated contract used the external id" do
     before { create(:contract, :terminated, organization:, customer:, external_id: "contract-1") }
 
