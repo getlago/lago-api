@@ -55,7 +55,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
       end
 
       if fallback
-        context "when fallback_connection is redefined and pins a specific connection" do
+        context "when fallback_connection is defined to pin a specific connection" do
           let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
 
           before do
@@ -65,6 +65,16 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
 
           it "returns the fallback connection" do
             expect(resolvable.effective_payment_connection).to eq(fallback_connection)
+          end
+        end
+
+        context "when fallback_connection is defined as skip" do
+          before do
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment, behavior: :skip)
+          end
+
+          it "reports skip behavior" do
+            expect(resolvable.effective_payment_connection).to be_nil
           end
         end
       end
@@ -123,6 +133,16 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
             expect(resolvable.effective_accounting_connection).to eq(fallback_connection)
           end
         end
+
+        context "when fallback_connection is defined as skip" do
+          before do
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :accounting, behavior: :skip)
+          end
+
+          it "reports skip behavior" do
+            expect(resolvable.effective_accounting_connection).to be_nil
+          end
+        end
       end
     end
 
@@ -179,6 +199,16 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
             expect(resolvable.effective_tax_connection).to eq(fallback_connection)
           end
         end
+
+        context "when fallback_connection is defined as skip", skip: "Unskip it when IntegrationCustomer#only_one_tax_integration_per_customer is removed" do
+          before do
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :tax, behavior: :skip)
+          end
+
+          it "reports skip behavior" do
+            expect(resolvable.effective_tax_connection).to be_nil
+          end
+        end
       end
     end
 
@@ -233,6 +263,16 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
 
           it "returns the fallback connection" do
             expect(resolvable.effective_crm_connection).to eq(fallback_connection)
+          end
+        end
+
+        context "when fallback_connection is defined as skip" do
+          before do
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :crm, behavior: :skip)
+          end
+
+          it "reports skip behavior" do
+            expect(resolvable.effective_crm_connection).to be_nil
           end
         end
       end
@@ -294,7 +334,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
     end
 
     if fallback
-      context "when fallback_connection is redefined and pins a specific connection" do
+      context "when fallback_connection is defined to pin a specific connection" do
         let(:fallback_connection) do
           create(:gocardless_customer, customer: resolution_customer, organization:, code: "gocardless_eu")
         end
@@ -306,6 +346,16 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
 
         it "reports specific with the pinned code" do
           expect(routing["payment"]).to have_attributes(behavior: "inherit", code: "gocardless_eu")
+        end
+      end
+
+      context "when fallback_connection is defined as skip" do
+        before do
+          create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment, behavior: :skip)
+        end
+
+        it "reports skip behavior" do
+          expect(routing["payment"]).to have_attributes(behavior: "skip", code: nil)
         end
       end
     end
