@@ -256,7 +256,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           expect(karafka_producer).to have_received(:produce_async) do |args|
             payload = JSON.parse(args[:payload])
             expect(payload).to include("resource_type" => "CatalogWallet", "external_customer_id" => contract_wallet.customer.external_id)
-            expect(payload.fetch("activity_object")).to include("lago_id" => contract_wallet.id, "balance" => "0.00", "taxes" => [], "metadata" => nil)
+            expect(payload.fetch("activity_object")).to include("lago_id" => contract_wallet.id, "balance_cents" => 0, "taxes" => [], "metadata" => nil)
           end
         end
       end
