@@ -369,7 +369,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService do
             create(
               :invoice_subscription,
               subscription:,
-              charges_to_datetime: "2022-01-31T23:59:59Z"
+              charges_to_datetime: "2022-01-31T23:59:59.999999Z"
             )
           end
 
@@ -379,7 +379,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService do
           end
 
           it "takes previous invoice into account" do
-            expect(result).to match_datetime("2022-02-01 00:00:00")
+            expect(date_service.charges_from_datetime).to eq(Time.zone.parse("2022-02-01 00:00:00"))
           end
         end
 
@@ -588,7 +588,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService do
             create(
               :invoice_subscription,
               subscription:,
-              fixed_charges_to_datetime: "2022-01-31T23:59:59Z"
+              fixed_charges_to_datetime: "2022-01-31T23:59:59.999999Z"
             )
           end
 
@@ -598,7 +598,7 @@ RSpec.describe Subscriptions::Dates::MonthlyService do
           end
 
           it "takes previous invoice into account and returns from_datetime" do
-            expect(result.to_s).to match_datetime("2022-02-01 00:00:00")
+            expect(result).to eq(Time.zone.parse("2022-02-01 00:00:00"))
           end
         end
 
