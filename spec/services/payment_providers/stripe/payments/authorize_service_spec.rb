@@ -86,6 +86,43 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
         expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_been_enqueued
       end
 
+      context "when the payment method is a bank debit, which cannot be held" do
+        let(:payment_method) do
+          create(:payment_method, payment_provider_customer: provider_customer, provider_method_id:, details: {type: "sepa_debit", last4: "3000"})
+        end
+
+        it "fails without calling Stripe" do
+          result = subject.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({payment_method_id: ["payment_method_not_supported_for_authorization"]})
+          expect(::Stripe::PaymentIntent).not_to have_received(:create)
+        end
+      end
+
+      context "when the payment method is Link, which can be held" do
+        let(:payment_method) do
+          create(:payment_method, payment_provider_customer: provider_customer, provider_method_id:, details: {type: "link"})
+        end
+
+        it "creates the stripe payment intent" do
+          expect(subject.call).to be_success
+          expect(::Stripe::PaymentIntent).to have_received(:create)
+        end
+      end
+
+      context "when the payment method type is unknown" do
+        let(:payment_method) do
+          create(:payment_method, payment_provider_customer: provider_customer, provider_method_id:, details: {})
+        end
+
+        it "lets Stripe decide, as before" do
+          expect(subject.call).to be_success
+          expect(::Stripe::PaymentIntent).to have_received(:create)
+        end
+      end
+
       context "when consent collection is enabled on the provider" do
         let(:provider_customer) do
           create(:stripe_customer, payment_provider: create(:stripe_provider, require_terms_of_service_consent: true), customer:, payment_method_id:)
