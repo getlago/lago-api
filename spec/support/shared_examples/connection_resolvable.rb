@@ -73,7 +73,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
             create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment, behavior: :skip)
           end
 
-          it "reports skip behavior" do
+          it "returns nil" do
             expect(resolvable.effective_payment_connection).to be_nil
           end
         end
@@ -139,7 +139,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
             create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :accounting, behavior: :skip)
           end
 
-          it "reports skip behavior" do
+          it "returns nil" do
             expect(resolvable.effective_accounting_connection).to be_nil
           end
         end
@@ -205,7 +205,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
             create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :tax, behavior: :skip)
           end
 
-          it "reports skip behavior" do
+          it "returns nil" do
             expect(resolvable.effective_tax_connection).to be_nil
           end
         end
@@ -271,7 +271,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
             create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :crm, behavior: :skip)
           end
 
-          it "reports skip behavior" do
+          it "returns nil" do
             expect(resolvable.effective_crm_connection).to be_nil
           end
         end
@@ -317,6 +317,21 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
       end
     end
 
+    context "when the object pins a payment connection with a deleted payment_provider_customer" do
+      let(:override_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+
+      before do
+        create(:billing_object_connection, owner: resolvable, organization:, category: :payment,
+          behavior: :specific, payment_provider_customer: override_connection)
+
+        override_connection.update(deleted_at: Time.zone.now)
+      end
+
+      it "reports inherit with nil code" do
+        expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
+      end
+    end
+
     context "when the object skips the category" do
       before do
         create(:billing_object_connection, owner: resolvable, organization:, category: :payment, behavior: :skip)
@@ -329,7 +344,12 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
 
     context "when nothing resolves" do
       it "reports inherit with a nil code" do
-        expect(routing["crm"]).to have_attributes(behavior: "inherit", code: nil)
+        expect(routing).to match(
+          "payment" => have_attributes(behavior: "inherit", code: nil),
+          "tax" => have_attributes(behavior: "inherit", code: nil),
+          "accounting" => have_attributes(behavior: "inherit", code: nil),
+          "crm" => have_attributes(behavior: "inherit", code: nil)
+        )
       end
     end
 
@@ -354,8 +374,8 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
           create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment, behavior: :skip)
         end
 
-        it "reports skip behavior" do
-          expect(routing["payment"]).to have_attributes(behavior: "skip", code: nil)
+        it "reports inherit behavior with nil code" do
+          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
         end
       end
     end

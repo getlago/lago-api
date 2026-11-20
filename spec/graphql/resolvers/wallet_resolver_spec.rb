@@ -201,7 +201,7 @@ RSpec.describe Resolvers::WalletResolver do
       rule_connections = wallet_connections["recurringTransactionRules"].first["connections"].index_by { it["category"] }
 
       expect(rule_connections["payment"]).to eq({"category" => "payment", "behavior" => "inherit", "code" => "gocardless_eu"})
-      expect(rule_connections["tax"]).to eq({"category" => "tax", "behavior" => "skip", "code" => nil})
+      expect(rule_connections["tax"]).to eq({"category" => "tax", "behavior" => "inherit", "code" => nil})
       expect(rule_connections["crm"]).to eq({"category" => "crm", "behavior" => "inherit", "code" => nil})
     end
   end
