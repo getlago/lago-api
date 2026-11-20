@@ -39,7 +39,7 @@ RSpec.describe Contracts::CurrentUsageService do
     usage = result.rate_card_usages.sole
 
     expect(usage.contract_rate_card).to eq(contract_rate_card)
-    expect(usage.billing_segment).to be_new_record
+    expect(usage.billing_segment).not_to respond_to(:save!)
     expect(usage.billing_segment).to have_attributes(
       rate_card_rate: rate, started_at: Time.zone.parse("2027-02-01"),
       ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-03-01"))
@@ -50,7 +50,7 @@ RSpec.describe Contracts::CurrentUsageService do
   end
 
   it "persists nothing" do
-    expect { result }.not_to change { [Fee.count, BillingSegment.count] }
+    expect { result }.not_to change { [Fee.count, LegacyBillingSegment.count] }
   end
 
   context "with an earlier timestamp" do

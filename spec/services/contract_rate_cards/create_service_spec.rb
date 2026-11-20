@@ -140,8 +140,8 @@ RSpec.describe ContractRateCards::CreateService do
     end
 
     it "creates the card without persisting an event-pricing segment" do
-      expect { result }.not_to change(BillingSegment, :count)
-      expect(result.contract_rate_card.billing_segments).to be_empty
+      expect { result }.not_to change(LegacyBillingSegment, :count)
+      expect(LegacyBillingSegment.where(contract_rate_card_id: result.contract_rate_card.id)).to be_empty
     end
   end
 

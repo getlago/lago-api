@@ -330,6 +330,10 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
     it { is_expected.to be(false) }
 
+    it "parses the watermark before comparing it to ingested_at, which can be a DateTime without milliseconds" do
+      expect(event_store.resent_after_watermark_sql(period)).to include("ingested_at <= toDateTime64('")
+    end
+
     context "with an event ingested by the watermark and re-sent after it" do
       before do
         ingest(ingested_at: period.watermark)

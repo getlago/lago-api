@@ -969,6 +969,24 @@
               "deprecationReason": null
             },
             {
+              "name": "plan_wallet_created",
+              "description": "plan_wallet.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_wallet_updated",
+              "description": "plan_wallet.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_wallet_deleted",
+              "description": "plan_wallet.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract_rate_card_created",
               "description": "contract_rate_card.created",
               "isDeprecated": false,
@@ -28960,16 +28978,12 @@
             },
             {
               "name": "planInterval",
-              "description": null,
+              "description": "Interval of the plan. Null for product catalog plans and contracts without a plan, whose rate cards each have their own interval",
               "args": [],
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "PlanInterval",
-                  "ofType": null
-                }
+                "kind": "ENUM",
+                "name": "PlanInterval",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -29861,16 +29875,12 @@
             },
             {
               "name": "planInterval",
-              "description": null,
+              "description": "Interval of the plan. Null for product catalog plans and contracts without a plan, whose rate cards each have their own interval",
               "args": [],
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "PlanInterval",
-                  "ofType": null
-                }
+                "kind": "ENUM",
+                "name": "PlanInterval",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -36234,6 +36244,18 @@
             },
             {
               "name": "standard_webhooks_signature",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_usage_on_wallet_expiration",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_alerts",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -81020,6 +81042,12 @@
             {
               "name": "plan_rate_card",
               "description": "PlanRateCard",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_wallet",
+              "description": "PlanWallet",
               "isDeprecated": false,
               "deprecationReason": null
             },

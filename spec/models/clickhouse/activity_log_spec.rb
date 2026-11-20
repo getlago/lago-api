@@ -22,6 +22,7 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
       expect(described_class::ACTIVITY_TYPES.slice(
         :rate_card_rate_created, :rate_card_rate_updated, :rate_card_rate_deleted,
         :plan_rate_card_created, :plan_rate_card_updated, :plan_rate_card_deleted,
+        :plan_wallet_created, :plan_wallet_updated, :plan_wallet_deleted,
         :contract_rate_card_created, :contract_rate_card_updated, :contract_rate_card_deleted,
         :contract_created, :contract_updated, :contract_started, :contract_terminated, :contract_canceled
       )).to eq(
@@ -31,6 +32,9 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         plan_rate_card_created: "plan_rate_card.created",
         plan_rate_card_updated: "plan_rate_card.updated",
         plan_rate_card_deleted: "plan_rate_card.deleted",
+        plan_wallet_created: "plan_wallet.created",
+        plan_wallet_updated: "plan_wallet.updated",
+        plan_wallet_deleted: "plan_wallet.deleted",
         contract_rate_card_created: "contract_rate_card.created",
         contract_rate_card_updated: "contract_rate_card.updated",
         contract_rate_card_deleted: "contract_rate_card.deleted",
@@ -41,13 +45,14 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         contract_canceled: "contract.canceled"
       )
 
-      expect(described_class::RESOURCE_TYPES.slice(:rate_card_rate, :plan_rate_card, :contract_rate_card, :contract)).to eq(
+      expect(described_class::RESOURCE_TYPES.slice(:rate_card_rate, :plan_rate_card, :plan_wallet, :contract_rate_card, :contract)).to eq(
         rate_card_rate: "RateCardRate",
         plan_rate_card: "PlanRateCard",
+        plan_wallet: "PlanWallet",
         contract_rate_card: "ContractRateCard",
         contract: "Contract"
       )
-      expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("RateCardRate", "PlanRateCard", "ContractRateCard")
+      expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("RateCardRate", "PlanRateCard", "ContractRateCard", "PlanWallet")
     end
   end
 

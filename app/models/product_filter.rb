@@ -14,6 +14,9 @@ class ProductFilter < ApplicationRecord
   has_many :values, class_name: "ProductFilterValue"
   has_many :billable_metric_filters, through: :values
   has_many :rate_cards
+  has_many :contract_alerts,
+    ->(product_filter) { where(organization_id: product_filter.organization_id) },
+    class_name: "UsageMonitoring::ContractAlert"
 
   delegate :attached_to_plan_or_subscription?, to: :product
 

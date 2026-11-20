@@ -72,7 +72,7 @@ module Contracts
     def effective_cards
       cards = contract.applied_rate_cards
         .starting_before_contract_end
-        .includes(rate_card: [:product_filter, {product: [:billable_metric, :product_category]}])
+        .includes(rate_card: [{product_filter: {values: :billable_metric_filter}}, {product: [:billable_metric, :product_category]}])
         .order(:effective_date, :created_at, :id)
         .to_a
       date = timestamp.in_time_zone(customer.applicable_timezone).to_date
@@ -124,7 +124,9 @@ module Contracts
     def billing_segment_for(card)
       return if card.rate_card.rates.empty?
 
-      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule
+      schedule = Billing::RateCards::BuildScheduleService.call!(
+        contract_rate_card: card
+      ).schedule
       billable_segment = schedule.segment_covering(timestamp)
       return unless billable_segment
 
@@ -157,7 +159,7 @@ module Contracts
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
-        [BillingSegments::Fees::ComputeService.call!(billing_segment:).fee]
+        [BillingOperations::Fees::ComputeService.call!(billing_segment:).fee]
       end
     end
 

@@ -6,7 +6,7 @@ require "rails_helper"
 # and its start activates it and bills a rate card due in advance. Everything between the
 # clock and the invoice is real.
 describe "A scheduled contract billed in advance invoices when it starts" do
-  let(:organization) { create(:organization, webhook_url: nil) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
   let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
   let(:product) { create(:product, :fixed, organization:) }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
@@ -45,7 +45,6 @@ describe "A scheduled contract billed in advance invoices when it starts" do
     travel_to(Time.zone.parse("2026-01-19 23:55:00")) do
       perform_enqueued_jobs do
         Clock::ActivateContractsJob.perform_now
-        Clock::CreateBillingSegmentsJob.perform_now
       end
     end
 
@@ -61,10 +60,10 @@ describe "A scheduled contract billed in advance invoices when it starts" do
     expect(contract.reload).to be_active
     invoice = Invoice.where(customer:).sole
     expect(invoice).to have_attributes(status: "finalized", total_amount_cents: 5_000)
-    expect(BillingSegment.where(customer:).sole).to have_attributes(
-      status: "done",
+    expect(invoice.billing_operations.sole).to have_attributes(
+      processed_at: Time.zone.parse("2026-01-20 00:05:00"),
       invoice_id: invoice.id,
-      started_at: Time.zone.parse("2026-01-20")
+      target_cycle_started_at: Time.zone.parse("2026-01-20")
     )
   end
 
@@ -77,7 +76,7 @@ describe "A scheduled contract billed in advance invoices when it starts" do
       end
 
       expect(contract.reload).to be_active
-      expect(BillingSegment.where(customer:).sole).to have_attributes(started_at: Time.zone.parse("2026-01-15"))
+      expect(Invoice.where(customer:).sole.billing_operations.sole).to have_attributes(target_cycle_started_at: Time.zone.parse("2026-01-15"))
       expect(Invoice.where(customer:).sole.total_amount_cents).to eq(5_000)
     end
   end

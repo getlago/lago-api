@@ -586,7 +586,9 @@ module Events
         end
       end
 
-      # One row when a late copy re-sends an event, none otherwise
+      # One row when a late copy re-sends an event, none otherwise.
+      # `events_raw.ingested_at` is a `DateTime` on some deployments: it rejects a watermark string with milliseconds,
+      # which `toDateTime64` parses before the comparison.
       def resent_after_watermark_sql(period)
         <<~SQL
           SELECT 1
@@ -596,7 +598,7 @@ module Events
               SELECT transaction_id, timestamp FROM (#{late_events_sql(period, deduplicated_columns: [])})
             )
           GROUP BY transaction_id, timestamp
-          HAVING count() > 1 AND #{sql_condition("countIf(ingested_at <= ?) > 0", period.watermark)}
+          HAVING count() > 1 AND #{sql_condition("countIf(ingested_at <= toDateTime64(?, 3, 'UTC')) > 0", period.watermark)}
           LIMIT 1
         SQL
       end

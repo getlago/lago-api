@@ -67,6 +67,13 @@ Rails.application.routes.draw do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end
       resources :product_categories, param: :code, code: /.*/, only: %i[index show create update destroy]
+      # Every privilege action is native, nested here so the greedy feature code does not swallow it.
+      # The routes with a privilege code are drawn first, so a code that ends with `privileges` is not
+      # read as a feature code by the index.
+      resources :features, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        resources :privileges, only: %i[show update destroy], param: :code, controller: "features/privileges"
+        resources :privileges, only: %i[index create], controller: "features/privileges"
+      end
       resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
@@ -76,6 +83,7 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
+        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets"
         draw(:plan_nested_api)
       end
       # The constraint mirrors v1: without it, an external id containing a

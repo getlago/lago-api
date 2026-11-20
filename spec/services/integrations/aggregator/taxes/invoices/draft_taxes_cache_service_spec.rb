@@ -119,6 +119,27 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxesCacheService
     end
   end
 
+  describe "#read" do
+    it "returns nil on a miss, without storing anything" do
+      expect(cache_service.read).to be_nil
+      expect(cache.read(cache_service.cache_key)).to be_nil
+    end
+
+    it "returns a stored answer" do
+      cache_service.call { success_body }
+
+      expect(cache_service.read).to eq(success_body)
+      expect(counter).to have_received(:increment).with({provider: "anrok", outcome: :hit})
+    end
+
+    it "returns nil when the cache is turned off" do
+      cache_service.call { success_body }
+      stub_const("ENV", ENV.to_h.merge("LAGO_ANROK_DRAFT_TAXES_CACHE_TTL_SECONDS" => "0"))
+
+      expect(described_class.new(integration:, payload:).read).to be_nil
+    end
+  end
+
   describe "#call" do
     context "without a cached answer" do
       it "asks the provider and caches its answer" do

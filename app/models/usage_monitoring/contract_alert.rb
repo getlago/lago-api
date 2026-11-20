@@ -2,6 +2,64 @@
 
 module UsageMonitoring
   class ContractAlert < ApplicationRecord
+    include Discard::Model
+    include ThresholdEvaluation
+
+    self.discard_column = :deleted_at
+    self.inheritance_column = :alert_type
+
+    STI_MAPPING = {
+      "usage_amount" => "UsageMonitoring::ContractUsageAmountAlert",
+      "usage_units" => "UsageMonitoring::ContractUsageUnitsAlert"
+    }.freeze
+
+    default_scope -> { kept }
+
+    belongs_to :organization
+    belongs_to :product, -> { with_discarded }, optional: true
+    belongs_to :product_filter, -> { with_discarded }, optional: true
+
+    has_many :thresholds,
+      class_name: "UsageMonitoring::ContractAlertThreshold",
+      dependent: :delete_all,
+      inverse_of: :alert
+
+    has_many :triggered_alerts,
+      -> { triggered },
+      class_name: "UsageMonitoring::ContractTriggeredAlert"
+
+    has_many :all_triggered_alerts,
+      class_name: "UsageMonitoring::ContractTriggeredAlert",
+      inverse_of: :alert
+
+    enum :direction, Alert::DIRECTIONS, validate: true
+
+    validates :alert_type, presence: true, inclusion: {in: STI_MAPPING.keys}
+    validates :code, presence: true
+    validates :contract_external_id, presence: true
+    validates :product, presence: true, if: :need_product?
+    validate :validate_product_filter_belongs_to_product
+
+    def self.find_sti_class(type_name)
+      STI_MAPPING.fetch(type_name).constantize
+    end
+
+    def self.sti_name
+      STI_MAPPING.invert.fetch(name)
+    end
+
+    private
+
+    # Units of different products do not add up, and a filter only narrows its own product
+    def need_product?
+      alert_type == "usage_units" || product_filter.present?
+    end
+
+    def validate_product_filter_belongs_to_product
+      return if product_filter.nil? || product.nil?
+
+      errors.add(:product_filter, :invalid) if product_filter.product_id != product.id
+    end
   end
 end
 
