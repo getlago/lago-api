@@ -63,6 +63,8 @@ module ConnectionResolvable
     fallback_connection(category, cache:)
   end
 
+  private
+
   def billing_object_connection(category, cache:)
     if cache
       billing_object_connections.detect { it.category == category.to_s }
@@ -70,8 +72,6 @@ module ConnectionResolvable
       billing_object_connections.find_by(category:)
     end
   end
-
-  private
 
   # PaymentProviders::DestroyService soft-deletes provider customers with update_all
   # and leaves their billing_object_connections, which results in payment_provider_customer
@@ -112,18 +112,20 @@ module ConnectionResolvable
     connections.detect(&:is_default?)
   end
 
-  # If the fallback record defines a skip behavior, show "skip" in
-  # connection_routing instead of "inherit".
   def routing_behavior(override, category)
-    return override.behavior if override
-
-    fallback = fallback_record&.billing_object_connection(category, cache: true)
-
-    if fallback&.skip?
-      fallback.behavior
-    else
+    if override.nil?
       INHERIT_BEHAVIOR
+    elsif soft_deleted_payment_provider_customer?(override, category)
+      INHERIT_BEHAVIOR
+    else
+      override.behavior
     end
+  end
+
+  # If PaymentProviderCustomer is soft-deleted but the billing_object_connection
+  # is still there, we return "inherit" instead of "specific".
+  def soft_deleted_payment_provider_customer?(override, category)
+    override.specific? && category == CATEGORIES[:payment] && override.payment_provider_customer.nil?
   end
 
   def routing_connection(override, category)
