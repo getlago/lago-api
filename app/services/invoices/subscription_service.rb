@@ -211,7 +211,8 @@ module Invoices
         skip_charges:,
         purchase_order_number: subscriptions.first&.purchase_order_number,
         payment_term: resolved_payment_terms.first&.payment_term,
-        payment_term_source: resolved_payment_term_source
+        payment_term_source: resolved_payment_term_source,
+        connections: subscriptions.first&.connection_routing
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
