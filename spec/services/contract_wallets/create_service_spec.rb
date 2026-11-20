@@ -115,6 +115,20 @@ describe ContractWallets::CreateService do
     end
   end
 
+  context "when the contract has ended since it was loaded" do
+    before do
+      contract
+      Contract.find(contract.id).update!(status: :terminated, terminated_at: Time.current)
+    end
+
+    it "refuses it and writes nothing" do
+      expect { result }.not_to change(CatalogWallet, :count)
+
+      expect(result).not_to be_success
+      expect(result.error.code).to eq("contract_not_live")
+    end
+  end
+
   describe "refused params" do
     [
       ["a currency other than the contract's", {currency: "EUR"}, {currency: ["currency_does_not_match"]}],
