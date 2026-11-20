@@ -82,6 +82,12 @@ class Contract < ApplicationRecord
   validate :validate_started_before_ended
   validate :validate_code_unchanged, on: :update
 
+  def self.terminatable_by_external_id(external_id)
+    live.where(external_id:)
+      .order(Arel.sql("status = 'active' DESC"), started_at: :desc, created_at: :desc)
+      .first
+  end
+
   # The anchor every attached rate card inherits by default: the explicit
   # anchor when one was signed, otherwise the day the contract starts — in
   # the customer's timezone, since the engine interprets dates as
