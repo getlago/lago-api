@@ -62,6 +62,7 @@ module Events
           :charges_duration,
           :decimal_literal,
           :wide_decimal_sql,
+          :wide_decimal_value,
           :events_cte_queries,
           :grouped_by_columns,
           :grouped_arel_columns,
@@ -105,7 +106,7 @@ module Events
         # NOTE: the running total multiplied by seconds overflows Decimal(38, 26), so every branch
         #       of events_data carries `difference` in Decimal256. The FINAL dedup CTE keeps the raw column.
         def wide_difference
-          Arel::Nodes::SqlLiteral.new(wide_decimal_sql("#{arel_table.name}.decimal_value")).as("difference")
+          wide_decimal_value.as("difference")
         end
 
         def initial_value_sql
