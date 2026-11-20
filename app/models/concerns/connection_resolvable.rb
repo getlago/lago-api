@@ -43,7 +43,7 @@ module ConnectionResolvable
   # collection keeps this to one query.
   def connection_routing
     overrides = billing_object_connections.index_by(&:category)
-    fallbacks = fallback_record.billing_object_connections.index_by(&:category)
+    fallbacks = fallback_billing_object_connections.index_by(&:cateogory)
 
     CATEGORIES.each_value.map do |category|
       override = overrides[category]
@@ -116,6 +116,10 @@ module ConnectionResolvable
 
   def fallback_record
     nil
+  end
+
+  def fallback_billing_object_connections
+    fallback_record&.billing_object_connections || []
   end
 
   def fallback_connection(category)
