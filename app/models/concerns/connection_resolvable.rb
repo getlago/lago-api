@@ -43,22 +43,16 @@ module ConnectionResolvable
   # collection keeps this to one query.
   def connection_routing
     overrides = billing_object_connections.index_by(&:category)
+    fallbacks = fallback_record.billing_object_connections.index_by(&:category)
 
     CATEGORIES.each_value.map do |category|
       override = overrides[category]
-
-      connection = if override.nil?
-        fallback_routing_connection(category)
-      elsif override.skip?
-        nil
-      else
-        override_connection(override, category)
-      end
+      fallback = fallbacks[category]
 
       Routing.new(
         category: category,
-        behavior: override&.behavior || INHERIT_BEHAVIOR,
-        code: connection&.code
+        behavior: routing_behavior(override, fallback),
+        code: routing_connection(override, category)&.code
       )
     end
   end
@@ -86,6 +80,28 @@ module ConnectionResolvable
   end
 
   private
+
+  # If the fallback record defines a skip behavior, show "skip" in
+  # connection_routing instead of "inherit".
+  def routing_behavior(override, fallback)
+    if override
+      override.behavior
+    elsif fallback&.skip?
+      fallback.behavior
+    else
+      INHERIT_BEHAVIOR
+    end
+  end
+
+  def routing_connection(override, category)
+    if override.nil?
+      fallback_routing_connection(category)
+    elsif override.skip?
+      nil
+    else
+      override_connection(override, category)
+    end
+  end
 
   # PaymentProviders::DestroyService soft-deletes provider customers with update_all
   # and leaves their billing_object_connections, which results in payment_provider_customer
