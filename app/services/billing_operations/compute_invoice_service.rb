@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module BillingSegments
+module BillingOperations
   class ComputeInvoiceService < BaseService
-    Result = BaseResult[:invoice]
+    Result = BaseResult[:invoice, :outputs]
 
     def initialize(invoice:, billing_segments:, context:)
       @invoice = invoice
@@ -12,6 +12,7 @@ module BillingSegments
     end
 
     def call
+      @outputs = {}
       grouped = billing_segments.group_by { |segment| segment.contract_rate_card.product.product_type }
       metered_segments = grouped[Product::PRODUCT_TYPES[:metered]] || []
       fixed_segments = grouped[Product::PRODUCT_TYPES[:fixed]] || []
@@ -28,32 +29,36 @@ module BillingSegments
       end
 
       result.invoice = invoice
+      result.outputs = outputs
       result
     end
 
     private
 
-    attr_reader :invoice, :billing_segments, :context
+    attr_reader :invoice, :billing_segments, :context, :outputs
 
     def attach_fixed_fees(segments)
       segments.each do |segment|
-        compute_fixed_fees(segment).each do |fee|
+        fees = compute_fixed_fees(segment)
+        fees.each do |fee|
           fee.invoice = invoice
           fee.billing_entity = invoice.billing_entity
           fee.save!
           apply_taxes(fee, segment)
         end
+        outputs[segment] = fees
       end
     end
 
     def attach_metered_fees(segments, filtered_aggregations)
       segments.each do |segment|
-        compute_metered_fees(segment, filtered_aggregations)
+        fees = compute_metered_fees(segment, filtered_aggregations)
+        outputs[segment] = fees
       end
     end
 
     def compute_fixed_fees(segment)
-      fee_result = BillingSegments::Fees::ComputeService.call!(billing_segment: segment)
+      fee_result = BillingOperations::Fees::ComputeService.call!(billing_segment: segment)
       [fee_result.fee, fee_result.true_up_fee].compact
     end
 
@@ -69,7 +74,10 @@ module BillingSegments
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
       )
 
-      fees_result.fees.each { |fee| apply_taxes(fee, segment) }
+      fees_result.fees.each do |fee|
+        apply_taxes(fee, segment)
+      end
+      fees_result.fees
     end
 
     def apply_taxes(fee, segment)

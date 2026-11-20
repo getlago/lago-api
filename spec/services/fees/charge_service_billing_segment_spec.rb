@@ -18,10 +18,12 @@ RSpec.describe Fees::ChargeService do
     create(:rate_card_rate, organization:, rate_card:, rate_properties: {"amount" => "9"}, min_amount_cents:)
   end
   let(:min_amount_cents) { 0 }
+  let(:proration_ratio) { BigDecimal("1.0") }
+  let(:pricing_unit) { nil }
   let(:billing_segment) do
-    create(
+    build(
       :billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
-      currency: "USD", rate_properties:,
+      currency: "USD", rate_properties:, pricing_unit:, proration_ratio:,
       cycle_started_at: Time.utc(2026, 8, 1), started_at: Time.utc(2026, 8, 1),
       ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1)), billing_at: Time.utc(2026, 9, 1)
     )
@@ -254,12 +256,13 @@ RSpec.describe Fees::ChargeService do
   end
 
   it "prices distinct windows independently on the same invoice" do
-    billing_segment.update!(ended_at: BillingSegment.inclusive_end(Time.utc(2026, 8, 15)))
+    billing_segment.ended_at = BillingSegment.inclusive_end(Time.utc(2026, 8, 15))
     first_fee = result.fees.sole
-    later_segment = create(
+    later_segment = build(
       :billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
       currency: "USD", rate_properties: {"amount" => "3"}, cycle_started_at: billing_segment.cycle_started_at,
-      started_at: Time.utc(2026, 8, 15), ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1))
+      started_at: Time.utc(2026, 8, 15), ended_at: BillingSegment.inclusive_end(Time.utc(2026, 9, 1)),
+      proration_ratio: BigDecimal("1.0")
     )
     later_item = described_class::MeteredItem.from_billing_segment(billing_segment: later_segment)
 
@@ -576,27 +579,28 @@ RSpec.describe Fees::ChargeService do
     let(:min_amount_cents) { 1000 }
 
     it "uses the segment proration ratio" do
-      billing_segment.update!(proration_ratio: 0.5)
+      billing_segment.proration_ratio = 0.5
 
       expect(result.fees.map(&:amount_cents)).to eq([400, 100])
       expect(result.fees.last).to have_attributes(fee_type: "product", rate_card_rate:, true_up_parent_fee: result.fees.first)
     end
 
     it "does not create a true-up at or above the minimum" do
-      billing_segment.update!(rate_properties: {"amount" => "5"})
+      billing_segment.rate_properties = {"amount" => "5"}
 
       expect(result.fees.sole.amount_cents).to eq(1000)
     end
 
     it "bills the minimum even when no events match" do
-      billing_segment.update!(started_at: Time.utc(2026, 8, 25))
+      billing_segment.started_at = Time.utc(2026, 8, 25)
 
       expect(result.fees.map(&:amount_cents)).to eq([0, 1000])
     end
 
     it "uses the override minimum and preserves pricing identity" do
       override = create(:rate_override, organization:, min_amount_cents: 1400)
-      billing_segment.update!(rate_override: override, proration_ratio: 0.5)
+      billing_segment.rate_override = override
+      billing_segment.proration_ratio = 0.5
 
       expect(result.fees.map(&:amount_cents)).to eq([400, 300])
       expect(result.fees.map(&:rate_override)).to eq([override, override])
@@ -609,7 +613,7 @@ RSpec.describe Fees::ChargeService do
         create(:rate_card_rate, organization:, rate_card:, min_amount_cents:, applied_pricing_unit_conversion_rate: 0.5)
       end
 
-      before { billing_segment.update!(pricing_unit:, proration_ratio: 0.5) }
+      before { billing_segment.proration_ratio = 0.5 }
 
       it "converts the prorated minimum and usage with the segment conversion rate" do
         expect(result.fees.map(&:amount_cents)).to eq([200, 300])
@@ -619,7 +623,7 @@ RSpec.describe Fees::ChargeService do
 
       it "uses the override conversion rate rather than the catalog rate" do
         override = create(:rate_override, organization:, min_amount_cents: 1000, pricing_unit_conversion_rate: 0.25)
-        billing_segment.update!(rate_override: override)
+        billing_segment.rate_override = override
 
         expect(result.fees.map(&:amount_cents)).to eq([100, 400])
         expect(result.fees.map { |fee| fee.pricing_unit_usage.conversion_rate }).to eq([0.25, 0.25])

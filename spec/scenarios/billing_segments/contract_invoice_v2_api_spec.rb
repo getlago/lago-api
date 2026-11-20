@@ -72,7 +72,7 @@ describe "Operate a contract invoice through API v2" do
 
   def tick(at)
     travel_to(at) do
-      Clock::CreateBillingSegmentsJob.perform_now
+      Clock::ProcessBillingOperationsJob.perform_now
       perform_all_enqueued_jobs
     end
   end
