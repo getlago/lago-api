@@ -21,6 +21,9 @@ module UsageMonitoring
         sent = UNCHANGEABLE_FIELDS.select { params.key?(it) }
         return result.validation_failure!(errors: sent.index_with { ["value_cannot_be_changed"] }) if sent.any?
 
+        validate_single_values(params, %i[name])
+        return result unless result.success?
+
         if params.key?(:thresholds)
           validate_thresholds(params[:thresholds], alert.alert_type)
           return result unless result.success?

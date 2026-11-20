@@ -28,6 +28,11 @@ module UsageMonitoring
           (lowest || 0) - BigDecimal(recurring.first[:value].to_s)
         end
       end
+
+      def validate_single_values(params, fields)
+        invalid = fields.reject { single_value?(params[it]) }
+        result.validation_failure!(errors: invalid.index_with { ["value_is_invalid"] }) if invalid.any?
+      end
     end
   end
 end

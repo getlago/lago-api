@@ -28,6 +28,27 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
     create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: alert, **attributes)
   end
 
+  def alert_json(alert, thresholds:)
+    {
+      lago_id: alert.id,
+      lago_wallet_id: plan_wallet.id,
+      wallet_code: "prepaid",
+      currency: "USD",
+      plan_code: "pro",
+      external_contract_id: nil,
+      external_customer_id: nil,
+      code: alert.code,
+      name: alert.name,
+      alert_type: alert.alert_type,
+      direction: "decreasing",
+      thresholds:,
+      previous_value: nil,
+      last_processed_at: nil,
+      created_at: alert.created_at.iso8601(6),
+      updated_at: alert.updated_at.iso8601(6)
+    }
+  end
+
   describe "GET /api/v2/plans/:plan_code/wallets/:wallet_code/alerts" do
     subject { get_with_token(organization, "/api/v2/plans/#{plan_code}/wallets/#{wallet_code}/alerts", query) }
 
@@ -261,6 +282,363 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
         subject
 
         expect(response).to be_v2_not_found_error("plan_wallet")
+      end
+    end
+  end
+
+  describe "POST /api/v2/plans/:plan_code/wallets/:wallet_code/alerts" do
+    subject { post_with_token(organization, "/api/v2/plans/#{plan_code}/wallets/#{wallet_code}/alerts", {alert: create_params}) }
+
+    let(:create_params) do
+      {
+        code: "low_balance",
+        name: "Low balance",
+        alert_type: "balance",
+        thresholds: [
+          {code: "low", value: "10000", notify_on: %w[triggered resolved]},
+          {code: "critical", value: 2000, notify_on: %w[triggered resolved]},
+          {code: "empty", value: "0"}
+        ]
+      }
+    end
+
+    include_examples "requires API permission", "alert", "write"
+    include_examples "requires the catalog_wallets flag"
+
+    it "creates the alert template and renders it, without a webhook" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      created = plan_wallet.alerts.sole
+      expect(created).to have_attributes(code: "low_balance", name: "Low balance", alert_type: "balance")
+      expect(json).to eq(alert: alert_json(created, thresholds: [
+        {code: "empty", value: "0.0", recurring: false, notify_on: %w[triggered]},
+        {code: "critical", value: "2000.0", recurring: false, notify_on: %w[triggered resolved]},
+        {code: "low", value: "10000.0", recurring: false, notify_on: %w[triggered resolved]}
+      ]))
+      expect(SendWebhookJob).not_to have_been_enqueued
+    end
+
+    context "with a fraction of a cent" do
+      let(:create_params) { super().merge(thresholds: [{value: "1000.5"}]) }
+
+      it "returns a validation error on the thresholds and creates nothing" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(plan_wallet.alerts).to be_empty
+      end
+    end
+
+    context "with a plain notify_on" do
+      let(:create_params) { super().merge(thresholds: [{code: "low", value: 1000, notify_on: "resolved"}]) }
+
+      it "returns a validation error on the thresholds rather than ignoring it" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+      end
+    end
+
+    context "with unknown fields on a threshold, one of them a column" do
+      let(:create_params) do
+        super().merge(thresholds: [{code: "low", value: 1000, colour: "red", organization_id: create(:organization).id}])
+      end
+
+      it "creates the alert without them, in the organization of the request" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(plan_wallet.alerts.sole.thresholds.pluck(:organization_id, :code, :value)).to eq([[organization.id, "low", 1000]])
+      end
+    end
+
+    {code: ["low_balance"], name: {text: "Low balance"}}.each do |field, value|
+      context "with a #{field} that is not a single value" do
+        let(:create_params) { super().merge(field => value) }
+
+        it "returns a validation error on it and creates nothing" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+          expect(plan_wallet.alerts).to be_empty
+        end
+      end
+    end
+
+    context "with an unknown alert type" do
+      let(:create_params) { super().merge(alert_type: "credits") }
+
+      it "returns a validation error on the alert type" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_type", field: "alert_type", meta: {}}])
+      end
+    end
+
+    context "when the code is taken on the wallet template" do
+      let(:create_params) { super().merge(alert_type: "ongoing_balance") }
+
+      before { alert }
+
+      it "returns a validation error on the code" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_already_exist", field: "code", meta: {}}])
+      end
+    end
+
+    context "when the wallet template already has an alert of this type" do
+      let(:create_params) { super().merge(code: "other_code") }
+
+      before { alert }
+
+      it "returns a validation error on the request" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "alert_already_exists", field: "base", meta: {}}])
+      end
+    end
+
+    context "without the alert parameter" do
+      subject { post_with_token(organization, "/api/v2/plans/#{plan_code}/wallets/#{wallet_code}/alerts", {}) }
+
+      it "returns a bad request error" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("missing_parameter")
+      end
+    end
+
+    context "with an alert that is not an object" do
+      subject { post_with_token(organization, "/api/v2/plans/#{plan_code}/wallets/#{wallet_code}/alerts", {alert: "low_balance"}) }
+
+      it "returns a bad request error and creates nothing" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "alert", meta: {}}])
+        expect(plan_wallet.alerts).to be_empty
+      end
+    end
+
+    context "when the wallet template does not exist" do
+      let(:wallet_code) { "unknown" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("plan_wallet")
+      end
+    end
+  end
+
+  describe "PUT /api/v2/plans/:plan_code/wallets/:wallet_code/alerts/:code" do
+    subject { put_with_token(organization, "/api/v2/plans/#{plan_code}/wallets/#{wallet_code}/alerts/#{code}", {alert: update_params}) }
+
+    let(:code) { alert.code }
+    let(:update_params) { {name: "Prepaid running low", thresholds: [{code: "low", value: "5000"}]} }
+
+    before { create_threshold(alert, code: "low", value: 10_000, notify_on: %w[triggered resolved]) }
+
+    include_examples "requires API permission", "alert", "write"
+    include_examples "requires the catalog_wallets flag"
+
+    it "renames it and replaces its thresholds, keeping an omitted notify_on, without a webhook" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      expect(json).to eq(alert: alert_json(alert.reload, thresholds: [
+        {code: "low", value: "5000.0", recurring: false, notify_on: %w[triggered resolved]}
+      ]))
+      expect(alert.name).to eq("Prepaid running low")
+      expect(SendWebhookJob).not_to have_been_enqueued
+    end
+
+    context "with a null name" do
+      let(:update_params) { {name: nil} }
+
+      it "clears the name and keeps the thresholds" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(alert.reload.name).to be_nil
+        expect(json[:alert][:thresholds].map { it[:value] }).to eq(["10000.0"])
+      end
+    end
+
+    context "with a null list of thresholds" do
+      let(:update_params) { {thresholds: nil} }
+
+      it "returns a validation error on the thresholds and keeps them" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "thresholds", meta: {}}])
+        expect(alert.thresholds.pluck(:value)).to eq([10_000])
+      end
+    end
+
+    context "with a threshold that is not an object" do
+      let(:update_params) { {thresholds: [{code: "low", value: "5000"}, 2000]} }
+
+      it "returns a validation error on the thresholds rather than dropping it" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(alert.thresholds.pluck(:value)).to eq([10_000])
+      end
+    end
+
+    {"an object" => {resolved: true}, "a list holding an object" => [{resolved: true}], "a list holding a list" => [%w[triggered]]}
+      .each do |shape, notify_on|
+        context "with a notify_on that is #{shape}" do
+          let(:update_params) { {thresholds: [{code: "low", value: "5000", notify_on:}]} }
+
+          it "returns a validation error on the thresholds and keeps them" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+            expect(alert.thresholds.pluck(:value, :notify_on)).to eq([[10_000, %w[triggered resolved]]])
+          end
+        end
+      end
+
+    {code: ["low"], recurring: [true]}.each do |field, value|
+      context "with a #{field} that is a list" do
+        let(:update_params) { {thresholds: [{code: "low", value: "5000"}.merge(field => value)]} }
+
+        it "returns a validation error on the thresholds and keeps them" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+          expect(alert.thresholds.pluck(:value)).to eq([10_000])
+        end
+      end
+    end
+
+    context "with a name that is a list" do
+      let(:update_params) { {name: ["Prepaid running low"]} }
+
+      it "returns a validation error on the name and keeps it" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "name", meta: {}}])
+        expect(alert.reload.name).to eq("Low balance")
+      end
+    end
+
+    context "with a code that is a list" do
+      let(:update_params) { {code: ["new_code"], name: "Prepaid running low"} }
+
+      it "returns a validation error on the code and changes nothing" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_cannot_be_changed", field: "code", meta: {}}])
+        expect(alert.reload.name).to eq("Low balance")
+      end
+    end
+
+    context "with the code and the type" do
+      let(:update_params) { {name: "Prepaid running low", code: "new_code", alert_type: "ongoing_balance"} }
+
+      it "returns a validation error on each of them and changes nothing" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [
+            {code: "value_cannot_be_changed", field: "code", meta: {}},
+            {code: "value_cannot_be_changed", field: "alert_type", meta: {}}
+          ]
+        )
+        expect(alert.reload.name).to eq("Low balance")
+      end
+    end
+
+    context "with a negative balance threshold" do
+      let(:update_params) { {thresholds: [{value: "-100"}]} }
+
+      it "returns a validation error on the thresholds and keeps them" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(alert.thresholds.pluck(:value)).to eq([10_000])
+      end
+    end
+
+    context "when it does not exist" do
+      let(:code) { "unknown" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("alert")
+      end
+    end
+
+    context "when the wallet template does not exist" do
+      let(:wallet_code) { "unknown" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("plan_wallet")
+      end
+    end
+  end
+
+  describe "DELETE /api/v2/plans/:plan_code/wallets/:wallet_code/alerts/:code" do
+    subject { delete_with_token(organization, "/api/v2/plans/#{plan_code}/wallets/#{wallet_code}/alerts/#{code}") }
+
+    let(:code) { alert.code }
+
+    before { create_threshold(alert, code: "low", value: 10_000) }
+
+    include_examples "requires API permission", "alert", "write"
+    include_examples "requires the catalog_wallets flag"
+
+    it "deletes it for good with its thresholds and renders it" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      expect(json).to eq(alert: alert_json(alert, thresholds: []))
+      expect(UsageMonitoring::PlanWalletAlert.where(id: alert.id)).to be_empty
+      expect(UsageMonitoring::CatalogWalletAlertThreshold.where(plan_wallet_alert_id: alert.id)).to be_empty
+    end
+
+    context "when it does not exist" do
+      let(:code) { "unknown" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("alert")
+      end
+    end
+
+    context "when the wallet template does not exist" do
+      let(:wallet_code) { "unknown" }
+
+      it "returns a not found error and deletes nothing" do
+        subject
+
+        expect(response).to be_v2_not_found_error("plan_wallet")
+        expect(UsageMonitoring::PlanWalletAlert.where(id: alert.id)).to exist
       end
     end
   end
