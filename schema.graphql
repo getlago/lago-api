@@ -5398,6 +5398,11 @@ Current Organization Type
 """
 type CurrentOrganization {
   accessibleByCurrentSession: Boolean!
+
+  """
+  Always active when reachable: an organization waiting for a payment method is
+  refused with organization_inactive. Clients read the waiting status from currentUser.
+  """
   activationStatus: OrganizationActivationStatusEnum!
   addressLine1: String
   addressLine2: String
