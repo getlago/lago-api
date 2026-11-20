@@ -8,6 +8,8 @@ module Api
 
     def catalog_wallet_params(root)
       wallet = params.require(root)
+      raise ActionController::ParameterMissing, root unless wallet.is_a?(ActionController::Parameters)
+
       permitted = wallet.permit(
         :code,
         :name,
