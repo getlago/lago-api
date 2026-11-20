@@ -412,6 +412,29 @@ describe Api::V2::ContractWalletsController do
       end
     end
 
+    context "when the contract belongs to another organization" do
+      let(:contract) { create(:contract, organization: create(:organization), external_id: "acme-pro") }
+
+      it "returns a not found error and adds nothing" do
+        expect { subject }.not_to change(CatalogWallet, :count)
+
+        expect(response).to be_v2_not_found_error("contract")
+      end
+    end
+
+    [["a string", "ai_credits"], ["a list", [{code: "ai_credits"}]]].each do |description, root|
+      context "when the contract_wallet root is #{description}" do
+        let(:create_params) { root }
+
+        it "returns a missing parameter error and adds nothing" do
+          expect { subject }.not_to change(CatalogWallet, :count)
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "contract_wallet", meta: {}}])
+        end
+      end
+    end
+
     context "when a tax does not exist" do
       let(:create_params) { super().merge(tax_codes: ["unknown"]) }
 
@@ -558,6 +581,30 @@ describe Api::V2::ContractWalletsController do
       end
     end
 
+    context "when the contract belongs to another organization" do
+      let(:contract) { create(:contract, organization: create(:organization), external_id: "acme-pro") }
+      let(:contract_wallet) { create(:catalog_wallet, organization: contract.organization, contract:, code: "ai_credits", priority: 10) }
+
+      it "returns a not found error and changes nothing" do
+        expect { subject }.not_to change { contract_wallet.reload.attributes }
+
+        expect(response).to be_v2_not_found_error("contract_wallet")
+      end
+    end
+
+    [["a string", "ai_credits"], ["a list", [{priority: 20}]]].each do |description, root|
+      context "when the contract_wallet root is #{description}" do
+        let(:update_params) { root }
+
+        it "returns a missing parameter error and changes nothing" do
+          expect { subject }.not_to change { contract_wallet.reload.attributes }
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "contract_wallet", meta: {}}])
+        end
+      end
+    end
+
     context "when it does not exist" do
       let(:code) { "unknown" }
 
@@ -608,6 +655,18 @@ describe Api::V2::ContractWalletsController do
 
         expect(response).to have_http_status(:forbidden)
         expect(json).to eq(code: "wallet_has_credit_allocations", details: [])
+        expect(contract_wallet.reload).to be_kept
+      end
+    end
+
+    context "when the contract belongs to another organization" do
+      let(:contract) { create(:contract, organization: create(:organization), external_id: "acme-pro") }
+      let(:contract_wallet) { create(:catalog_wallet, organization: contract.organization, contract:, code: "ai_credits") }
+
+      it "returns a not found error and keeps the wallet" do
+        subject
+
+        expect(response).to be_v2_not_found_error("contract_wallet")
         expect(contract_wallet.reload).to be_kept
       end
     end
