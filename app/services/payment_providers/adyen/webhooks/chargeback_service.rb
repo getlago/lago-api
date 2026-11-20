@@ -7,7 +7,8 @@ module PaymentProviders
         def call
           status = event["additionalData"]["disputeStatus"]
           reason = event["reason"]
-          provider_payment_id = event["pspReference"]
+          # pspReference is the dispute's own id; originalReference points at the disputed payment.
+          provider_payment_id = event["originalReference"]
 
           payment = Payment.find_by(provider_payment_id:, organization_id: organization.id)
           return result.not_found_failure!(resource: "adyen_payment") unless payment

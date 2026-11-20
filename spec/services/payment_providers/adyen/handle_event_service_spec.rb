@@ -111,6 +111,40 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       end
     end
 
+    context "when chargeback event" do
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/chargeback_lost_event.json")
+        File.read(path)
+      end
+
+      let(:customer) { create(:customer, organization:) }
+      let(:invoice) { create(:invoice, organization:, customer:, status: :finalized, payment_status: :succeeded) }
+
+      context "when the disputed payment exists" do
+        before do
+          create(:payment, payable: invoice, organization:, provider_payment_id: "9913333333333333")
+        end
+
+        it "marks the invoice payment dispute as lost" do
+          result = event_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload.payment_dispute_lost_at).to eq(Time.zone.parse("2020-03-13T11:35:42+01:00"))
+        end
+      end
+
+      context "when the disputed payment is unknown" do
+        it "raises a not found failure" do
+          expect { event_service.call }.to raise_error(BaseService::NotFoundFailure)
+        end
+      end
+    end
+
     context "when succeeded refund event" do
       let(:refund_service) { instance_double(CreditNotes::Refunds::AdyenService) }
 
