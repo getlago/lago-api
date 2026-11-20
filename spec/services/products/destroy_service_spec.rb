@@ -59,6 +59,39 @@ RSpec.describe Products::DestroyService, :capture_kafka_messages do
     expect(activity.fetch("activity_object")).not_to have_key("rate_cards")
   end
 
+  context "when the product has contract alerts" do
+    let(:product_alert) { create(:contract_usage_units_alert, organization:, product:) }
+    let(:filter_alert) { create(:contract_usage_amount_alert, organization:, product:, product_filter: product.filters.first) }
+    let(:other_product_alert) { create(:contract_usage_units_alert, organization:, product: create(:product, organization:)) }
+    let(:whole_contract_alert) { create(:contract_usage_amount_alert, organization:) }
+    let(:triggered_alert) { create(:contract_triggered_alert, alert: product_alert) }
+
+    before do
+      freeze_time
+      product_alert
+      filter_alert
+      other_product_alert
+      whole_contract_alert
+      triggered_alert
+    end
+
+    it "discards the alerts of the product and of its filters, and deletes their thresholds" do
+      expect(result).to be_success
+      expect(product_alert.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+      expect(filter_alert.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+      expect(UsageMonitoring::ContractAlertThreshold.where(contract_alert_id: [product_alert.id, filter_alert.id])).to be_empty
+    end
+
+    it "keeps the alerts of other products and of the whole contract, and the triggered history" do
+      expect(result).to be_success
+      expect(other_product_alert.reload).not_to be_discarded
+      expect(whole_contract_alert.reload).not_to be_discarded
+      expect(other_product_alert.thresholds.count).to eq(1)
+      expect(whole_contract_alert.thresholds.count).to eq(1)
+      expect(UsageMonitoring::ContractTriggeredAlert.where(id: triggered_alert.id)).to exist
+    end
+  end
+
   context "when the catalog flag is disabled" do
     let(:organization) { create(:organization) }
 
@@ -79,9 +112,12 @@ RSpec.describe Products::DestroyService, :capture_kafka_messages do
   end
 
   context "when the item is attached to a subscription" do
+    let(:alert) { create(:contract_usage_units_alert, organization:, product:) }
+
     before do
       rate_card = create(:rate_card, organization:, product:)
       create(:contract_rate_card, organization:, rate_card:)
+      alert
     end
 
     it "returns a validation failure and discards nothing" do
@@ -89,6 +125,8 @@ RSpec.describe Products::DestroyService, :capture_kafka_messages do
       expect(result).not_to be_success
       expect(result.error.messages[:product]).to eq(["attached_to_plan_or_subscription"])
       expect(product.reload).not_to be_discarded
+      expect(alert.reload).not_to be_discarded
+      expect(alert.thresholds.count).to eq(1)
       expect(SendWebhookJob).not_to have_been_enqueued
     end
   end
