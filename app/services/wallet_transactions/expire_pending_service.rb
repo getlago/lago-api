@@ -49,12 +49,17 @@ module WalletTransactions
           next false unless invoice.open? && !invoice.payment_succeeded?
           # Recorded meanwhile: closing would bury that money on an invisible invoice that can no longer be paid
           next false if partly_paid?
+          # Started meanwhile (a retry): it can still pay the invoice
+          next false if open_payment
 
           invoice.closed!
           true
         end
+        next unless closed
 
-        WalletTransactions::MarkAsFailedService.call!(wallet_transaction:) if closed
+        # The webhook of our own cancel (payment_intent.canceled) may have failed it meanwhile
+        wallet_transaction.lock!
+        WalletTransactions::MarkAsFailedService.call!(wallet_transaction:) if wallet_transaction.pending?
       end
 
       result
@@ -86,10 +91,11 @@ module WalletTransactions
 
     # Returns whether the payment can no longer pay the invoice
     def stop_payment(payment)
+      return stop_payment_never_created(payment) if payment.provider_payment_id.blank?
+
       # Other providers do not wait on the end customer the same way (GoCardless is a direct
       # debit, already moving), and their webhooks settle the payment: leave it to them
       return false unless payment.payment_provider_type == "stripe"
-      return false if payment.provider_payment_id.blank?
 
       intent = stripe_intent(payment)
       return false unless intent
@@ -112,6 +118,37 @@ module WalletTransactions
         # processing, requires_capture: money is moving. succeeded: its webhook settles the top-up
         false
       end
+    end
+
+    # The payment has no provider id: the provider refused it (Stripe's amount_too_small) or the request
+    # failed (idempotency or connection errors), so nothing can pay it. After a connection error a Stripe
+    # intent may exist anyway: it is searched first, and one that is found goes through the usual checks.
+    def stop_payment_never_created(payment)
+      if payment.payment_provider_type == "stripe"
+        intent_id = lost_stripe_intent_id(payment)
+        return false if intent_id == false
+
+        if intent_id
+          payment.update!(provider_payment_id: intent_id)
+          return stop_payment(payment)
+        end
+      end
+
+      payment.update!(payable_payment_status: :failed)
+      true
+    end
+
+    # Returns the intent id, nil when Stripe has none, or false when Stripe cannot be read (tried again next hour)
+    def lost_stripe_intent_id(payment)
+      ::Stripe::PaymentIntent.search(
+        {query: "metadata['lago_payment_id']:'#{payment.id}'", limit: 1},
+        {api_key: payment.payment_provider.secret_key}
+      ).data.first&.id
+    rescue ::Stripe::StripeError => e
+      Rails.logger.warn(
+        "WalletTransactions::ExpirePendingService: cannot search the intent of payment #{payment.id}: #{e.class.name}"
+      )
+      false
     end
 
     def waiting_for_wire?(intent)

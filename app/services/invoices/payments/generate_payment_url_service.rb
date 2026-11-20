@@ -19,7 +19,9 @@ module Invoices
         return result.single_validation_failure!(error_code: "no_linked_payment_provider") unless provider
         return result.single_validation_failure!(error_code: "invalid_payment_provider") if provider == "gocardless"
 
-        if invoice.payment_succeeded? || invoice.voided? || invoice.draft?
+        # A closed invoice is invisible and can no longer be paid: a payment on it would grant
+        # credits with no invoice the customer can see (an expired top-up, for example)
+        if invoice.payment_succeeded? || invoice.voided? || invoice.draft? || invoice.closed?
           return result.single_validation_failure!(error_code: "invalid_invoice_status_or_payment_status")
         end
 

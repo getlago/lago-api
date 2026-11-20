@@ -273,4 +273,95 @@ RSpec.describe WalletTransactions::ExpirePendingService do
       expect(PaymentProviders::Stripe::Payments::RetrieveService).not_to have_received(:call!)
     end
   end
+
+  context "with a payment that never reached the provider (no provider id)" do
+    let(:payment) do
+      create(:payment, payable: invoice, customer:, organization:, provider_payment_id: nil,
+        status: "pending", payable_payment_status: :pending)
+    end
+    let(:found_intents) { [] }
+
+    before do
+      payment
+      allow(::Stripe::PaymentIntent).to receive(:search)
+        .and_return(Stripe::SearchResultObject.construct_from(data: found_intents))
+    end
+
+    it_behaves_like "fails the top-up"
+
+    it "fails the payment locally, since nothing can pay it" do
+      result
+
+      expect(payment.reload.payable_payment_status).to eq("failed")
+      expect(PaymentProviders::CancelPaymentService).not_to have_received(:call!)
+    end
+
+    it "looks for an intent Stripe created despite the error" do
+      result
+
+      expect(::Stripe::PaymentIntent).to have_received(:search)
+        .with(hash_including(query: "metadata['lago_payment_id']:'#{payment.id}'"), anything)
+    end
+
+    context "when Stripe created the intent anyway, and it is still processing" do
+      let(:found_intents) { [{id: "pi_lost", object: "payment_intent"}] }
+
+      before do
+        allow(PaymentProviders::Stripe::Payments::RetrieveService).to receive(:call!).and_return(
+          PaymentProviders::Stripe::Payments::RetrieveService::Result.new.tap do |intent|
+            intent.status = "processing"
+            intent.payment_method_type = "sepa_debit"
+          end
+        )
+      end
+
+      it_behaves_like "leaves the top-up pending"
+
+      it "records the intent on the payment" do
+        result
+
+        expect(payment.reload.provider_payment_id).to eq("pi_lost")
+      end
+    end
+
+    context "when Stripe cannot be searched" do
+      before { allow(::Stripe::PaymentIntent).to receive(:search).and_raise(::Stripe::APIConnectionError.new("down")) }
+
+      it_behaves_like "leaves the top-up pending"
+    end
+
+    context "with another provider" do
+      let(:payment) do
+        create(:payment, :gocardless_payment, payable: invoice, customer:, organization:, provider_payment_id: nil,
+          status: "pending", payable_payment_status: :pending)
+      end
+
+      it_behaves_like "fails the top-up"
+    end
+  end
+
+  context "when the webhook of our own cancel fails the top-up first" do
+    before do
+      allow(PaymentIntents::ExpireService).to receive(:call!) do
+        WalletTransaction.find(wallet_transaction.id).mark_as_failed!
+      end
+    end
+
+    it "closes the invoice without raising on the stale top-up" do
+      expect { result }.not_to raise_error
+
+      expect(invoice.reload).to be_closed
+      expect(wallet_transaction.reload).to be_failed
+    end
+  end
+
+  context "when a payment starts while the invoice is being closed" do
+    before do
+      allow(PaymentIntents::ExpireService).to receive(:call!) do
+        create(:payment, payable: invoice, customer:, organization:, status: "processing", payable_payment_status: :processing)
+      end
+    end
+
+    it_behaves_like "leaves the top-up pending"
+  end
 end
