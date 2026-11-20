@@ -7,6 +7,7 @@ module Types
 
       argument :wallet_id, ID, required: true
 
+      argument :connections, Types::Connections::Input, required: false
       argument :granted_credits, String, required: false
       argument :ignore_paid_top_up_limits, Boolean, required: false
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false

@@ -55,7 +55,7 @@ RSpec.describe Mutations::WalletTransactions::Create do
     }
   end
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:plan) { create_default(:plan) }
   let_it_be(:membership) { create_default(:membership, organization:) }
   let_it_be(:customer) { create_default(:customer, organization:) }
@@ -181,6 +181,59 @@ RSpec.describe Mutations::WalletTransactions::Create do
         it "returns a forbidden error" do
           expect { subject }.not_to change(organization.wallet_transactions, :count)
           expect_forbidden_error(result)
+        end
+      end
+    end
+  end
+
+  context "with connections" do
+    let(:query) do
+      <<-GQL
+      mutation ($input: CreateCustomerWalletTransactionInput!) {
+        createCustomerWalletTransaction(input: $input) {
+          collection {
+            id
+            connections { category behavior code }
+          }
+        }
+      }
+      GQL
+    end
+    let(:input) do
+      {
+        walletId: wallet.id,
+        paidCredits: "5.00",
+        connections: {payment: {code: "stripe_us"}, tax: {behavior: "skip"}}
+      }
+    end
+
+    context "when the multi_connection flag is disabled" do
+      it "returns a forbidden error" do
+        expect_forbidden_error(result)
+      end
+    end
+
+    context "when the multi_connection flag is enabled" do
+      before { organization.enable_feature_flag!(:multi_connection) }
+
+      context "when the code does not resolve" do
+        it "returns a validation error" do
+          expect_unprocessable_entity(result, details: {connections: ["connection_not_found"]})
+        end
+      end
+
+      context "when the code resolves" do
+        before { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+
+        it "routes the top-up to the connections" do
+          transaction = result["data"]["createCustomerWalletTransaction"]["collection"].sole
+
+          expect(transaction["connections"]).to eq([
+            {"category" => "payment", "behavior" => "specific", "code" => "stripe_us"},
+            {"category" => "tax", "behavior" => "skip", "code" => nil},
+            {"category" => "accounting", "behavior" => "inherit", "code" => nil},
+            {"category" => "crm", "behavior" => "inherit", "code" => nil}
+          ])
         end
       end
     end

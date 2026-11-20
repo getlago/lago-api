@@ -64,6 +64,53 @@ RSpec.describe Api::V1::WalletTransactionsController do
       ))
     end
 
+    context "with connections" do
+      let(:params) do
+        {
+          wallet_id:,
+          paid_credits: "10",
+          connections: {payment: {code: "stripe_us"}, tax: {behavior: "skip"}}
+        }
+      end
+
+      context "when the multi_connection flag is disabled" do
+        it "returns a forbidden error" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+        end
+      end
+
+      context "when the multi_connection flag is enabled" do
+        before { organization.enable_feature_flag!(:multi_connection) }
+
+        context "when the code does not resolve" do
+          it "returns a validation error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details][:connections]).to eq(["connection_not_found"])
+          end
+        end
+
+        context "when the code resolves" do
+          before { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+
+          it "routes the top-up to the connections" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:wallet_transactions].sole[:connections]).to eq(
+              payment: {behavior: "specific", code: "stripe_us"},
+              tax: {behavior: "skip", code: nil},
+              accounting: {behavior: "inherit", code: nil},
+              crm: {behavior: "inherit", code: nil}
+            )
+          end
+        end
+      end
+    end
+
     context "when paid credits is below the wallet minimum" do
       it "returns an error" do
         wallet.update!(paid_top_up_min_amount_cents: 20_00)
@@ -476,6 +523,28 @@ RSpec.describe Api::V1::WalletTransactionsController do
       it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us", is_default: true) }
+      let(:anrok_connection) { create(:anrok_customer, customer:, organization:, code: "anrok_us", is_default: true) }
+
+      before do
+        organization.enable_feature_flag!(:multi_connection)
+
+        create(:billing_object_connection, owner: wallet_transaction_first, organization:, category: :payment,
+          behavior: :specific, payment_provider_customer: stripe_connection)
+        create(:billing_object_connection, owner: wallet_transaction_second, organization:, category: :tax,
+          behavior: :specific, integration_customer: anrok_connection)
+        create(:billing_object_connection, owner: wallet_transaction_first, organization:, category: :crm, behavior: :skip)
+      end
+
+      it "renders wallet transactions without N+1 queries" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transactions].count).to eq(2)
       end
     end
   end

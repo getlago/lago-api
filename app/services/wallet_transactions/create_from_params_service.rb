@@ -20,6 +20,8 @@ module WalletTransactions
 
       # Normalize metadata
       params[:metadata] = [] if params[:metadata] == {}
+
+      return result.forbidden_failure! if params[:connections] && !organization.feature_flag_enabled?(:multi_connection)
       return result unless valid? # NOTE: validator sets result.current_wallet
 
       wallet_transactions = []
@@ -59,6 +61,12 @@ module WalletTransactions
         if params[:invoice_custom_section]
           wallet_transactions.compact.each do |wt|
             InvoiceCustomSections::AttachToResourceService.call(resource: wt, params:)
+          end
+        end
+
+        if params[:connections]
+          wallet_transactions.compact.each do |wt|
+            BillingObjectConnections::AttachToResourceService.call!(resource: wt, params:)
           end
         end
       end
