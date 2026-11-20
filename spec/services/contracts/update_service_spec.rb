@@ -422,6 +422,20 @@ RSpec.describe Contracts::UpdateService do
           expect(UsageMonitoring::CatalogWalletAlertThreshold.where(id: old_threshold.id)).to be_empty
         end
 
+        context "when another contract of the customer has a wallet with alerts" do
+          let(:other_wallet) { create(:catalog_wallet, organization:, customer:, code: "ai_credits") }
+          let(:other_alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: other_wallet, code: "low_balance") }
+          let(:other_threshold) { create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: other_alert, value: 100) }
+
+          before { other_threshold }
+
+          it "keeps that wallet's alerts" do
+            expect(result).to be_success
+
+            expect(other_alert.reload.thresholds).to eq([other_threshold])
+          end
+        end
+
         context "when the organization has contract wallets enabled" do
           let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
 
