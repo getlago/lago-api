@@ -46,6 +46,19 @@ describe ContractWallets::DestroyService do
     end
   end
 
+  context "when the contract has ended since the wallet was loaded" do
+    before do
+      contract_wallet
+      Contract.find(contract.id).update!(status: :terminated, terminated_at: Time.current)
+    end
+
+    it "refuses it and keeps the wallet" do
+      expect(result).not_to be_success
+      expect(result.error.code).to eq("contract_not_live")
+      expect(contract_wallet.reload).to be_kept
+    end
+  end
+
   context "when the wallet holds credit" do
     let(:balance_cents) { 1 }
 
