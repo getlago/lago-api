@@ -729,6 +729,7 @@ DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_live_pending_signup_i
 DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_expires_at;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_customer_date;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_and_date;
+DROP INDEX IF EXISTS public.index_pending_billing_operations_on_card_and_date;
 DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
@@ -1023,6 +1024,7 @@ DROP INDEX IF EXISTS public.index_contracts_on_started_at_pending;
 DROP INDEX IF EXISTS public.index_contracts_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_code;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
@@ -1704,6 +1706,7 @@ DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
 DROP TYPE IF EXISTS public.organization_environment;
+DROP TYPE IF EXISTS public.organization_activation_status;
 DROP TYPE IF EXISTS public.order_status;
 DROP TYPE IF EXISTS public.order_form_void_reason;
 DROP TYPE IF EXISTS public.order_form_status;
@@ -1827,7 +1830,8 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 --
 
 CREATE TYPE public.billing_operation_cancellation_reason AS ENUM (
-    'contract_termination'
+    'contract_termination',
+    'rate_change'
 );
 
 
@@ -2134,6 +2138,16 @@ CREATE TYPE public.order_status AS ENUM (
     'created',
     'executed',
     'failed'
+);
+
+
+--
+-- Name: organization_activation_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.organization_activation_status AS ENUM (
+    'pending_payment_method',
+    'active'
 );
 
 
@@ -3483,7 +3497,8 @@ CREATE TABLE public.contracts (
     purchase_order_number character varying,
     consolidate_invoice boolean DEFAULT true NOT NULL,
     payment_method_type public.contract_payment_method_type DEFAULT 'provider'::public.contract_payment_method_type NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    code character varying
 );
 
 
@@ -4422,6 +4437,8 @@ CREATE TABLE public.organizations (
     self_serve boolean DEFAULT false NOT NULL,
     environment public.organization_environment DEFAULT 'production'::public.organization_environment NOT NULL,
     production_organization_id uuid,
+    activation_status public.organization_activation_status DEFAULT 'active'::public.organization_activation_status NOT NULL,
+    CONSTRAINT check_organizations_on_activation_status CHECK (((activation_status = 'active'::public.organization_activation_status) OR (self_serve AND (environment = 'production'::public.organization_environment)))),
     CONSTRAINT check_organizations_on_environment_link CHECK ((((environment = 'production'::public.organization_environment) AND (production_organization_id IS NULL)) OR ((environment = 'sandbox'::public.organization_environment) AND (production_organization_id IS NOT NULL)))),
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0)),
@@ -10574,6 +10591,13 @@ CREATE INDEX index_contracts_on_organization_id_and_external_id ON public.contra
 
 
 --
+-- Name: index_contracts_on_organization_id_external_id_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contracts_on_organization_id_external_id_code ON public.contracts USING btree (organization_id, external_id, code);
+
+
+--
 -- Name: index_contracts_on_organization_id_external_id_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12629,6 +12653,13 @@ CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_i
 --
 
 CREATE INDEX index_pending_active_subscriptions_on_plan_id_and_status ON public.subscriptions USING btree (plan_id, status) WHERE (status = ANY (ARRAY[0, 1]));
+
+
+--
+-- Name: index_pending_billing_operations_on_card_and_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_billing_operations_on_card_and_date ON public.billing_operations USING btree (contract_rate_card_id, billing_at) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL));
 
 
 --
@@ -18102,13 +18133,19 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261119120000'),
+('20261118162728'),
+('20261118162726'),
+('20261118155959'),
+('20261118155957'),
 ('20261116121445'),
 ('20261116121442'),
 ('20261116121439'),
 ('20261116121436'),
 ('20261113204932'),
 ('20261113162250'),
+('20261112145548'),
 ('20261112092027'),
+('20261111173450'),
 ('20261111172228'),
 ('20261111172225'),
 ('20261111172221'),

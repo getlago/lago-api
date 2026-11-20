@@ -19,6 +19,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
   let(:rate_card_rate) do
     build(:rate_card_rate, organization:, rate_card:, rate_model: "standard", rate_properties:)
   end
+  let(:pricing_unit) { nil }
   let(:billing_segment) do
     build(
       :billing_segment,
@@ -27,13 +28,14 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       customer: contract_rate_card.contract.customer,
       contract_rate_card:,
       rate_card_rate:,
+      pricing_unit:,
       currency: "USD",
       rate_properties: segment_rate_properties,
       proration_ratio: 0.5,
       billing_at: Time.zone.parse("2026-10-01"),
       cycle_started_at: Time.zone.parse("2026-09-01"),
       started_at: Time.zone.parse("2026-09-01"),
-      ended_at: Time.zone.parse("2026-09-30").end_of_day
+      ended_at: BillingSegment.inclusive_end(Time.zone.parse("2026-10-01"))
     )
   end
 
@@ -296,6 +298,29 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         fee_type: :product, invoiceable: product, contract: billing_segment.contract,
         contract_rate_card:, rate_card_rate:, rate_override: nil
       )
+    end
+  end
+
+  describe "#applied_pricing_unit" do
+    it "returns nil when the segment has no pricing unit" do
+      expect(source.applied_pricing_unit).to be_nil
+    end
+
+    context "with a pricing unit" do
+      let(:pricing_unit) { build(:pricing_unit, organization:) }
+      let(:rate_card) do
+        build(:rate_card, organization:, product:, currency: "USD", applied_pricing_unit_code: pricing_unit.code)
+      end
+      let(:rate_card_rate) do
+        build(:rate_card_rate, organization:, rate_card:, rate_properties:, applied_pricing_unit_conversion_rate: BigDecimal("0.5"))
+      end
+
+      it "returns the in-memory amount adapter with the unit and conversion rate" do
+        expect(source.applied_pricing_unit).to have_attributes(
+          pricing_unit:,
+          conversion_rate: BigDecimal("0.5")
+        )
+      end
     end
   end
 

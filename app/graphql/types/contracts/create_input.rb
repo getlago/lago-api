@@ -6,6 +6,7 @@ module Types
       graphql_name "CreateContractInput"
       description "Create contract input arguments"
 
+      argument :code, String, required: true
       argument :external_customer_id, String, required: true
       # Generated server-side when blank or omitted; see Mutations::Contracts::Create.
       argument :external_id, String, required: false
