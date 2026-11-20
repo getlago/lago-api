@@ -6,8 +6,6 @@ RSpec.describe V2::ContractAlertSerializer do
   subject(:payload) { described_class.new(alert, options).serialize }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:, external_id: "acme_ai") }
-  let_it_be(:contract, refind: true) { create(:contract, organization:, customer:, external_id: "ctr_123") }
   let_it_be(:product) { create(:product, organization:, code: "llm_tokens") }
   let_it_be(:product_filter) { create(:product_filter, organization:, product:, code: "opus") }
 
@@ -39,7 +37,6 @@ RSpec.describe V2::ContractAlertSerializer do
     expect(payload).to eq(
       lago_id: alert.id,
       external_contract_id: "ctr_123",
-      external_customer_id: "acme_ai",
       code: "opus_tokens",
       name: "Opus tokens",
       alert_type: "usage_units",
@@ -80,43 +77,6 @@ RSpec.describe V2::ContractAlertSerializer do
 
     it "renders no product or filter" do
       expect(payload).to include(alert_type: "usage_amount", product_code: nil, product_filter_code: nil)
-    end
-  end
-
-  context "when the external id moved to another customer's contract" do
-    let(:new_customer) { create(:customer, organization:, external_id: "globex") }
-
-    before do
-      contract.update!(status: :terminated, terminated_at: 1.day.ago)
-      create(:contract, :pending, organization:, customer: new_customer, external_id: "ctr_123", created_at: 2.days.ago)
-      create(:contract, :canceled, organization:, customer:, external_id: "ctr_123")
-    end
-
-    it "renders the customer of the live contract" do
-      expect(payload[:external_customer_id]).to eq("globex")
-    end
-  end
-
-  context "with a newer pending contract next to the active one" do
-    let(:new_customer) { create(:customer, organization:, external_id: "globex") }
-
-    before { create(:contract, :pending, organization:, customer: new_customer, external_id: "ctr_123") }
-
-    it "renders the customer of the active contract" do
-      expect(payload[:external_customer_id]).to eq("acme_ai")
-    end
-  end
-
-  context "when every contract with the external id has ended" do
-    let(:new_customer) { create(:customer, organization:, external_id: "globex") }
-
-    before do
-      contract.update!(status: :terminated, terminated_at: 2.days.ago)
-      create(:contract, :terminated, organization:, customer: new_customer, external_id: "ctr_123")
-    end
-
-    it "renders the customer of the latest one" do
-      expect(payload[:external_customer_id]).to eq("globex")
     end
   end
 

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Api::V2::Contracts::AlertsController do
   let(:organization) { create(:organization, feature_flags: %w[product_catalog contract_alerts]) }
-  let(:customer) { create(:customer, organization:, external_id: "acme_ai") }
+  let(:customer) { create(:customer, organization:) }
   let(:contract) { create(:contract, organization:, customer:, external_id: "ctr_123") }
   let(:product) { create(:product, organization:, code: "llm_tokens") }
   let(:product_filter) { create(:product_filter, organization:, product:, code: "opus") }
@@ -25,7 +25,6 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     {
       lago_id: alert.id,
       external_contract_id: "ctr_123",
-      external_customer_id: "acme_ai",
       code: alert.code,
       name: alert.name,
       alert_type: alert.alert_type,

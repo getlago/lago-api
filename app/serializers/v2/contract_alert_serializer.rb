@@ -8,7 +8,6 @@ module V2
       {
         lago_id: model.id,
         external_contract_id: model.contract_external_id,
-        external_customer_id: contract&.customer&.external_id,
         code: model.code,
         name: model.name,
         alert_type: model.alert_type,
@@ -22,13 +21,6 @@ module V2
     end
 
     private
-
-    def contract
-      contracts = ::Contract.where(organization_id: model.organization_id, external_id: model.contract_external_id)
-
-      contracts.terminatable_by_external_id(model.contract_external_id) ||
-        contracts.order(created_at: :desc).first
-    end
 
     def thresholds
       model.thresholds
