@@ -193,10 +193,26 @@ describe Contracts::MaterializeWalletsService do
     end
   end
 
+  context "when the template has alerts" do
+    let(:alert_template) { create(:plan_wallet_alert, organization:, plan_wallet:, code: "low_balance") }
+
+    before { create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: alert_template, value: 2_000) }
+
+    it "gives the contract's wallet its own copy of them" do
+      expect { result }.to change(UsageMonitoring::CatalogWalletAlert, :count).by(1)
+
+      alert = result.wallets.sole.alerts.sole
+      expect(alert).to have_attributes(code: "low_balance", previous_value: nil)
+      expect(alert.thresholds.sole.value).to eq(2_000)
+      expect(alert_template.reload.thresholds.count).to eq(1)
+    end
+  end
+
   context "when the plan has several templates" do
     before do
-      create(:plan_wallet, organization:, catalog_plan:, code: "support_credits", currency: "USD")
+      support_credits = create(:plan_wallet, organization:, catalog_plan:, code: "support_credits", currency: "USD")
       create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:)
+      create(:plan_wallet_alert, organization:, plan_wallet: support_credits, code: "low_support_credits")
     end
 
     it "gives the contract one wallet per template" do
@@ -208,6 +224,13 @@ describe Contracts::MaterializeWalletsService do
 
       expect(wallets.fetch("ai_credits").selectors.count).to eq(1)
       expect(wallets.fetch("support_credits").selectors).to be_empty
+    end
+
+    it "copies each template's alerts onto its own wallet" do
+      wallets = result.wallets.index_by(&:code)
+
+      expect(wallets.fetch("ai_credits").alerts).to be_empty
+      expect(wallets.fetch("support_credits").alerts.sole.code).to eq("low_support_credits")
     end
   end
 

@@ -1,0 +1,224 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
+  subject(:result) { described_class.call(plan_wallet:, catalog_wallet:) }
+
+  # `let` rather than `let_it_be`: the race contexts run without a transaction and delete every row afterwards
+  let(:organization) { create(:organization) }
+  let(:plan_wallet) { create(:plan_wallet, organization:) }
+  let(:catalog_wallet) { create(:catalog_wallet, organization:) }
+
+  let(:template) { create(:plan_wallet_alert, organization:, plan_wallet:, alert_type: "balance", code: "low_balance", name: "Low balance") }
+  let(:template_thresholds) do
+    [
+      create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: template, code: "warning", value: 10_000, notify_on: %w[triggered resolved]),
+      create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: template, code: nil, value: 2_000, recurring: true)
+    ]
+  end
+
+  before { template_thresholds }
+
+  it "gives the wallet its own copy of the template, thresholds included" do
+    expect(result).to be_success
+
+    alert = catalog_wallet.alerts.sole
+    expect(result.alerts).to eq([alert])
+    expect(alert.id).not_to eq(template.id)
+    expect(alert).to have_attributes(
+      organization:,
+      alert_type: "balance",
+      code: "low_balance",
+      name: "Low balance",
+      previous_value: nil,
+      last_processed_at: nil
+    )
+    expect(alert.thresholds.order(:value).map { [it.organization, it.code, it.value, it.recurring, it.notify_on, it.plan_wallet_alert_id] })
+      .to eq([
+        [organization, nil, 2_000, true, %w[triggered], nil],
+        [organization, "warning", 10_000, false, %w[triggered resolved], nil]
+      ])
+  end
+
+  it "records no history" do
+    expect { result }.not_to change(UsageMonitoring::CatalogWalletTriggeredAlert, :count)
+  end
+
+  it "leaves the template untouched" do
+    expect { result }.not_to change { template.reload.thresholds.order(:value).pluck(:id, :value, :catalog_wallet_alert_id) }
+  end
+
+  it "locks the plan wallet while copying" do
+    expect(capture_sql { result }).to include(a_string_matching(/FROM "plan_wallets".*FOR SHARE/m))
+  end
+
+  context "when the plan wallet has several templates" do
+    let(:ongoing_template) { create(:plan_wallet_alert, organization:, plan_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", name: nil) }
+
+    before { create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: ongoing_template, code: "empty", value: 0) }
+
+    it "copies each one with its own thresholds" do
+      expect(result.alerts.map(&:code)).to contain_exactly("low_balance", "low_ongoing_balance")
+
+      alerts = catalog_wallet.alerts.index_by(&:alert_type)
+      expect(alerts.fetch("balance").thresholds.pluck(:value)).to contain_exactly(2_000, 10_000)
+      expect(alerts.fetch("ongoing_balance")).to have_attributes(code: "low_ongoing_balance", name: nil)
+      expect(alerts.fetch("ongoing_balance").thresholds.pluck(:code, :value)).to eq([["empty", 0]])
+    end
+  end
+
+  context "when another plan wallet has templates" do
+    let(:template) { create(:plan_wallet_alert, organization:, plan_wallet: create(:plan_wallet, organization:)) }
+
+    it "copies none of them" do
+      expect { result }.not_to change(UsageMonitoring::CatalogWalletAlert, :count)
+      expect(result.alerts).to be_empty
+    end
+  end
+
+  context "when the plan wallet has no template" do
+    let(:template_thresholds) { [] }
+
+    it "gives the wallet no alert" do
+      expect { result }.not_to change(UsageMonitoring::CatalogWalletAlert, :count)
+      expect(result).to be_success
+      expect(result.alerts).to be_empty
+    end
+  end
+
+  context "when the wallet was inserted before" do
+    let(:catalog_wallet) { CatalogWallet.find(create(:catalog_wallet, organization:).id) }
+
+    it "copies nothing, so running the copy again cannot duplicate alerts" do
+      expect { result }.not_to change(UsageMonitoring::CatalogWalletAlert, :count)
+      expect(result.alerts).to be_empty
+    end
+  end
+
+  context "when the template is edited after a copy" do
+    let(:earlier_wallet) { create(:catalog_wallet, organization:) }
+
+    before do
+      described_class.call!(plan_wallet:, catalog_wallet: earlier_wallet)
+      UsageMonitoring::CatalogWalletAlerts::UpdateService.call!(alert: template, params: {name: "Running low", thresholds: [{value: "500"}]})
+    end
+
+    it "keeps the earlier copy as it was" do
+      result
+
+      copy = earlier_wallet.alerts.sole
+      expect(copy.name).to eq("Low balance")
+      expect(copy.thresholds.pluck(:value)).to contain_exactly(2_000, 10_000)
+    end
+
+    it "gives a wallet copied later the edited version" do
+      copy = result.alerts.sole
+
+      expect(copy.name).to eq("Running low")
+      expect(copy.thresholds.pluck(:code, :value, :recurring)).to eq([[nil, 500, false]])
+    end
+  end
+
+  context "when the template is deleted after a copy" do
+    let(:earlier_wallet) { create(:catalog_wallet, organization:) }
+
+    before do
+      described_class.call!(plan_wallet:, catalog_wallet: earlier_wallet)
+      UsageMonitoring::CatalogWalletAlerts::DestroyService.call!(alert: template)
+    end
+
+    it "keeps the earlier copy" do
+      result
+
+      expect(earlier_wallet.alerts.sole.thresholds.count).to eq(2)
+    end
+
+    it "gives a wallet copied later no alert" do
+      expect(result.alerts).to be_empty
+      expect(catalog_wallet.alerts).to be_empty
+    end
+  end
+
+  context "when a template edit is in flight", transaction: false do
+    let(:edit) { {name: "Running low", thresholds: [{value: "500"}]} }
+
+    before { catalog_wallet }
+
+    it "waits for the edit and copies the edited version" do
+      locked = Queue.new
+      release = Queue.new
+
+      editor = Thread.new do
+        ApplicationRecord.connection_pool.with_connection do
+          ApplicationRecord.transaction do
+            UsageMonitoring::CatalogWalletAlerts::UpdateService.call!(alert: template, params: edit)
+            locked << true
+            release.pop
+          end
+        end
+      end
+      Timeout.timeout(10) { locked.pop }
+
+      copier = Thread.new do
+        ApplicationRecord.connection_pool.with_connection { described_class.call(plan_wallet:, catalog_wallet:) }
+      end
+      begin
+        Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? }
+      ensure
+        release << true
+      end
+      Timeout.timeout(10) { editor.join }
+      copy = Timeout.timeout(10) { copier.value }.alerts.sole
+
+      expect(copy.name).to eq("Running low")
+      expect(copy.thresholds.pluck(:code, :value)).to eq([[nil, 500]])
+    end
+  end
+
+  context "when a copy is in flight", transaction: false do
+    let(:edit) { {name: "Running low", thresholds: [{value: "500"}]} }
+
+    before { catalog_wallet }
+
+    it "holds the edit until the copy commits, so the copy keeps the version before it" do
+      locked = Queue.new
+      release = Queue.new
+
+      copier = Thread.new do
+        ApplicationRecord.connection_pool.with_connection do
+          ApplicationRecord.transaction do
+            described_class.call!(plan_wallet:, catalog_wallet:)
+            locked << true
+            release.pop
+          end
+        end
+      end
+      Timeout.timeout(10) { locked.pop }
+
+      editor = Thread.new do
+        ApplicationRecord.connection_pool.with_connection do
+          UsageMonitoring::CatalogWalletAlerts::UpdateService.call!(alert: template, params: edit)
+        end
+      end
+      begin
+        Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? }
+      ensure
+        release << true
+      end
+      Timeout.timeout(10) { copier.join }
+      Timeout.timeout(10) { editor.join }
+
+      copy = catalog_wallet.alerts.sole
+      expect(copy.name).to eq("Low balance")
+      expect(copy.thresholds.pluck(:value)).to contain_exactly(2_000, 10_000)
+      expect(template.reload.name).to eq("Running low")
+    end
+  end
+
+  def lock_waits
+    ApplicationRecord.connection.select_value(
+      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
+    )
+  end
+end
