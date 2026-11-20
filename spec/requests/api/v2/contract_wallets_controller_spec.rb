@@ -359,8 +359,9 @@ describe Api::V2::ContractWalletsController do
         applies_to: {include: selectors},
         top_up_min_amount_cents: 1000,
         top_up_max_amount_cents: 50_000,
-        balance: "0.00",
-        ongoing_balance: "0.00",
+        balance_cents: 0,
+        ongoing_balance_cents: 0,
+        last_ongoing_balance_sync_at: nil,
         deleted_at: nil
       )
       expect(json[:contract_wallet].keys).to eq(flat_keys)
@@ -468,13 +469,13 @@ describe Api::V2::ContractWalletsController do
     include_examples "requires API permission", "contract_wallet", "write"
     include_examples "requires the catalog_wallets flag"
 
-    it "updates the wallet and keeps its balance" do
+    it "updates the wallet and keeps its balances" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:contract_wallet]).to include(
         lago_id: contract_wallet.id, code: "ai_credits", name: "Credits", priority: 20,
-        applies_to: {include: [{type: "fee_type", code: "fixed"}]}, balance: "430.00"
+        applies_to: {include: [{type: "fee_type", code: "fixed"}]}, balance_cents: 43_000, ongoing_balance_cents: 41_500
       )
     end
 
