@@ -61,6 +61,10 @@ class ContractRateCard < ApplicationRecord
       .where(customers: {deleted_at: nil})
   }
 
+  def effective_date_in_customer_timezone
+    effective_date.in_time_zone(contract.customer.applicable_timezone)
+  end
+
   # A card seeded from its contract carries the contract's explicit anchor, or
   # its own start day when the contract set none: an anchor matching what it
   # would have inherited follows the contract, any other was set on the card.
@@ -101,7 +105,7 @@ class ContractRateCard < ApplicationRecord
   def requires_termination_billing?(timestamp:)
     next_billing_at.present? && timestamp < next_billing_at &&
       periodic_billing_action.in?(TERMINATION_BILLING_ACTIONS) &&
-      effective_date.in_time_zone(contract.customer.applicable_timezone) < [contract.billing_ends_at, timestamp].compact.min
+      effective_date_in_customer_timezone < [contract.billing_ends_at, timestamp].compact.min
   end
 
   def edit_error_code

@@ -284,13 +284,13 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   # produce the final, clamped cycle and the segments inside it.
   describe "a termination cutting the last cycle short" do
     subject(:schedule) do
-      described_class.call(contract_rate_card:, ends_at: terminated_at).schedule
+      described_class.call(contract_rate_card:).schedule
     end
 
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:, timezone: "UTC") }
     let(:catalog_plan) { create(:catalog_plan, organization:) }
-    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.utc(2026, 1, 1)) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.utc(2026, 1, 1), terminated_at:) }
     let(:rate_card) { create(:rate_card, organization:) }
     let(:rates) { rate_card.rates.order(:effective_from) }
     let(:terminated_at) { Time.utc(2026, 8, 17, 12, 34, 56) }
