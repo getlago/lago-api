@@ -16,6 +16,7 @@ module Subscriptions
       subscription_groups = group_by_payment_method(subscriptions)
       subscription_groups = group_by_currency(subscription_groups)
       subscription_groups = group_by_billing_entity(subscription_groups)
+      subscription_groups = group_by_connections(subscription_groups) if multi_connection_enabled?
       subscription_groups = split_consolidation_opted_out(subscription_groups)
       subscription_groups = group_by_purchase_order_number(subscription_groups)
       subscription_groups = group_by_resolved_payment_term(subscription_groups)
@@ -89,6 +90,35 @@ module Subscriptions
 
         groups
       end
+    end
+
+    def multi_connection_enabled?
+      subscriptions.first&.organization&.feature_flag_enabled?(:multi_connection)
+    end
+
+    # NOTE: Subscriptions sharing an invoice must use the same payment, tax, accounting and CRM connections.
+    #       A subscription without an override inherits the default connections of its customer.
+    def group_by_connections(subscription_groups)
+      shared_groups = subscription_groups.reject(&:one?)
+      return subscription_groups if shared_groups.empty?
+
+      ActiveRecord::Associations::Preloader.new(
+        records: shared_groups.flatten,
+        associations: {
+          billing_object_connections: %i[payment_provider_customer integration_customer],
+          customer: %i[payment_provider_customers integration_customers]
+        }
+      ).call
+
+      subscription_groups.flat_map do |subscriptions|
+        next [subscriptions] if subscriptions.size <= 1
+
+        subscriptions.group_by { |sub| connection_key(sub) }.values
+      end
+    end
+
+    def connection_key(subscription)
+      subscription.connection_routing.map(&:connection_id)
     end
 
     # NOTE: Returns array of subscription groups
