@@ -33,8 +33,9 @@ module Organizations
     attr_reader :organization
 
     def activate
-      # Skips the model validations: a row that a later release made invalid must still open once paid.
-      organization.update_columns(activation_status: Organization::ACTIVATION_STATUSES[:active], updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      # Skips the validations, so a row that a later release made invalid still opens once paid, but keeps the
+      # callbacks that record the change in the audit trail. `lock!` reloaded the row: nothing else is dirty.
+      organization.update_attribute(:activation_status, Organization::ACTIVATION_STATUSES[:active]) # rubocop:disable Rails/SkipsModelValidations
 
       # The REST gate trusts the API key cache: clear it once the new status is visible to other requests.
       after_commit do

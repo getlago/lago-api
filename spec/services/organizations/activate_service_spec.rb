@@ -27,7 +27,9 @@ RSpec.describe Organizations::ActivateService do
   context "with an organization that no longer passes its validations" do
     before { organization.update_column(:invoice_footer, "a" * 601) } # rubocop:disable Rails/SkipsModelValidations
 
-    it "opens it all the same" do
+    it "opens it all the same and records the change", versioning: true do
+      expect { result }.to change { organization.versions.count }.by(1)
+
       expect(result).to be_success
       expect(organization.reload.activation_status).to eq("active")
     end
