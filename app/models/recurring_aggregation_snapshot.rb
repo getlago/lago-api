@@ -20,7 +20,7 @@ class RecurringAggregationSnapshot < ApplicationRecord
   end
 
   # Invoicing and pay in advance both check it, so they start the same charge from the same units.
-  # Contract snapshots are only written for now.
+  # Not for segments yet: fetch_arguments keys on the subscription and ignores priced_product_filter_ids.
   def self.readable?(metered_item:, billing_context:)
     metered_item.billable_metric.recurring? &&
       metered_item.billing_segment.nil? &&
@@ -28,6 +28,7 @@ class RecurringAggregationSnapshot < ApplicationRecord
       RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
   end
 
+  # A contract prices each product and filter with one card (ContractRateCards::CreateService), so the card is left out
   def self.key(metered_item:, billing_context:)
     if metered_item.billing_segment
       RecurringAggregationSnapshots::ContractKey.new(
