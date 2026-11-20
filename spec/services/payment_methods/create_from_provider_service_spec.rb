@@ -32,8 +32,9 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
         allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock)
       end
 
-      it "raises a lock acquisition failure" do
+      it "raises a lock acquisition failure and rolls back the payment method" do
         expect { create_service.call }.to raise_error(BaseService::LockAcquisitionFailure)
+        expect(customer.payment_methods.where(provider_method_id:)).to be_empty
       end
     end
 
