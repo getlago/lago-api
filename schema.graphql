@@ -5492,6 +5492,11 @@ type Customer {
   accountType: CustomerAccountTypeEnum!
 
   """
+  Number of active contracts per customer
+  """
+  activeContractsCount: Int!
+
+  """
   Number of active subscriptions per customer
   """
   activeSubscriptionsCount: Int!
