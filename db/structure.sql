@@ -1086,6 +1086,7 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_contract_id_and_code;
+DROP INDEX IF EXISTS public.index_catalog_wallets_by_cursor;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_one_pending_ongoing_balance;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_wallet_and_idempotency_key;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_organization_id;
@@ -10473,6 +10474,13 @@ CREATE UNIQUE INDEX index_catalog_wallet_transactions_one_pending_ongoing_balanc
 
 
 --
+-- Name: index_catalog_wallets_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_wallets_by_cursor ON public.catalog_wallets USING btree (contract_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_catalog_wallets_on_contract_id_and_code; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -18456,6 +18464,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261118162726'),
 ('20261118155959'),
 ('20261118155957'),
+('20261118151847'),
 ('20261117160252'),
 ('20261117160249'),
 ('20261116121445'),
