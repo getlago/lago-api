@@ -23,12 +23,22 @@ module Plans
       ActiveRecord::Base.transaction do
         new_plan = plan.dup.tap do |p|
           p.organization = plan.organization
-          p.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
+          # dup marks every copied column changed, including a negative amount
+          # or trial the caller never sent. Clear those two, then mark only
+          # the values this request actually includes.
+          p.clear_attribute_changes(%w[amount_cents trial_period])
+          if params.key?(:amount_cents)
+            p.amount_cents = params[:amount_cents]
+            p.amount_cents_will_change!
+          end
           p.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
           p.description = params[:description] if params.key?(:description)
           p.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
           p.name = params[:name] if params.key?(:name)
-          p.trial_period = params[:trial_period] if params.key?(:trial_period)
+          if params.key?(:trial_period)
+            p.trial_period = params[:trial_period]
+            p.trial_period_will_change!
+          end
           p.parent_id = plan.id
         end
         new_plan.save!

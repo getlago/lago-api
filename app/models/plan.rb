@@ -57,6 +57,16 @@ class Plan < ApplicationRecord
   # to reject nil as an out-of-range value) rather than a "value_is_mandatory" one.
   validates :interval, presence: {message: "value_is_invalid"}
   validates :amount_cents, presence: true
+  # Zero is a real price. Negatives are rejected only when the field changes,
+  # so a row that already stores one can still be saved.
+  validates :amount_cents,
+    numericality: {greater_than_or_equal_to: 0},
+    allow_nil: true,
+    if: :amount_cents_changed?
+  validates :trial_period,
+    numericality: {greater_than_or_equal_to: 0},
+    allow_nil: true,
+    if: :trial_period_changed?
   validates :pay_in_advance, inclusion: {in: [true, false]}
   validate :validate_code_unique
 
