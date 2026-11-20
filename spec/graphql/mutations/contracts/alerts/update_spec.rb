@@ -50,13 +50,13 @@ RSpec.describe Mutations::Contracts::Alerts::Update do
   it "updates the name and replaces the thresholds" do
     response = execution["data"]["updateContractAlert"]
 
-    expect(response).to match(
+    expect(response).to eq(
       "id" => alert.id,
       "name" => "Monthly spend",
-      "thresholds" => contain_exactly(
+      "thresholds" => [
         {"code" => "warn", "value" => "2000.0", "recurring" => false, "notifyOn" => %w[triggered resolved]},
         {"code" => nil, "value" => "500.0", "recurring" => true, "notifyOn" => ["triggered"]}
-      )
+      ]
     )
     expect(alert.reload.name).to eq("Monthly spend")
   end
@@ -71,6 +71,17 @@ RSpec.describe Mutations::Contracts::Alerts::Update do
       expect(response["thresholds"]).to eq([
         {"code" => "warn1000", "value" => "1000.0", "recurring" => false, "notifyOn" => ["triggered"]}
       ])
+    end
+  end
+
+  [nil, []].each do |thresholds|
+    context "with thresholds #{thresholds.inspect}" do
+      let(:input) { {id: alert.id, thresholds:} }
+
+      it "returns a validation error and keeps the thresholds" do
+        expect_unprocessable_entity(execution, details: {thresholds: ["value_is_mandatory"]})
+        expect(alert.reload.thresholds.pluck(:value)).to eq([1000])
+      end
     end
   end
 

@@ -70,7 +70,7 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
   it "creates the alert" do
     response = execution["data"]["createContractAlert"]
 
-    expect(response).to match(
+    expect(response).to eq(
       "id" => organization.contract_alerts.sole.id,
       "alertType" => "usage_units",
       "code" => "opus_tokens",
@@ -78,12 +78,22 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
       "contractExternalId" => contract.external_id,
       "product" => {"id" => product.id},
       "productFilter" => {"id" => product_filter.id},
-      "thresholds" => contain_exactly(
+      "thresholds" => [
         {"code" => "warn", "value" => "1000000.0", "recurring" => false, "notifyOn" => ["triggered"]},
         {"code" => "high", "value" => "2000000.0", "recurring" => false, "notifyOn" => %w[triggered resolved]},
         {"code" => "every_500k", "value" => "500000.0", "recurring" => true, "notifyOn" => ["triggered"]}
-      )
+      ]
     )
+  end
+
+  context "with an ended contract whose replacement on the external id is active" do
+    let(:ended_contract) { create(:contract, :terminated, organization:, customer:, external_id: contract.external_id) }
+    let(:input) { super().merge(contractId: ended_contract.id) }
+
+    it "creates the alert on the external id" do
+      expect(execution["data"]["createContractAlert"]["contractExternalId"]).to eq(contract.external_id)
+      expect(organization.contract_alerts.sole.contract_external_id).to eq(contract.external_id)
+    end
   end
 
   context "when the contract belongs to another organization" do

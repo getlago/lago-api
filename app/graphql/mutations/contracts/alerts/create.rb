@@ -17,9 +17,13 @@ module Mutations
         type Types::UsageMonitoring::ContractAlerts::Object
 
         def resolve(contract_id:, **args)
+          contract = current_organization.contracts.find_by(id: contract_id)
+          # Alerts follow the external id, so an ended contract whose replacement is live still takes new alerts
+          contract = current_organization.contracts.terminatable_by_external_id(contract.external_id) || contract if contract
+
           result = ::UsageMonitoring::ContractAlerts::CreateService.call(
             organization: current_organization,
-            contract: current_organization.contracts.find_by(id: contract_id),
+            contract:,
             params: args.merge(thresholds: args[:thresholds].map(&:to_h))
           )
 

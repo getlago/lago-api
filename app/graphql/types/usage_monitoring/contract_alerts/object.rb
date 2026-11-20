@@ -29,6 +29,11 @@ module Types
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false
         field :deleted_at, GraphQL::Types::ISO8601DateTime
         field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+        # Same order as the REST serializer: one-time thresholds by value, then the recurring one
+        def thresholds
+          object.thresholds.sort_by { [it.recurring ? 1 : 0, it.value] }
+        end
       end
     end
   end

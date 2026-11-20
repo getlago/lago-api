@@ -26,7 +26,8 @@ RSpec.describe Resolvers::Contracts::AlertResolver do
       name: "Opus tokens",
       previous_value: 1_200_000,
       last_processed_at: Time.zone.parse("2026-11-18T10:00:00Z"),
-      thresholds: [1_000_000]
+      thresholds: [2_000_000, 1_000_000],
+      recurring_threshold: 500_000
     )
   end
 
@@ -60,7 +61,11 @@ RSpec.describe Resolvers::Contracts::AlertResolver do
       "contractExternalId" => alert.contract_external_id,
       "product" => {"id" => product.id, "code" => product.code},
       "productFilter" => {"id" => product_filter.id, "code" => product_filter.code},
-      "thresholds" => [{"code" => "warn1000000", "value" => "1000000.0", "recurring" => false, "notifyOn" => ["triggered"]}],
+      "thresholds" => [
+        {"code" => "warn1000000", "value" => "1000000.0", "recurring" => false, "notifyOn" => ["triggered"]},
+        {"code" => "warn2000000", "value" => "2000000.0", "recurring" => false, "notifyOn" => ["triggered"]},
+        {"code" => "rec", "value" => "500000.0", "recurring" => true, "notifyOn" => ["triggered"]}
+      ],
       "previousValue" => "1200000.0",
       "lastProcessedAt" => "2026-11-18T10:00:00Z",
       "createdAt" => alert.created_at.iso8601,
