@@ -187,6 +187,18 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
       end
     end
 
+    context "when an ongoing balance alert started on an empty wallet" do
+      let(:contract) { create(:contract, customer:) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", previous_value: 0, last_processed_at: 1.hour.ago) }
+      # The same line as before, opted in and in alarm at 0
+      let(:params) { {thresholds: [{code: "low", value: "10000", notify_on: %w[triggered resolved]}]} }
+
+      it "seeds nothing, as its baseline did" do
+        expect(result).to be_success
+        expect(alert.all_triggered_alerts).to be_empty
+      end
+    end
+
     it "updates the name and replaces the thresholds, recording and sending nothing" do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
 

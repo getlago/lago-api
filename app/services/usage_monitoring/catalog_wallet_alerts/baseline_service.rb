@@ -18,7 +18,7 @@ module UsageMonitoring
         ActiveRecord::Base.transaction do
           # Holds off balance changes, so the next evaluation starts from the value taken here
           catalog_wallet.lock!("FOR NO KEY UPDATE")
-          funded = catalog_wallet.balance_cents.positive?
+          funded = catalog_wallet.funded?
 
           waiting = catalog_wallet.alerts.where(previous_value: nil).order(:id).lock.includes(:thresholds)
           result.alerts = waiting.filter_map { start(it, funded) }
