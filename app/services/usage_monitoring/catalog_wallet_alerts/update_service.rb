@@ -43,8 +43,12 @@ module UsageMonitoring
           current.save!
 
           if params.key?(:thresholds)
-            replace_thresholds(current, nil, keep_previous_notify_on(current, params[:thresholds]))
-            seed_lines_in_alarm(current) if current.is_a?(CatalogWalletAlert) && !current.previous_value.nil?
+            thresholds = keep_previous_notify_on(current, params[:thresholds])
+            if watching?(current)
+              replace_watched_thresholds(current, thresholds)
+            else
+              replace_thresholds(current, nil, thresholds)
+            end
           end
 
           result.alert = current
@@ -59,9 +63,21 @@ module UsageMonitoring
 
       attr_reader :alert, :params
 
+      def watching?(alert)
+        alert.is_a?(CatalogWalletAlert) && !alert.previous_value.nil?
+      end
+
+      # The v1 edit of an alert with a baseline, seeding as below: an alarm the edit closes sends alert.resolved, with
+      # threshold_updated or threshold_removed
+      def replace_watched_thresholds(alert, thresholds)
+        lines_before = announced_lines_in_alarm(alert)
+        replace_thresholds(alert, nil, thresholds)
+        seed_lines_in_alarm(alert)
+        resolve_alarms_closed_by_edit(alert, alert.catalog_wallet, lines_before)
+      end
+
       # Seeds what a create would seed now, the opted-in lines in alarm at the value of a wallet holding money, less
-      # those the next evaluation crosses or recovers: it keeps the lines in alarm at the stored value too. The edit
-      # closes no alarm: that sends alert.resolved, and no payload renders a wallet alert's history
+      # those the next evaluation crosses or recovers: it keeps the lines in alarm at the stored value too
       def seed_lines_in_alarm(alert)
         wallet = alert.catalog_wallet
         seed_alarms_already_past(alert, wallet, still_in_alarm_at: alert.find_value(wallet)) if wallet.funded?

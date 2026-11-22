@@ -185,6 +185,31 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
         expect(seeded).to have_attributes(kind: "seeded", catalog_wallet:, current_value: 1_500, previous_value: 1_500)
         expect(seeded.crossed_thresholds).to eq([{"code" => "warning", "value" => "2000.0", "recurring" => false}])
       end
+
+      context "when the line it moves out of alarm had been recorded" do
+        # "low" was at 10000, in alarm at 1500, and moves to 1000, out of alarm
+        before { create(:catalog_wallet_triggered_alert, organization:, alert:, kind: :seeded, current_value: 1_500, previous_value: 1_500, crossed_thresholds: [{code: "low", value: BigDecimal(10_000), recurring: false}]) }
+
+        it "resolves it with threshold_updated and sends alert.resolved" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("alert.resolved", instance_of(UsageMonitoring::CatalogWalletTriggeredAlert))
+
+          resolved = alert.all_triggered_alerts.resolved.sole
+          expect(resolved).to have_attributes(resolution_reason: "threshold_updated", current_value: 1_500, catalog_wallet:)
+          expect(resolved.crossed_thresholds).to eq([{"code" => "low", "value" => "10000.0", "recurring" => false}])
+        end
+      end
+
+      context "when the edit removes a recorded line" do
+        let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}]} }
+
+        before { create(:catalog_wallet_triggered_alert, organization:, alert:, kind: :seeded, current_value: 1_500, previous_value: 1_500, crossed_thresholds: [{code: "low", value: BigDecimal(10_000), recurring: false}]) }
+
+        it "resolves it with threshold_removed and sends alert.resolved" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("alert.resolved", instance_of(UsageMonitoring::CatalogWalletTriggeredAlert))
+
+          expect(alert.all_triggered_alerts.resolved.sole).to have_attributes(resolution_reason: "threshold_removed")
+        end
+      end
     end
 
     context "when an ongoing balance alert started on an empty wallet" do

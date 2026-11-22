@@ -6,10 +6,15 @@ module Webhooks
       private
 
       def object_serializer
-        ::V1::UsageMonitoring::TriggeredAlertSerializer.new(
-          object,
-          root_name: object_type
-        )
+        serializer_class.new(object, root_name: object_type)
+      end
+
+      # Each alert family renders its own history rows
+      def serializer_class
+        case object
+        when ::UsageMonitoring::CatalogWalletTriggeredAlert then ::V1::UsageMonitoring::CatalogWalletTriggeredAlertSerializer
+        else ::V1::UsageMonitoring::TriggeredAlertSerializer
+        end
       end
 
       def webhook_type
