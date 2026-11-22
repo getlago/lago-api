@@ -40,10 +40,12 @@ module UsageMonitoring
         scope.exists?
       end
 
-      def seed_alarms_already_past(alert, alertable)
+      # `still_in_alarm_at:` keeps only the lines also in alarm at that value
+      def seed_alarms_already_past(alert, alertable, still_in_alarm_at: nil)
         return if alertable.nil?
 
         in_alarm = alert.thresholds_in_alarm(alert.previous_value)
+        in_alarm = in_alarm.select { alert.in_alarm?(it.value, still_in_alarm_at) } unless still_in_alarm_at.nil?
         return if in_alarm.empty?
 
         recorded = alert.recorded_alarm_codes

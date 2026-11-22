@@ -44,9 +44,7 @@ module UsageMonitoring
 
           if params.key?(:thresholds)
             replace_thresholds(current, nil, keep_previous_notify_on(current, params[:thresholds]))
-            # Seeds the opted-in lines the edit puts in alarm when the baseline would. The edit closes no alarm: that
-            # sends alert.resolved, and no payload renders a wallet alert's history
-            seed_alarms_already_past(current, current.catalog_wallet) if seeds?(current)
+            seed_lines_in_alarm(current) if current.is_a?(CatalogWalletAlert) && !current.previous_value.nil?
           end
 
           result.alert = current
@@ -61,13 +59,12 @@ module UsageMonitoring
 
       attr_reader :alert, :params
 
-      # Seeds as the baseline would, from an observation that is still the wallet's value: then an empty wallet seeds
-      # nothing, and a funded one seeds. An observation the balance has moved past is left to the next evaluation
-      def seeds?(alert)
-        return false unless alert.is_a?(CatalogWalletAlert) && !alert.previous_value.nil?
-
+      # Seeds what a create would seed now, the opted-in lines in alarm at the value of a wallet holding money, less
+      # those the next evaluation crosses or recovers: it keeps the lines in alarm at the stored value too. The edit
+      # closes no alarm: that sends alert.resolved, and no payload renders a wallet alert's history
+      def seed_lines_in_alarm(alert)
         wallet = alert.catalog_wallet
-        wallet.funded? && alert.find_value(wallet) == alert.previous_value
+        seed_alarms_already_past(alert, wallet, still_in_alarm_at: alert.find_value(wallet)) if wallet.funded?
       end
     end
   end

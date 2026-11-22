@@ -200,11 +200,26 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
 
       context "when money reached the wallet before the next evaluation" do
         let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: 1_500) }
+        let(:params) { {thresholds: [{code: "mid", value: "1000", notify_on: %w[triggered resolved]}, {code: "low", value: "10000", notify_on: %w[triggered resolved]}]} }
 
-        it "still seeds nothing, leaving the line to that evaluation" do
+        it "seeds only the line still in alarm at the new value" do
           expect(result).to be_success
-          expect(alert.all_triggered_alerts).to be_empty
+          # 1000 is in alarm at 0 but not at 1500: the evaluation recovers it. 10000 is in alarm at both, as a create would seed it
+          expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["low"])
         end
+      end
+    end
+
+    context "when the balance went down since the alert was last observed" do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 600) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "balance", code: "low_balance", previous_value: 800, last_processed_at: 1.hour.ago) }
+      let(:params) { {thresholds: [{code: "high", value: "1000", notify_on: %w[triggered resolved]}, {code: "mid", value: "700", notify_on: %w[triggered resolved]}]} }
+
+      it "seeds the line in alarm at both values and leaves the one the evaluation crosses" do
+        expect(result).to be_success
+        # 1000 is in alarm at 800 and at 600. 700 is only at 600, so the next evaluation crosses it and announces it
+        expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["high"])
       end
     end
 
