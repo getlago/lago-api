@@ -197,6 +197,15 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
         expect(result).to be_success
         expect(alert.all_triggered_alerts).to be_empty
       end
+
+      context "when money reached the wallet before the next evaluation" do
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
+
+        it "still seeds nothing, since the alert was last observed at 0" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts).to be_empty
+        end
+      end
     end
 
     it "updates the name and replaces the thresholds, recording and sending nothing" do
