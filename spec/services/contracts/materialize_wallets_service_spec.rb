@@ -312,6 +312,21 @@ describe Contracts::MaterializeWalletsService do
     it "reads the alert templates of every wallet in one query" do
       expect(capture_sql { result }.grep(/FROM "usage_monitoring_plan_wallet_alerts"/).size).to eq(1)
     end
+
+    context "when the alert templates have thresholds" do
+      before do
+        ai_credits_alert = create(:plan_wallet_alert, organization:, plan_wallet:, code: "low_ai_credits")
+        create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: ai_credits_alert, value: 100)
+        create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: UsageMonitoring::PlanWalletAlert.find_by!(code: "low_support_credits"), value: 200)
+      end
+
+      it "reads the thresholds of every alert template in one query" do
+        sql = capture_sql { result }
+
+        expect(sql.grep(/FROM "usage_monitoring_plan_wallet_alerts"/).size).to eq(1)
+        expect(sql.grep(/FROM "usage_monitoring_catalog_wallet_alert_thresholds"/).size).to eq(1)
+      end
+    end
   end
 
   context "when another contract already has the plan's wallets" do
