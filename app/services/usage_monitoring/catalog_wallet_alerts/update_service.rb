@@ -61,10 +61,13 @@ module UsageMonitoring
 
       attr_reader :alert, :params
 
-      # Decided on the value the seeding reads, not on the live balance, which can move before the next evaluation
-      # does: an alert observed at 0 or below stays unseeded, as its baseline on an empty wallet left it
+      # Seeds as the baseline would, from an observation that is still the wallet's value: then an empty wallet seeds
+      # nothing, and a funded one seeds. An observation the balance has moved past is left to the next evaluation
       def seeds?(alert)
-        alert.is_a?(CatalogWalletAlert) && (alert.previous_value || 0).positive?
+        return false unless alert.is_a?(CatalogWalletAlert) && !alert.previous_value.nil?
+
+        wallet = alert.catalog_wallet
+        wallet.funded? && alert.find_value(wallet) == alert.previous_value
       end
     end
   end

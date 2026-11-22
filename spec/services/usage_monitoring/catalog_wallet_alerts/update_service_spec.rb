@@ -199,11 +199,35 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
       end
 
       context "when money reached the wallet before the next evaluation" do
-        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: 1_500) }
 
-        it "still seeds nothing, since the alert was last observed at 0" do
+        it "still seeds nothing, leaving the line to that evaluation" do
           expect(result).to be_success
           expect(alert.all_triggered_alerts).to be_empty
+        end
+      end
+    end
+
+    context "when an ongoing balance alert watches a funded wallet whose ongoing balance is below 0" do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: -500) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", previous_value: -500, last_processed_at: 1.hour.ago) }
+      let(:params) { {thresholds: [{code: "zero", value: "0", notify_on: %w[triggered resolved]}]} }
+
+      it "seeds the line the edit puts in alarm, as a create on that wallet would" do
+        expect(result).to be_success
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to have_attributes(kind: "seeded", current_value: -500, previous_value: -500)
+        expect(seeded.crossed_thresholds).to eq([{"code" => "zero", "value" => "0.0", "recurring" => false}])
+      end
+
+      context "when the ongoing balance is 0" do
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 500, ongoing_balance_cents: 0) }
+        let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", previous_value: 0, last_processed_at: 1.hour.ago) }
+
+        it "seeds the line too" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["zero"])
         end
       end
     end
