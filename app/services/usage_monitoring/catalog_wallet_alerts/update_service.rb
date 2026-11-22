@@ -29,23 +29,23 @@ module UsageMonitoring
           return result unless result.success?
         end
 
-        # Template writes lock the plan wallet, so a contract copying its templates sees one version of them
-        alert.plan_wallet.with_lock do
-          return result.not_found_failure!(resource: "plan_wallet") if alert.plan_wallet.discarded?
+        ActiveRecord::Base.transaction do
+          lock_wallet(wallet_of(alert))
+          return result unless result.success?
 
-          # Read again under the lock: a write that held it may have changed the template or deleted it
-          template = PlanWalletAlert.find_by(id: alert.id)
-          return result.not_found_failure!(resource: "alert") unless template
+          # Read again under the lock: a write that held it may have changed the alert or deleted it
+          current = alert.class.lock.find_by(id: alert.id)
+          return result.not_found_failure!(resource: "alert") unless current
 
-          template.name = params[:name] if params.key?(:name)
-          # The thresholds are part of the template's body, so replacing them dates it too
-          template.updated_at = Time.current if params.key?(:thresholds)
-          template.save!
+          current.name = params[:name] if params.key?(:name)
+          # The thresholds are part of the alert's body, so replacing them dates it too
+          current.updated_at = Time.current if params.key?(:thresholds)
+          current.save!
 
-          # A template has no observed value, so only the thresholds change
-          replace_thresholds(template, nil, keep_previous_notify_on(template, params[:thresholds])) if params.key?(:thresholds)
+          # Nothing evaluates these alerts, so there is no observed value to seed or resolve: only the thresholds change
+          replace_thresholds(current, nil, keep_previous_notify_on(current, params[:thresholds])) if params.key?(:thresholds)
 
-          result.alert = template
+          result.alert = current
         end
 
         result

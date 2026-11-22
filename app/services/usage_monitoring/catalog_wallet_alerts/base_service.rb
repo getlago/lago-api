@@ -3,7 +3,32 @@
 module UsageMonitoring
   module CatalogWalletAlerts
     class BaseService < UsageMonitoring::BaseService
+      TYPE_UNIQUE_INDEXES = %w[idx_plan_wallet_alerts_alert_type_unique idx_catalog_wallet_alerts_alert_type_unique].freeze
+      CODE_UNIQUE_INDEXES = {"idx_plan_wallet_alerts_code_unique" => :code, "idx_catalog_wallet_alerts_code_unique" => :code}.freeze
+
       private
+
+      # Template writes lock the plan wallet, so a contract copying its templates sees one version of them. Contract
+      # wallet writes share the lock that ending the contract or changing its plan takes, so they read its last state
+      def lock_wallet(wallet)
+        if wallet.is_a?(PlanWallet)
+          wallet.lock!
+          result.not_found_failure!(resource: "plan_wallet") if wallet.discarded?
+        else
+          wallet.contract.lock!("FOR SHARE")
+          wallet.reload
+
+          if wallet.discarded?
+            result.not_found_failure!(resource: "contract_wallet")
+          elsif wallet.alerts_read_only?
+            result.forbidden_failure!(code: "wallet_alerts_read_only")
+          end
+        end
+      end
+
+      def wallet_of(alert)
+        alert.is_a?(PlanWalletAlert) ? alert.plan_wallet : alert.catalog_wallet
+      end
 
       # The checks of every alert family, then the wallet rules: values are cents, so a fraction is refused
       # rather than truncated. A balance never goes below 0, so a balance alert has no line below it either,

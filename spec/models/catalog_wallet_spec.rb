@@ -56,4 +56,35 @@ describe CatalogWallet do
       end
     end
   end
+
+  describe "#alerts_read_only?" do
+    subject(:catalog_wallet) { build(:catalog_wallet, contract:, terminated_at:) }
+
+    let(:contract) { build(:contract) }
+    let(:terminated_at) { nil }
+
+    it "is false while the wallet and its contract are live" do
+      expect(catalog_wallet.alerts_read_only?).to be(false)
+    end
+
+    context "when the contract is pending" do
+      let(:contract) { build(:contract, :pending) }
+
+      it { expect(catalog_wallet.alerts_read_only?).to be(false) }
+    end
+
+    %i[terminated canceled].each do |status|
+      context "when the contract is #{status}" do
+        let(:contract) { build(:contract, status) }
+
+        it { expect(catalog_wallet.alerts_read_only?).to be(true) }
+      end
+    end
+
+    context "when the wallet has ended" do
+      let(:terminated_at) { Time.current }
+
+      it { expect(catalog_wallet.alerts_read_only?).to be(true) }
+    end
+  end
 end
