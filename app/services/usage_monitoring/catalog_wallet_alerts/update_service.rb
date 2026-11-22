@@ -42,7 +42,7 @@ module UsageMonitoring
           current.updated_at = Time.current if params.key?(:thresholds)
           current.save!
 
-          # Nothing evaluates these alerts, so there is no observed value to seed or resolve: only the thresholds change
+          # Only the thresholds change: closing an alarm sends alert.resolved, and no payload renders a wallet alert's history
           replace_thresholds(current, nil, keep_previous_notify_on(current, params[:thresholds])) if params.key?(:thresholds)
 
           result.alert = current
