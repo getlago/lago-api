@@ -11,15 +11,38 @@ RSpec.describe Webhooks::UsageMonitoring::AlertTriggeredService do
     it_behaves_like "creates webhook", "alert.triggered", "triggered_alert"
 
     context "with a catalog wallet alert's history row" do
-      let(:triggered_alert) { create(:catalog_wallet_triggered_alert) }
+      let(:customer) { create(:customer, external_id: "acme") }
+      let(:catalog_wallet) { create(:catalog_wallet, organization: customer.organization, customer:, contract: create(:contract, customer:, external_id: "ctr_123"), code: "prepaid", currency: "USD") }
+      let(:alert) { create(:catalog_wallet_alert, organization: customer.organization, catalog_wallet:, alert_type: "balance", code: "low_balance", name: "Low balance") }
+      let(:triggered_alert) do
+        create(:catalog_wallet_triggered_alert, alert:, current_value: 1_500, previous_value: 3_000, crossed_thresholds: [{code: "low", value: BigDecimal(2_000), recurring: false}], triggered_at: Time.zone.parse("2026-11-22 12:00:00"))
+      end
 
-      it "renders it with the catalog wallet serializer" do
+      it "sends its v2 body under the same event" do
         webhook_service.call
 
-        payload = Webhook.order(created_at: :desc).first.payload
-        expected = V1::UsageMonitoring::CatalogWalletTriggeredAlertSerializer.new(triggered_alert, root_name: "triggered_alert").serialize
-        expect(payload["triggered_alert"]).to eq(JSON.parse(expected.to_json))
-        expect(payload["triggered_alert"]).to include("wallet_code" => triggered_alert.catalog_wallet.code)
+        expect(Webhook.order(created_at: :desc).first.payload).to eq(
+          "webhook_type" => "alert.triggered",
+          "object_type" => "triggered_alert",
+          "organization_id" => customer.organization_id,
+          "triggered_alert" => {
+            "lago_id" => triggered_alert.id,
+            "lago_alert_id" => alert.id,
+            "alert_code" => "low_balance",
+            "alert_name" => "Low balance",
+            "alert_type" => "balance",
+            "lago_wallet_id" => catalog_wallet.id,
+            "wallet_code" => "prepaid",
+            "currency" => "USD",
+            "lago_contract_id" => catalog_wallet.contract_id,
+            "external_contract_id" => "ctr_123",
+            "external_customer_id" => "acme",
+            "current_value" => "1500.0",
+            "previous_value" => "3000.0",
+            "crossed_thresholds" => [{"code" => "low", "value" => "2000.0", "recurring" => false}],
+            "triggered_at" => "2026-11-22T12:00:00Z"
+          }
+        )
       end
     end
 

@@ -193,9 +193,38 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
         it "resolves it with threshold_updated and sends alert.resolved" do
           expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("alert.resolved", instance_of(UsageMonitoring::CatalogWalletTriggeredAlert))
 
+          # "warning" at 2000 stays in alarm at 1500, so the alert is not fully resolved
           resolved = alert.all_triggered_alerts.resolved.sole
-          expect(resolved).to have_attributes(resolution_reason: "threshold_updated", current_value: 1_500, catalog_wallet:)
+          expect(resolved).to have_attributes(
+            resolution_reason: "threshold_updated",
+            current_value: 1_500,
+            previous_value: 1_500,
+            in_alarm_thresholds: ["warning"],
+            fully_resolved: false,
+            catalog_wallet:
+          )
           expect(resolved.crossed_thresholds).to eq([{"code" => "low", "value" => "10000.0", "recurring" => false}])
+        end
+
+        context "when the line moves but stays in alarm" do
+          # 5000 is still above the balance of 1500
+          let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}, {code: "low", value: "5000", notify_on: %w[triggered resolved]}]} }
+
+          it "resolves nothing and sends nothing" do
+            expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+            expect(alert.all_triggered_alerts.resolved).to be_empty
+          end
+        end
+
+        context "when the line leaves alarm but is opted out of resolutions" do
+          let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}, {code: "low", value: "1000", notify_on: %w[triggered]}]} }
+
+          it "resolves nothing and sends nothing" do
+            expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+            expect(alert.all_triggered_alerts.resolved).to be_empty
+          end
         end
       end
 
@@ -207,7 +236,16 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
         it "resolves it with threshold_removed and sends alert.resolved" do
           expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("alert.resolved", instance_of(UsageMonitoring::CatalogWalletTriggeredAlert))
 
-          expect(alert.all_triggered_alerts.resolved.sole).to have_attributes(resolution_reason: "threshold_removed")
+          resolved = alert.all_triggered_alerts.resolved.sole
+          expect(resolved).to have_attributes(
+            resolution_reason: "threshold_removed",
+            current_value: 1_500,
+            previous_value: 1_500,
+            in_alarm_thresholds: ["warning"],
+            fully_resolved: false,
+            catalog_wallet:
+          )
+          expect(resolved.crossed_thresholds).to eq([{"code" => "low", "value" => "10000.0", "recurring" => false}])
         end
       end
     end

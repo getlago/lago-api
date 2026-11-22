@@ -5,15 +5,12 @@ module Webhooks
     class AlertTriggeredService < Webhooks::BaseService
       private
 
+      # A catalog wallet alert keeps the v1 event and carries its v2 body, as catalog plans and invoices do
       def object_serializer
-        serializer_class.new(object, root_name: object_type)
-      end
-
-      # Each alert family renders its own history rows
-      def serializer_class
-        case object
-        when ::UsageMonitoring::CatalogWalletTriggeredAlert then ::V1::UsageMonitoring::CatalogWalletTriggeredAlertSerializer
-        else ::V1::UsageMonitoring::TriggeredAlertSerializer
+        if object.is_a?(::UsageMonitoring::CatalogWalletTriggeredAlert)
+          ::V2::CatalogWalletTriggeredAlertSerializer.new(object, root_name: object_type)
+        else
+          ::V1::UsageMonitoring::TriggeredAlertSerializer.new(object, root_name: object_type)
         end
       end
 

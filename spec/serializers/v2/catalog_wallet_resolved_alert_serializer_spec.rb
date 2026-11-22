@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ::V1::UsageMonitoring::CatalogWalletResolvedAlertSerializer do
+RSpec.describe ::V2::CatalogWalletResolvedAlertSerializer do
   subject(:serializer) { described_class.new(resolved_alert.reload, root_name: "resolved_alert") }
 
   let_it_be(:organization) { create(:organization) }
@@ -23,31 +23,24 @@ RSpec.describe ::V1::UsageMonitoring::CatalogWalletResolvedAlertSerializer do
       crossed_thresholds: [{code: "low", value: BigDecimal(2_000), recurring: false}],
       in_alarm_thresholds: ["critical"],
       fully_resolved: false,
-      triggered_at: Time.zone.parse("2026-11-22 12:00:00")
+      triggered_at: Time.zone.parse("2026-11-22 12:00:00.123456")
     )
   end
 
-  it "renders the v1 keys, the contract ones and the wallet's code and currency" do
+  it "renders the alert, its wallet, the values and the resolution, at whole seconds" do
     expect(JSON.parse(serializer.to_json)).to eq(
       "resolved_alert" => {
         "lago_id" => resolved_alert.id,
-        "lago_organization_id" => organization.id,
         "lago_alert_id" => alert.id,
-        "lago_subscription_id" => nil,
-        "external_subscription_id" => nil,
+        "alert_code" => "low_ongoing",
+        "alert_name" => "Low ongoing",
+        "alert_type" => "ongoing_balance",
         "lago_wallet_id" => catalog_wallet.id,
         "wallet_code" => "prepaid",
         "currency" => "USD",
         "lago_contract_id" => contract.id,
         "external_contract_id" => "ctr_123",
-        "product_code" => nil,
-        "product_filter_code" => nil,
-        "applies_to" => nil,
         "external_customer_id" => "acme",
-        "billable_metric_code" => nil,
-        "alert_name" => "Low ongoing",
-        "alert_code" => "low_ongoing",
-        "alert_type" => "ongoing_balance",
         "current_value" => "1500.0",
         "previous_value" => "1500.0",
         "recovered_thresholds" => [{"code" => "low", "value" => "2000.0", "recurring" => false}],
@@ -68,8 +61,8 @@ RSpec.describe ::V1::UsageMonitoring::CatalogWalletResolvedAlertSerializer do
     it "renders the alert as its history kept it" do
       expect(JSON.parse(serializer.to_json)["resolved_alert"]).to include(
         "lago_alert_id" => alert.id,
-        "alert_name" => "Low ongoing",
         "alert_code" => "low_ongoing",
+        "alert_name" => "Low ongoing",
         "alert_type" => "ongoing_balance"
       )
     end
