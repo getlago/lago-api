@@ -170,6 +170,23 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
     let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
     let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "balance", code: "low_balance", name: "Low balance") }
 
+    context "when the alert is watching the balance" do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "balance", code: "low_balance", previous_value: 1_500, last_processed_at: 1.hour.ago) }
+      let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}, {code: "low", value: "1000", notify_on: %w[triggered resolved]}]} }
+
+      it "seeds the opted-in line the edit puts in alarm and sends nothing" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(result).to be_success
+        # 2000 is above the balance of 1500, so it is in alarm; 1000 is below it
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to have_attributes(kind: "seeded", catalog_wallet:, current_value: 1_500, previous_value: 1_500)
+        expect(seeded.crossed_thresholds).to eq([{"code" => "warning", "value" => "2000.0", "recurring" => false}])
+      end
+    end
+
     it "updates the name and replaces the thresholds, recording and sending nothing" do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
 

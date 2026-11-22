@@ -42,8 +42,12 @@ module UsageMonitoring
           current.updated_at = Time.current if params.key?(:thresholds)
           current.save!
 
-          # Only the thresholds change: closing an alarm sends alert.resolved, and no payload renders a wallet alert's history
-          replace_thresholds(current, nil, keep_previous_notify_on(current, params[:thresholds])) if params.key?(:thresholds)
+          if params.key?(:thresholds)
+            replace_thresholds(current, nil, keep_previous_notify_on(current, params[:thresholds]))
+            # A watching alert seeds the opted-in lines the edit puts in alarm, as its baseline does. The edit closes no
+            # alarm: that sends alert.resolved, and no payload renders a wallet alert's history
+            seed_alarms_already_past(current, current.catalog_wallet) if watching?(current)
+          end
 
           result.alert = current
         end
@@ -56,6 +60,10 @@ module UsageMonitoring
       private
 
       attr_reader :alert, :params
+
+      def watching?(alert)
+        alert.is_a?(CatalogWalletAlert) && !alert.previous_value.nil?
+      end
     end
   end
 end
