@@ -13,6 +13,11 @@ class CatalogWallet < ApplicationRecord
   has_many :alerts, class_name: "UsageMonitoring::CatalogWalletAlert", dependent: :delete_all, inverse_of: :catalog_wallet
 
   validates :code, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
+
+  # Its alerts can still be read once the wallet or its contract ends, but no longer change
+  def alerts_read_only?
+    terminated_at? || contract.terminated? || contract.canceled?
+  end
 end
 
 # == Schema Information

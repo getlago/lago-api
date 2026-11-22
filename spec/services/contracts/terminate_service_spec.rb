@@ -439,6 +439,42 @@ RSpec.describe Contracts::TerminateService do
     end
   end
 
+  context "when the contract's wallets have alerts" do
+    let(:wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
+    let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: wallet, code: "low_balance", name: "Low balance") }
+    let(:history) { create(:catalog_wallet_triggered_alert, organization:, alert:) }
+    let(:other_wallet) { create(:catalog_wallet, organization:, customer:) }
+    let(:other_alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: other_wallet) }
+
+    before do
+      create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: alert)
+      create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: other_alert)
+      history
+    end
+
+    it "deletes them with their thresholds and keeps their history" do
+      expect(result).to be_success
+      expect(UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: wallet.id)).to be_empty
+      expect(UsageMonitoring::CatalogWalletAlertThreshold.where(catalog_wallet_alert_id: alert.id)).to be_empty
+      expect(history.reload).to have_attributes(catalog_wallet_alert_id: alert.id, alert_code: "low_balance", alert_name: "Low balance")
+    end
+
+    it "keeps the alerts of another contract's wallet" do
+      expect(result).to be_success
+      expect(other_alert.reload.thresholds.count).to eq(1)
+    end
+
+    context "when the contract is pending" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+
+      it "deletes them as it cancels the contract" do
+        expect(result.contract).to be_canceled
+        expect(UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: wallet.id)).to be_empty
+        expect(UsageMonitoring::CatalogWalletAlertThreshold.where(catalog_wallet_alert_id: alert.id)).to be_empty
+      end
+    end
+  end
+
   context "when the contract is already terminated" do
     let(:contract) { create(:contract, :terminated, organization:, customer:, catalog_plan:) }
 

@@ -77,12 +77,12 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
     end
   end
 
-  context "without a plan wallet" do
+  context "without a wallet" do
     let(:plan_wallet) { nil }
 
     it "fails" do
       expect(result).to be_failure
-      expect(result.error.error_code).to eq("plan_wallet_not_found")
+      expect(result.error.error_code).to eq("wallet_not_found")
     end
   end
 
@@ -198,6 +198,114 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
     it "fails on the code index" do
       expect(result).to be_failure
       expect(result.error.messages).to eq({code: ["value_already_exist"]})
+    end
+  end
+
+  context "with a contract wallet" do
+    subject(:result) { described_class.call(catalog_wallet:, params:) }
+
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, :pending, customer:) }
+    let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
+
+    it "creates the alert and its thresholds, with no previous value, and sends nothing" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(result).to be_success
+      expect(result.alert).to be_a(UsageMonitoring::CatalogWalletAlert)
+      expect(result.alert).to have_attributes(
+        organization:,
+        catalog_wallet:,
+        alert_type: "balance",
+        code: "low_balance",
+        name: "Low balance",
+        previous_value: nil,
+        last_processed_at: nil
+      )
+      expect(result.alert.thresholds.order(:value).pluck(:organization_id, :code, :value, :recurring, :notify_on)).to eq([
+        [organization.id, "empty", 0, false, %w[triggered]],
+        [organization.id, "low", 10_000, false, %w[triggered resolved]]
+      ])
+      expect(result.alert.all_triggered_alerts).to be_empty
+    end
+
+    context "when the contract is active" do
+      let(:contract) { create(:contract, customer:) }
+
+      it "creates the alert" do
+        expect(result).to be_success
+        expect(catalog_wallet.alerts).to eq([result.alert])
+      end
+    end
+
+    %i[terminated canceled].each do |status|
+      context "when the contract is #{status}" do
+        let(:contract) { create(:contract, status, customer:) }
+
+        it "refuses the write and creates nothing" do
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("wallet_alerts_read_only")
+          expect(catalog_wallet.alerts).to be_empty
+        end
+      end
+    end
+
+    context "when the wallet has ended" do
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, terminated_at: Time.current) }
+
+      it "refuses the write and creates nothing" do
+        expect(result).to be_failure
+        expect(result.error.code).to eq("wallet_alerts_read_only")
+        expect(catalog_wallet.alerts).to be_empty
+      end
+    end
+
+    context "when the contract was canceled before the lock" do
+      # Another request ends it: the contract the service holds stays pending until the lock reloads it
+      before { Contracts::TerminateService.call!(contract: Contract.find(contract.id)) }
+
+      it "refuses the write and creates nothing" do
+        expect(result).to be_failure
+        expect(result.error.code).to eq("wallet_alerts_read_only")
+        expect(UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: catalog_wallet.id)).to be_empty
+      end
+    end
+
+    context "when the wallet was deleted before the lock" do
+      before { CatalogWallet.find(catalog_wallet.id).discard! }
+
+      it "fails and writes nothing on it" do
+        expect(result).to be_failure
+        expect(result.error.error_code).to eq("contract_wallet_not_found")
+        expect(UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: catalog_wallet.id)).to be_empty
+      end
+    end
+
+    context "when the wallet already has an alert of that type" do
+      before { create(:catalog_wallet_alert, catalog_wallet:, organization:, alert_type: "balance", code: "other") }
+
+      it "fails on the type index" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq({base: ["alert_already_exists"]})
+      end
+    end
+
+    context "when the wallet already has an alert with that code" do
+      before { create(:catalog_wallet_alert, catalog_wallet:, organization:, alert_type: "ongoing_balance", code: "low_balance") }
+
+      it "fails on the code index" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq({code: ["value_already_exist"]})
+      end
+    end
+
+    context "when another wallet has an alert with that code" do
+      before { create(:catalog_wallet_alert, organization:, alert_type: "balance", code: "low_balance") }
+
+      it "creates the alert" do
+        expect(result).to be_success
+      end
     end
   end
 end
