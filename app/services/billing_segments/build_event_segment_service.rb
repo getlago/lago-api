@@ -18,6 +18,7 @@ module BillingSegments
         contract: contract_rate_card.contract,
         customer: contract_rate_card.contract.customer,
         contract_rate_card:,
+        billable_metric_code: contract_rate_card.rate_card.product.billable_metric&.code,
         rate_card_rate: billable_segment.rate,
         rate_override: billable_segment.rate_override,
         rate_properties: billable_segment.properties,
@@ -26,9 +27,11 @@ module BillingSegments
         cycle_started_at: billable_segment.cycle_started_at,
         started_at: billable_segment.started_at,
         ended_at: BillingSegment.inclusive_end(billable_segment.ended_at),
-        billing_at: billable_segment.billing_at,
-        proration_ratio: billable_segment.proration_ratio,
-        status: :pending
+        billing_at: Billing::Terms.new(
+          timing: contract_rate_card.rate_card.billing_timing,
+          prorated: contract_rate_card.rate_card.proration?
+        ).billing_at_for(billable_segment),
+        proration_ratio: billable_segment.proration_ratio
       )
       result
     end

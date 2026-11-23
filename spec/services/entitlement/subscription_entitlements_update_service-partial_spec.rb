@@ -74,6 +74,59 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
       end
     end
 
+    context "when a concurrent request creates the same entitlement" do
+      before do
+        # The concurrent request inserts its row after this one read the subscription entitlements.
+        allow(Entitlement::Entitlement).to receive(:create!).and_wrap_original do |original, **attributes|
+          original.call(**attributes)
+          original.call(**attributes)
+        end
+      end
+
+      it "returns the validation error of a taken feature" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(feature: ["value_already_exist"])
+        expect(subscription.entitlements.count).to eq(0)
+        expect(SendWebhookJob).not_to have_been_enqueued
+        expect(Utils::ActivityLog).not_to have_produced("subscription.updated")
+      end
+    end
+
+    context "when a concurrent request creates the same entitlement value" do
+      let(:sub_entitlement) { create(:entitlement, organization:, plan: nil, subscription:, feature:) }
+
+      before do
+        sub_entitlement
+
+        # The concurrent request read the subscription entitlement before this one inserted its value.
+        allow(Entitlement::SubscriptionEntitlementCoreUpdateService).to receive(:call!).and_wrap_original do |original, **kwargs|
+          stale_entitlement = Entitlement::Entitlement.includes(values: :privilege).find(kwargs[:sub_entitlement].id)
+          original.call(**kwargs)
+          original.call(**kwargs, sub_entitlement: stale_entitlement)
+        end
+      end
+
+      it "returns the validation error of a taken privilege" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(privilege: ["value_already_exist"])
+        expect(sub_entitlement.values.count).to eq(0)
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when another unique index refuses the write" do
+      before do
+        allow(Entitlement::Entitlement).to receive(:create!) do
+          create(:plan, organization:).update_column(:code, plan.code) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
+
+      it "raises the error" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique, /index_plans_on_organization_id_and_code/)
+      end
+    end
+
     context "when feature does not exist" do
       let(:entitlements_params) do
         {

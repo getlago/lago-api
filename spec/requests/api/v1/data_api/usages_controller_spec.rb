@@ -34,6 +34,20 @@ RSpec.describe Api::V1::DataApi::UsagesController do # rubocop:disable Rails/Fil
       end
     end
 
+    context "with an organization waiting for a payment method", :premium do
+      include_context "with self-serve enabled"
+
+      let(:organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+
+      it "refuses the request" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(status: 403, error: "Forbidden", code: "organization_inactive")
+        expect(DataApi::UsagesService).not_to have_received(:call)
+      end
+    end
+
     context "when license is not premium" do
       include_examples "requires API permission", "analytic", "read"
 

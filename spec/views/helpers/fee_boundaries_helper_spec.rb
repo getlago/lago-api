@@ -806,65 +806,74 @@ RSpec.describe FeeBoundariesHelper do
   end
 
   describe "GroupedFees" do
-    describe "#has_any_fees?" do
-      it "returns true when subscription fee is present" do
-        grouped = described_class::GroupedFees.new(
+    describe "#has_displayable_fees?" do
+      subject(:grouped) do
+        described_class::GroupedFees.new(
           billing_period: described_class::BillingPeriod.new(from_datetime: Time.current, to_datetime: Time.current),
-          subscription_fee: build(:fee),
-          fixed_charge_fees: [],
-          charge_fees: [],
-          commitment_fee: nil
+          subscription_fee:,
+          fixed_charge_fees:,
+          charge_fees:,
+          commitment_fee:
         )
-
-        expect(grouped.has_any_fees?).to be true
       end
 
-      it "returns true when charge fees are present" do
-        grouped = described_class::GroupedFees.new(
-          billing_period: described_class::BillingPeriod.new(from_datetime: Time.current, to_datetime: Time.current),
-          subscription_fee: nil,
-          fixed_charge_fees: [],
-          charge_fees: [build(:fee)],
-          commitment_fee: nil
-        )
+      let(:subscription_fee) { nil }
+      let(:fixed_charge_fees) { [] }
+      let(:charge_fees) { [] }
+      let(:commitment_fee) { nil }
 
-        expect(grouped.has_any_fees?).to be true
+      context "when the group only holds a subscription fee" do
+        let(:subscription_fee) { build(:fee) }
+
+        it "returns true when the subscription fee is displayed" do
+          expect(grouped.has_displayable_fees?(display_subscription_fee: true)).to be true
+        end
+
+        it "returns false when the subscription fee is hidden" do
+          expect(grouped.has_displayable_fees?(display_subscription_fee: false)).to be false
+        end
       end
 
-      it "returns true when fixed charge fees are present" do
-        grouped = described_class::GroupedFees.new(
-          billing_period: described_class::BillingPeriod.new(from_datetime: Time.current, to_datetime: Time.current),
-          subscription_fee: nil,
-          fixed_charge_fees: [build(:fee)],
-          charge_fees: [],
-          commitment_fee: nil
-        )
+      context "when the group holds a hidden subscription fee and charge fees" do
+        let(:subscription_fee) { build(:fee) }
+        let(:charge_fees) { [build(:charge_fee)] }
 
-        expect(grouped.has_any_fees?).to be true
+        it "returns true" do
+          expect(grouped.has_displayable_fees?(display_subscription_fee: false)).to be true
+        end
       end
 
-      it "returns true when minimum commitment fees are present" do
-        grouped = described_class::GroupedFees.new(
-          billing_period: described_class::BillingPeriod.new(from_datetime: Time.current, to_datetime: Time.current),
-          subscription_fee: nil,
-          fixed_charge_fees: [],
-          charge_fees: [],
-          commitment_fee: build(:fee)
-        )
+      context "when the group holds a hidden subscription fee and fixed charge fees" do
+        let(:subscription_fee) { build(:fee) }
+        let(:fixed_charge_fees) { [build(:fixed_charge_fee)] }
 
-        expect(grouped.has_any_fees?).to be true
+        it "returns true" do
+          expect(grouped.has_displayable_fees?(display_subscription_fee: false)).to be true
+        end
       end
 
-      it "returns false when no fees are present" do
-        grouped = described_class::GroupedFees.new(
-          billing_period: described_class::BillingPeriod.new(from_datetime: Time.current, to_datetime: Time.current),
-          subscription_fee: nil,
-          fixed_charge_fees: [],
-          charge_fees: [],
-          commitment_fee: nil
-        )
+      context "when the group holds a hidden subscription fee and a minimum commitment fee" do
+        let(:subscription_fee) { build(:fee) }
+        let(:commitment_fee) { build(:minimum_commitment_fee) }
 
-        expect(grouped.has_any_fees?).to be false
+        it "returns true" do
+          expect(grouped.has_displayable_fees?(display_subscription_fee: false)).to be true
+        end
+      end
+
+      context "when the group only holds charge fees" do
+        let(:charge_fees) { [build(:charge_fee)] }
+
+        it "returns true" do
+          expect(grouped.has_displayable_fees?(display_subscription_fee: true)).to be true
+        end
+      end
+
+      context "when the group holds no fees" do
+        it "returns false whether the subscription fee is displayed or not" do
+          expect(grouped.has_displayable_fees?(display_subscription_fee: true)).to be false
+          expect(grouped.has_displayable_fees?(display_subscription_fee: false)).to be false
+        end
       end
     end
   end

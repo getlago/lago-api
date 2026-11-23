@@ -41,6 +41,7 @@ module RateCardRates
         )
 
         result.rate_card_rate = rate
+        RateCardRates::ApplyRateChangeJob.perform_after_commit(rate.id)
         if emit_events
           SendWebhookJob.perform_after_commit("rate_card_rate.created", rate)
         end

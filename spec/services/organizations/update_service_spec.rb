@@ -92,6 +92,20 @@ RSpec.describe Organizations::UpdateService do
       expect(default_billing_entity.document_locale).to eq("fr")
     end
 
+    context "when the self-serve and sandbox fields are sent" do
+      before do
+        params.merge!(self_serve: true, environment: "sandbox", production_organization_id: create(:organization).id)
+      end
+
+      it "ignores them" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.organization.reload).to have_attributes(legal_name: "Foobar", self_serve: false,
+          environment: "production", production_organization_id: nil)
+      end
+    end
+
     context "when document_number_prefix is sent" do
       before { params[:document_number_prefix] = "abc" }
 
@@ -443,6 +457,53 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when authentication_methods change on an organization with a sandbox" do
+      let(:params) { {authentication_methods: ["email_password"]} }
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+      before { sandbox }
+
+      it "gives the sandbox the same login methods" do
+        expect(update_service.call).to be_success
+        expect(sandbox.reload.authentication_methods).to eq(["email_password"])
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:organization) { create(:organization, :sandbox, authentication_methods: %w[email_password google_oauth]) }
+
+      context "with other login methods" do
+        let(:params) { {authentication_methods: ["email_password"], legal_name: "Foobar"} }
+
+        it "refuses the update" do
+          expect(update_service.call.error.code).to eq("sandbox_managed_by_production")
+          expect(organization.reload).to have_attributes(authentication_methods: %w[email_password google_oauth],
+            legal_name: nil)
+        end
+      end
+
+      context "with the same login methods" do
+        let(:params) { {authentication_methods: %w[google_oauth email_password], legal_name: "Foobar"} }
+
+        it "updates the other fields" do
+          expect(update_service.call).to be_success
+          expect(organization.reload.legal_name).to eq("Foobar")
+        end
+      end
+    end
+
+    context "when authentication_methods is null" do
+      let(:params) { {authentication_methods: nil} }
+
+      it "returns a validation error and keeps the methods" do
+        result = update_service.call
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to eq([:authentication_methods])
+        expect(organization.reload.authentication_methods).to eq(%w[email_password google_oauth])
+      end
+    end
+
     context "when authentication_methods change but the update fails" do
       subject { described_class.new(organization:, params:, user:) }
 
@@ -512,18 +573,6 @@ RSpec.describe Organizations::UpdateService do
 
           expect(security_logger).to have_received(:produce).with(hash_including(log_event: "webhook_endpoint.created"))
         end
-
-        context "with the standard_webhooks_signature flag" do
-          before { organization.enable_feature_flag!(:standard_webhooks_signature) }
-
-          it "creates a jwt endpoint with no signing key" do
-            result = update_service.call
-
-            expect(result).to be_success
-            expect(organization.webhook_endpoints.reload.map(&:signature_algo)).to eq(["jwt"])
-            expect(WebhookEndpointSigningKey.where(organization:)).to be_empty
-          end
-        end
       end
 
       context "when the lowest id endpoint signs with standard_webhooks" do
@@ -538,7 +587,6 @@ RSpec.describe Organizations::UpdateService do
         let(:other_signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint: other_webhook_endpoint) }
 
         before do
-          organization.enable_feature_flag!(:standard_webhooks_signature)
           signing_key
           other_signing_key
         end
@@ -725,6 +773,23 @@ RSpec.describe Organizations::UpdateService do
         context "when the organization has a webhook endpoint" do
           it_behaves_like "an update that fails elsewhere"
         end
+      end
+    end
+
+    context "when the same authentication_methods are resubmitted in another order" do
+      subject { described_class.new(organization:, params:, user:) }
+
+      let(:params) { {authentication_methods: %w[google_oauth email_password]} }
+      let(:user) { create(:user) }
+
+      before { create(:membership, organization:, roles: %i[admin], user:) }
+
+      it "does not produce a security log nor send an email" do
+        expect { subject.call }.not_to have_enqueued_mail(OrganizationMailer, :authentication_methods_updated)
+
+        expect(organization.reload.authentication_methods).to eq(%w[email_password google_oauth])
+        expect(security_logger).not_to have_received(:produce)
+          .with(hash_including(log_event: "organization.authentication_methods_updated"))
       end
     end
   end

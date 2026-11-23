@@ -1,0 +1,105 @@
+# frozen_string_literal: true
+
+module Signups
+  # Signup Step 3: creates the production organization of a self-serve user who has none yet, with its sandbox, and
+  # makes the user admin of both. The role and source answers go to analytics only and are never saved in the database.
+  class CreateOrganizationService < BaseService
+    Result = BaseResult[:organization, :sandbox_organization, :user]
+
+    ROLES = %w[engineering finance founder product_management data leadership other].freeze
+    SOURCES = %w[ai_search github hacker_news reference y_combinator search_engine other].freeze
+
+    def initialize(user:, name:, role:, referral_source: nil)
+      @user = user
+      @name = name
+      @role = role
+      @referral_source = referral_source
+      super
+    end
+
+    def call
+      return result.forbidden_failure!(code: "self_serve_disabled") unless Lago::SelfServe.enabled?
+      return result.not_found_failure!(resource: "user") unless user
+      return result.single_validation_failure!(field: :role, error_code: "value_is_invalid") unless ROLES.include?(role)
+      if referral_source.present? && SOURCES.exclude?(referral_source)
+        return result.single_validation_failure!(field: :source, error_code: "value_is_invalid")
+      end
+
+      ActiveRecord::Base.transaction do
+        # Checked again on the locked user, so two submissions of Step 3 create a single pair.
+        user.lock!
+        user.memberships.reset
+        next result.forbidden_failure!(code: "user_not_eligible") unless user.needs_organization?
+
+        pair = Organizations::CreateSelfServeService.call!(name:, activation_status:)
+        membership = create_admin_membership(pair.organization)
+
+        result.organization = pair.organization
+        result.sandbox_organization = pair.sandbox_organization
+        after_commit { announce(membership, pair.sandbox_organization) }
+      end
+      return result if result.failure?
+
+      # The memberships were read under the lock, before this one existed: the answer's needsOrganization reads them.
+      user.memberships.reset
+      result.user = user
+      result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
+    end
+
+    private
+
+    # Not `source`: BaseService already names the caller (GraphQL, API) that way.
+    attr_reader :user, :name, :role, :referral_source
+
+    # With the switch on, the production waits for billing-accounts to confirm a card; the sandbox is open either way.
+    def activation_status
+      if Lago::SelfServe.require_payment_method?
+        Organization::ACTIVATION_STATUSES[:pending_payment_method]
+      else
+        Organization::ACTIVATION_STATUSES[:active]
+      end
+    end
+
+    # Admin of production, then the sandbox mirrors it, as for every member. No lock first: no other transaction can
+    # see the organization yet, and the sync locks the pair before it reads.
+    def create_admin_membership(organization)
+      membership = Membership.create!(user:, organization:)
+      MembershipRole.create!(organization:, membership:, role: Role.admins.find_by!(organization_id: nil))
+      Memberships::SyncSandboxService.call!(organization:, user:, actor: user)
+      membership
+    end
+
+    def announce(membership, sandbox)
+      Utils::SecurityLog.produce(
+        organization: membership.organization,
+        log_type: "user",
+        log_event: "user.signed_up",
+        user:,
+        resources: {email: user.email, roles: membership.roles.map(&:code)},
+        skip_organization_check: true
+      )
+      SegmentIdentifyJob.perform_later(membership_id: "membership/#{membership.id}")
+      SegmentTrackJob.perform_later(
+        membership_id: "membership/#{membership.id}",
+        event: "organization_registered",
+        # The only place the Step 3 answers go: not in the database, and not in the job logs. The job's arguments still
+        # reach Redis (the queue, then the dead set if it fails) and error reports.
+        properties: {
+          organization_name: membership.organization.name,
+          organization_id: membership.organization_id,
+          email: user.email,
+          self_serve: true,
+          sandbox_organization_id: sandbox.id,
+          activation_status: membership.organization.activation_status,
+          role:,
+          source: referral_source,
+          region: Lago::SelfServe.region
+        }
+      )
+    end
+  end
+end

@@ -39,14 +39,17 @@ module Types
 
     field :create_charge, mutation: Mutations::Charges::Create
     field :create_contract, mutation: Mutations::Contracts::Create
+    field :create_contract_alert, mutation: Mutations::Contracts::Alerts::Create
     field :create_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Create
     field :create_contract_rate_phase, mutation: Mutations::ContractRatePhases::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
+    field :destroy_contract_alert, mutation: Mutations::Contracts::Alerts::Destroy
     field :destroy_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Destroy
     field :destroy_contract_rate_phase, mutation: Mutations::ContractRatePhases::Destroy
     field :terminate_contract, mutation: Mutations::Contracts::Terminate
     field :update_charge, mutation: Mutations::Charges::Update
     field :update_contract, mutation: Mutations::Contracts::Update
+    field :update_contract_alert, mutation: Mutations::Contracts::Alerts::Update
     field :update_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Update
     field :update_contract_rate_phase, mutation: Mutations::ContractRatePhases::Update
 
@@ -217,6 +220,7 @@ module Types
     field :reset_password, mutation: Mutations::PasswordResets::Reset
 
     field :confirm_signup_email, mutation: Mutations::Signups::Confirm
+    field :create_self_serve_organization, mutation: Mutations::Signups::CreateOrganization
     field :exchange_signup_secret, mutation: Mutations::Signups::ExchangeSecret
     field :resend_signup_email, mutation: Mutations::Signups::Resend
     field :sign_up, mutation: Mutations::Signups::Create
@@ -252,6 +256,9 @@ module Types
 
     field :create_xero_integration, mutation: Mutations::Integrations::Xero::Create
     field :update_xero_integration, mutation: Mutations::Integrations::Xero::Update
+
+    field :create_quickbooks_integration, mutation: Mutations::Integrations::Quickbooks::Create
+    field :update_quickbooks_integration, mutation: Mutations::Integrations::Quickbooks::Update
 
     field :create_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Create
     field :update_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Update
@@ -330,6 +337,7 @@ module Types
     field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
 
     field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
+    field :admin_link_sandbox_organization, mutation: Mutations::Admin::LinkSandboxOrganization
     field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
     field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
   end

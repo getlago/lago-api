@@ -31,24 +31,8 @@ module ApiKeys
       # When no cache, just return the values from the database
       return fetch_from_database unless with_cache
 
-      # Fetch API key and organization from the cache
-      cache = Rails.cache.read(cache_key)
-      if cache && cache != INVALIDATED_MARKER
-        cache_json = JSON.parse(cache)
-        api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
-
-        # An entry cached by a release that predates member keys has no membership_id: it is dropped
-        # and read again from the database, rather than taken for an organization key.
-        if cache_json["api_key"].key?("membership_id")
-          # Avoid returning an expired API key
-          unless api_key.expired?
-            organization = Organization.instantiate(cache_json["organization"].slice(*Organization.column_names))
-            return api_key, organization
-          end
-        else
-          Rails.cache.delete(cache_key)
-        end
-      end
+      cached = read_from_cache
+      return cached if cached
 
       # In last resort, fetch from the database and write to the cache
       api_key, organization = fetch_from_database
@@ -72,6 +56,35 @@ module ApiKeys
     def fetch_from_database
       api_key = ApiKey.includes(:organization).find_by(value: auth_token)
       [api_key, api_key&.organization]
+    end
+
+    def read_from_cache
+      cache = Rails.cache.read(cache_key)
+      return if cache.nil? || cache == INVALIDATED_MARKER
+
+      cache_json = JSON.parse(cache)
+      # An entry written before a column was added (`membership_id`, `environment`) lacks it and would be read wrong:
+      # drop it, so the database answers and the next write caches every column. Unlike a CACHE_KEY_VERSION bump,
+      # this keeps one key across a deploy.
+      api_key_attributes = column_attributes(cache_json["api_key"], ApiKey)
+      organization_attributes = column_attributes(cache_json["organization"], Organization)
+      unless api_key_attributes && organization_attributes
+        Rails.cache.delete(cache_key)
+        return
+      end
+
+      api_key = ApiKey.instantiate(api_key_attributes)
+
+      # Avoid returning an expired API key
+      [api_key, Organization.instantiate(organization_attributes)] unless api_key.expired?
+    end
+
+    # The cached attributes of the model's columns, or nil when the entry is not an object or misses a column.
+    def column_attributes(attributes, model)
+      return unless attributes.is_a?(Hash)
+
+      known = attributes.slice(*model.column_names)
+      known if known.size == model.column_names.size
     end
 
     def write_to_cache(api_key)

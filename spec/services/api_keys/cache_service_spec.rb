@@ -134,6 +134,54 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
         end
       end
 
+      context "with an entry written before a column was added" do
+        before do
+          stale_organization = organization.attributes
+            .except("self_serve", "environment", "production_organization_id", "activation_status")
+          Rails.cache.write(cache_service.cache_key, {api_key: api_key.attributes, organization: stale_organization}.to_json)
+        end
+
+        it "reads the api_key and the organization from the database" do
+          result = cache_service.call
+
+          expect(result).to eq([api_key, organization])
+          expect(result.last.environment).to eq("production")
+          expect(result.last.activation_status).to eq("active")
+          # The database answered: the entry is written again with the new columns.
+          expect(JSON.parse(Rails.cache.read(cache_service.cache_key))["organization"])
+            .to include("activation_status" => "active")
+        end
+      end
+
+      context "with an entry whose organization is null" do
+        before do
+          Rails.cache.write(cache_service.cache_key, {api_key: api_key.attributes, organization: nil}.to_json)
+        end
+
+        it "reads the api_key and the organization from the database" do
+          expect(cache_service.call).to eq([api_key, organization])
+        end
+      end
+
+      context "when an instance running the previous code revokes the cached api key" do
+        include_context "with mocked security logger"
+
+        let(:api_key) { create(:api_key) }
+
+        before do
+          create(:api_key)
+          cache_service.call
+
+          # What `expire_cache` of the previous release writes during a rolling deploy.
+          api_key.touch(:expires_at) # rubocop:disable Rails/SkipsModelValidations
+          Rails.cache.write("api_key/1/#{auth_token}", described_class::INVALIDATED_MARKER)
+        end
+
+        it "does not authenticate the revoked api key" do
+          expect(described_class.call(auth_token, with_cache: true)).to eq([nil, nil])
+        end
+      end
+
       context "when cached value is expired" do
         let(:api_key) { create(:api_key, expires_at: Time.current - 10.minutes) }
 

@@ -134,6 +134,8 @@ class Organization < ApplicationRecord
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
+  has_many :contract_alerts, class_name: "UsageMonitoring::ContractAlert"
+  has_many :contract_activities, class_name: "UsageMonitoring::ContractActivity"
   has_many :pending_vies_checks
 
   has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"
@@ -144,16 +146,35 @@ class Organization < ApplicationRecord
   has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
   has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
+  has_many :quickbooks_integrations, class_name: "Integrations::QuickbooksIntegration"
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
+
+  belongs_to :production_organization, class_name: "Organization", optional: true, inverse_of: :sandbox_organization
+  # No path deletes an organization today; a future one gets an error instead of the foreign key's exception.
+  has_one :sandbox_organization, class_name: "Organization", foreign_key: :production_organization_id,
+    inverse_of: :production_organization, dependent: :restrict_with_error
 
   has_many :invoice_custom_sections
   has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"
   has_many :system_generated_invoice_custom_sections, -> { where(section_type: "system_generated") }, class_name: "InvoiceCustomSection"
 
   has_one_attached :logo
+
+  ENVIRONMENTS = {
+    production: "production",
+    sandbox: "sandbox"
+  }.freeze
+
+  # A self-serve production organization can wait for a payment method before it opens; every other one is active.
+  # The API key cache keeps the organization's attributes, so a change of status calls
+  # `ApiKeys::CacheService.expire_all_cache(organization)` in an `after_commit` block, or REST reads the old one.
+  ACTIVATION_STATUSES = {
+    pending_payment_method: "pending_payment_method",
+    active: "active"
+  }.freeze
 
   EVENTS_STORES = {
     clickhouse: "clickhouse",
@@ -176,6 +197,7 @@ class Organization < ApplicationRecord
     entra_id
     avalara
     xero
+    quickbooks
     progressive_billing
     lifetime_usage
     hubspot
@@ -207,6 +229,12 @@ class Organization < ApplicationRecord
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
+  # Declared, so the model loads in older migrations that run before the columns exist. Saving still fails there:
+  # the validations read `self_serve` and `production_organization_id`, which do not exist yet either.
+  attribute :environment, :string
+  enum :environment, ENVIRONMENTS, validate: true
+  attribute :activation_status, :string
+  enum :activation_status, ACTIVATION_STATUSES, prefix: true, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
@@ -229,10 +257,19 @@ class Organization < ApplicationRecord
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
   validates :hmac_key, uniqueness: true
   validates :hmac_key, presence: true, on: :update
+  validates :self_serve, inclusion: {in: [true, false]}
+  validates :production_organization_id, presence: true, if: :sandbox?
+  validates :production_organization_id, absence: true, if: :production?
+  # The unique index is the race guard; this gives the same answer before the write.
+  validates :production_organization_id, uniqueness: true, allow_nil: true,
+    if: :will_save_change_to_production_organization_id?
 
   validate :validate_premium_integrations
   validate :validate_email_settings
   validate :validate_customer_portal_locked_fields
+  validate :validate_environment_link,
+    if: -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }
+  validate :validate_activation_status, if: :activation_status_pending_payment_method?
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -247,6 +284,12 @@ class Organization < ApplicationRecord
     define_method("#{premium_integration}_enabled?") do
       License.premium? && premium_integrations.include?(premium_integration)
     end
+  end
+
+  # Shared with the billing entities. Spaces are left out ("ab Sandbox" gives "AB-4321", not "AB -4321"), and the cut
+  # comes after the upcase, which can lengthen a name ("ßßß" gives "SSS", not "SSSSSS").
+  def self.document_number_prefix_for(name, id)
+    "#{name.first(3).gsub(/[[:space:]]/, "").upcase.first(3)}-#{id.last(4).upcase}"
   end
 
   # Product catalog (billing v2) is a rollout feature flag, not a license-gated
@@ -364,12 +407,22 @@ class Organization < ApplicationRecord
     max_wallets if events_targeting_wallets_enabled?
   end
 
+  # With self-serve off, every organization counts as active, as the GraphQL environment fields answer production.
+  # Everything that shows or enforces the status reads this, never the column, so the UI and the API agree.
+  def effective_activation_status
+    Lago::SelfServe.enabled? ? activation_status : ACTIVATION_STATUSES[:active]
+  end
+
+  def awaiting_payment_method?
+    effective_activation_status == ACTIVATION_STATUSES[:pending_payment_method]
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
-  # Example of expected format is ORG-4321
+  # Example of expected format is ORG-4321.
   def generate_document_number_prefix
-    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}")
+    update!(document_number_prefix: self.class.document_number_prefix_for(name, id))
   end
 
   def validate_email_settings
@@ -389,6 +442,23 @@ class Organization < ApplicationRecord
     return if premium_integrations.all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
 
     errors.add(:premium_integrations, :inclusion, value: premium_integrations)
+  end
+
+  # A sandbox belongs to an existing production organization, never to itself or to another sandbox, and owns no
+  # sandbox. A missing one is refused here, or saving would raise on the foreign key.
+  def validate_environment_link
+    if production_organization_id.present? &&
+        (production_organization_id == id || production_organization.nil? || production_organization.sandbox?)
+      errors.add(:production_organization_id, :invalid)
+    end
+
+    errors.add(:environment, :invalid) if sandbox? && persisted? && sandbox_organization.present?
+  end
+
+  # Mirrors check_organizations_on_activation_status: only a self-serve production organization can wait for a
+  # payment method.
+  def validate_activation_status
+    errors.add(:activation_status, :invalid) unless self_serve? && production?
   end
 
   def set_hmac_key
@@ -412,6 +482,7 @@ end
 # Database name: primary
 #
 #  id                            :uuid             not null, primary key
+#  activation_status             :enum             default("active"), not null
 #  address_line1                 :string
 #  address_line2                 :string
 #  api_key                       :string
@@ -429,6 +500,7 @@ end
 #  document_url_expiration_days  :integer          default(30), not null
 #  email                         :string
 #  email_settings                :string           default([]), not null, is an Array
+#  environment                   :enum             default("production"), not null
 #  eu_tax_management             :boolean          default(FALSE)
 #  feature_flags                 :string           default([]), not null, is an Array
 #  finalize_zero_amount_invoice  :boolean          default(TRUE), not null
@@ -443,6 +515,7 @@ end
 #  net_payment_term              :integer          default(0), not null
 #  pagination_max_page_size      :integer
 #  premium_integrations          :string           default([]), not null, is an Array
+#  self_serve                    :boolean          default(FALSE), not null
 #  slug                          :string           not null
 #  state                         :string
 #  tax_identification_number     :string
@@ -452,10 +525,16 @@ end
 #  zipcode                       :string
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
+#  production_organization_id    :uuid
 #
 # Indexes
 #
-#  index_organizations_on_api_key   (api_key) UNIQUE
-#  index_organizations_on_hmac_key  (hmac_key) UNIQUE
-#  index_organizations_on_slug      (slug) UNIQUE
+#  index_organizations_on_api_key                     (api_key) UNIQUE
+#  index_organizations_on_hmac_key                    (hmac_key) UNIQUE
+#  index_organizations_on_production_organization_id  (production_organization_id) UNIQUE
+#  index_organizations_on_slug                        (slug) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (production_organization_id => organizations.id)
 #

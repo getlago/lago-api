@@ -30,8 +30,8 @@ module Contracts
 
       result.contract = contract
 
-      # A pending contract has not started billing, so it has no usage yet.
-      result.rate_card_usages = if contract.pending?
+      # Cancellation prevents billing, even if the planned start date has passed.
+      result.rate_card_usages = if contract.pending? || contract.canceled? || past_contract_end?
         []
       else
         cards = selected_cards
@@ -63,6 +63,11 @@ module Contracts
 
     delegate :customer, to: :contract
 
+    def past_contract_end?
+      ends_at = [contract.ended_at, contract.terminated_at].compact.min
+      ends_at.present? && timestamp > ends_at
+    end
+
     # Filtered after the version selection, so that a superseded version never stands in for
     # the card that replaced it.
     def selected_cards
@@ -72,7 +77,7 @@ module Contracts
     def effective_cards
       cards = contract.applied_rate_cards
         .starting_before_contract_end
-        .includes(rate_card: [:product_filter, {product: [:billable_metric, :product_category]}])
+        .includes(rate_card: [{product_filter: {values: :billable_metric_filter}}, {product: [:billable_metric, :product_category]}])
         .order(:effective_date, :created_at, :id)
         .to_a
       date = timestamp.in_time_zone(customer.applicable_timezone).to_date
@@ -124,7 +129,9 @@ module Contracts
     def billing_segment_for(card)
       return if card.rate_card.rates.empty?
 
-      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule
+      schedule = Billing::RateCards::BuildScheduleService.call!(
+        contract_rate_card: card
+      ).schedule
       billable_segment = schedule.segment_covering(timestamp)
       return unless billable_segment
 
@@ -157,7 +164,7 @@ module Contracts
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
-        [BillingSegments::Fees::ComputeService.call!(billing_segment:).fee]
+        [BillingOperations::Fees::ComputeService.call!(billing_segment:).fee]
       end
     end
 

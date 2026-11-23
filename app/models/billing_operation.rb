@@ -22,6 +22,7 @@ class BillingOperation < ApplicationRecord
   }.freeze
 
   CANCELLATION_REASONS = {
+    rate_change: "rate_change",
     contract_termination: "contract_termination"
   }.freeze
 
@@ -39,6 +40,17 @@ class BillingOperation < ApplicationRecord
   validate :validate_state
 
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
+  scope :completed, -> { where.not(processed_at: nil) }
+  scope :periodic, -> { where(action_type: PERIODIC_ACTIONS.keys).where.not(reason: :late_payment) }
+  scope :due_for_processing, ->(timestamp) { pending.where(billing_at: ..timestamp) }
+  scope :earliest_per_contract_rate_card, -> {
+    select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
+      .reorder(:contract_rate_card_id, :billing_at, :created_at, :id)
+  }
+
+  def due_for_processing?(timestamp:)
+    processed_at.nil? && cancelled_at.nil? && billing_at <= timestamp
+  end
 
   private
 
@@ -110,6 +122,7 @@ end
 #  index_billing_operations_on_customer_id                (customer_id)
 #  index_billing_operations_on_invoice_id                 (invoice_id)
 #  index_billing_operations_on_organization_id            (organization_id)
+#  index_pending_billing_operations_on_card_and_date      (contract_rate_card_id,billing_at) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #  index_pending_billing_operations_on_org_and_date       (organization_id,billing_at,id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #  index_pending_billing_operations_on_org_customer_date  (organization_id,customer_id,billing_at,id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #
