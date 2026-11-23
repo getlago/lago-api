@@ -247,7 +247,8 @@ module BillingEngineMigrations
           },
           priced_filters:,
           rate_card: rate_card.merge(code: "#{rate_card[:code]}_#{filter_code}"),
-          rate: rate.merge(rate_properties: rate_properties(charge.charge_model, charge_filter.properties)),
+          # V1 trues up the charge minimum once over all its filters, V2 once per rate card.
+          rate: rate.merge(rate_properties: rate_properties(charge.charge_model, charge_filter.properties), min_amount_cents: 0),
           units: nil
         )
       end
@@ -318,8 +319,9 @@ module BillingEngineMigrations
       gaps << "entitlements" if plan.entitlements.exists?
       gaps << "metadata" if plan.metadata&.value.present?
 
-      plan.charges.parents.order(:code).preload(:applied_pricing_unit).each do |charge|
+      plan.charges.parents.order(:code).preload(:applied_pricing_unit, :filters).each do |charge|
         gaps << "charge #{charge.code}: accepts_target_wallet" if charge.accepts_target_wallet
+        gaps << "charge #{charge.code}: min_amount_cents with filters" if charge.min_amount_cents.to_i.positive? && charge.filters.any?
         gaps << "charge #{charge.code}: pricing_unit" if charge.applied_pricing_unit
         gaps << "charge #{charge.code}: invoice_display_name" if charge.invoice_display_name.present?
       end

@@ -114,6 +114,10 @@ RSpec.describe BillingEngineMigrations::ConvertPlansService do
     )
   end
 
+  it "reports the charge minimum that cannot cover the charge filters" do
+    expect(result.plans.sole.gaps).to eq(["charge api_calls_charge: min_amount_cents with filters"])
+  end
+
   it "prices each charge and charge filter with a metered product of the shadow billable metric" do
     result
 
@@ -143,6 +147,7 @@ RSpec.describe BillingEngineMigrations::ConvertPlansService do
     expect(filter_card.product_filter).to have_attributes(code: "region_eu", invoice_display_name: "EU calls")
     expect(filter_card.product_filter.to_h).to eq({"region" => ["eu"]})
     expect(filter_card.rates.sole.rate_properties["volume_ranges"].map { it["from_value"] }).to eq([0, 50])
+    expect(filter_card.rates.sole.min_amount_cents).to eq(0)
   end
 
   context "when a subscription started before the plan was created" do
@@ -277,7 +282,7 @@ RSpec.describe BillingEngineMigrations::ConvertPlansService do
     let(:dry_run) { true }
 
     it "lists the rate cards it would create and writes nothing" do
-      expect(result.plans.sole).to have_attributes(outcome: :would_create, gaps: [])
+      expect(result.plans.sole).to have_attributes(outcome: :would_create)
       expect(result.plans.sole.entries.map { it.rate_card[:code] }).to eq(
         %w[pro_monthly_v2_subscription_fee pro_monthly_v2_onboarding_fee pro_monthly_v2_api_calls_charge pro_monthly_v2_api_calls_charge_region_eu]
       )
