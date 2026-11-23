@@ -93,6 +93,7 @@ en:
         unsupported_value: unsupported_value
         url_invalid: url_is_invalid
         value_already_exist: value_already_exist
+        value_is_not_editable: value_is_not_editable
       models:
         api_key:
           attributes:

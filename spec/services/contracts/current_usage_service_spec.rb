@@ -64,10 +64,42 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  context "when the contract has ended" do
+    let(:contract) do
+      create(:contract, :terminated, organization:, customer:, started_at: Time.zone.parse("2027-01-01"),
+        ended_at: Time.zone.parse("2027-02-01"), terminated_at: Time.zone.parse("2027-02-01"))
+    end
+
+    it "returns no current usage" do
+      expect(result.rate_card_usages).to eq([])
+      expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
+    end
+
+    context "with a timestamp before termination" do
+      let(:timestamp) { Time.zone.parse("2027-01-20 12:00:00") }
+
+      it "still prices the window open at that timestamp" do
+        expect(result.rate_card_usages.sole.fees.sole).to have_attributes(units: 1, amount_cents: 200)
+      end
+    end
+  end
+
   context "when the card is not effective yet" do
     let(:effective_date) { Date.new(2027, 2, 15) }
 
     it "returns no window" do
+      expect(result.rate_card_usages).to eq([])
+      expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
+    end
+  end
+
+  context "when the contract was canceled after its start date" do
+    let(:contract) do
+      create(:contract, :canceled, organization:, customer:, started_at: Time.zone.parse("2027-01-01"),
+        canceled_at: Time.zone.parse("2027-02-01"))
+    end
+
+    it "returns no usage even though its cards and matching events exist" do
       expect(result.rate_card_usages).to eq([])
       expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
     end
@@ -178,15 +210,6 @@ RSpec.describe Contracts::CurrentUsageService do
 
   context "when the contract is a draft whose start has passed" do
     let(:contract) { create(:contract, :draft, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
-
-    it "returns the contract with no window" do
-      expect(result.rate_card_usages).to eq([])
-      expect(result).to have_attributes(contract:, amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
-    end
-  end
-
-  context "when the contract was canceled" do
-    let(:contract) { create(:contract, :canceled, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
 
     it "returns the contract with no window" do
       expect(result.rate_card_usages).to eq([])

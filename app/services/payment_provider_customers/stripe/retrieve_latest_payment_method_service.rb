@@ -5,8 +5,11 @@ module PaymentProviderCustomers
     class RetrieveLatestPaymentMethodService < BaseService
       Result = BaseResult[:payment_method_id]
 
-      def initialize(provider_customer:)
+      # types: the payment method types the fallback may return when the customer has no default.
+      # Defaults to every type allowed on the customer that needs a setup (card, link, sepa_debit, etc.)
+      def initialize(provider_customer:, types: nil)
         @provider_customer = provider_customer
+        @types = types
         super
       end
 
@@ -20,13 +23,15 @@ module PaymentProviderCustomers
           nil
         end
 
-        # If no default, we'll try to get the latest card
+        # If no default, we'll try to get the latest card, as before. Only when the customer has no card,
+        # we take the latest payment method of another allowed type (link, sepa_debit, etc.), so it can still be charged.
         # We also swallow all errors because this is "best effort". If no payment method is found, the caller service will handle it
         if payment_method_id.blank?
           payment_method_id = begin
             # We use limit: 10 just in case for some (wrong) reason the customer has a very high number of payment method
             list = ::Stripe::Customer.list_payment_methods(provider_customer.provider_customer_id, {limit: 10}, request_options)
-            list.data.filter { it.type == "card" }.max_by { it.created }.id
+            allowed = list.data.filter { allowed_types.include?(it.type) }
+            (allowed.filter { it.type == "card" }.presence || allowed).max_by { it.created }.id
           rescue
             nil
           end
@@ -38,7 +43,11 @@ module PaymentProviderCustomers
 
       private
 
-      attr_reader :provider_customer
+      attr_reader :provider_customer, :types
+
+      def allowed_types
+        types || provider_customer.provider_payment_methods_with_setup
+      end
 
       def request_options
         {

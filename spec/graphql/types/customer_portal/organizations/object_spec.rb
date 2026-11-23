@@ -16,5 +16,6 @@ RSpec.describe Types::CustomerPortal::Organizations::Object do
     expect(subject).to have_field(:name).of_type("String!")
     expect(subject).to have_field(:premium_integrations).of_type("[PremiumIntegrationTypeEnum!]!")
     expect(subject).to have_field(:timezone).of_type("TimezoneEnum")
+    expect(subject).not_to have_field(:activation_status)
   end
 end

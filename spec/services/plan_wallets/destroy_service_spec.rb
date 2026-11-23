@@ -56,6 +56,24 @@ describe PlanWallets::DestroyService do
     end
   end
 
+  context "when the wallet template has alert templates" do
+    let(:alert) { create(:plan_wallet_alert, organization:, plan_wallet:) }
+
+    let(:other_wallet_alert) { create(:plan_wallet_alert, organization:, plan_wallet: create(:plan_wallet, organization:, catalog_plan:)) }
+
+    before do
+      create(:catalog_wallet_alert_threshold, :template, plan_wallet_alert: alert, organization:)
+      create(:catalog_wallet_alert_threshold, :template, plan_wallet_alert: other_wallet_alert, organization:)
+    end
+
+    it "deletes them for good, with their thresholds, and keeps the templates of other wallets" do
+      expect(result).to be_success
+      expect(UsageMonitoring::PlanWalletAlert.where(id: alert.id)).to be_empty
+      expect(UsageMonitoring::CatalogWalletAlertThreshold.where(plan_wallet_alert_id: alert.id)).to be_empty
+      expect(other_wallet_alert.reload.thresholds.count).to eq(1)
+    end
+  end
+
   context "when the plan has contracts" do
     before { create(:contract, organization:, catalog_plan:) }
 

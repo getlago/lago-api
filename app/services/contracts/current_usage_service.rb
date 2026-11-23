@@ -30,8 +30,9 @@ module Contracts
 
       result.contract = contract
 
-      # Only a contract that took effect has usage: a draft, a pending or a canceled one never billed.
-      result.rate_card_usages = if contract.active? || contract.terminated?
+      # Only a contract that took effect has usage: a draft, a pending or a canceled one never billed,
+      # even once its planned start date has passed.
+      result.rate_card_usages = if (contract.active? || contract.terminated?) && !past_contract_end?
         cards = selected_cards
         if cards.any?
           ActiveRecord::Associations::Preloader.new(records: cards, associations: [{rate_card: :rates}, {rate_phases: :rate_override}, :organization, :product]).call
@@ -62,6 +63,11 @@ module Contracts
     attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term
 
     delegate :customer, to: :contract
+
+    def past_contract_end?
+      ends_at = [contract.ended_at, contract.terminated_at].compact.min
+      ends_at.present? && timestamp > ends_at
+    end
 
     # Filtered after the version selection, so that a superseded version never stands in for
     # the card that replaced it.

@@ -8,6 +8,7 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
       api_call(perform_jobs: false) do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "advance-period-contract",
+          code: "default",
           external_customer_id: customer.external_id,
           plan_code: "advance-period-plan",
           started_at: period_started_at.iso8601,

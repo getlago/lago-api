@@ -13,6 +13,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     {
       external_customer_id: customer.external_id,
       external_id: "contract-1",
+      code: "initial",
       plan_code: catalog_plan.code
     }
   end
@@ -34,6 +35,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       customer:,
       catalog_plan:,
       external_id: "contract-1",
+      code: "initial",
       status: "active",
       billing_time: "calendar"
     )
@@ -185,6 +187,19 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       expect(result.contract.selected_invoice_custom_sections).to eq([section])
       expect(result.contract.skip_invoice_custom_sections).to be(false)
     end
+
+    context "when attaching a section violates another unique index" do
+      before do
+        allow(InvoiceCustomSections::AttachToResourceService).to receive(:call!).and_wrap_original do |original, **arguments|
+          original.call(**arguments)
+          create(:contract_applied_invoice_custom_section, contract: arguments[:resource], invoice_custom_section: section)
+        end
+      end
+
+      it "does not hide the database error" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique, /index_contracts_invoice_custom_sections_unique/)
+      end
+    end
   end
 
   context "when skipping invoice custom sections" do
@@ -240,7 +255,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
   end
 
   context "without a plan" do
-    let(:params) { {external_customer_id: customer.external_id, external_id: "contract-1"} }
+    let(:params) { super().except(:plan_code) }
 
     it "creates a plan-less contract with no rate cards" do
       expect { result }.to change(Contract, :count).by(1)
@@ -347,11 +362,26 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
   end
 
   context "when a live contract already uses the external id" do
-    before { create(:contract, organization:, customer:, external_id: "contract-1") }
+    before { create(:contract, :pending, organization:, customer:, external_id: "contract-1") }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:external_id]).to eq(["value_already_exists"])
+    end
+
+    context "when only the database catches the duplicate" do
+      let(:live_contracts) { organization.contracts.where(status: Contract::LIVE_STATUSES, external_id: params[:external_id]) }
+
+      before do
+        allow(organization.contracts).to receive(:where)
+          .with(status: Contract::LIVE_STATUSES, external_id: params[:external_id]).and_return(live_contracts)
+        allow(live_contracts).to receive(:exists?).and_return(false)
+      end
+
+      it "returns the same validation error instead of raising" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages).to eq(external_id: ["value_already_exists"])
+      end
     end
   end
 
@@ -390,6 +420,35 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     end
   end
 
+  context "without a code" do
+    let(:params) { super().except(:code) }
+
+    it "requires a user-provided code without generating one" do
+      expect { result }.not_to change(Contract, :count)
+      expect(result.error.messages[:code]).to eq(["value_is_mandatory"])
+    end
+  end
+
+  context "when a historical contract already uses the external id and code" do
+    before { create(:contract, :terminated, organization:, customer:, external_id: "contract-1", code: "initial") }
+
+    it "returns a validation error without creating a contract" do
+      expect { result }.not_to change(Contract, :count)
+      expect(result.error.messages[:code]).to eq(["value_already_exist"])
+    end
+
+    context "when only the database catches the duplicate" do
+      let(:uniqueness_validator) { Contract.validators_on(:code).find { |validator| validator.kind == :uniqueness } }
+
+      before { allow(uniqueness_validator).to receive(:validate_each) }
+
+      it "returns the same validation error instead of raising" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages[:code]).to eq(["value_already_exist"])
+      end
+    end
+  end
+
   context "with billing, invoicing and payment settings" do
     let(:billing_entity) { create(:billing_entity, organization:) }
     let(:payment_method) { create(:payment_method, customer:) }
@@ -397,6 +456,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       {
         external_customer_id: customer.external_id,
         external_id: "contract-1",
+        code: "initial",
         billing_entity_id: billing_entity.id,
         consolidate_invoice: false,
         purchase_order_number: "PO-42",

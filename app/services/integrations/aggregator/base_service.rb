@@ -11,6 +11,8 @@ module Integrations
       TASK_IN_PROGRESS_PATTERN = /\bTask\b.*\bis in progress\b/
       TASK_EXPIRED_PATTERN = /\bTask\b.*\bexpired\b/
       ORCHESTRATOR_FAILURE_PATTERN = %r{POST https?://nango-orchestrator-svc\.nango/v1/immediate failed}
+      # NOTE: Providers whose throttled jobs wait for the next rate limit window instead of backing off
+      NEXT_WINDOW_RETRY_PROVIDERS = %i[quickbooks].freeze
 
       def self.retryable_errors
         [
@@ -53,9 +55,13 @@ module Integrations
           "avalara"
         when "Integrations::HubspotIntegration"
           "hubspot"
+        when "Integrations::QuickbooksIntegration"
+          "quickbooks"
         end
       end
 
+      # The Nango provider config key, which can differ from Integrations::BaseIntegration#provider_key
+      # (netsuite-tba for NetSuite, quickbooks-sandbox for a sandbox QuickBooks integration).
       def provider_key
         case integration.type
         when "Integrations::NetsuiteIntegration"
@@ -68,25 +74,54 @@ module Integrations
           Rails.env.production? ? "avalara" : "avalara-sandbox"
         when "Integrations::HubspotIntegration"
           "hubspot"
+        when "Integrations::QuickbooksIntegration"
+          integration.sandbox? ? "quickbooks-sandbox" : "quickbooks"
         end
       end
 
       def throttle!(*providers)
         providers.each do |provider_name|
           if provider == provider_name.to_s
-            raise BaseService::ThrottlingError.new(provider_name:) \
+            raise throttling_error(provider_name) \
               unless Throttling.for(provider_name.to_sym).check(:client, throttle_key)
           end
         end
       end
 
+      def throttling_error(provider_name)
+        if NEXT_WINDOW_RETRY_PROVIDERS.include?(provider_name.to_sym)
+          return BaseService::NextWindowThrottlingError.new(provider_name:, retry_after: next_window_in(provider_name))
+        end
+
+        BaseService::ThrottlingError.new(provider_name:)
+      end
+
+      # The throttling gem counts in fixed buckets (Time.now.to_i / period): the next one opens at the
+      # end of the shortest period. Limits are either one flat entry ({limit:, period:}) or named
+      # entries ({minutely: {limit:, period:}}). Only the next-window providers reach this, and QuickBooks
+      # has a single minutely limit, so the shortest period is the one that refused the call.
+      def next_window_in(provider_name)
+        limits = Throttling.limits[provider_name.to_sym]
+        limits = {limit: limits} if limits.is_a?(Hash) && limits.key?(:period)
+        periods = Array(limits&.values).filter_map { |limit| limit[:period].to_i if limit.is_a?(Hash) }.select(&:positive?)
+        return BaseService::NextWindowThrottlingError::DEFAULT_RETRY_AFTER if periods.blank?
+
+        period = periods.min
+        (period - Time.current.to_i % period).seconds
+      end
+
       def throttle_key
-        # Hubspot and Xero calls are throttled globally, others are throttled per api key or client id
+        # Hubspot, Xero and Avalara calls are throttled globally, NetSuite per client id and Anrok per api key.
+        # Intuit counts QuickBooks calls per company, so they are throttled per company (realm id) and Nango
+        # provider key, which keeps sandbox and production companies apart. Before the realm id is known,
+        # the connection id is used. Every per-tenant value is digested.
         case provider
         when "netsuite"
           Digest::SHA2.hexdigest(integration.client_id)
         when "anrok"
           Digest::SHA2.hexdigest(integration.api_key)
+        when "quickbooks"
+          Digest::SHA2.hexdigest(integration.realm_id.present? ? "#{provider_key}:#{integration.realm_id}" : integration.connection_id)
         else
           provider.to_s
         end
