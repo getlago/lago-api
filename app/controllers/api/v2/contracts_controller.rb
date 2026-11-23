@@ -80,12 +80,13 @@ module Api
       private
 
       def create_params
-        params.require(:contract).permit(
+        permitted = params.require(:contract).permit(
           :external_customer_id,
           :external_id,
           :code,
           :name,
           :plan_code,
+          :status,
           :billing_time,
           :billing_anchor_date,
           :started_at,
@@ -94,6 +95,14 @@ module Api
           :purchase_order_number,
           invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
+
+        # permit drops a non-scalar status, which would create a contract that
+        # bills instead of a draft: keep it so the service refuses it.
+        if params[:contract].key?(:status) && !permitted.key?(:status)
+          permitted[:status] = params[:contract][:status].to_s
+        end
+
+        permitted
       end
 
       # external_customer_id and external_id are set at creation and address the

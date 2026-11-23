@@ -133,6 +133,64 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with the draft status" do
+      let(:create_params) { super().merge(status: "draft", started_at: "2026-10-01T00:00:00Z") }
+
+      it "creates a draft, which the list filtered on draft returns" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:contract]).to include(lago_id: Contract.sole.id, status: "draft", started_at: "2026-10-01T00:00:00.000000Z")
+
+        get_with_token(organization, "/api/v2/contracts", {status: "draft"})
+        expect(json[:contracts].map { it[:lago_id] }).to eq([Contract.sole.id])
+      end
+    end
+
+    context "with another status" do
+      let(:create_params) { super().merge(status: "active") }
+
+      it "returns a validation error without creating a contract" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "status", meta: {}}])
+      end
+    end
+
+    context "with a non-scalar status" do
+      let(:create_params) { super().merge(status: ["draft"], started_at: "2026-10-01T00:00:00Z") }
+
+      it "refuses it rather than creating a contract that bills" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "status", meta: {}}])
+      end
+    end
+
+    context "with a null status" do
+      let(:create_params) { super().merge(status: nil) }
+
+      it "creates the contract as when the status is omitted" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:contract][:status]).to eq("active")
+      end
+    end
+
+    context "with a draft status and no start date" do
+      let(:create_params) { super().merge(status: "draft") }
+
+      it "returns a validation error without creating a contract" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "started_at", meta: {}}])
+      end
+    end
+
     context "without a code" do
       let(:create_params) { super().except(:code) }
 
