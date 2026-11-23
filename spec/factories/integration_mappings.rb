@@ -4,10 +4,11 @@ FactoryBot.define do
   [
     :netsuite,
     :xero,
+    :quickbooks,
     :anrok,
     :avalara
   ].each do |integration_type|
-    factory "#{integration_type}_mapping", class: "IntegrationMappings::#{integration_type.to_s.classify}Mapping" do
+    factory "#{integration_type}_mapping", class: "IntegrationMappings::#{integration_type.to_s.camelize}Mapping" do
       association :integration, factory: "#{integration_type}_integration"
       association :mappable, factory: :add_on
       organization { integration&.organization || association(:organization) }
