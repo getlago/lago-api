@@ -24,6 +24,8 @@ module ProductFilters
       end
 
       ActiveRecord::Base.transaction do
+        discard_contract_alerts
+
         # Rate cards scoped to this filter lose their scope when it is deleted, so
         # discard them too (all unattached, guaranteed by the guard above) — mirrors
         # the product destroy cascade and avoids orphaned rate cards.
@@ -43,5 +45,13 @@ module ProductFilters
     private
 
     attr_reader :product_filter
+
+    def discard_contract_alerts
+      # Alert rows first, in a stable order, or this deadlocks against evaluation and edits.
+      alert_ids = product_filter.contract_alerts.order(:id).lock.pluck(:id)
+
+      UsageMonitoring::ContractAlertThreshold.where(contract_alert_id: alert_ids).delete_all
+      UsageMonitoring::ContractAlert.where(id: alert_ids).update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    end
   end
 end

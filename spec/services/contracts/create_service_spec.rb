@@ -13,6 +13,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     {
       external_customer_id: customer.external_id,
       external_id: "contract-1",
+      code: "initial",
       plan_code: catalog_plan.code
     }
   end
@@ -34,12 +35,89 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       customer:,
       catalog_plan:,
       external_id: "contract-1",
+      code: "initial",
       status: "active",
       billing_time: "calendar"
     )
     expect(contract.started_at).to be_within(5.seconds).of(Time.current)
     expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
     expect(contract.applied_rate_cards.sole.terms.sole.units).to eq(5)
+    expect(contract.applied_rate_cards.sole.billing_operations).to be_empty
+  end
+
+  context "when the billing schedule is locked" do
+    before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+    it "returns a concurrency failure without creating a contract" do
+      expect { result }.not_to change(Contract, :count)
+      expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+    end
+  end
+
+  context "when creating an active contract with a priced rate card" do
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance") }
+
+    before do
+      plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5)
+      create(:rate_phase, organization:, plan_rate_card:, position: 1)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    it "persists the initial operation and cursor atomically without predicted segments" do
+      expect { result }.to change(BillingOperation, :count).by(1)
+      expect(result.contract.applied_rate_cards.sole.next_billing_at).to be_present
+      expect(result.contract.applied_rate_cards.sole.billing_operations.sole.reason).to eq("contract_activation")
+      expect(LegacyBillingSegment.count).to eq(0)
+    end
+  end
+
+  context "when initial cursor persistence fails" do
+    let(:invalid_contract) { organization.contracts.new(customer:) }
+    let(:operation_writes) { [] }
+    let(:first_product) { create(:product, :fixed, organization:) }
+    let(:first_rate_card) { create(:rate_card, organization:, product: first_product, billing_timing: "advance") }
+    let(:second_product) { create(:product, :fixed, organization:) }
+    let(:second_rate_card) { create(:rate_card, organization:, product: second_product, billing_timing: "advance") }
+    let(:rate_cards) { [first_rate_card, second_rate_card] }
+
+    before do
+      rate_cards.each do |rate_card|
+        plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
+        create(:rate_phase, organization:, plan_rate_card:, position: 1)
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
+      end
+
+      allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
+        operation_writes << attributes
+        raise ActiveRecord::RecordInvalid.new(invalid_contract) if operation_writes.size == 2
+
+        original.call(**attributes)
+      end
+    end
+
+    it "rolls back the contract and its cards" do
+      expect { result }.not_to change(Contract, :count)
+      expect(BillingOperation.count).to eq(0)
+      expect(result).not_to be_success
+    end
+  end
+
+  context "when creating a pending contract with a priced rate card" do
+    let(:params) { super().merge(started_at: 1.month.from_now.iso8601) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+
+    before do
+      plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
+      create(:rate_phase, organization:, plan_rate_card:, position: 1)
+    end
+
+    it "does not create operations before activation" do
+      expect { result }.not_to change(BillingOperation, :count)
+      expect(result.contract).to be_pending
+    end
   end
 
   it "publishes created and started with the same post-materialization snapshot when immediately active" do
@@ -109,6 +187,19 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       expect(result.contract.selected_invoice_custom_sections).to eq([section])
       expect(result.contract.skip_invoice_custom_sections).to be(false)
     end
+
+    context "when attaching a section violates another unique index" do
+      before do
+        allow(InvoiceCustomSections::AttachToResourceService).to receive(:call!).and_wrap_original do |original, **arguments|
+          original.call(**arguments)
+          create(:contract_applied_invoice_custom_section, contract: arguments[:resource], invoice_custom_section: section)
+        end
+      end
+
+      it "does not hide the database error" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique, /index_contracts_invoice_custom_sections_unique/)
+      end
+    end
   end
 
   context "when skipping invoice custom sections" do
@@ -131,8 +222,40 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     end
   end
 
+  context "when the plan has a wallet template" do
+    let(:plan_wallet) { create(:plan_wallet, organization:, catalog_plan:, code: "ai_credits") }
+
+    before { create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:) }
+
+    it "creates the contract without a wallet" do
+      expect { result }.not_to change(CatalogWallet, :count)
+      expect(result).to be_success
+    end
+
+    context "when the organization has contract wallets enabled" do
+      let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
+
+      it "gives the contract its own copy of the wallet" do
+        expect { result }.to change(CatalogWallet, :count).by(1)
+
+        wallet = result.contract.wallets.sole
+        expect(wallet).to have_attributes(code: "ai_credits", customer:)
+        expect(wallet.selectors.sole).to have_attributes(selector_type: "fee_type", fee_type: "metered", plan_wallet_id: nil)
+      end
+
+      context "when the contract starts in the future" do
+        let(:params) { super().merge(started_at: 1.month.from_now.iso8601) }
+
+        it "gives the pending contract its wallet" do
+          expect(result.contract).to be_pending
+          expect(result.contract.wallets.sole.code).to eq("ai_credits")
+        end
+      end
+    end
+  end
+
   context "without a plan" do
-    let(:params) { {external_customer_id: customer.external_id, external_id: "contract-1"} }
+    let(:params) { super().except(:plan_code) }
 
     it "creates a plan-less contract with no rate cards" do
       expect { result }.to change(Contract, :count).by(1)
@@ -239,7 +362,31 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
   end
 
   context "when a live contract already uses the external id" do
-    before { create(:contract, organization:, customer:, external_id: "contract-1") }
+    before { create(:contract, :pending, organization:, customer:, external_id: "contract-1") }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:external_id]).to eq(["value_already_exists"])
+    end
+
+    context "when only the database catches the duplicate" do
+      let(:live_contracts) { organization.contracts.where(status: Contract::LIVE_STATUSES, external_id: params[:external_id]) }
+
+      before do
+        allow(organization.contracts).to receive(:where)
+          .with(status: Contract::LIVE_STATUSES, external_id: params[:external_id]).and_return(live_contracts)
+        allow(live_contracts).to receive(:exists?).and_return(false)
+      end
+
+      it "returns the same validation error instead of raising" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages).to eq(external_id: ["value_already_exists"])
+      end
+    end
+  end
+
+  context "when a draft contract already uses the external id" do
+    before { create(:contract, :draft, organization:, customer:, external_id: "contract-1") }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
@@ -273,6 +420,35 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     end
   end
 
+  context "without a code" do
+    let(:params) { super().except(:code) }
+
+    it "requires a user-provided code without generating one" do
+      expect { result }.not_to change(Contract, :count)
+      expect(result.error.messages[:code]).to eq(["value_is_mandatory"])
+    end
+  end
+
+  context "when a historical contract already uses the external id and code" do
+    before { create(:contract, :terminated, organization:, customer:, external_id: "contract-1", code: "initial") }
+
+    it "returns a validation error without creating a contract" do
+      expect { result }.not_to change(Contract, :count)
+      expect(result.error.messages[:code]).to eq(["value_already_exist"])
+    end
+
+    context "when only the database catches the duplicate" do
+      let(:uniqueness_validator) { Contract.validators_on(:code).find { |validator| validator.kind == :uniqueness } }
+
+      before { allow(uniqueness_validator).to receive(:validate_each) }
+
+      it "returns the same validation error instead of raising" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages[:code]).to eq(["value_already_exist"])
+      end
+    end
+  end
+
   context "with billing, invoicing and payment settings" do
     let(:billing_entity) { create(:billing_entity, organization:) }
     let(:payment_method) { create(:payment_method, customer:) }
@@ -280,6 +456,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       {
         external_customer_id: customer.external_id,
         external_id: "contract-1",
+        code: "initial",
         billing_entity_id: billing_entity.id,
         consolidate_invoice: false,
         purchase_order_number: "PO-42",

@@ -129,6 +129,8 @@ module Invoices
         "Integrations::AvalaraIntegration"
       when "xero"
         "Integrations::XeroIntegration"
+      when "quickbooks"
+        "Integrations::QuickbooksIntegration"
       when "hubspot"
         "Integrations::HubspotIntegration"
       when "salesforce"

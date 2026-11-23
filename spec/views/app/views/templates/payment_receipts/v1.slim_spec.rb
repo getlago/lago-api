@@ -108,4 +108,117 @@ RSpec.describe "templates/payment_receipts/v1.slim" do
       expect(rendered_template).not_to include("This progressive billing is generated because your cumulative usage has reached")
     end
   end
+
+  context "when the payable invoice has a hidden $0 subscription fee alone in its billing period" do
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 0, invoice_display_name: "Seats Plan") }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, pay_in_advance: true, invoice_display_name: "Seats") }
+    let(:subscription) { create(:subscription, customer:, plan:, status: "active") }
+
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        organization:,
+        billing_entity:,
+        number: "LAGO-202610-001",
+        payment_due_date: Date.parse("2026-10-03"),
+        issuing_date: Date.parse("2026-10-03"),
+        invoice_type: :subscription,
+        total_amount_cents: 18000,
+        total_paid_amount_cents: 18000,
+        currency: "USD",
+        fees_amount_cents: 18000,
+        sub_total_excluding_taxes_amount_cents: 18000,
+        sub_total_including_taxes_amount_cents: 18000
+      )
+    end
+
+    # The subscription fee is billed in arrears for the past period, the seats charge in advance for the next one
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        invoice:,
+        subscription:,
+        from_datetime: Time.zone.parse("2026-09-03 00:00:00"),
+        to_datetime: Time.zone.parse("2026-10-02 23:59:59"),
+        charges_from_datetime: Time.zone.parse("2026-10-03 00:00:00"),
+        charges_to_datetime: Time.zone.parse("2026-11-02 23:59:59"),
+        timestamp: Time.zone.parse("2026-10-03 00:00:00")
+      )
+    end
+
+    let(:subscription_fee) do
+      create(
+        :fee,
+        invoice:,
+        subscription:,
+        fee_type: :subscription,
+        amount_cents: 0,
+        amount_currency: "USD",
+        units: 1,
+        unit_amount_cents: 0,
+        precise_unit_amount: 0,
+        invoice_display_name: nil,
+        properties: {
+          from_datetime: "2026-09-03 00:00:00",
+          to_datetime: "2026-10-02 23:59:59"
+        }
+      )
+    end
+
+    let(:seats_fee) do
+      create(
+        :charge_fee,
+        invoice:,
+        subscription:,
+        charge:,
+        pay_in_advance: true,
+        amount_cents: 18000,
+        amount_currency: "USD",
+        units: 12,
+        unit_amount_cents: 1500,
+        precise_unit_amount: 15,
+        total_aggregated_units: 12,
+        invoice_display_name: "Seats",
+        properties: {
+          "timestamp" => "2026-10-03 00:00:00",
+          "charges_from_datetime" => "2026-10-03 00:00:00",
+          "charges_to_datetime" => "2026-11-02 23:59:59"
+        }
+      )
+    end
+
+    let(:payment) do
+      create(
+        :payment,
+        payable: invoice,
+        organization:,
+        customer:,
+        amount_cents: 18000,
+        amount_currency: "USD",
+        status: "succeeded",
+        payable_payment_status: "succeeded"
+      )
+    end
+
+    let(:payment_receipt) do
+      create(:payment_receipt, payment:, organization:, billing_entity:, number: "RCT-202610-001")
+    end
+
+    before do
+      invoice_subscription
+      subscription_fee
+      seats_fee
+    end
+
+    it "renders only the billing period of the displayed fees" do
+      sections = Nokogiri::HTML(rendered_template).css(".invoice-resume > table.invoice-resume-table").map do |table|
+        {heading: table.at_css("tr.first_child > td").text.strip, fees: table.css("tr.fee > td:first-child").map { it.text.strip }}
+      end
+
+      expect(sections).to eq([{heading: "Fees from Oct 03, 2026 to Nov 02, 2026", fees: ["Seats"]}])
+      expect(rendered_template).not_to include("Fees from Sep 03, 2026 to Oct 02, 2026")
+    end
+  end
 end

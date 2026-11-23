@@ -13,7 +13,7 @@ RSpec.describe "Contract percentage billing with duplicate unique_count_agg even
         timestamp: input.fetch(:at).to_i,
         properties: {user_id: input.fetch(:user_id), operation_type: "add"}
       }, perform_jobs: false)
-      perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+      perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
     end
 
     events = Event.where(organization:, transaction_id: inputs.map { |input| input.fetch(:transaction_id) })
@@ -47,8 +47,7 @@ RSpec.describe "Contract percentage billing with duplicate unique_count_agg even
   end
   let(:card) do
     create(:contract_rate_card, organization:, contract:, rate_card:,
-      effective_date: started_at.to_date, billing_anchor_date: started_at.to_date,
-      next_billing_at: started_at)
+      effective_date: started_at.to_date, billing_anchor_date: started_at.to_date)
   end
   let(:inputs) do
     [

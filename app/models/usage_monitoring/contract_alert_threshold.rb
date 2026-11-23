@@ -2,6 +2,12 @@
 
 module UsageMonitoring
   class ContractAlertThreshold < ApplicationRecord
+    include ThresholdRecord
+
+    belongs_to :organization
+    belongs_to :alert,
+      foreign_key: :contract_alert_id,
+      class_name: "UsageMonitoring::ContractAlert"
   end
 end
 

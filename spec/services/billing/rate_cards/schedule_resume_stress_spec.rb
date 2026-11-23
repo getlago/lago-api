@@ -46,10 +46,10 @@ RSpec.describe Billing::RateCards::Schedule do
 
   let(:asked_at) { Time.utc(2027, 7, 1) }
 
-  def build(timezone:, timing:, anchor:, resume_at: nil)
+  def build(timezone:, timing:, anchor:)
     described_class.new(
       anchor_date: anchor, starts_at: anchor.in_time_zone(timezone), timezone:,
-      phases:, rates:, resume_at:, terms: Billing::Terms.new(timing:, prorated: true)
+      phases:, rates:, terms: Billing::Terms.new(timing:, prorated: true)
     )
   end
 
@@ -79,6 +79,21 @@ RSpec.describe Billing::RateCards::Schedule do
       [segment.cycle_index, segment.cycle_started_at, segment.started_at, segment.ended_at,
         segment.billing_at, segment.proration_ratio, segment.rate_phase_code,
         segment.rate.effective_from, segment.rate_override&.billing_interval_unit]
+    end
+  end
+
+  def oracle_segments(cycles, timing:)
+    terms = Billing::Terms.new(timing:, prorated: true)
+    cycles.flat_map do |cycle|
+      Billing::Segments.within(cycle, rates:).filter_map do |segment|
+        next unless segment.rate
+        billing_at = terms.billing_at_for(segment)
+        next if billing_at > asked_at
+
+        [cycle.index, cycle.started_at, segment.started_at, segment.ended_at, billing_at,
+          cycle.calendar.proration_ratio(segment.started_at, segment.ended_at),
+          cycle.phase.code, segment.rate.effective_from, cycle.phase.rate_override&.billing_interval_unit]
+      end
     end
   end
 
@@ -138,16 +153,17 @@ RSpec.describe Billing::RateCards::Schedule do
         expect(mismatches).to be_empty
       end
 
-      it "answers the same segments whichever cycle it resumes at" do
+      it "answers the same segments whichever cycle it jumps to" do
         cycles = walk(**shape)
-        full = segment_values(build(**shape).segments_due_by(asked_at))
+        schedule = build(**shape)
+        full = oracle_segments(cycles, timing: shape[:timing])
 
         mismatches = cycles.filter_map do |cycle|
-          resumed = segment_values(build(**shape, resume_at: cycle.started_at).segments_due_by(asked_at))
-          tail = full.select { |values| values.first >= cycle.index }
-          next if resumed == tail
+          jumped = segment_values(schedule.segments_due_in_cycle(cycle.started_at, by: asked_at))
+          walked = full.select { |values| values.first == cycle.index }
+          next if jumped == walked
 
-          "resuming at #{cycle.index}: got #{resumed.size} segments, expected #{tail.size}"
+          "jumping to #{cycle.index}: got #{jumped.size} segments, expected #{walked.size}"
         end
 
         expect(mismatches).to be_empty

@@ -15,8 +15,8 @@ module Mutations
       input_object_class Types::Contracts::TerminateInput
       type Types::Contracts::Object
 
-      def resolve(external_id:)
-        contract = current_organization.contracts.terminatable_by_external_id(external_id)
+      def resolve(id:)
+        contract = current_organization.contracts.find_by(id:)
 
         result = ::Contracts::TerminateService.call(contract:)
 

@@ -63,7 +63,7 @@ RSpec.describe Events::PayInAdvanceMeteredItemsResolver do
       selection = selections.sole
 
       expect(selection.billing_context.contract).to eq(contract)
-      expect(selection.metered_item.billing_segment).to be_new_record
+      expect(selection.metered_item.billing_segment).to be_a(BillingSegment)
       expect(selection.metered_item).to have_attributes(contract_rate_card:, rate_card_rate: rate, event:)
       expect(selection.metered_item.boundaries).to have_attributes(
         charges_from_datetime: timestamp.beginning_of_day,
