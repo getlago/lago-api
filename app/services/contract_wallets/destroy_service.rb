@@ -18,7 +18,8 @@ module ContractWallets
       return result.not_found_failure!(resource: "contract_wallet") unless contract_wallet
 
       # Locked so the status check holds: the clock may end the contract meanwhile.
-      contract.with_lock do
+      # Unlike FOR UPDATE, it lets rows that reference the contract be inserted meanwhile.
+      contract.with_lock("FOR NO KEY UPDATE") do
         return result.forbidden_failure!(code: "contract_not_live") unless Contract::LIVE_STATUSES.include?(contract.status)
 
         # Settling an entry moves the wallet's balance, so it waits for this lock.
