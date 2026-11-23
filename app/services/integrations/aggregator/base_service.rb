@@ -58,6 +58,8 @@ module Integrations
         end
       end
 
+      # The Nango provider config key, which can differ from Integrations::BaseIntegration#provider_key
+      # (netsuite-tba for NetSuite, quickbooks-sandbox for a sandbox QuickBooks integration).
       def provider_key
         case integration.type
         when "Integrations::NetsuiteIntegration"
