@@ -14,6 +14,7 @@ module Agents
     CODE_GROUP_SIZE = 4
     VERIFICATION_CODE_LENGTH = 6
     VERIFICATION_TTL = 10.minutes
+    GMAIL_DOMAINS = %w[gmail.com googlemail.com].freeze
 
     belongs_to :organization
     belongs_to :registration, class_name: "Agents::Registration"
@@ -28,6 +29,22 @@ module Agents
 
     def self.digest(value)
       OpenSSL::Digest::SHA256.hexdigest(value)
+    end
+
+    # The owner's mailbox under a key: an address has none of the entropy of a code, so a plain digest would give the
+    # owners away to anyone holding the table.
+    def self.mailbox_digest(email)
+      key = Rails.application.key_generator.generate_key("agents/claims/mailbox")
+      OpenSSL::HMAC.hexdigest("SHA256", key, mailbox(email))
+    end
+
+    # One string per inbox: the signup mails' key (case, +tag), plus what Gmail ignores, dots in the local part and
+    # the googlemail domain.
+    def self.mailbox(email)
+      key = Signups::ValidateEmailService.mailbox_key(email)
+      local, domain = key.split("@", 2)
+
+      GMAIL_DOMAINS.include?(domain) ? "#{local.delete(".")}@gmail.com" : key
     end
 
     # What the owner types: case and separators do not matter.
@@ -71,6 +88,7 @@ end
 #  id                      :uuid             not null, primary key
 #  code_hash               :string           not null
 #  email                   :string
+#  email_hash              :string
 #  status                  :enum             default("issued"), not null
 #  verification_code_hash  :string
 #  verification_expires_at :datetime

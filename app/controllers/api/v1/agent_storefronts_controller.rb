@@ -90,7 +90,7 @@ module Api
           :payment_provider_code,
           :resource_endpoint,
           :resource_instructions,
-          plans: %i[plan_code minimum_topup_cents maximum_topup_cents]
+          plans: %i[plan_code minimum_topup_cents maximum_topup_cents free_credits_cents]
         )
       end
 

@@ -14,7 +14,16 @@ RSpec.describe Agents::BillingDocumentService do
 
     before do
       create(:standard_charge, plan:, billable_metric:, properties: {amount: "0.01"})
-      storefront.update!(plans: [{plan_code: plan.code, minimum_topup_cents: 500}])
+      storefront.update!(plans: [{plan_code: plan.code, minimum_topup_cents: 500, free_credits_cents: 1000}])
+    end
+
+    context "when the plan offers no free credits" do
+      before { storefront.update!(plans: [{plan_code: plan.code, minimum_topup_cents: 500}]) }
+
+      it "says nothing about them under the plan" do
+        expect(document).to include("Billed monthly, in EUR. Top-ups: at least 500, no maximum.\n")
+        expect(document).not_to include("Free credits")
+      end
     end
 
     context "when a sold plan has a subscription fee" do
@@ -31,7 +40,7 @@ RSpec.describe Agents::BillingDocumentService do
     it "lists each plan with its top-up limits and actions, then how to enroll" do
       expect(document).to include("### Basic (`agent_basic`)")
       expect(document).to include("Top-up limits and amounts are in cents of the plan's currency; the charge properties of each action are in the currency itself, not in cents.")
-      expect(document).to include("Billed monthly, in EUR. Top-ups: at least 500, no maximum.")
+      expect(document).to include("Billed monthly, in EUR. Top-ups: at least 500, no maximum. Free credits: 1000 once you are claimed.")
       expect(document).to include("- `api_call`: API call. One call. Charge model `standard`, properties `{\"amount\":\"0.01\"}`.")
       expect(document).to include("`purpose: \"authenticate\"` and `scope: \"billing\"`")
       expect(document).to include("POST `#{storefront.agent_url}/billing/enroll`")
@@ -60,6 +69,7 @@ RSpec.describe Agents::BillingDocumentService do
     expect(document).to include("POST `#{storefront.agent_url}/claims/codes`")
     expect(document).to include(storefront.claim_url)
     expect(document).to include("GET `#{storefront.agent_url}/claims`")
+    expect(document).to include("POST `#{storefront.agent_url}/billing/free_credits` with the billing token adds them to your wallet")
   end
 
   context "when the Stripe connection has no seller profile" do

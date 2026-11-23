@@ -19,6 +19,11 @@ RSpec.describe Agents::BillingController, :premium, cache: :memory do
     json[:access_token]
   end
 
+  def mailed_code
+    digest = Agents::Claim.sole.verification_code_hash
+    CGI.unescapeHTML(ActionMailer::Base.deliveries.last.body.encoded).scan(/\b\d{6}\b/).find { Agents::Claim.digest(it) == digest }
+  end
+
   it "enrolls an agent that holds a billing token" do
     api_token = token("signup", "signup")
     headers = {"Authorization" => "Bearer #{token("authenticate", "auth/token", scope: "billing")}"}
@@ -122,6 +127,44 @@ RSpec.describe Agents::BillingController, :premium, cache: :memory do
 
       get("#{base}/billing/payments/#{payment_id}", headers: {"Authorization" => "Bearer #{json[:access_token]}"})
       expect(response).to be_not_found_error("payment")
+    end
+  end
+
+  describe "free credits" do
+    let(:headers) { {"Authorization" => "Bearer #{token("authenticate", "auth/token", scope: "billing")}"} }
+
+    before do
+      storefront.update!(plans: [{plan_code: plan.code, free_credits_cents: 1000}])
+      token("signup", "signup")
+    end
+
+    it "grants them once the owner has claimed the agent, and once only" do
+      post("#{base}/billing/enroll", params: {plan_code: plan.code}, headers:, as: :json)
+
+      post("#{base}/billing/free_credits", headers:)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json[:error_details]).to eq(base: ["claim_required"])
+
+      post("#{base}/claims/codes", headers:)
+      code = json[:claim_code]
+      perform_enqueued_jobs do
+        post("#{base}/claims/start", params: {claim_code: code, email: "owner@example.com"}, as: :json)
+      end
+      post("#{base}/claims/verify", params: {claim_code: code, verification_code: mailed_code}, as: :json)
+      expect(json).to include(status: "claimed")
+
+      post("#{base}/billing/free_credits", headers:)
+      expect(response).to have_http_status(:ok)
+      expect(json).to include(status: "granted", amount_cents: 1000)
+      transaction_id = json[:wallet_transaction_id]
+      expect(transaction_id).to be_present
+
+      get("#{base}/billing", headers:)
+      expect(json).to include(balance_cents: 1000)
+
+      post("#{base}/billing/free_credits", headers:)
+      expect(response).to have_http_status(:ok)
+      expect(json).to eq(status: "granted", amount_cents: 1000, wallet_transaction_id: transaction_id)
     end
   end
 end

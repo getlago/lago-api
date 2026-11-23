@@ -43,6 +43,16 @@ module Agents
       render(json: payment_json(wallet_transaction))
     end
 
+    def free_credits
+      result = Agents::Billing::GrantFreeCreditsService.call(storefront:, registration:)
+
+      if result.success?
+        render(json: free_credits_json(result.grant))
+      else
+        render_error_response(result)
+      end
+    end
+
     private
 
     def billing_json(subscription, wallet)
@@ -74,6 +84,10 @@ module Agents
         settled_at: wallet_transaction.settled_at&.iso8601,
         failed_at: wallet_transaction.failed_at&.iso8601
       }
+    end
+
+    def free_credits_json(grant)
+      {status: "granted", amount_cents: grant.amount_cents, wallet_transaction_id: grant.wallet_transaction_id}
     end
   end
 end
