@@ -4,7 +4,7 @@ module CopyToProduction
   # What CopyToProduction::CopyService would do, without a lock or a write: the sandbox items it would copy, the production
   # items it would reuse, and the reason it would refuse the copy, if any.
   class PreviewService < BaseService
-    Result = BaseResult[:copied_items, :reused_items, :blocking_reason, :missing_parent]
+    Result = BaseResult[:copied_items, :reused_items, :blocking_reason, :missing_parent, :refused_item]
 
     def call
       check_entry
@@ -25,6 +25,7 @@ module CopyToProduction
       result.reused_items = plan.reused.map { it.entry(it.existing) }
       result.blocking_reason = plan_refusal(plan)
       result.missing_parent = plan.missing_parent&.entry
+      result.refused_item = refused_step(plan)&.last&.entry
       result
     end
   end

@@ -25,6 +25,7 @@ RSpec.describe CopyToProduction::PreviewService do
     expect(result.reused_items).to eq([])
     expect(result.blocking_reason).to be_nil
     expect(result.missing_parent).to be_nil
+    expect(result.refused_item).to be_nil
   end
 
   context "when production has a metric with the same code" do
@@ -71,8 +72,9 @@ RSpec.describe CopyToProduction::PreviewService do
         custom_aggregator: "aggregator")
     end
 
-    it "answers copy_to_production_item_unsupported" do
+    it "answers copy_to_production_item_unsupported and names the metric" do
       expect(result.blocking_reason).to eq("copy_to_production_item_unsupported")
+      expect(result.refused_item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "billable_metric", record: metric))
     end
   end
 
@@ -119,6 +121,35 @@ RSpec.describe CopyToProduction::PreviewService do
         expect(result.copied_items).to eq([])
         expect(result.reused_items).to eq([])
       end
+    end
+  end
+
+  context "with an item type whose dependency cannot be copied" do
+    subject(:result) { described_class.call(organization:, user:, item_type: "child_item", id: metric.id) }
+
+    let(:dependency) do
+      create(:billable_metric, organization: sandbox, code: "api_calls_custom", aggregation_type: "custom_agg",
+        custom_aggregator: "aggregator")
+    end
+
+    let(:child_item_class) do
+      dependency_metric = dependency
+
+      Class.new(CopyToProduction::Items::BillableMetricItem) do
+        def self.name = "CopyToProduction::Items::ChildItem"
+
+        define_method(:dependencies) { |_source| [["billable_metric", dependency_metric]] }
+      end
+    end
+
+    before do
+      stub_const("CopyToProduction::Items::ChildItem", child_item_class)
+      stub_const("CopyToProduction::Items::TYPES", CopyToProduction::Items::TYPES.merge("child_item" => "CopyToProduction::Items::ChildItem"))
+    end
+
+    it "answers the dependency's refusal and names it" do
+      expect(result.blocking_reason).to eq("copy_to_production_item_unsupported")
+      expect(result.refused_item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "billable_metric", record: dependency))
     end
   end
 

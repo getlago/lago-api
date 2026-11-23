@@ -9276,6 +9276,11 @@ type CopyToProductionPreview {
   missingParent: CopyToProductionItem
 
   """
+  Sandbox item to copy that refuses the move
+  """
+  refusedItem: CopyToProductionItem
+
+  """
   Production items reused by code
   """
   reusedItems: [CopyToProductionItem!]!

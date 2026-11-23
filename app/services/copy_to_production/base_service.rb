@@ -54,13 +54,22 @@ module CopyToProduction
       "copy_to_production_admin_only" unless production_membership&.admin?
     end
 
-    # The error code that refuses this item, or nil.
+    # The error code that refuses the copy, or nil: an item to copy that cannot be, then a parent that is not live,
+    # then the item's code taken in production.
     def plan_refusal(plan)
-      item_refusal = item.refusal(source_record)
-      return item_refusal if item_refusal
+      code, = refused_step(plan)
+      return code if code
       return "copy_to_production_parent_missing" if plan.missing_parent
 
       "value_already_exist" if plan.existing
+    end
+
+    # The first item to copy, in plan order, that refuses to be copied, as [error code, step], or nil. Dependencies
+    # and children are checked too, as the copy would copy them.
+    def refused_step(plan)
+      return @refused_step if defined?(@refused_step)
+
+      @refused_step = plan.copied.lazy.map { [it.item.refusal(it.source), it] }.find(&:first)
     end
 
     # Members are mirrored from production, so the admin check reads the production membership.

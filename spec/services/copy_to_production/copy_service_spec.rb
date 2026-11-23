@@ -359,6 +359,24 @@ RSpec.describe CopyToProduction::CopyService do
       end
     end
 
+    context "when a dependency to copy cannot be copied" do
+      let(:live_parent) { create(:billable_metric, organization: production, code: "api_calls_parent") }
+
+      before do
+        live_parent
+        sandbox.billable_metrics.find_by(code: "api_calls_copied")
+          .update!(aggregation_type: "custom_agg", custom_aggregator: "aggregator")
+      end
+
+      it "refuses the copy" do
+        expect { result }.not_to change { production.billable_metrics.count }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_item_unsupported")
+      end
+    end
+
     context "when the parent is not live" do
       it "refuses the copy" do
         expect { result }.not_to change(BillableMetric, :count)

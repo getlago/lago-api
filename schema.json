@@ -48449,6 +48449,18 @@
               "deprecationReason": null
             },
             {
+              "name": "refusedItem",
+              "description": "Sandbox item to copy that refuses the move",
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "CopyToProductionItem",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "reusedItems",
               "description": "Production items reused by code",
               "args": [],
