@@ -1341,6 +1341,18 @@ RSpec.describe Subscription do
         end.to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(migration.id, subscription)
       end
 
+      it "looks the migration up only after the commit" do
+        allow(BillingEngineMigrations::Lookup).to receive(:for_source).and_call_original
+
+        described_class.transaction do
+          subscription.mark_as_terminated!
+
+          expect(BillingEngineMigrations::Lookup).not_to have_received(:for_source)
+        end
+
+        expect(BillingEngineMigrations::Lookup).to have_received(:for_source).with(subscription.organization_id).at_least(:once)
+      end
+
       it "does not enqueue a copy for other changes" do
         expect { subscription.update!(name: "Renamed") }
           .not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionJob)
