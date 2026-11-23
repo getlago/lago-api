@@ -2,6 +2,7 @@
 
 module Resolvers
   class CopyToProductionPreviewResolver < Resolvers::BaseResolver
+    include RequiresSelfServe
     include AuthenticableApiUser
     include RequiredOrganization
 

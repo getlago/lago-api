@@ -13,6 +13,8 @@ RSpec.describe Resolvers::CopyToProductionPreviewResolver do
     )
   end
 
+  include_context "with self-serve enabled"
+
   let(:required_permission) { "copy_to_production:create" }
   let(:production) { create(:organization) }
   let(:sandbox) { create(:organization, :sandbox, production_organization: production) }
@@ -39,6 +41,10 @@ RSpec.describe Resolvers::CopyToProductionPreviewResolver do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "copy_to_production:create"
+
+  it_behaves_like "a self-serve entry point" do
+    let(:result) { execution }
+  end
 
   it "previews the move" do
     expect(execution["data"]["copyToProductionPreview"]).to eq(

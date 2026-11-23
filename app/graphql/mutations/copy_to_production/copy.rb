@@ -3,6 +3,7 @@
 module Mutations
   module CopyToProduction
     class Copy < BaseMutation
+      include RequiresSelfServe
       include AuthenticableApiUser
       include RequiredOrganization
 

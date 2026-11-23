@@ -54,14 +54,15 @@ module CopyToProduction
       "copy_to_production_admin_only" unless production_membership&.admin?
     end
 
-    # The error code that refuses the copy, or nil: an item to copy that cannot be, then a parent that is not live,
-    # then the item's code taken in production.
+    # The error code that refuses the copy, or nil: the item's code taken in production, then an item to copy that
+    # cannot be, then a parent that is not live. A live item answers that it is live, whatever its copy would refuse.
     def plan_refusal(plan)
+      return "value_already_exist" if plan.existing
+
       code, = refused_step(plan)
       return code if code
-      return "copy_to_production_parent_missing" if plan.missing_parent
 
-      "value_already_exist" if plan.existing
+      "copy_to_production_parent_missing" if plan.missing_parent
     end
 
     # The first item to copy, in plan order, that refuses to be copied, as [error code, step], or nil. Dependencies

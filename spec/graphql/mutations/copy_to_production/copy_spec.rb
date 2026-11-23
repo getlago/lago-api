@@ -13,6 +13,8 @@ RSpec.describe Mutations::CopyToProduction::Copy do
     )
   end
 
+  include_context "with self-serve enabled"
+
   let(:required_permission) { "copy_to_production:create" }
   let(:production) { create(:organization) }
   let(:sandbox) { create(:organization, :sandbox, production_organization: production) }
@@ -37,6 +39,10 @@ RSpec.describe Mutations::CopyToProduction::Copy do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "copy_to_production:create"
+
+  it_behaves_like "a self-serve entry point" do
+    let(:result) { execution }
+  end
 
   it "copies the billable metric to production" do
     data = execution["data"]["copyToProduction"]

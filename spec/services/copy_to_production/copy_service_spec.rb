@@ -258,6 +258,15 @@ RSpec.describe CopyToProduction::CopyService do
       expect(result.error).to be_a(BaseService::ForbiddenFailure)
       expect(result.error.code).to eq("copy_to_production_item_unsupported")
     end
+
+    context "when production has a metric with the same code" do
+      before { create(:billable_metric, organization: production, code: "api_calls") }
+
+      it "answers that it is live" do
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(code: ["value_already_exist"])
+      end
+    end
   end
 
   context "when the copy fails inside a caller's transaction" do

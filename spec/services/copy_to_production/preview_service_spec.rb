@@ -76,6 +76,15 @@ RSpec.describe CopyToProduction::PreviewService do
       expect(result.blocking_reason).to eq("copy_to_production_item_unsupported")
       expect(result.refused_item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "billable_metric", record: metric))
     end
+
+    context "when production has a metric with the same code" do
+      before { create(:billable_metric, organization: production, code: "api_calls") }
+
+      it "answers value_already_exist without a refused item" do
+        expect(result.blocking_reason).to eq("value_already_exist")
+        expect(result.refused_item).to be_nil
+      end
+    end
   end
 
   context "when the organization is a production" do

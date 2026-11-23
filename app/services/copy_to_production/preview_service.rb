@@ -25,7 +25,7 @@ module CopyToProduction
       result.reused_items = plan.reused.map { it.entry(it.existing) }
       result.blocking_reason = plan_refusal(plan)
       result.missing_parent = plan.missing_parent&.entry
-      result.refused_item = refused_step(plan)&.last&.entry
+      result.refused_item = refused_step(plan)&.last&.entry unless plan.existing
       result
     end
   end
