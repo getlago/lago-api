@@ -63,6 +63,16 @@ RSpec.describe "billing_engine_migrations:copy_setup", :premium do # rubocop:dis
     end
   end
 
+  context "when a shadow record differs from the copied one" do
+    before { create(:tax, organization: shadow_organization, code: "vat_fr", rate: 5.5) }
+
+    it "lists the differing attributes and aborts" do
+      expect { task.invoke(organization.id) }
+        .to raise_error(SystemExit, /1 record\(s\) differ from the shadow organization/)
+        .and output(/tax vat_fr: mismatch \(differs: rate\)/).to_stdout
+    end
+  end
+
   context "when DRY_RUN is disabled" do
     around do |example|
       ENV["DRY_RUN"] = "false"

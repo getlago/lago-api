@@ -145,22 +145,80 @@ RSpec.describe BillingEngineMigrations::CopySetupService, :premium do
 
   context "when the shadow organization already has some of the codes" do
     before do
-      create(:tax, organization: shadow_organization, code: "vat_fr")
+      create(:tax, organization: shadow_organization, **other_tax.slice(:code, :name, :rate, :description).symbolize_keys)
+      create(:tax, organization: shadow_organization, code: "vat_fr", name: tax.name, rate: 5.5, description: "French VAT")
       create(:billable_metric, organization: shadow_organization, code: "api_calls")
     end
 
-    it "skips them and creates the others" do
+    it "skips the identical ones, reports the different ones and creates the others" do
       expect(outcomes).to eq(
         [
-          ["tax", "vat_de", :created],
-          ["tax", "vat_fr", :skipped],
+          ["tax", "vat_de", :skipped],
+          ["tax", "vat_fr", :mismatch],
           ["billing_entity", "entity_fr", :created],
-          ["billable_metric", "api_calls", :skipped],
+          ["billable_metric", "api_calls", :mismatch],
           ["billable_metric", "seats", :created]
         ]
       )
-      expect(shadow_organization.taxes.where(code: "vat_fr").count).to eq(1)
-      expect(shadow_organization.billable_metrics.where(code: "api_calls").count).to eq(1)
+
+      records = result.records.index_by(&:code)
+      expect(records["vat_de"].mismatches).to be_empty
+      expect(records["vat_fr"].mismatches).to eq([:rate])
+      expect(records["api_calls"].mismatches).to include(:aggregation_type, :field_name, :filters)
+      expect(shadow_organization.taxes.find_by(code: "vat_fr").rate).to eq(5.5)
+      expect(shadow_organization.billable_metrics.find_by(code: "api_calls").aggregation_type).to eq("count_agg")
+    end
+  end
+
+  context "when the shadow organization already has the billing entity" do
+    let(:shadow_entity) do
+      shadow_organization.default_billing_entity.tap do |entity|
+        entity.update!(
+          **billing_entity.slice(*described_class::BILLING_ENTITY_ATTRIBUTES).symbolize_keys,
+          invoice_grace_period: 0,
+          email_settings: ["invoice.finalized"],
+          eu_tax_management: true
+        )
+        shadow_tax = create(:tax, organization: shadow_organization, **tax.slice(:code, :name, :rate, :description).symbolize_keys)
+        create(:billing_entity_applied_tax, billing_entity: entity, tax: shadow_tax, organization: shadow_organization)
+      end
+    end
+
+    before { shadow_entity }
+
+    def billing_entity_record
+      result.records.find { it.resource == "billing_entity" }
+    end
+
+    it "keeps its invoices as drafts, without emails or EU tax management" do
+      expect(billing_entity_record).to have_attributes(code: "entity_fr", outcome: :updated, mismatches: [])
+      expect(shadow_entity.reload).to have_attributes(
+        invoice_grace_period: described_class::SHADOW_INVOICE_GRACE_PERIOD_DAYS,
+        email_settings: [],
+        eu_tax_management: false
+      )
+      expect(shadow_organization.billing_entities.where(code: "entity_fr").count).to eq(1)
+    end
+
+    context "when its other attributes differ" do
+      before { shadow_entity.update!(default_currency: "USD", timezone: "UTC") }
+
+      it "reports the differences and still keeps its invoices as drafts" do
+        expect(billing_entity_record).to have_attributes(outcome: :mismatch, mismatches: %i[default_currency timezone])
+        expect(shadow_entity.reload).to have_attributes(
+          default_currency: "USD",
+          invoice_grace_period: described_class::SHADOW_INVOICE_GRACE_PERIOD_DAYS
+        )
+      end
+    end
+
+    context "when it is a dry run" do
+      let(:dry_run) { true }
+
+      it "reports the update and writes nothing" do
+        expect(billing_entity_record).to have_attributes(outcome: :would_update, mismatches: [])
+        expect(shadow_entity.reload.invoice_grace_period).to eq(0)
+      end
     end
   end
 

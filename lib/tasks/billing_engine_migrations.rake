@@ -59,11 +59,16 @@ namespace :billing_engine_migrations do
     records.each do |record|
       line = "  [#{mode}] #{record.resource} #{record.code}: #{record.outcome}"
       line += " (#{record.error.message})" if record.error
+      line += " (differs: #{record.mismatches.join(", ")})" if record.outcome == :mismatch
       puts line
     end
 
     counts = records.map(&:outcome).tally
     puts "Done [#{mode}]: #{counts.map { |outcome, count| "#{count} #{outcome}" }.join(", ").presence || "nothing to copy"}"
-    abort "#{counts[:failed]} record(s) failed" if counts[:failed]
+
+    problems = []
+    problems << "#{counts[:failed]} record(s) failed" if counts[:failed]
+    problems << "#{counts[:mismatch]} record(s) differ from the shadow organization" if counts[:mismatch]
+    abort problems.join(", ") if problems.any?
   end
 end
