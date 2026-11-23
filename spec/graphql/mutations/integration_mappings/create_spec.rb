@@ -92,6 +92,29 @@ RSpec.describe Mutations::IntegrationMappings::Create do
     end
   end
 
+  context "with a QuickBooks integration" do
+    let(:integration) { create(:quickbooks_integration, organization:) }
+
+    it "creates a QuickBooks integration mapping" do
+      result = create_integration_mapping(input:)
+
+      expect(result).to include(
+        "integrationId" => integration.id,
+        "mappableId" => mappable.id,
+        "mappableType" => "AddOn",
+        "billingEntityId" => nil,
+        "externalAccountCode" => external_account_code,
+        "externalId" => external_id,
+        "externalName" => external_name
+      )
+      expect(IntegrationMappings::QuickbooksMapping.find(result["id"])).to have_attributes(
+        external_account_code:,
+        external_id:,
+        external_name:
+      )
+    end
+  end
+
   context "when the integration belongs to another organization" do
     let(:other_organization) { create(:organization) }
     let(:integration) { create(:netsuite_integration, organization: other_organization) }

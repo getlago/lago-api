@@ -176,6 +176,29 @@ RSpec.describe Invoices::PreviewContextService do
         end
       end
 
+      context "when integration type is quickbooks and no integration matches params" do
+        let(:params) do
+          super().deep_merge(
+            customer: {
+              integration_customers: [
+                {
+                  integration_type: "quickbooks",
+                  integration_code: "code"
+                }
+              ]
+            }
+          )
+        end
+
+        it "returns nil" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("quickbooks_integration_not_found")
+
+          expect(subject).to be_nil
+        end
+      end
+
       context "when an explicit billing_entity is passed for a brand-new customer" do
         let(:billing_entity) { create(:billing_entity, organization:) }
         let(:params) do

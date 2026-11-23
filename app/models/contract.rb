@@ -11,6 +11,7 @@ class Contract < ApplicationRecord
   include Terminatable
 
   STATUSES = {
+    draft: "draft",
     pending: "pending",
     active: "active",
     terminated: "terminated",
@@ -35,25 +36,32 @@ class Contract < ApplicationRecord
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
   has_many :wallets, class_name: "CatalogWallet"
-  has_many :billing_segments
   has_many :daily_usages
   has_many :fees
-  has_many :invoices, -> { distinct }, through: :billing_segments
+  has_many :invoices, -> { distinct }, through: :fees
   has_many :applied_invoice_custom_sections,
     class_name: "Contract::AppliedInvoiceCustomSection",
     dependent: :destroy
   has_many :selected_invoice_custom_sections,
     through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
+  has_many :contract_alerts,
+    ->(contract) { where(organization_id: contract.organization_id) },
+    class_name: "UsageMonitoring::ContractAlert",
+    foreign_key: :contract_external_id,
+    primary_key: :external_id
+  has_one :contract_activity, class_name: "UsageMonitoring::ContractActivity"
 
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
   enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
 
-  LIVE_STATUSES = %w[pending active].freeze
+  # A draft is live (it holds its external id, stays editable and can be
+  # canceled) but never billable.
+  LIVE_STATUSES = %w[draft pending active].freeze
 
-  # Which contracts the billing clock may produce segments for. A terminated contract's
-  # final arrears period is the termination path's, so it is not billable from the clock.
+  # Live contracts accepting rate changes and usage billing. Terminated cards with owed
+  # coverage remain discoverable separately through their billing cursors.
   BILLABLE_STATUSES = %w[active].freeze
 
   # The live contracts for an external id: at most one per status (the partial
@@ -70,29 +78,21 @@ class Contract < ApplicationRecord
   # Active contracts whose planned end has arrived, compared as an instant like the start.
   scope :due_for_termination, ->(timestamp) { active.where(ended_at: ..timestamp) }
 
-  def self.live_by_external_id(external_id)
-    # Prefer the pending contract over an active sibling — the replacement
-    # being authored is the target every consumer wants; started_at/created_at
-    # then breaks ties deterministically within a status.
-    live.where(external_id:)
-      .order(Arel.sql("status = 'pending' DESC"), started_at: :desc, created_at: :desc)
-      .first
-  end
-
-  def self.terminatable_by_external_id(external_id)
-    # Termination ends the agreement in force, so it prefers the active
-    # contract over a pending replacement — the reverse of live_by_external_id.
-    # Ending the active row leaves the future replacement to start on its own;
-    # with no active sibling the pending row is the one to cancel.
-    # started_at/created_at break ties deterministically within a status.
-    live.where(external_id:)
-      .order(Arel.sql("status = 'active' DESC"), started_at: :desc, created_at: :desc)
-      .first
-  end
-
   validates :external_id, presence: true
+  validates :code, presence: true, on: :create
+  validates :code, uniqueness: {scope: [:organization_id, :external_id]}, allow_nil: true, if: :will_save_change_to_code?
 
   validate :validate_started_before_ended
+  validate :validate_code_unchanged, on: :update
+
+  # Termination ends the agreement in force, so it prefers the active contract,
+  # then a pending replacement, then a draft. started_at/created_at break ties
+  # deterministically within a status.
+  def self.terminatable_by_external_id(external_id)
+    live.where(external_id:)
+      .order(Arel.sql("status = 'active' DESC, status = 'pending' DESC"), started_at: :desc, created_at: :desc)
+      .first
+  end
 
   # The anchor every attached rate card inherits by default: the explicit
   # anchor when one was signed, otherwise the day the contract starts — in
@@ -103,12 +103,17 @@ class Contract < ApplicationRecord
     billing_anchor_date || started_at&.in_time_zone(customer.applicable_timezone)&.to_date
   end
 
-  # Rate cards are authored while pending only: once the agreement is active
-  # (or ended) they are signed. Unit changes on an active contract are a
+  # Billing stops at the planned end or the termination, whichever comes first.
+  def billing_ends_at
+    [ended_at, terminated_at].compact.min
+  end
+
+  # Rate cards are authored while draft or pending only: once the agreement is
+  # active (or ended) they are signed. Unit changes on an active contract are a
   # lifecycle concern priced by the billing engine, not an authoring edit.
   # The contract's own settings follow Contracts::UpdateService instead.
   def editable?
-    pending?
+    draft? || pending?
   end
 
   # The currency fees bill in: the plan's when there is one, otherwise the
@@ -138,6 +143,12 @@ class Contract < ApplicationRecord
 
   private
 
+  def validate_code_unchanged
+    if will_save_change_to_code?
+      errors.add(:code, :value_is_not_editable)
+    end
+  end
+
   def validate_started_before_ended
     return if started_at.blank? || ended_at.blank?
     return if started_at <= ended_at
@@ -155,6 +166,7 @@ end
 #  billing_anchor_date          :date
 #  billing_time                 :enum             default("calendar"), not null
 #  canceled_at                  :datetime
+#  code                         :string
 #  consolidate_invoice          :boolean          default(TRUE), not null
 #  ended_at                     :datetime
 #  name                         :string
@@ -180,9 +192,10 @@ end
 #  index_contracts_on_billing_entity_id                         (billing_entity_id)
 #  index_contracts_on_catalog_plan_id                           (catalog_plan_id)
 #  index_contracts_on_customer_id                               (customer_id)
-#  index_contracts_on_live_external_id                          (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
+#  index_contracts_on_live_external_id                          (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['draft'::contract_status, 'pending'::contract_status, 'active'::contract_status]))
 #  index_contracts_on_organization_id                           (organization_id)
 #  index_contracts_on_organization_id_and_external_id           (organization_id,external_id)
+#  index_contracts_on_organization_id_external_id_code          (organization_id,external_id,code) UNIQUE
 #  index_contracts_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) USING gin
 #  index_contracts_on_organization_id_name_gin_trgm_ops         (organization_id,name) USING gin
 #  index_contracts_on_payment_method_id                         (payment_method_id)

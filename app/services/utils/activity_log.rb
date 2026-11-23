@@ -3,7 +3,7 @@
 module Utils
   class ActivityLog
     IGNORED_FIELDS = %i[updated_at].freeze
-    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan CatalogPlan BillingEntity Entitlement::Feature ProductCategory Product ProductFilter RateCard RateCardRate PlanRateCard].freeze
+    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan CatalogPlan BillingEntity Entitlement::Feature ProductCategory Product ProductFilter RateCard RateCardRate PlanRateCard PlanWallet].freeze
     MAX_SERIALIZED_FEES = 25
     MAX_SERIALIZED_CHARGES = 50
     MAX_SERIALIZED_CHARGE_FILTERS = 100
@@ -19,6 +19,7 @@ module Utils
       invoice: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections],
       plan: %i[charges usage_thresholds taxes minimum_commitment],
       plan_rate_card: %i[rate_phases],
+      plan_wallet: %i[taxes metadata],
       quote: %i[owners],
       # content is an unbounded rich-text document and produce serializes the record three times
       # per log, so only the billing state is auditable here.

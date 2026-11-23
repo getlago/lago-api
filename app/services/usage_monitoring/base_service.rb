@@ -18,5 +18,10 @@ module UsageMonitoring
         row
       end
     end
+
+    # A list or an object would be cast on write: a code or a name to its text, a recurring to true
+    def single_value?(value)
+      !value.is_a?(Hash) && !value.is_a?(Array)
+    end
   end
 end

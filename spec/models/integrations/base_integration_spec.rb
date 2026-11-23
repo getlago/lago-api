@@ -93,6 +93,12 @@ RSpec.describe Integrations::BaseIntegration do
       end
     end
 
+    context "when type is quickbooks" do
+      it "returns the correct class name" do
+        expect(described_class.integration_type("quickbooks")).to eq("Integrations::QuickbooksIntegration")
+      end
+    end
+
     context "when type is hubspot" do
       it "returns the correct class name" do
         expect(described_class.integration_type("hubspot")).to eq("Integrations::HubspotIntegration")
@@ -115,6 +121,18 @@ RSpec.describe Integrations::BaseIntegration do
       it "raises a NotImplementedError" do
         expect { described_class.integration_type("unknown") }.to raise_error(NotImplementedError)
       end
+    end
+  end
+
+  describe "INTEGRATION_ACCOUNTING_TYPES" do
+    it "includes the QuickBooks integration next to the existing accounting types" do
+      expect(described_class::INTEGRATION_ACCOUNTING_TYPES).to eq(
+        %w[
+          Integrations::NetsuiteIntegration
+          Integrations::XeroIntegration
+          Integrations::QuickbooksIntegration
+        ]
+      )
     end
   end
 

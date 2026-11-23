@@ -1,0 +1,367 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxRatesCache do
+  subject(:rates_cache) { described_class.new(integration:, payload:) }
+
+  let(:integration) { build_stubbed(:anrok_integration) }
+  let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+  let(:amounts) { [20_000, 30_000] }
+
+  let(:payload) { anrok_payload(amounts) }
+
+  let(:answer) do
+    {
+      "succeededInvoices" => [
+        {
+          "id" => "txn_1",
+          "fees" => [
+            {
+              "item_id" => "id_1",
+              "item_code" => "m1",
+              "amount_cents" => 20_000,
+              "tax_amount_cents" => 2_000,
+              "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 2_000, "type" => "tax"}]
+            },
+            {
+              "item_id" => "id_2",
+              "item_code" => "m2",
+              "amount_cents" => 30_000,
+              "tax_amount_cents" => 0,
+              "tax_breakdown" => [{"reason" => "reverseCharge", "type" => "exempt"}]
+            }
+          ]
+        }
+      ],
+      "failedInvoices" => []
+    }
+  end
+
+  def anrok_payload(line_amounts, city: "Nashville", tax_number: nil, item_code: "m1", issuing_date: Date.new(2026, 11, 18), currency: "USD")
+    [
+      {
+        "issuing_date" => issuing_date,
+        "currency" => currency,
+        "contact" => {
+          "external_id" => "cus_123",
+          "name" => "Acme",
+          "address_line_1" => "1 Main St",
+          "city" => city,
+          "zip" => "37201",
+          "country" => "US",
+          "taxable" => tax_number.present?,
+          "tax_number" => tax_number
+        },
+        "fees" => [
+          {"item_key" => "key_#{line_amounts.first}", "item_id" => "id_1", "item_code" => item_code, "amount_cents" => line_amounts.first},
+          {"item_key" => "key_#{line_amounts.last}", "item_id" => "id_2", "item_code" => "m2", "amount_cents" => line_amounts.last}
+        ],
+        "tax_date" => issuing_date
+      }
+    ]
+  end
+
+  def rates_for(other_payload)
+    described_class.new(integration:, payload: other_payload).fetch
+  end
+
+  before do
+    allow(Rails).to receive(:cache).and_return(cache)
+  end
+
+  describe "#fetch" do
+    it "returns nil before any answer is stored" do
+      expect(rates_cache.fetch).to be_nil
+    end
+
+    context "when an answer was stored" do
+      before { rates_cache.store(answer) }
+
+      it "prices new amounts of the same band with the stored rates" do
+        # $200 at 10% and $300 exempt were stored; $250 and $350 stay in the 0-499 band
+        body = rates_for(anrok_payload([25_000, 35_000]))
+
+        expect(body).to eq(
+          "succeededInvoices" => [
+            {
+              "fees" => [
+                {
+                  "item_key" => "key_25000",
+                  "item_id" => "id_1",
+                  "item_code" => "m1",
+                  "amount_cents" => 25_000,
+                  "tax_amount_cents" => 2_500, # 25_000 * 2_000 / 20_000
+                  "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 2_500, "type" => "tax"}]
+                },
+                {
+                  "item_key" => "key_35000",
+                  "item_id" => "id_2",
+                  "item_code" => "m2",
+                  "amount_cents" => 35_000,
+                  "tax_amount_cents" => 0,
+                  "tax_breakdown" => [{"reason" => "reverseCharge", "type" => "exempt"}]
+                }
+              ]
+            }
+          ],
+          "failedInvoices" => []
+        )
+      end
+
+      it "ignores the dates" do
+        expect(rates_for(anrok_payload(amounts, issuing_date: Date.new(2026, 11, 19)))).to be_present
+      end
+
+      it "asks the provider when a line moves to another band" do
+        # $300 moves to $500, the first 500-wide band above it
+        expect(rates_for(anrok_payload([20_000, 50_000]))).to be_nil
+      end
+
+      it "asks the provider when the customer address changes" do
+        expect(rates_for(anrok_payload(amounts, city: "Memphis"))).to be_nil
+      end
+
+      it "asks the provider when the tax identification number changes" do
+        expect(rates_for(anrok_payload(amounts, tax_number: "US123"))).to be_nil
+      end
+
+      it "asks the provider when a product mapping changes" do
+        expect(rates_for(anrok_payload(amounts, item_code: "m3"))).to be_nil
+      end
+
+      it "asks the provider when the currency changes" do
+        expect(rates_for(anrok_payload(amounts, currency: "EUR"))).to be_nil
+      end
+
+      it "asks the provider when the integration is updated" do
+        updated_integration = build_stubbed(:anrok_integration, id: integration.id, updated_at: integration.updated_at + 1.second)
+
+        expect(described_class.new(integration: updated_integration, payload:).fetch).to be_nil
+      end
+
+      it "asks the provider when one line has no stored rate" do
+        other_payload = anrok_payload(amounts)
+        other_payload.first["fees"] << {"item_key" => "key_3", "item_id" => "id_3", "item_code" => "m4", "amount_cents" => 100}
+
+        expect(rates_for(other_payload)).to be_nil
+      end
+    end
+
+    context "when a line has no amount" do
+      let(:amounts) { [20_000, 0] }
+
+      before { rates_cache.store(answer) }
+
+      it "prices it with no tax, without a stored rate" do
+        lines = rates_for(anrok_payload([25_000, 0])).dig("succeededInvoices", 0, "fees")
+
+        expect(lines.map { it.slice("item_id", "amount_cents", "tax_amount_cents", "tax_breakdown") }).to eq(
+          [
+            {"item_id" => "id_1", "amount_cents" => 25_000, "tax_amount_cents" => 2_500, "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 2_500, "type" => "tax"}]},
+            {"item_id" => "id_2", "amount_cents" => 0, "tax_amount_cents" => 0, "tax_breakdown" => []}
+          ]
+        )
+      end
+    end
+
+    context "when a line is negative" do
+      let(:amounts) { [20_000, -500] }
+
+      before { rates_cache.store(answer) }
+
+      it "leaves the request to the provider" do
+        expect(rates_cache).not_to be_cacheable
+        expect(rates_cache.fetch).to be_nil
+      end
+    end
+
+    context "when the line tax was rounded to the cent" do
+      let(:amounts) { [15, 30_000] }
+      let(:answer) do
+        {
+          "succeededInvoices" => [
+            {
+              "fees" => [
+                # 1.5 cents of tax booked as 2: the booked amount alone would give a 13.3% rate
+                {"item_id" => "id_1", "amount_cents" => 15, "tax_amount_cents" => 2, "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 1.5, "type" => "tax"}]},
+                {"item_id" => "id_2", "amount_cents" => 30_000, "tax_amount_cents" => 0, "tax_breakdown" => []}
+              ]
+            }
+          ]
+        }
+      end
+
+      before { rates_cache.store(answer) }
+
+      it "keeps the rate of the unrounded taxes" do
+        lines = rates_for(anrok_payload([25_000, 30_000])).dig("succeededInvoices", 0, "fees")
+
+        expect(lines.first).to include(
+          "tax_amount_cents" => 2_500, # 25_000 * 1.5 / 15
+          "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 2_500.0, "type" => "tax"}]
+        )
+      end
+    end
+
+    context "when less than a cent of tax was booked as zero" do
+      let(:amounts) { [4, 30_000] }
+      let(:answer) do
+        {
+          "succeededInvoices" => [
+            {
+              "fees" => [
+                # Rounded down, or paid by the seller: the answer looks the same either way
+                {"item_id" => "id_1", "amount_cents" => 4, "tax_amount_cents" => 0, "tax_breakdown" => [{"name" => "State tax", "rate" => "0.10", "tax_amount" => 0.4, "type" => "tax"}]},
+                {"item_id" => "id_2", "amount_cents" => 30_000, "tax_amount_cents" => 0, "tax_breakdown" => []}
+              ]
+            }
+          ]
+        }
+      end
+
+      before { rates_cache.store(answer) }
+
+      it "waits for a larger answer" do
+        expect(rates_for(anrok_payload([25_000, 30_000]))).to be_nil
+      end
+    end
+
+    context "when the provider lists the lines in another order" do
+      before do
+        rates_cache.store(answer.deep_dup.tap { it["succeededInvoices"].first["fees"].reverse! })
+      end
+
+      it "stores each rate under its own line" do
+        lines = rates_for(anrok_payload([25_000, 35_000])).dig("succeededInvoices", 0, "fees")
+
+        expect(lines.map { it["tax_amount_cents"] }).to eq([2_500, 0])
+      end
+    end
+
+    context "with the seller paying the taxes" do
+      let(:answer) do
+        {
+          "succeededInvoices" => [
+            {
+              "fees" => [
+                {"item_id" => "id_1", "amount_cents" => 20_000, "tax_amount_cents" => 0, "tax_breakdown" => [{"name" => "Tax", "rate" => "0.10", "tax_amount" => 2_000, "type" => "tax"}]},
+                {"item_id" => "id_2", "amount_cents" => 30_000, "tax_amount_cents" => 0, "tax_breakdown" => []}
+              ]
+            }
+          ]
+        }
+      end
+
+      before { rates_cache.store(answer) }
+
+      it "keeps the booked taxes at zero and scales the exact ones" do
+        lines = rates_for(anrok_payload([40_000, 30_000])).dig("succeededInvoices", 0, "fees")
+
+        expect(lines.first).to include(
+          "tax_amount_cents" => 0,
+          "tax_breakdown" => [{"name" => "Tax", "rate" => "0.10", "tax_amount" => 4_000, "type" => "tax"}] # 40_000 * 2_000 / 20_000
+        )
+      end
+    end
+
+    context "with an Avalara payload" do
+      let(:integration) { build_stubbed(:avalara_integration) }
+      let(:payload) { avalara_payload("200.0") }
+
+      let(:answer) do
+        {
+          "succeededInvoices" => [
+            {"fees" => [{"item_key" => "key_1", "amount_cents" => 20_000, "tax_amount_cents" => 1_500, "tax_breakdown" => [{"name" => "Sales tax", "rate" => "0.075", "tax_amount" => 1_500, "type" => "tax"}]}]}
+          ]
+        }
+      end
+
+      def avalara_payload(amount)
+        [
+          {
+            "issuing_date" => Date.new(2026, 11, 18),
+            "currency" => "USD",
+            "contact" => {"external_id" => "cus_123", "name" => "Acme", "city" => "Austin", "region" => "TX", "country" => "US"},
+            "billing_entity" => {"city" => "Austin", "region" => "TX", "country" => "US"},
+            "fees" => [{"item_key" => "key_1", "item_id" => "id_1", "item_code" => "m1", "unit" => 3, "amount" => amount}]
+          }
+        ]
+      end
+
+      before { rates_cache.store(answer) }
+
+      it "reads the amount in currency units" do
+        lines = rates_for(avalara_payload("300.0")).dig("succeededInvoices", 0, "fees")
+
+        expect(lines.first).to include("amount_cents" => 30_000, "tax_amount_cents" => 2_250) # 30_000 * 1_500 / 20_000
+      end
+
+      it "asks the provider when the billing entity address changes" do
+        other_payload = avalara_payload("300.0")
+        other_payload.first["billing_entity"]["region"] = "CA"
+
+        expect(rates_for(other_payload)).to be_nil
+      end
+    end
+  end
+
+  describe "#store" do
+    it "keeps the rates between 24 and 36 hours" do
+      allow(cache).to receive(:write_multi).and_call_original
+
+      rates_cache.store(answer)
+
+      expect(cache).to have_received(:write_multi) do |_entries, expires_in:|
+        expect(expires_in).to be_between(24.hours, 36.hours)
+      end
+    end
+
+    it "keeps the rates for the configured TTL" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_DRAFT_TAX_RATES_CACHE_TTL_SECONDS" => "3600"))
+      allow(cache).to receive(:write_multi).and_call_original
+
+      rates_cache.store(answer)
+
+      expect(cache).to have_received(:write_multi) do |_entries, expires_in:|
+        expect(expires_in).to be_between(1.hour, 90.minutes)
+      end
+    end
+
+    it "skips a failed answer" do
+      rates_cache.store({"succeededInvoices" => [], "failedInvoices" => [{"validation_errors" => {"type" => "customerAddressCouldNotResolve"}}]})
+
+      expect(rates_cache.fetch).to be_nil
+    end
+
+    it "skips an answer that does not cover every line" do
+      rates_cache.store(answer.deep_dup.tap { it["succeededInvoices"].first["fees"].pop })
+
+      expect(rates_cache.fetch).to be_nil
+    end
+  end
+
+  describe ".enabled?" do
+    it "is turned off by a zero TTL" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_DRAFT_TAX_RATES_CACHE_TTL_SECONDS" => "0"))
+
+      expect(described_class).not_to be_enabled
+    end
+
+    it "is on by default" do
+      stub_const("ENV", ENV.to_h.except("LAGO_DRAFT_TAX_RATES_CACHE_TTL_SECONDS"))
+
+      expect(described_class).to be_enabled
+    end
+  end
+
+  describe "bands" do
+    def band_of(amount_cents)
+      rates_cache.send(:band, BigDecimal(amount_cents) / 100)
+    end
+
+    it "is 500 wide up to 5,000, then 1,000 wide" do
+      expect([0, 49_999, 50_000, 499_999, 500_000, 599_999, 600_000].map { band_of(it) }).to eq([0, 0, 1, 9, 10, 10, 11])
+    end
+  end
+end
