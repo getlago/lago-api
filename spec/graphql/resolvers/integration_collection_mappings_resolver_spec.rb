@@ -18,9 +18,9 @@ RSpec.describe Resolvers::IntegrationCollectionMappingsResolver do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:integration) { create(:netsuite_integration, organization:) }
-  let(:netsuite_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
+  let(:collection_mapping) { create(:netsuite_collection_mapping, integration:) }
 
-  before { netsuite_collection_mapping }
+  before { collection_mapping }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -32,10 +32,12 @@ RSpec.describe Resolvers::IntegrationCollectionMappingsResolver do
     integration_collection_mappings_response = result["data"]["integrationCollectionMappings"]
 
     mapping = integration_collection_mappings_response["collection"].sole
-    expect(mapping["id"]).to eq(netsuite_collection_mapping.id)
-    expect(mapping["mappingType"]).to eq(netsuite_collection_mapping.mapping_type)
+    expect(mapping["id"]).to eq(collection_mapping.id)
+    expect(mapping["mappingType"]).to eq(collection_mapping.mapping_type)
     expect(mapping["externalId"]).to eq("netsuite-123")
     expect(mapping["taxCode"]).to eq("tax-code-1")
+    expect(mapping["taxNexus"]).to eq("tax-nexus-1")
+    expect(mapping["taxType"]).to eq("tax-type-1")
     expect(mapping["currencies"]).to be_nil
 
     expect(integration_collection_mappings_response["metadata"]["currentPage"]).to eq(1)
@@ -43,7 +45,7 @@ RSpec.describe Resolvers::IntegrationCollectionMappingsResolver do
   end
 
   context "when a currency mapping" do
-    let(:netsuite_collection_mapping) { create(:netsuite_currencies_mapping, integration:) }
+    let(:collection_mapping) { create(:netsuite_currencies_mapping, integration:) }
 
     it do
       result = execute_query(query:, variables: {integrationId: integration.id})
@@ -51,7 +53,7 @@ RSpec.describe Resolvers::IntegrationCollectionMappingsResolver do
       integration_collection_mappings_response = result["data"]["integrationCollectionMappings"]
 
       mapping = integration_collection_mappings_response["collection"].sole
-      expect(mapping["id"]).to eq(netsuite_collection_mapping.id)
+      expect(mapping["id"]).to eq(collection_mapping.id)
       expect(mapping["mappingType"]).to eq("currencies")
       expect(mapping["externalId"]).to be_nil
       expect(mapping["taxCode"]).to be_nil
@@ -65,15 +67,15 @@ RSpec.describe Resolvers::IntegrationCollectionMappingsResolver do
 
   context "when a xero collection mapping" do
     let(:integration) { create(:xero_integration, organization:) }
-    let(:netsuite_collection_mapping) { create(:xero_collection_mapping, integration:) }
+    let(:collection_mapping) { create(:xero_collection_mapping, integration:) }
 
     it "returns null for the netsuite only fields" do
       result = execute_query(query:, variables: {integrationId: integration.id})
 
       expect(result["errors"]).to be_nil
       expect(result["data"]["integrationCollectionMappings"]["collection"].sole).to eq(
-        "id" => netsuite_collection_mapping.id,
-        "mappingType" => netsuite_collection_mapping.mapping_type,
+        "id" => collection_mapping.id,
+        "mappingType" => collection_mapping.mapping_type,
         "externalId" => "xero-123",
         "taxCode" => nil,
         "taxNexus" => nil,
@@ -85,15 +87,15 @@ RSpec.describe Resolvers::IntegrationCollectionMappingsResolver do
 
   context "when a quickbooks collection mapping" do
     let(:integration) { create(:quickbooks_integration, organization:) }
-    let(:netsuite_collection_mapping) { create(:quickbooks_collection_mapping, integration:) }
+    let(:collection_mapping) { create(:quickbooks_collection_mapping, integration:) }
 
     it "returns null for the netsuite only fields" do
       result = execute_query(query:, variables: {integrationId: integration.id})
 
       expect(result["errors"]).to be_nil
       expect(result["data"]["integrationCollectionMappings"]["collection"].sole).to eq(
-        "id" => netsuite_collection_mapping.id,
-        "mappingType" => netsuite_collection_mapping.mapping_type,
+        "id" => collection_mapping.id,
+        "mappingType" => collection_mapping.mapping_type,
         "externalId" => "quickbooks-123",
         "taxCode" => nil,
         "taxNexus" => nil,
