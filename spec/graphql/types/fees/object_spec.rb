@@ -16,10 +16,10 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:description).of_type("String")
     expect(subject).to have_field(:grouped_by).of_type("JSON!")
     expect(subject).to have_field(:fixed_charge).of_type("FixedCharge")
-    expect(subject).to have_field(:invoice).of_type("Invoice")
     expect(subject).to have_field(:invoice_display_name).of_type("String")
     expect(subject).to have_field(:invoice_id).of_type("ID")
     expect(subject).to have_field(:invoice_name).of_type("String")
+    expect(subject).to have_field(:invoice_was_regenerated).of_type("Boolean!")
     expect(subject).to have_field(:subscription).of_type("Subscription")
     expect(subject).to have_field(:true_up_fee).of_type("Fee")
     expect(subject).to have_field(:true_up_parent_fee).of_type("Fee")
@@ -127,6 +127,28 @@ RSpec.describe Types::Fees::Object do
 
       it "returns nil" do
         expect(subject).to be_nil
+      end
+    end
+  end
+
+  describe "#invoice_was_regenerated" do
+    subject { run_graphql_field("Fee.invoiceWasRegenerated", fee) }
+
+    context "when fee's invoice is itself a product of a prior regenerate" do
+      let(:voided_invoice) { create(:invoice) }
+      let(:invoice) { create(:invoice, voided_invoice_id: voided_invoice.id) }
+      let(:fee) { create(:charge_fee, invoice:) }
+
+      it "returns true" do
+        expect(subject).to eq(true)
+      end
+    end
+
+    context "when fee's invoice has never been regenerated" do
+      let(:fee) { create(:charge_fee) }
+
+      it "returns false" do
+        expect(subject).to eq(false)
       end
     end
   end

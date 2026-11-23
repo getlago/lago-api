@@ -18,10 +18,10 @@ module Types
       field :description, String, null: true
       field :fixed_charge, Types::FixedCharges::Object, null: true
       field :grouped_by, GraphQL::Types::JSON, null: false
-      field :invoice, Types::Invoices::Object, null: true
       field :invoice_display_name, String, null: true
       field :invoice_id, ID, null: true
       field :invoice_name, String, null: true
+      field :invoice_was_regenerated, Boolean, null: false
       field :original_fee_id, ID, null: true
       field :subscription, Types::Subscriptions::Object, null: true
       field :true_up_fee, Types::Fees::Object, null: true
@@ -60,6 +60,10 @@ module Types
 
       def wallet_transaction
         object.invoiceable if object.credit?
+      end
+
+      def invoice_was_regenerated
+        dataloader.with(Sources::ActiveRecordAssociation, :invoice).load(object)&.voided_invoice_id.present?
       end
 
       def item_type
