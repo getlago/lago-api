@@ -65,6 +65,8 @@ RSpec.describe Integrations::Aggregator::BaseService do
       let(:provider_name) { :quickbooks }
 
       it "raises the next window throttling error, retried after 60 seconds when no limit is configured" do
+        allow(Throttling).to receive(:limits).and_return({})
+
         expect { throttle }
           .to raise_error(BaseService::NextWindowThrottlingError) do |error|
             expect(error.provider_name).to eq(:quickbooks)
@@ -142,6 +144,301 @@ RSpec.describe Integrations::Aggregator::BaseService do
       service.send(:trigger_action, {foo: "bar"})
 
       expect(Sentry).to have_received(:set_tags).with(nango_action: "netsuite-create-invoice")
+    end
+  end
+
+  describe "#provider and #provider_key" do
+    subject(:service) { described_class.new(integration:) }
+
+    context "with a NetSuite integration" do
+      let(:integration) { create(:netsuite_integration) }
+
+      it "uses the netsuite provider and the netsuite-tba key" do
+        expect(service.send(:provider)).to eq("netsuite")
+        expect(service.send(:provider_key)).to eq("netsuite-tba")
+      end
+    end
+
+    context "with a Xero integration" do
+      let(:integration) { create(:xero_integration) }
+
+      it "uses the xero provider and key" do
+        expect(service.send(:provider)).to eq("xero")
+        expect(service.send(:provider_key)).to eq("xero")
+      end
+    end
+
+    context "with an Anrok integration" do
+      let(:integration) { create(:anrok_integration) }
+
+      it "uses the anrok provider and key" do
+        expect(service.send(:provider)).to eq("anrok")
+        expect(service.send(:provider_key)).to eq("anrok")
+      end
+    end
+
+    context "with a HubSpot integration" do
+      let(:integration) { create(:hubspot_integration) }
+
+      it "uses the hubspot provider and key" do
+        expect(service.send(:provider)).to eq("hubspot")
+        expect(service.send(:provider_key)).to eq("hubspot")
+      end
+    end
+
+    context "with an Avalara integration" do
+      let(:integration) { create(:avalara_integration) }
+
+      it "uses the avalara provider" do
+        expect(service.send(:provider)).to eq("avalara")
+      end
+
+      context "when Rails runs in production" do
+        before { allow(Rails.env).to receive(:production?).and_return(true) }
+
+        it "uses the avalara key" do
+          expect(service.send(:provider_key)).to eq("avalara")
+        end
+      end
+
+      context "when Rails does not run in production" do
+        before { allow(Rails.env).to receive(:production?).and_return(false) }
+
+        it "uses the avalara-sandbox key" do
+          expect(service.send(:provider_key)).to eq("avalara-sandbox")
+        end
+      end
+    end
+
+    context "with a QuickBooks integration" do
+      let(:integration) { create(:quickbooks_integration, settings:) }
+      let(:settings) { {realm_id: "1234567890", sandbox:} }
+      let(:sandbox) { false }
+
+      it "uses the quickbooks provider" do
+        expect(service.send(:provider)).to eq("quickbooks")
+      end
+
+      [true, "true"].each do |value|
+        context "when sandbox is #{value.inspect}" do
+          let(:sandbox) { value }
+
+          it "uses the quickbooks-sandbox key" do
+            expect(service.send(:provider_key)).to eq("quickbooks-sandbox")
+          end
+        end
+      end
+
+      [false, "false", nil, "False", "no", 1].each do |value|
+        context "when sandbox is #{value.inspect}" do
+          let(:sandbox) { value }
+
+          it "uses the quickbooks key" do
+            expect(service.send(:provider_key)).to eq("quickbooks")
+          end
+        end
+      end
+
+      context "when sandbox is absent from the settings" do
+        let(:settings) { {realm_id: "1234567890"} }
+
+        it "uses the quickbooks key" do
+          expect(service.send(:provider_key)).to eq("quickbooks")
+        end
+      end
+
+      context "when Rails runs in production and sandbox is true" do
+        let(:sandbox) { true }
+
+        before { allow(Rails.env).to receive(:production?).and_return(true) }
+
+        it "still uses the quickbooks-sandbox key" do
+          expect(service.send(:provider_key)).to eq("quickbooks-sandbox")
+        end
+      end
+
+      context "when Rails does not run in production and sandbox is false" do
+        before { allow(Rails.env).to receive(:production?).and_return(false) }
+
+        it "still uses the quickbooks key" do
+          expect(service.send(:provider_key)).to eq("quickbooks")
+        end
+      end
+
+      describe "request headers" do
+        context "when sandbox is true" do
+          let(:sandbox) { true }
+
+          it "sends the sandbox provider config key for the connection" do
+            expect(service.send(:headers)).to include(
+              "Provider-Config-Key" => "quickbooks-sandbox",
+              "Connection-Id" => "quickbooks-test-connection"
+            )
+          end
+        end
+
+        context "when sandbox is false" do
+          it "sends the production provider config key for the connection" do
+            expect(service.send(:headers)).to include(
+              "Provider-Config-Key" => "quickbooks",
+              "Connection-Id" => "quickbooks-test-connection"
+            )
+          end
+        end
+      end
+    end
+  end
+
+  describe "#throttle_key" do
+    subject(:throttle_key) { described_class.new(integration:).send(:throttle_key) }
+
+    context "with QuickBooks integrations" do
+      def quickbooks_integration(connection_id:, realm_id:, sandbox: false, organization: create(:organization))
+        create(
+          :quickbooks_integration,
+          organization:,
+          secrets: {connection_id:}.to_json,
+          settings: {realm_id:, sandbox:, sync_invoices: false, sync_credit_notes: false, sync_payments: false}
+        )
+      end
+
+      def key_for(integration)
+        described_class.new(integration:).send(:throttle_key)
+      end
+
+      let(:integration_a) { quickbooks_integration(connection_id: "quickbooks-placeholder-connection-a", realm_id: "1111111111") }
+      let(:integration_b) { quickbooks_integration(connection_id: "quickbooks-placeholder-connection-b", realm_id: "2222222222") }
+
+      it "uses the SHA-256 digest of the provider key and the company id" do
+        expect(key_for(integration_a)).to eq(Digest::SHA2.hexdigest("quickbooks:1111111111"))
+        expect(key_for(integration_b)).to eq(Digest::SHA2.hexdigest("quickbooks:2222222222"))
+      end
+
+      it "gives different keys to different companies" do
+        expect(key_for(integration_a)).not_to eq(key_for(integration_b))
+      end
+
+      it "gives the same key to two connections to the same company" do
+        other = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: "1111111111")
+
+        expect(key_for(other)).to eq(key_for(integration_a))
+      end
+
+      it "keeps a sandbox company apart from a production company with the same id" do
+        sandbox = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: "1111111111", sandbox: true)
+
+        expect(key_for(sandbox)).to eq(Digest::SHA2.hexdigest("quickbooks-sandbox:1111111111"))
+        expect(key_for(sandbox)).not_to eq(key_for(integration_a))
+      end
+
+      it "falls back to the digest of the connection id when the company id is blank" do
+        integration = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: nil)
+
+        expect(key_for(integration)).to eq(Digest::SHA2.hexdigest("quickbooks-placeholder-connection-c"))
+      end
+    end
+
+    context "with a NetSuite integration" do
+      let(:integration) { create(:netsuite_integration) }
+
+      it "uses the SHA-256 digest of the client id" do
+        expect(throttle_key).to eq(Digest::SHA2.hexdigest(integration.client_id))
+      end
+    end
+
+    context "with an Anrok integration" do
+      let(:integration) { create(:anrok_integration) }
+
+      it "uses the SHA-256 digest of the api key" do
+        expect(throttle_key).to eq(Digest::SHA2.hexdigest(integration.api_key))
+      end
+    end
+
+    {xero_integration: "xero", hubspot_integration: "hubspot", avalara_integration: "avalara"}.each do |factory, key|
+      context "with a #{key} integration" do
+        let(:integration) { create(factory) }
+
+        it "uses the global #{key} key" do
+          expect(throttle_key).to eq(key)
+        end
+      end
+    end
+  end
+
+  describe "#throttle! with a real counter" do
+    def quickbooks_integration(connection_id:, realm_id:, sandbox: false, organization: create(:organization))
+      create(
+        :quickbooks_integration,
+        organization:,
+        secrets: {connection_id:}.to_json,
+        settings: {realm_id:, sandbox:, sync_invoices: false, sync_credit_notes: false, sync_payments: false}
+      )
+    end
+
+    let(:store) { ActiveSupport::Cache::MemoryStore.new }
+    let(:store_keys) { store.instance_variable_get(:@data).keys }
+
+    let(:connection_id_a) { "quickbooks-placeholder-connection-a" }
+    let(:connection_id_b) { "quickbooks-placeholder-connection-b" }
+    let(:integration_a) { quickbooks_integration(connection_id: connection_id_a, realm_id: "1111111111") }
+    let(:integration_b) { quickbooks_integration(connection_id: connection_id_b, realm_id: "2222222222") }
+    let(:service_a) { described_class.new(integration: integration_a) }
+    let(:service_b) { described_class.new(integration: integration_b) }
+
+    before do
+      allow(Throttling).to receive(:storage).and_return(store)
+      travel_to(Time.zone.parse("2026-01-05 10:00:00"))
+    end
+
+    it "allows 150 QuickBooks calls a minute and waits for the next window on the 151st" do
+      expect { 150.times { service_a.send(:throttle!, :quickbooks) } }.not_to raise_error
+
+      expect { service_a.send(:throttle!, :quickbooks) }
+        .to raise_error(BaseService::NextWindowThrottlingError) do |error|
+          expect(error.provider_name).to eq(:quickbooks)
+          expect(error.retry_after).to eq(60.seconds)
+        end
+    end
+
+    it "counts each QuickBooks company apart and never stores the company or connection id" do
+      150.times { service_a.send(:throttle!, :quickbooks) }
+
+      expect { service_a.send(:throttle!, :quickbooks) }
+        .to raise_error(BaseService::NextWindowThrottlingError) do |error|
+          expect(error.message).not_to include(connection_id_a)
+        end
+      expect { service_b.send(:throttle!, :quickbooks) }.not_to raise_error
+
+      expect(store_keys).to include(a_string_including(Digest::SHA2.hexdigest("quickbooks:1111111111")))
+      expect(store_keys).to include(a_string_including(Digest::SHA2.hexdigest("quickbooks:2222222222")))
+      expect(store_keys).to all(start_with("throttle:quickbooks:client:"))
+      expect(store_keys.join).not_to include("1111111111")
+      expect(store_keys.join).not_to include(connection_id_a)
+    end
+
+    it "shares one counter between two organizations connected to the same company" do
+      other_org = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: "1111111111")
+
+      150.times { service_a.send(:throttle!, :quickbooks) }
+
+      expect { described_class.new(integration: other_org).send(:throttle!, :quickbooks) }
+        .to raise_error(BaseService::NextWindowThrottlingError)
+    end
+
+    it "counts a sandbox company apart from a production company with the same id" do
+      sandbox = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: "1111111111", sandbox: true)
+
+      150.times { service_a.send(:throttle!, :quickbooks) }
+
+      expect { described_class.new(integration: sandbox).send(:throttle!, :quickbooks) }.not_to raise_error
+    end
+
+    it "still raises the regular throttling error on the 11th NetSuite call in a second" do
+      service = described_class.new(integration: create(:netsuite_integration))
+
+      expect { 10.times { service.send(:throttle!, :netsuite) } }.not_to raise_error
+      expect { service.send(:throttle!, :netsuite) }
+        .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(:netsuite) }
     end
   end
 end

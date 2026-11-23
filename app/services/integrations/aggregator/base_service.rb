@@ -55,9 +55,13 @@ module Integrations
           "avalara"
         when "Integrations::HubspotIntegration"
           "hubspot"
+        when "Integrations::QuickbooksIntegration"
+          "quickbooks"
         end
       end
 
+      # The Nango provider config key, which can differ from Integrations::BaseIntegration#provider_key
+      # (netsuite-tba for NetSuite, quickbooks-sandbox for a sandbox QuickBooks integration).
       def provider_key
         case integration.type
         when "Integrations::NetsuiteIntegration"
@@ -70,6 +74,8 @@ module Integrations
           Rails.env.production? ? "avalara" : "avalara-sandbox"
         when "Integrations::HubspotIntegration"
           "hubspot"
+        when "Integrations::QuickbooksIntegration"
+          integration.sandbox? ? "quickbooks-sandbox" : "quickbooks"
         end
       end
 
@@ -105,12 +111,17 @@ module Integrations
       end
 
       def throttle_key
-        # Hubspot and Xero calls are throttled globally, others are throttled per api key or client id
+        # Hubspot, Xero and Avalara calls are throttled globally, NetSuite per client id and Anrok per api key.
+        # Intuit counts QuickBooks calls per company, so they are throttled per company (realm id) and Nango
+        # provider key, which keeps sandbox and production companies apart. Before the realm id is known,
+        # the connection id is used. Every per-tenant value is digested.
         case provider
         when "netsuite"
           Digest::SHA2.hexdigest(integration.client_id)
         when "anrok"
           Digest::SHA2.hexdigest(integration.api_key)
+        when "quickbooks"
+          Digest::SHA2.hexdigest(integration.realm_id.present? ? "#{provider_key}:#{integration.realm_id}" : integration.connection_id)
         else
           provider.to_s
         end
