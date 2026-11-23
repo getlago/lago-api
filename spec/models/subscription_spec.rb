@@ -1321,7 +1321,7 @@ RSpec.describe Subscription do
     context "when the subscription already exists" do
       before do
         subscription
-        clear_enqueued_jobs
+        queue_adapter.enqueued_jobs.clear
       end
 
       it "enqueues a copy after the subscription is terminated" do
