@@ -3,18 +3,24 @@
 module PaymentProviderCustomers
   class StripeCustomer < BaseCustomer
     PAYMENT_METHODS_WITH_SETUP = %w[card sepa_debit us_bank_account bacs_debit link boleto].freeze
-    PAYMENT_METHODS_WITHOUT_SETUP = %w[crypto customer_balance].freeze
+    PAYMENT_METHODS_WITHOUT_SETUP = %w[crypto customer_balance shared_payment_token].freeze
     PAYMENT_METHODS = (PAYMENT_METHODS_WITH_SETUP + PAYMENT_METHODS_WITHOUT_SETUP).freeze
+
+    EXCLUSIVE_PAYMENT_METHODS = %w[customer_balance shared_payment_token].freeze
 
     validates :provider_payment_methods, presence: true
     validate :allowed_provider_payment_methods
     validate :link_payment_method_can_exist_only_with_card
-    validate :customer_balance_must_be_exclusive
+    validate :exclusive_payment_methods_cannot_be_combined
 
     settings_accessors :payment_method_id
 
     def provider_payment_methods
       get_from_settings("provider_payment_methods")
+    end
+
+    def shared_payment_token_only?
+      provider_payment_methods == ["shared_payment_token"]
     end
 
     def provider_payment_methods_with_setup
@@ -43,11 +49,13 @@ module PaymentProviderCustomers
       errors.add(:provider_payment_methods, :invalid)
     end
 
-    def customer_balance_must_be_exclusive
-      return unless provider_payment_methods.include?("customer_balance")
-      return if provider_payment_methods == ["customer_balance"]
+    def exclusive_payment_methods_cannot_be_combined
+      EXCLUSIVE_PAYMENT_METHODS.each do |method|
+        next unless provider_payment_methods.include?(method)
+        next if provider_payment_methods == [method]
 
-      errors.add(:provider_payment_methods, "customer_balance cannot be combined with other payment methods")
+        errors.add(:provider_payment_methods, "#{method} cannot be combined with other payment methods")
+      end
     end
   end
 end

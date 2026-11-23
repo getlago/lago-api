@@ -374,6 +374,63 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
       expect(result.payment_url).to be_present
     end
 
+    context "with a payment request of 12345 subunits" do
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          amount_cents: 12_345,
+          amount_currency: currency,
+          invoices: [invoice]
+        )
+      end
+
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 12_345,
+          currency:,
+          ready_for_payment_processing: true
+        )
+      end
+
+      context "when the currency has two decimals" do
+        let(:currency) { "INR" }
+
+        it "sends the amount in major units" do
+          described_class.call(:generate_payment_url, payment_request)
+
+          expect(cashfree_client).to have_received(:post_with_response)
+            .with(hash_including(link_amount: 123.45, link_currency: "INR"), anything) # 12345 paise / 100
+        end
+      end
+
+      context "when the currency has no decimals" do
+        let(:currency) { "JPY" }
+
+        it "sends the amount in major units" do
+          described_class.call(:generate_payment_url, payment_request)
+
+          expect(cashfree_client).to have_received(:post_with_response)
+            .with(hash_including(link_amount: 12_345.0, link_currency: "JPY"), anything) # 12345 yen, 1 subunit per yen
+        end
+      end
+
+      context "when the currency has three decimals" do
+        let(:currency) { "KWD" }
+
+        it "sends the amount in major units" do
+          described_class.call(:generate_payment_url, payment_request)
+
+          expect(cashfree_client).to have_received(:post_with_response)
+            .with(hash_including(link_amount: 12.345, link_currency: "KWD"), anything) # 12345 fils / 1000
+        end
+      end
+    end
+
     context "when payment url failed to generate" do
       let(:payment_links_response) { Net::HTTPResponse.new("1.0", "400", "Bad Request") }
       let(:payment_links_body) do
