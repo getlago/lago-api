@@ -15,14 +15,16 @@ RSpec.describe CopyToProduction::Items::PricingUnitItem do
   end
 
   describe "#find_existing" do
-    let!(:live_pricing_unit) { create(:pricing_unit, organization: production, code: "credits") }
+    let(:live_pricing_unit) { create(:pricing_unit, organization: production, code: "credits") }
+
+    before { live_pricing_unit }
 
     it "finds the production pricing unit with the same code" do
       expect(item.find_existing(pricing_unit)).to eq(live_pricing_unit)
     end
 
     context "when only another organization has the code" do
-      let!(:live_pricing_unit) { create(:pricing_unit, code: "credits") }
+      let(:live_pricing_unit) { create(:pricing_unit, code: "credits") }
 
       it "finds nothing" do
         expect(item.find_existing(pricing_unit)).to be_nil

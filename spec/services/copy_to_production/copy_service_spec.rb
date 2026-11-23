@@ -533,10 +533,11 @@ RSpec.describe CopyToProduction::CopyService do
     end
 
     context "when production has products, metrics and taxes with the same codes" do
-      let!(:live_seat) { create(:product, :fixed, :standalone, organization: production, code: "seat", name: "Live seat") }
-      let!(:live_metric) { create(:billable_metric, organization: production, code: "api_calls") }
+      let(:live_seat) { create(:product, :fixed, :standalone, organization: production, code: "seat", name: "Live seat") }
+      let(:live_metric) { create(:billable_metric, organization: production, code: "api_calls") }
 
       before do
+        live_seat
         create(:billable_metric_filter, billable_metric: live_metric, key: "region", values: %w[eu us])
         create(:tax, organization: production, code: "vat_fr")
       end
@@ -551,6 +552,21 @@ RSpec.describe CopyToProduction::CopyService do
         expect(result.reused_items.map { [it.item_type, it.record] }).to eq([["billable_metric", live_metric], ["product", live_seat]])
         expect(production.products.find_by!(code: "api").billable_metric).to eq(live_metric)
         expect(production.rate_cards.find_by(code: "seat_eur")).to be_nil
+      end
+    end
+
+    context "when a product's metric uses a custom aggregation" do
+      let(:metric) do
+        create(:billable_metric, organization: sandbox, code: "api_calls", aggregation_type: "custom_agg",
+          custom_aggregator: "aggregator")
+      end
+
+      it "refuses the copy" do
+        expect { result }.not_to change { [ProductCategory.count, Product.count, BillableMetric.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_item_unsupported")
       end
     end
 
@@ -594,7 +610,9 @@ RSpec.describe CopyToProduction::CopyService do
       end
 
       context "when production has the pricing unit" do
-        let!(:live_pricing_unit) { create(:pricing_unit, organization: production, code: "credits") }
+        let(:live_pricing_unit) { create(:pricing_unit, organization: production, code: "credits") }
+
+        before { live_pricing_unit }
 
         it "reuses it" do
           expect(result).to be_success
@@ -625,7 +643,9 @@ RSpec.describe CopyToProduction::CopyService do
     end
 
     context "when its category is live" do
-      let!(:live_category) { create(:product_category, organization: production, code: "compute") }
+      let(:live_category) { create(:product_category, organization: production, code: "compute") }
+
+      before { live_category }
 
       it "copies the product into it with its metric and rate cards" do
         expect(result).to be_success
@@ -637,6 +657,65 @@ RSpec.describe CopyToProduction::CopyService do
         expect(result.reused_items.map(&:record)).to eq([live_category])
         expect(live_product.product_category).to eq(live_category)
         expect(live_product.rate_cards.sole.rates.count).to eq(1)
+      end
+    end
+
+    context "when its category is live and something it brings along cannot be copied" do
+      let(:live_category) { create(:product_category, organization: production, code: "compute") }
+
+      before { live_category }
+
+      context "when its metric uses a custom aggregation" do
+        let(:metric) do
+          create(:billable_metric, organization: sandbox, code: "api_calls", aggregation_type: "custom_agg",
+            custom_aggregator: "aggregator")
+        end
+
+        it "refuses the copy" do
+          expect { result }.not_to change { [Product.count, BillableMetric.count] }
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("copy_to_production_item_unsupported")
+        end
+      end
+
+      context "when another production product uses the code of its rate card" do
+        let(:live_rate_card) { create(:rate_card, organization: production, code: "api_eur") }
+
+        before { live_rate_card }
+
+        it "refuses the copy" do
+          expect { result }.not_to change { [Product.count, RateCard.count] }
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("copy_to_production_code_conflict")
+        end
+      end
+
+      context "when the live metric it reuses lacks a filter value it uses" do
+        let(:live_metric) { create(:billable_metric, organization: production, code: "api_calls") }
+        let(:filter) { create(:product_filter, organization: sandbox, product:, code: "eu_only") }
+
+        before do
+          create(:billable_metric_filter, billable_metric: live_metric, key: "region", values: %w[us])
+          create(
+            :product_filter_value,
+            organization: sandbox,
+            product_filter: filter,
+            billable_metric_filter: metric.filters.find_by(key: "region"),
+            value: "eu"
+          )
+        end
+
+        it "refuses the copy" do
+          expect { result }.not_to change { [Product.count, ProductFilter.count] }
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("copy_to_production_filter_missing")
+        end
       end
     end
 

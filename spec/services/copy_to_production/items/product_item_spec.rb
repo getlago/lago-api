@@ -27,7 +27,9 @@ RSpec.describe CopyToProduction::Items::ProductItem do
   end
 
   describe "#find_existing" do
-    let!(:live_product) { create(:product, organization: production, code: "api") }
+    let(:live_product) { create(:product, organization: production, code: "api") }
+
+    before { live_product }
 
     it "finds the kept production product with the same code" do
       expect(item.find_existing(product)).to eq(live_product)

@@ -15,7 +15,9 @@ RSpec.describe CopyToProduction::Items::TaxItem do
   end
 
   describe "#find_existing" do
-    let!(:live_tax) { create(:tax, organization: production, code: "vat") }
+    let(:live_tax) { create(:tax, organization: production, code: "vat") }
+
+    before { live_tax }
 
     it "finds the kept production tax with the same code" do
       expect(item.find_existing(tax)).to eq(live_tax)

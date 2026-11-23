@@ -15,17 +15,29 @@ RSpec.describe CopyToProduction::Items::RateCardItem do
   end
 
   describe "#find_existing" do
-    let!(:live_rate_card) { create(:rate_card, organization: production, code: "api_eur") }
+    let(:live_rate_card) { create(:rate_card, organization: production, code: "api_eur") }
 
-    it "finds the kept production rate card with the same code" do
-      expect(item.find_existing(rate_card)).to eq(live_rate_card)
+    before { live_rate_card }
+
+    it "never reuses a production rate card" do
+      expect(item.find_existing(rate_card)).to be_nil
+    end
+  end
+
+  describe "#refusal" do
+    let(:live_rate_card) { create(:rate_card, organization: production, code: "api_eur") }
+
+    before { live_rate_card }
+
+    it "answers copy_to_production_code_conflict when production uses its code" do
+      expect(item.refusal(rate_card)).to eq("copy_to_production_code_conflict")
     end
 
     context "when the production rate card is deleted" do
       before { live_rate_card.discard! }
 
-      it "finds nothing" do
-        expect(item.find_existing(rate_card)).to be_nil
+      it "answers nil" do
+        expect(item.refusal(rate_card)).to be_nil
       end
     end
   end

@@ -18,8 +18,14 @@ module CopyToProduction
         sandbox.rate_cards.includes(*PRELOADS).find_by(id:)
       end
 
-      def find_existing(source)
-        production.rate_cards.find_by(code: source.code)
+      # A rate card is only copied as part of a new product, so it is never reused: a live card with its code belongs
+      # to another product, which refuses the copy.
+      def find_existing(_source)
+        nil
+      end
+
+      def refusal(source)
+        "copy_to_production_code_conflict" if production.rate_cards.exists?(code: source.code)
       end
 
       def dependencies(source)
@@ -37,6 +43,7 @@ module CopyToProduction
         RateCards::CreateService.call!(
           product:,
           params: source.slice(*ATTRIBUTES).merge(
+            # Deleting a product filter discards its rate cards, so a kept card's filter is kept and was copied.
             product_filter_id: source.product_filter && product.filters.find_by!(code: source.product_filter.code).id,
             tax_codes: source.taxes.map(&:code),
             rates: rates_params(source)
