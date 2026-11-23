@@ -50,10 +50,11 @@ module Contracts
         **plan_wallet.attributes.slice(*WALLET_ATTRIBUTES)
       )
 
-      plan_wallet.selectors.each do |selector|
+      # A wallet renders its scope and its taxes by the order they were added in, so the copies keep the template's.
+      in_added_order(plan_wallet.selectors).each do |selector|
         wallet.selectors.create!(organization:, **selector.attributes.slice(*SELECTOR_ATTRIBUTES))
       end
-      plan_wallet.applied_taxes.each do |applied_tax|
+      in_added_order(plan_wallet.applied_taxes).each do |applied_tax|
         wallet.applied_taxes.create!(organization:, tax_id: applied_tax.tax_id)
       end
       plan_wallet.credit_allocations.each do |allocation|
@@ -63,6 +64,10 @@ module Contracts
       UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService.call!(plan_wallet:, catalog_wallet: wallet)
 
       wallet
+    end
+
+    def in_added_order(records)
+      records.sort_by { [it.created_at, it.id] }
     end
   end
 end
