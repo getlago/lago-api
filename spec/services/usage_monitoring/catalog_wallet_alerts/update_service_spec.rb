@@ -247,6 +247,18 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
           )
           expect(resolved.crossed_thresholds).to eq([{"code" => "low", "value" => "10000.0", "recurring" => false}])
         end
+
+        context "when the wallet was emptied since the alert was last observed" do
+          # An empty wallet seeds nothing, but the edit still closes the alarm of the line it removes
+          let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 0) }
+
+          it "resolves it all the same and seeds nothing more" do
+            expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("alert.resolved", instance_of(UsageMonitoring::CatalogWalletTriggeredAlert))
+
+            expect(alert.all_triggered_alerts.resolved.sole.resolution_reason).to eq("threshold_removed")
+            expect(alert.all_triggered_alerts.seeded.count).to eq(1)
+          end
+        end
       end
     end
 

@@ -70,8 +70,13 @@ module UsageMonitoring
         alert.thresholds.delete_all
         alert.thresholds.create!(prepare_thresholds(thresholds, alert.organization_id))
         alert.reload_thresholds
-        seed_alarms_already_past(alert, alertable)
+        seed_after_edit(alert, alertable)
         resolve_alarms_closed_by_edit(alert, alertable, lines_before)
+      end
+
+      # An alert family that seeds an edit differently overrides this step only
+      def seed_after_edit(alert, alertable)
+        seed_alarms_already_past(alert, alertable)
       end
 
       # Thresholds are replaced wholesale, so an update that leaves notify_on out would otherwise
