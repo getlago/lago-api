@@ -57,7 +57,7 @@ SELECT
                     fao.invoice_display_name,
                     fao.name
                 ) -- 5 is fixed_charge
-                WHEN 6 THEN COALESCE(pr.invoice_display_name, pr.name) -- 6 is product
+                WHEN 6 THEN COALESCE(NULLIF(pr.invoice_display_name, ''), pr.name) -- 6 is product, empty display name falls back like Product#invoice_name
                 ELSE p.invoice_display_name -- everything else is subscription
             END
         ),
