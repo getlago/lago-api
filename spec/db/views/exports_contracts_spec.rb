@@ -46,6 +46,7 @@ RSpec.describe "exports_contracts view" do # rubocop:disable RSpec/DescribeClass
         lago_id
         lago_customer_id
         external_id
+        code
         name
         status
         billing_anchor_date
@@ -74,6 +75,7 @@ RSpec.describe "exports_contracts view" do # rubocop:disable RSpec/DescribeClass
       lago_id: contract.id,
       lago_customer_id: customer.id,
       external_id: contract.external_id,
+      code: contract.code,
       name: "Enterprise contract",
       status: "active",
       billing_anchor_date: Date.new(2026, 1, 15),

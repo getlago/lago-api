@@ -486,6 +486,7 @@ DROP TRIGGER IF EXISTS record_deletions_on_invoice_subscriptions ON public.invoi
 DROP TRIGGER IF EXISTS record_deletions_on_fees_taxes ON public.fees_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_fees ON public.fees;
 DROP TRIGGER IF EXISTS record_deletions_on_credit_notes_taxes ON public.credit_notes_taxes;
+DROP TRIGGER IF EXISTS record_deletions_on_contract_rate_cards_terms ON public.contract_rate_cards_terms;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
@@ -1553,7 +1554,6 @@ DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.presentation_breakdowns;
 DROP TABLE IF EXISTS public.plan_wallets;
 DROP TABLE IF EXISTS public.plan_wallet_credit_allocations;
-DROP TABLE IF EXISTS public.plan_rate_cards;
 DROP TABLE IF EXISTS public.pending_vies_checks;
 DROP TABLE IF EXISTS public.pending_signups;
 DROP TABLE IF EXISTS public.pending_signup_tokens;
@@ -1615,6 +1615,8 @@ DROP VIEW IF EXISTS public.exports_pricing_units;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
+DROP VIEW IF EXISTS public.exports_plan_rate_cards;
+DROP TABLE IF EXISTS public.plan_rate_cards;
 DROP VIEW IF EXISTS public.exports_payments;
 DROP VIEW IF EXISTS public.exports_payment_requests;
 DROP TABLE IF EXISTS public.payments;
@@ -1653,7 +1655,11 @@ DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
 DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_coupons;
+DROP VIEW IF EXISTS public.exports_contracts;
+DROP VIEW IF EXISTS public.exports_contract_rate_cards_terms;
+DROP VIEW IF EXISTS public.exports_contract_rate_cards;
 DROP VIEW IF EXISTS public.exports_charges;
+DROP VIEW IF EXISTS public.exports_catalog_plans;
 DROP VIEW IF EXISTS public.exports_billing_entities;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
@@ -4343,6 +4349,24 @@ CREATE VIEW public.exports_billing_entities AS
 
 
 --
+-- Name: exports_catalog_plans; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_catalog_plans AS
+ SELECT cp.organization_id,
+    cp.id AS lago_id,
+    cp.code,
+    cp.name,
+    cp.invoice_display_name,
+    cp.description,
+    cp.currency,
+    cp.created_at,
+    cp.updated_at,
+    cp.deleted_at
+   FROM public.catalog_plans cp;
+
+
+--
 -- Name: exports_charges; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4381,6 +4405,69 @@ CREATE VIEW public.exports_charges AS
            FROM public.charge_filters cf
           WHERE (cf.charge_id = c.id)) AS charge_filters
    FROM public.charges c;
+
+
+--
+-- Name: exports_contract_rate_cards; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_contract_rate_cards AS
+ SELECT crc.organization_id,
+    crc.id AS lago_id,
+    crc.contract_id AS lago_contract_id,
+    crc.rate_card_id AS lago_rate_card_id,
+    crc.billing_anchor_date,
+    crc.next_billing_at,
+    crc.effective_date,
+    crc.created_at,
+    crc.updated_at,
+    crc.deleted_at
+   FROM public.contract_rate_cards crc;
+
+
+--
+-- Name: exports_contract_rate_cards_terms; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_contract_rate_cards_terms AS
+ SELECT crct.organization_id,
+    crct.id AS lago_id,
+    crct.contract_rate_card_id AS lago_contract_rate_card_id,
+    crct.units,
+    crct.effective_date,
+    (crct.application_timing)::text AS application_timing,
+    crct.created_at,
+    crct.updated_at
+   FROM public.contract_rate_cards_terms crct;
+
+
+--
+-- Name: exports_contracts; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_contracts AS
+ SELECT c.organization_id,
+    c.id AS lago_id,
+    c.customer_id AS lago_customer_id,
+    c.external_id,
+    c.code,
+    c.name,
+    (c.status)::text AS status,
+    c.billing_anchor_date,
+    c.started_at,
+    c.ended_at,
+    c.terminated_at,
+    c.canceled_at,
+    c.catalog_plan_id AS lago_catalog_plan_id,
+    c.billing_entity_id AS lago_billing_entity_id,
+    c.payment_method_id AS lago_payment_method_id,
+    (c.payment_method_type)::text AS payment_method_type,
+    c.purchase_order_number,
+    c.consolidate_invoice,
+    c.skip_invoice_custom_sections,
+    c.created_at,
+    c.updated_at
+   FROM public.contracts c;
 
 
 --
@@ -5598,6 +5685,38 @@ CREATE VIEW public.exports_payments AS
             ELSE to_json(ARRAY[]::uuid[])
         END AS invoice_ids
    FROM public.payments p;
+
+
+--
+-- Name: plan_rate_cards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plan_rate_cards (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_card_id uuid NOT NULL,
+    units numeric,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    catalog_plan_id uuid
+);
+
+
+--
+-- Name: exports_plan_rate_cards; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_plan_rate_cards AS
+ SELECT prc.organization_id,
+    prc.id AS lago_id,
+    prc.catalog_plan_id AS lago_catalog_plan_id,
+    prc.rate_card_id AS lago_rate_card_id,
+    prc.units,
+    prc.created_at,
+    prc.updated_at,
+    prc.deleted_at
+   FROM public.plan_rate_cards prc;
 
 
 --
@@ -6836,22 +6955,6 @@ CREATE TABLE public.pending_vies_checks (
     last_error_message text,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: plan_rate_cards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.plan_rate_cards (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    rate_card_id uuid NOT NULL,
-    units numeric,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    catalog_plan_id uuid
 );
 
 
@@ -15086,6 +15189,13 @@ CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.roles FOR EACH ROW EXE
 
 
 --
+-- Name: contract_rate_cards_terms record_deletions_on_contract_rate_cards_terms; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER record_deletions_on_contract_rate_cards_terms AFTER DELETE ON public.contract_rate_cards_terms DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
+
+
+--
 -- Name: credit_notes_taxes record_deletions_on_credit_notes_taxes; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -18904,6 +19014,12 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261124113226'),
+('20261123224020'),
+('20261123224017'),
+('20261123222615'),
+('20261123222612'),
+('20261123222610'),
+('20261123222607'),
 ('20261123185222'),
 ('20261123142220'),
 ('20261123142148'),

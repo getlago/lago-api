@@ -3,6 +3,7 @@ SELECT
   c.id AS lago_id,
   c.customer_id AS lago_customer_id,
   c.external_id,
+  c.code,
   c.name,
   c.status::text AS status,
   c.billing_anchor_date,
