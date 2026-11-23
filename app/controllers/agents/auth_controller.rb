@@ -43,13 +43,14 @@ module Agents
     end
 
     def me
-      return if throttled?(:agent_me_per_ip, request.remote_ip)
+      return if limit_reached?(:agent_me_failed_per_ip, request.remote_ip)
 
       result = Agents::Auth::VerifyTokenService.call(storefront:, token: bearer_token, scope: storefront.scope)
 
       if result.success?
         render(json: {registration_id: result.registration.id, scope: storefront.scope, status: result.registration.status})
       else
+        ::Auth::AttemptsThrottle.hit!(:agent_me_failed_per_ip, request.remote_ip)
         render_error_response(result)
       end
     end
