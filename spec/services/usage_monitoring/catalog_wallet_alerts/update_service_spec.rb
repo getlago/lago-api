@@ -247,6 +247,19 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
       end
     end
 
+    # Created while the contract was pending: nothing starts it when money arrives yet
+    context "when a balance alert has no baseline on a funded wallet" do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
+      let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}]} }
+
+      it "changes the thresholds and seeds nothing" do
+        expect(result).to be_success
+        expect(alert.reload.previous_value).to be_nil
+        expect(alert.all_triggered_alerts).to be_empty
+      end
+    end
+
     it "updates the name and replaces the thresholds, recording and sending nothing" do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
 

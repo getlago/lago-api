@@ -59,6 +59,16 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::BaselineService do
       expect(ongoing_alert.reload.previous_value).to eq(0)
       expect(ongoing_alert.all_triggered_alerts).to be_empty
     end
+
+    context "when usage already took the ongoing balance below 0" do
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 0, ongoing_balance_cents: -300) }
+
+      it "starts the ongoing balance alert at that value and seeds nothing" do
+        expect(result.alerts).to eq([ongoing_alert])
+        expect(ongoing_alert.reload.previous_value).to eq(-300)
+        expect(ongoing_alert.all_triggered_alerts).to be_empty
+      end
+    end
   end
 
   context "when the alert already has a baseline" do
