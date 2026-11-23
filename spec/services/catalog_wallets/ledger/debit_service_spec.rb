@@ -93,6 +93,53 @@ describe CatalogWallets::Ledger::DebitService do
     end
   end
 
+  context "when the wallet already paid the invoice" do
+    let(:consumptions) { [{inbound_transaction: older_entry, fee: first_fee, credit_amount_cents: 1_000}] }
+    let(:first_debit) do
+      described_class.call!(
+        wallet: CatalogWallet.find(wallet.id),
+        reason:,
+        invoice:,
+        consumptions: [{inbound_transaction: CatalogWalletTransaction.find(older_entry.id), fee: first_fee, credit_amount_cents: 1_000}]
+      ).wallet_transaction
+    end
+
+    before { first_debit }
+
+    it "returns the first debit and writes nothing" do
+      expect { result }.not_to change {
+        [
+          wallet.reload.balance_cents,
+          older_entry.reload.remaining_credit_amount_cents,
+          CatalogWalletTransaction.outbound.count,
+          CatalogWalletConsumption.count
+        ]
+      }
+
+      expect(result).to be_success
+      expect(result.wallet_transaction).to eq(first_debit)
+    end
+  end
+
+  context "when another wallet of the customer paid the invoice" do
+    let(:other_wallet) { create(:catalog_wallet, organization:, customer:, balance_cents: 1_000) }
+    let(:other_entry) { create(:catalog_wallet_transaction, organization:, catalog_wallet: other_wallet, credit_amount_cents: 1_000) }
+
+    before do
+      described_class.call!(
+        wallet: other_wallet,
+        reason:,
+        invoice:,
+        consumptions: [{inbound_transaction: other_entry, fee: first_fee, credit_amount_cents: 1_000}]
+      )
+    end
+
+    it "debits this wallet too" do
+      expect(result).to be_success
+      expect(wallet.reload.balance_cents).to eq(15_000 - 10_000)
+    end
+  end
+
   shared_examples "a refused debit" do
     it "changes nothing" do
       expect { result }.not_to change {
@@ -190,6 +237,51 @@ describe CatalogWallets::Ledger::DebitService do
 
   context "without any row" do
     let(:consumptions) { [] }
+
+    it "raises" do
+      expect { result }.to raise_error(ArgumentError)
+    end
+  end
+
+  context "when a row names no entry" do
+    let(:consumptions) { [{fee: first_fee, credit_amount_cents: 1_000}] }
+
+    it "raises" do
+      expect { result }.to raise_error(ArgumentError)
+    end
+  end
+
+  context "when a fee is on another invoice" do
+    let(:second_fee) { create(:fee, invoice: create(:invoice, organization:, customer:)) }
+
+    it "raises" do
+      expect { result }.to raise_error(ArgumentError)
+    end
+  end
+
+  context "when the invoice is another customer's" do
+    let(:invoice) { create(:invoice, organization:, customer: create(:customer, organization:)) }
+
+    it "raises" do
+      expect { result }.to raise_error(ArgumentError)
+    end
+  end
+
+  context "when a void names an invoice" do
+    let(:reason) { "void" }
+    let(:consumptions) { [{inbound_transaction: newer_entry, credit_amount_cents: 4_000}] }
+
+    it "raises" do
+      expect { result }.to raise_error(ArgumentError)
+    end
+  end
+
+  context "when a void row names a fee" do
+    let(:reason) { "void" }
+    let(:invoice) { nil }
+    let(:consumptions) do
+      [{inbound_transaction: newer_entry, fee: create(:fee, invoice: create(:invoice, organization:, customer:)), credit_amount_cents: 4_000}]
+    end
 
     it "raises" do
       expect { result }.to raise_error(ArgumentError)
