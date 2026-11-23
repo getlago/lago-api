@@ -39,7 +39,7 @@ module Mutations
       end
 
       def mailbox_throttled?(result)
-        result.error.is_a?(BaseService::MethodNotAllowedFailure) && result.error.code == "too_many_requests"
+        result.error.is_a?(BaseService::ForbiddenFailure) && result.error.code == "too_many_requests"
       end
     end
   end

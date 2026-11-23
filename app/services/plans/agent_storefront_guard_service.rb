@@ -15,7 +15,7 @@ module Plans
       if X402::PlanEligibility.usage_only?(plan.reload)
         result
       else
-        result.not_allowed_failure!(code: "plan_sold_by_agent_storefront")
+        result.forbidden_failure!(code: "plan_sold_by_agent_storefront")
       end
     end
 
