@@ -107,6 +107,13 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
       let(:category_rate_card) do
         create(:rate_card, organization:, product: category_product, billing_timing: :arrears, currency: "EUR")
       end
+      let(:second_category_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+      let(:second_category_product) do
+        create(:product, :metered, organization:, product_category:, billable_metric: second_category_metric)
+      end
+      let(:second_category_rate_card) do
+        create(:rate_card, organization:, product: second_category_product, billing_timing: :arrears, currency: "EUR")
+      end
 
       before do
         create(:contract_rate_card, organization:, contract:, rate_card: category_rate_card,
@@ -116,16 +123,23 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
         create(:rate_card_applied_tax, rate_card: category_rate_card, tax: create(:tax, organization:, rate: 20))
         create(:event, organization:, customer:, external_subscription_id: contract.external_id,
           code: category_metric.code, timestamp: Time.zone.parse("2027-02-05"))
+
+        create(:contract_rate_card, organization:, contract:, rate_card: second_category_rate_card,
+          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 2, 3))
+        create(:rate_card_rate, organization:, rate_card: second_category_rate_card,
+          effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "4"})
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: second_category_metric.code, timestamp: Time.zone.parse("2027-02-05"))
       end
 
-      it "splits the total by product category, each with its own taxes and window" do
+      it "splits the total by product category, summing each category's rate cards, taxes and windows" do
         result = execute_graphql(
           current_user: membership.user, current_organization: organization,
           permissions: required_permission, query:, variables: {contractId: contract.id}
         )
 
         totals = result["data"]["contractCurrentUsageTotal"]
-        expect(totals).to include("amountCents" => "500", "taxesAmountCents" => "60", "totalAmountCents" => "560")
+        expect(totals).to include("amountCents" => "900", "taxesAmountCents" => "60", "totalAmountCents" => "960")
         expect(totals["productCategoryTotals"]).to contain_exactly(
           {
             "productCategory" => nil,
@@ -134,8 +148,8 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
           },
           {
             "productCategory" => {"id" => product_category.id, "name" => "Compute"},
-            "amountCents" => "300", "taxesAmountCents" => "60", "totalAmountCents" => "360",
-            "fromDatetime" => "2027-01-15T00:00:00Z", "toDatetime" => "2027-02-14T23:59:59Z"
+            "amountCents" => "700", "taxesAmountCents" => "60", "totalAmountCents" => "760",
+            "fromDatetime" => "2027-01-15T00:00:00Z", "toDatetime" => "2027-03-02T23:59:59Z"
           }
         )
       end
