@@ -194,5 +194,37 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService do
         end
       end
     end
+
+    context "when the connection pays with a shared payment token" do
+      let(:create_service) { described_class.new(customer:, payment_provider_id:, params:, async:, allow_shared_payment_token: true) }
+      let(:params) { {provider_customer_id: "id", provider_payment_methods: %w[shared_payment_token]} }
+
+      it "does not fetch a payment method from Stripe" do
+        expect { create_service.call }
+          .not_to have_enqueued_job(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob)
+      end
+
+      context "when the caller does not allow it" do
+        let(:create_service) { described_class.new(customer:, payment_provider_id:, params:, async:) }
+
+        it "returns an error without saving the connection" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:provider_payment_methods]).to eq(["value_is_invalid"])
+          expect(PaymentProviderCustomers::StripeCustomer.where(customer:)).to be_empty
+        end
+
+        context "when the connection already pays with a shared payment token" do
+          before do
+            create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_payment_methods: %w[shared_payment_token])
+          end
+
+          it "keeps it" do
+            expect(create_service.call).to be_success
+          end
+        end
+      end
+    end
   end
 end

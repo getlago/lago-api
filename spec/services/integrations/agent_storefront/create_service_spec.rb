@@ -45,7 +45,7 @@ RSpec.describe Integrations::AgentStorefront::CreateService do
         result = service_call
 
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
     end
 
@@ -55,7 +55,7 @@ RSpec.describe Integrations::AgentStorefront::CreateService do
           result = service_call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
         end
       end
 
