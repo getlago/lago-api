@@ -42,6 +42,12 @@ describe ContractWallets::UpdateService do
     expect(Utils::ActivityLog).to have_received(:produce).with(contract_wallet, "contract_wallet.updated", after_commit: true)
   end
 
+  it "locks the contract without holding back the rows that reference it" do
+    statements = capture_sql { result }
+
+    expect(statements).to include(a_string_matching(/FROM "contracts".*FOR NO KEY UPDATE/))
+  end
+
   context "when the contract is pending" do
     let(:contract) { create(:contract, :pending, organization:, customer:) }
 
