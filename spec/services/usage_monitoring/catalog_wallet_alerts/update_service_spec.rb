@@ -185,6 +185,81 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
         expect(seeded).to have_attributes(kind: "seeded", catalog_wallet:, current_value: 1_500, previous_value: 1_500)
         expect(seeded.crossed_thresholds).to eq([{"code" => "warning", "value" => "2000.0", "recurring" => false}])
       end
+
+      context "when the line it moves out of alarm had been recorded" do
+        # "low" was at 10000, in alarm at 1500, and moves to 1000, out of alarm
+        before { create(:catalog_wallet_triggered_alert, organization:, alert:, kind: :seeded, current_value: 1_500, previous_value: 1_500, crossed_thresholds: [{code: "low", value: BigDecimal(10_000), recurring: false}]) }
+
+        it "resolves it with threshold_updated and sends alert.resolved" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("alert.resolved", instance_of(UsageMonitoring::CatalogWalletTriggeredAlert))
+
+          # "warning" at 2000 stays in alarm at 1500, so the alert is not fully resolved
+          resolved = alert.all_triggered_alerts.resolved.sole
+          expect(resolved).to have_attributes(
+            resolution_reason: "threshold_updated",
+            current_value: 1_500,
+            previous_value: 1_500,
+            in_alarm_thresholds: ["warning"],
+            fully_resolved: false,
+            catalog_wallet:
+          )
+          expect(resolved.crossed_thresholds).to eq([{"code" => "low", "value" => "10000.0", "recurring" => false}])
+        end
+
+        context "when the line moves but stays in alarm" do
+          # 5000 is still above the balance of 1500
+          let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}, {code: "low", value: "5000", notify_on: %w[triggered resolved]}]} }
+
+          it "resolves nothing and sends nothing" do
+            expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+            expect(alert.all_triggered_alerts.resolved).to be_empty
+          end
+        end
+
+        context "when the line leaves alarm but is opted out of resolutions" do
+          let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}, {code: "low", value: "1000", notify_on: %w[triggered]}]} }
+
+          it "resolves nothing and sends nothing" do
+            expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+            expect(alert.all_triggered_alerts.resolved).to be_empty
+          end
+        end
+      end
+
+      context "when the edit removes a recorded line" do
+        let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}]} }
+
+        before { create(:catalog_wallet_triggered_alert, organization:, alert:, kind: :seeded, current_value: 1_500, previous_value: 1_500, crossed_thresholds: [{code: "low", value: BigDecimal(10_000), recurring: false}]) }
+
+        it "resolves it with threshold_removed and sends alert.resolved" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("alert.resolved", instance_of(UsageMonitoring::CatalogWalletTriggeredAlert))
+
+          resolved = alert.all_triggered_alerts.resolved.sole
+          expect(resolved).to have_attributes(
+            resolution_reason: "threshold_removed",
+            current_value: 1_500,
+            previous_value: 1_500,
+            in_alarm_thresholds: ["warning"],
+            fully_resolved: false,
+            catalog_wallet:
+          )
+          expect(resolved.crossed_thresholds).to eq([{"code" => "low", "value" => "10000.0", "recurring" => false}])
+        end
+
+        context "when the wallet was emptied since the alert was last observed" do
+          # An empty wallet seeds nothing, but the edit still closes the alarm of the line it removes
+          let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 0) }
+
+          it "resolves it all the same and seeds nothing more" do
+            expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("alert.resolved", instance_of(UsageMonitoring::CatalogWalletTriggeredAlert))
+
+            expect(alert.all_triggered_alerts.resolved.sole.resolution_reason).to eq("threshold_removed")
+            expect(alert.all_triggered_alerts.seeded.count).to eq(1)
+          end
+        end
+      end
     end
 
     context "when an ongoing balance alert started on an empty wallet" do
