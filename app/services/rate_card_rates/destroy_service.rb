@@ -24,6 +24,7 @@ module RateCardRates
 
       ActiveRecord::Base.transaction do
         rate_card_rate.discard!
+        RateCardRates::ApplyRateChangeJob.perform_after_commit(rate_card_rate.id)
         SendWebhookJob.perform_after_commit("rate_card_rate.deleted", rate_card_rate)
       end
 

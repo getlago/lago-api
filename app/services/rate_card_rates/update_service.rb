@@ -61,6 +61,7 @@ module RateCardRates
         assign_attributes
         rate_card_rate.save!
 
+        RateCardRates::ApplyRateChangeJob.perform_after_commit(rate_card_rate.id)
         SendWebhookJob.perform_after_commit("rate_card_rate.updated", rate_card_rate)
       end
 

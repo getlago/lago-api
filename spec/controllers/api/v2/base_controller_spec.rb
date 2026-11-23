@@ -18,7 +18,7 @@ RSpec.describe Api::V2::BaseController, type: :controller do
     end
 
     def show
-      reject_offset_pagination!
+      reject_pagination!
       head(:ok)
     end
 
@@ -179,14 +179,44 @@ RSpec.describe Api::V2::BaseController, type: :controller do
     end
   end
 
-  context "with offset pagination parameters on a list returned whole" do
-    subject(:show) { get(:show, params: {id: "1", page: "2"}) }
+  context "with pagination parameters on a list returned whole" do
+    subject(:show) { get(:show, params: {id: "1", **pagination_params}) }
+
+    let(:pagination_params) { {page: "2"} }
 
     it "returns a bad request error" do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:details]).to eq([{code: "not_paginated", field: "page", meta: {}}])
+      expect(json).to eq(
+        code: "invalid_pagination_parameter",
+        details: [{code: "not_paginated", field: "page", meta: {}}]
+      )
+    end
+
+    context "with cursor parameters" do
+      let(:pagination_params) { {limit: "1", cursor: "x", after: "x"} }
+
+      it "returns a bad request error for each parameter" do
+        show
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details]).to eq([
+          {code: "not_paginated", field: "limit", meta: {}},
+          {code: "not_paginated", field: "cursor", meta: {}},
+          {code: "not_paginated", field: "after", meta: {}}
+        ])
+      end
+    end
+
+    context "without pagination parameters" do
+      let(:pagination_params) { {} }
+
+      it "accepts the request" do
+        show
+
+        expect(response).to have_http_status(:ok)
+      end
     end
   end
 end

@@ -526,14 +526,17 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
           create_previous_snapshot(to_datetime: termination_datetime, units: 7, events_count: 2)
         end
 
-        it "returns the latest snapshot of the previous subscription" do
-          expect(fetch_service.call.snapshots).to eq(
+        it "returns the latest snapshot of the previous subscription, in a period marked as inherited" do
+          result = fetch_service.call
+
+          expect(result.snapshots).to eq(
             [
               described_class::Snapshot.new(
                 grouped_by: {}, units: 7, events_count: 2, to_datetime: termination_datetime, watermark:
               )
             ]
           )
+          expect(result.period).to eq(described_class::Period.new(to_datetime: termination_datetime, watermark:, inherited: true))
         end
 
         context "when a filter of the previous charge was removed after its snapshot" do

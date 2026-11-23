@@ -82,4 +82,25 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, :premium do
       "totalPages" => 5
     )
   end
+
+  context "with a plan without interval" do
+    # Product catalog plans and contracts without a plan have no plan interval
+    let(:body_response) do
+      data = JSON.parse(File.read("spec/fixtures/lago_data_api/revenue_streams_plans.json"))
+      data["revenue_streams_plans"].first["plan_interval"] = nil
+      data.to_json
+    end
+
+    it "returns a null interval" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["dataApiRevenueStreamsPlans"]["collection"].first["planInterval"]).to be_nil
+    end
+  end
 end

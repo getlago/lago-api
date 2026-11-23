@@ -110,7 +110,7 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
-    addressable (2.9.0)
+    addressable (2.9.1)
       public_suffix (>= 2.0.2, < 8.0)
     addressing (1.1.0)
     adyen-ruby-api-library (7.3.1)
@@ -1206,7 +1206,7 @@ DEPENDENCIES
   yabeda-rails
 
 RUBY VERSION
-  ruby 4.0.9
+  ruby 4.0.10
 
 BUNDLED WITH
   4.0.16

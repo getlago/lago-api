@@ -54,22 +54,29 @@ RSpec.describe Resolvers::InviteResolver do
       <<~GQL
         query($token: String!) {
           invite(token: $token) {
-            organization { selfServe environment sandboxOrganization { id } }
+            organization { selfServe environment activationStatus sandboxOrganization { id } }
           }
         }
       GQL
     end
 
-    let(:organization) { create(:organization, :self_serve) }
+    let(:organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+    let(:non_member) { create(:user) }
 
     before { create(:organization, :self_serve, :sandbox, production_organization: organization) }
 
-    it "shows the environment but not the sandbox to an anonymous caller" do
+    it "shows the environment but neither the activation status nor the sandbox to an anonymous caller" do
       result = execute_graphql(query:, variables: {token: invite.token})
 
       expect(result["data"]["invite"]["organization"]).to eq(
-        "selfServe" => true, "environment" => "production", "sandboxOrganization" => nil
+        "selfServe" => true, "environment" => "production", "activationStatus" => nil, "sandboxOrganization" => nil
       )
+    end
+
+    it "hides the activation status from a logged-in user who is not a member" do
+      result = execute_graphql(current_user: non_member, query:, variables: {token: invite.token})
+
+      expect(result["data"]["invite"]["organization"]["activationStatus"]).to be_nil
     end
   end
 

@@ -61,6 +61,55 @@ RSpec.describe Api::BaseController, type: :controller do
     end
   end
 
+  describe "#refuse_inactive_organization" do
+    include_context "with self-serve enabled"
+
+    let(:waiting_organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+    let(:api_key) { create(:api_key, organization: waiting_organization) }
+
+    before { request.headers["Authorization"] = "Bearer #{api_key.value}" }
+
+    it "refuses a request for an organization waiting for a payment method" do
+      get :index
+
+      expect(response).to have_http_status(:forbidden)
+      expect(JSON.parse(response.body)).to eq("status" => 403, "error" => "Forbidden", "code" => "organization_inactive")
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "lets the request through, as the organization counts as active" do
+        get :index
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+
+    context "with the sandbox of an organization waiting for a payment method" do
+      let(:sandbox) do
+        create(:organization, :self_serve, :sandbox, production_organization: waiting_organization)
+      end
+      let(:api_key) { create(:api_key, organization: sandbox) }
+
+      it "lets the request through, as the sandbox stays open" do
+        get :index
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+
+    context "with an active organization" do
+      let(:api_key) { create(:api_key) }
+
+      it "lets the request through" do
+        get :index
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+  end
+
   describe "#track_api_key_usage", cache: :memory do
     let(:api_key) { create(:api_key) }
     let(:cache_key) { "api_key_last_used_#{api_key.id}" }

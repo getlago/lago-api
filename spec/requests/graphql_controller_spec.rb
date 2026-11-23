@@ -312,6 +312,90 @@ RSpec.describe GraphqlController do
       end
     end
 
+    context "with an admin of a sandbox organization" do
+      let(:production) { create(:organization) }
+      let(:sandbox) { create(:organization, :sandbox, production_organization: production) }
+      let(:membership) { create(:membership, organization: sandbox, roles: %i[admin]) }
+      let(:headers) do
+        {
+          "Authorization" => "Bearer #{Utils::AuthToken.encode(user: membership.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)}",
+          "x-lago-organization" => sandbox.id
+        }
+      end
+
+      # Create the member and its admin role outside the count expectations
+      before { membership }
+
+      it "reports the permissions its production manages as not held" do
+        query = <<~GQL
+          query {
+            currentUser {
+              memberships {
+                permissions {
+                  organizationMembersCreate organizationMembersUpdate organizationMembersDelete
+                  rolesCreate rolesUpdate rolesDelete authenticationMethodsUpdate
+                  customersView organizationIntegrationsCreate
+                }
+              }
+            }
+          }
+        GQL
+
+        post "/graphql", headers:, params: {query:}
+
+        expect(json[:data][:currentUser][:memberships].sole[:permissions]).to eq(
+          organizationMembersCreate: false,
+          organizationMembersUpdate: false,
+          organizationMembersDelete: false,
+          rolesCreate: false,
+          rolesUpdate: false,
+          rolesDelete: false,
+          authenticationMethodsUpdate: false,
+          customersView: true,
+          organizationIntegrationsCreate: true
+        )
+      end
+
+      it "refuses to invite a member" do
+        query = <<~GQL
+          mutation { createInvite(input: {email: "new.member@example.com", roles: ["admin"]}) { id } }
+        GQL
+
+        expect { post "/graphql", headers:, params: {query:} }.not_to change(Invite, :count)
+        expect(json[:errors].sole[:extensions]).to include(code: "forbidden", required_permissions: ["organization:members:create"])
+      end
+
+      it "refuses to create a role" do
+        query = <<~GQL
+          mutation { createRole(input: {code: "custom", name: "Custom", permissions: [customers_view]}) { id } }
+        GQL
+
+        expect { post "/graphql", headers:, params: {query:} }.not_to change(Role, :count)
+        expect(json[:errors].sole[:extensions]).to include(code: "forbidden", required_permissions: ["roles:create"])
+      end
+
+      it "refuses to create an Okta integration" do
+        query = <<~GQL
+          mutation {
+            createOktaIntegration(input: {clientId: "id", clientSecret: "secret", domain: "sso.test", organizationName: "sso"}) { id }
+          }
+        GQL
+
+        expect { post "/graphql", headers:, params: {query:} }.not_to change(Integrations::OktaIntegration, :count)
+        expect(json[:errors].sole[:extensions]).to include(code: "forbidden", required_permissions: ["authentication_methods:update"])
+      end
+
+      it "ignores the login methods sent to updateOrganization" do
+        query = <<~GQL
+          mutation { updateOrganization(input: {authenticationMethods: [email_password]}) { authenticationMethods } }
+        GQL
+
+        expect { post "/graphql", headers:, params: {query:} }.not_to change { sandbox.reload.authentication_methods }
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:updateOrganization][:authenticationMethods]).to eq(sandbox.authentication_methods)
+      end
+    end
+
     context "with customer portal token" do
       let(:customer) { create(:customer) }
       let(:query) do
