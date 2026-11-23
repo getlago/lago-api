@@ -136,6 +136,15 @@ RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:d
     end
   end
 
+  context "when AFTER_CUSTOMER_ID is not a customer id" do
+    let(:env) { {"AFTER_CUSTOMER_ID" => "abc"} }
+
+    it "aborts" do
+      expect { task.invoke(organization.id) }
+        .to raise_error(SystemExit).and output(/AFTER_CUSTOMER_ID must be a customer id/).to_stderr
+    end
+  end
+
   context "when LIMIT is not a positive integer" do
     let(:env) { {"LIMIT" => "many"} }
 
@@ -207,12 +216,29 @@ RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:d
       end
     end
 
+    context "with AFTER_CUSTOMER_ID" do
+      let(:env) { {"DRY_RUN" => "false", "AFTER_CUSTOMER_ID" => customers_in_order.first.id} }
+
+      it "only processes the customers after it" do
+        expect { task.invoke(organization.id) }.to output(a_string_including("of 1 customer(s)")).to_stdout
+
+        expect(BillingEngineMigrations::CopyCustomerSubscriptionsJob)
+          .to have_been_enqueued.with(migration, match_array(subscription_ids_of(customers_in_order.last)))
+        expect(BillingEngineMigrations::CopyCustomerSubscriptionsJob).to have_been_enqueued.once
+      end
+    end
+
     context "with a LIMIT" do
       let(:env) { {"DRY_RUN" => "false", "LIMIT" => "1"} }
 
-      it "stops after that number of customers" do
+      it "stops after that number of customers and prints where to resume" do
         expect { task.invoke(organization.id) }.to output(
-          a_string_including("Enqueued", "of 1 customer(s)", "Stopped at 1 customer(s)")
+          a_string_including(
+            "Enqueued",
+            "of 1 customer(s)",
+            "Stopped at 1 customer(s)",
+            "AFTER_CUSTOMER_ID=#{customers_in_order.first.id}"
+          )
         ).to_stdout
 
         expect(BillingEngineMigrations::CopyCustomerSubscriptionsJob)

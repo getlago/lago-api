@@ -3,11 +3,13 @@
 class BillingEngineSubscriptionsBackfill
   CUSTOMER_BATCH_SIZE = 1_000
 
-  def initialize(migration:, dry_run:, customers_per_minute:, customer_limit: nil)
+  def initialize(migration:, dry_run:, customers_per_minute:, customer_limit: nil, after_customer_id: nil)
     @migration = migration
     @dry_run = dry_run
     @customers_per_minute = customers_per_minute
     @customer_limit = customer_limit
+    @after_customer_id = after_customer_id
+    @last_customer_id = nil
     @enqueued_customers = 0
     @enqueued_subscriptions = 0
     @skipped = Hash.new(0)
@@ -22,13 +24,16 @@ class BillingEngineSubscriptionsBackfill
     end
 
     puts summary
-    puts "Stopped at #{customer_limit} customer(s): run the task again once these jobs have run" if customer_limit_reached?
+    return unless customer_limit_reached?
+
+    puts "Stopped at #{customer_limit} customer(s): once these jobs have run, run the task again with " \
+      "AFTER_CUSTOMER_ID=#{last_customer_id}"
   end
 
   private
 
-  attr_reader :migration, :dry_run, :customers_per_minute, :customer_limit,
-    :enqueued_customers, :enqueued_subscriptions, :skipped
+  attr_reader :migration, :dry_run, :customers_per_minute, :customer_limit, :after_customer_id,
+    :enqueued_customers, :enqueued_subscriptions, :skipped, :last_customer_id
 
   def mode
     dry_run ? "DRY RUN" : "LIVE"
@@ -42,21 +47,28 @@ class BillingEngineSubscriptionsBackfill
   end
 
   def each_customer_batch
-    candidates.distinct.order(:customer_id).pluck(:customer_id).each_slice(CUSTOMER_BATCH_SIZE) do |customer_ids|
+    customer_ids_to_process.each_slice(CUSTOMER_BATCH_SIZE) do |customer_ids|
       break if customer_limit_reached?
 
       yield customer_ids
     end
   end
 
+  def customer_ids_to_process
+    scope = candidates.distinct.order(:customer_id)
+    scope = scope.where(Subscription.arel_table[:customer_id].gt(after_customer_id)) if after_customer_id
+    scope.pluck(:customer_id)
+  end
+
   def process(subscriptions)
     contracts = shadow_contracts(subscriptions)
 
-    subscriptions.group_by(&:customer_id).each_value do |customer_subscriptions|
+    subscriptions.group_by(&:customer_id).each do |customer_id, customer_subscriptions|
       break if customer_limit_reached?
 
       to_copy = customer_subscriptions.reject { |subscription| skipped?(subscription, contracts) }
       enqueue(to_copy) if to_copy.any?
+      @last_customer_id = customer_id
     end
   end
 
@@ -150,11 +162,15 @@ namespace :billing_engine_migrations do
     customer_limit = ENV["LIMIT"].presence && Integer(ENV["LIMIT"], exception: false)
     abort "LIMIT must be a positive integer" if ENV["LIMIT"].present? && !customer_limit&.positive?
 
+    after_customer_id = ENV["AFTER_CUSTOMER_ID"].presence
+    abort "AFTER_CUSTOMER_ID must be a customer id" if after_customer_id && !Regex::UUID.match?(after_customer_id)
+
     BillingEngineSubscriptionsBackfill.new(
       migration:,
       dry_run: ENV.fetch("DRY_RUN", "true") != "false",
       customers_per_minute:,
-      customer_limit:
+      customer_limit:,
+      after_customer_id:
     ).run
   end
 end
