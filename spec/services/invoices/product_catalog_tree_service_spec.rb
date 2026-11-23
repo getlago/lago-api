@@ -13,13 +13,37 @@ RSpec.describe Invoices::ProductCatalogTreeService do
   let(:catering) { create(:contract, organization:, customer:, name: "Bistro catering") }
 
   let(:food) { create(:product_category, organization:, name: "Food", invoice_display_name: nil) }
+  let(:drinks) { create(:product_category, organization:, name: "Drinks", invoice_display_name: nil) }
   let(:salad) { create(:product, organization:, product_category: food, name: "Salad", invoice_display_name: nil) }
-  let(:hamburger) { create(:product, organization:, product_category: food, name: "Hamburger", invoice_display_name: nil) }
+  let(:hamburger) { create(:product, organization:, product_category: food, name: "Hamburger", invoice_display_name: "Zesty burger") }
+  let(:coffee) { create(:product, organization:, product_category: drinks, name: "Coffee", invoice_display_name: nil) }
   let(:wine) { create(:product, :fixed, :standalone, organization:, name: "Wine", invoice_display_name: nil) }
   let(:caesar) { create(:product_filter, organization:, product: salad, name: "Caesar", invoice_display_name: nil) }
   let(:caprese) { create(:product_filter, organization:, product: salad, name: "Caprese", invoice_display_name: nil) }
 
   let(:caesar_fee) { product_fee(annual, salad, amount_cents: 14_000, product_filter: caesar) }
+
+  let(:expected_tree) do
+    [
+      [
+        "Bistro annual",
+        [
+          ["Drinks", [["Coffee", 400, 1, []]]],
+          [
+            "Food",
+            [
+              # 14_000 caesar + 200 true-up + 10_000 caprese, the true-up counted under the filter of its parent
+              ["Salad", 24_200, 3, [["Caesar", 14_200, 2], ["Caprese", 10_000, 1]]],
+              # sorted on its invoice name, Zesty burger
+              ["Hamburger", 3_000, 1, []]
+            ]
+          ],
+          [nil, [["Wine", 5_000, 1, []]]]
+        ]
+      ],
+      ["Bistro catering", [["Food", [["Salad", 6_000, 1, []]]]]]
+    ]
+  end
 
   before do
     product_fee(catering, salad, amount_cents: 6_000)
@@ -27,6 +51,7 @@ RSpec.describe Invoices::ProductCatalogTreeService do
     product_fee(annual, salad, amount_cents: 10_000, product_filter: caprese)
     product_fee(annual, salad, amount_cents: 200, true_up_parent_fee: caesar_fee)
     product_fee(annual, hamburger, amount_cents: 3_000)
+    product_fee(annual, coffee, amount_cents: 400)
   end
 
   def product_fee(contract, product, amount_cents:, product_filter: nil, true_up_parent_fee: nil, fee_invoice: invoice)
@@ -67,23 +92,7 @@ RSpec.describe Invoices::ProductCatalogTreeService do
   end
 
   it "sums the fees by contract, category, product and filter, in the order of the PDF" do
-    expect(tree).to eq([
-      [
-        "Bistro annual",
-        [
-          [
-            "Food",
-            [
-              ["Hamburger", 3_000, 1, []],
-              # 14_000 caesar + 200 true-up + 10_000 caprese, the true-up counted under the filter of its parent
-              ["Salad", 24_200, 3, [["Caesar", 14_200, 2], ["Caprese", 10_000, 1]]]
-            ]
-          ],
-          [nil, [["Wine", 5_000, 1, []]]]
-        ]
-      ],
-      ["Bistro catering", [["Food", [["Salad", 6_000, 1, []]]]]]
-    ])
+    expect(tree).to eq(expected_tree)
   end
 
   it "leaves out the fees of other invoices and other fee types" do
@@ -93,11 +102,15 @@ RSpec.describe Invoices::ProductCatalogTreeService do
     expect(tree.first.last.last).to eq([nil, [["Wine", 5_000, 1, []]]])
   end
 
-  context "with a discarded product" do
-    before { wine.discard! }
+  context "with a discarded product, category and filter" do
+    before do
+      wine.discard!
+      food.discard!
+      caesar.discard!
+    end
 
-    it "keeps its fees" do
-      expect(tree.first.last.last).to eq([nil, [["Wine", 5_000, 1, []]]])
+    it "keeps their fees in place" do
+      expect(tree).to eq(expected_tree)
     end
   end
 end

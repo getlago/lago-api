@@ -23,19 +23,15 @@ class ProductCatalogHierarchyHelper
   end
 
   def self.contract_groups(entries)
-    entries.group_by(&:contract).sort_by { |contract, _| contract_name(contract).to_s.downcase }.map do |contract, contract_entries|
+    entries.group_by(&:contract).sort_by { |contract, _| contract_sort_key(contract) }.map do |contract, contract_entries|
       ContractGroup.new(contract:, sections: sections(contract_entries))
     end
   end
 
   def self.sections(entries)
-    grouped = entries.group_by(&:category)
-    uncategorized = grouped.delete(nil) || []
-    categorized = grouped.sort_by { |category, _| category.invoice_name.downcase }.map do |category, category_entries|
+    entries.group_by(&:category).sort_by { |category, _| section_sort_key(category) }.map do |category, category_entries|
       SectionGroup.new(category:, entries: category_entries, products: product_groups(category_entries))
     end
-
-    categorized + (uncategorized.any? ? [SectionGroup.new(category: nil, entries: uncategorized, products: product_groups(uncategorized))] : [])
   end
 
   def self.product_groups(entries)
@@ -45,8 +41,8 @@ class ProductCatalogHierarchyHelper
         FilterGroup.new(name: filter.invoice_name, filter:, entries: by_period(filter_entries))
       end
 
-      ProductGroup.new(name: product.invoice_name, product:, entries: product_entries, unfiltered_entries: by_period(plain), filters: sort_by_name(filters))
-    end.then { sort_by_name(it) }
+      ProductGroup.new(name: product.invoice_name, product:, entries: product_entries, unfiltered_entries: by_period(plain), filters: filters.sort_by { name_sort_key(it.filter) })
+    end.sort_by { name_sort_key(it.product) }
   end
 
   def self.total(entries)
@@ -59,6 +55,19 @@ class ProductCatalogHierarchyHelper
       parent = fee.true_up_parent_fee || fee
       [parent.properties["from_datetime"].to_s, parent.id, fee.true_up_parent_fee_id ? 1 : 0]
     end
+  end
+
+  # The order of the PDF, shared with the invoice page. The id breaks ties so equal names keep one order.
+  def self.contract_sort_key(contract)
+    [contract_name(contract).to_s.downcase, contract.id]
+  end
+
+  def self.section_sort_key(category)
+    [category ? 0 : 1, *(category ? name_sort_key(category) : [])]
+  end
+
+  def self.name_sort_key(record)
+    [record.invoice_name.downcase, record.id]
   end
 
   def self.sort_by_name(items)

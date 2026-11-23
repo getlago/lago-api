@@ -155,6 +155,12 @@ RSpec.describe Types::Invoices::Object do
       it { is_expected.to be_nil }
     end
 
+    context "with a contract invoice without product fees" do
+      let(:invoice) { create(:invoice, invoice_type: :contract) }
+
+      it { is_expected.to eq([]) }
+    end
+
     context "with contract fees" do
       let(:contract) { create(:contract, organization: invoice.organization, customer: invoice.customer) }
       let(:contract_rate_card) { create(:contract_rate_card, organization: invoice.organization, contract:) }

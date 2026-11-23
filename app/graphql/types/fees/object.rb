@@ -6,7 +6,7 @@ module Types
       graphql_name "Fee"
       implements Types::Invoices::InvoiceItem
 
-      dataload_association :contract, :contract_rate_card, :rate_card_rate, :rate_override
+      dataload_association :contract, :contract_rate_card, :product_filter, :rate_card_rate, :rate_override
 
       field :id, ID, null: false
 
@@ -71,12 +71,6 @@ module Types
 
       def product
         dataloader.with(Sources::ActiveRecordAssociation, :billed_product).load(object) if object.product?
-      end
-
-      # A true-up carries no filter of its own: it belongs with the fee it tops up.
-      def product_filter
-        fee = object.true_up_parent_fee_id ? dataloader.with(Sources::ActiveRecordAssociation, :true_up_parent_fee).load(object) : object
-        dataloader.with(Sources::ActiveRecordAssociation, :product_filter).load(fee)
       end
 
       def rate_model

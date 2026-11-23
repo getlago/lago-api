@@ -102,6 +102,18 @@ RSpec.describe Types::Fees::Object do
         end
       end
 
+      context "when the fee has a filter" do
+        let(:product_filter) { create(:product_filter, organization:, product: contract_rate_card.rate_card.product) }
+        let(:fee) do
+          create(:fee, invoice:, subscription: nil, fee_type: :product,
+            invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, product_filter:)
+        end
+
+        it "returns it" do
+          expect(run_graphql_field("Fee.productFilter", fee)).to eq(product_filter)
+        end
+      end
+
       context "when the fee is the true-up of a filtered fee" do
         let(:product_filter) { create(:product_filter, organization:, product: contract_rate_card.rate_card.product) }
         let(:parent_fee) do
@@ -113,8 +125,9 @@ RSpec.describe Types::Fees::Object do
             invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, true_up_parent_fee: parent_fee)
         end
 
-        it "returns the filter of the fee it tops up" do
-          expect(run_graphql_field("Fee.productFilter", fee)).to eq(product_filter)
+        it "returns no filter of its own, as REST does" do
+          expect(run_graphql_field("Fee.productFilter", fee)).to be_nil
+          expect(run_graphql_field("Fee.productFilter", parent_fee)).to eq(product_filter)
         end
       end
     end

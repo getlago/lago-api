@@ -20,7 +20,7 @@ module Invoices
 
     def call
       result.contracts = totals.group_by(&:contract_id).map { |contract_id, rows| contract_group(contracts[contract_id], rows) }
-        .sort_by { [ProductCatalogInvoiceHelper.contract_name(it.contract).to_s.downcase, it.contract.id] }
+        .sort_by { ProductCatalogHierarchyHelper.contract_sort_key(it.contract) }
       result
     end
 
@@ -48,7 +48,7 @@ module Invoices
         Section.new(category: categories[category_id], products: product_groups(category_rows))
       end
 
-      ContractGroup.new(contract:, sections: sections.sort_by { [it.category ? 0 : 1, *sort_key(it.category)] })
+      ContractGroup.new(contract:, sections: sections.sort_by { ProductCatalogHierarchyHelper.section_sort_key(it.category) })
     end
 
     def product_groups(rows)
@@ -61,13 +61,9 @@ module Invoices
           product: products[product_id],
           amount_cents: product_rows.sum(&:amount_cents),
           fees_count: product_rows.sum(&:fees_count),
-          filters: filters.sort_by { sort_key(it.filter) }
+          filters: filters.sort_by { ProductCatalogHierarchyHelper.name_sort_key(it.filter) }
         )
-      end.sort_by { sort_key(it.product) }
-    end
-
-    def sort_key(record)
-      [record&.invoice_name.to_s.downcase, record&.id.to_s]
+      end.sort_by { ProductCatalogHierarchyHelper.name_sort_key(it.product) }
     end
 
     def contracts
