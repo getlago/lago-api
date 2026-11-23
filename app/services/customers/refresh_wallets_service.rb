@@ -16,7 +16,7 @@ module Customers
 
       allocation = Wallets::Balance::AllocateOngoingUsageByWalletsService.call!(
         customer:,
-        wallets: all_wallets,
+        wallets: allocatable_wallets,
         current_usage_fees:,
         draft_invoices_fees:,
         progressive_billing_fees:,
@@ -29,7 +29,7 @@ module Customers
       all_wallets.each do |wallet|
         Wallets::Balance::RefreshOngoingUsageService.call!(
           wallet:,
-          ongoing_usage_amount_cents: allocation.wallet_allocations[wallet],
+          ongoing_usage_amount_cents: allocation.wallet_allocations.fetch(wallet, 0),
           ongoing_billable_metric_amounts: allocation.billable_metric_amounts.fetch(wallet, {}),
           skip_single_wallet_update: true
         )
@@ -158,6 +158,11 @@ module Customers
       @all_wallets ||= customer.wallets.active.includes(:recurring_transaction_rules, :wallet_targets).in_application_order.to_a
     end
 
+    # A wallet reserved for its expiration invoices pays no other usage.
+    def allocatable_wallets
+      all_wallets.reject(&:reserved_for_expiration_invoice?)
+    end
+
     def current_usage_fees
       @current_usage_fees ||= subscription_usages.flat_map { |usage| usage[:invoice].fees }
     end
@@ -179,7 +184,15 @@ module Customers
     # billed invoice subscriptions used to net already-billed amounts out of ongoing usage.
     def subscription_usages
       @subscription_usages ||= customer.active_subscriptions.map do |subscription|
-        usage_result = ::Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER, use_usage_buckets: true)
+        # The ongoing balance is an estimate, so the taxes may come from cached rates instead of
+        # a provider call: every refresh would otherwise call the provider for each customer.
+        usage_result = ::Invoices::CustomerUsageService.call!(
+          customer:,
+          subscription:,
+          usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+          use_usage_buckets: true,
+          reuse_tax_rates: true
+        )
 
         billed_progressive_invoice_subscriptions = ::Subscriptions::ProgressiveBilledAmount
           .call(subscription:, include_generating_invoices:)

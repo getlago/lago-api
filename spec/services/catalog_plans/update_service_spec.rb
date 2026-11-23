@@ -53,6 +53,18 @@ RSpec.describe CatalogPlans::UpdateService do
     end
   end
 
+  context "when changing the currency of a plan holding wallet templates" do
+    let(:catalog_plan) { create(:catalog_plan, currency: "EUR") }
+    let(:params) { {currency: "USD"} }
+
+    before { create(:plan_wallet, organization: catalog_plan.organization, catalog_plan:) }
+
+    it "rejects the change" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:currency]).to eq(["not_editable_with_wallets"])
+    end
+  end
+
   context "when changing the currency of a plan holding applied rate cards" do
     let(:catalog_plan) { create(:catalog_plan, currency: "EUR") }
     let(:params) { {currency: "USD"} }

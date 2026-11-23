@@ -194,6 +194,18 @@ RSpec.describe Signups::VerifyCaptchaService do
     end
   end
 
+  context "when LAGO_FRONT_URL has no host", :sentry do
+    let(:siteverify_answer) { {hostname: ""} }
+
+    before { allow(Rails.application.config).to receive(:lago_front_url).and_return(nil) }
+
+    it "is unavailable and calls nothing, even for an answer without a hostname" do
+      expect_unavailable
+      expect(siteverify).not_to have_been_requested
+      expect(sentry_events.last.extra).to include(reason: "missing_front_host")
+    end
+  end
+
   context "without LAGO_RECAPTCHA_SECRET_KEY", :sentry do
     before { stub_const("ENV", ENV.to_h.except("LAGO_RECAPTCHA_SECRET_KEY")) }
 

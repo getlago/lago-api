@@ -55,21 +55,23 @@ RSpec.describe Resolvers::Admin::OrganizationsResolver do
       <<~GQL
         query {
           adminOrganizations {
-            collection { id environment selfServe productionOrganization { id } sandboxOrganization { id } }
+            collection { id environment selfServe activationStatus productionOrganization { id } sandboxOrganization { id } }
             metadata { totalCount }
           }
         }
       GQL
     end
 
-    let(:production) { create(:organization, :self_serve, created_at: 4.hours.ago) }
+    let(:production) do
+      create(:organization, :self_serve, activation_status: "pending_payment_method", created_at: 4.hours.ago)
+    end
     let(:sandbox) do
       create(:organization, :self_serve, :sandbox, production_organization: production, created_at: 3.hours.ago)
     end
 
     let(:standalone) do
-      {"environment" => "production", "selfServe" => false, "productionOrganization" => nil,
-       "sandboxOrganization" => nil}
+      {"environment" => "production", "selfServe" => false, "activationStatus" => "active",
+       "productionOrganization" => nil, "sandboxOrganization" => nil}
     end
 
     before { sandbox }
@@ -80,9 +82,10 @@ RSpec.describe Resolvers::Admin::OrganizationsResolver do
 
         expect(result["metadata"]["totalCount"]).to eq(4)
         expect(result["collection"]).to eq([
-          {"id" => sandbox.id, "environment" => "sandbox", "selfServe" => true,
+          {"id" => sandbox.id, "environment" => "sandbox", "selfServe" => true, "activationStatus" => "active",
            "productionOrganization" => {"id" => production.id}, "sandboxOrganization" => nil},
-          {"id" => production.id, "environment" => "production", "selfServe" => true, "productionOrganization" => nil,
+          {"id" => production.id, "environment" => "production", "selfServe" => true,
+           "activationStatus" => "pending_payment_method", "productionOrganization" => nil,
            "sandboxOrganization" => {"id" => sandbox.id}},
           {"id" => hooli.id, **standalone},
           {"id" => acme.id, **standalone}
@@ -93,7 +96,7 @@ RSpec.describe Resolvers::Admin::OrganizationsResolver do
     context "with self-serve disabled" do
       let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
 
-      it "shows every organization as a standalone production one", :premium do
+      it "shows every organization as an active standalone production one", :premium do
         expect(fetch["collection"]).to eq([sandbox, production, hooli, acme].map { {"id" => it.id, **standalone} })
       end
     end

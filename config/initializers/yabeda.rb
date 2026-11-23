@@ -68,6 +68,9 @@ Yabeda.configure do
     counter :draft_taxes_cache_total,
       comment: "Draft tax requests, by whether the cache answered them (hit) or the provider did (miss)",
       tags: %i[provider outcome]
+    counter :draft_tax_rates_cache_total,
+      comment: "Draft tax requests that accept cached rates, by what answered them: the rates (hit), the exact cache (exact), the provider after a missing rate (miss), or the provider because a line can't be priced from rates (skipped)",
+      tags: %i[provider outcome]
   end
 
   # Cursor pagination of the v2 lists. Tags are bounded by the paginated tables and the error

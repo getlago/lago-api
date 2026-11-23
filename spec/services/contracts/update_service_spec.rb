@@ -27,6 +27,15 @@ RSpec.describe Contracts::UpdateService do
     expect(contract.reload).to have_attributes(name: "Renamed", billing_time: "anniversary")
   end
 
+  context "when the billing schedule is locked" do
+    before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+    it "returns a concurrency failure without changing the contract" do
+      expect { result }.not_to change { contract.reload.attributes }
+      expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+    end
+  end
+
   it "publishes contract.updated after a successful update" do
     expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.updated", contract)
 
@@ -335,18 +344,95 @@ RSpec.describe Contracts::UpdateService do
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.deleted", any_args)
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.created", any_args)
     end
+
+    context "when the contract has a wallet from its previous plan" do
+      let(:old_wallet) { create(:catalog_wallet, organization:, contract:, customer:, code: "ai_credits") }
+      let(:old_allocation) { create(:catalog_wallet_credit_allocation, organization:, catalog_wallet: old_wallet) }
+      let(:plan_wallet) { create(:plan_wallet, organization:, catalog_plan: other_plan, code: "ai_credits") }
+
+      before do
+        old_allocation
+        create(:plan_wallet_credit_allocation, organization:, plan_wallet:, code: "monthly_allowance")
+      end
+
+      it "discards the wallet along with its rules" do
+        expect(result).to be_success
+
+        expect(old_wallet.reload).to be_discarded
+        expect(old_allocation.reload).to be_discarded
+      end
+
+      it "gives the contract no wallet from the new plan" do
+        expect(result).to be_success
+
+        expect(contract.reload.wallets).to be_empty
+      end
+
+      context "when the contract has a second wallet" do
+        let(:second_wallet) { create(:catalog_wallet, organization:, contract:, customer:, code: "support_credits") }
+
+        before { second_wallet }
+
+        it "discards each of them" do
+          expect(result).to be_success
+
+          expect([old_wallet, second_wallet].map(&:reload)).to all(be_discarded)
+        end
+      end
+
+      context "when another contract of the customer has a wallet" do
+        let(:other_wallet) { create(:catalog_wallet, organization:, customer:, code: "ai_credits") }
+
+        before { other_wallet }
+
+        it "keeps that wallet" do
+          expect(result).to be_success
+
+          expect(other_wallet.reload).not_to be_discarded
+        end
+      end
+
+      context "when the organization has contract wallets enabled" do
+        let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
+
+        it "gives the contract the new plan's wallet only" do
+          expect(result).to be_success
+
+          wallet = contract.reload.wallets.sole
+          expect(wallet).not_to eq(old_wallet)
+          expect(wallet).to have_attributes(code: "ai_credits", customer:)
+          expect(wallet.credit_allocations.sole.code).to eq("monthly_allowance")
+        end
+      end
+    end
+
+    context "when the plan is removed" do
+      let(:params) { {plan_code: nil} }
+      let(:wallet) { create(:catalog_wallet, organization:, contract:, customer:) }
+
+      before { wallet }
+
+      it "discards the contract's wallets" do
+        expect(result).to be_success
+
+        expect(contract.reload.catalog_plan).to be_nil
+        expect(wallet.reload).to be_discarded
+      end
+    end
   end
 
   context "when moving the start of a pending contract" do
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-15")) }
+    let(:activation_product) { create(:product, :fixed, organization:) }
+    let(:activation_rate_card) { create(:rate_card, organization:, product: activation_product, billing_timing: "advance") }
     let(:inherited_card) do
       create(
         :contract_rate_card,
         organization:,
         contract:,
+        rate_card: activation_rate_card,
         effective_date: Date.new(2026, 10, 15),
-        billing_anchor_date: Date.new(2026, 10, 15),
-        next_billing_at: Time.zone.parse("2026-10-15")
+        billing_anchor_date: Date.new(2026, 10, 15)
       )
     end
     let(:anchored_card) do
@@ -355,8 +441,7 @@ RSpec.describe Contracts::UpdateService do
         organization:,
         contract:,
         effective_date: Date.new(2026, 10, 15),
-        billing_anchor_date: Date.new(2026, 10, 1),
-        next_billing_at: Time.zone.parse("2026-10-15")
+        billing_anchor_date: Date.new(2026, 10, 1)
       )
     end
     let(:params) { {started_at: "2026-11-01T00:00:00"} }
@@ -366,6 +451,7 @@ RSpec.describe Contracts::UpdateService do
     before do
       inherited_card
       anchored_card
+      create(:rate_card_rate, organization:, rate_card: activation_rate_card, effective_from: Time.zone.parse("2026-09-01"), billing_interval_count: 1, billing_interval_unit: "month")
     end
 
     it "starts its cards on the new date, keeping an anchor set on a card" do
@@ -373,8 +459,7 @@ RSpec.describe Contracts::UpdateService do
       expect(contract.reload).to be_pending
       expect(inherited_card.reload).to have_attributes(
         effective_date: Date.new(2026, 11, 1),
-        billing_anchor_date: Date.new(2026, 11, 1),
-        next_billing_at: Time.zone.parse("2026-11-01")
+        billing_anchor_date: Date.new(2026, 11, 1)
       )
       expect(anchored_card.reload).to have_attributes(effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 10, 1))
     end
@@ -387,8 +472,7 @@ RSpec.describe Contracts::UpdateService do
           organization:,
           contract:,
           effective_date: Date.new(2026, 10, 15),
-          billing_anchor_date: Date.new(2026, 10, 15),
-          next_billing_at: Time.zone.parse("2026-10-15")
+          billing_anchor_date: Date.new(2026, 10, 15)
         )
       end
       let(:params) { {started_at: "2026-11-01T00:00:00"} }
@@ -412,8 +496,7 @@ RSpec.describe Contracts::UpdateService do
           organization:,
           contract:,
           effective_date: Date.new(2026, 10, 15),
-          billing_anchor_date: Date.new(2026, 10, 15),
-          next_billing_at: Time.zone.parse("2026-10-15")
+          billing_anchor_date: Date.new(2026, 10, 15)
         )
       end
 
@@ -463,7 +546,44 @@ RSpec.describe Contracts::UpdateService do
         expect(result).to be_success
         expect(contract.reload).to be_active
         expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 9, 29))
-        expect(BillingSegments::ScheduleJob).to have_been_enqueued.with(customer.id)
+        expect(BillingOperations::ProcessJob).to have_been_enqueued.with(customer.id)
+        expect(inherited_card.reload.next_billing_at).to eq(Time.zone.parse("2026-09-29"))
+        expect(inherited_card.billing_operations.sole).to have_attributes(
+          action_type: "renew_fixed_advance", reason: "contract_activation",
+          billing_at: Time.zone.parse("2026-09-29"), target_cycle_started_at: Time.zone.parse("2026-09-29")
+        )
+        expect(LegacyBillingSegment.where(contract_rate_card_id: inherited_card.id)).to be_empty
+      end
+
+      context "when cursor persistence fails" do
+        let(:failure_product) { create(:product, :fixed, organization:) }
+        let(:failure_rate_card) { create(:rate_card, organization:, product: failure_product, billing_timing: "advance") }
+        let(:failure_card) do
+          create(
+            :contract_rate_card, organization:, contract:,
+            rate_card: failure_rate_card,
+            effective_date: Date.new(2026, 9, 29), billing_anchor_date: Date.new(2026, 9, 29)
+          )
+        end
+        let(:operation_writes) { [] }
+
+        before do
+          failure_card
+          create(:rate_card_rate, organization:, rate_card: failure_card.rate_card, effective_from: Time.zone.parse("2026-09-01"), billing_interval_count: 1, billing_interval_unit: "month")
+          allow(ContractRateCards::ResetBillingClockService).to receive(:call!).and_wrap_original do |original, **attributes|
+            operation_writes << attributes
+            raise ActiveRecord::RecordInvalid.new(failure_card) if operation_writes.size == 2
+
+            original.call(**attributes)
+          end
+        end
+
+        it "rolls back the moved start, activation and earlier cursors" do
+          expect { result }.not_to change { inherited_card.reload.next_billing_at }
+          expect(result).not_to be_success
+          expect(contract.reload).to have_attributes(status: "pending", started_at: Time.zone.parse("2026-10-15"))
+          expect(BillingOperation.where(contract_rate_card_id: [inherited_card.id, failure_card.id])).to be_empty
+        end
       end
 
       it "publishes contract.updated and exactly one contract.started pair" do
@@ -509,6 +629,22 @@ RSpec.describe Contracts::UpdateService do
     it "accepts the edit" do
       expect(result).to be_success
       expect(contract.reload.name).to eq("Renamed")
+    end
+
+    context "when the contract has a wallet" do
+      let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
+      let(:wallet) { create(:catalog_wallet, organization:, contract:, customer:) }
+
+      before do
+        wallet
+        create(:plan_wallet, organization:, catalog_plan:)
+      end
+
+      it "keeps the contract's wallets as they are" do
+        expect(result).to be_success
+
+        expect(contract.reload.wallets).to eq([wallet])
+      end
     end
   end
 

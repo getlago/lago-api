@@ -13,13 +13,21 @@ require "rails_helper"
 #   1. the cadence is resolved at the START of each cycle, from the rate in force there
 #   2. a rate taking effect INSIDE a cycle splits it into segments — it does not
 #      change the cadence of the cycle it lands in
-#   3. when the cadence changes, billing re-anchors on the day it changes — LAGO-1766
-#      settled this as the ONLY behaviour ("reading B, everything is glued"), which is
-#      why the walk re-anchors unconditionally and there is no mode to turn it off
+#   3. when the cadence changes, billing re-anchors on the day it changes
 #
 # The previous engine stored `period_to` inclusively; this one is half-open, so every
 # expectation below is the old one with the end moved to the next instant.
 RSpec.describe Billing::RateCards::BuildScheduleService do
+  def due_segments(schedule, by:)
+    cycle = schedule.cycle_at(contract_rate_card.effective_date.in_time_zone("UTC"))
+    segments = []
+    while cycle && cycle.started_at <= by
+      segments.concat(schedule.segments_due_in_cycle(cycle.started_at, by:))
+      cycle = schedule.cycle_at(cycle.ended_at)
+    end
+    segments
+  end
+
   describe "cadence from the rates in force" do
     subject(:schedule) do
       described_class.call(contract_rate_card:).schedule
@@ -38,8 +46,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         :contract_rate_card,
         organization:, contract:, rate_card:,
         billing_anchor_date: Date.new(2026, 1, 1),
-        effective_date: Date.new(2026, 1, 1),
-        next_billing_at: Time.utc(2026, 1, 1)
+        effective_date: Date.new(2026, 1, 1)
       )
     end
 
@@ -58,7 +65,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     def t(*parts) = Time.utc(*parts).to_fs(:db)
 
     def billed_windows(from, to)
-      schedule.segments_due_by(to)
+      due_segments(schedule, by: to)
         .select { |segment| segment.started_at >= from && segment.started_at < to }
         .map { |segment| [segment.started_at.to_fs(:db), segment.ended_at.to_fs(:db), segment.rate.code] }
     end
@@ -157,7 +164,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       end
 
       def ratios_by_slice(from, to)
-        schedule.segments_due_by(to)
+        due_segments(schedule, by: to)
           .select { |segment| segment.started_at >= from && segment.started_at < to }
           .map { |segment| [segment.rate.code, segment.proration_ratio] }
       end
@@ -184,7 +191,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     # The advance segment is already due and still carries the re-anchored end of its cycle.
     it "runs the cadence in force through to the re-anchored boundary" do
       at = Time.utc(2026, 5, 20)
-      in_force = schedule.segments_due_by(at).find { |cycle| cycle.ended_at > at }
+      in_force = schedule.segment_covering(at)
 
       expect(in_force.ended_at).to eq(Time.utc(2026, 6, 6))
     end
@@ -215,8 +222,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         :contract_rate_card,
         organization:, contract:, rate_card:,
         billing_anchor_date: Date.new(2026, 8, 3),
-        effective_date: Date.new(2026, 7, 1),
-        next_billing_at: Time.utc(2026, 7, 1)
+        effective_date: Date.new(2026, 7, 1)
       )
     end
 
@@ -231,7 +237,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     # Aug 3 through Jul 27, Jul 20, Jul 13 and Jul 6, and the card's own start opens the first
     # cycle on Jul 1 rather than on the boundary before it.
     it "puts the cycles on the anchor's grid and clamps the first to the card start" do
-      windows = schedule.segments_due_by(Time.utc(2026, 8, 20)).group_by(&:cycle_started_at)
+      windows = due_segments(schedule, by: Time.utc(2026, 8, 20)).group_by(&:cycle_started_at)
         .map { |started_at, group| [started_at.to_fs(:db), group.last.ended_at.to_fs(:db)] }
 
       expect(windows).to eq(
@@ -250,7 +256,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     # The second rate carries the same cadence, so it moves nothing: it only cuts the cycle it
     # lands in. This is the case that separates a rate change from a cadence change.
     it "splits the cycle the second rate lands in without moving any boundary" do
-      segments = schedule.segments_due_by(Time.utc(2026, 8, 17))
+      segments = due_segments(schedule, by: Time.utc(2026, 8, 17))
         .select { |segment| segment.started_at >= Time.utc(2026, 8, 3) }
         .map { |segment| [segment.started_at.to_fs(:db), segment.ended_at.to_fs(:db), segment.rate.code] }
 
@@ -290,8 +296,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         :contract_rate_card,
         organization:, contract:, rate_card:,
         billing_anchor_date: Date.new(2026, 8, 3),
-        effective_date: Date.new(2026, 8, 3),
-        next_billing_at: Time.utc(2026, 8, 3)
+        effective_date: Date.new(2026, 8, 3)
       )
     end
 
@@ -303,7 +308,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "clamps the final cycle to the termination instant, not to the boundary" do
-      segments = schedule.segments_due_by(Time.utc(2026, 9, 1))
+      segments = due_segments(schedule, by: Time.utc(2026, 9, 1))
         .map { |segment| [segment.started_at.to_fs(:db), segment.ended_at.to_fs(:db), segment.rate.code] }
 
       expect(segments).to eq(
@@ -317,7 +322,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "stops producing cycles after the termination" do
-      expect(schedule.billing_at(timestamp: Time.utc(2027, 1, 1), target: "next")).to be_nil
+      expect(schedule.next_obligation(after: Time.utc(2027, 1, 1))&.billing_at).to be_nil
     end
   end
 end

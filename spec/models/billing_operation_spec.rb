@@ -61,6 +61,86 @@ RSpec.describe BillingOperation do
         expect(cancelled_operation.processed_at).to be_nil
       end
     end
+
+    describe ".due_for_processing" do
+      let(:timestamp) { Time.utc(2026, 2, 1) }
+      let(:past_operation) { create(:billing_operation, billing_at: timestamp - 1.second) }
+      let(:due_operation) { create(:billing_operation, billing_at: timestamp) }
+      let(:future_operation) { create(:billing_operation, billing_at: timestamp + 1.second) }
+      let(:completed_operation) { create(:billing_operation, billing_at: timestamp - 2.seconds, processed_at: timestamp - 1.second) }
+      let(:cancelled_operation) do
+        create(:billing_operation, billing_at: timestamp - 3.seconds, cancelled_at: timestamp - 1.second,
+          cancellation_reason: :contract_termination)
+      end
+
+      before do
+        past_operation
+        due_operation
+        future_operation
+        completed_operation
+        cancelled_operation
+      end
+
+      it "keeps pending operations due inclusively and orders by billing date" do
+        expect(described_class.due_for_processing(timestamp).order(:billing_at, :id))
+          .to eq([past_operation, due_operation])
+      end
+    end
+
+    describe ".earliest_per_contract_rate_card" do
+      let(:other_contract) { create(:contract, organization:, customer:) }
+      let(:other_card) { create(:contract_rate_card, organization:, contract: other_contract) }
+      let(:first_created_at) { Time.utc(2026, 1, 1, 9) }
+      let(:billing_at) { Time.utc(2026, 2, 1) }
+      let(:same_day_winner) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at:, created_at: first_created_at,
+          action_type: "close_fixed_arrears", id: "00000000-0000-4000-8000-000000000001")
+      end
+      let(:same_day_loser) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at:, created_at: first_created_at,
+          action_type: "close_fixed_arrears", id: "00000000-0000-4000-8000-000000000002")
+      end
+      let(:later_operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at: billing_at + 1.day,
+          action_type: "close_fixed_arrears", created_at: first_created_at - 1.day)
+      end
+      let(:other_card_operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card: other_card,
+          action_type: "close_fixed_arrears", billing_at: billing_at - 1.day)
+      end
+
+      before do
+        same_day_winner
+        same_day_loser
+        later_operation
+        other_card_operation
+      end
+
+      it "selects the earliest pending row per card using billing, creation, and id order" do
+        selected = described_class.earliest_per_contract_rate_card.index_by(&:contract_rate_card_id)
+
+        expect(selected).to eq({
+          contract_rate_card.id => same_day_winner,
+          other_card.id => other_card_operation
+        })
+      end
+
+      context "when an earlier ineligible row exists" do
+        let(:earlier_reconciliation) do
+          create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
+            reason: "rate_change", billing_at: billing_at - 1.day)
+        end
+
+        before { earlier_reconciliation }
+
+        it "selects after caller filters have removed unsupported operations" do
+          selected = described_class.due_for_processing(Time.utc(2026, 3, 1)).where(action_type: "close_fixed_arrears")
+            .earliest_per_contract_rate_card.index_by(&:contract_rate_card_id)
+
+          expect(selected.fetch(contract_rate_card.id)).to eq(same_day_winner)
+        end
+      end
+    end
   end
 
   describe "validations" do
@@ -287,6 +367,44 @@ RSpec.describe BillingOperation do
           expect(operation.errors.where(:processed_at, :invalid)).to be_present
         end
       end
+    end
+  end
+
+  describe "#due_for_processing?" do
+    subject(:due_for_processing) { operation.due_for_processing?(timestamp:) }
+
+    let(:timestamp) { Time.utc(2026, 2, 1) }
+    let(:billing_at) { timestamp }
+    let(:processed_at) { nil }
+    let(:cancelled_at) { nil }
+    let(:operation) { described_class.new(billing_at:, processed_at:, cancelled_at:) }
+
+    context "when billing is in the past" do
+      let(:billing_at) { timestamp - 1.second }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when billing is exactly due" do
+      it { is_expected.to be(true) }
+    end
+
+    context "when billing is in the future" do
+      let(:billing_at) { timestamp + 1.second }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when already processed" do
+      let(:processed_at) { timestamp }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when cancelled" do
+      let(:cancelled_at) { timestamp }
+
+      it { is_expected.to be(false) }
     end
   end
 end

@@ -5,12 +5,19 @@ module Lago
   # LAGO_SELF_SERVE_ENABLED unset, which keeps the single-screen signup.
   module SelfServe
     ENV_VAR = "LAGO_SELF_SERVE_ENABLED"
+    REQUIRE_PAYMENT_METHOD_ENV_VAR = "LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD"
     ACCEPTED_VALUES = ["", "true", "false"].freeze
 
     class << self
       # Only "true" turns the gate on (any case, surrounding spaces ignored): a security gate errs toward off.
       def enabled?(value: ENV[ENV_VAR])
-        normalize(value) == "true"
+        true_value?(value)
+      end
+
+      # Whether signup creates its production organization waiting for a payment method. Read like enabled?, off by
+      # default; validate! refuses it on without self-serve or without the key that lets billing-accounts activate.
+      def require_payment_method?(value: ENV[REQUIRE_PAYMENT_METHOD_ENV_VAR])
+        true_value?(value)
       end
 
       # Exactly "true", as the API and lago-front have always read LAGO_DISABLE_SIGNUP. With the gate on,
@@ -19,15 +26,37 @@ module Lago
         value == "true"
       end
 
+      # The key billing-accounts sends to activate a production organization, one per region; nil when unset, which
+      # leaves the activation route undrawn.
+      def billing_accounts_key(value: ENV["LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY"])
+        value.to_s.strip.presence
+      end
+
+      # The host of this region's front (`app.eu.getlago.com`), or nil when LAGO_FRONT_URL has none. Never raises:
+      # with the gate on, validate! already refused a value that is not an https origin.
+      def front_host(url: Rails.application.config.lago_front_url)
+        URI.parse(url.to_s).host&.downcase
+      rescue URI::InvalidURIError
+        nil
+      end
+
+      # The region analytics events carry: this front's host on Lago Cloud, nil on a self-hosted install, whose host
+      # stays out of Lago's analytics.
+      def region(cloud: ENV["LAGO_CLOUD"] == "true")
+        front_host if cloud
+      end
+
       # Run at boot: a malformed value stops the deploy instead of leaving the gate off, and a region never
       # sends verification links, Google redirects or captcha checks to the default US front.
       def validate!(
         value: ENV[ENV_VAR],
         front_url: ENV["LAGO_FRONT_URL"],
         disable_signup: ENV["LAGO_DISABLE_SIGNUP"],
+        require_payment_method: ENV[REQUIRE_PAYMENT_METHOD_ENV_VAR],
+        billing_accounts_key: ENV["LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY"],
         local: Rails.env.local?
       )
-        unless ACCEPTED_VALUES.include?(normalize(value))
+        unless accepted_value?(value)
           raise ArgumentError, "#{ENV_VAR} must be true or false, got #{value.inspect}"
         end
 
@@ -42,11 +71,32 @@ module Lago
           raise ArgumentError,
             "LAGO_DISABLE_SIGNUP must be exactly true or false when #{ENV_VAR} is true; got #{disable_signup.inspect}"
         end
+
+        validate_require_payment_method!(require_payment_method, enabled: enabled?(value:), key: billing_accounts_key)
       end
 
       private
 
       def normalize(value) = value.to_s.strip.downcase
+
+      def true_value?(value) = normalize(value) == "true"
+
+      def accepted_value?(value) = ACCEPTED_VALUES.include?(normalize(value))
+
+      # Pending organizations that nothing can activate would lock every new signup out of production. With self-serve
+      # off, only true matters: a self-hosted install never fails to boot over this Cloud-only switch.
+      def validate_require_payment_method!(value, enabled:, key:)
+        if enabled && !accepted_value?(value)
+          raise ArgumentError,
+            "#{REQUIRE_PAYMENT_METHOD_ENV_VAR} must be true or false when #{ENV_VAR} is true; got #{value.inspect}"
+        end
+        return unless require_payment_method?(value:)
+
+        raise ArgumentError, "#{REQUIRE_PAYMENT_METHOD_ENV_VAR} needs #{ENV_VAR} to be true" unless enabled
+        if billing_accounts_key(value: key).nil?
+          raise ArgumentError, "#{REQUIRE_PAYMENT_METHOD_ENV_VAR} needs LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY to be set"
+        end
+      end
 
       # Development and test fall back to a local front and accept http.
       def valid_front_url?(url, local:)

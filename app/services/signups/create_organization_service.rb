@@ -2,7 +2,7 @@
 
 module Signups
   # Signup Step 3: creates the production organization of a self-serve user who has none yet, with its sandbox, and
-  # makes the user admin of both. The role and source answers go to analytics only and are never stored.
+  # makes the user admin of both. The role and source answers go to analytics only and are never saved in the database.
   class CreateOrganizationService < BaseService
     Result = BaseResult[:organization, :sandbox_organization, :user]
 
@@ -31,12 +31,12 @@ module Signups
         user.memberships.reset
         next result.forbidden_failure!(code: "user_not_eligible") unless user.needs_organization?
 
-        pair = Organizations::CreateSelfServeService.call!(name:)
+        pair = Organizations::CreateSelfServeService.call!(name:, activation_status:)
         membership = create_admin_membership(pair.organization)
 
         result.organization = pair.organization
         result.sandbox_organization = pair.sandbox_organization
-        after_commit { announce(membership) }
+        after_commit { announce(membership, pair.sandbox_organization) }
       end
       return result if result.failure?
 
@@ -55,6 +55,15 @@ module Signups
     # Not `source`: BaseService already names the caller (GraphQL, API) that way.
     attr_reader :user, :name, :role, :referral_source
 
+    # With the switch on, the production waits for billing-accounts to confirm a card; the sandbox is open either way.
+    def activation_status
+      if Lago::SelfServe.require_payment_method?
+        Organization::ACTIVATION_STATUSES[:pending_payment_method]
+      else
+        Organization::ACTIVATION_STATUSES[:active]
+      end
+    end
+
     # Admin of production, then the sandbox mirrors it, as for every member. No lock first: no other transaction can
     # see the organization yet, and the sync locks the pair before it reads.
     def create_admin_membership(organization)
@@ -64,7 +73,7 @@ module Signups
       membership
     end
 
-    def announce(membership)
+    def announce(membership, sandbox)
       Utils::SecurityLog.produce(
         organization: membership.organization,
         log_type: "user",
@@ -77,10 +86,18 @@ module Signups
       SegmentTrackJob.perform_later(
         membership_id: "membership/#{membership.id}",
         event: "organization_registered",
+        # The only place the Step 3 answers go: not in the database, and not in the job logs. The job's arguments still
+        # reach Redis (the queue, then the dead set if it fails) and error reports.
         properties: {
           organization_name: membership.organization.name,
           organization_id: membership.organization_id,
-          email: user.email
+          email: user.email,
+          self_serve: true,
+          sandbox_organization_id: sandbox.id,
+          activation_status: membership.organization.activation_status,
+          role:,
+          source: referral_source,
+          region: Lago::SelfServe.region
         }
       )
     end

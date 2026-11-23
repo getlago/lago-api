@@ -122,7 +122,7 @@ RSpec.describe WebhookEndpoints::UpdateService do
 
           expect(result).not_to be_success
           expect(result.error.messages).to eq(signature_algo: ["value_is_invalid"])
-          expect(result.error.meta).to eq(signature_algo: {allowed_values: %w[jwt hmac]})
+          expect(result.error.meta).to eq(signature_algo: {allowed_values: %w[jwt hmac standard_webhooks]})
         end
       end
     end
@@ -130,84 +130,71 @@ RSpec.describe WebhookEndpoints::UpdateService do
     context "when signature_algo changes to standard_webhooks" do
       let(:update_params) { {signature_algo: "standard_webhooks"} }
 
-      it "returns a validation failure with the allowed values, without changing the endpoint" do
-        result = nil
-        expect { result = update_service.call }.not_to change { webhook_endpoint.reload.attributes }
+      it "switches the endpoint to standard_webhooks with one signing key" do
+        result = update_service.call
 
-        expect(result).not_to be_success
-        expect(result.error.messages).to eq(signature_algo: ["value_is_invalid"])
-        expect(result.error.meta).to eq(signature_algo: {allowed_values: %w[jwt hmac]})
+        expect(result).to be_success
+        expect(webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
+        expect(webhook_endpoint.signing_keys.pluck(:organization_id)).to eq([organization.id])
       end
 
-      context "with the standard_webhooks_signature flag" do
-        before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+      it "logs the signature_algo change" do
+        update_service.call
 
-        it "switches the endpoint to standard_webhooks with one signing key" do
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "webhook_endpoint",
+          log_event: "webhook_endpoint.updated",
+          resources: {
+            webhook_url: webhook_endpoint.webhook_url,
+            signature_algo: {deleted: "jwt", added: "standard_webhooks"}
+          }
+        )
+      end
+
+      context "when the signing key cannot be created" do
+        before do
+          allow(WebhookEndpoints::SigningKeys::CreateService).to receive(:call!)
+            .and_raise(BaseService::FailedResult.new(BaseService::Result.new, "key failure"))
+        end
+
+        it "raises, keeps the endpoint unchanged and produces no security log" do
+          expect { update_service.call }.to raise_error(BaseService::FailedResult, "key failure")
+            .and not_change { webhook_endpoint.reload.attributes }
+
+          expect(security_logger).not_to have_received(:produce)
+        end
+      end
+
+      context "when the endpoint switched away from standard_webhooks earlier" do
+        let!(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :hmac) }
+        let!(:kept_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+        it "reuses the kept signing key" do
           result = update_service.call
 
           expect(result).to be_success
           expect(webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
-          expect(webhook_endpoint.signing_keys.pluck(:organization_id)).to eq([organization.id])
+          expect(webhook_endpoint.signing_keys.pluck(:id)).to eq([kept_key.id])
         end
+      end
 
-        it "logs the signature_algo change" do
-          update_service.call
+      context "when two updates switch the endpoint at once", transaction: false do
+        it "creates a single signing key" do
+          endpoint_id = webhook_endpoint.id # materialize on this connection before the threads read it
+          organization_id = organization.id
 
-          expect(security_logger).to have_received(:produce).with(
-            organization:,
-            log_type: "webhook_endpoint",
-            log_event: "webhook_endpoint.updated",
-            resources: {
-              webhook_url: webhook_endpoint.webhook_url,
-              signature_algo: {deleted: "jwt", added: "standard_webhooks"}
-            }
-          )
-        end
-
-        context "when the signing key cannot be created" do
-          before do
-            allow(WebhookEndpoints::SigningKeys::CreateService).to receive(:call!)
-              .and_raise(BaseService::FailedResult.new(BaseService::Result.new, "key failure"))
-          end
-
-          it "raises, keeps the endpoint unchanged and produces no security log" do
-            expect { update_service.call }.to raise_error(BaseService::FailedResult, "key failure")
-              .and not_change { webhook_endpoint.reload.attributes }
-
-            expect(security_logger).not_to have_received(:produce)
-          end
-        end
-
-        context "when the endpoint switched away from standard_webhooks earlier" do
-          let!(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :hmac) }
-          let!(:kept_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
-
-          it "reuses the kept signing key" do
-            result = update_service.call
-
-            expect(result).to be_success
-            expect(webhook_endpoint.reload.signature_algo).to eq("standard_webhooks")
-            expect(webhook_endpoint.signing_keys.pluck(:id)).to eq([kept_key.id])
-          end
-        end
-
-        context "when two updates switch the endpoint at once", transaction: false do
-          it "creates a single signing key" do
-            endpoint_id = webhook_endpoint.id # materialize on this connection before the threads read it
-            organization_id = organization.id
-
-            results = Array.new(2) do
-              Thread.new do
-                ActiveRecord::Base.connection_pool.with_connection do
-                  described_class.call(id: endpoint_id, organization: Organization.find(organization_id), params: update_params)
-                end
+          results = Array.new(2) do
+            Thread.new do
+              ActiveRecord::Base.connection_pool.with_connection do
+                described_class.call(id: endpoint_id, organization: Organization.find(organization_id), params: update_params)
               end
-            end.map(&:value)
+            end
+          end.map(&:value)
 
-            expect(results).to all(be_success)
-            expect(WebhookEndpoint.find(endpoint_id).signature_algo).to eq("standard_webhooks")
-            expect(WebhookEndpointSigningKey.where(webhook_endpoint_id: endpoint_id).count).to eq(1)
-          end
+          expect(results).to all(be_success)
+          expect(WebhookEndpoint.find(endpoint_id).signature_algo).to eq("standard_webhooks")
+          expect(WebhookEndpointSigningKey.where(webhook_endpoint_id: endpoint_id).count).to eq(1)
         end
       end
     end
@@ -239,7 +226,7 @@ RSpec.describe WebhookEndpoints::UpdateService do
       end
     end
 
-    context "when the endpoint signs with standard_webhooks and the organization has no flag" do
+    context "when the endpoint signs with standard_webhooks" do
       let!(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :standard_webhooks) }
 
       context "when the update sends the current signature_algo" do
@@ -321,7 +308,7 @@ RSpec.describe WebhookEndpoints::UpdateService do
       context "when a jwt endpoint changes to standard_webhooks" do
         let(:update_params) { {signature_algo: "standard_webhooks"} }
 
-        it "switches the endpoint to standard_webhooks with one signing key, even without the flag" do
+        it "switches the endpoint to standard_webhooks with one signing key" do
           result = update_service.call
 
           expect(result).to be_success

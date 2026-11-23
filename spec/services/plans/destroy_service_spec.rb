@@ -110,6 +110,42 @@ RSpec.describe Plans::DestroyService do
       end
     end
 
+    context "when another connection holds the plan lock", transaction: false do
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      # Frees the lock holder left waiting by a failed expectation.
+      after { release << -> {} }
+
+      it "waits for the lock, then discards the entitlement written under it" do
+        holder = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              Plan.lock("FOR NO KEY UPDATE").find(plan.id)
+              locked << true
+              release.pop.call
+            end
+          end
+        end
+        locked.pop
+
+        destroyer = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(plan: Plan.find(plan.id))
+          end
+        end
+        expect(destroyer.join(0.5)).to be_nil
+
+        # The holder commits an entitlement that the deletion can only see once it has the lock.
+        release << -> { create(:entitlement, plan:, organization:) }
+        holder.join
+
+        expect(destroyer.value).to be_success
+        expect(Plan.with_discarded.find(plan.id)).to be_discarded
+        expect(Entitlement::Entitlement.unscoped.where(plan_id: plan.id).sole).to be_discarded
+      end
+    end
+
     context "when plan is already discarded" do
       let(:plan) { create(:plan, :deleted, organization:) }
 

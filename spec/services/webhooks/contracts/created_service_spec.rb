@@ -27,9 +27,9 @@ RSpec.describe Webhooks::Contracts::CreatedService do
       contract:,
       rate_card:,
       units: 2,
+      next_billing_at: Time.zone.parse("2026-02-01T00:00:00Z"),
       effective_date: Date.new(2026, 1, 1),
-      billing_anchor_date: Date.new(2026, 1, 1),
-      next_billing_at: Time.zone.parse("2026-02-01T00:00:00Z")
+      billing_anchor_date: Date.new(2026, 1, 1)
     )
   end
 
@@ -50,6 +50,7 @@ RSpec.describe Webhooks::Contracts::CreatedService do
         "contract" => {
           "lago_id" => contract.id,
           "external_id" => "contract_external_id",
+          "code" => contract.code,
           "lago_customer_id" => contract.customer_id,
           "external_customer_id" => contract.customer.external_id,
           "name" => "Annual agreement",
