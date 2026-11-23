@@ -558,17 +558,20 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
   end
 
   context "when the copy runs" do
-    let(:lock_key) { "billing-engine-migration-subscription-#{subscription.id}" }
+    let(:previous_subscription) do
+      create(:subscription, :terminated, organization:, customer:, plan:, external_id: subscription.external_id)
+    end
 
-    it "reads and writes the contracts while holding the copy lock of the subscription" do
+    it "writes the contract while holding the copy lock of every subscription of the external id" do
+      previous_copy_lock = BillingEngineMigrations::SubscriptionCopyLockService.new(subscription: previous_subscription)
       allow(Contracts::CreateService).to receive(:call).and_wrap_original do |original, **args|
-        expect(Subscription.advisory_lock_exists?(lock_key)).to be(true)
+        expect(previous_copy_lock).to be_locked
         original.call(**args)
       end
 
       expect(result).to be_success
       expect(Contracts::CreateService).to have_received(:call)
-      expect(Subscription.advisory_lock_exists?(lock_key)).to be(false)
+      expect(previous_copy_lock).not_to be_locked
     end
   end
 
