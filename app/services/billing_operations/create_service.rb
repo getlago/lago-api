@@ -24,7 +24,14 @@ module BillingOperations
         target_cycle_started_at: planned_operation.cycle_started_at,
         coverage_started_at: planned_operation.coverage_started_at,
         coverage_ended_at: planned_operation.coverage_ended_at
-      )
+      ) do |operation|
+        obligation = planned_operation.obligation
+        obligation.segments.each_with_index do |segment, position|
+          operation.segments.build(organization: contract_rate_card.organization, position:,
+            started_at: segment.started_at, ended_at: segment.ended_at,
+            rate_card_rate: segment.rate, rate_override: obligation.cycle.phase.rate_override)
+        end
+      end
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

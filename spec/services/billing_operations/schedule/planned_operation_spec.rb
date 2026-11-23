@@ -18,7 +18,8 @@ RSpec.describe BillingOperations::Schedule::PlannedOperation do
     let(:after) { nil }
 
     it "uses the natural cycle and billing date without changing the obligation" do
-      expect(plan).to have_attributes(cycle_started_at:, billing_at:, coverage_started_at:, coverage_ended_at:)
+      expect(plan).to have_attributes(cycle_started_at:, billing_at:, coverage_started_at:, coverage_ended_at:, obligation:)
+      expect(plan.with(billing_at: billing_at + 1.day).obligation).to equal(obligation)
       expect(obligation.billing_at).to eq(billing_at)
     end
 

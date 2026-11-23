@@ -30,6 +30,7 @@ class BillingOperation < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :contract_rate_card, -> { with_discarded }
   belongs_to :invoice, optional: true
+  has_many :segments, -> { order(:position) }, class_name: "BillingOperationSegment", inverse_of: :billing_operation
 
   enum :reason, REASONS, validate: true
   enum :cancellation_reason, CANCELLATION_REASONS, prefix: true, validate: {allow_nil: true}
