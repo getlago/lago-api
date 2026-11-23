@@ -9206,6 +9206,11 @@ enum CopyToProductionBlockingReasonEnum {
   copy_to_production_admin_only
 
   """
+  This item cannot be copied to production
+  """
+  copy_to_production_item_unsupported
+
+  """
   The item's parent must be copied to production first
   """
   copy_to_production_parent_missing

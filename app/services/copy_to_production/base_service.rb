@@ -46,10 +46,18 @@ module CopyToProduction
       result.not_found_failure!(resource: item_type) unless source_record
     end
 
-    # The error code that refuses the copy in production, or nil.
-    def blocking_reason(plan)
+    # The error code that refuses the user access to production, or nil. Checked before the plan, which reads
+    # production records.
+    def access_refusal
       return "organization_inactive" if production.awaiting_payment_method?
-      return "copy_to_production_admin_only" unless production_membership&.admin?
+
+      "copy_to_production_admin_only" unless production_membership&.admin?
+    end
+
+    # The error code that refuses this item, or nil.
+    def plan_refusal(plan)
+      item_refusal = item.refusal(source_record)
+      return item_refusal if item_refusal
       return "copy_to_production_parent_missing" if plan.missing_parent
 
       "value_already_exist" if plan.existing

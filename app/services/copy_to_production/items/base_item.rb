@@ -36,6 +36,12 @@ module CopyToProduction
         nil
       end
 
+      # The error code refusing a source that the create service would refuse, or that cannot be copied, so that the
+      # preview and the copy agree. Nil when it can be moved.
+      def refusal(_source)
+        nil
+      end
+
       # Creates the source in production through its create service and returns the record. Raises
       # BaseService::FailedResult on a refusal, so that the whole move rolls back. `resolved` gives the production
       # record of each dependency and parent, by [item_type, sandbox id].

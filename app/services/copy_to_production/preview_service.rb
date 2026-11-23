@@ -10,11 +10,20 @@ module CopyToProduction
       check_entry
       return result if result.failure?
 
+      # A user who cannot move to production does not see what it holds.
+      reason = access_refusal
+      if reason
+        result.copied_items = []
+        result.reused_items = []
+        result.blocking_reason = reason
+        return result
+      end
+
       plan = build_plan
 
       result.copied_items = plan.copied.map(&:entry)
       result.reused_items = plan.reused.map { it.entry(it.existing) }
-      result.blocking_reason = blocking_reason(plan)
+      result.blocking_reason = plan_refusal(plan)
       result.missing_parent = plan.missing_parent&.entry
       result
     end

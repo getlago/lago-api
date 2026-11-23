@@ -49,8 +49,10 @@ module BillableMetrics
 
       if result.billable_metric
         # NOTE: An event received for this code before the metric existed cached the absence of an
-        #       expression, so drop that entry to let the expression apply to the next events.
-        BillableMetrics::ExpressionCacheService.expire_cache(organization.id, result.billable_metric.code)
+        #       expression, so drop that entry to let the expression apply to the next events. After the commit of
+        #       an outer transaction too, or an event read before it would cache the absence again.
+        code = result.billable_metric.code
+        after_commit { BillableMetrics::ExpressionCacheService.expire_cache(organization.id, code) }
 
         SendWebhookJob.perform_after_commit("billable_metric.created", result.billable_metric)
       end
@@ -67,7 +69,7 @@ module BillableMetrics
     attr_reader :args
 
     def track_billable_metric_created(metric)
-      SegmentTrackJob.perform_later(
+      SegmentTrackJob.perform_after_commit(
         membership_id: CurrentContext.membership,
         event: "billable_metric_created",
         properties: {

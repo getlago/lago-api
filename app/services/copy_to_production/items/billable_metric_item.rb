@@ -16,6 +16,12 @@ module CopyToProduction
         production.billable_metrics.find_by(code: source.code)
       end
 
+      # The custom aggregator is code set by hand on a deprecated aggregation, which the create service cannot set.
+      def refusal(source)
+        "copy_to_production_item_unsupported" if source.custom_agg?
+      end
+
+      # `properties` is not copied: no code reads it, and the create service does not set it.
       def copy!(source, _resolved)
         BillableMetrics::CreateService.call!(
           **source.slice(*ATTRIBUTES).symbolize_keys,

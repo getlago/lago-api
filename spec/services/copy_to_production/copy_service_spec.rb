@@ -104,6 +104,49 @@ RSpec.describe CopyToProduction::CopyService do
         end
       )
     end
+
+    context "when the copy runs inside a caller's transaction" do
+      it "logs after that commit, still attributed to the user" do
+        CurrentContext.membership = "membership/caller"
+
+        ApplicationRecord.transaction do
+          result
+          expect(kafka_messages).to be_empty
+        end
+
+        expect(kafka_messages.map { JSON.parse(it[:payload]).values_at("activity_type", "user_id") }).to match_array(
+          [["billable_metric.created", user.id], ["billable_metric.copied_to_production", user.id]]
+        )
+        expect(CurrentContext.membership).to eq("membership/caller")
+      end
+    end
+
+    context "when the copy fails" do
+      before do
+        allow(BillableMetricFilters::CreateOrUpdateBatchService).to receive(:call)
+          .and_return(BaseService::Result.new.service_failure!(code: "filters_failed", message: "Filters failed"))
+      end
+
+      it "logs nothing" do
+        expect(result).to be_failure
+        expect(kafka_messages).to be_empty
+      end
+    end
+  end
+
+  describe "expression cache" do
+    let(:cache_key) { BillableMetrics::ExpressionCacheService.new(production.id, "api_calls").cache_key }
+
+    before { allow(Rails.cache).to receive(:delete).and_call_original }
+
+    it "expires the production entry of the code after the commit of the copy" do
+      ApplicationRecord.transaction do
+        result
+        expect(Rails.cache).not_to have_received(:delete).with(cache_key)
+      end
+
+      expect(Rails.cache).to have_received(:delete).with(cache_key)
+    end
   end
 
   context "when production has a metric with the same code" do
@@ -201,6 +244,36 @@ RSpec.describe CopyToProduction::CopyService do
     end
   end
 
+  context "with a custom aggregation metric" do
+    let(:production) { create(:organization, :self_serve, custom_aggregation: true) }
+    let(:metric) do
+      create(:billable_metric, organization: sandbox, code: "api_calls", aggregation_type: "custom_agg",
+        custom_aggregator: "def aggregate(event, previous_state, aggregation_properties); end")
+    end
+
+    it "refuses the copy" do
+      expect { result }.not_to change(BillableMetric, :count)
+
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      expect(result.error.code).to eq("copy_to_production_item_unsupported")
+    end
+  end
+
+  context "when the copy fails inside a caller's transaction" do
+    before do
+      allow(BillableMetricFilters::CreateOrUpdateBatchService).to receive(:call)
+        .and_return(BaseService::Result.new.service_failure!(code: "filters_failed", message: "Filters failed"))
+    end
+
+    it "rolls the copies back" do
+      ApplicationRecord.transaction do
+        expect(result).to be_failure
+        expect(production.billable_metrics.with_discarded).to be_empty
+      end
+    end
+  end
+
   context "when a concurrent write creates the code in production" do
     let(:constraint) { "index_billable_metrics_on_organization_id_and_code" }
     let(:database_result) { instance_double(PG::Result, error_field: constraint) }
@@ -268,8 +341,13 @@ RSpec.describe CopyToProduction::CopyService do
     end
 
     context "when the parent is live" do
-      let!(:live_parent) { create(:billable_metric, organization: production, code: "api_calls_parent") }
-      let!(:live_dependency) { create(:billable_metric, organization: production, code: "api_calls_reused") }
+      let(:live_parent) { create(:billable_metric, organization: production, code: "api_calls_parent") }
+      let(:live_dependency) { create(:billable_metric, organization: production, code: "api_calls_reused") }
+
+      before do
+        live_parent
+        live_dependency
+      end
 
       it "copies the missing dependency before the item and reuses the others" do
         expect { result }.to change { production.billable_metrics.count }.by(2)

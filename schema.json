@@ -48246,6 +48246,12 @@
               "description": "The item's parent must be copied to production first",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "copy_to_production_item_unsupported",
+              "description": "This item cannot be copied to production",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null

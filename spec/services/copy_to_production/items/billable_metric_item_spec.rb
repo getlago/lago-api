@@ -24,8 +24,26 @@ RSpec.describe CopyToProduction::Items::BillableMetricItem do
     end
   end
 
+  describe "#refusal" do
+    it "accepts a metric" do
+      expect(item.refusal(metric)).to be_nil
+    end
+
+    context "with a custom aggregation" do
+      let(:metric) do
+        create(:billable_metric, organization: sandbox, aggregation_type: "custom_agg", custom_aggregator: "aggregator")
+      end
+
+      it "refuses it" do
+        expect(item.refusal(metric)).to eq("copy_to_production_item_unsupported")
+      end
+    end
+  end
+
   describe "#find_existing" do
-    let!(:live_metric) { create(:billable_metric, organization: production, code: "api_calls") }
+    let(:live_metric) { create(:billable_metric, organization: production, code: "api_calls") }
+
+    before { live_metric }
 
     it "finds the kept production metric with the same code" do
       expect(item.find_existing(metric)).to eq(live_metric)
