@@ -91,6 +91,10 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :active_contracts_count,
+        Integer,
+        null: false,
+        description: "Number of active contracts per customer"
       field :active_subscriptions_count,
         Integer,
         null: false,
@@ -153,6 +157,10 @@ module Types
         object.overdue_balances.map do |currency, amount_cents|
           {currency:, amount_cents:}
         end
+      end
+
+      def active_contracts_count
+        dataloader.with(Sources::CustomerActiveContractsCount).load(object.id)
       end
 
       def active_subscriptions_count

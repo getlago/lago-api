@@ -128,6 +128,18 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
 
+    context "when progressive billing already computed the usage" do
+      let(:premium_integrations) { %w[progressive_billing] }
+
+      it "computes the current usage once for progressive billing and the alerts" do
+        service.call
+
+        expect(::Invoices::CustomerUsageService).to have_received(:call).once
+        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
+          .with(alert:, alertable: subscription, current_metrics: mocked_current_usage)
+      end
+    end
+
     context "when alerting fail" do
       it "deletes subscription_activity before raising" do
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call).and_raise(StandardError, "boom")

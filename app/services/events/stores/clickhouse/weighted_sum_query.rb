@@ -61,6 +61,8 @@ module Events
           :with_ctes,
           :charges_duration,
           :decimal_literal,
+          :wide_decimal_sql,
+          :wide_decimal_value,
           :events_cte_queries,
           :grouped_by_columns,
           :grouped_arel_columns,
@@ -85,7 +87,7 @@ module Events
             ordered: true,
             select: [
               arel_table[:timestamp].as("timestamp"),
-              arel_table[:decimal_value].as("difference")
+              wide_difference
             ],
             deduplicated_columns: %w[decimal_value]
           )
@@ -101,11 +103,17 @@ module Events
           events_cte.except!("events").merge!("events_data" => events_data)
         end
 
+        # NOTE: the running total multiplied by seconds overflows Decimal(38, 26), so every branch
+        #       of events_data carries `difference` in Decimal256. The FINAL dedup CTE keeps the raw column.
+        def wide_difference
+          wide_decimal_value.as("difference")
+        end
+
         def initial_value_sql
           <<-SQL
             SELECT
               toDateTime64(:from_datetime, 5, 'UTC') as timestamp,
-              toDecimal128(:initial_value, :decimal_scale) as difference
+              #{wide_decimal_sql(":initial_value")} as difference
           SQL
         end
 
@@ -113,7 +121,7 @@ module Events
           <<-SQL
             SELECT
               toDateTime64(:to_datetime, 5, 'UTC') as timestamp,
-              toDecimal128(0, :decimal_scale) as difference
+              #{wide_decimal_sql("0")} as difference
           SQL
         end
 
@@ -144,7 +152,7 @@ module Events
             ordered: true,
             select: groups + [
               arel_table[:timestamp].as("timestamp"),
-              arel_table[:decimal_value].as("difference")
+              wide_difference
             ],
             deduplicated_columns: store.with_presentation_by_in_grouped_by? ? %w[decimal_value sorted_properties] : %w[decimal_value]
           )
@@ -167,7 +175,7 @@ module Events
             [
               groups,
               "toDateTime64(:from_datetime, 5, 'UTC')",
-              "toDecimal128('#{decimal_literal(initial_value[:value])}', :decimal_scale)"
+              wide_decimal_sql("'#{decimal_literal(initial_value[:value])}'")
             ].flatten.join(", ")
           end
 
@@ -187,7 +195,7 @@ module Events
             [
               groups,
               "toDateTime64(:to_datetime, 5, 'UTC')",
-              "toDecimal32(0, 0)"
+              wide_decimal_sql("0")
             ].flatten.join(", ")
           end
 

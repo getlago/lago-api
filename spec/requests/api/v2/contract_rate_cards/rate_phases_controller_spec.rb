@@ -67,11 +67,15 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
     end
 
     context "when a terminated contract reuses the external id" do
+      subject do
+        post_with_token(organization, "#{base_path}?contract_code=#{contract.code}", {rate_phase: {code: "ramp", position: 1, billing_interval_cycle_count: 2}})
+      end
+
       before do
         create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
       end
 
-      it "targets the live contract's card" do
+      it "targets the contract identified by its code" do
         subject
 
         expect(response).to have_http_status(:success)

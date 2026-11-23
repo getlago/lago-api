@@ -8,6 +8,7 @@ RSpec.describe "Advance graduated usage before the first priced segment" do
       api_call(perform_jobs: false) do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "unpriced-contract", external_customer_id: customer.external_id,
+          code: "default",
           plan_code: "unpriced-plan", started_at: cycle_started_at.iso8601
         }})
       end
@@ -15,12 +16,11 @@ RSpec.describe "Advance graduated usage before the first priced segment" do
 
     event_quantities.each do |timestamp, quantity|
       travel_to(timestamp) do
-        BillingSegments::ScheduleService.call!(customer:)
         create_event({
           external_contract_id: contract.external_id, code: billable_metric.code,
           timestamp: timestamp.utc.strftime("%s.%6N"), properties: {"quantity" => quantity}
         }, perform_jobs: false)
-        perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+        perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
       end
     end
 

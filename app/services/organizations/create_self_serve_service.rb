@@ -12,8 +12,9 @@ module Organizations
     SANDBOX_SLUG_BASE_LENGTH = 32
 
     def initialize(name:, document_numbering: "per_organization", timezone: nil, premium_integrations: [], feature_flags: [],
-      allow_links_in_name: false)
+      allow_links_in_name: false, activation_status: Organization::ACTIVATION_STATUSES[:active])
       @name = name
+      @activation_status = activation_status
       @allow_links_in_name = allow_links_in_name
       @document_numbering = document_numbering
       @timezone = timezone
@@ -32,8 +33,10 @@ module Organizations
 
       # A savepoint inside a caller's transaction, so a failed sandbox leaves no production behind.
       ActiveRecord::Base.transaction(requires_new: true) do
-        production = CreateService.call!(**shared_attributes, name: name_result.name, environment: "production")
-          .organization
+        # Only the production can wait for a payment method: the sandbox is open from the start.
+        production = CreateService.call!(
+          **shared_attributes, name: name_result.name, environment: "production", activation_status:
+        ).organization
         sandbox = CreateService.call!(
           **shared_attributes.except(:premium_integrations, :feature_flags),
           name: "#{name_result.name}#{SANDBOX_NAME_SUFFIX}",
@@ -56,7 +59,8 @@ module Organizations
 
     private
 
-    attr_reader :name, :document_numbering, :timezone, :premium_integrations, :feature_flags, :allow_links_in_name
+    attr_reader :name, :document_numbering, :timezone, :premium_integrations, :feature_flags, :allow_links_in_name,
+      :activation_status
 
     def shared_attributes
       {document_numbering:, timezone:, premium_integrations: Array(premium_integrations),

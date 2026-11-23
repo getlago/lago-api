@@ -54,6 +54,15 @@ RSpec.describe Resolvers::ContractsResolver do
     end
   end
 
+  context "with a draft contract" do
+    let!(:draft_contract) { create(:contract, :draft, organization:) }
+    let(:variables) { {status: ["draft"]} }
+
+    it "returns it with its status" do
+      expect(execution["data"]["contracts"]["collection"]).to eq([{"id" => draft_contract.id, "externalId" => draft_contract.external_id, "status" => "draft"}])
+    end
+  end
+
   context "with a customer filter" do
     let(:variables) { {externalCustomerId: customer.external_id} }
 
@@ -155,8 +164,8 @@ RSpec.describe Resolvers::ContractsResolver do
     it "loads the cards in one query, not one per contract" do
       cards_queries = count_queries("contract_rate_cards") { execution }
 
-      # one batched query for the whole page, not one per contract
-      expect(cards_queries.size).to eq(1)
+      # The clock's history-existence query also mentions contract_rate_cards.
+      expect(cards_queries.count { it.include?('"contract_rate_cards"."contract_id"') }).to eq(1)
       counts = execution["data"]["contracts"]["collection"].map { it["appliedRateCardsCount"] }
       expect(counts.sum).to eq(2)
     end

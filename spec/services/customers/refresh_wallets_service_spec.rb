@@ -293,7 +293,8 @@ RSpec.describe Customers::RefreshWalletsService do
             customer:,
             subscription:,
             usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
-            use_usage_buckets: true
+            use_usage_buckets: true,
+            reuse_tax_rates: true
           )
         end
       end

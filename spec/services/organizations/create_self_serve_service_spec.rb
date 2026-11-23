@@ -19,6 +19,20 @@ RSpec.describe Organizations::CreateSelfServeService do
     expect(production.reload.sandbox_organization).to eq(sandbox)
   end
 
+  it "opens both organizations by default" do
+    expect(result.organization.activation_status).to eq("active")
+    expect(result.sandbox_organization.activation_status).to eq("active")
+  end
+
+  context "with a production waiting for a payment method" do
+    let(:options) { {activation_status: "pending_payment_method"} }
+
+    it "creates the production pending and the sandbox open" do
+      expect(result.organization.reload.activation_status).to eq("pending_payment_method")
+      expect(result.sandbox_organization.reload.activation_status).to eq("active")
+    end
+  end
+
   it "gives each organization its own API key and billing entity" do
     production = result.organization
     sandbox = result.sandbox_organization
