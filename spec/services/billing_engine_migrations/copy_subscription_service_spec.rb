@@ -67,7 +67,6 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       code: subscription.id,
       name: "Main subscription",
       status: "active",
-      billing_time: "calendar",
       started_at:,
       ended_at: nil,
       billing_anchor_date: Date.new(2025, 1, 1)
@@ -281,10 +280,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     end
 
     it "anchors the contract on the subscription date in the customer timezone" do
-      expect(result.contract).to have_attributes(
-        billing_time: "anniversary",
-        billing_anchor_date: Date.new(2025, 3, 14)
-      )
+      expect(result.contract.billing_anchor_date).to eq(Date.new(2025, 3, 14))
       expect(result.contract.customer.applicable_timezone).to eq("America/Los_Angeles")
     end
 
@@ -310,7 +306,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     end
 
     it "anchors the contract on Jan 1 of the start year in the customer timezone" do
-      expect(result.contract).to have_attributes(billing_time: "calendar", billing_anchor_date: Date.new(2025, 1, 1))
+      expect(result.contract.billing_anchor_date).to eq(Date.new(2025, 1, 1))
     end
 
     context "when the start is still the previous year in the customer timezone" do

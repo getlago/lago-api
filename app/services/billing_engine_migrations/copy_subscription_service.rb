@@ -86,14 +86,13 @@ module BillingEngineMigrations
         code: subscription.id,
         name: subscription.name,
         plan_code: migration.plan_mapping.fetch(subscription.plan.code),
-        billing_time: subscription.billing_time,
         started_at: subscription.started_at&.iso8601(6),
         billing_anchor_date: billing_anchor_date&.iso8601,
         ended_at: subscription.ending_at&.iso8601(6)
       }.compact_blank
     end
 
-    # V2 cuts periods from the anchor only and never reads billing_time, so a calendar
+    # V2 contracts have no billing time and cut periods from the anchor only, so a calendar
     # subscription is anchored on a calendar boundary to keep the V1 periods.
     def billing_anchor_date
       if subscription.anniversary?
