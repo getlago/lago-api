@@ -67,6 +67,11 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
           .to eq(%i[ensure_product_catalog! validate_expand! read_cursor])
       end
 
+      it "serves shadow organization reads after the key permissions and before the catalog check" do
+        expect(callbacks & %i[authorize serve_reads_from_shadow_organization ensure_product_catalog!])
+          .to eq(%i[authorize serve_reads_from_shadow_organization ensure_product_catalog!])
+      end
+
       it "validates expand before every callback of its own" do
         expect(callbacks.take_while { it != :validate_expand! } - base_callbacks).to be_empty
       end
