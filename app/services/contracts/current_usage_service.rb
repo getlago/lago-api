@@ -30,8 +30,8 @@ module Contracts
 
       result.contract = contract
 
-      # A pending contract has not started billing, so it has no usage yet.
-      result.rate_card_usages = if contract.pending?
+      # Cancellation prevents billing, even if the planned start date has passed.
+      result.rate_card_usages = if contract.pending? || contract.canceled? || past_contract_end?
         []
       else
         cards = selected_cards
@@ -62,6 +62,11 @@ module Contracts
     attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term
 
     delegate :customer, to: :contract
+
+    def past_contract_end?
+      ends_at = [contract.ended_at, contract.terminated_at].compact.min
+      ends_at.present? && timestamp > ends_at
+    end
 
     # Filtered after the version selection, so that a superseded version never stands in for
     # the card that replaced it.

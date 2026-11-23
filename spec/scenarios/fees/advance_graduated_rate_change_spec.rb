@@ -8,6 +8,7 @@ RSpec.describe "Advance graduated pricing across rate changes" do
       api_call(perform_jobs: false) do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "advance-graduated-contract",
+          code: "default",
           external_customer_id: customer.external_id,
           plan_code: "graduated-plan",
           started_at: cycle_started_at.iso8601

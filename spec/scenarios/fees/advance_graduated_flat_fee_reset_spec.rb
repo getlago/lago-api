@@ -8,6 +8,7 @@ RSpec.describe "Graduated flat fees and filter buckets across a rate change" do
       api_call(perform_jobs: false) do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "flat-reset-contract", external_customer_id: customer.external_id,
+          code: "default",
           plan_code: "flat-reset-plan", started_at: cycle_started_at.iso8601
         }})
       end

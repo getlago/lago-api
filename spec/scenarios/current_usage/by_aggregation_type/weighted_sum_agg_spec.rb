@@ -111,4 +111,58 @@ describe "Aggregation - Weighted Sum Scenarios", transaction: false do
       end
     end
   end
+
+  context "with clickhouse store and a weighted sum above the Decimal128 limit", clickhouse: true do
+    let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true) }
+    let(:customer) { create(:customer, organization:) }
+
+    let(:plan) { create(:plan, organization:, amount_cents: 0) }
+    let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "1"}) }
+
+    before { charge }
+
+    it "bills the exact units without wrapping" do
+      travel_to(DateTime.new(2023, 3, 1)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+      end
+
+      subscription = customer.subscriptions.first
+
+      travel_to(DateTime.new(2023, 3, 1)) do
+        create_event(
+          {
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            properties: {value: "1000000"}
+          }
+        )
+      end
+
+      travel_to(DateTime.new(2023, 3, 15)) do
+        fetch_current_usage(customer:)
+
+        # 1,000,000 held the 31 days of March: 1e6 x 2,678,400 s / 2,678,400 s.
+        # The product 2.6784e12 wrapped in Decimal128.
+        expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1000000.0")
+        expect(json[:customer_usage][:total_amount_cents]).to eq(100_000_000) # 1,000,000 units x 1 x 100
+      end
+
+      travel_to(DateTime.new(2023, 4, 1)) do
+        expect { perform_billing }
+          .to change { subscription.reload.invoices.count }.from(0).to(1)
+      end
+
+      fee = subscription.invoices.first.fees.charge.sole
+      expect(fee.units).to eq(1_000_000)
+      expect(fee.amount_cents).to eq(100_000_000) # 1,000,000 units x 1 x 100
+      expect(fee.total_aggregated_units).to eq(1_000_000)
+    end
+  end
 end

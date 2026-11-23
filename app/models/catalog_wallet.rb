@@ -10,6 +10,7 @@ class CatalogWallet < ApplicationRecord
 
   has_many :credit_allocations, class_name: "CatalogWalletCreditAllocation"
   has_many :transactions, class_name: "CatalogWalletTransaction"
+  has_many :alerts, class_name: "UsageMonitoring::CatalogWalletAlert", dependent: :delete_all, inverse_of: :catalog_wallet
 
   validates :code, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 end

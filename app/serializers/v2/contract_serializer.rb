@@ -18,6 +18,7 @@ module V2
       {
         lago_id: model.id,
         external_id: model.external_id,
+        code: model.code,
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer.external_id,
         name: model.name,

@@ -4,11 +4,12 @@ module Api
   module V2
     module Contracts
       class UsageController < Api::V2::BaseController
+        include Api::V2::ContractLookup
+
         serializable_with ::V2::ContractUsageSerializer, root: :current_usage
 
         def current
-          # The active contract first; a pending one has no usage yet, so it answers an empty list.
-          contract = current_organization.contracts.terminatable_by_external_id(params[:external_id])
+          contract = find_contract(params[:external_id])
           return not_found_error(resource: "contract") unless contract
 
           result = ::Contracts::CurrentUsageService.call(
