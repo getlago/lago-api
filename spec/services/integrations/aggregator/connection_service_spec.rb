@@ -187,13 +187,21 @@ RSpec.describe Integrations::Aggregator::ConnectionService do
     end
   end
 
-  it "builds its HTTP client with short timeouts and no retry" do
+  it "builds its HTTP client with short timeouts and no retry, Net::HTTP's own retry included" do
+    http_clients = []
     allow(LagoHttpClient::Client).to receive(:new).and_call_original
+    allow(Net::HTTP).to receive(:new).and_wrap_original do |original, *args|
+      original.call(*args).tap { |http| http_clients << http }
+    end
 
     result
 
     expect(LagoHttpClient::Client).to have_received(:new)
-      .with(a_string_including("connection/"), open_timeout: 5, read_timeout: 10, write_timeout: 10)
+      .with(a_string_including("connection/"), open_timeout: 5, read_timeout: 10, write_timeout: 10, max_retries: 0)
+    expect(http_clients).not_to be_empty
+    http_clients.each do |http|
+      expect([http.open_timeout, http.read_timeout, http.write_timeout, http.max_retries]).to eq([5, 10, 10, 0])
+    end
   end
 
   context "when the response has no connection_config" do
