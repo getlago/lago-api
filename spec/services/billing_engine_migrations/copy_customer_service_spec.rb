@@ -118,6 +118,27 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
       expect(Customers::UpdateService).not_to have_received(:call!)
     end
 
+    context "when the customer has a blank attribute that the shadow customer holds as nil" do
+      before do
+        customer.update_column(:phone, "")
+        shadow_customer.update_column(:phone, nil)
+      end
+
+      it "does not rewrite the shadow customer" do
+        expect(result.customer.phone).to be_nil
+        expect(Customers::UpdateService).not_to have_received(:call!)
+      end
+    end
+
+    context "when the customer email was stored before its normalizer existed" do
+      before { Customer.where(id: customer.id).update_all(["email = ?", " #{customer.email} "]) }
+
+      it "does not rewrite the shadow customer" do
+        expect(result.customer.email).to eq(customer.email)
+        expect(Customers::UpdateService).not_to have_received(:call!)
+      end
+    end
+
     context "when copied attributes of the customer changed" do
       before do
         customer.update!(name: "New name", address_line2: nil, shipping_city: "Lyon", billing_entity: other_entity)
@@ -149,6 +170,18 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
         expect(result).to be_failure
         expect(result.error.error_code).to eq("billing_entity_not_found")
       end
+    end
+  end
+
+  context "without a premium license, when the customer has a timezone" do
+    before do
+      described_class.call(migration:, customer:)
+      allow(Customers::UpdateService).to receive(:call!).and_call_original
+    end
+
+    it "leaves the timezone out so that the next copy writes nothing" do
+      expect(result.customer.timezone).to be_nil
+      expect(Customers::UpdateService).not_to have_received(:call!)
     end
   end
 

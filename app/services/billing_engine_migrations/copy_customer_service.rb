@@ -133,15 +133,21 @@ module BillingEngineMigrations
       customer.billing_entity_id == BillingEntity.active.where(organization_id: migration.organization_id).order(:created_at).pick(:id)
     end
 
-    # Blank and nil are the same value, so a V1 empty string never rewrites a shadow nil.
     def copied_attributes(record, timezone:)
-      record.slice(*CUSTOMER_ATTRIBUTES).symbolize_keys
-        .merge(timezone:, billing_entity_code: record.billing_entity&.code)
-        .transform_values(&:presence)
+      attributes = CUSTOMER_ATTRIBUTES.index_with { |name| comparable_value(record, name) }
+      attributes[:billing_entity_code] = record.billing_entity&.code
+      # The customer services ignore timezone without a premium license: comparing it would rewrite every copy.
+      attributes[:timezone] = timezone.presence if License.premium?
+      attributes
     end
 
     def shipping_address(record)
-      SHIPPING_ATTRIBUTES.transform_values { |column| record.public_send(column).presence }
+      SHIPPING_ATTRIBUTES.transform_values { |column| comparable_value(record, column) }
+    end
+
+    # Rows saved before a normalizer existed keep their raw value, and blank equals nil, so neither causes a rewrite.
+    def comparable_value(record, column)
+      Customer.normalize_value_for(column, record.public_send(column)).presence
     end
   end
 end
