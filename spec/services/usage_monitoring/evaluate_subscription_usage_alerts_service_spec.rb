@@ -3,14 +3,15 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
-  subject(:service) { described_class.new(subscription:, alerts:, lifetime_usage:, full_plan_usage:) }
+  subject(:result) { described_class.call(subscription:, alerts:, lifetime_usage:, full_plan_usage:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+
   let(:subscription) { create(:subscription, customer:, organization:) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:) }
   let(:full_plan_usage) { nil }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:computed_usage) { instance_double(SubscriptionUsage) }
 
   let(:amount_alert) { create(:usage_current_amount_alert, organization:, subscription_external_id: subscription.external_id) }
@@ -18,10 +19,19 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
   let(:metric_units_alert) { create(:billable_metric_current_usage_units_alert, billable_metric:, organization:, subscription_external_id: subscription.external_id) }
   let(:lifetime_alert) { create(:lifetime_usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
 
+  let(:span) { instance_double(OpenTelemetry::Trace::Span, add_attributes: nil) }
+
   before do
     allow(::Invoices::CustomerUsageService).to receive(:call)
       .and_return(instance_double(Invoices::CustomerUsageService::Result, usage: computed_usage))
     allow(UsageMonitoring::ProcessAlertService).to receive(:call)
+    allow(OpenTelemetry::Trace).to receive(:current_span).and_call_original
+    allow(OpenTelemetry::Trace).to receive(:current_span).with(no_args).and_return(span)
+  end
+
+  def expect_usage_path(path)
+    expect(span).to have_received(:add_attributes)
+      .with("usage_monitoring.alerts_count" => alerts.size, "usage_monitoring.usage_path" => path)
   end
 
   context "with a subset of the subscription alerts" do
@@ -30,7 +40,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     before { amount_alert }
 
     it "processes only the given alerts" do
-      expect(service.call).to be_success
+      expect(result).to be_success
 
       expect(UsageMonitoring::ProcessAlertService).to have_received(:call).twice
       expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
@@ -44,7 +54,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     let(:alerts) { [amount_alert, metric_amount_alert, metric_units_alert] }
 
     it "computes the current usage once with the alerting options" do
-      service.call
+      result
 
       expect(::Invoices::CustomerUsageService).to have_received(:call).once.with(
         customer:,
@@ -57,19 +67,31 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
         expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
           .with(alert:, alertable: subscription, current_metrics: computed_usage)
       end
+      expect_usage_path("full_plan")
+    end
+
+    context "when the usage computation fails" do
+      let(:computed_usage) { nil }
+
+      it "traces the failed path" do
+        result
+
+        expect_usage_path("full_plan_failed")
+      end
     end
 
     context "when a full plan usage is given" do
       let(:full_plan_usage) { instance_double(SubscriptionUsage) }
 
       it "reuses it without computing a usage" do
-        service.call
+        result
 
         expect(::Invoices::CustomerUsageService).not_to have_received(:call)
         alerts.each do |alert|
           expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
             .with(alert:, alertable: subscription, current_metrics: full_plan_usage)
         end
+        expect_usage_path("full_plan_reused")
       end
     end
   end
@@ -78,9 +100,20 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     let(:alerts) { [lifetime_alert] }
 
     it "does not compute the current usage" do
-      service.call
+      result
 
       expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+      expect_usage_path("none")
+    end
+
+    context "when a full plan usage is given" do
+      let(:full_plan_usage) { instance_double(SubscriptionUsage) }
+
+      it "does not trace it as reused" do
+        result
+
+        expect_usage_path("none")
+      end
     end
   end
 
@@ -89,7 +122,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     let(:alerts) { [lifetime_alert] }
 
     it "creates and uses the subscription lifetime usage" do
-      expect { service.call }.to change(LifetimeUsage, :count).by(1)
+      expect { result }.to change(LifetimeUsage, :count).by(1)
 
       expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
         .with(alert: lifetime_alert, alertable: subscription, current_metrics: subscription.reload.lifetime_usage)
@@ -104,7 +137,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
 
     it "enqueues ProcessLifetimeUsageAlertJob after the processing interval" do
       freeze_time do
-        service.call
+        result
 
         expect(UsageMonitoring::ProcessLifetimeUsageAlertJob)
           .to have_been_enqueued.with(alert: lifetime_units_alert, subscription:).at(1.minute.from_now)
@@ -126,7 +159,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     end
 
     it "processes the other alerts and raises the first error" do
-      expect { service.call }.to raise_error(StandardError, "first alert failed")
+      expect { result }.to raise_error(StandardError, "first alert failed")
 
       expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
         .with(alert: lifetime_alert, alertable: subscription, current_metrics: lifetime_usage)
@@ -137,7 +170,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     let(:alerts) { [] }
 
     it "does nothing" do
-      expect(service.call).to be_success
+      expect(result).to be_success
 
       expect(::Invoices::CustomerUsageService).not_to have_received(:call)
       expect(UsageMonitoring::ProcessAlertService).not_to have_received(:call)

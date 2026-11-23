@@ -51,7 +51,17 @@ module UsageMonitoring
     end
 
     def current_usage
-      @current_usage ||= full_plan_usage || ::Invoices::CustomerUsageService.call(
+      @current_usage ||= if full_plan_usage
+        @usage_path = "full_plan_reused"
+        full_plan_usage
+      else
+        @usage_path = "full_plan_failed"
+        compute_full_plan_usage.tap { @usage_path = "full_plan" if it }
+      end
+    end
+
+    def compute_full_plan_usage
+      ::Invoices::CustomerUsageService.call(
         customer: subscription.customer,
         subscription:,
         apply_taxes: false, # Never use taxes for alerting
@@ -61,17 +71,9 @@ module UsageMonitoring
     end
 
     def trace_usage_path
-      path = if full_plan_usage
-        "full_plan_reused"
-      elsif @current_usage
-        "full_plan"
-      else
-        "none"
-      end
-
       OpenTelemetry::Trace.current_span.add_attributes(
         "usage_monitoring.alerts_count" => alerts.size,
-        "usage_monitoring.usage_path" => path
+        "usage_monitoring.usage_path" => @usage_path || "none"
       )
     end
   end
