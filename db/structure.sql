@@ -3066,6 +3066,7 @@ CREATE TABLE public.billing_operation_segments (
     ended_at timestamp(6) without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    proration_ratio numeric(30,10) NOT NULL,
     CONSTRAINT billing_operation_segments_positive_coverage CHECK ((ended_at > started_at))
 );
 
@@ -18213,6 +18214,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123221629'),
 ('20261123213837'),
 ('20261120155610'),
 ('20261117151151'),

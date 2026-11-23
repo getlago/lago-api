@@ -70,6 +70,26 @@ RSpec.describe BillingOperations::ScheduleService do
     end
   end
 
+  context "when a fixed advance clock falls inside completed coverage" do
+    let(:started_at) { Time.utc(2026, 11, 1) }
+    let(:cursor) { Time.utc(2026, 11, 15) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+    let(:completed_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance),
+        billing_at: started_at, target_cycle_started_at: started_at, processed_at: started_at,
+        coverage_started_at: started_at, coverage_ended_at: Time.utc(2026, 12, 1))
+    end
+
+    before { completed_operation }
+
+    it "resets the clock without creating operations" do
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+      expect(contract_rate_card.billing_operations.pluck(:id)).to eq([completed_operation.id])
+    end
+  end
+
   context "with a completed operation in the current cycle" do
     let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:segment) }
     let(:completed_operation) do

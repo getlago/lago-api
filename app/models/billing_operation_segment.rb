@@ -7,7 +7,7 @@ class BillingOperationSegment < ApplicationRecord
   belongs_to :rate_override, -> { with_discarded }, optional: true
 
   validates :position, numericality: {only_integer: true, greater_than_or_equal_to: 0}
-  validates :started_at, :ended_at, presence: true
+  validates :started_at, :ended_at, :proration_ratio, presence: true
   validates :ended_at, comparison: {greater_than: :started_at}, if: -> { started_at.present? && ended_at.present? }
   validate :tenant_and_source_match
 
@@ -31,6 +31,7 @@ end
 #  id                   :uuid             not null, primary key
 #  ended_at             :datetime         not null
 #  position             :integer          not null
+#  proration_ratio      :decimal(30, 10)  not null
 #  started_at           :datetime         not null
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null

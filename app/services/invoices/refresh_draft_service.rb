@@ -146,23 +146,20 @@ module Invoices
     end
 
     def billing_segments
-      return @billing_segments if @billing_segments
-
       operations = invoice.billing_operations
         .order(:target_cycle_started_at, :billing_at, :id)
-        .includes(contract_rate_card: [
+        .includes(segments: [:rate_card_rate, :rate_override], contract_rate_card: [
           :organization,
           :terms,
           {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]},
           {contract: :customer},
-          {rate_card: [:rates, {product: :billable_metric}]},
-          {rate_phases: :rate_override}
-        ])
+          {rate_card: {product: :billable_metric}}
+        ]).load
 
       result.not_allowed_failure!(code: "missing_billing_operations").raise_if_error! if operations.empty?
 
       pricing_units = pricing_units_by_code(operations.map(&:contract_rate_card))
-      @billing_segments = operations.flat_map do |operation|
+      operations.flat_map do |operation|
         BillingOperations::ResolveSegmentsService.call!(operation:, pricing_units_by_code: pricing_units).billing_segments
       end
     end

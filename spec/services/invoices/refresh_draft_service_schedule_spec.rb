@@ -16,6 +16,7 @@ RSpec.describe Invoices::RefreshDraftService do
   let(:billing_scope) { "cycle" }
   let(:pricing_unit_conversion_rate) { nil }
   let(:operation_cycles) { [1, 2, 3] }
+  let(:operation_traits) { [:with_plan] }
   let(:contract_rate_card) do
     create(
       :contract_rate_card,
@@ -58,7 +59,7 @@ RSpec.describe Invoices::RefreshDraftService do
     operation_cycles.each do |month|
       cycle_start = Time.utc(2026, month, 1)
       billing_at = (billing_timing == "advance") ? cycle_start : cycle_start + 1.month
-      create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,
+      create(:billing_operation, *operation_traits, organization:, customer:, contract_rate_card:, invoice:,
         action_type: (billing_timing == "advance") ? "renew_fixed_advance" : "close_fixed_arrears",
         reason: :periodic_continuation, billing_at:, target_cycle_started_at: cycle_start, processed_at: billing_at)
     end
@@ -113,6 +114,7 @@ RSpec.describe Invoices::RefreshDraftService do
 
   context "when the invoice has linked billing operations" do
     let(:operation_cycles) { [] }
+    let(:additional_rate) { nil }
     let(:operation_attributes) do
       {
         action_type: "renew_fixed_advance",
@@ -123,7 +125,8 @@ RSpec.describe Invoices::RefreshDraftService do
     end
 
     before do
-      create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,
+      additional_rate
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, invoice:,
         processed_at: operation_attributes[:billing_at], **operation_attributes)
     end
 
@@ -152,7 +155,7 @@ RSpec.describe Invoices::RefreshDraftService do
         }
       end
 
-      before do
+      let(:additional_rate) do
         create(
           :rate_card_rate, organization:, rate_card:,
           effective_from: Time.utc(2026, 1, 15),
@@ -174,6 +177,7 @@ RSpec.describe Invoices::RefreshDraftService do
 
       context "when an earlier operation of the cycle owns the first slice" do
         let(:billing_scope) { "segment" }
+        let(:operation_attributes) { super().merge(coverage_started_at: Time.utc(2026, 1, 15), coverage_ended_at: Time.utc(2026, 2, 1)) }
 
         before do
           create(:billing_operation, organization:, customer:, contract_rate_card:,
@@ -212,7 +216,7 @@ RSpec.describe Invoices::RefreshDraftService do
           applied_pricing_unit_conversion_rate: pricing_unit_conversion_rate
         )
         create(
-          :billing_operation, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
+          :billing_operation, :with_plan, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
           action_type: "renew_fixed_advance", reason: :periodic_continuation,
           billing_at: Time.utc(2026, 3, 1), target_cycle_started_at: Time.utc(2026, 3, 1),
           processed_at: Time.utc(2026, 3, 1)
@@ -260,20 +264,6 @@ RSpec.describe Invoices::RefreshDraftService do
           expect(lookup_queries).to be_empty
         end
       end
-    end
-  end
-
-  context "when the resolved segments are accessed again" do
-    let(:refresh_service) { described_class.new(invoice:) }
-
-    it "reuses the same segments without querying their source again" do
-      segments = refresh_service.send(:billing_segments)
-
-      statements = capture_sql do
-        expect(refresh_service.send(:billing_segments)).to equal(segments)
-      end
-
-      expect(statements).to be_empty
     end
   end
 
@@ -355,18 +345,17 @@ RSpec.describe Invoices::RefreshDraftService do
     end
   end
 
-  context "when the referenced card has no rates" do
-    let(:rate_card_rate) { nil }
+  context "when the linked operations have no saved segments" do
+    let(:operation_traits) { [] }
 
-    it "rolls back the refresh and preserves the existing fees, totals, and ready flag" do
-      expect(result).not_to be_success
-
+    it "refreshes the draft with no fees" do
+      expect(result).to be_success
       expect(invoice.reload).to have_attributes(
-        ready_to_be_refreshed: true,
-        total_amount_cents: 444,
-        fees_amount_cents: 444
+        ready_to_be_refreshed: false,
+        total_amount_cents: 0,
+        fees_amount_cents: 0
       )
-      expect(invoice.fees.pluck(:id)).to eq([initial_fee.id])
+      expect(invoice.fees).to be_empty
       expect(invoice.billing_operations.count).to eq(3)
     end
   end

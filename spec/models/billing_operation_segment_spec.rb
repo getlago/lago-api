@@ -6,7 +6,7 @@ RSpec.describe BillingOperationSegment do
   subject(:segment) do
     described_class.new(
       organization:, billing_operation: operation, rate_card_rate: rate, position: 0,
-      started_at: Time.utc(2026, 11, 1), ended_at: Time.utc(2026, 12, 1)
+      started_at: Time.utc(2026, 11, 1), ended_at: Time.utc(2026, 12, 1), proration_ratio: 1
     )
   end
 
@@ -26,6 +26,7 @@ RSpec.describe BillingOperationSegment do
   describe "validations" do
     it "accepts an owned source and half-open coverage" do
       expect(segment).to be_valid
+      expect(segment).to validate_presence_of(:proration_ratio)
     end
 
     context "when the operation belongs to another organization" do

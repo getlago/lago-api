@@ -9,6 +9,7 @@ RSpec.describe "Billing operation coverage across a rate change" do
   let(:card) { contract.applied_rate_cards.sole }
   let(:rate_card) { organization.rate_cards.find_by!(code: "coverage-card") }
   let(:new_rate) { rate_card.rates.find_by!(code: "new") }
+  let(:old_rate) { rate_card.rates.find_by!(code: "old") }
   let(:start_at) { Time.utc(2026, 11, 1) }
   let(:change_at) { Time.utc(2026, 11, 15) }
   let(:end_at) { Time.utc(2026, 12, 1) }
@@ -19,7 +20,6 @@ RSpec.describe "Billing operation coverage across a rate change" do
   let(:display_on_invoice) { true }
   let(:regroup_paid_fees) { nil }
   let(:action_type) { "renew_fixed_advance" }
-  let(:initially_completed) { true }
   let(:first_operation) { card.billing_operations.where(action_type:).sole }
 
   around do |example|
@@ -99,7 +99,7 @@ RSpec.describe "Billing operation coverage across a rate change" do
       snapshot = operation.attributes.slice("id", "coverage_started_at", "coverage_ended_at", "processed_at",
         "cancelled_at", "invoice_id")
       expect(operation).to have_attributes(coverage_started_at: start_at, coverage_ended_at: end_at)
-      expect(operation.processed_at.present?).to eq(initially_completed)
+      expect(operation.processed_at).to be_present
       expect(card.billing_operations.where(action_type: "reconcile_advance_coverage")).to be_empty
       initial_clock = card.reload.next_billing_at
 
@@ -112,12 +112,7 @@ RSpec.describe "Billing operation coverage across a rate change" do
       add_rate_and_apply_change
 
       expect(operation.reload.attributes.slice(*snapshot.keys)).to eq(snapshot)
-      expected_clock = if initially_completed || billing_scope == "cycle"
-        snapshot.fetch("coverage_ended_at")
-      else
-        change_at
-      end
-      expect(card.reload.next_billing_at).to eq(expected_clock)
+      expect(card.reload.next_billing_at).to eq(end_at)
       if action_type == "renew_fixed_advance"
         expect(initial_clock).to eq(snapshot.fetch("coverage_ended_at"))
         expect(card.billing_operations.pending.where(action_type: "reconcile_advance_coverage", reason: "rate_change").count).to eq(1)
@@ -128,6 +123,35 @@ RSpec.describe "Billing operation coverage across a rate change" do
   end
 
   shared_examples "fixed advance continuation" do
+    let(:reconciliation_start) { (billing_scope == "cycle") ? start_at : change_at }
+
+    it "keeps one pending reconciliation across duplicate rate-change jobs and scheduling" do
+      operation = first_operation
+      expect(operation).to have_attributes(coverage_started_at: start_at, coverage_ended_at: end_at)
+      add_rate_and_apply_change
+      reconciliations = card.billing_operations.pending.where(action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage))
+      reconciliation = reconciliations.sole
+      expect(reconciliation).to have_attributes(target_cycle_started_at: start_at, billing_at: reconciliation_start,
+        coverage_started_at: reconciliation_start, coverage_ended_at: end_at, invoice_id: nil)
+      fields = %i[started_at ended_at rate_card_rate_id proration_ratio]
+      expected_segments = [[change_at, end_at, new_rate.id, (16.to_d / 30).round(10)]]
+      expected_segments.unshift([start_at, change_at, old_rate.id, (14.to_d / 30).round(10)]) if billing_scope == "cycle"
+      expect(operation.segments.pluck(*fields)).to eq([[start_at, end_at, old_rate.id, 1]])
+      expect(reconciliation.segments.pluck(*fields)).to eq(expected_segments)
+      travel_to(Time.utc(2026, 11, 12)) { BillingOperations::ApplyRateChangeJob.perform_now(customer.id, new_rate.id) }
+      expect(reconciliations.pluck(:id)).to eq([reconciliation.id])
+      expect(reconciliation.segments.pluck(*fields)).to eq(expected_segments)
+
+      travel_to(change_at + 5.minutes) do
+        Clock::ScheduleBillingOperationsJob.perform_now
+        perform_all_enqueued_jobs
+        expect(reconciliations.pluck(:id)).to eq([reconciliation.id])
+        expect(card.billing_operations.periodic.pluck(:id)).to eq([operation.id])
+        expect(card.reload.next_billing_at).to eq(end_at)
+        expect(Fee.where(contract:, fee_type: :product).pluck(:amount_cents)).to eq([3_000])
+      end
+    end
+
     it "continues at the stored coverage end without billing the covered rate-change slice" do
       expect(rate_card.rates.count).to eq(1)
       operation = first_operation
@@ -139,12 +163,12 @@ RSpec.describe "Billing operation coverage across a rate change" do
         "cancelled_at", "invoice_id")
 
       add_rate_and_apply_change
-      reconciliation = card.billing_operations.find_by!(
-        action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage)
-      )
       travel_to(end_at + 5.minutes) do
         Clock::ScheduleBillingOperationsJob.perform_now
         perform_all_enqueued_jobs
+        reconciliation = card.billing_operations.find_by!(
+          action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage)
+        )
         expect(Fee.where(contract:, fee_type: :product).order(:created_at).pluck(:amount_cents)).to eq([3_000, 6_000])
         renewal = card.billing_operations.where(
           action_type: BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance), coverage_started_at: covered_until
@@ -153,11 +177,12 @@ RSpec.describe "Billing operation coverage across a rate change" do
         expect(operation.reload.attributes.slice(*snapshot.keys)).to eq(snapshot)
         expect(reconciliation.reload).to have_attributes(
           processed_at: nil, invoice_id: nil,
-          coverage_started_at: (billing_scope == "cycle") ? start_at : change_at, coverage_ended_at: covered_until
+          coverage_started_at: reconciliation_start, coverage_ended_at: covered_until
         )
         expect(renewal).to have_attributes(
           processed_at: Time.current, coverage_started_at: covered_until, coverage_ended_at: Time.utc(2027, 1, 1)
         )
+        expect(renewal.segments.pluck(:started_at, :ended_at, :rate_card_rate_id)).to eq([[covered_until, Time.utc(2027, 1, 1), new_rate.id]])
         expect(renewal.invoice).to be_present
         expect(renewal.invoice.fees.where(fee_type: :product).pluck(:amount_cents)).to eq([6_000])
         expect(card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
@@ -179,9 +204,8 @@ RSpec.describe "Billing operation coverage across a rate change" do
   end
 
   shared_examples "arrears coverage after the rate change" do
-    it "invoices the uncovered portions on both sides of the new rate" do
-      operation = first_operation
-      expect(operation).to have_attributes(coverage_started_at: start_at, coverage_ended_at: end_at, processed_at: nil)
+    it "invoices each side of the rate change once" do
+      expect(card.billing_operations).to be_empty
       if product_type == "metered"
         travel_to(Time.utc(2026, 11, 10, 12)) do
           create_event({external_contract_id: contract.external_id, code: "coverage-usage",
@@ -189,6 +213,7 @@ RSpec.describe "Billing operation coverage across a rate change" do
         end
       end
       add_rate_and_apply_change
+      travel_to(change_at + 5.minutes) { perform_enqueued_jobs { Clock::ScheduleBillingOperationsJob.perform_now } }
       if product_type == "metered"
         travel_to(Time.utc(2026, 11, 20, 12)) do
           create_event({external_contract_id: contract.external_id, code: "coverage-usage",
@@ -213,11 +238,14 @@ RSpec.describe "Billing operation coverage across a rate change" do
           [start_at.iso8601(6), BillingSegment.inclusive_end(change_at).iso8601(6)],
           [change_at.iso8601(6), BillingSegment.inclusive_end(end_at).iso8601(6)]
         ])
-        coverage = card.billing_operations.completed.periodic.order(:coverage_started_at)
-          .pluck(:coverage_started_at, :coverage_ended_at)
-        expect(coverage).to eq([[start_at, end_at]])
-        expect(operation.reload).to have_attributes(
-          processed_at: Time.current, coverage_started_at: start_at, coverage_ended_at: end_at
+        operations = card.billing_operations.completed.periodic.order(:coverage_started_at)
+        coverage = operations.pluck(:coverage_started_at, :coverage_ended_at)
+        expected_coverage = (billing_scope == "cycle") ? [[start_at, end_at]] : [[start_at, change_at], [change_at, end_at]]
+        expect(coverage).to eq(expected_coverage)
+        old_segment = [start_at, change_at, old_rate.id]
+        new_segment = [change_at, end_at, new_rate.id]
+        expect(operations.map { it.segments.pluck(:started_at, :ended_at, :rate_card_rate_id) }).to eq(
+          (billing_scope == "cycle") ? [[old_segment, new_segment]] : [[old_segment], [new_segment]]
         )
         expect(card.billing_operations.where(action_type: "reconcile_advance_coverage")).to be_empty
       end
@@ -253,9 +281,7 @@ RSpec.describe "Billing operation coverage across a rate change" do
   context "with fixed arrears" do
     let(:billing_timing) { "arrears" }
     let(:action_type) { "close_fixed_arrears" }
-    let(:initially_completed) { false }
 
-    include_examples "both billing scopes"
     include_examples "arrears in both billing scopes"
   end
 
@@ -263,9 +289,7 @@ RSpec.describe "Billing operation coverage across a rate change" do
     let(:product_type) { "metered" }
     let(:billing_timing) { "arrears" }
     let(:action_type) { "close_metered_arrears" }
-    let(:initially_completed) { false }
 
-    include_examples "both billing scopes"
     include_examples "arrears in both billing scopes"
   end
 
@@ -282,8 +306,21 @@ RSpec.describe "Billing operation coverage across a rate change" do
     let(:display_on_invoice) { false }
     let(:regroup_paid_fees) { "invoice" }
     let(:action_type) { "regroup_paid_fees" }
-    let(:initially_completed) { false }
 
-    include_examples "both billing scopes"
+    it "replans the regrouping date without creating an operation" do
+      add_rate_and_apply_change
+      expect(card.reload.next_billing_at).to eq(end_at)
+      expect(card.billing_operations).to be_empty
+    end
+
+    context "with segment billing" do
+      let(:billing_scope) { "segment" }
+
+      it "moves the regrouping date to the first segment end" do
+        add_rate_and_apply_change
+        expect(card.reload.next_billing_at).to eq(change_at)
+        expect(card.billing_operations).to be_empty
+      end
+    end
   end
 end

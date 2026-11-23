@@ -40,9 +40,8 @@ module BillingOperations
     def schedule_card(contract_rate_card)
       action_type = contract_rate_card.periodic_billing_action
       schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule if action_type
-      # The reset moves the clock to the next obligation, or clears it when there is none.
       ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, schedule:)
-      return [] unless schedule && action_type
+      return [] unless schedule
 
       Schedule::DueOperationsService.call!(contract_rate_card:, schedule:, timestamp:).billing_operations
     end

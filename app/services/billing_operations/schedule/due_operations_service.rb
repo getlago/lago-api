@@ -36,27 +36,20 @@ module BillingOperations
       end
 
       def last_periodic_operation
-        return @last_periodic_operation if defined?(@last_periodic_operation)
-
-        operations = contract_rate_card.billing_operations.periodic
+        contract_rate_card.billing_operations.periodic
           .where(organization_id: contract_rate_card.organization_id, action_type:, cancelled_at: nil)
           .where(billing_at: ..timestamp)
-        @last_periodic_operation = operations.order(billing_at: :desc, created_at: :desc, id: :desc).first
+          .order(billing_at: :desc, created_at: :desc, id: :desc).first
       end
 
       def create_due_operations
-        from = last_periodic_operation&.coverage_ended_at || contract_rate_card.effective_date_in_customer_timezone
-        previous_billing_at = last_periodic_operation&.billing_at
-        due = schedule.obligations_due_by(timestamp, from:, after: previous_billing_at)
-        due.filter_map do |obligation|
-          plan = PlannedOperation.from_obligation(obligation, after: previous_billing_at)
-          next if plan.billing_at > timestamp
-
-          operation = BillingOperations::CreateService.call!(
-            contract_rate_card:, action_type:, reason: "periodic_continuation", planned_operation: plan
+        previous = last_periodic_operation
+        from = previous&.coverage_ended_at || contract_rate_card.effective_date_in_customer_timezone
+        schedule.obligations_due_by(timestamp, from:, after: previous&.billing_at).map do |obligation, billing_at|
+          BillingOperations::CreateService.call!(
+            contract_rate_card:, action_type:, reason: "periodic_continuation",
+            planned_operation: PlannedOperation.new(obligation:, billing_at:)
           ).operation
-          previous_billing_at = operation.billing_at
-          operation
         end
       end
     end

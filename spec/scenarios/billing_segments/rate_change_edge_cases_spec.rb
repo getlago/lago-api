@@ -72,17 +72,14 @@ RSpec.describe "Fixed advance rate change edge cases" do
   end
 
   shared_examples "an earlier first price" do
-    it "replans the first due date and catches up coverage before the existing December operation" do
+    it "replans the first due date and catches up coverage through December" do
       expect(rate_card.rates.count).to eq(1)
-      operation = first_operation
-      expect(operation).to have_attributes(
-        action_type: BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance),
-        billing_at: december, coverage_started_at: december, coverage_ended_at: january,
-        processed_at: nil, cancelled_at: nil
-      )
+      expect(card.billing_operations).to be_empty
       expect(card.reload.next_billing_at).to eq(december)
 
       travel_to(Time.utc(2026, 11, 12)) do
+        expect(contract.reload).to be_active
+        expect(rate_card.rates.sole).to be_pending
         api_call(perform_jobs: false) do
           post_with_token(organization, "/api/v2/rate_cards/edge-card/rates", {rate: {
             code: "new", effective_from: change_at.iso8601, rate_model: "standard",
@@ -90,13 +87,12 @@ RSpec.describe "Fixed advance rate change edge cases" do
           }})
         end
         new_rate = rate_card.rates.find_by!(code: "new")
+        expect(new_rate).to be_pending
         apply_rate_jobs(new_rate)
         expect(card.reload.next_billing_at).to eq(change_at)
-        expect(operation.reload).to have_attributes(
-          billing_at: december, coverage_started_at: december, coverage_ended_at: january,
-          processed_at: nil, cancelled_at: nil
-        )
-        expect(card.billing_operations.where(action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage))).to be_empty
+        reconciliation = card.billing_operations.pending.sole
+        expect(reconciliation).to have_attributes(action_type: "reconcile_advance_coverage", reason: "rate_change")
+        expect(reconciliation.segments.pluck(:started_at, :ended_at, :rate_card_rate_id)).to eq([[change_at, december, new_rate.id]])
       end
 
       travel_to(december + 5.minutes) do
@@ -108,11 +104,9 @@ RSpec.describe "Fixed advance rate change edge cases" do
         expect(completed.map { [it.coverage_started_at, it.coverage_ended_at] }).to eq([
           [change_at, december], [december, january]
         ])
-        expect(completed.last.id).to eq(operation.id)
         expect(completed.map { it.invoice.total_amount_cents }).to eq([3_200, 3_000]) # $60 * 16/30 days; then $30 for December.
-        expect(operation.reload.processed_at).to be_present
         expect(card.reload.next_billing_at).to eq(january)
-        expect(card.billing_operations.where(action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage))).to be_empty
+        expect(card.billing_operations.pending.sole.action_type).to eq("reconcile_advance_coverage")
       end
     end
   end
@@ -139,10 +133,85 @@ RSpec.describe "Fixed advance rate change edge cases" do
       ]
     end
 
-    it "queues reconciliation for the previously priced November coverage" do
+    context "with segment billing when the new rate moves from Nov 15 to Nov 20" do
+      let(:billing_scope) { "segment" }
+      let(:moved_to) { Time.utc(2026, 11, 20) }
+      let(:old_rate) { rate_card.rates.find_by!(code: "old") }
+      let(:new_rate) { rate_card.rates.find_by!(code: "new") }
+
+      it "reconciles the extended old-rate segment and moves the next periodic billing date to Nov 20" do
+        expect(new_rate.effective_from).to eq(change_at)
+        expect(card.next_billing_at).to eq(change_at)
+        expect(first_operation.segments.pluck(:started_at, :ended_at, :rate_card_rate_id)).to eq([[start_at, change_at, old_rate.id]])
+        expect(first_operation.invoice.total_amount_cents).to eq(1_400) # $30 × 14/30 days.
+
+        travel_to(Time.utc(2026, 11, 12))
+        api_call do
+          put_with_token(organization, "/api/v2/rate_cards/edge-card/rates/new", {rate: {effective_from: moved_to.iso8601}})
+        end
+
+        # The old rate now covers Nov 1–19, but only Nov 1–14 was prepaid.
+        reconciliation = card.billing_operations.pending.sole
+        expect(reconciliation).to have_attributes(action_type: "reconcile_advance_coverage", reason: "rate_change",
+          target_cycle_started_at: start_at, coverage_started_at: start_at, coverage_ended_at: moved_to)
+        expect(reconciliation.segments.pluck(:started_at, :ended_at, :rate_card_rate_id, :proration_ratio))
+          .to eq([[start_at, moved_to, old_rate.id, (19.to_d / 30).round(10)]])
+        expect(card.reload.next_billing_at).to eq(moved_to)
+
+        travel_to(change_at + 5.minutes) { perform_enqueued_jobs { Clock::ScheduleBillingOperationsJob.perform_now } }
+        completed = card.billing_operations.completed.periodic.order(:coverage_started_at)
+        expect(card.billing_operations.periodic.pluck(:id)).to eq([first_operation.id])
+        expect(card.reload.next_billing_at).to eq(moved_to)
+
+        travel_to(moved_to + 5.minutes) { perform_enqueued_jobs { Clock::ScheduleBillingOperationsJob.perform_now } }
+        billed = completed.map do |operation|
+          segment = operation.segments.sole
+          fee = operation.invoice.fees.sole
+          [segment.started_at, segment.ended_at, fee.rate_card_rate_id, fee.amount_cents]
+        end
+        expect(billed).to eq([
+          [start_at, change_at, old_rate.id, 1_400],
+          [moved_to, december, new_rate.id, 2_200] # $60 × 11/30 days.
+        ])
+        expect(reconciliation.reload).to have_attributes(processed_at: nil, cancelled_at: nil, invoice_id: nil)
+      end
+    end
+
+    it "records only the latest schedule when the same rate is edited twice before the customer job runs" do
+      rate = rate_card.rates.find_by!(code: "new")
+      first_date = Time.utc(2026, 11, 20)
+      latest_date = Time.utc(2026, 12, 15)
+      [first_date, latest_date].each_with_index do |date, index|
+        travel_to(start_at + (index + 1).days)
+        api_call(perform_jobs: false) do
+          put_with_token(organization, "/api/v2/rate_cards/edge-card/rates/new", {rate: {effective_from: date.iso8601}})
+        end
+        perform_all_enqueued_jobs(only: [RateCardRates::ApplyRateChangeJob])
+      end
+
+      expect(BillingOperations::ApplyRateChangeJob).to have_been_enqueued.with(customer.id, rate.id).at_least(:once)
+      perform_all_enqueued_jobs(only: [BillingOperations::ApplyRateChangeJob])
+      BillingOperations::ApplyRateChangeJob.perform_now(customer.id, rate.id)
+
+      reconciliation = card.billing_operations.where(action_type: "reconcile_advance_coverage").sole
+      expect(reconciliation).to have_attributes(coverage_started_at: december, coverage_ended_at: january)
+      expect(reconciliation.segments.pluck(:started_at, :ended_at, :rate_card_rate_id)).to eq([
+        [december, latest_date, rate_card.rates.find_by!(code: "old").id], [latest_date, january, rate.id]
+      ])
+    end
+
+    it "keeps November as purchased and queues reconciliation with the revised December segments" do
       operation = first_operation
       invoice = operation.invoice
+      old_rate = rate_card.rates.find_by!(code: "old")
+      moved_rate = rate_card.rates.find_by!(code: "new")
+      segment_fields = %i[position started_at ended_at rate_card_rate_id proration_ratio]
+      purchased_segments = [
+        [0, start_at, change_at, old_rate.id, (14.to_d / 30).round(10)],
+        [1, change_at, december, moved_rate.id, (16.to_d / 30).round(10)]
+      ]
       expect(operation).to have_attributes(coverage_started_at: start_at, coverage_ended_at: december, processed_at: start_at + 5.minutes)
+      expect(operation.segments.pluck(*segment_fields)).to eq(purchased_segments)
       expect(invoice.total_amount_cents).to eq(4_600) # $30 * 14/30 + $60 * 16/30 days.
       expect(invoice.fees.order(:amount_cents).pluck(:amount_cents)).to eq([1_400, 3_200])
       expect(card.reload.next_billing_at).to eq(december)
@@ -152,6 +221,12 @@ RSpec.describe "Fixed advance rate change edge cases" do
       fee_ids = invoice.fees.order(:id).pluck(:id)
 
       travel_to(Time.utc(2026, 11, 12)) do
+        rate = rate_card.rates.find_by!(code: "new")
+        expect(contract.reload).to be_active
+        expect(card.billing_scope).to eq("cycle")
+        expect(rate_card.rates.find_by!(code: "old")).to be_active
+        expect(rate).to be_pending
+        expect(invoice.fees.find_by!(rate_card_rate_id: rate.id).amount_cents).to eq(3_200)
         api_call(perform_jobs: false) do
           put_with_token(organization, "/api/v2/rate_cards/edge-card/rates/new", {
             rate: {effective_from: Time.utc(2026, 12, 15).iso8601}
@@ -165,9 +240,14 @@ RSpec.describe "Fixed advance rate change edge cases" do
         expect(invoice.reload.total_amount_cents).to eq(4_600)
         expect(invoice.fees.order(:id).pluck(:id)).to eq(fee_ids)
         expect(card.reload.next_billing_at).to eq(december)
-        expect(card.billing_operations.pending.where(action_type: reconciliation_type)).to contain_exactly(
-          have_attributes(coverage_started_at: start_at, coverage_ended_at: december, reason: "rate_change")
-        )
+        expect(operation.segments.pluck(*segment_fields)).to eq(purchased_segments)
+        reconciliation = card.billing_operations.pending.where(action_type: reconciliation_type).sole
+        expect(reconciliation).to have_attributes(coverage_started_at: december, coverage_ended_at: january,
+          target_cycle_started_at: december, billing_at: december, reason: "rate_change", invoice_id: nil)
+        expect(reconciliation.segments.pluck(*segment_fields)).to eq([
+          [0, december, rate.effective_from, old_rate.id, (14.to_d / 31).round(10)],
+          [1, rate.effective_from, january, moved_rate.id, (17.to_d / 31).round(10)]
+        ])
       end
     end
   end

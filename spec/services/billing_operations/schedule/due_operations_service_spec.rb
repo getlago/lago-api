@@ -65,9 +65,39 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
     let(:anchor_action) { "renew_fixed_advance" }
     let(:anchor_cycle) { anchor_at }
 
+    before do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
+        billing_at: started_at, target_cycle_started_at: started_at, processed_at: started_at,
+        coverage_started_at: started_at, coverage_ended_at: anchor_at)
+    end
+
     it "fills renewals through the cutoff" do
       expect(result.billing_operations.map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
       expect(result.billing_operations.map(&:action_type).uniq).to eq(["renew_fixed_advance"])
+    end
+  end
+
+  context "with gaps between pending advance renewals" do
+    let(:billing_timing) { "advance" }
+    let(:anchor_action) { "renew_fixed_advance" }
+    let(:has_anchor) { false }
+    let(:boundary) { Time.utc(2026, 11, 5) }
+    let(:pending_dates) { [Time.utc(2026, 11, 2), Time.utc(2026, 11, 4)] }
+    let(:pending_operations) do
+      pending_dates.map do |date|
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
+          billing_at: date, target_cycle_started_at: date, coverage_started_at: date, coverage_ended_at: date + 1.day)
+      end
+    end
+
+    before { pending_operations }
+
+    it "continues once from the latest pending coverage end" do
+      expect(result.billing_operations.sole).to have_attributes(
+        billing_at: boundary, coverage_started_at: boundary, coverage_ended_at: boundary + 1.day
+      )
+      expect(described_class.call!(contract_rate_card:, schedule:, timestamp:).billing_operations).to be_empty
+      expect(contract_rate_card.billing_operations.where(id: pending_operations.map(&:id)).count).to eq(2)
     end
   end
 
@@ -246,6 +276,38 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
       expect(result.billing_operations.map(&:billing_at)).to eq([Time.utc(2026, 11, 15), Time.utc(2026, 12, 1)])
     end
 
+    context "when only the later fixed advance segment is pending" do
+      let(:billing_timing) { "advance" }
+      let(:anchor_action) { BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance) }
+      let(:has_anchor) { true }
+      let(:anchor_at) { Time.utc(2026, 11, 15) }
+      let(:anchor_cycle) { started_at }
+      let(:timestamp) { anchor_at }
+      let(:anchor) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
+          billing_at: anchor_at, target_cycle_started_at: started_at, coverage_started_at: anchor_at, coverage_ended_at: boundary)
+      end
+
+      it "keeps the existing due renewal" do
+        expect(result.billing_operations).to be_empty
+        expect(contract_rate_card.billing_operations.sole).to eq(anchor)
+        expect(anchor.reload).to have_attributes(coverage_started_at: anchor_at, coverage_ended_at: boundary)
+      end
+
+      context "when the later renewal is not yet due" do
+        let(:timestamp) { anchor_at - 1.second }
+
+        it "schedules the earlier segment once and preserves the later renewal" do
+          earlier = result.billing_operations.sole
+          expect(earlier).to have_attributes(
+            action_type: anchor_action, coverage_started_at: started_at, coverage_ended_at: anchor_at
+          )
+          expect(described_class.call!(contract_rate_card:, schedule:, timestamp:).billing_operations).to be_empty
+          expect(contract_rate_card.billing_operations.pluck(:id)).to match_array([anchor.id, earlier.id])
+        end
+      end
+    end
+
     context "when the first arrears segment was already closed" do
       let(:has_anchor) { true }
       let(:anchor_at) { Time.utc(2026, 11, 15) }
@@ -308,6 +370,28 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
         let(:billing_scope) { "cycle" }
 
         include_examples "continues after completed coverage"
+      end
+    end
+
+    context "when a new advance segment starts inside completed coverage" do
+      let(:billing_timing) { "advance" }
+      let(:anchor_action) { BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance) }
+      let(:anchor_at) { started_at }
+      let(:anchor_cycle) { started_at }
+      let(:anchor_coverage_end) { Time.utc(2026, 11, 20) }
+      let(:anchor_processed_at) { started_at }
+      let(:has_anchor) { true }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: anchor_coverage_end,
+          billing_interval_count: 1, billing_interval_unit: "month")
+      end
+
+      it "continues at the stored coverage end without reopening a priced slice" do
+        expect(result.billing_operations.map { [it.coverage_started_at, it.coverage_ended_at] }).to eq([
+          [Time.utc(2026, 11, 20), boundary], [boundary, Time.utc(2027, 1, 1)]
+        ])
+        expect(anchor.reload.coverage_ended_at).to eq(Time.utc(2026, 11, 20))
       end
     end
 
