@@ -100,7 +100,6 @@ RSpec.describe V2::InvoiceSerializer do
     let(:error_detail) { create(:error_detail, owner: invoice, error_code: "tax_error", details: {"code" => "x"}) }
 
     before do
-      create(:billing_segment, organization:, customer:, contract:, invoice:)
       later_fee
       earlier_fee
       event_fee
@@ -159,7 +158,7 @@ RSpec.describe V2::InvoiceSerializer do
     end
 
     it "lists the distinct contracts the fees were billed from" do
-      expect(invoice.contracts).to eq([contract])
+      expect(invoice.contracts).to match_array([contract, other_contract])
       expect(result["contracts"]).to eq(
         [contract, other_contract].map { JSON.parse(V2::ContractSerializer.new(it).serialize.to_json) }
       )

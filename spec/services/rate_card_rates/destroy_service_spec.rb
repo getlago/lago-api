@@ -24,6 +24,10 @@ RSpec.describe RateCardRates::DestroyService, :capture_kafka_messages do
       expect(rate_card_rate.reload).to be_discarded
     end
 
+    it "replans the cards that used the rate after commit" do
+      expect { result }.to have_enqueued_job_after_commit(RateCardRates::ApplyRateChangeJob).with(rate_card_rate.id)
+    end
+
     it "publishes rate_card_rate.deleted on the discarded rate without a snapshot" do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card_rate.deleted", rate_card_rate)
       expect(Utils::ActivityLog).to have_received(:produce).with(
@@ -62,6 +66,7 @@ RSpec.describe RateCardRates::DestroyService, :capture_kafka_messages do
           end
         end.not_to have_enqueued_job(SendWebhookJob)
 
+        expect(RateCardRates::ApplyRateChangeJob).not_to have_been_enqueued
         expect(rate_card_rate.reload).not_to be_discarded
         expect(kafka_messages).to be_empty
       end

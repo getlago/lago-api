@@ -1117,6 +1117,19 @@ RSpec.describe Api::V2::CustomersController do
 
     include_examples "requires API permission", "customer", "read"
 
+    context "with an organization waiting for a payment method" do
+      include_context "with self-serve enabled"
+
+      let(:organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+
+      it "refuses the request" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "organization_inactive", details: [])
+      end
+    end
+
     it_behaves_like "a cursor paginated v2 endpoint", collection: :customers, model: Customer do
       let(:paginated_path) { "/api/v2/customers" }
       let(:create_paginated_record) { ->(created_at) { create(:customer, organization:, created_at:) } }

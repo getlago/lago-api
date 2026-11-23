@@ -6,6 +6,7 @@ module Organizations
 
     ORGANIZATION_ATTRIBUTES = %i[
       name document_numbering premium_integrations feature_flags slug self_serve environment production_organization_id
+      activation_status
     ].freeze
 
     def initialize(params)

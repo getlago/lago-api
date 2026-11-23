@@ -16,6 +16,28 @@ RSpec.describe ProductFilter do
       expect(product_filter).to have_many(:values).class_name("ProductFilterValue")
       expect(product_filter).to have_many(:billable_metric_filters).through(:values)
       expect(product_filter).to have_many(:rate_cards)
+      expect(product_filter).to have_many(:contract_alerts).class_name("UsageMonitoring::ContractAlert")
+    end
+
+    context "with contract alerts" do
+      let(:product_filter) { create(:product_filter) }
+      let(:organization) { product_filter.organization }
+      let(:product) { product_filter.product }
+      let(:alert) { create(:contract_usage_units_alert, organization:, product:, product_filter:) }
+
+      before do
+        alert
+        create(
+          :contract_usage_units_alert,
+          organization:, product:, product_filter:, code: "discarded", deleted_at: Time.current
+        )
+        create(:contract_usage_units_alert, organization:, product:)
+        create(:contract_usage_units_alert, organization: create(:organization), product:, product_filter:)
+      end
+
+      it "lists the kept alerts on the filter in its organization only" do
+        expect(product_filter.contract_alerts).to eq([alert])
+      end
     end
   end
 

@@ -33,5 +33,79 @@ RSpec.describe Integrations::Aggregator::SyncService do
         expect(payload[:syncs]).to eq(syncs_list)
       end
     end
+
+    context "with a xero integration" do
+      let(:integration) { create(:xero_integration) }
+
+      it "triggers the xero syncs" do
+        sync_service.call
+
+        expect(lago_client).to have_received(:post_with_response) do |payload|
+          expect(payload[:provider_config_key]).to eq("xero")
+          expect(payload[:syncs]).to eq(%w[xero-accounts-sync xero-items-sync xero-contacts-sync])
+        end
+      end
+    end
+
+    context "with a quickbooks integration" do
+      let(:integration) { create(:quickbooks_integration) }
+
+      it "triggers the quickbooks catalog syncs" do
+        sync_service.call
+
+        expect(lago_client).to have_received(:post_with_response) do |payload|
+          expect(payload[:provider_config_key]).to eq("quickbooks")
+          expect(payload[:syncs]).to eq(%w[accounts items customers])
+        end
+      end
+
+      context "when the integration is a sandbox" do
+        let(:integration) do
+          create(
+            :quickbooks_integration,
+            settings: {
+              realm_id: "1234567890",
+              sandbox: true,
+              sync_invoices: false,
+              sync_credit_notes: false,
+              sync_payments: false
+            }
+          )
+        end
+
+        it "triggers the quickbooks catalog syncs on the sandbox provider config" do
+          sync_service.call
+
+          expect(lago_client).to have_received(:post_with_response) do |payload|
+            expect(payload[:provider_config_key]).to eq("quickbooks-sandbox")
+            expect(payload[:syncs]).to eq(%w[accounts items customers])
+          end
+        end
+      end
+
+      context "with only_items option" do
+        subject(:sync_service) { described_class.new(integration:, options: {only_items: true}) }
+
+        it "triggers the items sync only" do
+          sync_service.call
+
+          expect(lago_client).to have_received(:post_with_response) do |payload|
+            expect(payload[:syncs]).to eq(["items"])
+          end
+        end
+      end
+
+      context "with only_accounts option" do
+        subject(:sync_service) { described_class.new(integration:, options: {only_accounts: true}) }
+
+        it "triggers the accounts sync only" do
+          sync_service.call
+
+          expect(lago_client).to have_received(:post_with_response) do |payload|
+            expect(payload[:syncs]).to eq(["accounts"])
+          end
+        end
+      end
+    end
   end
 end

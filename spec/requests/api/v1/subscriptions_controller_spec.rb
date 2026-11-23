@@ -577,6 +577,21 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
             })
           end
         end
+
+        context "when the payment method is a SEPA debit" do
+          let(:payment_method) do
+            create(:payment_method, customer:, organization:, payment_provider_customer: stripe_customer, provider_method_id: "pm_sepa",
+              details: {type: "sepa_debit", last4: "3000"})
+          end
+
+          it "returns a validation error without creating the subscription" do
+            expect { subject }.not_to change(Subscription, :count)
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details][:payment_method_id]).to include "payment_method_not_supported_for_authorization"
+            expect(WebMock).not_to have_requested(:post, "https://api.stripe.com/v1/payment_intents")
+          end
+        end
       end
     end
 
