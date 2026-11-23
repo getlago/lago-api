@@ -95,6 +95,33 @@ RSpec.describe Customers::UpsertFromApiService do
     )
   end
 
+  context "when the organization is copied to a shadow organization" do
+    let(:migration) { create(:billing_engine_migration, organization:) }
+
+    before { migration }
+
+    it "enqueues a copy of the new customer" do
+      expect(result).to be_success
+      expect(BillingEngineMigrations::CopyCustomerJob).to have_been_enqueued.with(migration.id, result.customer.id)
+    end
+
+    context "when the customer exists" do
+      let(:customer) { described_class.call(organization:, params: create_args.deep_dup).customer }
+
+      before { customer }
+
+      it "enqueues nothing for an upsert with the same data" do
+        expect { described_class.call(organization:, params: create_args.deep_dup) }
+          .not_to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob)
+      end
+
+      it "enqueues a copy when the name changes" do
+        expect { described_class.call(organization:, params: create_args.merge(name: "New name")) }
+          .to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob).with(migration.id, customer.id)
+      end
+    end
+  end
+
   context "when net_payment_term is provided" do
     let(:customer) do
       create(
