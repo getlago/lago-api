@@ -17,8 +17,7 @@ module CatalogWallets
 
       def move_balance(wallet, by:)
         wallet.balance_cents += by
-        # Not validated: a balance must still move on a deleted wallet whose code is in use again.
-        wallet.save!(validate: false)
+        wallet.save!
 
         after_commit { CatalogWallets::ThresholdTopUpService.call(wallet:) }
       end

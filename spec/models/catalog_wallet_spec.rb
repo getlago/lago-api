@@ -54,6 +54,16 @@ describe CatalogWallet do
       it "accepts the code on another contract" do
         expect(build(:catalog_wallet, organization: existing.organization, code: "credits")).to be_valid
       end
+
+      context "when the code of a deleted wallet is in use again" do
+        let(:deleted) { create(:catalog_wallet, code: "credits", deleted_at: 1.day.ago) }
+
+        before { create(:catalog_wallet, contract: deleted.contract, customer: deleted.customer, code: "credits") }
+
+        it "accepts the deleted wallet" do
+          expect(deleted).to be_valid
+        end
+      end
     end
   end
 end
