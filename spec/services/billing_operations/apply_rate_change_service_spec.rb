@@ -20,8 +20,15 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 1), rate_properties: {"amount" => "30"})
   end
   let(:effective_from) { Time.utc(2026, 11, 15) }
-  # Set only by the reconciliation contexts, whose path still reads the clock.
   let(:initial_cursor) { nil }
+  let(:completed_coverage_attributes) do
+    {
+      organization:, customer:, action_type: "renew_fixed_advance", reason: "contract_activation",
+      billing_at: Time.utc(2026, 11, 1), target_cycle_started_at: Time.utc(2026, 11, 1),
+      coverage_started_at: Time.utc(2026, 11, 1), coverage_ended_at: Time.utc(2026, 12, 1),
+      processed_at: Time.utc(2026, 11, 1)
+    }
+  end
   let(:new_rate) do
     create(:rate_card_rate, organization:, rate_card:, effective_from:, rate_properties: {"amount" => "60"})
   end
@@ -161,25 +168,25 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
 
   context "when reconciliation creation fails on the second card", transaction: false do
     let(:billing_timing) { "advance" }
-    let(:initial_cursor) { effective_from }
     let(:other_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
     let(:other_card) do
       create(:contract_rate_card, organization:, contract: other_contract, rate_card:,
         effective_date: contract_rate_card.effective_date, billing_anchor_date: contract_rate_card.billing_anchor_date,
-        next_billing_at: effective_from)
+        next_billing_at: Time.utc(2026, 12, 1))
     end
     let(:operation_counts_during_creation) { [] }
     let(:failure) { BaseService::Result.new.single_validation_failure!(field: :base, error_code: "cannot_create") }
 
     before do
-      other_card
+      create(:billing_operation, **completed_coverage_attributes, contract_rate_card:)
+      create(:billing_operation, **completed_coverage_attributes, contract_rate_card: other_card)
       allow(BillingOperations::CreateService).to receive(:call!).and_wrap_original do |original, **attributes|
         if operation_counts_during_creation.empty?
           original.call(**attributes).tap do
-            operation_counts_during_creation << BillingOperation.count
+            operation_counts_during_creation << BillingOperation.where(action_type: "reconcile_advance_coverage").count
           end
         else
-          operation_counts_during_creation << BillingOperation.count
+          operation_counts_during_creation << BillingOperation.where(action_type: "reconcile_advance_coverage").count
           raise BaseService::FailedResult.new(failure, "cannot create")
         end
       end
@@ -188,7 +195,8 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     it "rolls back the first created operation and skips processing enqueue" do
       expect(result).to be_failure
       expect(operation_counts_during_creation).to eq([1, 1])
-      expect(BillingOperation.where(contract_rate_card_id: [contract_rate_card.id, other_card.id])).to be_empty
+      expect(BillingOperation.where(contract_rate_card_id: [contract_rate_card.id, other_card.id],
+        action_type: "reconcile_advance_coverage")).to be_empty
       expect(BillingOperations::ProcessJob).not_to have_been_enqueued
     end
   end
@@ -274,15 +282,20 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
 
   context "when a fixed-advance schedule has no planned operation" do
     let(:billing_timing) { "advance" }
-    let(:initial_cursor) { effective_from }
     let(:contract) do
       create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1), ended_at: Time.utc(2026, 11, 15))
+    end
+
+    before do
+      create(:billing_operation, **completed_coverage_attributes, contract_rate_card:)
+      allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_call_original
     end
 
     it "succeeds without creating a reconciliation or enqueueing processing" do
       expect { result }.not_to change(BillingOperation, :count)
       expect(result).to be_success
       expect(result.billing_operations).to be_empty
+      expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
       expect(BillingOperations::ProcessJob).not_to have_been_enqueued
     end
 
@@ -293,6 +306,7 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
         expect { result }.not_to change(BillingOperation, :count)
         expect(result).to be_success
         expect(result.billing_operations).to be_empty
+        expect(BillingOperations::Schedule::BuildPlannedOperation).to have_received(:call!)
         expect(BillingOperations::ProcessJob).not_to have_been_enqueued
       end
     end
@@ -371,7 +385,6 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     let(:initialize_clock) do
       advance_activation_operation
       BillingOperations::ProcessService.call!(customer:, timestamp: Time.utc(2026, 11, 1))
-      contract_rate_card.update!(next_billing_at: effective_from)
     end
 
     before do
@@ -383,6 +396,11 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     end
 
     it "persists a reconciliation using the planned dates and enqueues only its creation" do
+      expect(advance_activation_operation.reload).to have_attributes(
+        processed_at: Time.utc(2026, 11, 1), coverage_started_at: Time.utc(2026, 11, 1),
+        coverage_ended_at: Time.utc(2026, 12, 1)
+      )
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
       reconciliation = result.billing_operations.sole
       expect(reconciliation).to have_attributes(action_type: "reconcile_advance_coverage", billing_at: effective_from, processed_at: nil)
       expect(planned_operations.sole).to have_attributes(
@@ -392,11 +410,162 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
         billing_at: planned_operations.sole.billing_at,
         target_cycle_started_at: planned_operations.sole.cycle_started_at
       )
-      expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
       expect(BillingOperations::ProcessJob).to have_been_enqueued.with(customer.id).once
-      expect { described_class.call!(customer:, rate_card_rate_id: new_rate.id) }.to change(BillingOperation, :count).by(1)
-      expect(reconciliation.reload.processed_at).to be_nil
-      expect(BillingOperations::ProcessJob).to have_been_enqueued.with(customer.id).twice
+    end
+
+    it "does not duplicate pending reconciliation when the same change is delivered again" do
+      reconciliation = result.billing_operations.sole
+      expect(reconciliation).to have_attributes(
+        action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage), processed_at: nil
+      )
+
+      described_class.call!(customer:, rate_card_rate_id: new_rate.id)
+
+      expect(contract_rate_card.billing_operations.pending.where(
+        action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage)
+      ).pluck(:id)).to eq([reconciliation.id])
+    end
+
+    it "rejects an active price edit without changing purchased coverage" do
+      purchased = advance_activation_operation.reload
+      invoice = purchased.invoice
+      expect(purchased).to have_attributes(
+        coverage_started_at: Time.utc(2026, 11, 1), coverage_ended_at: Time.utc(2026, 12, 1)
+      )
+      expect(invoice.total_amount_cents).to eq(3_000)
+      expect(old_rate.reload.rate_properties).to include("amount" => "30")
+
+      update = nil
+      expect {
+        update = RateCardRates::UpdateService.call(rate_card_rate: old_rate, params: {rate_properties: {amount: "60"}})
+      }.not_to have_enqueued_job(RateCardRates::ApplyRateChangeJob)
+      expect(update).to be_failure
+      expect(update.error.messages).to eq({rate_card: ["attached_to_subscriptions"]})
+      expect(old_rate.reload.rate_properties).to include("amount" => "30")
+      expect(purchased.reload).to have_attributes(
+        coverage_started_at: Time.utc(2026, 11, 1), coverage_ended_at: Time.utc(2026, 12, 1), invoice_id: invoice.id
+      )
+      expect(invoice.reload.total_amount_cents).to eq(3_000)
+      expect(contract_rate_card.billing_operations.where(
+        action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage)
+      )).to be_empty
+    end
+
+    context "with cycle scope" do
+      let(:billing_scope) { "cycle" }
+
+      it "reconciles the purchased cycle without moving the cursor" do
+        expect(result.billing_operations.sole.action_type).to eq("reconcile_advance_coverage")
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+      end
+
+      context "without a cursor" do
+        before { contract_rate_card.update!(next_billing_at: nil) }
+
+        it "reconciles using completed coverage" do
+          expect(result.billing_operations.sole.action_type).to eq("reconcile_advance_coverage")
+          expect(contract_rate_card.reload.next_billing_at).to be_nil
+        end
+      end
+    end
+
+    context "without a cursor" do
+      before { contract_rate_card.update!(next_billing_at: nil) }
+
+      it "reconciles using completed coverage" do
+        expect(result.billing_operations.sole.action_type).to eq("reconcile_advance_coverage")
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+      end
+    end
+
+    context "when the rate was discarded" do
+      before { new_rate.discard! }
+
+      it "reconciles the affected coverage" do
+        expect(result.billing_operations.sole.action_type).to eq("reconcile_advance_coverage")
+      end
+    end
+  end
+
+  context "when checking completed advance coverage" do
+    let(:billing_timing) { "advance" }
+    let(:history_attributes) { completed_coverage_attributes }
+    let(:history_card) { contract_rate_card }
+
+    before do
+      create(:billing_operation, **history_attributes, contract_rate_card: history_card) if history_attributes
+      contract_rate_card.update!(next_billing_at: effective_from)
+    end
+
+    it "reconciles completed coverage without an invoice" do
+      expect(result.billing_operations.sole.action_type).to eq("reconcile_advance_coverage")
+    end
+
+    context "when the change is at the end of coverage" do
+      let(:history_attributes) { super().merge(coverage_ended_at: effective_from) }
+
+      it "does not reconcile" do
+        expect(result.billing_operations).to be_empty
+      end
+    end
+
+    context "when the coverage starts at the change" do
+      let(:history_attributes) { super().merge(coverage_started_at: effective_from) }
+
+      it "reconciles" do
+        expect(result.billing_operations.sole.action_type).to eq("reconcile_advance_coverage")
+      end
+    end
+
+    context "when the operation is pending" do
+      let(:history_attributes) { super().merge(processed_at: nil) }
+
+      it "does not reconcile" do
+        expect(result.billing_operations).to be_empty
+      end
+    end
+
+    context "when the operation is cancelled" do
+      let(:history_attributes) { super().merge(processed_at: nil, cancelled_at: Time.current, cancellation_reason: :rate_change) }
+
+      it "does not reconcile" do
+        expect(result.billing_operations).to be_empty
+      end
+    end
+
+    context "when the operation is a late payment" do
+      let(:history_attributes) { super().merge(reason: :late_payment) }
+
+      it "does not reconcile" do
+        expect(result.billing_operations).to be_empty
+      end
+    end
+
+    context "when the operation has another action" do
+      let(:history_attributes) { super().merge(action_type: "close_fixed_arrears") }
+
+      it "does not reconcile" do
+        expect(result.billing_operations).to be_empty
+      end
+    end
+
+    context "when only another card has coverage" do
+      let(:other_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
+      let(:other_card) { create(:contract_rate_card, organization:, contract: other_contract) }
+      let(:history_card) { other_card }
+
+      it "does not reconcile this card" do
+        expect(result.billing_operations).to be_empty
+      end
+    end
+
+    context "without history" do
+      let(:history_attributes) { nil }
+
+      it "does not reconcile" do
+        expect(result.billing_operations).to be_empty
+      end
     end
   end
 end

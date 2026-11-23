@@ -45,7 +45,7 @@ module BillingOperations
       end
 
       def create_due_operations
-        from = last_periodic_operation&.target_cycle_started_at || contract_rate_card.effective_date_in_customer_timezone
+        from = last_periodic_operation&.coverage_ended_at || contract_rate_card.effective_date_in_customer_timezone
         previous_billing_at = last_periodic_operation&.billing_at
         due = schedule.obligations_due_by(timestamp, from:, after: previous_billing_at)
         due.filter_map do |obligation|

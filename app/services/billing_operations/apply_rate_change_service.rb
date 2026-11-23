@@ -47,9 +47,12 @@ module BillingOperations
       schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
 
       if contract_rate_card.needs_reconciliation?
-        # Renewed advance coverage is reconciled, not replanned, until a price change can tell
-        # what that coverage already paid for.
-        return unless contract_rate_card.next_billing_at&.between?(Time.current, rate.effective_from)
+        # next_billing_at says when to bill next, not which coverage was already billed.
+        # A Nov 15 rate change affects completed [Nov 1, Dec 1) coverage even with a Dec 1 cursor.
+        return unless contract_rate_card.billing_operations.completed.periodic.where(
+          organization_id: contract_rate_card.organization_id, cancelled_at: nil,
+          action_type: BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance), coverage_started_at: ..rate.effective_from
+        ).where("coverage_ended_at > ?", rate.effective_from).exists?
 
         planned_operation = Schedule::BuildPlannedOperation.call!(
           schedule:, at: rate.effective_from

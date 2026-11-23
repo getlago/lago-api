@@ -251,7 +251,8 @@ RSpec.describe BillingOperations::ScheduleService do
 
       before do
         create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: anchor_action,
-          billing_at: Time.utc(2026, 11, 10), target_cycle_started_at: Time.utc(2026, 11, 9))
+          billing_at: Time.utc(2026, 11, 10), target_cycle_started_at: Time.utc(2026, 11, 9),
+          coverage_ended_at: Time.utc(2026, 11, 10))
       end
 
       it "uses each card's own latest checkpoint" do

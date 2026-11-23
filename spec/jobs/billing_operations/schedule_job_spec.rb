@@ -91,7 +91,8 @@ RSpec.describe BillingOperations::ScheduleJob, job: true do
     end
     let(:completed_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
-        billing_at: Time.utc(2026, 11, 1), target_cycle_started_at: started_at, processed_at: Time.utc(2026, 11, 1))
+        billing_at: Time.utc(2026, 11, 1), target_cycle_started_at: started_at, processed_at: Time.utc(2026, 11, 1),
+        coverage_ended_at: Time.utc(2026, 11, 1))
     end
 
     before do

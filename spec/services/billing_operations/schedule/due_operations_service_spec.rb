@@ -27,9 +27,11 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
   let(:anchor_cycle) { started_at }
   let(:anchor_action) { "close_fixed_arrears" }
   let(:anchor_processed_at) { nil }
+  let(:anchor_coverage_end) { (billing_timing == "advance") ? anchor_at.advance(days: 1) : anchor_at }
   let(:anchor) do
     create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
-      billing_at: anchor_at, target_cycle_started_at: anchor_cycle, processed_at: anchor_processed_at)
+      billing_at: anchor_at, target_cycle_started_at: anchor_cycle, processed_at: anchor_processed_at,
+      coverage_ended_at: anchor_coverage_end)
   end
   let(:has_anchor) { true }
 
@@ -151,7 +153,7 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
   context "when current and future operations already exist" do
     before do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
-        billing_at: boundary, target_cycle_started_at: Time.utc(2026, 11, 18))
+        billing_at: boundary, target_cycle_started_at: Time.utc(2026, 11, 18), coverage_ended_at: boundary)
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
         billing_at: Time.utc(2026, 11, 22), target_cycle_started_at: Time.utc(2026, 11, 21))
     end
@@ -165,7 +167,8 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
   context "when another periodic close exists before the cutoff" do
     before do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
-        billing_at: Time.utc(2026, 11, 10), target_cycle_started_at: Time.utc(2026, 11, 9))
+        billing_at: Time.utc(2026, 11, 10), target_cycle_started_at: Time.utc(2026, 11, 9),
+        coverage_ended_at: Time.utc(2026, 11, 10))
     end
 
     it "starts after the latest prior operation" do
@@ -241,6 +244,71 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
 
     it "creates both segment closes through the cycle close" do
       expect(result.billing_operations.map(&:billing_at)).to eq([Time.utc(2026, 11, 15), Time.utc(2026, 12, 1)])
+    end
+
+    context "when the first arrears segment was already closed" do
+      let(:has_anchor) { true }
+      let(:anchor_at) { Time.utc(2026, 11, 15) }
+      let(:anchor_cycle) { started_at }
+      let(:anchor_coverage_end) { anchor_at }
+      let(:anchor_processed_at) { anchor_at }
+
+      shared_examples "continues the uncovered arrears tail" do
+        it "creates the remaining segment close" do
+          expect(result.billing_operations.sole).to have_attributes(
+            action_type: anchor_action, billing_at: boundary,
+            coverage_started_at: anchor_at, coverage_ended_at: boundary
+          )
+        end
+      end
+
+      include_examples "continues the uncovered arrears tail"
+
+      context "with metered arrears" do
+        let(:product) { create(:product, organization:) }
+        let(:anchor_action) { BillingOperation::ACTION_TYPES.fetch(:close_metered_arrears) }
+
+        include_examples "continues the uncovered arrears tail"
+      end
+    end
+
+    context "when fixed advance coverage was already completed" do
+      let(:billing_timing) { "advance" }
+      let(:anchor_action) { BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance) }
+      let(:anchor_at) { started_at }
+      let(:anchor_cycle) { started_at }
+      let(:anchor_coverage_end) { boundary }
+      let(:anchor_processed_at) { started_at }
+      let(:has_anchor) { true }
+      let(:reconciliation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:,
+          action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage),
+          reason: :rate_change, billing_at: Time.utc(2026, 11, 15), target_cycle_started_at: started_at,
+          coverage_started_at: Time.utc(2026, 11, 15), coverage_ended_at: boundary)
+      end
+
+      before { reconciliation }
+
+      shared_examples "continues after completed coverage" do
+        it "creates only the next renewal and remains idempotent" do
+          expect(result.billing_operations.sole).to have_attributes(
+            action_type: anchor_action, billing_at: boundary,
+            coverage_started_at: boundary, coverage_ended_at: Time.utc(2027, 1, 1)
+          )
+          expect(described_class.call!(contract_rate_card:, schedule:, timestamp:).billing_operations).to be_empty
+          expect(contract_rate_card.billing_operations.reload.map(&:id)).to match_array(
+            [anchor.id, reconciliation.id, result.billing_operations.sole.id]
+          )
+        end
+      end
+
+      include_examples "continues after completed coverage"
+
+      context "with cycle billing" do
+        let(:billing_scope) { "cycle" }
+
+        include_examples "continues after completed coverage"
+      end
     end
 
     context "when a pending close is after the cutoff" do
