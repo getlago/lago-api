@@ -21,10 +21,14 @@ module Integrations
             "create-contact"
           when "avalara"
             "create-customer"
+          when "quickbooks"
+            "create-customer"
           end
         end
 
         def call
+          return create_in_quickbooks if provider == "quickbooks"
+
           Integrations::Hubspot::Contacts::DeployPropertiesService.call(integration:)
 
           throttle!(:anrok, :hubspot, :netsuite, :xero)
@@ -59,12 +63,26 @@ module Integrations
         attr_reader :customer, :subsidiary_id
 
         def params
-          Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
+          payload.create_body
+        end
+
+        def payload
+          @payload ||= Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
             integration:,
             integration_customer: nil,
             customer:,
             subsidiary_id:
-          ).create_body
+          )
+        end
+
+        def create_in_quickbooks
+          response = trigger_quickbooks_action_with_unique_name_retry(payload.create_body)
+          process_quickbooks_result(JSON.parse(response.body))
+          return result if result.failure?
+
+          deliver_success_webhook(customer:, webhook_code:)
+
+          result
         end
       end
     end

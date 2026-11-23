@@ -20,10 +20,14 @@ module Integrations
             "update-contact"
           when "avalara"
             "update-customer"
+          when "quickbooks"
+            "update-customer"
           end
         end
 
         def call
+          return update_in_quickbooks if provider == "quickbooks"
+
           Integrations::Hubspot::Contacts::DeployPropertiesService.call(integration:)
 
           throttle!(:anrok, :hubspot, :netsuite, :xero)
@@ -56,12 +60,39 @@ module Integrations
         attr_reader :integration_customer, :subsidiary_id
 
         def params
-          Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
+          payload.update_body
+        end
+
+        def payload
+          @payload ||= Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
             integration:,
             integration_customer:,
             customer:,
             subsidiary_id:
-          ).update_body
+          )
+        end
+
+        # QuickBooks refuses an update without the current SyncToken, so it is read through the Nango proxy first.
+        def update_in_quickbooks
+          token_result = Integrations::Aggregator::Contacts::FetchQuickbooksSyncTokenService.call(
+            integration:,
+            integration_customer:
+          )
+
+          unless token_result.success?
+            code = token_result.error.code
+            message = token_result.error.error_message
+
+            deliver_error_webhook(customer:, code:, message:)
+
+            return result.service_failure!(code:, message:)
+          end
+
+          body = payload.update_body.merge("SyncToken" => token_result.sync_token)
+          response = trigger_quickbooks_action_with_unique_name_retry(body)
+          process_quickbooks_result(JSON.parse(response.body))
+
+          result
         end
       end
     end
