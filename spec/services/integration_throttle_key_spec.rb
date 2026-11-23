@@ -120,7 +120,8 @@ RSpec.describe IntegrationThrottleKey do
         end
       end
 
-      it "computes the same suffix again from the database when nothing is cached" do
+      # Pinned to the null store: an earlier `cache: :memory` example leaves its store in Rails.cache.
+      it "computes the same suffix again from the database when nothing is cached", cache: :null do
         first = described_class.key_suffix(*invoice_args)
         statements = capture_sql { expect(described_class.key_suffix(*invoice_args)).to eq(first) }
 
