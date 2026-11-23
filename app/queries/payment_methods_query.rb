@@ -32,7 +32,8 @@ class PaymentMethodsQuery < BaseQuery
     scope.where(payment_provider_customer_id: filters.payment_provider_customer_id)
   end
 
+  # A shared payment token pays one top-up and is never chosen again, so lists leave it out.
   def base_scope
-    PaymentMethod.where(organization:)
+    PaymentMethod.where(organization:).where.not(provider_method_type: "shared_payment_token")
   end
 end

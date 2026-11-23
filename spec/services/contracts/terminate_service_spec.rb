@@ -18,6 +18,12 @@ RSpec.describe Contracts::TerminateService do
     BillingOperations::ProcessService.call!(customer:, timestamp:)
   end
 
+  def lock_waits
+    ApplicationRecord.connection.select_value(
+      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
+    )
+  end
+
   it "terminates an active contract" do
     freeze_time do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.terminated", contract)
@@ -402,6 +408,113 @@ RSpec.describe Contracts::TerminateService do
 
     it "does not seed billing operations" do
       expect { result }.not_to change { card.billing_operations.count }
+    end
+  end
+
+  context "when the contract is a draft" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:started_at) { Time.utc(2026, 1, 1) }
+    let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at:) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+    end
+
+    # A fixed advance card due since the draft's start: the same card bills an active contract.
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at,
+        rate_model: "standard", rate_properties: {"amount" => "10"},
+        billing_interval_count: 1, billing_interval_unit: "month")
+      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
+    end
+
+    it "cancels it without billing" do
+      travel_to(Time.utc(2026, 1, 10)) do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.canceled", contract)
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(status: "canceled", canceled_at: Time.current, terminated_at: nil)
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.canceled")
+
+        bill(Time.current)
+
+        expect(contract_rate_card.billing_operations).to be_empty
+        expect(Invoice.where(customer:)).to be_empty
+      end
+    end
+  end
+
+  context "when the contract's wallets have alerts" do
+    let(:wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
+    let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: wallet, code: "low_balance", name: "Low balance") }
+    let(:history) { create(:catalog_wallet_triggered_alert, organization:, alert:) }
+    let(:other_wallet) { create(:catalog_wallet, organization:, customer:) }
+    let(:other_alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: other_wallet) }
+
+    before do
+      create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: alert)
+      create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: other_alert)
+      history
+    end
+
+    it "deletes them with their thresholds and keeps their history" do
+      expect(result).to be_success
+      expect(UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: wallet.id)).to be_empty
+      expect(UsageMonitoring::CatalogWalletAlertThreshold.where(catalog_wallet_alert_id: alert.id)).to be_empty
+      expect(history.reload).to have_attributes(catalog_wallet_alert_id: alert.id, alert_code: "low_balance", alert_name: "Low balance")
+    end
+
+    it "keeps the alerts of another contract's wallet" do
+      expect(result).to be_success
+      expect(other_alert.reload.thresholds.count).to eq(1)
+    end
+
+    context "when the contract is pending" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+
+      it "deletes them as it cancels the contract" do
+        expect(result.contract).to be_canceled
+        expect(UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: wallet.id)).to be_empty
+        expect(UsageMonitoring::CatalogWalletAlertThreshold.where(catalog_wallet_alert_id: alert.id)).to be_empty
+      end
+    end
+  end
+
+  context "when an alert is being created on one of its wallets", transaction: false do
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+    let(:wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
+    let(:alert_params) { {alert_type: "balance", code: "low_balance", thresholds: [{value: "1000"}]} }
+
+    before { wallet }
+
+    it "waits for the alert, then deletes it as it ends the contract" do
+      locked = Queue.new
+      release = Queue.new
+
+      creator = Thread.new do
+        ApplicationRecord.connection_pool.with_connection do
+          ApplicationRecord.transaction do
+            UsageMonitoring::CatalogWalletAlerts::CreateService.call!(catalog_wallet: CatalogWallet.find(wallet.id), params: alert_params)
+            locked << true
+            release.pop
+          end
+        end
+      end
+      Timeout.timeout(10) { locked.pop }
+
+      terminator = Thread.new do
+        ApplicationRecord.connection_pool.with_connection { described_class.call(contract: Contract.find(contract.id)) }
+      end
+      begin
+        Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? }
+      ensure
+        release << true
+      end
+      Timeout.timeout(10) { creator.join }
+
+      expect(Timeout.timeout(10) { terminator.value }.contract).to be_canceled
+      expect(UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: wallet.id)).to be_empty
     end
   end
 
