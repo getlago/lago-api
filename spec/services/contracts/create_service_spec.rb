@@ -370,11 +370,11 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     end
 
     context "when only the database catches the duplicate" do
-      let(:live_contracts) { organization.contracts.where(status: %w[pending active], external_id: params[:external_id]) }
+      let(:live_contracts) { organization.contracts.where(status: Contract::LIVE_STATUSES, external_id: params[:external_id]) }
 
       before do
         allow(organization.contracts).to receive(:where)
-          .with(status: %w[pending active], external_id: params[:external_id]).and_return(live_contracts)
+          .with(status: Contract::LIVE_STATUSES, external_id: params[:external_id]).and_return(live_contracts)
         allow(live_contracts).to receive(:exists?).and_return(false)
       end
 
@@ -382,6 +382,15 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
         expect { result }.not_to change(Contract, :count)
         expect(result.error.messages).to eq(external_id: ["value_already_exists"])
       end
+    end
+  end
+
+  context "when a draft contract already uses the external id" do
+    before { create(:contract, :draft, organization:, customer:, external_id: "contract-1") }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:external_id]).to eq(["value_already_exists"])
     end
   end
 

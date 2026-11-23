@@ -2026,6 +2026,7 @@ CREATE TYPE public.contract_rate_cards_terms_application_timing AS ENUM (
 --
 
 CREATE TYPE public.contract_status AS ENUM (
+    'draft',
     'pending',
     'active',
     'terminated',
@@ -10805,7 +10806,7 @@ CREATE INDEX index_contracts_on_customer_id ON public.contracts USING btree (cus
 -- Name: index_contracts_on_live_external_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['pending'::public.contract_status, 'active'::public.contract_status]));
+CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['draft'::public.contract_status, 'pending'::public.contract_status, 'active'::public.contract_status]));
 
 
 --
@@ -18447,6 +18448,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261118155957'),
 ('20261117160252'),
 ('20261117160249'),
+('20261116175753'),
+('20261116175747'),
+('20261116175742'),
 ('20261116121445'),
 ('20261116121442'),
 ('20261116121439'),

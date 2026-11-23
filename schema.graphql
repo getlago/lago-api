@@ -2158,6 +2158,7 @@ type ContractCurrentUsageTotal {
 enum ContractStatusEnum {
   active
   canceled
+  draft
   pending
   terminated
 }

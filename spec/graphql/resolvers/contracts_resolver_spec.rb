@@ -54,6 +54,15 @@ RSpec.describe Resolvers::ContractsResolver do
     end
   end
 
+  context "with a draft contract" do
+    let!(:draft_contract) { create(:contract, :draft, organization:) }
+    let(:variables) { {status: ["draft"]} }
+
+    it "returns it with its status" do
+      expect(execution["data"]["contracts"]["collection"]).to eq([{"id" => draft_contract.id, "externalId" => draft_contract.external_id, "status" => "draft"}])
+    end
+  end
+
   context "with a customer filter" do
     let(:variables) { {externalCustomerId: customer.external_id} }
 

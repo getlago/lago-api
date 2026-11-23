@@ -405,6 +405,40 @@ RSpec.describe Contracts::TerminateService do
     end
   end
 
+  context "when the contract is a draft" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:started_at) { Time.utc(2026, 1, 1) }
+    let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at:) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+    end
+
+    # A fixed advance card due since the draft's start: the same card bills an active contract.
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at,
+        rate_model: "standard", rate_properties: {"amount" => "10"},
+        billing_interval_count: 1, billing_interval_unit: "month")
+      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
+    end
+
+    it "cancels it without billing" do
+      travel_to(Time.utc(2026, 1, 10)) do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.canceled", contract)
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(status: "canceled", canceled_at: Time.current, terminated_at: nil)
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.canceled")
+
+        bill(Time.current)
+
+        expect(contract_rate_card.billing_operations).to be_empty
+        expect(Invoice.where(customer:)).to be_empty
+      end
+    end
+  end
+
   context "when the contract is already terminated" do
     let(:contract) { create(:contract, :terminated, organization:, customer:, catalog_plan:) }
 
