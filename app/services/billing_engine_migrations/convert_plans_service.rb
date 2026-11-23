@@ -258,6 +258,7 @@ module BillingEngineMigrations
 
     # Catalog volume tiers start where the previous one ends, V1 ones a unit after it.
     def rate_properties(rate_model, properties)
+      properties = with_pricing_group_keys(properties)
       return properties unless rate_model == "volume"
 
       ranges = properties["volume_ranges"]
@@ -265,6 +266,14 @@ module BillingEngineMigrations
         range.merge("from_value" => index.zero? ? 0 : ranges[index - 1]["to_value"])
       end
       properties.merge("volume_ranges" => adjacent_ranges)
+    end
+
+    # V1 still falls back to the deprecated grouped_by key, rates read pricing_group_keys only.
+    def with_pricing_group_keys(properties)
+      return properties unless properties.key?("grouped_by")
+
+      pricing_group_keys = properties["pricing_group_keys"].presence || properties["grouped_by"]
+      properties.except("grouped_by").merge("pricing_group_keys" => pricing_group_keys)
     end
 
     # The default rate card of a product skips usage matching any of its filters, priced or not, so
@@ -323,6 +332,7 @@ module BillingEngineMigrations
         gaps << "charge #{charge.code}: accepts_target_wallet" if charge.accepts_target_wallet
         gaps << "charge #{charge.code}: min_amount_cents with filters" if charge.min_amount_cents.to_i.positive? && charge.filters.any?
         gaps << "charge #{charge.code}: pricing_unit" if charge.applied_pricing_unit
+        gaps << "charge #{charge.code}: presentation_group_keys" if charge.presentation_group_keys
         gaps << "charge #{charge.code}: invoice_display_name" if charge.invoice_display_name.present?
       end
 

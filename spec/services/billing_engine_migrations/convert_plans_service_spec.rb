@@ -278,6 +278,34 @@ RSpec.describe BillingEngineMigrations::ConvertPlansService do
     end
   end
 
+  context "when a charge groups its fees with the deprecated grouped_by key" do
+    let(:plan_mapping) { {"grouped" => "grouped_v2"} }
+
+    before do
+      grouped = create(:plan, organization:, code: "grouped", amount_currency: "EUR")
+      grouped_charge = create(
+        :standard_charge,
+        plan: grouped,
+        billable_metric:,
+        code: "calls",
+        invoice_display_name: nil,
+        properties: {"amount" => "1", "grouped_by" => ["country"], "presentation_group_keys" => [{"value" => "team"}]}
+      )
+      grouped_filter = create(:charge_filter, charge: grouped_charge, code: "eu", properties: {"amount" => "2", "grouped_by" => ["city"]})
+      create(:charge_filter_value, charge_filter: grouped_filter, billable_metric_filter: metric_filter, values: ["eu"])
+    end
+
+    it "prices the groups with pricing_group_keys and reports the presentation groups" do
+      expect(result.plans.sole).to have_attributes(outcome: :created, gaps: ["charge calls: presentation_group_keys"])
+
+      expect(shadow_organization.rate_cards.find_by!(code: "grouped_v2_calls").rates.sole.rate_properties).to eq(
+        {"amount" => "1", "pricing_group_keys" => ["country"], "presentation_group_keys" => [{"value" => "team"}]}
+      )
+      expect(shadow_organization.rate_cards.find_by!(code: "grouped_v2_calls_eu").rates.sole.rate_properties)
+        .to eq({"amount" => "2", "pricing_group_keys" => ["city"]})
+    end
+  end
+
   context "when DRY_RUN is enabled" do
     let(:dry_run) { true }
 
