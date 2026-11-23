@@ -119,7 +119,7 @@ RSpec.describe BillingEngineMigrations::CopyFeaturesService do
     it "discards it with its values and copies the organization one" do
       expect(result).to be_success
       expect(result.removed_privileges).to eq(%w[seats.max])
-      expect(result.created_privileges).to eq(%w[seats.max])
+      expect(result.created_privileges).to eq(%w[seats.max seats.tier])
 
       expect(Entitlement::Privilege.unscoped.find(shadow_max.id)).to be_discarded
       expect(Entitlement::EntitlementValue.unscoped.find(shadow_max_value.id)).to be_discarded

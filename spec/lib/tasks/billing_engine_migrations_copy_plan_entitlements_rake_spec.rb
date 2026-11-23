@@ -117,11 +117,11 @@ RSpec.describe "billing_engine_migrations:copy_plan_entitlements" do # rubocop:d
       expect { task.invoke(organization.id) }.to output(
         a_string_including(
           "[DRY RUN] would update privilege seats.tier",
+          "[DRY RUN] would remove privilege seats.old",
           "[DRY RUN] would remove entitlement legacy on catalog plan pro_v2",
           "[DRY RUN] would update value seats.max on catalog plan pro_v2",
-          "[DRY RUN] would remove value seats.old on catalog plan pro_v2",
-          "Features: 0 created. Privileges: 0 created, 1 updated, 0 removed. Catalog plans: 1 synced. Mappings skipped: 1. " \
-          "Entitlements: 0 created, 1 removed. Values: 0 created, 1 updated, 1 removed. [DRY RUN]"
+          "Features: 0 created. Privileges: 0 created, 1 updated, 1 removed. Catalog plans: 1 synced. Mappings skipped: 1. " \
+          "Entitlements: 0 created, 1 removed. Values: 0 created, 1 updated, 0 removed. [DRY RUN]"
         )
       ).to_stdout
 
@@ -137,9 +137,9 @@ RSpec.describe "billing_engine_migrations:copy_plan_entitlements" do # rubocop:d
         expect { task.invoke(organization.id) }.to output(
           a_string_including(
             "[LIVE] updated privilege seats.tier",
+            "[LIVE] removed privilege seats.old",
             "[LIVE] removed entitlement legacy on catalog plan pro_v2",
-            "[LIVE] updated value seats.max on catalog plan pro_v2",
-            "[LIVE] removed value seats.old on catalog plan pro_v2"
+            "[LIVE] updated value seats.max on catalog plan pro_v2"
           )
         ).to_stdout
 
