@@ -24,7 +24,7 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         :plan_rate_card_created, :plan_rate_card_updated, :plan_rate_card_deleted,
         :plan_wallet_created, :plan_wallet_updated, :plan_wallet_deleted,
         :contract_rate_card_created, :contract_rate_card_updated, :contract_rate_card_deleted,
-        :contract_created, :contract_updated, :contract_started, :contract_terminated, :contract_canceled
+        :contract_created, :contract_updated, :contract_published, :contract_started, :contract_terminated, :contract_canceled
       )).to eq(
         rate_card_rate_created: "rate_card_rate.created",
         rate_card_rate_updated: "rate_card_rate.updated",
@@ -40,6 +40,7 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         contract_rate_card_deleted: "contract_rate_card.deleted",
         contract_created: "contract.created",
         contract_updated: "contract.updated",
+        contract_published: "contract.published",
         contract_started: "contract.started",
         contract_terminated: "contract.terminated",
         contract_canceled: "contract.canceled"

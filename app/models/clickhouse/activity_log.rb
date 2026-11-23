@@ -133,6 +133,7 @@ module Clickhouse
       contract_rate_card_deleted: "contract_rate_card.deleted",
       contract_created: "contract.created",
       contract_updated: "contract.updated",
+      contract_published: "contract.published",
       contract_started: "contract.started",
       contract_terminated: "contract.terminated",
       contract_canceled: "contract.canceled",

@@ -12,16 +12,16 @@ RSpec.describe Contracts::PublishService do
 
   before do
     allow(Utils::ActivityLog).to receive(:produce)
-    allow(Utils::ActivityLog).to receive(:produce_after_commit) { |*, &block| block&.call }
+    allow(Utils::ActivityLog).to receive(:produce_after_commit)
   end
 
   it "makes a draft whose start is ahead pending, which the clock then starts" do
-    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.updated", contract)
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.published", contract)
 
     expect(result).to be_success
     expect(contract.reload).to be_pending
     expect(SendWebhookJob).not_to have_been_enqueued.with("contract.started", anything)
-    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.updated")
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.published")
 
     travel_to(started_at) { Contracts::ActivateAllPendingService.call }
     expect(Contracts::ActivateJob).to have_been_enqueued.with(contract)
@@ -34,24 +34,23 @@ RSpec.describe Contracts::PublishService do
       allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
     end
 
-    it "records the move out of draft" do
+    it "records the publication" do
       expect(result).to be_success
 
       payload = JSON.parse(kafka_messages.sole.fetch(:payload))
-      expect(payload).to include("activity_type" => "contract.updated", "resource_id" => contract.id)
-      expect(payload.fetch("activity_object_changes")).to eq("status" => %w[draft pending])
+      expect(payload).to include("activity_type" => "contract.published", "resource_id" => contract.id)
+      expect(payload.dig("activity_object", "status")).to eq("pending")
     end
 
     context "when the start has passed" do
       let(:started_at) { 1.month.ago }
 
-      it "records the move from draft to active, never pending" do
+      it "records the publication, then the start" do
         expect(result).to be_success
 
-        payloads = kafka_messages.map { JSON.parse(it.fetch(:payload)) }.index_by { it.fetch("activity_type") }
-        expect(payloads.keys).to match_array(%w[contract.updated contract.started])
-        expect(payloads.fetch("contract.updated").fetch("activity_object_changes")).to eq("status" => %w[draft active])
-        expect(payloads.fetch("contract.updated").dig("activity_object", "status")).to eq("active")
+        payloads = kafka_messages.map { JSON.parse(it.fetch(:payload)) }
+        expect(payloads.map { it.fetch("activity_type") }).to eq(%w[contract.published contract.started])
+        expect(payloads.map { it.dig("activity_object", "status") }).to eq(%w[active active])
       end
     end
   end
@@ -75,7 +74,7 @@ RSpec.describe Contracts::PublishService do
     it "activates it and schedules billing from its start, catching up the elapsed periods" do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(2).times
 
-      expect(SendWebhookJob).to have_been_enqueued.with("contract.updated", contract)
+      expect(SendWebhookJob).to have_been_enqueued.with("contract.published", contract)
       expect(SendWebhookJob).to have_been_enqueued.with("contract.started", contract)
       expect(contract.reload).to be_active
       expect(contract_rate_card.billing_operations.sole).to have_attributes(
@@ -90,7 +89,7 @@ RSpec.describe Contracts::PublishService do
       expect { described_class.call(contract: Contract.find(contract.id)) }.not_to have_enqueued_job(SendWebhookJob)
       expect(contract.reload).to be_active
       expect(BillingOperation.count).to eq(1)
-      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.updated").once
+      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.published").once
     end
 
     context "when the activation fails" do

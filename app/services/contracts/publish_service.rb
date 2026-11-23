@@ -52,16 +52,15 @@ module Contracts
             result.single_validation_failure!(field: :external_id, error_code:).raise_if_error!
           end
 
-          # The block covers the activation too, so the logged change ends at the status
-          # that commits: a contract activated here was never pending.
-          Utils::ActivityLog.produce_after_commit(contract, "contract.updated") do
-            contract.update!(status: :pending)
-            SendWebhookJob.perform_after_commit("contract.updated", contract)
+          # Its own event, as every other lifecycle step has: contract.updated with a pending
+          # status could not be told apart from an edit of a pending contract. Both are sent
+          # before contract.started when the publication activates.
+          contract.update!(status: :pending)
+          SendWebhookJob.perform_after_commit("contract.published", contract)
+          Utils::ActivityLog.produce_after_commit(contract, "contract.published")
 
-            # Inside the transaction, so an activation that fails rolls back the move to pending.
-            Contracts::ActivateService.call!(contract:) if contract.started_at <= Time.current
-            result
-          end
+          # Inside the transaction, so an activation that fails rolls back the move to pending.
+          Contracts::ActivateService.call!(contract:) if contract.started_at <= Time.current
 
           result.contract = contract
         end
