@@ -11188,22 +11188,6 @@
               "deprecationReason": null
             },
             {
-              "name": "billingTime",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "ContractBillingTimeEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "canceledAt",
               "description": null,
               "args": [],
@@ -12061,29 +12045,6 @@
           "possibleTypes": null
         },
         {
-          "kind": "ENUM",
-          "name": "ContractBillingTimeEnum",
-          "description": null,
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": [
-            {
-              "name": "calendar",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "anniversary",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "possibleTypes": null
-        },
-        {
           "kind": "OBJECT",
           "name": "ContractCollection",
           "description": "ContractCollection type",
@@ -12368,6 +12329,12 @@
           "inputFields": null,
           "interfaces": null,
           "enumValues": [
+            {
+              "name": "draft",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "pending",
               "description": null,
@@ -16086,18 +16053,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601Date",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "billingTime",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "ContractBillingTimeEnum",
                 "ofType": null
               },
               "defaultValue": null,
@@ -65902,6 +65857,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "shared_payment_token",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -89445,18 +89406,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ISO8601Date",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "billingTime",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "ContractBillingTimeEnum",
                 "ofType": null
               },
               "defaultValue": null,

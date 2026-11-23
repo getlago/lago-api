@@ -1971,7 +1971,6 @@ type Contract {
   billingAnchorDate: ISO8601Date
   billingEntity: BillingEntity
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum!
   canceledAt: ISO8601DateTime
   code: String
   consolidateInvoice: Boolean!
@@ -2082,11 +2081,6 @@ type ContractAppliedRateCardCollection {
   metadata: CollectionMetadata!
 }
 
-enum ContractBillingTimeEnum {
-  anniversary
-  calendar
-}
-
 """
 ContractCollection type
 """
@@ -2158,6 +2152,7 @@ type ContractCurrentUsageTotal {
 enum ContractStatusEnum {
   active
   canceled
+  draft
   pending
   terminated
 }
@@ -3709,7 +3704,6 @@ Create contract input arguments
 input CreateContractInput {
   billingAnchorDate: ISO8601Date
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum
 
   """
   A unique identifier for the client performing the mutation.
@@ -12893,6 +12887,7 @@ enum ProviderPaymentMethodsEnum {
   customer_balance
   link
   sepa_debit
+  shared_payment_token
   us_bank_account
 }
 
@@ -16838,7 +16833,6 @@ Update contract input arguments
 input UpdateContractInput {
   billingAnchorDate: ISO8601Date
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum
 
   """
   A unique identifier for the client performing the mutation.

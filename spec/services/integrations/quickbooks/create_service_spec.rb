@@ -47,6 +47,10 @@ RSpec.describe Integrations::Quickbooks::CreateService do
       it "does not create an integration" do
         expect { service_call }.not_to change(Integrations::QuickbooksIntegration, :count)
       end
+
+      it "does not enqueue a sync job" do
+        expect { service_call }.not_to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
+      end
     end
 
     context "without premium license" do
@@ -108,8 +112,12 @@ RSpec.describe Integrations::Quickbooks::CreateService do
             expect(result.integration).to be_persisted
           end
 
-          it "does not enqueue a sync job" do
-            expect { service_call }.not_to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
+          it "calls Integrations::Aggregator::PerformSyncJob" do
+            freeze_time do
+              expect { service_call }.to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
+                .with(integration: an_instance_of(Integrations::QuickbooksIntegration))
+                .at(2.seconds.from_now)
+            end
           end
 
           it_behaves_like "produces a security log", "integration.created" do
@@ -278,6 +286,10 @@ RSpec.describe Integrations::Quickbooks::CreateService do
               expect(result.error.messages).to eq({realm_id: ["value_already_exist"]})
               expect(Integrations::QuickbooksIntegration.where(organization:).count).to eq(1)
             end
+
+            it "does not enqueue a sync job" do
+              expect { service_call }.not_to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
+            end
           end
 
           context "with the same code" do
@@ -290,6 +302,10 @@ RSpec.describe Integrations::Quickbooks::CreateService do
               expect(result.error).to be_a(BaseService::ValidationFailure)
               expect(result.error.messages).to eq({code: ["value_already_exist"]})
               expect(Integrations::QuickbooksIntegration.where(organization:).count).to eq(1)
+            end
+
+            it "does not enqueue a sync job" do
+              expect { service_call }.not_to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
             end
           end
         end
