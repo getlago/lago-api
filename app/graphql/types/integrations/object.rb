@@ -11,6 +11,7 @@ module Types
         Types::Integrations::Anrok,
         Types::Integrations::Avalara,
         Types::Integrations::Xero,
+        Types::Integrations::Quickbooks,
         Types::Integrations::Hubspot,
         Types::Integrations::Salesforce
 
@@ -28,6 +29,8 @@ module Types
           Types::Integrations::Avalara
         when "Integrations::XeroIntegration"
           Types::Integrations::Xero
+        when "Integrations::QuickbooksIntegration"
+          Types::Integrations::Quickbooks
         when "Integrations::HubspotIntegration"
           Types::Integrations::Hubspot
         when "Integrations::SalesforceIntegration"

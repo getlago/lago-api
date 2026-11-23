@@ -56,4 +56,14 @@ describe CatalogWallet do
       end
     end
   end
+
+  describe "#funded?" do
+    it "is true once the wallet holds money" do
+      expect(build(:catalog_wallet, balance_cents: 1).funded?).to be(true)
+    end
+
+    it "is false on an empty wallet" do
+      expect(build(:catalog_wallet, balance_cents: 0).funded?).to be(false)
+    end
+  end
 end

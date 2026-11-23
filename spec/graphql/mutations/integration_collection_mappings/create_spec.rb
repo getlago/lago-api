@@ -75,6 +75,40 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
     end
   end
 
+  context "with a QuickBooks integration" do
+    let(:integration) { create(:quickbooks_integration, organization:) }
+    let(:mapping_type) { "fallback_item" }
+    let(:query) do
+      <<-GQL
+        mutation($input: CreateIntegrationCollectionMappingInput!) {
+          createIntegrationCollectionMapping(input: $input) {
+            id,
+            integrationId,
+            mappingType,
+            externalAccountCode,
+            externalId,
+            externalName
+          }
+        }
+      GQL
+    end
+
+    it "creates a QuickBooks integration collection mapping" do
+      result = create_integration_collection_mapping(input:)
+
+      expect(result).to include(
+        "integrationId" => integration.id,
+        "mappingType" => "fallback_item",
+        "externalAccountCode" => external_account_code,
+        "externalId" => external_id,
+        "externalName" => external_name
+      )
+      expect(integration.integration_collection_mappings.sole)
+        .to be_a(IntegrationCollectionMappings::QuickbooksCollectionMapping)
+        .and have_attributes(id: result["id"])
+    end
+  end
+
   context "with currencies" do
     let(:input) do
       {
