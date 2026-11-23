@@ -28,7 +28,7 @@ module Agents
 
     # A service counts an attempt itself when the limit only applies once its checks passed.
     def too_many_requests?(result)
-      result.error.is_a?(BaseService::MethodNotAllowedFailure) && result.error.code == "too_many_requests"
+      result.error.is_a?(BaseService::ForbiddenFailure) && result.error.code == "too_many_requests"
     end
 
     def render_too_many_requests

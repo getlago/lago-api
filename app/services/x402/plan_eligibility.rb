@@ -15,8 +15,8 @@ module X402
     def self.usage_only?(plan)
       plan.amount_cents.zero? &&
         plan.minimum_commitment.nil? &&
-        !plan.fixed_charges.exists? &&
-        !plan.charges.where(min_amount_cents: 1..).exists?
+        plan.fixed_charges.empty? &&
+        plan.charges.none? { it.min_amount_cents.to_i.positive? }
     end
   end
 end

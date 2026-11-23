@@ -18,7 +18,7 @@ module Integrations
           # Waits for the enrollments in progress, which lock the storefront for share.
           integration.lock!
           if integration.enrolled_agents?
-            result.not_allowed_failure!(code: "agent_storefront_has_enrolled_agents").raise_if_error!
+            result.forbidden_failure!(code: "agent_storefront_has_enrolled_agents").raise_if_error!
           end
         end
 

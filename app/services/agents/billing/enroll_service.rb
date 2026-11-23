@@ -32,11 +32,12 @@ module Agents
           if current && (current.plan.parent_id || current.plan_id) == plan.id
             result.subscription = current
           else
-            result.not_allowed_failure!(code: "too_many_requests").raise_if_error! if current && plan_change_throttled?
+            result.forbidden_failure!(code: "too_many_requests").raise_if_error! if current && plan_change_at_limit?
 
             # A new subscription on the agent's external id, or Lago's plan change when one is active.
             result.subscription = create_subscription(customer)
             apply_topup_limits if result.wallet
+            count_plan_change if current
           end
 
           result.wallet ||= create_wallet(customer)
@@ -61,7 +62,11 @@ module Agents
         @plan ||= storefront.plans_for_sale.find_by(code: plan_code)
       end
 
-      def plan_change_throttled?
+      def plan_change_at_limit?
+        ::Auth::AttemptsThrottle.at_limit?(:agent_plan_change_per_registration, registration.id)
+      end
+
+      def count_plan_change
         ::Auth::AttemptsThrottle.hit!(:agent_plan_change_per_registration, registration.id)
       end
 
@@ -82,10 +87,10 @@ module Agents
           params: {external_id: Agents::ExternalIds.subscription(registration), external_customer_id: customer.external_id, billing_time: :calendar}
         ).subscription
 
-        if subscription.active?
+        if subscription.active? && (subscription.plan.parent_id || subscription.plan_id) == plan.id
           subscription
         else
-          result.single_validation_failure!(error_code: "subscription_not_active").raise_if_error!
+          result.single_validation_failure!(field: :plan_code, error_code: "plan_change_deferred").raise_if_error!
         end
       end
 
