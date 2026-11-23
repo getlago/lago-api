@@ -19,7 +19,8 @@ module Api
           payment_method_params: create_params[:payment_method],
           billing_entity_code: create_params[:billing_entity_code],
           purchase_order_number: create_params[:purchase_order_number],
-          payment_term: create_params[:payment_term]
+          payment_term: create_params[:payment_term],
+          connections: create_params[:connections]
         )
 
         if result.success?
@@ -337,6 +338,12 @@ module Api
               payment_method: [
                 :payment_method_type,
                 :payment_method_id
+              ],
+              connections: [
+                payment: [:behavior, :code],
+                tax: [:behavior, :code],
+                accounting: [:behavior, :code],
+                crm: [:behavior, :code]
               ]
             )
 

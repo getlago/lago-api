@@ -4,7 +4,13 @@ module Invoices
   class CreateOneOffService < BaseService
     Result = BaseResult[:invoice, :payment_method]
 
-    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {}, billing_entity_id: nil, billing_entity_code: nil, purchase_order_number: nil, with_discarded_add_ons: false, payment_term: nil)
+    # A one-off invoice stores no override rows: its choices go through the same cascade as a
+    # persisted billing object, in memory, and only the resolved connections are snapshotted.
+    ConnectionChoices = Struct.new(:customer, :billing_object_connections, keyword_init: true) do
+      include ConnectionResolvable
+    end
+
+    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {}, billing_entity_id: nil, billing_entity_code: nil, purchase_order_number: nil, with_discarded_add_ons: false, payment_term: nil, connections: nil)
       @customer = customer
       @currency = currency || customer&.currency
       @fees = fees
@@ -18,6 +24,7 @@ module Invoices
       @purchase_order_number = purchase_order_number
       @with_discarded_add_ons = with_discarded_add_ons
       @payment_term = payment_term
+      @connections = connections
 
       super(nil)
     end
@@ -34,6 +41,9 @@ module Invoices
       return result.not_found_failure!(resource: "add_on") unless add_ons.count == add_on_identifiers.count
       return result unless valid_payment_method?
       return result unless PaymentTerms::ValidateService.new(result, payment_term:).valid?
+      return result.forbidden_failure! if connections.present? && !customer.organization.feature_flag_enabled?(:multi_connection)
+      return result unless valid_connections?
+      return result unless result.success?
 
       resolve_billing_entity
       return result unless result.success?
@@ -100,7 +110,7 @@ module Invoices
     private
 
     attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id, :payment_method_params, :invoice_custom_section
-    attr_reader :billing_entity_id, :billing_entity_code, :billing_entity, :purchase_order_number, :with_discarded_add_ons, :payment_term
+    attr_reader :billing_entity_id, :billing_entity_code, :billing_entity, :purchase_order_number, :with_discarded_add_ons, :payment_term, :connections
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -110,6 +120,7 @@ module Invoices
         datetime: Time.zone.at(timestamp),
         billing_entity:,
         purchase_order_number:,
+        connections: connection_routing,
         **invoice_payment_term
       )
       invoice_result.raise_if_error!
@@ -124,6 +135,54 @@ module Invoices
         {}
       else
         {payment_term: PaymentTerm.from_h(payment_term), payment_term_source: "invoice"}
+      end
+    end
+
+    def valid_connections?
+      validator = BillingObjectConnections::ValidateService.new(result, connections:)
+      return true if validator.valid?
+
+      result.validation_failure!(errors: {connections: validator.error_codes})
+
+      false
+    end
+
+    def connection_routing
+      ConnectionChoices.new(customer:, billing_object_connections: connection_overrides).connection_routing
+    end
+
+    # Unsaved override rows for the categories that do not inherit the customer default.
+    def connection_overrides
+      return @connection_overrides if defined?(@connection_overrides)
+
+      choices = connections.respond_to?(:to_hash) ? connections.to_hash : connections.to_h
+      @connection_overrides = choices.with_indifferent_access.filter_map do |category, choice|
+        next if choice.blank? || choice[:behavior].to_s == ConnectionResolvable::INHERIT_BEHAVIOR
+
+        connection_override(category.to_s, choice)
+      end
+    end
+
+    def connection_override(category, choice)
+      if choice[:behavior].to_s == BillingObjectConnection::BEHAVIORS[:skip]
+        return BillingObjectConnection.new(category:, behavior: :skip)
+      end
+
+      connection = if category == BillingObjectConnection::CATEGORIES[:payment]
+        customer.payment_connection(choice[:code])
+      else
+        customer.integration_customers.find_by(category:, code: choice[:code])
+      end
+
+      if connection.nil?
+        result.single_validation_failure!(field: :connections, error_code: "connection_not_found")
+        return
+      end
+
+      if category == BillingObjectConnection::CATEGORIES[:payment]
+        BillingObjectConnection.new(category:, behavior: :specific, payment_provider_customer: connection)
+      else
+        BillingObjectConnection.new(category:, behavior: :specific, integration_customer: connection)
       end
     end
 

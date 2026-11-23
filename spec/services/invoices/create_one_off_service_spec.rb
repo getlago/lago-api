@@ -536,6 +536,125 @@ RSpec.describe Invoices::CreateOneOffService do
       end
     end
 
+    context "with customer connections" do
+      let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_main", is_default: true) }
+      let(:gocardless_connection) { create(:gocardless_customer, customer:, code: "gocardless_eu") }
+      let(:netsuite_connection) { create(:netsuite_customer, customer:, code: "netsuite_main") }
+
+      before do
+        stripe_connection
+        gocardless_connection
+        netsuite_connection
+      end
+
+      it "snapshots the customer default connection of each category" do
+        result = described_class.call(**args)
+
+        expect(result).to be_success
+        expect(result.invoice.invoice_connections.pluck(:category, :payment_provider_customer_id, :integration_customer_id))
+          .to contain_exactly(
+            ["payment", stripe_connection.id, nil],
+            ["accounting", nil, netsuite_connection.id]
+          )
+      end
+
+      context "when connections are passed" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, connections:} }
+        let(:connections) do
+          {
+            payment: {code: "gocardless_eu"},
+            accounting: {behavior: "skip"},
+            crm: {behavior: "inherit"}
+          }
+        end
+
+        before { organization.enable_feature_flag!(:multi_connection) }
+
+        it "snapshots the chosen connections" do
+          result = described_class.call(**args)
+
+          expect(result).to be_success
+          expect(result.invoice.invoice_connections.pluck(:category, :payment_provider_customer_id, :integration_customer_id))
+            .to eq([["payment", gocardless_connection.id, nil]])
+        end
+
+        it "stores no override rows" do
+          expect { described_class.call(**args) }.not_to change(BillingObjectConnection, :count)
+        end
+
+        context "when a code does not resolve" do
+          let(:connections) { {accounting: {code: "unknown"}} }
+
+          it "returns a validation error and creates no invoice" do
+            result = nil
+
+            expect { result = described_class.call(**args) }.not_to change(Invoice, :count)
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq(connections: ["connection_not_found"])
+          end
+        end
+
+        context "when a code belongs to another category" do
+          let(:connections) { {payment: {code: "netsuite_main"}} }
+
+          it "returns a validation error" do
+            result = described_class.call(**args)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(connections: ["connection_not_found"])
+          end
+        end
+
+        context "when a code belongs to another customer" do
+          let(:connections) { {payment: {code: "stripe_other"}} }
+
+          before { create(:stripe_customer, customer: create(:customer, organization:), code: "stripe_other") }
+
+          it "returns a validation error" do
+            result = described_class.call(**args)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(connections: ["connection_not_found"])
+          end
+        end
+
+        context "when the behavior is invalid" do
+          let(:connections) { {payment: {behavior: "nonsense"}} }
+
+          it "returns a validation error" do
+            result = described_class.call(**args)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(connections: ["invalid_connection_behavior"])
+          end
+        end
+
+        context "when the category is invalid" do
+          let(:connections) { {shipping: {behavior: "skip"}} }
+
+          it "returns a validation error" do
+            result = described_class.call(**args)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(connections: ["invalid_connection_category"])
+          end
+        end
+
+        context "when the multi_connection flag is disabled" do
+          before { organization.disable_feature_flag!(:multi_connection) }
+
+          it "returns a forbidden failure and creates no invoice" do
+            result = nil
+
+            expect { result = described_class.call(**args) }.not_to change(Invoice, :count)
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          end
+        end
+      end
+    end
+
     context "when add_on_code is invalid" do
       let(:fees) do
         [

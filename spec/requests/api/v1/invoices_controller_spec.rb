@@ -179,6 +179,75 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with connections" do
+      let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+      let(:netsuite_connection) { create(:netsuite_customer, customer:, code: "netsuite_main") }
+      let(:connections) do
+        {
+          payment: {behavior: "skip"},
+          accounting: {code: "netsuite_main"},
+          crm: {behavior: "inherit"}
+        }
+      end
+      let(:create_params) do
+        {
+          external_customer_id: customer_external_id,
+          currency: "EUR",
+          fees: [{add_on_code: add_on_first.code, unit_amount_cents: 1200, units: 2}],
+          connections:
+        }
+      end
+
+      before do
+        organization.enable_feature_flag!(:multi_connection)
+        stripe_connection
+        netsuite_connection
+      end
+
+      it "snapshots the chosen connections on the invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        invoice = organization.invoices.find(json[:invoice][:lago_id])
+        expect(invoice.invoice_connections.pluck(:category, :payment_provider_customer_id, :integration_customer_id))
+          .to eq([["accounting", nil, netsuite_connection.id]])
+      end
+
+      context "when a code does not resolve" do
+        let(:connections) { {payment: {code: "unknown_connection"}} }
+
+        it "returns a validation error" do
+          expect { subject }.not_to change(Invoice, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:connections]).to eq(["connection_not_found"])
+        end
+      end
+
+      context "when the behavior is invalid" do
+        let(:connections) { {payment: {behavior: "nonsense"}} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:connections]).to eq(["invalid_connection_behavior"])
+        end
+      end
+
+      context "when the multi_connection flag is disabled" do
+        before { organization.disable_feature_flag!(:multi_connection) }
+
+        it "returns a forbidden error" do
+          expect { subject }.not_to change(Invoice, :count)
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json[:code]).to eq("feature_unavailable")
+        end
+      end
+    end
+
     context "when multi_entity_billing feature flag is enabled" do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 

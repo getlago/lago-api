@@ -219,4 +219,65 @@ RSpec.describe Mutations::Invoices::Create do
       expect(result["errors"].first["extensions"]["details"]).to include("billingEntity" => ["not_found"])
     end
   end
+
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+    let(:netsuite_connection) { create(:netsuite_customer, customer:, organization:, code: "netsuite_main") }
+    let(:connections_mutation) do
+      <<~GQL
+        mutation($input: CreateInvoiceInput!) {
+          createInvoice(input: $input) { id }
+        }
+      GQL
+    end
+
+    # The shared organization is frozen, so the flag is toggled on a fresh copy.
+    let(:current_organization) { Organization.find(organization.id) }
+
+    def create_invoice(connections:)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization:,
+        permissions: required_permission,
+        query: connections_mutation,
+        variables: {input: {customerId: customer.id, currency:, fees:, connections:}}
+      )
+    end
+
+    before do
+      current_organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+      netsuite_connection
+    end
+
+    it "snapshots the chosen connections on the invoice" do
+      result = create_invoice(
+        connections: {
+          payment: {code: "stripe_us"},
+          accounting: {behavior: "skip"},
+          crm: {behavior: "inherit"}
+        }
+      )
+
+      invoice = Invoice.find(result["data"]["createInvoice"]["id"])
+
+      expect(invoice.invoice_connections.pluck(:category, :payment_provider_customer_id, :integration_customer_id))
+        .to eq([["payment", stripe_connection.id, nil]])
+    end
+
+    it "returns a validation error when the code does not resolve" do
+      result = create_invoice(connections: {accounting: {code: "unknown_connection"}})
+
+      expect(result["errors"].first["extensions"]["code"]).to eq("unprocessable_entity")
+      expect(result["errors"].first["extensions"]["details"]["connections"]).to eq(["connection_not_found"])
+    end
+
+    it "returns a forbidden error when the multi_connection flag is disabled" do
+      current_organization.disable_feature_flag!(:multi_connection)
+
+      result = create_invoice(connections: {payment: {code: "stripe_us"}})
+
+      expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
+    end
+  end
 end

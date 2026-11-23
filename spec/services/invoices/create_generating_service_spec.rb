@@ -225,6 +225,43 @@ RSpec.describe Invoices::CreateGeneratingService do
 
         expect(result.invoice.invoice_subscriptions.count).to eq(1)
       end
+
+      context "when connections are passed" do
+        subject(:create_service) do
+          described_class.new(customer:, invoice_type:, currency:, datetime:, connections: subscription.connection_routing)
+        end
+
+        let(:payment_connection) { create(:stripe_customer, customer:, is_default: true) }
+        let(:tax_connection) { create(:anrok_customer, customer:, is_default: true) }
+
+        before do
+          payment_connection
+          tax_connection
+        end
+
+        it "snapshots them on the invoice" do
+          result = create_service.call do |invoice|
+            create(:invoice_subscription, invoice:, subscription:)
+          end
+
+          expect(result).to be_success
+          expect(result.invoice.payment_connection.payment_provider_customer).to eq(payment_connection)
+          expect(result.invoice.tax_connection.integration_customer).to eq(tax_connection)
+          expect(result.invoice.accounting_connection).to be_nil
+          expect(result.invoice.crm_connection).to be_nil
+        end
+      end
+    end
+
+    context "when no connections are passed" do
+      before { create(:stripe_customer, customer:, is_default: true) }
+
+      it "snapshots no connection" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.invoice_connections).to be_empty
+      end
     end
 
     context "when invoice type is subscription" do

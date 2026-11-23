@@ -18898,6 +18898,18 @@
               "deprecationReason": null
             },
             {
+              "name": "connections",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionsInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "currency",
               "description": null,
               "type": {
@@ -38464,6 +38476,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "connections",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "ConnectionsInput",
                 "ofType": null
               },
               "defaultValue": null,
