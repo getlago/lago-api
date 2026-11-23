@@ -5,12 +5,10 @@ require "rails_helper"
 RSpec.describe Integrations::Quickbooks::CreateService do
   include_context "with mocked security logger"
 
-  let(:service) { described_class.new(membership.user) }
   let(:organization) { create_default(:organization) }
-  let(:membership) { create(:membership) }
 
   describe "#call" do
-    subject(:service_call) { service.call(**create_args) }
+    subject(:service_call) { described_class.call(params: create_args) }
 
     let(:name) { "QuickBooks 1" }
     let(:code) { "quickbooks1" }

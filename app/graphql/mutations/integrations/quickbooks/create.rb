@@ -17,9 +17,9 @@ module Mutations
         type Types::Integrations::Quickbooks
 
         def resolve(**args)
-          result = ::Integrations::Quickbooks::CreateService
-            .new(context[:current_user])
-            .call(**args.merge(organization_id: current_organization.id))
+          result = ::Integrations::Quickbooks::CreateService.call(
+            params: args.merge(organization_id: current_organization.id)
+          )
 
           result.success? ? result.integration : result_error(result)
         end
