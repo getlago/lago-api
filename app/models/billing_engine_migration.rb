@@ -2,15 +2,18 @@
 
 class BillingEngineMigration < ApplicationRecord
   STATUSES = {shadowing: "shadowing", paused: "paused", aborted: "aborted"}.freeze
+  EVENTS_COPY_SOURCES = {api: "api", raw_topic: "raw_topic"}.freeze
 
   belongs_to :organization
   belongs_to :shadow_organization, class_name: "Organization"
 
   enum :status, STATUSES, validate: true
+  enum :events_copy_source, EVENTS_COPY_SOURCES, prefix: :events_copied_from, validate: true
 
   validate :shadow_organization_differs_from_organization
   validate :plan_mapping_is_valid
   validate :organizations_not_in_another_migration
+  validate :events_copy_source_unchanged_while_shadowing, on: :update
 
   after_commit :expire_lookup
   after_rollback :expire_lookup
@@ -40,6 +43,12 @@ class BillingEngineMigration < ApplicationRecord
     errors.add(:shadow_organization, :invalid) if shadow_organization.present? && shadow_organization == organization
   end
 
+  # Processes see a change up to a minute late, so switching sources while shadowing could copy an
+  # event on both paths or on neither.
+  def events_copy_source_unchanged_while_shadowing
+    errors.add(:events_copy_source, :invalid) if events_copy_source_changed? && shadowing?
+  end
+
   def organizations_not_in_another_migration
     other_migrations = BillingEngineMigration.where.not(id:)
     errors.add(:organization, :value_already_exist) if other_migrations.exists?(shadow_organization_id: organization_id)
@@ -65,6 +74,7 @@ end
 # Database name: primary
 #
 #  id                     :uuid             not null, primary key
+#  events_copy_source     :enum             default("api"), not null
 #  plan_mapping           :jsonb            not null
 #  status                 :enum             default("shadowing"), not null
 #  created_at             :datetime         not null

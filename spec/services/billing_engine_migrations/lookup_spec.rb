@@ -21,7 +21,8 @@ RSpec.describe BillingEngineMigrations::Lookup do
         organization_id: organization.id,
         shadow_organization_id: shadow_organization.id,
         status: "shadowing",
-        plan_mapping: {"legacy" => "catalog"}
+        plan_mapping: {"legacy" => "catalog"},
+        events_copy_source: "api"
       )
     end
 
@@ -79,6 +80,27 @@ RSpec.describe BillingEngineMigrations::Lookup do
       let(:status) { "aborted" }
 
       it { expect(described_class.shadow_organization?(shadow_organization.id)).to be(false) }
+    end
+  end
+
+  describe ".copying_events_from" do
+    let(:raw_topic_migration) { create(:billing_engine_migration, events_copy_source: "raw_topic") }
+    let(:paused_raw_topic_migration) { create(:billing_engine_migration, events_copy_source: "raw_topic", status: "paused") }
+
+    before do
+      raw_topic_migration
+      paused_raw_topic_migration
+    end
+
+    it "returns the shadowing migrations that copy their events from that source" do
+      expect(described_class.copying_events_from("raw_topic").map(&:id)).to eq([raw_topic_migration.id])
+      expect(described_class.copying_events_from("api").map(&:id)).to eq([migration.id])
+    end
+
+    context "when no migration copies from the source" do
+      let(:raw_topic_migration) { nil }
+
+      it { expect(described_class.copying_events_from("raw_topic")).to eq([]) }
     end
   end
 

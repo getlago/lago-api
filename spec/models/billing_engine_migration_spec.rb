@@ -11,6 +11,11 @@ RSpec.describe BillingEngineMigration do
         .backed_by_column_of_type(:enum)
         .validating
         .with_values(shadowing: "shadowing", paused: "paused", aborted: "aborted")
+      expect(migration).to define_enum_for(:events_copy_source)
+        .backed_by_column_of_type(:enum)
+        .validating
+        .with_values(api: "api", raw_topic: "raw_topic")
+        .with_prefix(:events_copied_from)
     end
   end
 
@@ -56,6 +61,39 @@ RSpec.describe BillingEngineMigration do
 
       context "when the migration is saved again" do
         subject(:migration) { create(:billing_engine_migration) }
+
+        it { expect(migration).to be_valid }
+      end
+    end
+
+    describe "events_copy_source validation" do
+      subject(:migration) { create(:billing_engine_migration, status:) }
+
+      before { migration.events_copy_source = "raw_topic" }
+
+      context "when the migration is shadowing" do
+        let(:status) { "shadowing" }
+
+        it "refuses to switch the source" do
+          expect(migration).not_to be_valid
+          expect(migration.errors.where(:events_copy_source, :invalid)).to be_present
+        end
+      end
+
+      context "when the migration is paused" do
+        let(:status) { "paused" }
+
+        it { expect(migration).to be_valid }
+
+        it "refuses to switch the source and resume at once" do
+          migration.status = "shadowing"
+
+          expect(migration).not_to be_valid
+        end
+      end
+
+      context "when the migration is created with it" do
+        subject(:migration) { build(:billing_engine_migration) }
 
         it { expect(migration).to be_valid }
       end

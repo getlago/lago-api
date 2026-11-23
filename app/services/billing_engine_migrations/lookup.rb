@@ -7,7 +7,7 @@ module BillingEngineMigrations
     REFRESH_INTERVAL = 60.seconds
     RETRY_INTERVAL = 5.seconds
 
-    Entry = Data.define(:id, :organization_id, :shadow_organization_id, :status, :plan_mapping) do
+    Entry = Data.define(:id, :organization_id, :shadow_organization_id, :status, :plan_mapping, :events_copy_source) do
       def shadowing?
         status == BillingEngineMigration::STATUSES[:shadowing]
       end
@@ -38,6 +38,10 @@ module BillingEngineMigrations
 
       def shadow_organization?(organization_id)
         !for_shadow(organization_id).nil?
+      end
+
+      def copying_events_from(events_copy_source)
+        snapshot.by_source.values.select { it.shadowing? && it.events_copy_source == events_copy_source }
       end
 
       def expire!
@@ -82,7 +86,7 @@ module BillingEngineMigrations
       def load_snapshot
         entries = BillingEngineMigration
           .where.not(status: BillingEngineMigration::STATUSES[:aborted])
-          .pluck(:id, :organization_id, :shadow_organization_id, :status, :plan_mapping)
+          .pluck(:id, :organization_id, :shadow_organization_id, :status, :plan_mapping, :events_copy_source)
           .map { |row| build_entry(*row) }
 
         Snapshot.new(
@@ -92,8 +96,15 @@ module BillingEngineMigrations
         )
       end
 
-      def build_entry(id, organization_id, shadow_organization_id, status, plan_mapping)
-        Entry.new(id:, organization_id:, shadow_organization_id:, status:, plan_mapping: plan_mapping.each_value(&:freeze).freeze)
+      def build_entry(id, organization_id, shadow_organization_id, status, plan_mapping, events_copy_source)
+        Entry.new(
+          id:,
+          organization_id:,
+          shadow_organization_id:,
+          status:,
+          plan_mapping: plan_mapping.each_value(&:freeze).freeze,
+          events_copy_source:
+        )
       end
     end
   end
