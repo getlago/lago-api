@@ -496,6 +496,21 @@ RSpec.describe CopyToProduction::CopyService do
       end
     end
 
+    context "when the coupon targets a custom aggregation metric" do
+      let(:copied_metric_source) do
+        create(:billable_metric, organization: sandbox, code: "storage", aggregation_type: "custom_agg",
+          custom_aggregator: "aggregator")
+      end
+
+      it "refuses the copy" do
+        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_item_unsupported")
+      end
+    end
+
     context "when one targeted metric is deleted in the sandbox" do
       before { copied_metric_source.discard! }
 
