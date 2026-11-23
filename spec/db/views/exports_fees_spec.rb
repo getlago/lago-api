@@ -24,6 +24,21 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
     expect(exported_fee_ids).not_to include(deleted_fee.id)
   end
 
+  it "takes the customer of a subscription fee from its subscription and leaves the contract columns null" do
+    row = ActiveRecord::Base.connection.select_one(
+      "SELECT * FROM exports_fees WHERE lago_id = #{ActiveRecord::Base.connection.quote(finalized_fee.id)}"
+    )
+
+    expect(row["lago_customer_id"]).to eq(customer.id)
+    expect(row.slice(
+      "lago_contract_id",
+      "lago_contract_rate_card_id",
+      "lago_rate_card_rate_id",
+      "lago_product_filter_id",
+      "lago_product_id"
+    ).values).to all(be_nil)
+  end
+
   describe "fixed-charge fees" do
     # Fee::FEE_TYPES gained fixed_charge at index 5, but every CASE f.fee_type in
     # the view stopped at 4, so fixed-charge fees fell through to the subscription
@@ -109,6 +124,111 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
       expect(Time.zone.parse(row["to_date"]).to_date).to eq(Date.new(2022, 7, 31))
       # the generic from_datetime on the same fee is 2022-08-01
       expect(Time.zone.parse(row["from_date"]).to_date).not_to eq(Date.new(2022, 8, 1))
+    end
+  end
+
+  describe "product fees" do
+    # Contract fees are billed from a rate card rate, without a subscription.
+    let(:product) do
+      create(:product, organization:, code: "storage", name: "Storage", description: "Object storage", invoice_display_name: nil)
+    end
+    let(:product_filter) { create(:product_filter, organization:, product:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, product_filter:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:contract_invoice) { create(:invoice, status: :finalized, organization:, customer:) }
+    let!(:product_fee) do
+      create(
+        :product_fee,
+        invoice: contract_invoice,
+        organization:,
+        subscription: nil,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate:,
+        product_filter:,
+        invoice_display_name: nil
+      )
+    end
+
+    def item_for(id)
+      ActiveRecord::Base.connection.select_one(<<~SQL.squish)
+        SELECT item->>'type' AS type,
+               item->>'code' AS code,
+               item->>'name' AS name,
+               item->>'description' AS description,
+               item->>'item_type' AS item_type,
+               item->>'lago_item_id' AS lago_item_id,
+               item->>'invoice_display_name' AS invoice_display_name
+        FROM exports_fees
+        WHERE lago_id = #{ActiveRecord::Base.connection.quote(id)}
+      SQL
+    end
+
+    def row_for(id)
+      ActiveRecord::Base.connection.select_one(
+        "SELECT * FROM exports_fees WHERE lago_id = #{ActiveRecord::Base.connection.quote(id)}"
+      )
+    end
+
+    it "serializes the product as the item" do
+      expect(item_for(product_fee.id)).to eq(
+        "type" => "product",
+        "code" => "storage",
+        "name" => "Storage",
+        "description" => "Object storage",
+        "item_type" => "product",
+        "lago_item_id" => product.id,
+        "invoice_display_name" => "Storage"
+      )
+    end
+
+    it "prefers the product's invoice_display_name over its name" do
+      product.update!(invoice_display_name: "Cloud storage")
+
+      expect(item_for(product_fee.id)["invoice_display_name"]).to eq("Cloud storage")
+    end
+
+    it "exposes the contract, rate card and product ids" do
+      row = row_for(product_fee.id)
+
+      expect(row.slice(
+        "lago_contract_id",
+        "lago_contract_rate_card_id",
+        "lago_rate_card_rate_id",
+        "lago_product_filter_id",
+        "lago_product_id",
+        "lago_subscription_id"
+      )).to eq(
+        "lago_contract_id" => contract.id,
+        "lago_contract_rate_card_id" => contract_rate_card.id,
+        "lago_rate_card_rate_id" => rate_card_rate.id,
+        "lago_product_filter_id" => product_filter.id,
+        "lago_product_id" => product.id,
+        "lago_subscription_id" => nil
+      )
+    end
+
+    it "takes the customer from the contract" do
+      expect(row_for(product_fee.id)["lago_customer_id"]).to eq(customer.id)
+    end
+
+    context "when the catalog rows are deleted" do
+      before do
+        [rate_card_rate, rate_card, product_filter, product].each { |record| record.update!(deleted_at: Time.current) }
+        contract_rate_card.update!(deleted_at: Time.current)
+      end
+
+      it "keeps the ids and the product item" do
+        row = row_for(product_fee.id)
+
+        expect(row["lago_product_id"]).to eq(product.id)
+        expect(row["lago_rate_card_rate_id"]).to eq(rate_card_rate.id)
+        expect(row["lago_contract_rate_card_id"]).to eq(contract_rate_card.id)
+        expect(row["lago_product_filter_id"]).to eq(product_filter.id)
+        expect(item_for(product_fee.id)["code"]).to eq("storage")
+      end
     end
   end
 end
