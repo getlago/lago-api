@@ -159,4 +159,101 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided do
       end
     end
   end
+
+  context "when the voided invoice is an advance_charges invoice" do
+    let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+    let(:advance_charges_plan) { create(:plan, organization:, interval: "monthly") }
+    let(:subscription) do
+      create(
+        :subscription,
+        customer:,
+        plan: advance_charges_plan,
+        subscription_at: started_at,
+        started_at:,
+        created_at: started_at
+      )
+    end
+    let(:charge) do
+      create(:standard_charge, plan: advance_charges_plan, pay_in_advance: true, invoiceable: false, properties: {amount: "10"})
+    end
+    let(:voided_invoice) do
+      create(
+        :invoice,
+        :voided,
+        :with_subscriptions,
+        organization:,
+        customer:,
+        subscriptions: [subscription],
+        currency: "EUR",
+        invoice_type: :advance_charges,
+        payment_status: :succeeded,
+        fees_amount_cents: 1_000,
+        sub_total_excluding_taxes_amount_cents: 1_000,
+        taxes_amount_cents: 200,
+        sub_total_including_taxes_amount_cents: 1_200,
+        total_amount_cents: 1_200
+      )
+    end
+    let(:charge_fee) do
+      create(
+        :charge_fee,
+        invoice: voided_invoice,
+        subscription:,
+        charge:,
+        units: 1,
+        unit_amount_cents: 1_000,
+        precise_unit_amount: 10,
+        amount_cents: 1_000,
+        precise_amount_cents: 1_000,
+        taxes_amount_cents: 200,
+        taxes_precise_amount_cents: 200,
+        taxes_rate: 20,
+        payment_status: :succeeded
+      )
+    end
+    let(:fee_input) do
+      {
+        id: charge_fee.id,
+        chargeId: charge.id,
+        subscriptionId: subscription.id,
+        invoiceDisplayName: charge_fee.invoice_display_name,
+        units: 1,
+        unitAmountCents: 10
+      }
+    end
+
+    before do
+      create(:customer_applied_tax, customer:, tax: create(:tax, organization:, rate: 8.5))
+    end
+
+    it "regenerates a paid advance_charges receipt without charging the payment provider" do
+      freeze_time do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: {voidedInvoiceId: voided_invoice.id, fees: [fee_input]}}
+        )
+
+        regenerated_invoice = Invoice.find(result.dig("data", "regenerateFromVoided", "id"))
+        expect(regenerated_invoice).to have_attributes(
+          invoice_type: "advance_charges",
+          fees_amount_cents: 1_000,
+          taxes_amount_cents: 85, # 1000 * 8.5%
+          total_amount_cents: 1_085, # 1000 + 85
+          payment_status: "succeeded"
+        )
+        expect(Payments::ManualCreateJob).to have_been_enqueued.with(
+          organization:,
+          params: hash_including(
+            invoice_id: regenerated_invoice.id,
+            amount_cents: 1_085,
+            reference: I18n.t("invoice.charges_paid_in_advance")
+          )
+        )
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+      end
+    end
+  end
 end

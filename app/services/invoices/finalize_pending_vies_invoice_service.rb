@@ -27,7 +27,7 @@ module Invoices
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
-        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+        invoice.payment_status = invoice.finalized_payment_status
         invoice.tax_status = "succeeded"
 
         skip_payment_gating_for_zero_amount if invoice.subscription_payment_gated? && invoice.total_amount_cents.zero?
@@ -98,8 +98,10 @@ module Invoices
       !invoice.one_off?
     end
 
+    # A regenerated advance_charges invoice is a receipt for fees already paid: no wallet or PSP charge.
     def should_create_applied_prepaid_credit?
       return false if invoice.one_off?
+      return false if invoice.regenerated_advance_charges?
 
       invoice.total_amount_cents&.positive?
     end
@@ -132,7 +134,7 @@ module Invoices
         {}
       end
 
-      Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:)
+      Invoices::Payments::CollectService.call!(invoice:, payment_method_params:)
     end
   end
 end

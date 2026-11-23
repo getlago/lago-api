@@ -65,7 +65,7 @@ module Invoices
     end
 
     def should_apply_fee_taxes?
-      return false if invoice.advance_charges?
+      return false if invoice.advance_charges? && !invoice.regenerated_advance_charges?
 
       true
     end

@@ -20,6 +20,8 @@ require "rails_helper"
 #     subscription invoices, avoiding forbidden_failure! on advance_charges
 #
 describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_generation_stub, transaction: false do
+  include GraphQLHelper
+
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax_rate) { 20 }
@@ -129,6 +131,137 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
     end
   end
 
+  context "when regenerating through the regenerateFromVoided mutation" do
+    let(:membership) { create(:membership, organization:) }
+    let(:mutation) do
+      <<~GQL
+        mutation($input: RegenerateInvoiceInput!) {
+          regenerateFromVoided(input: $input) { id }
+        }
+      GQL
+    end
+
+    it "keeps the receipt paid with a manual payment and taxes from the current customer taxes" do
+      advance_charges_invoice = create_advance_charges_invoice
+      subscription = customer.subscriptions.sole
+      original_fee = advance_charges_invoice.fees.first
+
+      void_invoice(advance_charges_invoice)
+      expect(advance_charges_invoice).to be_voided
+      voided_invoice_payments = Payment.where(payable: advance_charges_invoice).to_a
+      expect(voided_invoice_payments.map(&:payment_type)).to eq(["manual"])
+
+      create(:customer_applied_tax, customer:, tax: create(:tax, organization:, rate: 8.5))
+
+      data = nil
+      expect do
+        data = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: "invoices:update",
+          query: mutation,
+          variables: {
+            input: {
+              voidedInvoiceId: advance_charges_invoice.id,
+              fees: [{id: original_fee.id, subscriptionId: subscription.id, units: 5, unitAmountCents: 20.0}]
+            }
+          }
+        )
+      end.not_to have_enqueued_job(Invoices::Payments::CreateJob)
+
+      perform_all_enqueued_jobs
+
+      regenerated_invoice = Invoice.find(data.dig("data", "regenerateFromVoided", "id"))
+      expect(regenerated_invoice).to have_attributes(
+        invoice_type: "advance_charges",
+        status: "finalized",
+        fees_amount_cents: 10_000, # 5 units * 2000 cents
+        taxes_amount_cents: 850, # 10000 * 8.5% customer tax, which replaces the 20% billing entity tax
+        total_amount_cents: 10_850, # 10000 + 850
+        payment_status: "succeeded"
+      )
+      expect(regenerated_invoice.fees.sole.amount_cents).to eq(10_000)
+
+      payment = Payment.where(payable: regenerated_invoice).sole
+      expect(payment).to have_attributes(
+        payment_type: "manual",
+        payment_provider_id: nil,
+        amount_cents: 10_850,
+        reference: I18n.t("invoice.charges_paid_in_advance")
+      )
+      expect(Payment.where(payable: advance_charges_invoice).to_a).to eq(voided_invoice_payments)
+    end
+  end
+
+  context "when the customer has a tax provider", :premium do
+    let(:anrok_client) { instance_double(LagoHttpClient::Client) }
+    let(:nango_action_endpoint) { "https://api.nango.dev/action/trigger" }
+    let(:success_body_template) do
+      JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")))
+    end
+
+    before do
+      allow(LagoHttpClient::Client).to receive(:new).and_call_original
+      allow(LagoHttpClient::Client).to receive(:new).with(nango_action_endpoint, anything).and_return(anrok_client)
+      allow(anrok_client).to receive(:post_with_response)
+        .with(hash_including(action_name: "anrok-create-or-update-transaction"), anything) do
+        # Anrok answers for the fees it receives, so its fee entry carries the regenerated fee id.
+        body = success_body_template.deep_dup
+        body["succeededInvoices"].first["fees"].first["item_id"] = customer.invoices.pending.sole.fees.sole.id
+        instance_double(Net::HTTPOK, body: body.to_json)
+      end
+    end
+
+    it "keeps the receipt paid with a manual payment once the provider taxes are pulled" do
+      advance_charges_invoice = create_advance_charges_invoice
+      subscription = customer.subscriptions.sole
+      original_fee = advance_charges_invoice.fees.first
+
+      void_invoice(advance_charges_invoice)
+      expect(advance_charges_invoice).to be_voided
+
+      # The tax provider and the payment provider are connected after the original invoice is voided.
+      create(:anrok_customer, integration: create(:anrok_integration, organization:), customer:)
+      customer.update!(payment_provider: "stripe")
+
+      result = nil
+      expect do
+        result = Invoices::RegenerateFromVoidedService.call(
+          voided_invoice: advance_charges_invoice,
+          fees_params: [{id: original_fee.id, subscription_id: subscription.id, units: 5, unit_amount_cents: 20.0}]
+        )
+      end.not_to have_enqueued_job(Invoices::Payments::CreateJob)
+
+      expect(result).to be_success
+      regenerated_invoice = result.invoice
+      expect(regenerated_invoice).to have_attributes(status: "pending", tax_status: "pending")
+      expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice: regenerated_invoice)
+
+      expect do
+        perform_all_enqueued_jobs(only: [Invoices::ProviderTaxes::PullTaxesAndApplyJob])
+      end.not_to have_enqueued_job(Invoices::Payments::CreateJob)
+      perform_all_enqueued_jobs
+
+      expect(regenerated_invoice.reload).to have_attributes(
+        invoice_type: "advance_charges",
+        status: "finalized",
+        tax_status: "succeeded",
+        fees_amount_cents: 10_000, # 5 units * 2000 cents
+        taxes_amount_cents: 990, # Anrok tax_amount_cents from success_response.json
+        total_amount_cents: 10_990, # 10000 + 990
+        payment_status: "succeeded"
+      )
+
+      payment = Payment.where(payable: regenerated_invoice).sole
+      expect(payment).to have_attributes(
+        payment_type: "manual",
+        payment_provider_id: nil,
+        amount_cents: 10_990,
+        reference: I18n.t("invoice.charges_paid_in_advance")
+      )
+    end
+  end
+
   context "when multiple void/regenerate cycles occur" do
     it "preserves pay_in_advance_event_transaction_id across the chain" do
       advance_charges_invoice = create_advance_charges_invoice
@@ -144,6 +277,8 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
         fees_params: [{id: original_fee.id, subscription_id: subscription.id, units: 5, unit_amount_cents: 20.0}]
       )
       expect(first_result).to be_success
+      # Records the manual payment of the regenerated receipt before it is voided, as it runs right away in production.
+      perform_all_enqueued_jobs
 
       first_regenerated_invoice = first_result.invoice
       first_regenerated_fee = first_regenerated_invoice.fees.first

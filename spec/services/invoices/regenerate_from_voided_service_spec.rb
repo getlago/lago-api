@@ -1053,6 +1053,184 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
     end
   end
 
+  context "when the voided invoice is advance_charges" do
+    subject(:result) { Invoices::RegenerateFromVoidedService.call(voided_invoice:, fees_params:) }
+
+    let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+    let(:plan) { create(:plan, organization:, interval: "monthly") }
+    let(:subscription) { create(:subscription, organization:, customer:, plan:) }
+    let(:charge) do
+      create(:standard_charge, plan:, pay_in_advance: true, invoiceable: false, properties: {amount: "10"})
+    end
+    let(:invoice_type) { :advance_charges }
+    let(:voided_invoice) do
+      create(
+        :invoice,
+        :voided,
+        :with_subscriptions,
+        organization:,
+        customer:,
+        subscriptions: [subscription],
+        currency: "EUR",
+        invoice_type:,
+        payment_status: :succeeded,
+        fees_amount_cents: 1_000,
+        taxes_amount_cents: 200,
+        total_amount_cents: 1_200
+      )
+    end
+    let(:charge_fee) do
+      create(
+        :charge_fee,
+        invoice: voided_invoice,
+        subscription:,
+        charge:,
+        units: 1,
+        unit_amount_cents: 1_000,
+        precise_unit_amount: 10,
+        amount_cents: 1_000,
+        precise_amount_cents: 1_000,
+        taxes_amount_cents: 200,
+        taxes_precise_amount_cents: 200,
+        taxes_rate: 20,
+        payment_status: :succeeded
+      )
+    end
+    let(:fees_params) do
+      [{id: charge_fee.id, charge_id: charge.id, subscription_id: subscription.id, units: 1, unit_amount_cents: 10}]
+    end
+    let(:wallet) do
+      create(:wallet, :with_inbound_transaction, customer:, balance_cents: 500, credits_balance: 5.0)
+    end
+
+    before { tax }
+
+    it "marks the receipt paid and records a manual payment instead of charging the payment provider" do
+      invoice = result.invoice
+
+      expect(result).to be_success
+      expect(invoice).to have_attributes(
+        invoice_type: "advance_charges",
+        status: "finalized",
+        fees_amount_cents: 1_000,
+        taxes_amount_cents: 200, # 1000 * 20%
+        total_amount_cents: 1_200, # 1000 + 200
+        payment_status: "succeeded"
+      )
+      expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
+        organization:,
+        params: {
+          invoice_id: invoice.id,
+          amount_cents: 1_200,
+          reference: I18n.t("invoice.charges_paid_in_advance"),
+          created_at: invoice.created_at
+        }
+      )
+      expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+    end
+
+    context "when the customer has a wallet and an applied coupon" do
+      let(:coupon) { create(:coupon, organization:, coupon_type: :fixed_amount, amount_cents: 300) }
+      let(:applied_coupon) do
+        create(:applied_coupon, customer:, coupon:, amount_cents: 300, frequency: :recurring, frequency_duration: 3,
+          frequency_duration_remaining: 3)
+      end
+
+      before do
+        wallet
+        applied_coupon
+      end
+
+      it "applies neither of them" do
+        invoice = result.invoice
+
+        expect(invoice).to have_attributes(
+          coupons_amount_cents: 0,
+          prepaid_credit_amount_cents: 0,
+          total_amount_cents: 1_200, # 1000 + 1000 * 20%, no coupon or wallet deducted
+          payment_status: "succeeded"
+        )
+        expect(invoice.credits).to be_empty
+        expect(WalletTransaction.where(invoice:)).to be_empty
+        expect(wallet.reload.balance_cents).to eq(500)
+        expect(applied_coupon.reload).to have_attributes(status: "active", frequency_duration_remaining: 3)
+      end
+    end
+
+    context "when credit-note credit covers the whole total" do
+      let(:credit_note) do
+        create(:credit_note, customer:, invoice: create(:invoice, organization:, customer:),
+          credit_amount_cents: 1_500, balance_amount_cents: 1_500)
+      end
+
+      before { credit_note }
+
+      it "marks the receipt paid without recording a manual payment" do
+        invoice = result.invoice
+
+        expect(invoice).to have_attributes(
+          credit_notes_amount_cents: 1_200, # the whole 1000 + 200 total
+          total_amount_cents: 0,
+          payment_status: "succeeded"
+        )
+        expect(credit_note.reload.balance_amount_cents).to eq(300) # 1500 - 1200
+        expect(Payments::ManualCreateJob).not_to have_been_enqueued
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when credit-note credit covers part of the total" do
+      let(:credit_note) do
+        create(:credit_note, customer:, invoice: create(:invoice, organization:, customer:),
+          credit_amount_cents: 500, balance_amount_cents: 500)
+      end
+
+      before { credit_note }
+
+      it "records a manual payment for the total left after the credit" do
+        invoice = result.invoice
+
+        expect(invoice).to have_attributes(
+          credit_notes_amount_cents: 500,
+          total_amount_cents: 700, # 1000 + 1000 * 20% - 500 credit note
+          payment_status: "succeeded"
+        )
+        expect(credit_note.reload.balance_amount_cents).to eq(0)
+        expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
+          organization:,
+          params: {
+            invoice_id: invoice.id,
+            amount_cents: 700,
+            reference: I18n.t("invoice.charges_paid_in_advance"),
+            created_at: invoice.created_at
+          }
+        )
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when the voided invoice is a subscription invoice" do
+      let(:invoice_type) { :subscription }
+
+      before { wallet }
+
+      it "applies the wallet and charges the payment provider" do
+        invoice = result.invoice
+
+        expect(invoice).to have_attributes(
+          invoice_type: "subscription",
+          prepaid_credit_amount_cents: 500,
+          total_amount_cents: 700, # 1000 + 1000 * 20% - 500 wallet
+          payment_status: "pending"
+        )
+        expect(WalletTransaction.where(invoice:).count).to eq(1)
+        expect(Invoices::Payments::CreateJob).to have_been_enqueued
+          .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+        expect(Payments::ManualCreateJob).not_to have_been_enqueued
+      end
+    end
+  end
+
   context "when the voided invoice was billed from a contract" do
     subject(:result) { Invoices::RegenerateFromVoidedService.call(voided_invoice:, fees_params:) }
 

@@ -113,6 +113,20 @@ RSpec.describe Invoices::FinalizeAndPublishAdvanceChargesService do
       end
     end
 
+    context "when the invoice total is zero" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, invoice_type: :advance_charges,
+          status: :generating, total_amount_cents: 0, fees_amount_cents: 0)
+      end
+
+      it "publishes the invoice without recording a payment" do
+        expect(result).to be_success
+        expect(invoice.reload).to be_finalized
+        expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", invoice)
+        expect(Payments::ManualCreateJob).not_to have_been_enqueued
+      end
+    end
+
     context "when the invoice is already finalized" do
       let(:invoice_status) { :finalized }
 

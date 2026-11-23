@@ -51,7 +51,7 @@ module Invoices
 
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
-        regenerated_invoice.payment_status = regenerated_invoice.total_amount_cents.positive? ? :pending : :succeeded
+        regenerated_invoice.payment_status = regenerated_invoice.finalized_payment_status
         regenerated_invoice.issuing_date = issuing_date
         regenerated_invoice.payment_due_date = payment_due_date
         Invoices::TransitionToFinalStatusService.call!(invoice: regenerated_invoice)
@@ -88,13 +88,17 @@ module Invoices
       true
     end
 
+    # A regenerated advance_charges invoice is a receipt for fees already paid: no coupon, wallet or PSP charge.
     def should_create_coupon_credit?
+      return false if regenerated_invoice.regenerated_advance_charges?
       return false unless regenerated_invoice.fees_amount_cents&.positive?
 
       true
     end
 
     def should_create_applied_prepaid_credit?
+      return false if regenerated_invoice.regenerated_advance_charges?
+
       regenerated_invoice.total_amount_cents&.positive? && wallets.any?
     end
 
@@ -330,7 +334,7 @@ module Invoices
       GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-      Invoices::Payments::CreateService.call_async(invoice:)
+      Invoices::Payments::CollectService.call!(invoice:)
     end
 
     def should_deliver_email?

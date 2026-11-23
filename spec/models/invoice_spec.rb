@@ -663,6 +663,62 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#regenerated_advance_charges?" do
+    subject(:invoice) { build(:invoice, organization:, invoice_type:, voided_invoice_id:) }
+
+    let(:voided_invoice_id) { SecureRandom.uuid }
+
+    context "when the invoice is an advance_charges invoice regenerated from a voided one" do
+      let(:invoice_type) { :advance_charges }
+
+      it { expect(invoice.regenerated_advance_charges?).to be(true) }
+    end
+
+    context "when the invoice is an advance_charges invoice not regenerated" do
+      let(:invoice_type) { :advance_charges }
+      let(:voided_invoice_id) { nil }
+
+      it { expect(invoice.regenerated_advance_charges?).to be(false) }
+    end
+
+    context "when the invoice is regenerated from a voided one of another type" do
+      let(:invoice_type) { :subscription }
+
+      it { expect(invoice.regenerated_advance_charges?).to be(false) }
+    end
+  end
+
+  describe "#finalized_payment_status" do
+    subject(:invoice) do
+      build(:invoice, organization:, invoice_type:, voided_invoice_id:, total_amount_cents:)
+    end
+
+    let(:invoice_type) { :subscription }
+    let(:voided_invoice_id) { nil }
+    let(:total_amount_cents) { 1_000 }
+
+    it { expect(invoice.finalized_payment_status).to eq(:pending) }
+
+    context "when nothing is left to pay" do
+      let(:total_amount_cents) { 0 }
+
+      it { expect(invoice.finalized_payment_status).to eq(:succeeded) }
+    end
+
+    context "when the invoice is a regenerated advance_charges invoice" do
+      let(:invoice_type) { :advance_charges }
+      let(:voided_invoice_id) { SecureRandom.uuid }
+
+      it { expect(invoice.finalized_payment_status).to eq(:succeeded) }
+    end
+
+    context "when the invoice is a regenerated invoice of another type" do
+      let(:voided_invoice_id) { SecureRandom.uuid }
+
+      it { expect(invoice.finalized_payment_status).to eq(:pending) }
+    end
+  end
+
   describe "ready_to_be_finalized" do
     let(:invoice) { create(:invoice, status: :draft, expected_finalization_date: Time.current - 1.day) }
 
