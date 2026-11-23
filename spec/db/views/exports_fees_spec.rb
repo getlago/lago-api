@@ -228,6 +228,18 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
       expect(row_for(product_fee.id)["lago_customer_id"]).to eq(customer.id)
     end
 
+    it "takes invoiceable from the rate card's display_on_invoice" do
+      expect(row_for(product_fee.id)["invoiceable"]).to be(true)
+    end
+
+    context "when the rate card is hidden from invoices" do
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, product_filter:, display_on_invoice: false) }
+
+      it "exports the fee as not invoiceable" do
+        expect(row_for(product_fee.id)["invoiceable"]).to be(false)
+      end
+    end
+
     context "when the catalog rows are deleted" do
       before do
         [rate_card_rate, rate_card, product_filter, product].each { |record| record.update!(deleted_at: Time.current) }

@@ -97,7 +97,10 @@ SELECT
     ) AS item,
     f.pay_in_advance,
     f.amount_cents,
-    ch.invoiceable AS invoiceable,
+    CASE f.fee_type
+        WHEN 6 THEN rc.display_on_invoice -- product fees are invoiceable when their rate card shows on invoices
+        ELSE ch.invoiceable
+    END AS invoiceable,
     f.taxes_amount_cents,
     f.taxes_precise_amount_cents,
     f.taxes_rate,
