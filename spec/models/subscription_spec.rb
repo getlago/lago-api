@@ -1302,8 +1302,7 @@ RSpec.describe Subscription do
 
     let(:mapped_plan) { create(:plan) }
     let(:migration_status) { "shadowing" }
-
-    before do
+    let(:migration) do
       create(
         :billing_engine_migration,
         organization:,
@@ -1312,9 +1311,11 @@ RSpec.describe Subscription do
       )
     end
 
+    before { migration }
+
     it "enqueues a copy after the subscription is created" do
       expect { subscription }
-        .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob)
+        .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(migration.id, anything)
     end
 
     context "when the subscription already exists" do
@@ -1325,19 +1326,19 @@ RSpec.describe Subscription do
 
       it "enqueues a copy after the subscription is terminated" do
         expect { subscription.mark_as_terminated! }
-          .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(subscription)
+          .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(migration.id, subscription)
       end
 
       it "enqueues a copy after its end date changes" do
         expect { subscription.update!(ending_at: 1.month.from_now) }
-          .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(subscription)
+          .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(migration.id, subscription)
       end
 
       it "enqueues a copy when a later save of the same transaction leaves the status unchanged" do
         expect do
           subscription.mark_as_terminated!
           subscription.update!(name: "Renamed")
-        end.to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(subscription)
+        end.to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(migration.id, subscription)
       end
 
       it "does not enqueue a copy for other changes" do
