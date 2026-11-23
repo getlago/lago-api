@@ -56,4 +56,39 @@ RSpec.describe Mutations::IntegrationItems::FetchItems do
     expect(external_ids).to eq(%w[755 745 753 484 828])
     expect(integration.integration_items.where(item_type: :standard).count).to eq(5)
   end
+
+  context "with a quickbooks integration" do
+    let(:integration) { create(:quickbooks_integration, organization:) }
+    let(:fixture_records) { JSON.parse(items_response)["records"] }
+    let(:sync_request) do
+      stub_request(:post, "https://api.nango.dev/sync/trigger")
+        .with(body: hash_including(provider_config_key: "quickbooks", syncs: ["items"]))
+        .to_return(status: 200, body: "{}")
+    end
+
+    before do
+      allow(Integrations::Aggregator::SyncService).to receive(:call).and_call_original
+      sync_request
+    end
+
+    it "fetches the quickbooks items through the items sync" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {integrationId: integration.id}
+        }
+      )
+
+      collection = result["data"]["fetchIntegrationItems"]["collection"]
+
+      expect(sync_request).to have_been_requested.once
+      expect(collection.map { |value| value.slice("externalId", "externalName") })
+        .to eq(fixture_records.map { |record| {"externalId" => record["id"], "externalName" => record["name"]} })
+      expect(integration.integration_items.where(item_type: :standard).count)
+        .to eq(fixture_records.map { |record| record["id"] }.uniq.count)
+    end
+  end
 end
