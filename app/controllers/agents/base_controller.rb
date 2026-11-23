@@ -19,8 +19,8 @@ module Agents
       request.authorization.to_s[/\ABearer (.+)\z/i, 1]
     end
 
-    def throttled?(rule, identifier)
-      return false unless ::Auth::AttemptsThrottle.hit!(rule, identifier)
+    def throttled?(rule, *identifiers)
+      return false unless ::Auth::AttemptsThrottle.hit!(rule, *identifiers)
 
       render_too_many_requests
       true
