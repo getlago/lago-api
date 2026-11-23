@@ -109,18 +109,33 @@ RSpec.describe BillingEngineMigrations::CopyFeaturesService do
   end
 
   context "when a shadow privilege has another value type" do
-    before_all do
-      shadow_seats = create(:feature, organization: shadow_organization, code: "seats")
-      create(:privilege, feature: shadow_seats, code: "max", value_type: "string")
+    let_it_be(:shadow_seats) { create(:feature, organization: shadow_organization, code: "seats") }
+    let_it_be(:shadow_max) { create(:privilege, feature: shadow_seats, code: "max", value_type: "string") }
+    let_it_be(:shadow_max_value) do
+      shadow_plan = create(:plan, organization: shadow_organization)
+      create(:entitlement_value, entitlement: create(:entitlement, plan: shadow_plan, feature: shadow_seats), privilege: shadow_max, value: "ten")
     end
 
-    it "fails without creating anything" do
-      expect { result }.not_to change { Entitlement::Privilege.unscoped.count }
+    it "discards it with its values and copies the organization one" do
+      expect(result).to be_success
+      expect(result.removed_privileges).to eq(%w[seats.max])
+      expect(result.created_privileges).to eq(%w[seats.max])
 
-      expect(result).to be_failure
-      expect(result.error).to be_a(BaseService::ValidationFailure)
-      expect(result.error.messages).to eq({"seats.max": ["value_type_mismatch"]})
-      expect(shadow_features.map(&:first)).to eq(%w[seats])
+      expect(Entitlement::Privilege.unscoped.find(shadow_max.id)).to be_discarded
+      expect(Entitlement::EntitlementValue.unscoped.find(shadow_max_value.id)).to be_discarded
+      expect(shadow_privileges).to include(["seats", "max", "Max", "integer", {}])
+    end
+  end
+
+  context "when the organization removed a privilege copied before" do
+    let_it_be(:shadow_seats) { create(:feature, organization: shadow_organization, code: "seats") }
+    let_it_be(:shadow_legacy) { create(:privilege, feature: shadow_seats, code: "legacy", value_type: "boolean") }
+
+    it "discards it" do
+      expect(result).to be_success
+      expect(result.removed_privileges).to eq(%w[seats.legacy])
+      expect(Entitlement::Privilege.unscoped.find(shadow_legacy.id)).to be_discarded
+      expect(shadow_privileges.map(&:second)).to eq(%w[max tier])
     end
   end
 
@@ -146,11 +161,11 @@ RSpec.describe BillingEngineMigrations::CopyFeaturesService do
       create(:privilege, feature: shadow_seats, code: "tier", value_type: "select", config: {select_options: %w[gold bronze]})
     end
 
-    it "fails without creating or updating anything" do
-      expect(result).to be_failure
-      expect(result.error.messages).to eq({"seats.tier": ["select_options_mismatch"]})
-      expect(shadow_features.map(&:first)).to eq(%w[seats])
-      expect(shadow_privileges.map(&:last)).to eq([{"select_options" => %w[gold bronze]}])
+    it "discards it and copies the organization one" do
+      expect(result).to be_success
+      expect(result.removed_privileges).to eq(%w[seats.tier])
+      expect(result.updated_privileges).to be_empty
+      expect(shadow_privileges).to include(["seats", "tier", nil, "select", {"select_options" => %w[silver gold]}])
     end
   end
 end

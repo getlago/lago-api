@@ -172,6 +172,7 @@ class BillingEnginePlanEntitlementsCopy
     list("create", "feature", result.created_features)
     list("create", "privilege", result.created_privileges)
     list("update", "privilege", result.updated_privileges)
+    list("remove", "privilege", result.removed_privileges)
     result.catalog_plans.each { |code, plan_result| report_catalog_plan(code, plan_result) }
     result.missing_plan_codes.each { puts "  [#{mode}] skipped plan #{it} (plan_not_found)" }
     result.missing_catalog_plan_codes.each { puts "  [#{mode}] skipped catalog plan #{it} (catalog_plan_not_found)" }
@@ -200,7 +201,8 @@ class BillingEnginePlanEntitlementsCopy
 
   def summary(result)
     "Features: #{result.created_features.size} created. " \
-      "Privileges: #{result.created_privileges.size} created, #{result.updated_privileges.size} updated. " \
+      "Privileges: #{result.created_privileges.size} created, #{result.updated_privileges.size} updated, " \
+      "#{result.removed_privileges.size} removed. " \
       "Catalog plans: #{result.catalog_plans.size} synced. Mappings skipped: #{skipped_mappings(result)}. " \
       "Entitlements: #{plan_count(result, :created_entitlements)} created, #{plan_count(result, :removed_entitlements)} removed. " \
       "Values: #{plan_count(result, :created_values)} created, #{plan_count(result, :updated_values)} updated, " \

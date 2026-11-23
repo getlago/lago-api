@@ -66,7 +66,7 @@ RSpec.describe "billing_engine_migrations:copy_plan_entitlements" do # rubocop:d
           "[DRY RUN] would create value seats.max on catalog plan pro_v2",
           "[DRY RUN] skipped plan basic (plan_not_found)",
           "[DRY RUN] skipped catalog plan basic_v2 (catalog_plan_not_found)",
-          "Features: 1 created. Privileges: 1 created, 0 updated. Catalog plans: 1 synced. Mappings skipped: 1. " \
+          "Features: 1 created. Privileges: 1 created, 0 updated, 0 removed. Catalog plans: 1 synced. Mappings skipped: 1. " \
           "Entitlements: 1 created, 0 removed. Values: 1 created, 0 updated, 0 removed. [DRY RUN]"
         )
       ).to_stdout
@@ -120,7 +120,7 @@ RSpec.describe "billing_engine_migrations:copy_plan_entitlements" do # rubocop:d
           "[DRY RUN] would remove entitlement legacy on catalog plan pro_v2",
           "[DRY RUN] would update value seats.max on catalog plan pro_v2",
           "[DRY RUN] would remove value seats.old on catalog plan pro_v2",
-          "Features: 0 created. Privileges: 0 created, 1 updated. Catalog plans: 1 synced. Mappings skipped: 1. " \
+          "Features: 0 created. Privileges: 0 created, 1 updated, 0 removed. Catalog plans: 1 synced. Mappings skipped: 1. " \
           "Entitlements: 0 created, 1 removed. Values: 0 created, 1 updated, 1 removed. [DRY RUN]"
         )
       ).to_stdout
@@ -173,12 +173,14 @@ RSpec.describe "billing_engine_migrations:copy_plan_entitlements" do # rubocop:d
       create(:privilege, feature: shadow_seats, code: "max", value_type: "string")
     end
 
-    it "aborts with the mismatch" do
-      expect { task.invoke(organization.id) }
-        .to raise_error(SystemExit)
-        .and output(/Plan entitlements copy failed: Validation errors: \{"seats.max":\["value_type_mismatch"\]\}/).to_stderr
-
-      expect(pro_catalog_plan.entitlements).to be_empty
+    it "replaces it with the organization one" do
+      expect { task.invoke(organization.id) }.to output(
+        a_string_including(
+          "[LIVE] removed privilege seats.max",
+          "[LIVE] created privilege seats.max",
+          "Privileges: 1 created, 0 updated, 1 removed."
+        )
+      ).to_stdout
     end
   end
 end

@@ -2,7 +2,7 @@
 
 module BillingEngineMigrations
   class CopyFeaturesService < BaseService
-    Result = BaseResult[:features, :created_features, :created_privileges, :updated_privileges]
+    Result = BaseResult[:features, :created_features, :created_privileges, :updated_privileges, :removed_privileges]
 
     def initialize(migration:)
       @migration = migration
@@ -10,9 +10,8 @@ module BillingEngineMigrations
     end
 
     def call
-      return result.validation_failure!(errors: mismatched_privileges) if mismatched_privileges.any?
-
       ActiveRecord::Base.transaction do
+        remove_outdated_privileges
         create_missing_features
         create_missing_privileges
         update_select_options
@@ -47,21 +46,35 @@ module BillingEngineMigrations
       end
     end
 
-    def mismatched_privileges
-      @mismatched_privileges ||= source_and_shadow_privileges.each_with_object({}) do |(feature_code, privilege, shadow), errors|
-        error = mismatch_error(privilege, shadow)
-        errors[:"#{feature_code}.#{privilege.code}"] = [error] if error
+    def remove_outdated_privileges
+      outdated = outdated_shadow_privileges
+      result.removed_privileges = outdated.map { |feature_code, privilege| "#{feature_code}.#{privilege.code}" }.sort
+      return if outdated.empty?
+
+      privilege_ids = outdated.map { |_, privilege| privilege.id }
+      discard(::Entitlement::EntitlementValue.where(entitlement_privilege_id: privilege_ids))
+      discard(::Entitlement::Privilege.where(id: privilege_ids))
+      @shadow_features = load_shadow_features
+    end
+
+    def outdated_shadow_privileges
+      source_features.flat_map do |feature|
+        shadow_feature = shadow_features[feature.code]
+        next [] unless shadow_feature
+
+        shadow_feature.privileges.filter_map do |shadow_privilege|
+          privilege = feature.privileges.find { it.code == shadow_privilege.code }
+          [feature.code, shadow_privilege] if privilege.nil? || recreated?(privilege, shadow_privilege)
+        end
       end
     end
 
-    # An organization can add select options to a privilege but never remove one, so a shadow
-    # privilege whose options are all still in the organization only lags behind it.
-    def mismatch_error(privilege, shadow_privilege)
-      if privilege.value_type != shadow_privilege.value_type
-        "value_type_mismatch"
-      elsif (select_options(shadow_privilege) - select_options(privilege)).any?
-        "select_options_mismatch"
-      end
+    # An organization can add select options to a privilege but never change its value type or
+    # remove an option in place, so a shadow privilege that differs that way was discarded and
+    # recreated in the organization.
+    def recreated?(privilege, shadow_privilege)
+      privilege.value_type != shadow_privilege.value_type ||
+        (select_options(shadow_privilege) - select_options(privilege)).any?
     end
 
     def select_options(privilege)
@@ -117,9 +130,18 @@ module BillingEngineMigrations
       outdated = source_and_shadow_privileges.select { |_, privilege, shadow| privilege.config != shadow.config }
       result.updated_privileges = outdated.map { |feature_code, privilege, _| "#{feature_code}.#{privilege.code}" }
 
-      outdated.each do |_, privilege, shadow|
-        ::Entitlement::Privilege.where(id: shadow.id).update_all(config: privilege.config, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      return if outdated.empty?
+
+      rows = outdated.map do |_, privilege, shadow|
+        shadow.attributes.slice("id", "organization_id", "entitlement_feature_id", "code", "name", "value_type")
+          .merge("config" => privilege.config)
       end
+      ::Entitlement::Privilege.upsert_all(rows, update_only: %i[config]) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    def discard(scope)
+      now = Time.current
+      scope.update_all(deleted_at: now, updated_at: now) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

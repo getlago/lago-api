@@ -158,11 +158,10 @@ RSpec.describe BillingEngineMigrations::CopyEntitlementsService do
       create(:privilege, feature: shadow_seats, code: "max", value_type: "string")
     end
 
-    it "fails without copying any entitlement" do
-      expect { result }.not_to change { Entitlement::Entitlement.unscoped.count }
-
-      expect(result).to be_failure
-      expect(result.error.messages).to eq({"seats.max": ["value_type_mismatch"]})
+    it "replaces it with the organization one, then copies the values" do
+      expect(result).to be_success
+      expect(result.removed_privileges).to eq(%w[seats.max])
+      expect(entitlements_of(catalog_plan_id: pro_catalog_plan.id)).to eq({"seats" => {"max" => "10"}, "sso" => {}})
     end
   end
 end

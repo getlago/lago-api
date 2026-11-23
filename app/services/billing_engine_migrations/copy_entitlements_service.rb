@@ -6,6 +6,7 @@ module BillingEngineMigrations
       :created_features,
       :created_privileges,
       :updated_privileges,
+      :removed_privileges,
       :catalog_plans,
       :missing_plan_codes,
       :missing_catalog_plan_codes,
@@ -25,6 +26,7 @@ module BillingEngineMigrations
         result.created_features = features_result.created_features
         result.created_privileges = features_result.created_privileges
         result.updated_privileges = features_result.updated_privileges
+        result.removed_privileges = features_result.removed_privileges
 
         sync_catalog_plans(features_result.features)
       end
