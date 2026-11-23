@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class ScopeX402SettlementTransactionUniqueness < ActiveRecord::Migration[8.0]
+class ScopeX402SettlementTransactionUniqueness < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
   def up
@@ -11,7 +11,7 @@ class ScopeX402SettlementTransactionUniqueness < ActiveRecord::Migration[8.0]
   end
 
   def down
-    add_unique_index %i[network transaction_hash], name: :index_x402_settlements_on_network_and_transaction_hash, where: "transaction_hash IS NOT NULL"
+    add_unique_index %i[network transaction_hash], name: :index_x402_settlements_on_network_and_transaction_hash, where: "transaction_hash IS NOT NULL AND settled_by = 'lago'"
 
     remove_index :x402_settlements, name: :index_x402_settlements_on_organization_network_and_hash, algorithm: :concurrently, if_exists: true
     remove_index :x402_settlements, name: :index_x402_settlements_on_lago_network_and_hash, algorithm: :concurrently, if_exists: true
