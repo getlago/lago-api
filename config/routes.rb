@@ -176,6 +176,15 @@ Rails.application.routes.draw do
     as: :admin_organization_activation,
     constraints: ->(_request) { Lago::SelfServe.enabled? && Lago::SelfServe.billing_accounts_key.present? }
 
+  scope "agents/v1/:storefront_id", module: :agents, as: :agents do
+    get "AUTH.md", to: "documents#auth", format: false
+    post "auth/challenges", to: "auth#challenge"
+    post "signup", to: "auth#signup"
+    post "auth/token", to: "auth#token"
+    post "auth/revoke", to: "auth#revoke"
+    get "me", to: "auth#me"
+  end
+
   if Rails.env.local?
     namespace :admin do
       resources :memberships, only: %i[create]

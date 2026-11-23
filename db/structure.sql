@@ -364,6 +364,7 @@ ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3a
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alerts DROP CONSTRAINT IF EXISTS fk_rails_3a142d9ca0;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
+ALTER TABLE IF EXISTS ONLY public.agent_registrations DROP CONSTRAINT IF EXISTS fk_rails_384b08e18d;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_37c75ac37a;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_37996f8882;
 ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXISTS fk_rails_36e9122b3e;
@@ -457,6 +458,7 @@ ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_0c9773c34d;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_0bb6dcc01f;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0baa7bd751;
+ALTER TABLE IF EXISTS ONLY public.agent_registrations DROP CONSTRAINT IF EXISTS fk_rails_0b8cfe0c26;
 ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS fk_rails_0b0ce044e7;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_selectors DROP CONSTRAINT IF EXISTS fk_rails_09beb391a2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_0934890b24;
@@ -1170,6 +1172,8 @@ DROP INDEX IF EXISTS public.index_api_keys_on_organization_id;
 DROP INDEX IF EXISTS public.index_api_keys_on_membership_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_membership_id;
+DROP INDEX IF EXISTS public.index_agent_registrations_on_organization_id;
+DROP INDEX IF EXISTS public.index_agent_registrations_on_integration_id_and_key_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_invoice_id;
@@ -1474,6 +1478,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS appl
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS applied_add_ons_pkey;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS api_keys_pkey;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS ai_conversations_pkey;
+ALTER TABLE IF EXISTS ONLY public.agent_registrations DROP CONSTRAINT IF EXISTS agent_registrations_pkey;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS adjusted_fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS add_ons_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS add_ons_pkey;
@@ -1693,6 +1698,7 @@ DROP TABLE IF EXISTS public.applied_coupons;
 DROP TABLE IF EXISTS public.applied_add_ons;
 DROP TABLE IF EXISTS public.api_keys;
 DROP TABLE IF EXISTS public.ai_conversations;
+DROP TABLE IF EXISTS public.agent_registrations;
 DROP TABLE IF EXISTS public.adjusted_fees;
 DROP TABLE IF EXISTS public.add_ons_taxes;
 DROP TABLE IF EXISTS public.add_ons;
@@ -1774,6 +1780,7 @@ DROP TYPE IF EXISTS public.billing_operation_cancellation_reason;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
+DROP TYPE IF EXISTS public.agent_registration_status;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
 DROP EXTENSION IF EXISTS pg_trgm;
@@ -1828,6 +1835,16 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 --
 
 CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: agent_registration_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.agent_registration_status AS ENUM (
+    'active',
+    'revoked'
+);
 
 
 --
@@ -2801,6 +2818,24 @@ CREATE TABLE public.adjusted_fees (
     unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL,
     fixed_charge_id uuid
+);
+
+
+--
+-- Name: agent_registrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.agent_registrations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    integration_id uuid NOT NULL,
+    key_id character varying NOT NULL,
+    public_key character varying NOT NULL,
+    status public.agent_registration_status DEFAULT 'active'::public.agent_registration_status NOT NULL,
+    last_authenticated_at timestamp(6) without time zone,
+    revoked_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -7629,6 +7664,14 @@ ALTER TABLE ONLY public.adjusted_fees
 
 
 --
+-- Name: agent_registrations agent_registrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_registrations
+    ADD CONSTRAINT agent_registrations_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ai_conversations ai_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9952,6 +9995,20 @@ CREATE INDEX index_adjusted_fees_on_organization_id ON public.adjusted_fees USIN
 --
 
 CREATE INDEX index_adjusted_fees_on_subscription_id ON public.adjusted_fees USING btree (subscription_id);
+
+
+--
+-- Name: index_agent_registrations_on_integration_id_and_key_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_agent_registrations_on_integration_id_and_key_id ON public.agent_registrations USING btree (integration_id, key_id);
+
+
+--
+-- Name: index_agent_registrations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_registrations_on_organization_id ON public.agent_registrations USING btree (organization_id);
 
 
 --
@@ -14930,6 +14987,14 @@ ALTER TABLE ONLY public.billing_operations
 
 
 --
+-- Name: agent_registrations fk_rails_0b8cfe0c26; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_registrations
+    ADD CONSTRAINT fk_rails_0b8cfe0c26 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_monitoring_triggered_alerts fk_rails_0baa7bd751; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15671,6 +15736,14 @@ ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_triggered_alerts
 
 ALTER TABLE ONLY public.products
     ADD CONSTRAINT fk_rails_37c75ac37a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: agent_registrations fk_rails_384b08e18d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_registrations
+    ADD CONSTRAINT fk_rails_384b08e18d FOREIGN KEY (integration_id) REFERENCES public.integrations(id);
 
 
 --
@@ -18601,6 +18674,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261016163943'),
 ('20261016153657'),
 ('20261016024339'),
+('20261015133853'),
 ('20261014180403'),
 ('20261014123350'),
 ('20261014123349'),
