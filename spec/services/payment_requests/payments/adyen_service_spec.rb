@@ -13,14 +13,17 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
   let(:payments_response) { generate(:adyen_payments_response) }
   let(:payment_methods_response) { generate(:adyen_payment_methods_response) }
   let(:code) { "adyen_1" }
+  let(:currency) { "USD" }
+  let(:invoice_1_amount_cents) { 200 }
+  let(:invoice_2_amount_cents) { 599 }
 
   let(:payment_request) do
     create(
       :payment_request,
       organization:,
       customer:,
-      amount_cents: 799,
-      amount_currency: "USD",
+      amount_cents: invoice_1_amount_cents + invoice_2_amount_cents,
+      amount_currency: currency,
       invoices: [invoice_1, invoice_2]
     )
   end
@@ -30,8 +33,8 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
       :invoice,
       organization:,
       customer:,
-      total_amount_cents: 200,
-      currency: "USD",
+      total_amount_cents: invoice_1_amount_cents,
+      currency:,
       ready_for_payment_processing: true
     )
   end
@@ -41,8 +44,8 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
       :invoice,
       organization:,
       customer:,
-      total_amount_cents: 599,
-      currency: "USD",
+      total_amount_cents: invoice_2_amount_cents,
+      currency:,
       ready_for_payment_processing: true
     )
   end
@@ -97,6 +100,45 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
               storePaymentMethodMode: "enabled"
             }
           )
+      end
+    end
+
+    context "when the payment request is in a currency with more decimals on Adyen" do
+      let(:currency) { "HUF" }
+      let(:invoice_1_amount_cents) { 20_000 }
+      let(:invoice_2_amount_cents) { 30_000 }
+
+      it "sends the amount in Adyen minor units" do
+        described_class.call(:generate_payment_url, payment_request)
+
+        expect(payment_links_api).to have_received(:payment_links)
+          .with(hash_including(amount: {currency: "HUF", value: 5_000_000})) # 50_000 * 100
+      end
+    end
+
+    context "when the payment request is in a currency with fewer decimals on Adyen" do
+      let(:currency) { "IDR" }
+      let(:invoice_1_amount_cents) { 1_000_000 }
+      let(:invoice_2_amount_cents) { 234_500 }
+
+      it "sends the amount in Adyen minor units" do
+        described_class.call(:generate_payment_url, payment_request)
+
+        expect(payment_links_api).to have_received(:payment_links)
+          .with(hash_including(amount: {currency: "IDR", value: 12_345})) # 1_234_500 / 100
+      end
+    end
+
+    context "when the payment request is in a currency with the same decimals on Adyen" do
+      let(:currency) { "EUR" }
+      let(:invoice_1_amount_cents) { 400 }
+      let(:invoice_2_amount_cents) { 600 }
+
+      it "sends the amount unchanged" do
+        described_class.call(:generate_payment_url, payment_request)
+
+        expect(payment_links_api).to have_received(:payment_links)
+          .with(hash_including(amount: {currency: "EUR", value: 1_000}))
       end
     end
 

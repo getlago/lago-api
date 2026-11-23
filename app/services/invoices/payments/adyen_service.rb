@@ -113,7 +113,7 @@ module Invoices
         prms = {
           reference: invoice.number,
           amount: {
-            value: invoice.total_due_amount_cents,
+            value: ::PaymentProviders::AdyenProvider.to_adyen_amount(invoice.total_due_amount_cents, invoice.currency),
             currency: invoice.currency.upcase
           },
           merchantAccount: adyen_payment_provider.merchant_account,
