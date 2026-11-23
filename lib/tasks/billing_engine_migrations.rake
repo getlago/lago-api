@@ -302,11 +302,18 @@ class BillingEngineUsageParityReport
       compare(contract, subscription)
     end
   rescue BaseService::FailedResult => e
-    @errors += 1
-    puts "  error on contract #{contract.external_id}: #{e.message}"
+    report_error(contract, e.message)
+  rescue => e
+    report_error(contract, "#{e.class}: #{e.message}")
   end
 
-  # The copy follows the status and the end date of a V1 subscription: while they differ, it has not run yet.
+  def report_error(contract, message)
+    @errors += 1
+    puts "  error on contract #{contract.external_id}: #{message}"
+  end
+
+  # The copy sets the status and the end date of a contract from its V1 subscription: when they
+  # differ, V1 changed after the copy and the usage periods no longer line up.
   def skip_reason(contract, subscription)
     if subscription.nil?
       "subscription_not_found"

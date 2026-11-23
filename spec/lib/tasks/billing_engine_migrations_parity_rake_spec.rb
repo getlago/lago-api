@@ -160,6 +160,23 @@ RSpec.describe "billing_engine_migrations:parity" do # rubocop:disable RSpec/Des
         ).to_stdout
       end
     end
+
+    context "when a usage computation raises" do
+      before do
+        allow(Invoices::CustomerUsageService).to receive(:call!)
+          .and_raise(ActiveRecord::QueryCanceled, "canceling statement due to statement timeout")
+      end
+
+      it "reports the error and goes on" do
+        expect { task.invoke(organization.id) }.to output(
+          a_string_including(
+            "error on contract #{contract.external_id}: ActiveRecord::QueryCanceled: " \
+            "canceling statement due to statement timeout",
+            "Contracts compared: 0, matching: 0, mismatches: 0, skipped: 0, errors: 1"
+          )
+        ).to_stdout
+      end
+    end
   end
 
   context "with contracts out of sync with their V1 subscription" do
