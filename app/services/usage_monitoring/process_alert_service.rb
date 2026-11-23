@@ -75,7 +75,6 @@ module UsageMonitoring
       end
 
       alert.previous_value = current
-      # A card without usage counted 0 in the baseline, so it needs no entry
       alert.previous_windows = windows.reject { |_, window| BigDecimal(window["value"]).zero? } if windows
     end
 

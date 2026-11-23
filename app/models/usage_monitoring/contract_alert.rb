@@ -49,8 +49,6 @@ module UsageMonitoring
       STI_MAPPING.invert.fetch(name)
     end
 
-    # The whole contract counts every metered card, a product its default card and each of its filter cards,
-    # a product filter its one card. A contract prices each slice once per date, so no event counts twice.
     def cards_in_scope(usage)
       usage.rate_card_usages.select do |card_usage|
         rate_card = card_usage.contract_rate_card.rate_card
@@ -63,7 +61,6 @@ module UsageMonitoring
       end
     end
 
-    # nil when no card prices the scope, so the alert is skipped rather than evaluated at 0
     def find_value(usage)
       cards = cards_in_scope(usage)
       cards.sum(BigDecimal(0)) { card_value(it) } if cards.any?
@@ -78,7 +75,6 @@ module UsageMonitoring
       end
     end
 
-    # False once the card left the scope (a new version of the slice, a replacement contract) or renewed its window
     def same_window?(contract_rate_card_id, window)
       previous_windows.key?(contract_rate_card_id) && !window.nil? &&
         previous_windows[contract_rate_card_id]["started_at"] == window["started_at"]
