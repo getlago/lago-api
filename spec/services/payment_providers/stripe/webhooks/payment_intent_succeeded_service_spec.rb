@@ -178,6 +178,71 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
       end
     end
 
+    context "when payment intent event for a one-time payment (api_version: #{version})" do
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code: "stripe_1", currency:) }
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency:, total_amount_cents: 50_000, total_paid_amount_cents: 0)
+      end
+      let(:currency) { "HUF" }
+      let(:stripe_amount) { 5_000_000 }
+      let(:stripe_currency) { "huf" }
+
+      let(:event_json) do
+        get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version:) do |h|
+          h["data"]["object"]["id"] = "pi_one_time"
+          h["data"]["object"]["amount"] = stripe_amount
+          h["data"]["object"]["currency"] = stripe_currency
+          h["data"]["object"]["metadata"] = {lago_invoice_id: invoice.id, payment_type: "one-time"}
+        end
+      end
+
+      before do
+        create(:stripe_provider, organization:, code: "stripe_1")
+        create(:stripe_customer, customer:)
+      end
+
+      it "stores the Stripe amount in Lago units" do
+        result = event_service.call
+
+        expect(result).to be_success
+        expect(result.payment.amount_cents).to eq(5_000_000 / 100) # HUF: Stripe hundredths to Lago units
+        expect(result.payment.amount_currency).to eq("HUF")
+      end
+
+      context "when the currency is EUR" do
+        let(:currency) { "EUR" }
+        let(:stripe_amount) { 50_000 }
+        let(:stripe_currency) { "eur" }
+
+        it "stores the Stripe amount unchanged" do
+          result = event_service.call
+
+          expect(result).to be_success
+          expect(result.payment.amount_cents).to eq(50_000)
+        end
+      end
+
+      context "when the event carries no currency" do
+        let(:stripe_amount) { 42_000 }
+
+        let(:event_json) do
+          get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version:) do |h|
+            h["data"]["object"]["id"] = "pi_one_time"
+            h["data"]["object"]["amount"] = stripe_amount
+            h["data"]["object"].delete("currency")
+            h["data"]["object"]["metadata"] = {lago_invoice_id: invoice.id, payment_type: "one-time"}
+          end
+        end
+
+        it "stores the Stripe amount unchanged" do
+          result = event_service.call
+
+          expect(result).to be_success
+          expect(result.payment.amount_cents).to eq(42_000)
+        end
+      end
+    end
+
     context "when payment intent event with an invalid payable type" do
       let(:event_json) do
         get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version:) do |h|
