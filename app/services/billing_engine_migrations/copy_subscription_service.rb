@@ -49,9 +49,9 @@ module BillingEngineMigrations
       terminate_contracts_of_ended_subscriptions
       return if result.failure?
 
-      return skip("plan_override_not_supported") if plan_override?
       return if already_ended?
       return sync_ended_at(own_live_contract) if own_live_contract
+      return skip("plan_override_not_supported") if plan_override?
       return skip(conflict_reason) if conflict_reason
 
       customer_result = CopyCustomerService.call(migration:, customer: subscription.customer)

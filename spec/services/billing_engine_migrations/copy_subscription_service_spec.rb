@@ -732,6 +732,17 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       end
     end
 
+    context "when the subscription moved to an override of its plan" do
+      let(:override_plan) { create(:plan, organization:, code: plan.code, parent: plan) }
+
+      before { subscription.update!(plan: override_plan) }
+
+      it "still moves the end date of the contract" do
+        expect(result).to be_success
+        expect(contract.reload.ended_at).to eq(ending_at)
+      end
+    end
+
     context "when the contract cannot be updated" do
       before do
         allow(Rails.logger).to receive(:warn)
