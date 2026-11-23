@@ -34,7 +34,7 @@ module BillingEngineMigrations
         organization: shadow_organization,
         params: contract_params(customer_result.customer)
       )
-      return result if contract_result.failure? && external_id_taken?(contract_result.error)
+      return result if contract_result.failure? && already_copied?(contract_result.error)
 
       if contract_result.failure?
         log(:warn, "cannot create contract: #{contract_result.error.message}")
@@ -51,14 +51,18 @@ module BillingEngineMigrations
 
     delegate :shadow_organization, to: :migration
 
-    def external_id_taken?(error)
-      error.is_a?(BaseService::ValidationFailure) && error.messages[:external_id]&.include?("value_already_exists")
+    def already_copied?(error)
+      return false unless error.is_a?(BaseService::ValidationFailure)
+
+      error.messages[:external_id]&.include?("value_already_exists") ||
+        error.messages[:code]&.include?("value_already_exist")
     end
 
     def contract_params(shadow_customer)
       {
         external_customer_id: shadow_customer.external_id,
         external_id: subscription.external_id,
+        code: subscription.id,
         name: subscription.name,
         plan_code: migration.plan_mapping.fetch(subscription.plan.code),
         billing_time: subscription.billing_time,
@@ -68,10 +72,23 @@ module BillingEngineMigrations
       }.compact_blank
     end
 
+    # V2 periods are cut from the anchor only (billing_time is not read), so a calendar
+    # subscription is anchored on a calendar boundary: Monday for weekly plans, Jan 1 otherwise.
     def billing_anchor_date
+      timezone = subscription.customer.applicable_timezone
+
       if subscription.anniversary?
-        subscription.subscription_at&.in_time_zone(subscription.customer.applicable_timezone)&.to_date&.iso8601
+        subscription.subscription_at&.in_time_zone(timezone)&.to_date&.iso8601
+      else
+        start_date = subscription.started_at&.in_time_zone(timezone)&.to_date
+        calendar_anchor(start_date)&.iso8601
       end
+    end
+
+    def calendar_anchor(start_date)
+      return if start_date.nil?
+
+      subscription.plan.weekly? ? start_date.beginning_of_week(:monday) : start_date.beginning_of_year
     end
 
     def log(level, message)

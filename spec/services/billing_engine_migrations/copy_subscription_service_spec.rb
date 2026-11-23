@@ -64,12 +64,13 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       customer: shadow_customer,
       catalog_plan:,
       external_id: subscription.external_id,
+      code: subscription.id,
       name: "Main subscription",
       status: "active",
       billing_time: "calendar",
       started_at:,
       ended_at: nil,
-      billing_anchor_date: nil
+      billing_anchor_date: Date.new(2025, 1, 1)
     )
   end
 
@@ -273,8 +274,24 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       create(:subscription, :calendar, organization:, customer:, plan:, started_at:, subscription_at:)
     end
 
-    it "sets no anchor date" do
-      expect(result.contract).to have_attributes(billing_time: "calendar", billing_anchor_date: nil)
+    it "anchors the contract on Jan 1 of the start year in the customer timezone" do
+      expect(result.contract).to have_attributes(billing_time: "calendar", billing_anchor_date: Date.new(2025, 1, 1))
+    end
+
+    context "when the start is still the previous year in the customer timezone" do
+      let(:started_at) { Time.zone.parse("2025-01-01 05:00:00") }
+
+      it "anchors the contract on Jan 1 of that previous year" do
+        expect(result.contract.billing_anchor_date).to eq(Date.new(2024, 1, 1)) # 2024-12-31 21:00 in Los Angeles
+      end
+    end
+
+    context "with a weekly plan" do
+      let(:plan) { create(:plan, organization:, interval: :weekly) }
+
+      it "anchors the contract on the Monday of the start week" do
+        expect(result.contract.billing_anchor_date).to eq(Date.new(2025, 2, 24)) # 2025-03-01 is a Saturday
+      end
     end
   end
 
@@ -301,6 +318,21 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       allow(Rails.logger).to receive(:warn)
       allow(Contracts::CreateService).to receive(:call).and_return(
         BaseService::Result.new.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
+      )
+    end
+
+    it "skips it without logging a failure" do
+      expect(result).to be_success
+      expect(result.contract).to be_nil
+      expect(Rails.logger).not_to have_received(:warn)
+    end
+  end
+
+  context "when the contract is created concurrently with the same code" do
+    before do
+      allow(Rails.logger).to receive(:warn)
+      allow(Contracts::CreateService).to receive(:call).and_return(
+        BaseService::Result.new.single_validation_failure!(field: :code, error_code: "value_already_exist")
       )
     end
 

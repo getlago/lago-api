@@ -5,13 +5,12 @@ require "rails_helper"
 require "rake"
 
 RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:disable RSpec/DescribeClass
-  let(:task) { Rake::Task["billing_engine_migrations:backfill_subscriptions"] }
-
   let_it_be(:organization) { create(:organization) }
   let_it_be(:plan) { create(:plan, organization:) }
   let_it_be(:other_plan) { create(:plan, organization:) }
   let_it_be(:customer) { create(:customer, organization:) }
 
+  let(:task) { Rake::Task["billing_engine_migrations:backfill_subscriptions"] }
   let(:status) { "shadowing" }
   let(:migration) do
     create(:billing_engine_migration, organization:, status:, plan_mapping: {plan.code => "catalog_plan"})
