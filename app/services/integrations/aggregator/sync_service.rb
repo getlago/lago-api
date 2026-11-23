@@ -44,10 +44,15 @@ module Integrations
           }
         end
 
-        return [list[:items]] if options[:only_items]
-        return [list[:accounts]] if options[:only_accounts]
-
-        list.values
+        if options[:only_items]
+          [list[:items]]
+        elsif options[:only_accounts]
+          [list[:accounts]]
+        elsif options[:only_customers]
+          [list[:contacts]]
+        else
+          list.values
+        end
       end
     end
   end
