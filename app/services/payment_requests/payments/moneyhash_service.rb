@@ -147,7 +147,7 @@ module PaymentRequests
 
       def create_moneyhash_payment
         payment_params = {
-          amount: payable.total_amount_cents.div(100).to_f,
+          amount: Money.from_cents(payable.total_amount_cents, payable.currency).to_f,
           amount_currency: payable.currency.upcase,
           flow_id: moneyhash_payment_provider.flow_id,
           billing_data: customer.moneyhash_customer.mh_billing_data,

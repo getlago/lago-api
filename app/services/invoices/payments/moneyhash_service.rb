@@ -138,7 +138,7 @@ module Invoices
 
       def payment_url_params(payment_intent)
         params = {
-          amount: invoice.total_due_amount_cents.div(100).to_f,
+          amount: Money.from_cents(invoice.total_due_amount_cents, invoice.currency).to_f,
           amount_currency: invoice.currency.upcase,
           flow_id: moneyhash_payment_provider.flow_id,
           billing_data: invoice.customer.moneyhash_customer.mh_billing_data,
