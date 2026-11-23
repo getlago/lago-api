@@ -162,6 +162,136 @@ describe "Invoice Payments Scenarios" do
     end
   end
 
+  context "with Stripe and a currency Stripe reads in hundredths" do
+    include_context "with Stripe configured for customer"
+
+    let(:customer) { create(:customer, organization:, currency: "HUF", net_payment_term: 2, payment_term: {term_type: "net", days: 2}) }
+    let(:plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 50_000, amount_currency: "HUF") }
+    let(:payment_intents_url) { "https://api.stripe.com/v1/payment_intents" }
+
+    before do
+      stub_request(:post, payment_intents_url)
+        .and_return(
+          status: 200,
+          body: {
+            id: "pi_huf",
+            object: "payment_intent",
+            status: "succeeded",
+            amount: 5_000_000,
+            currency: "huf"
+          }.to_json
+        )
+      stub_request(:get, "https://api.stripe.com/v1/payment_methods/#{stripe_pm_id}")
+        .and_return(status: 200, body: stripe_payment_method_response)
+    end
+
+    it "charges Stripe in hundredths and stores the payment in Lago units" do
+      travel_to(DateTime.new(2025, 1, 1, 10)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: external_subscription_id,
+            plan_code: plan.code
+          }
+        )
+        perform_billing
+        perform_all_enqueued_jobs
+
+        invoice = customer.invoices.sole
+        expect(invoice.total_amount_cents).to eq(50_000)
+
+        expect(
+          a_request(:post, payment_intents_url)
+            .with(body: hash_including("amount" => "5000000", "currency" => "huf")) # 50_000 HUF * 100
+        ).to have_been_made.once
+
+        payment = invoice.payments.sole
+        expect(payment.provider_payment_id).to eq("pi_huf")
+        expect(payment.amount_cents).to eq(50_000)
+        expect(payment.amount_currency).to eq("HUF")
+
+        invoice.reload
+        expect(invoice.payment_status).to eq("succeeded")
+        expect(invoice.total_paid_amount_cents).to eq(50_000)
+      end
+    end
+
+    context "when the card is declined and the customer pays once through Stripe" do
+      let(:stripe_provider) { create(:stripe_provider, organization:, settings: {webhook_secret: "whsec_huf"}) }
+      let(:stripe_event_payload) do
+        {
+          id: "evt_huf_one_time",
+          object: "event",
+          created: Time.current.to_i,
+          type: "payment_intent.succeeded",
+          data: {
+            object: {
+              id: "pi_huf_one_time",
+              object: "payment_intent",
+              status: "succeeded",
+              amount: 5_000_000, # what Stripe charged for 50_000 HUF
+              currency: "huf",
+              payment_method: stripe_pm_id,
+              metadata: {
+                lago_customer_id: customer.id,
+                lago_invoice_id: customer.invoices.sole.id,
+                invoice_issuing_date: customer.invoices.sole.issuing_date.iso8601,
+                invoice_type: "subscription",
+                payment_type: "one-time"
+              }
+            }
+          }
+        }.to_json
+      end
+
+      before do
+        stub_request(:post, payment_intents_url)
+          .and_return(
+            status: 402,
+            body: get_stripe_fixtures("payment_intent_card_declined_response.json")
+          )
+      end
+
+      it "stores the one-time payment in Lago units" do
+        travel_to(DateTime.new(2025, 1, 1, 10)) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: external_subscription_id,
+              plan_code: plan.code
+            }
+          )
+          perform_billing
+          perform_all_enqueued_jobs
+
+          invoice = customer.invoices.sole
+          expect(invoice.reload.payment_status).to eq("failed")
+
+          signed_at = Time.current
+          signature = ::Stripe::Webhook::Signature.compute_signature(signed_at, stripe_event_payload, stripe_provider.webhook_secret)
+          post(
+            "/webhooks/stripe/#{organization.id}?code=#{stripe_provider.code}",
+            params: stripe_event_payload,
+            headers: {
+              "HTTP_STRIPE_SIGNATURE" => ::Stripe::Webhook::Signature.generate_header(signed_at, signature),
+              "Content-Type" => "application/json"
+            }
+          )
+          expect(response).to have_http_status(:ok)
+          perform_all_enqueued_jobs
+
+          payment = invoice.payments.find_by!(provider_payment_id: "pi_huf_one_time")
+          expect(payment.amount_cents).to eq(50_000) # 5_000_000 / 100
+          expect(payment.amount_currency).to eq("HUF")
+
+          invoice.reload
+          expect(invoice.payment_status).to eq("succeeded")
+          expect(invoice.total_paid_amount_cents).to eq(50_000)
+        end
+      end
+    end
+  end
+
   context "with GoCardless refusing the payment" do
     let(:gocardless_provider) { create(:gocardless_provider, organization:) }
     let(:gocardless_customer) do

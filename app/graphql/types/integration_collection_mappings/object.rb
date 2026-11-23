@@ -14,16 +14,15 @@ module Types
       field :external_id, String, null: true
       field :external_name, String, null: true
 
-      field :tax_code, String, null: true
-      field :tax_nexus, String, null: true
-      field :tax_type, String, null: true
+      field :tax_code, String, null: true, fallback_value: nil
+      field :tax_nexus, String, null: true, fallback_value: nil
+      field :tax_type, String, null: true, fallback_value: nil
 
       field :currencies, [Types::IntegrationCollectionMappings::CurrencyMappingItem], null: true
 
+      # Only NetSuite mappings define currencies and tax settings: other providers answer null.
       def currencies
-        return nil if object.currencies.nil?
-
-        object.currencies.map do |currency_code, currency_external_code|
+        object.try(:currencies)&.map do |currency_code, currency_external_code|
           {currency_code:, currency_external_code:}
         end
       end

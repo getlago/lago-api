@@ -100,6 +100,99 @@ RSpec.describe PaymentProviders::StripeProvider do
     end
   end
 
+  describe ".to_stripe_amount" do
+    subject(:stripe_amount) { described_class.to_stripe_amount(amount_cents, currency) }
+
+    let(:amount_cents) { 50_000 }
+
+    %w[HUF ISK UGX].each do |override_currency|
+      context "when the currency is #{override_currency}" do
+        let(:currency) { override_currency }
+
+        it "converts the amount to hundredths" do
+          expect(stripe_amount).to eq(50_000 * 100) # Stripe reads #{override_currency} in hundredths
+        end
+      end
+    end
+
+    %w[EUR USD JPY].each do |other_currency|
+      context "when the currency is #{other_currency}" do
+        let(:currency) { other_currency }
+
+        it "returns the amount unchanged" do
+          expect(stripe_amount).to eq(50_000)
+        end
+      end
+    end
+
+    context "when the currency is lowercase" do
+      let(:currency) { "huf" }
+
+      it "converts the amount to hundredths" do
+        expect(stripe_amount).to eq(50_000 * 100) # Stripe reads HUF in hundredths
+      end
+    end
+
+    context "when the currency is a Symbol" do
+      let(:currency) { :huf }
+
+      it "converts the amount to hundredths" do
+        expect(stripe_amount).to eq(50_000 * 100) # Stripe reads HUF in hundredths
+      end
+    end
+  end
+
+  describe ".from_stripe_amount" do
+    subject(:lago_amount) { described_class.from_stripe_amount(amount, currency) }
+
+    let(:amount) { 5_000_000 }
+
+    %w[HUF ISK UGX].each do |override_currency|
+      context "when the currency is #{override_currency}" do
+        let(:currency) { override_currency }
+
+        it "converts the amount back from hundredths" do
+          expect(lago_amount).to eq(5_000_000 / 100) # Stripe sends #{override_currency} in hundredths
+        end
+      end
+    end
+
+    %w[EUR USD JPY].each do |other_currency|
+      context "when the currency is #{other_currency}" do
+        let(:currency) { other_currency }
+
+        it "returns the amount unchanged" do
+          expect(lago_amount).to eq(5_000_000)
+        end
+      end
+    end
+
+    context "when the currency is lowercase" do
+      let(:currency) { "huf" }
+
+      it "converts the amount back from hundredths" do
+        expect(lago_amount).to eq(5_000_000 / 100) # Stripe sends HUF in hundredths
+      end
+    end
+
+    context "when the currency is a Symbol" do
+      let(:currency) { :huf }
+
+      it "converts the amount back from hundredths" do
+        expect(lago_amount).to eq(5_000_000 / 100) # Stripe sends HUF in hundredths
+      end
+    end
+
+    context "when the amount is nil" do
+      let(:amount) { nil }
+      let(:currency) { "huf" }
+
+      it "returns nil" do
+        expect(lago_amount).to be_nil
+      end
+    end
+  end
+
   describe "require_terms_of_service_consent" do
     it "assigns and retrieve a setting" do
       stripe_provider.require_terms_of_service_consent = true

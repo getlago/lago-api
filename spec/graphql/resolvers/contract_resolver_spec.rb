@@ -36,7 +36,7 @@ RSpec.describe Resolvers::ContractResolver do
     <<~GQL
       query($contractId: ID!) {
         contract(id: $contractId) {
-          id externalId status billingTime
+          id externalId status
           customer { id }
           plan { id code name currency }
           appliedRateCards { id rateCard { id } effectiveDate nextBillingAt }

@@ -25,10 +25,10 @@ module Contracts
 
       wallets = []
       ActiveRecord::Base.transaction do
-        # Every write to a template, its scope, taxes, rules and metadata included, locks the template's row first:
+        # Every write to a template, its scope, taxes, rules, metadata and alerts included, locks the template's row first:
         # the copy waits for it, so it never mixes two versions of a template.
         templates = contract.catalog_plan.wallets.lock("FOR SHARE")
-        templates.includes(:selectors, :applied_taxes, :credit_allocations, :metadata).find_each do |plan_wallet|
+        templates.includes(:selectors, :applied_taxes, :credit_allocations, :metadata, alerts: :thresholds).find_each do |plan_wallet|
           wallets << copy(plan_wallet)
         end
       end
@@ -60,6 +60,7 @@ module Contracts
         wallet.credit_allocations.create!(organization:, **allocation.attributes.slice(*CREDIT_ALLOCATION_ATTRIBUTES))
       end
       wallet.create_metadata!(organization:, value: plan_wallet.metadata.value) if plan_wallet.metadata
+      UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService.call!(plan_wallet:, catalog_wallet: wallet)
 
       wallet
     end

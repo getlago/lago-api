@@ -630,7 +630,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               name: "Acme 2023",
               plan_code: nil,
               status: "active",
-              billing_time: "calendar",
               consolidate_invoice: true,
               purchase_order_number: "PO-42",
               billing_anchor_date: nil,

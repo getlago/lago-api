@@ -1971,7 +1971,6 @@ type Contract {
   billingAnchorDate: ISO8601Date
   billingEntity: BillingEntity
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum!
   canceledAt: ISO8601DateTime
   code: String
   consolidateInvoice: Boolean!
@@ -2082,11 +2081,6 @@ type ContractAppliedRateCardCollection {
   metadata: CollectionMetadata!
 }
 
-enum ContractBillingTimeEnum {
-  anniversary
-  calendar
-}
-
 """
 ContractCollection type
 """
@@ -2103,6 +2097,30 @@ type ContractCollection {
 }
 
 """
+The share of a contract's current usage total priced by one product category
+"""
+type ContractCurrentUsageCategoryTotal {
+  amountCents: BigInt!
+
+  """
+  Earliest billing window start across the category's rate cards
+  """
+  fromDatetime: ISO8601DateTime!
+
+  """
+  Null for the products that belong to no category
+  """
+  productCategory: ProductCategory
+  taxesAmountCents: BigInt!
+
+  """
+  Latest billing window end across the category's rate cards
+  """
+  toDatetime: ISO8601DateTime!
+  totalAmountCents: BigInt!
+}
+
+"""
 The contract's total computed usage for the current billing period, unfiltered
 """
 type ContractCurrentUsageTotal {
@@ -2112,6 +2130,11 @@ type ContractCurrentUsageTotal {
   Earliest billing window start across the contract's rate cards, null with no usage
   """
   fromDatetime: ISO8601DateTime
+
+  """
+  The total split by product category, each one priced and taxed in the same pass as the total
+  """
+  productCategoryTotals: [ContractCurrentUsageCategoryTotal!]!
   taxesAmountCents: BigInt!
 
   """
@@ -2129,6 +2152,7 @@ type ContractCurrentUsageTotal {
 enum ContractStatusEnum {
   active
   canceled
+  draft
   pending
   terminated
 }
@@ -3680,7 +3704,6 @@ Create contract input arguments
 input CreateContractInput {
   billingAnchorDate: ISO8601Date
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum
 
   """
   A unique identifier for the client performing the mutation.
@@ -5546,6 +5569,11 @@ type CurrentVersion {
 
 type Customer {
   accountType: CustomerAccountTypeEnum!
+
+  """
+  Number of active contracts per customer
+  """
+  activeContractsCount: Int!
 
   """
   Number of active subscriptions per customer
@@ -12859,6 +12887,7 @@ enum ProviderPaymentMethodsEnum {
   customer_balance
   link
   sepa_debit
+  shared_payment_token
   us_bank_account
 }
 
@@ -16804,7 +16833,6 @@ Update contract input arguments
 input UpdateContractInput {
   billingAnchorDate: ISO8601Date
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum
 
   """
   A unique identifier for the client performing the mutation.
