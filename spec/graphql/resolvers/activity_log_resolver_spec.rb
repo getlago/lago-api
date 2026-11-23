@@ -72,6 +72,32 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
       expect(activity_log_response["activityObjectChanges"]).to eq("foo" => {"old" => "bar", "new" => "baz"})
     end
 
+    context "when the resource has a GraphQL type" do
+      let(:query) do
+        <<~GQL
+          query($activityLogId: ID!) {
+            activityLog(activityId: $activityLogId) {
+              activityId
+              resource { ... on BillableMetric { id } }
+            }
+          }
+        GQL
+      end
+
+      it "returns the activity log with its resource" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {activityLogId: clickhouse_activity_log.activity_id}
+        )
+
+        expect(result["errors"]).to be_nil
+        expect(result["data"]["activityLog"]["resource"]).to eq("id" => clickhouse_activity_log.resource_id)
+      end
+    end
+
     context "when the resource has no GraphQL type" do
       let(:query) do
         <<~GQL
