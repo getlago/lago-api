@@ -57,7 +57,11 @@ SELECT
                     fao.invoice_display_name,
                     fao.name
                 ) -- 5 is fixed_charge
-                WHEN 6 THEN COALESCE(NULLIF(pr.invoice_display_name, ''), pr.name) -- 6 is product, empty display name falls back like Product#invoice_name
+                -- 6 is product: a blank display name falls back to the name, like Product#invoice_name
+                WHEN 6 THEN COALESCE(
+                    CASE WHEN pr.invoice_display_name !~ '^[[:space:]]*$' THEN pr.invoice_display_name END,
+                    pr.name
+                )
                 ELSE p.invoice_display_name -- everything else is subscription
             END
         ),

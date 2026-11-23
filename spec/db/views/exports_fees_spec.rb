@@ -190,10 +190,18 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
       expect(item_for(product_fee.id)["invoice_display_name"]).to eq("Cloud storage")
     end
 
-    it "falls back to the product's name when its invoice_display_name is empty" do
-      product.update!(invoice_display_name: "")
+    ["", "  ", "\t\n"].each do |blank|
+      it "falls back to the product's name when its invoice_display_name is #{blank.inspect}" do
+        product.update!(invoice_display_name: blank)
 
-      expect(item_for(product_fee.id)["invoice_display_name"]).to eq("Storage")
+        expect(item_for(product_fee.id)["invoice_display_name"]).to eq("Storage")
+      end
+    end
+
+    it "keeps surrounding whitespace of a non-blank invoice_display_name" do
+      product.update!(invoice_display_name: " Cloud storage ")
+
+      expect(item_for(product_fee.id)["invoice_display_name"]).to eq(" Cloud storage ")
     end
 
     it "exposes the contract, rate card and product ids" do
