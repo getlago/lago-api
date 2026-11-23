@@ -169,6 +169,27 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     end
   end
 
+  context "when the shadow contract of this subscription has ended" do
+    before do
+      allow(Rails.logger).to receive(:info)
+      create(
+        :contract,
+        :terminated,
+        customer: create(:customer, organization: shadow_organization),
+        external_id: subscription.external_id,
+        code: subscription.id
+      )
+    end
+
+    it "skips the subscription and logs it" do
+      expect { result }.not_to change { shadow_organization.contracts.count }
+
+      expect(result).to be_success
+      expect(result.contract).to be_nil
+      expect(Rails.logger).to have_received(:info).with(a_string_including("shadow_contract_ended"))
+    end
+  end
+
   context "when the shadow organization only has a terminated contract with the subscription external id" do
     before do
       shadow_customer = create(:customer, organization: shadow_organization, external_id: customer.external_id)
@@ -347,9 +368,10 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
   context "when the contract is created concurrently" do
     before do
       allow(Rails.logger).to receive(:warn)
-      allow(Contracts::CreateService).to receive(:call).and_return(
+      allow(Contracts::CreateService).to receive(:call) do
+        create_concurrent_contract(code: subscription.id)
         BaseService::Result.new.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
-      )
+      end
     end
 
     it "skips it without logging a failure" do
@@ -362,15 +384,45 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
   context "when the contract is created concurrently with the same code" do
     before do
       allow(Rails.logger).to receive(:warn)
-      allow(Contracts::CreateService).to receive(:call).and_return(
+      allow(Contracts::CreateService).to receive(:call) do
+        create_concurrent_contract(code: subscription.id)
         BaseService::Result.new.single_validation_failure!(field: :code, error_code: "value_already_exist")
-      )
+      end
     end
 
     it "skips it without logging a failure" do
       expect(result).to be_success
       expect(result.contract).to be_nil
       expect(Rails.logger).not_to have_received(:warn)
+    end
+  end
+
+  context "when another subscription takes the external id concurrently" do
+    before do
+      allow(Rails.logger).to receive(:info)
+      allow(Contracts::CreateService).to receive(:call) do
+        create_concurrent_contract(code: "other-subscription-id")
+        BaseService::Result.new.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
+      end
+    end
+
+    it "skips the subscription and logs it" do
+      expect(result).to be_success
+      expect(Rails.logger).to have_received(:info).with(a_string_including("external_id_taken_by_other_subscription"))
+    end
+  end
+
+  context "when a uniqueness conflict leaves no contract to explain it" do
+    before do
+      allow(Rails.logger).to receive(:warn)
+      allow(Contracts::CreateService).to receive(:call).and_return(
+        BaseService::Result.new.single_validation_failure!(field: :code, error_code: "value_already_exist")
+      )
+    end
+
+    it "logs the failure and returns it" do
+      expect(result).to be_failure
+      expect(Rails.logger).to have_received(:warn).with(a_string_including("cannot create contract"))
     end
   end
 
@@ -434,5 +486,14 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
         a_string_including("cannot create customer", "subscription #{subscription.external_id}")
       )
     end
+  end
+
+  def create_concurrent_contract(code:)
+    create(
+      :contract,
+      customer: create(:customer, organization: shadow_organization),
+      external_id: subscription.external_id,
+      code:
+    )
   end
 end

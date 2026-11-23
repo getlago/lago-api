@@ -15,7 +15,7 @@ module BillingEngineMigrations
 
       return skip("plan_override_not_supported") if plan_override?
       return result if already_ended? || already_copied?
-      return skip("external_id_taken_by_other_subscription") if external_id_taken?
+      return skip(conflict_reason) if conflict_reason
 
       customer_result = CopyCustomerService.call(migration:, customer: subscription.customer)
       return fail_with(customer_result, "cannot create customer") if customer_result.failure?
@@ -46,17 +46,26 @@ module BillingEngineMigrations
     end
 
     def already_copied?
-      live_contract_code == subscription.id
+      live_shadow_contracts.any? { |contract| contract.code == subscription.id }
     end
 
-    def external_id_taken?
-      !live_contract_code.nil? && !already_copied?
+    def conflict_reason
+      if live_shadow_contracts.any?
+        "external_id_taken_by_other_subscription"
+      elsif shadow_contracts.any? { |contract| contract.code == subscription.id }
+        "shadow_contract_ended"
+      end
     end
 
-    def live_contract_code
-      return @live_contract_code if defined?(@live_contract_code)
+    def live_shadow_contracts
+      shadow_contracts.select { |contract| Contract::LIVE_STATUSES.include?(contract.status) }
+    end
 
-      @live_contract_code = shadow_organization.contracts.live.where(external_id: subscription.external_id).pick(:code)
+    def shadow_contracts
+      @shadow_contracts ||= shadow_organization.contracts
+        .where(external_id: subscription.external_id)
+        .select(:id, :code, :status)
+        .to_a
     end
 
     def create_contract(shadow_customer)
@@ -67,12 +76,21 @@ module BillingEngineMigrations
 
       if contract_result.success?
         result.contract = contract_result.contract
-      elsif !copied_concurrently?(contract_result.error)
+      elsif unique_conflict?(contract_result.error)
+        resolve_conflict(contract_result)
+      else
         fail_with(contract_result, "cannot create contract")
       end
     end
 
-    def copied_concurrently?(error)
+    def resolve_conflict(contract_result)
+      @shadow_contracts = nil
+      return if already_copied?
+
+      conflict_reason ? skip(conflict_reason) : fail_with(contract_result, "cannot create contract")
+    end
+
+    def unique_conflict?(error)
       return false unless error.is_a?(BaseService::ValidationFailure)
 
       error.messages[:external_id]&.include?("value_already_exists") ||

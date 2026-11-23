@@ -42,56 +42,50 @@ class BillingEngineSubscriptionsBackfill
   end
 
   def each_customer_batch
-    last_customer_id = nil
-
-    until customer_limit_reached?
-      customer_ids = customer_ids_after(last_customer_id)
-      break if customer_ids.empty?
+    candidates.distinct.order(:customer_id).pluck(:customer_id).each_slice(CUSTOMER_BATCH_SIZE) do |customer_ids|
+      break if customer_limit_reached?
 
       yield customer_ids
-      last_customer_id = customer_ids.last
     end
   end
 
-  def customer_ids_after(customer_id)
-    scope = candidates.distinct.order(:customer_id).limit(CUSTOMER_BATCH_SIZE)
-    scope = scope.where(Subscription.arel_table[:customer_id].gt(customer_id)) if customer_id
-    scope.pluck(:customer_id)
-  end
-
   def process(subscriptions)
-    codes = live_contract_codes(subscriptions)
+    contracts = shadow_contracts(subscriptions)
 
     subscriptions.group_by(&:customer_id).each_value do |customer_subscriptions|
       break if customer_limit_reached?
 
-      to_copy = customer_subscriptions.reject { |subscription| skipped?(subscription, codes) }
+      to_copy = customer_subscriptions.reject { |subscription| skipped?(subscription, contracts) }
       enqueue(to_copy) if to_copy.any?
     end
   end
 
-  def live_contract_codes(subscriptions)
-    migration.shadow_organization.contracts.live
+  def shadow_contracts(subscriptions)
+    migration.shadow_organization.contracts
       .where(external_id: subscriptions.map(&:external_id))
-      .pluck(:external_id, :code)
-      .to_h
+      .pluck(:external_id, :code, :status)
+      .group_by(&:first)
   end
 
-  def skipped?(subscription, live_contract_codes)
-    reason = skip_reason(subscription, live_contract_codes[subscription.external_id])
+  def skipped?(subscription, shadow_contracts)
+    reason = skip_reason(subscription, shadow_contracts.fetch(subscription.external_id, []))
     skip(subscription, reason) if reason
     reason.present?
   end
 
-  def skip_reason(subscription, live_contract_code)
+  def skip_reason(subscription, contracts)
+    live_code = contracts.find { |_, _, status| Contract::LIVE_STATUSES.include?(status) }&.second
+
     if subscription.plan.parent_id.present?
       "plan_override_not_supported"
     elsif subscription.ending_at&.past?
       "already_ended"
-    elsif live_contract_code == subscription.id
+    elsif live_code == subscription.id
       "already_copied"
-    elsif live_contract_code
+    elsif live_code
       "external_id_taken_by_other_subscription"
+    elsif contracts.any? { |_, code, _| code == subscription.id }
+      "shadow_contract_ended"
     end
   end
 

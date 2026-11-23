@@ -46,6 +46,12 @@ RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:d
     end
   end
 
+  let(:ended_copy_subscription) do
+    create(:subscription, organization:, customer:, plan:).tap do |subscription|
+      create_shadow_contract(:terminated, external_id: subscription.external_id, code: subscription.id)
+    end
+  end
+
   let(:recopiable_subscription) do
     create(:subscription, organization:, customer:, plan:).tap do |subscription|
       create_shadow_contract(:terminated, external_id: subscription.external_id, code: "previous-subscription-id")
@@ -81,6 +87,7 @@ RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:d
     ended_subscription
     copied_subscription
     taken_subscription
+    ended_copy_subscription
     create(:subscription, organization:, customer:, plan: other_plan)
     create(:subscription, :terminated, organization:, customer:, plan:)
   end
@@ -147,9 +154,10 @@ RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:d
           "[DRY RUN] would skip subscription #{ended_subscription.external_id} (already_ended)",
           "[DRY RUN] would skip subscription #{copied_subscription.external_id} (already_copied)",
           "[DRY RUN] would skip subscription #{taken_subscription.external_id} (external_id_taken_by_other_subscription)",
-          "Would enqueue 5 subscription(s) of 2 customer(s) over 1 minute(s), skipped 4 " \
+          "[DRY RUN] would skip subscription #{ended_copy_subscription.external_id} (shadow_contract_ended)",
+          "Would enqueue 5 subscription(s) of 2 customer(s) over 1 minute(s), skipped 5 " \
           "(already_copied: 1, already_ended: 1, external_id_taken_by_other_subscription: 1, " \
-          "plan_override_not_supported: 1) [DRY RUN]"
+          "plan_override_not_supported: 1, shadow_contract_ended: 1) [DRY RUN]"
         )
       ).to_stdout
 
@@ -170,7 +178,7 @@ RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:d
         expect { task.invoke(organization.id) }.to output(
           a_string_including(
             "[LIVE] skipped subscription #{copied_subscription.external_id} (already_copied)",
-            "Enqueued 5 subscription(s) of 2 customer(s) over 2 minute(s), skipped 4"
+            "Enqueued 5 subscription(s) of 2 customer(s) over 2 minute(s), skipped 5"
           )
         ).to_stdout
 
