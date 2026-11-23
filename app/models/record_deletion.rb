@@ -2,7 +2,10 @@
 
 # Written only by the `record_deletion()` trigger on TRACKED_TABLES, never by the application.
 class RecordDeletion < ApplicationRecord
-  TRACKED_TABLES = %w[fees fees_taxes invoice_subscriptions invoices_taxes credit_notes_taxes].freeze
+  TRACKED_TABLES = %w[
+    fees fees_taxes invoice_subscriptions invoices_taxes credit_notes_taxes
+    billing_entities_taxes customers_taxes rate_cards_taxes
+  ].freeze
 
   belongs_to :organization
 end

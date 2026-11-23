@@ -473,11 +473,14 @@ ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_fees_contract_rate_card_contract;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_daily_usages_contract_rate_card_contract;
+DROP TRIGGER IF EXISTS record_deletions_on_rate_cards_taxes ON public.rate_cards_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_invoices_taxes ON public.invoices_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_invoice_subscriptions ON public.invoice_subscriptions;
 DROP TRIGGER IF EXISTS record_deletions_on_fees_taxes ON public.fees_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_fees ON public.fees;
+DROP TRIGGER IF EXISTS record_deletions_on_customers_taxes ON public.customers_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_credit_notes_taxes ON public.credit_notes_taxes;
+DROP TRIGGER IF EXISTS record_deletions_on_billing_entities_taxes ON public.billing_entities_taxes;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
@@ -1523,7 +1526,6 @@ DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.recurring_aggregation_snapshots;
 DROP TABLE IF EXISTS public.rate_phases;
 DROP TABLE IF EXISTS public.rate_overrides;
-DROP TABLE IF EXISTS public.rate_cards_taxes;
 DROP TABLE IF EXISTS public.rate_cards;
 DROP TABLE IF EXISTS public.rate_card_rates;
 DROP TABLE IF EXISTS public.quotes;
@@ -1586,6 +1588,8 @@ DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
 DROP VIEW IF EXISTS public.exports_record_deletions;
 DROP TABLE IF EXISTS public.record_deletions;
+DROP VIEW IF EXISTS public.exports_rate_cards_taxes;
+DROP TABLE IF EXISTS public.rate_cards_taxes;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
 DROP VIEW IF EXISTS public.exports_payments;
@@ -1616,6 +1620,7 @@ DROP VIEW IF EXISTS public.exports_entitlement_features;
 DROP VIEW IF EXISTS public.exports_entitlement_entitlements;
 DROP VIEW IF EXISTS public.exports_entitlement_entitlement_values;
 DROP VIEW IF EXISTS public.exports_daily_usages;
+DROP VIEW IF EXISTS public.exports_customers_taxes;
 DROP VIEW IF EXISTS public.exports_customers;
 DROP TABLE IF EXISTS public.payment_provider_customers;
 DROP TABLE IF EXISTS public.organizations;
@@ -1624,6 +1629,7 @@ DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_coupons;
 DROP VIEW IF EXISTS public.exports_charges;
+DROP VIEW IF EXISTS public.exports_billing_entities_taxes;
 DROP VIEW IF EXISTS public.exports_billing_entities;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
@@ -4230,6 +4236,20 @@ CREATE VIEW public.exports_billing_entities AS
 
 
 --
+-- Name: exports_billing_entities_taxes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_billing_entities_taxes AS
+ SELECT bet.organization_id,
+    bet.id AS lago_id,
+    bet.billing_entity_id AS lago_billing_entity_id,
+    bet.tax_id AS lago_tax_id,
+    bet.created_at,
+    bet.updated_at
+   FROM public.billing_entities_taxes bet;
+
+
+--
 -- Name: exports_charges; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4550,6 +4570,20 @@ CREATE VIEW public.exports_customers AS
    FROM ((public.customers c
      LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
      LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL) AND (ppc.payment_provider_id IS NOT NULL))));
+
+
+--
+-- Name: exports_customers_taxes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_customers_taxes AS
+ SELECT ct.organization_id,
+    ct.id AS lago_id,
+    ct.customer_id AS lago_customer_id,
+    ct.tax_id AS lago_tax_id,
+    ct.created_at,
+    ct.updated_at
+   FROM public.customers_taxes ct;
 
 
 --
@@ -5441,6 +5475,34 @@ CREATE VIEW public.exports_plans AS
           WHERE (pt.plan_id = p.id))) AS lago_taxes_ids
    FROM public.plans p
   WHERE (p.deleted_at IS NULL);
+
+
+--
+-- Name: rate_cards_taxes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_cards_taxes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    rate_card_id uuid NOT NULL,
+    tax_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_rate_cards_taxes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_cards_taxes AS
+ SELECT rct.organization_id,
+    rct.id AS lago_id,
+    rct.rate_card_id AS lago_rate_card_id,
+    rct.tax_id AS lago_tax_id,
+    rct.created_at,
+    rct.updated_at
+   FROM public.rate_cards_taxes rct;
 
 
 --
@@ -6699,20 +6761,6 @@ CREATE TABLE public.rate_cards (
     regroup_paid_fees public.rate_card_regroup_paid_fees,
     applied_pricing_unit_code character varying,
     deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: rate_cards_taxes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_cards_taxes (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    rate_card_id uuid NOT NULL,
-    tax_id uuid NOT NULL,
-    organization_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -14683,10 +14731,24 @@ CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.roles FOR EACH ROW EXE
 
 
 --
+-- Name: billing_entities_taxes record_deletions_on_billing_entities_taxes; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER record_deletions_on_billing_entities_taxes AFTER DELETE ON public.billing_entities_taxes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
+
+
+--
 -- Name: credit_notes_taxes record_deletions_on_credit_notes_taxes; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE CONSTRAINT TRIGGER record_deletions_on_credit_notes_taxes AFTER DELETE ON public.credit_notes_taxes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
+
+
+--
+-- Name: customers_taxes record_deletions_on_customers_taxes; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER record_deletions_on_customers_taxes AFTER DELETE ON public.customers_taxes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
 
 
 --
@@ -14715,6 +14777,13 @@ CREATE CONSTRAINT TRIGGER record_deletions_on_invoice_subscriptions AFTER DELETE
 --
 
 CREATE CONSTRAINT TRIGGER record_deletions_on_invoices_taxes AFTER DELETE ON public.invoices_taxes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
+
+
+--
+-- Name: rate_cards_taxes record_deletions_on_rate_cards_taxes; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER record_deletions_on_rate_cards_taxes AFTER DELETE ON public.rate_cards_taxes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
 
 
 --
@@ -18436,6 +18505,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123132349'),
+('20261123132346'),
+('20261123132343'),
+('20261123132341'),
 ('20261123112950'),
 ('20261123112949'),
 ('20261123100000'),
