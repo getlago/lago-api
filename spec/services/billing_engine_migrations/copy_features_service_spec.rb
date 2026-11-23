@@ -31,6 +31,7 @@ RSpec.describe BillingEngineMigrations::CopyFeaturesService do
     expect(result).to be_success
     expect(result.created_features).to eq(%w[seats sso])
     expect(result.created_privileges).to eq(%w[seats.max seats.tier])
+    expect(result.updated_privileges).to eq([])
 
     expect(shadow_features).to eq([["seats", "Seats", "Seat limits"], ["sso", "SSO", nil]])
     expect(shadow_privileges).to eq(
@@ -57,6 +58,21 @@ RSpec.describe BillingEngineMigrations::CopyFeaturesService do
 
     expect(result.created_features).to eq([])
     expect(result.created_privileges).to eq([])
+    expect(result.updated_privileges).to eq([])
+  end
+
+  context "when a feature is created in the shadow organization between the read and the insert" do
+    before do
+      allow(Entitlement::Feature).to receive(:insert_all).and_wrap_original do |original, *args, **kwargs|
+        create(:feature, organization: shadow_organization, code: "sso")
+        original.call(*args, **kwargs)
+      end
+    end
+
+    it "reports only the features it inserted" do
+      expect(result.created_features).to eq(%w[seats])
+      expect(shadow_features.map(&:first)).to eq(%w[seats sso])
+    end
   end
 
   context "when the shadow organization already has some of them" do
@@ -71,6 +87,15 @@ RSpec.describe BillingEngineMigrations::CopyFeaturesService do
       expect(shadow_features).to eq([["seats", "Renamed", "Feature Description"], ["sso", "SSO", nil]])
       expect(shadow_privileges.map { it.first(2) }).to eq([%w[seats max], %w[seats tier]])
       expect(result.features["seats"]).to eq(shadow_seats)
+    end
+  end
+
+  context "when the shadow organization has a feature the organization does not have" do
+    before_all { create(:feature, organization: shadow_organization, code: "legacy") }
+
+    it "returns it with the copied features" do
+      expect(result.created_features).to eq(%w[seats sso])
+      expect(result.features.keys).to match_array(%w[legacy seats sso])
     end
   end
 
@@ -99,16 +124,33 @@ RSpec.describe BillingEngineMigrations::CopyFeaturesService do
     end
   end
 
-  context "when a shadow select privilege has other options" do
-    before_all do
-      shadow_seats = create(:feature, organization: shadow_organization, code: "seats")
-      create(:privilege, feature: shadow_seats, code: "tier", value_type: "select", config: {select_options: %w[gold]})
+  context "when a shadow select privilege lacks options added in the organization since the last copy" do
+    let_it_be(:shadow_seats) { create(:feature, organization: shadow_organization, code: "seats") }
+    let_it_be(:shadow_tier, refind: true) do
+      create(:privilege, feature: shadow_seats, code: "tier", value_type: "select", config: {select_options: %w[silver]})
     end
 
-    it "fails without creating anything" do
+    it "updates its select options to the organization ones" do
+      expect(result).to be_success
+      expect(result.created_privileges).to eq(%w[seats.max])
+      expect(result.updated_privileges).to eq(%w[seats.tier])
+
+      expect(shadow_tier.reload.config).to eq({"select_options" => %w[silver gold]})
+      expect(result.features["seats"].privileges.find { it.code == "tier" }.config).to eq({"select_options" => %w[silver gold]})
+    end
+  end
+
+  context "when a shadow select privilege has an option the organization does not have" do
+    before_all do
+      shadow_seats = create(:feature, organization: shadow_organization, code: "seats")
+      create(:privilege, feature: shadow_seats, code: "tier", value_type: "select", config: {select_options: %w[gold bronze]})
+    end
+
+    it "fails without creating or updating anything" do
       expect(result).to be_failure
       expect(result.error.messages).to eq({"seats.tier": ["select_options_mismatch"]})
       expect(shadow_features.map(&:first)).to eq(%w[seats])
+      expect(shadow_privileges.map(&:last)).to eq([{"select_options" => %w[gold bronze]}])
     end
   end
 end
