@@ -240,6 +240,16 @@ RSpec.describe BillingEngineMigrations::CopyRawEventsService, :capture_kafka_mes
     end
   end
 
+  context "when the shadow organization left the ClickHouse store" do
+    before { Organization.find(shadow_organization.id).update!(clickhouse_events_store: false) }
+
+    it "fails instead of producing copies its usage would not read" do
+      expect(result).to be_failure
+      expect(result.error.code).to eq("shadow_organization_not_on_clickhouse_events_store")
+      expect(karafka_producer).not_to have_received(:produce_many_sync)
+    end
+  end
+
   context "when Kafka refuses the copies" do
     before { allow(karafka_producer).to receive(:produce_many_sync).and_raise(WaterDrop::Errors::ProduceManyError.new([], "boom")) }
 

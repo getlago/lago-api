@@ -84,8 +84,8 @@ RSpec.describe BillingEngineMigrations::Lookup do
   end
 
   describe ".copying_events_from" do
-    let(:raw_topic_migration) { create(:billing_engine_migration, events_copy_source: "raw_topic") }
-    let(:paused_raw_topic_migration) { create(:billing_engine_migration, events_copy_source: "raw_topic", status: "paused") }
+    let(:raw_topic_migration) { create(:billing_engine_migration, :copying_from_raw_topic) }
+    let(:paused_raw_topic_migration) { create(:billing_engine_migration, :copying_from_raw_topic, status: "paused") }
 
     before do
       raw_topic_migration

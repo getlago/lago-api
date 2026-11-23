@@ -34,7 +34,11 @@ module BillingEngineMigrations
       result.invalid_count = 0
       result.replayed_count = 0
 
-      migrations.each { copy_events_of(it) }
+      migrations.each do |migration|
+        break if result.failure?
+
+        copy_events_of(migration)
+      end
       result
     end
 
@@ -99,12 +103,10 @@ module BillingEngineMigrations
     end
 
     def produce(migration, events)
-      Events::KafkaProducerService.call!(
-        events:,
-        organization: Organization.find(migration.shadow_organization_id),
-        catalog_events: true,
-        sync: true
-      )
+      shadow_organization = Organization.find(migration.shadow_organization_id)
+      return shadow_organization_store_failure unless shadow_organization.clickhouse_events_store?
+
+      Events::KafkaProducerService.call!(events:, organization: shadow_organization, catalog_events: true, sync: true)
     end
 
     def count_invalid
@@ -115,6 +117,13 @@ module BillingEngineMigrations
     def count_replayed
       result.replayed_count += 1
       nil
+    end
+
+    def shadow_organization_store_failure
+      result.service_failure!(
+        code: "shadow_organization_not_on_clickhouse_events_store",
+        message: "The shadow organization reads its usage from PostgreSQL, events copied from the raw topic would not reach it"
+      )
     end
 
     def product_topic_missing_failure

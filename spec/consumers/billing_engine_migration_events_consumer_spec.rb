@@ -20,7 +20,7 @@ RSpec.describe BillingEngineMigrationEventsConsumer, :capture_kafka_messages do
   end
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:shadow_organization) { create(:shadow_organization) }
+  let_it_be(:shadow_organization) { create(:shadow_organization, clickhouse_events_store: true) }
   let_it_be(:other_organization) { create(:organization) }
   let_it_be(:customer) { create(:customer, organization:) }
   let_it_be(:plan) { create(:plan, organization:, code: "legacy") }
