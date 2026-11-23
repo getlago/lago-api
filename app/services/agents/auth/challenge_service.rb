@@ -58,11 +58,12 @@ module Agents
           scope:
         )
 
-        Rails.cache.write(
+        written = Rails.cache.write(
           self.class.cache_key(challenge_id),
           {storefront_id: storefront.id, public_key:, key_id:, purpose:, scope:, message:, expires_at:},
           expires_in: TTL
         )
+        return result.service_failure!(code: "challenge_store_unavailable", message: "challenge could not be stored") unless written
 
         result.challenge_id = challenge_id
         result.message = message
