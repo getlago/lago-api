@@ -2,9 +2,11 @@
 
 module BillingEngineMigrations
   # The raw events topic carries the events of every organization, so a payload is parsed only
-  # when it contains the id of a migrated organization.
+  # when it contains the id of a migrated organization. Re-enrichment replays are skipped: they
+  # re-send a subscription's events since it started, which would reach the shadow organization
+  # for the re-enriched subscriptions only.
   class CopyRawEventsService < BaseService
-    Result = BaseResult[:copied_count, :unmapped_count, :invalid_count]
+    Result = BaseResult[:copied_count, :unmapped_count, :invalid_count, :replayed_count]
 
     RawEvent = Data.define(
       :external_customer_id,
@@ -30,6 +32,7 @@ module BillingEngineMigrations
       result.copied_count = 0
       result.unmapped_count = 0
       result.invalid_count = 0
+      result.replayed_count = 0
 
       migrations.each { copy_events_of(it) }
       result
@@ -57,6 +60,7 @@ module BillingEngineMigrations
       payload = parse(raw_payload)
       return count_invalid if payload.nil?
       return unless payload["organization_id"] == migration.organization_id
+      return count_replayed if replay?(payload)
 
       timestamp = parse_timestamp(payload["timestamp"])
       return count_invalid if timestamp.nil? || payload["transaction_id"].blank? || payload["code"].blank?
@@ -77,6 +81,11 @@ module BillingEngineMigrations
       payload if payload.is_a?(Hash)
     rescue JSON::ParserError
       nil
+    end
+
+    def replay?(payload)
+      source_metadata = payload["source_metadata"]
+      source_metadata.is_a?(Hash) && source_metadata["reprocess"] == true
     end
 
     def parse_timestamp(value)
@@ -100,6 +109,11 @@ module BillingEngineMigrations
 
     def count_invalid
       result.invalid_count += 1
+      nil
+    end
+
+    def count_replayed
+      result.replayed_count += 1
       nil
     end
 

@@ -92,9 +92,77 @@ RSpec.describe BillingEngineMigrations::CopyRawEventsService, :capture_kafka_mes
       expect(result.copied_count).to eq(2)
       expect(result.unmapped_count).to eq(2)
       expect(result.invalid_count).to eq(0)
+      expect(result.replayed_count).to eq(0)
 
       expect(karafka_producer).to have_received(:produce_many_sync).once
       expect(copied_payloads.map { it["transaction_id"] }).to eq(%w[tr-1 tr-6])
+    end
+  end
+
+  context "with several migrations copying from the raw topic" do
+    let(:second_organization) { create(:organization) }
+    let(:second_shadow_organization) { create(:shadow_organization, clickhouse_events_store: true) }
+    let(:raw_payloads) do
+      [
+        raw_event(transaction_id: "tr-1"),
+        raw_event(transaction_id: "tr-2", organization_id: second_organization.id, external_subscription_id: "sub-second")
+      ]
+    end
+
+    before do
+      second_customer = create(:customer, organization: second_organization)
+      create(:subscription, customer: second_customer, plan: create(:plan, organization: second_organization, code: "legacy"), external_id: "sub-second")
+      create(
+        :billing_engine_migration,
+        organization: second_organization,
+        shadow_organization: second_shadow_organization,
+        plan_mapping: {"legacy" => "catalog"},
+        events_copy_source: "raw_topic"
+      )
+    end
+
+    it "produces the copies of each shadow organization in its own call" do
+      expect(result.copied_count).to eq(2)
+
+      expect(karafka_producer).to have_received(:produce_many_sync).twice
+      expect(copied_payloads.map { it.values_at("organization_id", "transaction_id") })
+        .to match_array([[shadow_organization.id, "tr-1"], [second_shadow_organization.id, "tr-2"]])
+    end
+
+    context "when Kafka refuses the copies of the second shadow organization" do
+      before do
+        produce_calls = 0
+
+        allow(karafka_producer).to receive(:produce_many_sync) do |messages|
+          produce_calls += 1
+          raise WaterDrop::Errors::ProduceManyError.new([], "boom") if produce_calls == 2
+
+          kafka_messages.concat(messages)
+        end
+      end
+
+      it "raises after the first copies, so the retried batch sends them again" do
+        expect { result }.to raise_error(WaterDrop::Errors::ProduceManyError)
+
+        expect(karafka_producer).to have_received(:produce_many_sync).twice
+        expect(kafka_messages.size).to eq(1)
+      end
+    end
+  end
+
+  context "with re-enrichment replays" do
+    let(:raw_payloads) do
+      [
+        raw_event(transaction_id: "tr-1", source_metadata: {api_post_processed: true, reprocess: true}),
+        raw_event(transaction_id: "tr-2", source_metadata: {api_post_processed: true, reprocess: false}),
+        raw_event(transaction_id: "tr-3", source_metadata: "reprocess")
+      ]
+    end
+
+    it "skips the replays and copies the other events" do
+      expect(result.replayed_count).to eq(1)
+      expect(result.copied_count).to eq(2)
+      expect(copied_payloads.map { it["transaction_id"] }).to eq(%w[tr-2 tr-3])
     end
   end
 

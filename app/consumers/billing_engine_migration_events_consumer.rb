@@ -24,7 +24,14 @@ class BillingEngineMigrationEventsConsumer < ApplicationConsumer
   end
 
   def report_outcomes(result)
-    {copied: result.copied_count, unmapped: result.unmapped_count, invalid: result.invalid_count}.each do |outcome, count|
+    outcomes = {
+      copied: result.copied_count,
+      unmapped: result.unmapped_count,
+      invalid: result.invalid_count,
+      replayed: result.replayed_count
+    }
+
+    outcomes.each do |outcome, count|
       Yabeda.billing_engine_migrations.events_copy_total.increment({outcome: outcome.to_s}, by: count) if count.positive?
     end
   end

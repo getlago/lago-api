@@ -81,7 +81,7 @@ Yabeda.configure do
   # other lanes, no organization or subscription id is ever a tag.
   group :billing_engine_migrations do
     counter :events_copy_total,
-      comment: "Events of migrated organizations read from the raw topic, by what the copy did with them (copied, unmapped, invalid)",
+      comment: "Events of migrated organizations read from the raw topic, by what the copy did with them (copied, unmapped, invalid, replayed)",
       tags: %i[outcome]
 
     counter :events_copy_failures_total,

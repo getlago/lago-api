@@ -75,6 +75,24 @@ RSpec.describe BillingEngineMigrationEventsConsumer, :capture_kafka_messages do
     expect(outcomes).to have_received(:increment).with({outcome: "copied"}, by: 1)
     expect(outcomes).to have_received(:increment).with({outcome: "unmapped"}, by: 1)
     expect(outcomes).not_to have_received(:increment).with({outcome: "invalid"}, by: anything)
+    expect(outcomes).not_to have_received(:increment).with({outcome: "replayed"}, by: anything)
+  end
+
+  context "with invalid payloads and re-enrichment replays of the migrated organization" do
+    before do
+      karafka.produce({organization_id: organization.id, code: "api_calls"}.to_json)
+      karafka.produce(
+        JSON.parse(raw_event(organization.id, "tr-4")).merge("source_metadata" => {"reprocess" => true}).to_json
+      )
+    end
+
+    it "counts them apart" do
+      consumer.consume
+
+      expect(outcomes).to have_received(:increment).with({outcome: "copied"}, by: 1)
+      expect(outcomes).to have_received(:increment).with({outcome: "invalid"}, by: 1)
+      expect(outcomes).to have_received(:increment).with({outcome: "replayed"}, by: 1)
+    end
   end
 
   it "reports the age of the batch" do
