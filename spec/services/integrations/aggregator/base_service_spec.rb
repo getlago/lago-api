@@ -31,6 +31,91 @@ RSpec.describe Integrations::Aggregator::BaseService do
     end
   end
 
+  describe "#throttle!" do
+    subject(:throttle) { service.send(:throttle!, provider_name) }
+
+    let(:limiter) { instance_double(Throttling::Base, check: allowed) }
+    let(:allowed) { false }
+
+    let(:service) do
+      throttled_provider = provider_name.to_s
+
+      Class.new(described_class) do
+        define_method(:provider) { throttled_provider }
+        define_method(:throttle_key) { "throttle-key" }
+      end.new(integration:)
+    end
+
+    before do
+      allow(Throttling).to receive(:for).with(provider_name).and_return(limiter)
+    end
+
+    %i[netsuite xero hubspot anrok avalara].each do |existing_provider|
+      context "when #{existing_provider} is rate limited" do
+        let(:provider_name) { existing_provider }
+
+        it "raises the regular throttling error" do
+          expect { throttle }
+            .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(provider_name) }
+        end
+      end
+    end
+
+    context "when quickbooks is rate limited" do
+      let(:provider_name) { :quickbooks }
+
+      it "raises the next window throttling error, retried after 60 seconds when no limit is configured" do
+        expect { throttle }
+          .to raise_error(BaseService::NextWindowThrottlingError) do |error|
+            expect(error.provider_name).to eq(:quickbooks)
+            expect(error.retry_after).to eq(60.seconds)
+          end
+      end
+
+      context "with a flat limit entry" do
+        before do
+          allow(Throttling).to receive(:limits).and_return({quickbooks: {limit: 1, period: 60}})
+        end
+
+        it "retries when the current window ends" do
+          travel_to(Time.zone.parse("2026-11-23 10:00:20")) do
+            expect { throttle }
+              .to raise_error(BaseService::NextWindowThrottlingError) { |error| expect(error.retry_after).to eq(40.seconds) }
+          end
+        end
+      end
+
+      context "with a minutely limit" do
+        before do
+          allow(Throttling).to receive(:limits).and_return({quickbooks: {minutely: {limit: 1, period: 60}}})
+        end
+
+        it "retries when the current window ends" do
+          travel_to(Time.zone.parse("2026-11-23 10:00:05")) do
+            expect { throttle }
+              .to raise_error(BaseService::NextWindowThrottlingError) { |error| expect(error.retry_after).to eq(55.seconds) }
+          end
+        end
+
+        it "waits a full window at the start of a minute" do
+          travel_to(Time.zone.parse("2026-11-23 10:00:00")) do
+            expect { throttle }
+              .to raise_error(BaseService::NextWindowThrottlingError) { |error| expect(error.retry_after).to eq(60.seconds) }
+          end
+        end
+      end
+    end
+
+    context "when the provider is not rate limited" do
+      let(:provider_name) { :quickbooks }
+      let(:allowed) { true }
+
+      it "does not raise" do
+        expect { throttle }.not_to raise_error
+      end
+    end
+  end
+
   describe "#trigger_action" do
     let(:service) do
       Class.new(described_class) do
