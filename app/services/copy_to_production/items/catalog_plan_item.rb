@@ -57,7 +57,9 @@ module CopyToProduction
       # The entitlements and wallets of a plan name privileges and filters by code, which a reused live feature or
       # product may lack.
       def refusal(source)
-        return "copy_to_production_privilege_missing" if entitlements(source).any? { missing_privilege?(it) }
+        live_features = production.features.includes(:privileges)
+          .where(code: entitlements(source).map { it.feature.code }).index_by(&:code)
+        return "copy_to_production_privilege_missing" if entitlements(source).any? { missing_privilege?(it, live_features) }
 
         "copy_to_production_filter_missing" if wallets(source).any? { missing_filter?(it) }
       end
@@ -100,8 +102,9 @@ module CopyToProduction
         wallet.selectors.reject { (target = target_of(it)) && target.discarded? }
       end
 
+      # An ongoing balance allocation has no target.
       def credit_allocations(wallet)
-        wallet.credit_allocations.reject { target_of(it).discarded? }
+        wallet.credit_allocations.reject { (target = target_of(it)) && target.discarded? }
       end
 
       def target_of(record)
@@ -120,8 +123,8 @@ module CopyToProduction
         end
       end
 
-      def missing_privilege?(entitlement)
-        live_feature = production.features.includes(:privileges).find_by(code: entitlement.feature.code)
+      def missing_privilege?(entitlement, live_features)
+        live_feature = live_features[entitlement.feature.code]
         return false unless live_feature
 
         (entitlement.values.filter_map { it.privilege&.code } - live_feature.privileges.map(&:code)).any?
@@ -192,10 +195,16 @@ module CopyToProduction
       def live_targets(allocation, resolved)
         if allocation.product
           {product: resolved.fetch(["product", allocation.product_id])}
+        elsif (filter = allocation.product_filter)
+          {product_filter: live_filters(resolved.fetch(["product", filter.product_id])).fetch(filter.code)}
         else
-          filter = allocation.product_filter
-          {product_filter: resolved.fetch(["product", filter.product_id]).filters.find_by!(code: filter.code)}
+          {}
         end
+      end
+
+      def live_filters(live_product)
+        @live_filters ||= {}
+        @live_filters[live_product.id] ||= live_product.filters.index_by(&:code)
       end
 
       def copy_alert!(alert, live_wallet)

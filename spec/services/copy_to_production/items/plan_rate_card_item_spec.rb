@@ -112,6 +112,37 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
         expect(item.refusal(plan_rate_card)).to eq("plan_locked")
       end
     end
+
+    context "when the live plan bills another currency" do
+      let(:live_plan) { create(:catalog_plan, organization: production, code: "pro", currency: "USD") }
+
+      before { live_plan }
+
+      it "answers currency_does_not_match" do
+        expect(item.refusal(plan_rate_card)).to eq("currency_does_not_match")
+      end
+    end
+
+    context "when the plan is not live and the live card with its code bills another currency" do
+      before { create(:rate_card, organization: production, product: live_product, code: "seat_eur", currency: "USD") }
+
+      it "answers currency_does_not_match, as the copied plan would attach that card" do
+        expect(item.refusal(plan_rate_card)).to eq("currency_does_not_match")
+      end
+    end
+
+    context "when the live card with its code prices a slice the live plan already prices" do
+      before do
+        live_seat_eu = create(:rate_card, :with_filter, organization: production, product: live_product, code: "seat_eu")
+        create(:plan_rate_card, organization: production, catalog_plan: live_plan, rate_card: live_seat_eu)
+        create(:rate_card, organization: production, product: live_product, product_filter: live_seat_eu.product_filter,
+          code: "seat_eur")
+      end
+
+      it "answers copy_to_production_already_priced" do
+        expect(item.refusal(plan_rate_card)).to eq("copy_to_production_already_priced")
+      end
+    end
   end
 
   describe "#active_subscriptions_count" do

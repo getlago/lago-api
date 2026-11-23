@@ -16,11 +16,18 @@ module Types
       end
 
       def code
-        object.record.code
+        named_record.code
       end
 
       def name
-        object.record.name
+        named_record.name
+      end
+
+      private
+
+      # A plan rate card is known by its rate card.
+      def named_record
+        object.record.is_a?(PlanRateCard) ? object.record.rate_card : object.record
       end
     end
   end

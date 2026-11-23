@@ -32,14 +32,18 @@ module CopyToProduction
         [*product_dependencies(source.rate_card.product), ["rate_card", source.rate_card]]
       end
 
-      # A plan with contracts cannot change its pricing, and a plan prices a product, or one of its filters, once. A
-      # live plan that has the card itself refuses it with value_already_exist instead.
+      # As PlanRateCards::CreateService: a plan with contracts cannot change its pricing, it bills cards of its own
+      # currency, and it prices a product, or one of its filters, once. The card read is the one the copy attaches: the
+      # live card with its code, or the sandbox card it copies. A card the live plan already has answers
+      # value_already_exist before this.
       def refusal(source)
         plan = live_plan(source)
-        return unless plan
-        return "plan_locked" if plan.attached_to_contracts?
+        return "plan_locked" if plan&.attached_to_contracts?
 
-        "copy_to_production_already_priced" if priced_slices(plan, except: source.rate_card.code).include?(slice(source.rate_card))
+        card = attached_card(source)
+        return "currency_does_not_match" if card.currency != (plan || source.catalog_plan).currency
+
+        "copy_to_production_already_priced" if plan && priced_slices(plan, except: card.code).include?(slice(card))
       end
 
       def copy!(source, resolved)
@@ -69,6 +73,10 @@ module CopyToProduction
         return @live_plans[code] if @live_plans.key?(code)
 
         @live_plans[code] = production.catalog_plans.find_by(code:)
+      end
+
+      def attached_card(source)
+        production.rate_cards.includes(:product, :product_filter).find_by(code: source.rate_card.code) || source.rate_card
       end
 
       def priced_slices(plan, except:)

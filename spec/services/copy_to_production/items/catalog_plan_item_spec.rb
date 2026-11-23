@@ -147,5 +147,16 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
         expect(item.refusal(plan)).to eq("copy_to_production_filter_missing")
       end
     end
+
+    context "with an ongoing balance credit allocation" do
+      before do
+        create(:plan_wallet_credit_allocation, :ongoing_balance, organization: sandbox,
+          plan_wallet: create(:plan_wallet, organization: sandbox, catalog_plan: plan))
+      end
+
+      it "accepts it" do
+        expect(item.refusal(plan)).to be_nil
+      end
+    end
   end
 end
