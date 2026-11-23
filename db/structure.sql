@@ -1623,7 +1623,6 @@ DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
 DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_coupons;
-DROP VIEW IF EXISTS public.exports_contract_daily_usages;
 DROP VIEW IF EXISTS public.exports_charges;
 DROP VIEW IF EXISTS public.exports_billing_entities;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
@@ -4272,29 +4271,6 @@ CREATE VIEW public.exports_charges AS
 
 
 --
--- Name: exports_contract_daily_usages; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.exports_contract_daily_usages AS
- SELECT du.organization_id,
-    du.id AS lago_id,
-    du.from_datetime,
-    du.to_datetime,
-    du.refreshed_at,
-    du.usage_date,
-    du.usage AS daily_usage,
-    du.usage_diff AS daily_usage_diff,
-    du.created_at,
-    du.updated_at,
-    du.customer_id AS lago_customer_id,
-    du.contract_id AS lago_contract_id,
-    du.external_contract_id,
-    du.contract_rate_card_id AS lago_contract_rate_card_id
-   FROM public.daily_usages du
-  WHERE (du.contract_id IS NOT NULL);
-
-
---
 -- Name: exports_coupons; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4593,9 +4569,11 @@ CREATE VIEW public.exports_daily_usages AS
     du.updated_at,
     du.customer_id AS lago_customer_id,
     du.subscription_id AS lago_subscription_id,
-    du.external_subscription_id
-   FROM public.daily_usages du
-  WHERE (du.contract_id IS NULL);
+    du.external_subscription_id,
+    du.contract_id AS lago_contract_id,
+    du.external_contract_id,
+    du.contract_rate_card_id AS lago_contract_rate_card_id
+   FROM public.daily_usages du;
 
 
 --
@@ -18458,6 +18436,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123112950'),
+('20261123112949'),
 ('20261123100000'),
 ('20261119191519'),
 ('20261119191515'),
