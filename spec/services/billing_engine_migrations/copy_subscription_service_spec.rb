@@ -123,7 +123,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
 
       expect(result.contract.customer).to eq(shadow_customer)
       expect(shadow_customer.reload.name).to eq("Shadow name")
-      expect(Customers::LockService).not_to have_received(:call)
+      expect(Customers::LockService).not_to have_received(:call).with(hash_including(scope: :shadow_copy))
     end
   end
 

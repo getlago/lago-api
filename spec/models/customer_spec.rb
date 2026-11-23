@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "redlock/client"
 
 RSpec.describe Customer do
   subject(:customer) { create(:customer) }

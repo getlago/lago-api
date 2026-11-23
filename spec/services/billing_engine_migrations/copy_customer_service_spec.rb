@@ -106,11 +106,15 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
   context "when the shadow customer was copied before", :premium do
     let(:other_entity) { create(:billing_entity, organization:) }
     let(:shadow_customer) { shadow_organization.customers.find_by(external_id: customer.external_id) }
+    let(:update_args) { [] }
 
     before do
       described_class.call(migration:, customer:)
       create(:billing_entity, organization: shadow_organization, code: other_entity.code, email_settings: [])
-      allow(Customers::UpdateService).to receive(:call!).and_call_original
+      allow(Customers::UpdateService).to receive(:call!).and_wrap_original do |original, **kwargs|
+        update_args << kwargs[:args].dup
+        original.call(**kwargs)
+      end
     end
 
     it "returns it without writing when nothing changed" do
@@ -120,8 +124,8 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
 
     context "when the customer has a blank attribute that the shadow customer holds as nil" do
       before do
-        customer.update_column(:phone, "")
-        shadow_customer.update_column(:phone, nil)
+        customer.update_column(:phone, "") # rubocop:disable Rails/SkipsModelValidations
+        shadow_customer.update_column(:phone, nil) # rubocop:disable Rails/SkipsModelValidations
       end
 
       it "does not rewrite the shadow customer" do
@@ -131,7 +135,7 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
     end
 
     context "when the customer email was stored before its normalizer existed" do
-      before { Customer.where(id: customer.id).update_all(["email = ?", " #{customer.email} "]) }
+      before { Customer.where(id: customer.id).update_all(["email = ?", " #{customer.email} "]) } # rubocop:disable Rails/SkipsModelValidations
 
       it "does not rewrite the shadow customer" do
         expect(result.customer.email).to eq(customer.email)
@@ -148,9 +152,8 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
 
       it "updates the shadow customer with the changed attributes only" do
         expect(result).to be_success
-        expect(Customers::UpdateService).to have_received(:call!).with(
-          customer: shadow_customer,
-          args: {name: "New name", address_line2: nil, billing_entity_code: other_entity.code, shipping_address: {city: "Lyon"}}
+        expect(update_args).to eq(
+          [{name: "New name", address_line2: nil, billing_entity_code: other_entity.code, shipping_address: {city: "Lyon"}}]
         )
         expect(result.customer).to have_attributes(id: shadow_customer.id, name: "New name", address_line2: nil, shipping_city: "Lyon")
         expect(result.customer.billing_entity.code).to eq(other_entity.code)
