@@ -3,8 +3,16 @@
 FactoryBot.define do
   factory :billing_engine_migration do
     organization
-    shadow_organization { association(:organization, feature_flags: ["product_catalog"]) }
+    shadow_organization
     status { "shadowing" }
     plan_mapping { {} }
+  end
+
+  factory :shadow_organization, parent: :organization do
+    feature_flags { ["product_catalog"] }
+    webhook_url { nil }
+    billing_entities do
+      [association(:billing_entity, organization: instance, email_settings: [], strategy: :build)]
+    end
   end
 end

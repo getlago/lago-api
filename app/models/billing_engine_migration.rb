@@ -10,11 +10,27 @@ class BillingEngineMigration < ApplicationRecord
 
   validate :shadow_organization_differs_from_organization
   validate :plan_mapping_is_valid
+  validate :organizations_not_in_another_migration
+
+  def shadow_organization_isolated?
+    shadow_organization.webhook_endpoints.none? && shadow_billing_entities_sending_outbound.none?
+  end
 
   private
 
+  def shadow_billing_entities_sending_outbound
+    entities = BillingEntity.where(organization_id: shadow_organization_id)
+    entities.where("cardinality(email_settings) > 0").or(entities.where.not(applied_dunning_campaign_id: nil))
+  end
+
   def shadow_organization_differs_from_organization
     errors.add(:shadow_organization, :invalid) if shadow_organization.present? && shadow_organization == organization
+  end
+
+  def organizations_not_in_another_migration
+    other_migrations = BillingEngineMigration.where.not(id:)
+    errors.add(:organization, :value_already_exist) if other_migrations.exists?(shadow_organization_id: organization_id)
+    errors.add(:shadow_organization, :value_already_exist) if other_migrations.exists?(organization_id: shadow_organization_id)
   end
 
   def plan_mapping_is_valid

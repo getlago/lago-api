@@ -26,6 +26,7 @@ module BillingEngineMigrations
 
     def call
       return result unless copyable?
+      return shadow_organization_not_isolated_failure unless migration.shadow_organization_isolated?
 
       result.customer = find_shadow_customer || create_shadow_customer!
       result
@@ -41,6 +42,13 @@ module BillingEngineMigrations
 
     def copyable?
       migration.shadowing? && customer.organization_id == migration.organization_id
+    end
+
+    def shadow_organization_not_isolated_failure
+      result.service_failure!(
+        code: "shadow_organization_not_isolated",
+        message: "shadow organization #{shadow_organization.id} has webhook endpoints, invoice emails or a dunning campaign"
+      )
     end
 
     def find_shadow_customer

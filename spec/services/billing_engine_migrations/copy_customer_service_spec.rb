@@ -6,7 +6,7 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
   subject(:result) { described_class.call(migration:, customer:) }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:shadow_organization) { create(:organization, feature_flags: ["product_catalog"]) }
+  let_it_be(:shadow_organization) { create(:shadow_organization) }
   let_it_be(:billing_entity) { organization.default_billing_entity }
 
   let(:shadow_entity_code) { billing_entity.code }
@@ -16,7 +16,7 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
     create(:customer, :with_shipping_address, organization:, billing_entity:, timezone: "America/Los_Angeles")
   end
 
-  before { create(:billing_entity, organization: shadow_organization, code: shadow_entity_code) }
+  before { create(:billing_entity, organization: shadow_organization, code: shadow_entity_code, email_settings: []) }
 
   it "creates the customer in the shadow organization with the allow-listed attributes" do
     expect { result }.to change { shadow_organization.customers.count }.by(1)
@@ -157,6 +157,23 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
       expect { result }.not_to change { shadow_organization.customers.count }
 
       expect(result).to be_success
+      expect(result.customer).to be_nil
+    end
+  end
+
+  context "when a billing entity of the shadow organization sends invoice emails" do
+    let(:shadow_customer) { create(:customer, organization: shadow_organization, external_id: customer.external_id) }
+
+    before do
+      shadow_customer
+      create(:billing_entity, organization: shadow_organization, email_settings: ["invoice.finalized"])
+    end
+
+    it "returns a failure without creating or returning the shadow customer" do
+      expect { result }.not_to change { shadow_organization.customers.count }
+
+      expect(result).to be_failure
+      expect(result.error.code).to eq("shadow_organization_not_isolated")
       expect(result.customer).to be_nil
     end
   end
