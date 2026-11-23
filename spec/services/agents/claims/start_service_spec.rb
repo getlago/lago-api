@@ -107,7 +107,7 @@ RSpec.describe Agents::Claims::StartService, :premium do
 
       refused = described_class.call(storefront:, params: {claim_code: "ABCD2345", email: "owner+agent2@example.com"})
 
-      expect(refused.error).to be_a(BaseService::MethodNotAllowedFailure)
+      expect(refused.error).to be_a(BaseService::ForbiddenFailure)
       expect(refused.error.code).to eq("too_many_requests")
     end
   end

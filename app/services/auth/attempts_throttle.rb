@@ -45,8 +45,9 @@ module Auth
       signup_email_per_minute: Rule.new(limit: 1, period: 1.minute, identifier: :email),
       signup_email_per_hour: Rule.new(limit: 3, period: 1.hour, identifier: :email),
       agent_challenge_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
-      agent_challenge_per_key: Rule.new(limit: 10, period: 1.minute, identifier: :public_key),
+      agent_challenge_per_key: Rule.new(limit: 10, period: 1.minute, identifier: %i[public_key ip]),
       agent_proof_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
+      agent_me_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
       # Each change is a Lago plan change on the merchant's organization: a subscription, a termination invoice
       # and webhooks. Enrolling again in the same plan is free and not counted.
       agent_plan_change_per_registration: Rule.new(limit: 3, period: 1.hour, identifier: :registration),
@@ -117,6 +118,7 @@ module Auth
     def normalize(type, identifier)
       case type
       when :email then User.email_lookup_key(identifier)
+      when :public_key then identifier.to_s.strip
       when :ip_network then ip_prefix(identifier, ipv6_prefix: 64)
       when :ip_block then ip_prefix(identifier, ipv6_prefix: 48)
       else identifier.to_s.strip.downcase
