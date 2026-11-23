@@ -217,6 +217,23 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with a draft contract" do
+      let!(:draft_contract) { create(:contract, :draft, organization:, customer:) }
+
+      it "lists it with the contracts of every other status by default" do
+        subject
+
+        expect(json[:contracts].map { |c| c.slice(:lago_id, :status) })
+          .to eq([{lago_id: draft_contract.id, status: "draft"}, {lago_id: contract.id, status: "active"}])
+      end
+
+      it "lists draft contracts when the status filter asks for them" do
+        get_with_token(organization, "/api/v2/contracts?status[]=draft")
+
+        expect(json[:contracts].map { |c| c.slice(:lago_id, :status) }).to eq([{lago_id: draft_contract.id, status: "draft"}])
+      end
+    end
+
     context "with a billing entity filter" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let!(:matching) { create(:contract, organization:, billing_entity:) }
@@ -809,6 +826,18 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:success)
         expect(json[:contract][:status]).to eq("canceled")
+      end
+    end
+
+    context "when the contract is a draft" do
+      let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.ago) }
+
+      it "cancels it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(external_id: contract.external_id, status: "canceled")
+        expect(contract.reload.fees).to be_empty
       end
     end
 

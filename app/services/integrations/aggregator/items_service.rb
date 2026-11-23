@@ -24,7 +24,7 @@ module Integrations
             break if cursor.blank?
           end
 
-          handle_items(deduplicate_items(fetched_items))
+          handle_items(deduplicate_items(fetched_items.reject { |item| unavailable_record?(item) }))
         end
 
         result.items = items
