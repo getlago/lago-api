@@ -2,6 +2,7 @@
 
 module CopyToProduction
   module Items
+    # No unique_indexes: Entitlement::FeatureCreateService answers a concurrent create with value_already_exist itself.
     class FeatureItem < BaseItem
       def find_source(id)
         sandbox.features.find_by(id:)
@@ -23,10 +24,6 @@ module CopyToProduction
             end
           }
         ).feature
-      end
-
-      def unique_indexes
-        {"idx_features_code_unique_per_organization" => :code}
       end
     end
   end

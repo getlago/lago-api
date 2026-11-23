@@ -30,7 +30,9 @@ RSpec.describe CopyToProduction::Items::FeatureItem do
   end
 
   describe "#find_existing" do
-    let!(:live_feature) { create(:feature, organization: production, code: "seats") }
+    let(:live_feature) { create(:feature, organization: production, code: "seats") }
+
+    before { live_feature }
 
     it "finds the kept production feature with the same code" do
       expect(item.find_existing(feature)).to eq(live_feature)
