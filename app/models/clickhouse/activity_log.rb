@@ -102,6 +102,7 @@ module Clickhouse
       coupon_created: "coupon.created",
       coupon_updated: "coupon.updated",
       coupon_deleted: "coupon.deleted",
+      coupon_copied_to_production: "coupon.copied_to_production",
       applied_coupon_created: "applied_coupon.created",
       applied_coupon_deleted: "applied_coupon.deleted",
       payment_request_created: "payment_request.created",
