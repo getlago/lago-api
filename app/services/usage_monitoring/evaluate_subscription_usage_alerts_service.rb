@@ -14,6 +14,8 @@ module UsageMonitoring
     end
 
     def call
+      check_alerts_belong_to_subscription!
+
       exception_to_raise = nil
 
       alerts.each do |alert|
@@ -21,7 +23,7 @@ module UsageMonitoring
         when "lifetime_usage_amount"
           ProcessAlertService.call(alert:, alertable: subscription, current_metrics: lifetime_usage)
         when *Alert::BILLABLE_METRIC_LIFETIME_USAGE_TYPES
-          ProcessLifetimeUsageAlertJob.set(wait: processing_interval).perform_later(alert:, subscription:)
+          after_commit { ProcessLifetimeUsageAlertJob.set(wait: processing_interval).perform_later(alert:, subscription:) }
         when *Alert::CURRENT_USAGE_TYPES
           ProcessAlertService.call(alert:, alertable: subscription, current_metrics: current_usage)
         end
@@ -39,6 +41,16 @@ module UsageMonitoring
     delegate :organization, to: :subscription
 
     attr_reader :subscription, :alerts, :full_plan_usage
+
+    # Callers build the alert list themselves, so a wrong one would trigger alerts against this subscription.
+    def check_alerts_belong_to_subscription!
+      foreign_alert_ids = alerts.reject do |alert|
+        alert.organization_id == subscription.organization_id && alert.subscription_external_id == subscription.external_id
+      end.map(&:id)
+      return if foreign_alert_ids.empty?
+
+      raise ArgumentError, "alerts #{foreign_alert_ids.join(", ")} do not belong to subscription #{subscription.id}"
+    end
 
     def processing_interval
       (ENV["LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS"].presence || 1.minute).to_i.seconds

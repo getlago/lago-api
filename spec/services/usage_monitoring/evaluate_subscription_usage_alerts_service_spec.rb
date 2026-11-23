@@ -114,6 +114,41 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     end
   end
 
+  context "when the job enqueue runs inside a transaction" do
+    let(:lifetime_units_alert) do
+      create(:billable_metric_lifetime_usage_units_alert, billable_metric:, organization:, subscription_external_id: subscription.external_id)
+    end
+    let(:alerts) { [lifetime_units_alert] }
+
+    it "enqueues ProcessLifetimeUsageAlertJob after the commit" do
+      expect { result }.to have_enqueued_job_after_commit(UsageMonitoring::ProcessLifetimeUsageAlertJob)
+        .with(alert: lifetime_units_alert, subscription:)
+    end
+  end
+
+  context "with an alert of another subscription" do
+    let(:other_alert) { create(:usage_current_amount_alert, organization:, subscription_external_id: create(:subscription, customer:, organization:).external_id) }
+    let(:alerts) { [lifetime_alert, other_alert] }
+
+    it "raises without processing any alert" do
+      expect { result }.to raise_error(ArgumentError, /#{other_alert.id}/)
+
+      expect(UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+    end
+  end
+
+  context "with an alert of another organization" do
+    let(:other_organization) { create(:organization) }
+    let(:other_alert) { create(:usage_current_amount_alert, organization: other_organization, subscription_external_id: subscription.external_id) }
+    let(:alerts) { [lifetime_alert, other_alert] }
+
+    it "raises without processing any alert" do
+      expect { result }.to raise_error(ArgumentError, /#{other_alert.id}/)
+
+      expect(UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+    end
+  end
+
   context "when one alert fails" do
     let(:alerts) { [amount_alert, metric_units_alert, lifetime_alert] }
 
