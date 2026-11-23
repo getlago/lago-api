@@ -46,6 +46,12 @@ RSpec.describe Emails::ResendService do
           end.to have_enqueued_mail(InvoiceMailer, :created)
         end
 
+        it_behaves_like "refused on a shadow organization", -> { ActiveJob::Base.queue_adapter.enqueued_jobs.size } do
+          subject { service.call }
+
+          before { resource }
+        end
+
         context "with custom recipients" do
           let(:to) { ["custom@example.com", "another@example.com"] }
           let(:cc) { ["cc@example.com"] }

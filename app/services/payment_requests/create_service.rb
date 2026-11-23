@@ -2,6 +2,8 @@
 
 module PaymentRequests
   class CreateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:payment_request, :payment_method]
 
     def initialize(organization:, params:, dunning_campaign: nil)
@@ -61,6 +63,7 @@ module PaymentRequests
     def check_preconditions
       # NOTE: Prevent creation of payment request if:
       # - the organization is not premium
+      # - the organization is the shadow of a billing engine migration
       # - the customer does not exist
       # - there are no invoices
       # - the invoices are not overdue
@@ -70,6 +73,7 @@ module PaymentRequests
       # - the requested payment method is invalid
 
       return result.forbidden_failure! unless License.premium?
+      return shadow_outbound_failure if shadow_outbound_refused?(organization.id)
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "invoice") if invoices.empty?
 
