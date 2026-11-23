@@ -117,6 +117,39 @@ RSpec.describe Integrations::Aggregator::CustomersService do
         expect(result.customers.map(&:external_id)).to eq(%w[58 59 62])
       end
     end
+
+    context "when every response has a next cursor" do
+      before do
+        allow(lago_client).to receive(:get)
+          .with(headers: anything, params: anything)
+          .and_return({"records" => [], "next_cursor" => "c"})
+      end
+
+      it "stops after the maximum number of requests" do
+        customers_service.call
+
+        expect(lago_client).to have_received(:get).exactly(15).times
+      end
+    end
+
+    context "when fetching a subsequent page fails" do
+      let!(:old_customer) { create(:integration_item, integration:, item_type: :customer, external_id: "1") }
+
+      before do
+        allow(lago_client).to receive(:get)
+          .with(headers:, params:)
+          .and_return(aggregator_response.merge("next_cursor" => "cursor-abc"))
+        allow(lago_client).to receive(:get)
+          .with(headers:, params: params.merge(cursor: "cursor-abc"))
+          .and_raise(StandardError, "aggregator unavailable")
+      end
+
+      it "raises and keeps the existing customer items" do
+        expect { customers_service.call }.to raise_error(StandardError, "aggregator unavailable")
+
+        expect(integration.integration_items.customer.pluck(:id)).to eq([old_customer.id])
+      end
+    end
   end
 
   describe "#fetch_records" do
