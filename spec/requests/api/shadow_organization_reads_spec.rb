@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::ShadowOrganizationReads, type: :request, product_catalog: false do
+RSpec.describe Api::ShadowOrganizationReads, type: :request do
   let(:organization) { create(:organization) }
   let(:shadow_organization) { create(:shadow_organization) }
   let(:status) { "shadowing" }
