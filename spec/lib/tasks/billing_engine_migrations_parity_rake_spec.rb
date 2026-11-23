@@ -244,6 +244,27 @@ RSpec.describe "billing_engine_migrations:parity" do # rubocop:disable RSpec/Des
           a_string_including("skipped contract older (subscription_not_found)", "skipped: 1 (subscription_not_found: 1)")
         ).to_stdout
       end
+
+      it "does not offer to continue after the last contract" do
+        expect { task.invoke(organization.id) }.not_to output(/continue with AFTER/).to_stdout
+      end
+    end
+  end
+
+  context "with exactly LIMIT contracts" do
+    let(:env) { {"LIMIT" => "2"} }
+
+    before do
+      create_shadow_contract(external_id: "first", code: "first")
+      create_shadow_contract(external_id: "second", code: "second")
+    end
+
+    it "examines them all" do
+      expect { task.invoke(organization.id) }.to output(a_string_including("skipped: 2 (subscription_not_found: 2)")).to_stdout
+    end
+
+    it "does not offer to continue" do
+      expect { task.invoke(organization.id) }.not_to output(/continue with AFTER/).to_stdout
     end
   end
 end

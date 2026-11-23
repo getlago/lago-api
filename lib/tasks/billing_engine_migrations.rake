@@ -256,22 +256,27 @@ class BillingEngineUsageParityReport
     end
 
     puts summary
-    puts "Stopped at #{limit} contract(s): continue with AFTER=#{last_contract.id}" if limit_reached?
+    puts "Stopped at #{limit} contract(s): continue with AFTER=#{last_contract.id}" if contracts_left
   end
 
   private
 
-  attr_reader :migration, :limit, :after_contract, :examined, :matching, :mismatching, :errors, :skipped, :last_contract
+  attr_reader :migration, :limit, :after_contract, :examined, :matching, :mismatching, :errors, :skipped,
+    :last_contract, :contracts_left
 
   def each_contract_batch
     cursor = after_contract && [after_contract.created_at, after_contract.id]
 
-    until limit_reached?
-      contracts = contracts_before(cursor).limit([BATCH_SIZE, limit - examined].min).to_a
-      break if contracts.empty?
+    loop do
+      batch_size = [BATCH_SIZE, limit - examined].min
+      contracts = contracts_before(cursor).limit(batch_size + 1).to_a
+      @contracts_left = contracts.size > batch_size
+      batch = contracts.first(batch_size)
 
-      yield contracts
-      cursor = [contracts.last.created_at, contracts.last.id]
+      yield batch unless batch.empty?
+      break if !contracts_left || limit_reached?
+
+      cursor = [batch.last.created_at, batch.last.id]
     end
   end
 
