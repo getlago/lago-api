@@ -71,4 +71,40 @@ namespace :billing_engine_migrations do
     problems << "#{counts[:mismatch]} record(s) differ from the shadow organization" if counts[:mismatch]
     abort problems.join(", ") if problems.any?
   end
+
+  desc "Convert the mapped plans of a shadowing organization into catalog plans of its shadow organization"
+  task :convert_plans, [:organization_id] => :environment do |_task, args|
+    organization_id = args[:organization_id]
+    abort "Missing organization_id argument\n\nUsage: rake billing_engine_migrations:convert_plans[organization_id]" if organization_id.blank?
+
+    migration = BillingEngineMigration.find_by(organization_id:)
+    abort "No billing engine migration for organization #{organization_id}" unless migration
+    abort "Billing engine migration #{migration.id} is #{migration.status}, not shadowing" unless migration.shadowing?
+
+    dry_run = ENV.fetch("DRY_RUN", "true") != "false"
+    mode = dry_run ? "DRY RUN" : "LIVE"
+
+    puts "Starting plans conversion [#{mode}] for organization #{organization_id}..."
+
+    plans = BillingEngineMigrations::ConvertPlansService.call!(migration:, dry_run:).plans
+    plans.each do |report|
+      line = "  [#{mode}] plan #{report.plan_code} -> #{report.catalog_plan_code}: #{report.outcome}"
+      line += " (#{report.error})" if report.error
+      puts line
+
+      report.entries.each do |entry|
+        filter = entry.product_filter ? " filter #{entry.product_filter[:code]}," : ""
+        rate = entry.rate
+        puts "    rate_card #{entry.rate_card[:code]}: product #{entry.product[:code]} (#{entry.product[:product_type]}),#{filter} " \
+          "#{rate[:rate_model]} #{entry.rate_card[:billing_timing]} every #{rate[:billing_interval_count]} #{rate[:billing_interval_unit]}, " \
+          "properties #{rate[:rate_properties].to_json}#{", units #{entry.units.to_s("F")}" if entry.units}"
+      end
+      report.gaps.each { |gap| puts "    not implemented: #{gap}" }
+    end
+
+    counts = plans.map(&:outcome).tally
+    puts "Done [#{mode}]: #{counts.map { |outcome, count| "#{count} #{outcome}" }.join(", ").presence || "nothing to convert"}"
+
+    abort "#{counts[:failed]} plan(s) failed" if counts[:failed]
+  end
 end
