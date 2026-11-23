@@ -64,12 +64,32 @@ RSpec.describe Integrations::Aggregator::BaseService do
     context "when quickbooks is rate limited" do
       let(:provider_name) { :quickbooks }
 
-      it "raises the next window throttling error" do
+      it "raises the next window throttling error, retried after 60 seconds when no limit is configured" do
         expect { throttle }
           .to raise_error(BaseService::NextWindowThrottlingError) do |error|
             expect(error.provider_name).to eq(:quickbooks)
             expect(error.retry_after).to eq(60.seconds)
           end
+      end
+
+      context "with a minutely limit" do
+        before do
+          allow(Throttling).to receive(:limits).and_return({quickbooks: {minutely: {limit: 1, period: 60}}})
+        end
+
+        it "retries when the current window ends" do
+          travel_to(Time.zone.parse("2026-11-23 10:00:05")) do
+            expect { throttle }
+              .to raise_error(BaseService::NextWindowThrottlingError) { |error| expect(error.retry_after).to eq(55.seconds) }
+          end
+        end
+
+        it "waits a full window at the start of a minute" do
+          travel_to(Time.zone.parse("2026-11-23 10:00:00")) do
+            expect { throttle }
+              .to raise_error(BaseService::NextWindowThrottlingError) { |error| expect(error.retry_after).to eq(60.seconds) }
+          end
+        end
       end
     end
 

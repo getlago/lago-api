@@ -52,12 +52,26 @@ RSpec.describe NextWindowThrottlingRetryable do
     end
   end
 
-  context "when the error already occurred 30 times" do
-    before { job.exception_executions = {"[BaseService::NextWindowThrottlingError]" => 30} }
+  context "when the job is throttled many times in a row" do
+    let(:job_class) do
+      Class.new(ApplicationJob) do
+        include NextWindowThrottlingRetryable
 
-    it "keeps retrying without an attempt cap" do
-      expect(handle).to be_truthy
-      expect(retry_at).to eq(60.seconds.from_now.to_f)
+        def perform
+          raise BaseService::NextWindowThrottlingError.new(provider_name: :quickbooks)
+        end
+      end
+    end
+
+    it "keeps retrying without an attempt cap and counts each throttled retry" do
+      job_class.perform_later
+
+      40.times { perform_enqueued_jobs(only: job_class, at: 2.minutes.from_now) }
+
+      enqueued = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j[:job] == job_class }
+      expect(enqueued.size).to eq(1)
+      expect(enqueued.first["executions"]).to eq(40)
+      expect(enqueued.first["exception_executions"]).to eq("[BaseService::NextWindowThrottlingError]" => 40)
     end
   end
 
