@@ -100,6 +100,50 @@ RSpec.describe BillingEngineMigration do
         it { expect(migration).not_to be_valid }
       end
     end
+
+    describe "v2_read_endpoints validation" do
+      before { migration.v2_read_endpoints = v2_read_endpoints }
+
+      context "with native v2 endpoints" do
+        let(:v2_read_endpoints) { %w[contracts contracts/usage customers] }
+
+        it { expect(migration).to be_valid }
+      end
+
+      context "with no endpoint" do
+        let(:v2_read_endpoints) { [] }
+
+        it { expect(migration).to be_valid }
+      end
+
+      context "with an endpoint that v1 serves under /api/v2" do
+        let(:v2_read_endpoints) { %w[contracts subscriptions] }
+
+        it "rejects it" do
+          expect(migration).not_to be_valid
+          expect(migration.errors.where(:v2_read_endpoints, :invalid)).to be_present
+        end
+      end
+
+      context "with an unknown endpoint" do
+        let(:v2_read_endpoints) { %w[contracts/current_usage] }
+
+        it { expect(migration).not_to be_valid }
+      end
+    end
+  end
+
+  describe ".v2_endpoint" do
+    it { expect(described_class.v2_endpoint("api/v2/contracts/usage")).to eq("contracts/usage") }
+    it { expect(described_class.v2_endpoint("api/v1/subscriptions")).to be_nil }
+    it { expect(described_class.v2_endpoint(nil)).to be_nil }
+  end
+
+  describe ".native_v2_endpoints" do
+    it "lists the controllers of the native v2 routes only" do
+      expect(described_class.native_v2_endpoints).to include("contracts", "contracts/usage", "customers", "events")
+      expect(described_class.native_v2_endpoints).not_to include("subscriptions", "application", nil)
+    end
   end
 
   describe "#shadow_organization_isolated?" do

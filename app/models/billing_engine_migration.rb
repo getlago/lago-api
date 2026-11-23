@@ -2,6 +2,7 @@
 
 class BillingEngineMigration < ApplicationRecord
   STATUSES = {shadowing: "shadowing", paused: "paused", aborted: "aborted"}.freeze
+  NATIVE_V2_CONTROLLER_PREFIX = "api/v2/"
 
   belongs_to :organization
   belongs_to :shadow_organization, class_name: "Organization"
@@ -11,9 +12,18 @@ class BillingEngineMigration < ApplicationRecord
   validate :shadow_organization_differs_from_organization
   validate :plan_mapping_is_valid
   validate :organizations_not_in_another_migration
+  validate :v2_read_endpoints_are_native
 
   after_commit :expire_lookup
   after_rollback :expire_lookup
+
+  def self.v2_endpoint(controller_path)
+    controller_path.delete_prefix(NATIVE_V2_CONTROLLER_PREFIX) if controller_path&.start_with?(NATIVE_V2_CONTROLLER_PREFIX)
+  end
+
+  def self.native_v2_endpoints
+    Rails.application.routes.routes.filter_map { v2_endpoint(it.defaults[:controller]) }.uniq
+  end
 
   def shadow_organization_isolated?
     !WebhookEndpoint.exists?(organization_id: shadow_organization_id) &&
@@ -46,6 +56,10 @@ class BillingEngineMigration < ApplicationRecord
     errors.add(:shadow_organization, :value_already_exist) if other_migrations.exists?(organization_id: shadow_organization_id)
   end
 
+  def v2_read_endpoints_are_native
+    errors.add(:v2_read_endpoints, :invalid) unless v2_read_endpoints.is_a?(Array) && (v2_read_endpoints - self.class.native_v2_endpoints).empty?
+  end
+
   def plan_mapping_is_valid
     errors.add(:plan_mapping, :invalid) unless valid_plan_mapping?
   end
@@ -67,6 +81,7 @@ end
 #  id                     :uuid             not null, primary key
 #  plan_mapping           :jsonb            not null
 #  status                 :enum             default("shadowing"), not null
+#  v2_read_endpoints      :string           default([]), not null, is an Array
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  organization_id        :uuid             not null
