@@ -17,7 +17,7 @@ module BillingEngineMigrations
       return result if already_ended? || already_copied?
       return skip(conflict_reason) if conflict_reason
 
-      customer_result = CopyCustomerService.call(migration:, customer: subscription.customer)
+      customer_result = CopyCustomerService.call(migration:, customer: subscription.customer, update_existing: false)
       return fail_with(customer_result, "cannot create customer") if customer_result.failure?
 
       create_contract(customer_result.customer)

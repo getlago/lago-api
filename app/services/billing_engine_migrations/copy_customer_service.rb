@@ -20,9 +20,10 @@ module BillingEngineMigrations
 
     COPIED_COLUMNS = [*CUSTOMER_ATTRIBUTES, *SHIPPING_ATTRIBUTES.values, :timezone, :billing_entity_id].map(&:to_s).freeze
 
-    def initialize(migration:, customer:)
+    def initialize(migration:, customer:, update_existing: true)
       @migration = migration
       @customer = customer
+      @update_existing = update_existing
       super
     end
 
@@ -30,8 +31,8 @@ module BillingEngineMigrations
       return result unless copyable?
       return shadow_organization_not_isolated_failure unless migration.shadow_organization_isolated?
 
-      # A session lock: inside a transaction, the unique violation of a concurrent create would abort it.
-      Customers::LockService.call(customer:, scope: :shadow_copy, transaction: false) { copy_latest_customer! }
+      result.customer = find_shadow_customer unless update_existing
+      copy_latest_customer_under_lock unless result.customer
       result
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
@@ -39,7 +40,7 @@ module BillingEngineMigrations
 
     private
 
-    attr_reader :migration, :customer
+    attr_reader :migration, :customer, :update_existing
 
     delegate :shadow_organization, to: :migration
 
@@ -52,6 +53,11 @@ module BillingEngineMigrations
         code: "shadow_organization_not_isolated",
         message: "shadow organization #{shadow_organization.id} has webhook endpoints, invoice emails or a dunning campaign"
       )
+    end
+
+    # A session lock: inside a transaction, the unique violation of a concurrent create would abort it.
+    def copy_latest_customer_under_lock
+      Customers::LockService.call(customer:, scope: :shadow_copy, transaction: false) { copy_latest_customer! }
     end
 
     def copy_latest_customer!

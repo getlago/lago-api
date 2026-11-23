@@ -185,6 +185,46 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
     end
   end
 
+  context "when an existing shadow customer is not to be updated" do
+    subject(:result) { described_class.call(migration:, customer:, update_existing: false) }
+
+    let(:shadow_customer) do
+      create(:customer, organization: shadow_organization, external_id: customer.external_id, name: "Shadow name")
+    end
+
+    before do
+      shadow_customer
+      allow(Customers::LockService).to receive(:call).and_call_original
+    end
+
+    it "returns it unchanged without taking the lock" do
+      expect(result).to be_success
+      expect(result.customer).to eq(shadow_customer)
+      expect(result.customer.reload.name).to eq("Shadow name")
+      expect(Customers::LockService).not_to have_received(:call)
+    end
+
+    context "when the shadow organization does not have the customer yet" do
+      let(:shadow_customer) { nil }
+
+      it "creates it" do
+        expect { result }.to change { shadow_organization.customers.count }.by(1)
+
+        expect(result.customer.name).to eq(customer.name)
+      end
+    end
+
+    context "when the shadow organization is not isolated" do
+      before { create(:webhook_endpoint, organization: shadow_organization) }
+
+      it "returns the failure" do
+        expect(result).to be_failure
+        expect(result.error.code).to eq("shadow_organization_not_isolated")
+        expect(result.customer).to be_nil
+      end
+    end
+  end
+
   context "when the customer changed since it was loaded" do
     before { Customer.find(customer.id).update!(name: "Newer name") }
 
