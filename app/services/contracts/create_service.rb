@@ -52,14 +52,6 @@ module Contracts
         return result.single_validation_failure!(field: :ended_at, error_code: "already_ended")
       end
 
-      # One live agreement per external id. Replacement flows (upgrade,
-      # downgrade, renewal) will create their pending sibling explicitly when
-      # they exist; a blind second create is a mistake, not a replacement.
-      # Advisory under concurrency — the partial unique index closes the race.
-      if organization.contracts.where(status: Contract::LIVE_STATUSES, external_id: params[:external_id]).exists?
-        return result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
-      end
-
       if (failure = settings_references_failure)
         return failure
       end
@@ -68,6 +60,15 @@ module Contracts
 
       ActiveRecord::Base.transaction do
         Customers::LockService.call!(customer:, scope: :billing_schedule) do
+          # One live agreement per external id. Replacement flows (upgrade,
+          # downgrade, renewal) will create their pending sibling explicitly when
+          # they exist; a blind second create is a mistake, not a replacement.
+          # Checked under the lock: the unique index is per status, so it misses
+          # a draft racing an active contract. Two customers can still race.
+          if organization.contracts.where(status: Contract::LIVE_STATUSES, external_id: params[:external_id]).exists?
+            result.single_validation_failure!(field: :external_id, error_code: "value_already_exists").raise_if_error!
+          end
+
           contract = organization.contracts.new(
             customer:,
             catalog_plan:,

@@ -326,6 +326,15 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       end
     end
 
+    context "when an active contract already uses the external id" do
+      before { create(:contract, organization:, customer:, external_id: "contract-1") }
+
+      it "returns a validation failure, as the per-status unique index would not catch it" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages).to eq(external_id: ["value_already_exists"])
+      end
+    end
+
     context "without a start date" do
       let(:started_at) { nil }
 
