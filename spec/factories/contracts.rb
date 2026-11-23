@@ -11,6 +11,10 @@ FactoryBot.define do
     billing_time { :calendar }
     started_at { 1.day.ago }
 
+    trait :draft do
+      status { :draft }
+    end
+
     trait :pending do
       status { :pending }
       started_at { 1.day.from_now }

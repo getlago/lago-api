@@ -2,7 +2,7 @@
 
 module Contracts
   # Ends a live contract's lifecycle. An active contract that already ran is
-  # terminated; a pending one that never started is canceled instead — two
+  # terminated; a draft or pending one that never started is canceled instead — two
   # names for the same "no longer live" outcome, so history keeps whether the
   # agreement ever took effect. Both transitions are terminal: a terminated or
   # canceled contract is history and cannot be terminated again.
@@ -27,7 +27,7 @@ module Contracts
         # taken effect, so it is terminated rather than canceled.
         contract.lock!
 
-        unless contract.pending? || contract.active?
+        unless Contract::LIVE_STATUSES.include?(contract.status)
           return result.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
         end
 
@@ -37,6 +37,7 @@ module Contracts
         else
           contract.update!(status: :canceled, canceled_at: timestamp)
         end
+        delete_wallet_alerts
 
         SendWebhookJob.perform_after_commit(event_type, contract)
         Utils::ActivityLog.produce_after_commit(contract, event_type)
@@ -65,6 +66,11 @@ module Contracts
       if termination_result.billing_operations.any? { it.due_for_processing?(timestamp: Time.current) }
         BillingOperations::ProcessJob.perform_after_commit(contract.customer_id)
       end
+    end
+
+    # A contract wallet's alerts end with the contract, with their thresholds; their history stays
+    def delete_wallet_alerts
+      UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: contract.wallets.select(:id)).delete_all
     end
   end
 end

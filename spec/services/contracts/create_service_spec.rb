@@ -243,6 +243,19 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
         expect(wallet.selectors.sole).to have_attributes(selector_type: "fee_type", fee_type: "metered", plan_wallet_id: nil)
       end
 
+      context "when the wallet template has an alert" do
+        let(:alert_template) { create(:plan_wallet_alert, organization:, plan_wallet:, code: "low_balance") }
+
+        before { create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: alert_template, value: 2_000) }
+
+        it "gives the contract's wallet its own copy of the alert" do
+          alert = result.contract.wallets.sole.alerts.sole
+
+          expect(alert).to have_attributes(code: "low_balance", previous_value: nil)
+          expect(alert.thresholds.sole.value).to eq(2_000)
+        end
+      end
+
       context "when the contract starts in the future" do
         let(:params) { super().merge(started_at: 1.month.from_now.iso8601) }
 
@@ -370,11 +383,11 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     end
 
     context "when only the database catches the duplicate" do
-      let(:live_contracts) { organization.contracts.where(status: %w[pending active], external_id: params[:external_id]) }
+      let(:live_contracts) { organization.contracts.where(status: Contract::LIVE_STATUSES, external_id: params[:external_id]) }
 
       before do
         allow(organization.contracts).to receive(:where)
-          .with(status: %w[pending active], external_id: params[:external_id]).and_return(live_contracts)
+          .with(status: Contract::LIVE_STATUSES, external_id: params[:external_id]).and_return(live_contracts)
         allow(live_contracts).to receive(:exists?).and_return(false)
       end
 
@@ -382,6 +395,15 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
         expect { result }.not_to change(Contract, :count)
         expect(result.error.messages).to eq(external_id: ["value_already_exists"])
       end
+    end
+  end
+
+  context "when a draft contract already uses the external id" do
+    before { create(:contract, :draft, organization:, customer:, external_id: "contract-1") }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:external_id]).to eq(["value_already_exists"])
     end
   end
 

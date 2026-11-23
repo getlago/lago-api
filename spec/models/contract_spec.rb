@@ -13,7 +13,7 @@ RSpec.describe Contract do
       expect(subject).to define_enum_for(:status)
         .backed_by_column_of_type(:enum)
         .validating
-        .with_values(pending: "pending", active: "active", terminated: "terminated", canceled: "canceled")
+        .with_values(draft: "draft", pending: "pending", active: "active", terminated: "terminated", canceled: "canceled")
       expect(subject).to define_enum_for(:billing_time)
         .backed_by_column_of_type(:enum)
         .validating
@@ -149,6 +149,15 @@ RSpec.describe Contract do
 
         expect { create(:contract, organization:, customer:, external_id: "c-1") }
           .to raise_error(ActiveRecord::RecordNotUnique)
+      end
+
+      it "never allows two drafts" do
+        organization = create(:organization)
+        customer = create(:customer, organization:)
+        create(:contract, :draft, organization:, customer:, external_id: "c-1")
+
+        expect { create(:contract, :draft, organization:, customer:, external_id: "c-1") }
+          .to raise_error(ActiveRecord::RecordNotUnique, /index_contracts_on_live_external_id/)
       end
 
       it "does not constrain finished contracts" do
@@ -326,7 +335,8 @@ RSpec.describe Contract do
   end
 
   describe "#editable?" do
-    it "is true only while the contract is pending" do
+    it "is true only while the contract is draft or pending" do
+      expect(build(:contract, :draft).editable?).to be(true)
       expect(build(:contract, :pending).editable?).to be(true)
       expect(build(:contract, status: :active).editable?).to be(false)
       expect(build(:contract, :terminated).editable?).to be(false)
@@ -391,6 +401,12 @@ RSpec.describe Contract do
         expect(described_class.due_for_activation(timestamp)).to eq([due])
       end
 
+      it "leaves out a draft whose start has arrived" do
+        create(:contract, :draft, started_at: timestamp - 1.day)
+
+        expect(described_class.due_for_activation(timestamp)).to eq([due])
+      end
+
       context "with sequential scans disabled" do
         around do |example|
           ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
@@ -426,13 +442,14 @@ RSpec.describe Contract do
     end
 
     describe ".live" do
-      it "returns only pending and active contracts" do
+      it "returns only draft, pending and active contracts" do
+        draft = create(:contract, :draft)
         pending = create(:contract, :pending)
         active = create(:contract)
         create(:contract, :terminated)
         create(:contract, :canceled)
 
-        expect(described_class.live).to match_array([pending, active])
+        expect(described_class.live).to match_array([draft, pending, active])
       end
     end
 
@@ -458,6 +475,13 @@ RSpec.describe Contract do
 
         expect(organization.contracts.terminatable_by_external_id("reused")).to eq(active)
         expect(pending.reload.status).to eq("pending")
+      end
+
+      it "prefers the pending contract over a draft" do
+        pending = create(:contract, :pending, organization:, external_id: "reused", started_at: 1.day.from_now)
+        create(:contract, :draft, organization:, external_id: "reused", started_at: 2.days.from_now)
+
+        expect(organization.contracts.terminatable_by_external_id("reused")).to eq(pending)
       end
     end
   end
