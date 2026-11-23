@@ -12,7 +12,7 @@ module Plans
     def call
       return result.not_found_failure!(resource: "plan") unless plan
       if plan.parent_id.nil? && plan.organization.agent_storefront_integrations.with_plan_code(plan.code).exists?
-        return result.not_allowed_failure!(code: "plan_sold_by_agent_storefront")
+        return result.forbidden_failure!(code: "plan_sold_by_agent_storefront")
       end
 
       ActiveRecord::Base.transaction do

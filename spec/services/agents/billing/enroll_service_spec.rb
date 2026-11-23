@@ -77,7 +77,7 @@ RSpec.describe Agents::Billing::EnrollService, :premium do
       it "refuses a fourth change and keeps the subscription" do
         refused = described_class.call(storefront:, registration:, plan_code: other_plan.code)
 
-        expect(refused.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(refused.error).to be_a(BaseService::ForbiddenFailure)
         expect(refused.error.code).to eq("too_many_requests")
         expect(registration.subscription.reload).to have_attributes(plan:, status: "active")
       end

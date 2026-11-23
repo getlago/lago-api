@@ -4,7 +4,7 @@ module Agents
   class AuthController < BaseController
     def challenge
       return if throttled?(:agent_challenge_per_ip, request.remote_ip)
-      return if throttled?(:agent_challenge_per_key, params[:public_key].to_s)
+      return if throttled?(:agent_challenge_per_key, params[:public_key].to_s, request.remote_ip)
 
       result = Agents::Auth::ChallengeService.call(storefront:, public_key: params[:public_key], purpose: params[:purpose], scope: params[:scope])
 
@@ -43,6 +43,8 @@ module Agents
     end
 
     def me
+      return if throttled?(:agent_me_per_ip, request.remote_ip)
+
       result = Agents::Auth::VerifyTokenService.call(storefront:, token: bearer_token, scope: storefront.scope)
 
       if result.success?
