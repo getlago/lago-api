@@ -290,7 +290,7 @@ RSpec.describe CopyToProduction::CopyService do
   end
 
   context "with a coupon" do
-    let(:result) { described_class.call(organization:, user:, item_type: "coupon", id: coupon.id) }
+    subject(:result) { described_class.call(organization:, user:, item_type: "coupon", id: coupon.id) }
 
     let(:coupon) do
       create(
@@ -307,15 +307,17 @@ RSpec.describe CopyToProduction::CopyService do
         frequency_duration: 3,
         expiration: "time_limit",
         expiration_at: 1.month.from_now.beginning_of_day,
-        reusable: false
+        reusable: false,
+        limited_billable_metrics: true
       )
     end
 
     let(:live_metric) { create(:billable_metric, organization: production, code: "seats") }
+    let(:reused_metric_source) { create(:billable_metric, organization: sandbox, code: "seats") }
     let(:copied_metric_source) { create(:billable_metric, organization: sandbox, code: "storage") }
 
     before do
-      create(:coupon_billable_metric, coupon:, billable_metric: create(:billable_metric, organization: sandbox, code: "seats"))
+      create(:coupon_billable_metric, coupon:, billable_metric: reused_metric_source)
       create(:coupon_billable_metric, coupon:, billable_metric: copied_metric_source)
       live_metric
     end
@@ -458,11 +460,51 @@ RSpec.describe CopyToProduction::CopyService do
     context "when the coupon has expired" do
       before { coupon.update!(expiration_at: 1.day.ago) }
 
-      it "copies nothing" do
+      it "refuses the copy" do
         expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
 
         expect(result).to be_failure
-        expect(result.error.messages).to eq(expiration_at: ["invalid_date"])
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_item_inactive")
+      end
+    end
+
+    context "when the coupon is terminated" do
+      before { coupon.mark_as_terminated! }
+
+      it "refuses the copy" do
+        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_item_inactive")
+      end
+    end
+
+    context "when every targeted metric is deleted in the sandbox" do
+      before do
+        reused_metric_source.discard!
+        copied_metric_source.discard!
+      end
+
+      it "refuses the copy rather than copy an unlimited coupon" do
+        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_target_deleted")
+      end
+    end
+
+    context "when one targeted metric is deleted in the sandbox" do
+      before { copied_metric_source.discard! }
+
+      it "copies the coupon limited to the kept metric" do
+        expect { result }.not_to change { production.billable_metrics.count }
+
+        expect(result).to be_success
+        expect(result.item.record.limited_billable_metrics).to be(true)
+        expect(result.item.record.coupon_targets.map(&:billable_metric_id)).to eq([live_metric.id])
       end
     end
   end

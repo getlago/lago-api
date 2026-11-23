@@ -22,8 +22,14 @@ module CopyToProduction
 
       # Self-serve organizations only use catalog plans, so a coupon limited to legacy plans is never moved. A coupon
       # limited to catalog plans waits for the catalog plan item type, which will make each targeted plan a parent.
+      # The create service would create a terminated coupon active, refuses a past expiration, and would make a coupon
+      # whose targeted metrics are all deleted apply to every metric.
       def refusal(source)
-        "copy_to_production_unsupported_target" if source.coupon_targets.any? { it.plan_id || it.catalog_plan_id }
+        return "copy_to_production_unsupported_target" if source.coupon_targets.any? { it.plan_id || it.catalog_plan_id }
+        return "copy_to_production_item_inactive" if source.terminated?
+        return "copy_to_production_item_inactive" unless Validators::ExpirationDateValidator.valid?(source.expiration_at)
+
+        "copy_to_production_target_deleted" if source.limited_billable_metrics? && targeted_metrics(source).empty?
       end
 
       # The create service reads metric ids or codes depending on the caller, so both are given.
