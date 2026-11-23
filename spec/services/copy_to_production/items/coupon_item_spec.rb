@@ -114,6 +114,16 @@ RSpec.describe CopyToProduction::Items::CouponItem do
       end
     end
 
+    context "when a coupon without expiration keeps a past date" do
+      let(:coupon) do
+        create(:coupon, organization: sandbox, code: "welcome", expiration: "no_expiration", expiration_at: 1.day.ago)
+      end
+
+      it "accepts it" do
+        expect(item.refusal(coupon)).to be_nil
+      end
+    end
+
     context "when the coupon expires later" do
       let(:coupon) do
         create(:coupon, organization: sandbox, code: "welcome", expiration: "time_limit", expiration_at: 1.day.from_now)

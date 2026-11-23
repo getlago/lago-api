@@ -5,11 +5,11 @@ module CopyToProduction
     class CouponItem < BaseItem
       ATTRIBUTES = %i[
         name code description coupon_type amount_cents amount_currency percentage_rate frequency frequency_duration
-        expiration expiration_at reusable
+        expiration reusable
       ].freeze
 
       def find_source(id)
-        sandbox.coupons.includes(coupon_targets: :billable_metric).find_by(id:)
+        sandbox.coupons.includes(coupon_targets: {billable_metric: :filters}).find_by(id:)
       end
 
       def find_existing(source)
@@ -27,7 +27,7 @@ module CopyToProduction
       def refusal(source)
         return "copy_to_production_unsupported_target" if source.coupon_targets.any? { it.plan_id || it.catalog_plan_id }
         return "copy_to_production_item_inactive" if source.terminated?
-        return "copy_to_production_item_inactive" unless Validators::ExpirationDateValidator.valid?(source.expiration_at)
+        return "copy_to_production_item_inactive" if source.time_limit? && !Validators::ExpirationDateValidator.valid?(source.expiration_at)
 
         "copy_to_production_target_deleted" if source.limited_billable_metrics? && targeted_metrics(source).empty?
       end
@@ -41,6 +41,8 @@ module CopyToProduction
 
         Coupons::CreateService.call!(
           **source.slice(*ATTRIBUTES).symbolize_keys,
+          # Only a time limited coupon expires: the date another one keeps from an earlier setting is never read.
+          expiration_at: (source.expiration_at if source.time_limit?),
           organization_id: production.id,
           applies_to:
         ).coupon

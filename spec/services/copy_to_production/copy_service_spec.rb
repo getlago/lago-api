@@ -469,6 +469,15 @@ RSpec.describe CopyToProduction::CopyService do
       end
     end
 
+    context "when a coupon without expiration keeps a past date" do
+      before { coupon.update!(expiration: "no_expiration", expiration_at: 1.day.ago) }
+
+      it "copies the coupon without the date" do
+        expect(result).to be_success
+        expect(result.item.record).to have_attributes(status: "active", expiration: "no_expiration", expiration_at: nil)
+      end
+    end
+
     context "when the coupon is terminated" do
       before { coupon.mark_as_terminated! }
 
@@ -478,6 +487,21 @@ RSpec.describe CopyToProduction::CopyService do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("copy_to_production_item_inactive")
+      end
+    end
+
+    context "when a concurrent write creates a targeted metric in production" do
+      let(:database_result) { instance_double(PG::Result, error_field: "index_billable_metrics_on_organization_id_and_code") }
+      let(:database_error) { PG::UniqueViolation.new("duplicate value") }
+
+      before do
+        allow(database_error).to receive(:result).and_return(database_result)
+        allow(BillableMetric).to receive(:create!) { raise ActiveRecord::RecordNotUnique.new("duplicate value"), cause: database_error }
+      end
+
+      it "answers value_already_exist on code" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq(code: ["value_already_exist"])
       end
     end
 
