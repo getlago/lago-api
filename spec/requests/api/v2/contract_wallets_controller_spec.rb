@@ -332,9 +332,10 @@ describe Api::V2::ContractWalletsController do
   end
 
   describe "POST /api/v2/contracts/:external_id/wallets" do
-    subject { post_with_token(organization, "/api/v2/contracts/#{external_id}/wallets", {contract_wallet: create_params}) }
+    subject { post_with_token(organization, "/api/v2/contracts/#{external_id}/wallets#{query_string}", {contract_wallet: create_params}) }
 
     let(:external_id) { contract.external_id }
+    let(:query_string) { "" }
     let(:product) { create(:product, organization:, code: "api_calls") }
     let(:create_params) do
       {
@@ -369,6 +370,33 @@ describe Api::V2::ContractWalletsController do
     include_examples "requires API permission", "contract_wallet", "write"
     include_examples "requires the catalog_wallets flag"
     include_examples "refuses an ended contract"
+
+    context "when an ended contract reuses the external id" do
+      let(:ended_contract) do
+        create(:contract, :terminated, organization:, customer:, external_id: "acme-pro", started_at: 2.months.ago)
+      end
+
+      before { ended_contract }
+
+      it "asks for the contract code and adds nothing" do
+        expect { subject }.not_to change(CatalogWallet, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "contract_code", meta: {}}])
+      end
+
+      context "with the contract code" do
+        let(:query_string) { "?contract_code=#{contract.code}" }
+
+        it "adds the wallet to that contract" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(contract.wallets.map(&:code)).to eq(["ai_credits"])
+          expect(ended_contract.wallets).to be_empty
+        end
+      end
+    end
 
     it "adds an empty wallet to the contract" do
       subject
@@ -511,14 +539,35 @@ describe Api::V2::ContractWalletsController do
   end
 
   describe "PUT /api/v2/contracts/:external_id/wallets/:code" do
-    subject { put_with_token(organization, "/api/v2/contracts/#{contract.external_id}/wallets/#{code}", {contract_wallet: update_params}) }
+    subject do
+      put_with_token(organization, "/api/v2/contracts/#{contract.external_id}/wallets/#{code}#{query_string}", {contract_wallet: update_params})
+    end
 
     let(:code) { contract_wallet.code }
+    let(:query_string) { "" }
     let(:update_params) { {name: "Credits", priority: 20, applies_to: {include: [{type: "fee_type", code: "fixed"}]}} }
 
     include_examples "requires API permission", "contract_wallet", "write"
     include_examples "requires the catalog_wallets flag"
     include_examples "refuses an ended contract"
+
+    context "when an ended contract reuses the external id" do
+      let(:ended_contract) do
+        create(:contract, :terminated, organization:, customer:, external_id: "acme-pro", started_at: 2.months.ago)
+      end
+      let(:ended_wallet) { create(:catalog_wallet, organization:, customer:, contract: ended_contract, code: "ai_credits", priority: 10) }
+      let(:query_string) { "?contract_code=#{contract.code}" }
+
+      before { ended_wallet }
+
+      it "updates the wallet of the contract named by its code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract_wallet.reload.priority).to eq(20)
+        expect(ended_wallet.reload.priority).to eq(10)
+      end
+    end
 
     it "updates the wallet and keeps its balances" do
       subject
@@ -577,7 +626,7 @@ describe Api::V2::ContractWalletsController do
           expect { subject }.not_to change { contract_wallet.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:details]).to eq([{code: "not_editable", field:, meta: {}}])
+          expect(json[:details]).to eq([{code: "value_cannot_be_changed", field:, meta: {}}])
         end
       end
     end
@@ -645,14 +694,33 @@ describe Api::V2::ContractWalletsController do
   end
 
   describe "DELETE /api/v2/contracts/:external_id/wallets/:code" do
-    subject { delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}/wallets/#{code}") }
+    subject { delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}/wallets/#{code}#{query_string}") }
 
     let(:contract_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "ai_credits") }
     let(:code) { contract_wallet.code }
+    let(:query_string) { "" }
 
     include_examples "requires API permission", "contract_wallet", "write"
     include_examples "requires the catalog_wallets flag"
     include_examples "refuses an ended contract"
+
+    context "when an ended contract reuses the external id" do
+      let(:ended_contract) do
+        create(:contract, :terminated, organization:, customer:, external_id: "acme-pro", started_at: 2.months.ago)
+      end
+      let(:ended_wallet) { create(:catalog_wallet, organization:, customer:, contract: ended_contract, code: "ai_credits") }
+      let(:query_string) { "?contract_code=#{contract.code}" }
+
+      before { ended_wallet }
+
+      it "deletes the wallet of the contract named by its code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract_wallet.reload).to be_discarded
+        expect(ended_wallet.reload).to be_kept
+      end
+    end
 
     it "soft deletes the wallet" do
       freeze_time do
