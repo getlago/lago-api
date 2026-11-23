@@ -449,13 +449,14 @@ class Customer < ApplicationRecord
       saved_changes.keys.intersect?(BillingEngineMigrations::CopyCustomerService::COPIED_COLUMNS)
   end
 
+  # The row is already committed: raising here would answer an error for a write that succeeded.
   def enqueue_shadow_copy
     return unless @shadow_copy_pending
 
     clear_shadow_copy_pending
     migration = BillingEngineMigrations::Lookup.for_source(organization_id)
     BillingEngineMigrations::CopyCustomerJob.perform_later(migration.id, id) if migration
-  rescue RedisClient::Error => e
+  rescue RedisClient::Error, Redlock::LockError, ActiveRecord::ActiveRecordError => e
     Sentry.capture_exception(e, extra: {customer_id: id})
   end
 

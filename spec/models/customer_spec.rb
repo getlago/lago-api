@@ -1292,6 +1292,38 @@ RSpec.describe Customer do
       end
     end
 
+    context "when the uniqueness lock cannot reach Redis" do
+      let(:lock_error) do
+        Redlock::LockAcquisitionError.new("Too many Redis errors", [RedisClient::CannotConnectError.new("no connection")])
+      end
+
+      before do
+        allow(ActiveJob::Uniqueness.lock_manager).to receive(:lock).and_raise(lock_error)
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "keeps the customer write and reports the error" do
+        expect { customer.update!(name: "New name") }.not_to raise_error
+
+        expect(customer.reload.name).to eq("New name")
+        expect(Sentry).to have_received(:capture_exception).with(lock_error, extra: {customer_id: customer.id})
+      end
+    end
+
+    context "when the lookup cannot load the migrations" do
+      before do
+        allow(BillingEngineMigrations::Lookup).to receive(:for_source).and_raise(ActiveRecord::ConnectionNotEstablished)
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "keeps the customer write and reports the error" do
+        expect { customer.update!(name: "New name") }.not_to raise_error
+
+        expect(customer.reload.name).to eq("New name")
+        expect(Sentry).to have_received(:capture_exception).with(ActiveRecord::ConnectionNotEstablished, extra: {customer_id: customer.id})
+      end
+    end
+
     context "when the migration is paused" do
       let(:migration) { create(:billing_engine_migration, organization:, status: "paused") }
 
