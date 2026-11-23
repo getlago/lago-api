@@ -711,12 +711,12 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         build_stubbed(:contract_rate_card, organization:, contract: on, rate_card:)
       end
 
-      def card_usage(contract_rate_card, started_at, units)
+      def card_usage(contract_rate_card, started_at, units, amount_cents: 0)
         RateCardUsage.new(
           contract_rate_card:,
           billing_segment: BillingSegment.new(contract_rate_card:, started_at: Time.zone.parse(started_at)),
           rate_phase: nil,
-          fees: [Fee.new(units:)]
+          fees: [Fee.new(units:, amount_cents:)]
         )
       end
 
@@ -793,6 +793,74 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(resolved.crossed_thresholds).to eq([{"code" => high.code, "value" => "2000000.0", "recurring" => false}])
           expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
           expect(alert.reload.previous_windows).to eq(opus_card.id => window("2026-11-01", 1_500_000))
+        end
+      end
+
+      context "when the usage goes back under a threshold not opted in to resolutions" do
+        let(:previous_value) { 1_200_000 }
+        let(:previous_windows) { {opus_card.id => window("2026-11-01", 1_200_000)} }
+        let(:rate_card_usages) { [card_usage(opus_card, "2026-11-01", 900_000)] }
+
+        before { record_alarm(warn.code, 1_000_000) }
+
+        it "sends no webhook" do
+          expect { result }.not_to change { alert.all_triggered_alerts.count }
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+          expect(alert.reload).to have_attributes(
+            previous_value: 900_000,
+            previous_windows: {opus_card.id => window("2026-11-01", 900_000)}
+          )
+        end
+      end
+
+      context "when no card prices the scope" do
+        let(:previous_value) { 1_200_000 }
+        let(:previous_windows) { {opus_card.id => window("2026-11-01", 1_200_000)} }
+        let(:rate_card_usages) { [card_usage(sonnet_card, "2026-11-02", 500_000)] }
+
+        it "skips the evaluation and keeps the stored baseline" do
+          expect(result).to be_success
+
+          expect(alert.all_triggered_alerts).to be_empty
+          expect(SendWebhookJob).not_to have_been_enqueued
+          expect(alert.reload).to have_attributes(
+            previous_value: 1_200_000,
+            previous_windows: {opus_card.id => window("2026-11-01", 1_200_000)},
+            last_processed_at: Time.current
+          )
+        end
+      end
+
+      context "when the alert watches the amount of the whole contract" do
+        let_it_be(:video_minutes) { create(:product, organization:) }
+        let_it_be(:platform) { create(:product, :fixed, organization:) }
+
+        let(:video_minutes_card) { card_of(video_minutes) }
+        let(:platform_card) { card_of(platform) }
+        let(:alert) do
+          create(:contract_usage_amount_alert, organization:, contract_external_id: contract.external_id, thresholds: [150_00])
+        end
+        let(:rate_card_usages) do
+          [
+            card_usage(opus_card, "2026-11-01", 600_000, amount_cents: 80_00),
+            card_usage(video_minutes_card, "2026-11-01", 90, amount_cents: 75_00),
+            card_usage(platform_card, "2026-01-01", 1, amount_cents: 500_00)
+          ]
+        end
+
+        it "triggers on the amount of the metered cards, in cents" do
+          expect(result).to be_success
+
+          triggered = alert.all_triggered_alerts.sole
+          # opus + video_minutes, without platform's fixed 500_00
+          expect(triggered).to have_attributes(previous_value: 0, current_value: 80_00 + 75_00)
+          expect(triggered.crossed_thresholds).to eq([{"code" => "warn15000", "value" => "15000.0", "recurring" => false}])
+          expect(SendWebhookJob).to have_been_enqueued.once.with("alert.triggered", triggered)
+          expect(alert.reload.previous_windows).to eq(
+            opus_card.id => window("2026-11-01", 80_00),
+            video_minutes_card.id => window("2026-11-01", 75_00)
+          )
         end
       end
 
