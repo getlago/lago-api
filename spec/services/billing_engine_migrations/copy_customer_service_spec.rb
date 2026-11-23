@@ -95,10 +95,99 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
 
     before { shadow_customer }
 
-    it "returns it without creating another one" do
+    it "updates it to the customer attributes without creating another one" do
       expect { result }.not_to change { shadow_organization.customers.count }
 
       expect(result.customer).to eq(shadow_customer)
+      expect(result.customer).to have_attributes(name: customer.name, email: customer.email, address_line1: customer.address_line1)
+    end
+  end
+
+  context "when the shadow customer was copied before", :premium do
+    let(:other_entity) { create(:billing_entity, organization:) }
+    let(:shadow_customer) { shadow_organization.customers.find_by(external_id: customer.external_id) }
+
+    before do
+      described_class.call(migration:, customer:)
+      create(:billing_entity, organization: shadow_organization, code: other_entity.code, email_settings: [])
+      allow(Customers::UpdateService).to receive(:call!).and_call_original
+    end
+
+    it "returns it without writing when nothing changed" do
+      expect(result.customer).to eq(shadow_customer)
+      expect(Customers::UpdateService).not_to have_received(:call!)
+    end
+
+    context "when copied attributes of the customer changed" do
+      before do
+        customer.update!(name: "New name", address_line2: nil, shipping_city: "Lyon", billing_entity: other_entity)
+        create(:customer_metadata, customer:)
+        create(:customer_applied_tax, customer:, tax: create(:tax, organization:))
+      end
+
+      it "updates the shadow customer with the changed attributes only" do
+        expect(result).to be_success
+        expect(Customers::UpdateService).to have_received(:call!).with(
+          customer: shadow_customer,
+          args: {name: "New name", address_line2: nil, billing_entity_code: other_entity.code, shipping_address: {city: "Lyon"}}
+        )
+        expect(result.customer).to have_attributes(id: shadow_customer.id, name: "New name", address_line2: nil, shipping_city: "Lyon")
+        expect(result.customer.billing_entity.code).to eq(other_entity.code)
+        expect(result.customer.metadata).to be_empty
+        expect(result.customer.taxes).to be_empty
+      end
+    end
+
+    context "when the shadow organization has no billing entity with the new code" do
+      let(:unknown_entity) { create(:billing_entity, organization:) }
+
+      before { customer.update!(name: "New name", billing_entity: unknown_entity) }
+
+      it "returns the failure and leaves the shadow customer unchanged" do
+        expect { result }.not_to change { shadow_customer.reload.name }
+
+        expect(result).to be_failure
+        expect(result.error.error_code).to eq("billing_entity_not_found")
+      end
+    end
+  end
+
+  context "when the customer changed since it was loaded" do
+    before { Customer.find(customer.id).update!(name: "Newer name") }
+
+    it "copies the latest committed attributes" do
+      expect(result.customer.name).to eq("Newer name")
+    end
+  end
+
+  context "when the customer was deleted since it was loaded" do
+    before { Customer.find(customer.id).discard! }
+
+    it "returns a not found failure and creates nothing" do
+      expect { result }.not_to change { shadow_organization.customers.count }
+
+      expect(result).to be_failure
+      expect(result.error.error_code).to eq("customer_not_found")
+    end
+  end
+
+  context "when copies of the customer run concurrently" do
+    before { allow(Customers::LockService).to receive(:call).and_call_original }
+
+    it "serializes them on a session lock of the customer" do
+      result
+
+      expect(Customers::LockService).to have_received(:call).with(customer:, scope: :shadow_copy, transaction: false)
+    end
+  end
+
+  context "when another copy of the customer holds the lock" do
+    before do
+      allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock, "Failed to acquire lock")
+    end
+
+    it "raises so that the job retries" do
+      expect { result }.to raise_error(BaseLockService::FailedToAcquireLock)
     end
   end
 
@@ -128,9 +217,10 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
       end
     end
 
-    it "returns the customer created by the other writer" do
+    it "updates and returns the customer created by the other writer" do
       expect(result).to be_success
       expect(result.customer).to eq(concurrent_customer)
+      expect(result.customer.name).to eq(customer.name)
     end
   end
 
