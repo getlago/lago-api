@@ -106,7 +106,7 @@ module Contracts
 
       # An active contract only gets here with its locked fields unchanged;
       # writing them back would still version them on a signed contract.
-      if contract.pending?
+      if contract.editable?
         contract.billing_time = params[:billing_time] if params[:billing_time].present?
         contract.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
         contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
@@ -154,8 +154,9 @@ module Contracts
     end
 
     # The wallets came from the previous plan, as the rate cards did. Their scope, taxes and metadata stay on the
-    # discarded wallets.
+    # discarded wallets; their alerts are deleted for good, thresholds included (ON DELETE CASCADE).
     def discard_wallets
+      UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: contract.wallets.select(:id)).delete_all
       contract.wallets.find_each do |wallet|
         wallet.credit_allocations.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
         wallet.discard!

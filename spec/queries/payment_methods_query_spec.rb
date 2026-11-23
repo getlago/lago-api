@@ -11,6 +11,7 @@ RSpec.describe PaymentMethodsQuery do
   let(:payment_method_first) { create(:payment_method, organization:) }
   let(:payment_method_second) { create(:payment_method, organization:, customer:) }
   let(:payment_method_third) { create(:payment_method, organization:, deleted_at: Time.current) }
+  let(:shared_payment_token) { create(:payment_method, organization:, customer:, provider_method_type: "shared_payment_token", provider_method_id: "spt_1", is_default: false) }
 
   let(:pagination) { nil }
   let(:filters) { {} }
@@ -23,11 +24,16 @@ RSpec.describe PaymentMethodsQuery do
     payment_method_first
     payment_method_second
     payment_method_third
+    shared_payment_token
   end
 
   it "returns all active payment methods" do
     expect(result).to be_success
     expect(returned_ids).to contain_exactly(payment_method_first.id, payment_method_second.id)
+  end
+
+  it "leaves out the shared payment tokens, which pay one top-up only" do
+    expect(returned_ids).not_to include(shared_payment_token.id)
   end
 
   context "when payment methods have the same values for the ordering criteria" do

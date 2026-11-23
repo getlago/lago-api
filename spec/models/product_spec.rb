@@ -39,6 +39,9 @@ RSpec.describe Product do
       expect(product).to have_many(:xero_mappings)
         .class_name("IntegrationMappings::XeroMapping")
         .dependent(:destroy)
+      expect(product).to have_many(:quickbooks_mappings)
+        .class_name("IntegrationMappings::QuickbooksMapping")
+        .dependent(:destroy)
     end
 
     context "with contract alerts" do
