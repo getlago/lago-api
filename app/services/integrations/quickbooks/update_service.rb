@@ -21,9 +21,9 @@ module Integrations
 
         integration.name = params[:name] if params.key?(:name)
         integration.code = params[:code] if params.key?(:code)
-        integration.sync_credit_notes = params[:sync_credit_notes] if params.key?(:sync_credit_notes)
-        integration.sync_invoices = params[:sync_invoices] if params.key?(:sync_invoices)
-        integration.sync_payments = params[:sync_payments] if params.key?(:sync_payments)
+        integration.sync_credit_notes = cast_boolean(params[:sync_credit_notes]) if params.key?(:sync_credit_notes)
+        integration.sync_invoices = cast_boolean(params[:sync_invoices]) if params.key?(:sync_invoices)
+        integration.sync_payments = cast_boolean(params[:sync_payments]) if params.key?(:sync_payments)
 
         integration.save!
 
@@ -31,11 +31,18 @@ module Integrations
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
+      rescue ActiveRecord::RecordNotUnique => e
+        unique_index_failure!(e, Integrations::QuickbooksIntegration::UNIQUE_INDEXES)
       end
 
       private
 
       attr_reader :integration, :params
+
+      # Same cast as on create: an explicit null stores false.
+      def cast_boolean(value)
+        ActiveModel::Type::Boolean.new.cast(value) || false
+      end
     end
   end
 end

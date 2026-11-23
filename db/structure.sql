@@ -800,6 +800,7 @@ DROP INDEX IF EXISTS public.index_invoice_connections_on_integration_customer_id
 DROP INDEX IF EXISTS public.index_invites_on_token;
 DROP INDEX IF EXISTS public.index_invites_on_organization_id;
 DROP INDEX IF EXISTS public.index_invites_on_membership_id;
+DROP INDEX IF EXISTS public.index_integrations_on_organization_id_and_quickbooks_realm_id;
 DROP INDEX IF EXISTS public.index_integrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_integrations_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_syncable;
@@ -11038,6 +11039,13 @@ CREATE INDEX index_integrations_on_organization_id ON public.integrations USING 
 
 
 --
+-- Name: index_integrations_on_organization_id_and_quickbooks_realm_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_integrations_on_organization_id_and_quickbooks_realm_id ON public.integrations USING btree (organization_id, ((settings ->> 'realm_id'::text))) WHERE (((type)::text = 'Integrations::QuickbooksIntegration'::text) AND ((settings ->> 'realm_id'::text) IS NOT NULL));
+
+
+--
 -- Name: index_invites_on_membership_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16967,6 +16975,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123100000'),
 ('20261116121445'),
 ('20261116121442'),
 ('20261116121439'),

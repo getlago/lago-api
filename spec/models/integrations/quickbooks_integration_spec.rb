@@ -215,6 +215,44 @@ RSpec.describe Integrations::QuickbooksIntegration do
     it "returns quickbooks" do
       expect(quickbooks_integration.provider_key).to eq("quickbooks")
     end
+
+    it "returns quickbooks for a sandbox integration too" do
+      quickbooks_integration.sandbox = true
+
+      expect(quickbooks_integration.provider_key).to eq("quickbooks")
+    end
+  end
+
+  describe "unique company index" do
+    let(:organization) { create(:organization) }
+
+    # Saved without validations, so only the database can refuse the row.
+    def insert_row(organization_id:, code:, realm_id:, factory: :quickbooks_integration)
+      build(factory, organization_id:, code:, settings: {realm_id:}).save!(validate: false)
+    end
+
+    before { insert_row(organization_id: organization.id, code: "quickbooks_1", realm_id: "1234567890") }
+
+    it "rejects a second QuickBooks row with the same organization and company" do
+      expect { insert_row(organization_id: organization.id, code: "quickbooks_2", realm_id: "1234567890") }
+        .to raise_error(ActiveRecord::RecordNotUnique, /index_integrations_on_organization_id_and_quickbooks_realm_id/)
+    end
+
+    it "accepts the same company in another organization" do
+      expect { insert_row(organization_id: create(:organization).id, code: "quickbooks_1", realm_id: "1234567890") }
+        .not_to raise_error
+    end
+
+    it "accepts two QuickBooks rows without a company id" do
+      insert_row(organization_id: organization.id, code: "quickbooks_2", realm_id: nil)
+
+      expect { insert_row(organization_id: organization.id, code: "quickbooks_3", realm_id: nil) }.not_to raise_error
+    end
+
+    it "ignores other integration types" do
+      expect { insert_row(organization_id: organization.id, code: "xero_1", realm_id: "1234567890", factory: :xero_integration) }
+        .not_to raise_error
+    end
   end
 
   describe "organization.quickbooks_integrations" do

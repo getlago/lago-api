@@ -142,17 +142,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
         end
       end
 
-      [false, "false", nil].each do |value|
-        context "when sandbox is #{value.inspect}" do
-          let(:sandbox) { value }
-
-          it "uses the quickbooks key" do
-            expect(service.send(:provider_key)).to eq("quickbooks")
-          end
-        end
-      end
-
-      ["False", "no", 1].each do |value|
+      [false, "false", nil, "False", "no", 1].each do |value|
         context "when sandbox is #{value.inspect}" do
           let(:sandbox) { value }
 
