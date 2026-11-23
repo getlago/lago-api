@@ -10,6 +10,8 @@ module RequiredOrganization
     raise organization_error("Missing organization id") unless current_organization
     raise organization_error("Missing membership") unless current_membership
     raise organization_error("Not in organization") unless user_is_member_of_organization?
+    # A self-serve production organization waiting for a payment method opens only once billing-accounts activates it.
+    raise forbidden_error(code: "organization_inactive") if current_organization.awaiting_payment_method?
 
     super
   end

@@ -64,6 +64,27 @@ RSpec.describe Resolvers::OrganizationResolver do
     end
   end
 
+  context "with an organization waiting for a payment method" do
+    include_context "with self-serve enabled"
+
+    let(:waiting_organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+    let(:waiting_membership) { create(:membership, organization: waiting_organization) }
+
+    it "refuses the query" do
+      result = execute_graphql(
+        current_user: waiting_membership.user,
+        current_organization: waiting_organization,
+        current_membership: waiting_membership,
+        query:
+      )
+
+      expect(result["data"]["organization"]).to be_nil
+      expect(result["errors"]).to include hash_including(
+        "extensions" => hash_including("status" => 403, "code" => "organization_inactive")
+      )
+    end
+  end
+
   context "with a production organization and its sandbox" do
     include_context "with self-serve enabled"
 
@@ -71,7 +92,7 @@ RSpec.describe Resolvers::OrganizationResolver do
       <<~GQL
         query {
           organization {
-            selfServe environment
+            selfServe environment activationStatus
             productionOrganization { id name slug }
             sandboxOrganization { id name slug }
           }
@@ -80,7 +101,8 @@ RSpec.describe Resolvers::OrganizationResolver do
     end
 
     let(:user) { create(:user) }
-    let(:production) { create(:organization, :self_serve) }
+    let(:production) { create(:organization, :self_serve, activation_status:) }
+    let(:activation_status) { "active" }
     let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: production) }
     # The user's membership status in the sandbox, nil for none.
     let(:sandbox_membership_status) { :active }
@@ -97,11 +119,12 @@ RSpec.describe Resolvers::OrganizationResolver do
 
     it "links each organization to the other one for a member of both" do
       expect(fetch(production)).to eq(
-        "selfServe" => true, "environment" => "production", "productionOrganization" => nil,
+        "selfServe" => true, "environment" => "production", "activationStatus" => "active",
+        "productionOrganization" => nil,
         "sandboxOrganization" => {"id" => sandbox.id, "name" => sandbox.name, "slug" => sandbox.slug}
       )
       expect(fetch(sandbox)).to eq(
-        "selfServe" => true, "environment" => "sandbox", "sandboxOrganization" => nil,
+        "selfServe" => true, "environment" => "sandbox", "activationStatus" => "active", "sandboxOrganization" => nil,
         "productionOrganization" => {"id" => production.id, "name" => production.name, "slug" => production.slug}
       )
     end
@@ -114,13 +137,15 @@ RSpec.describe Resolvers::OrganizationResolver do
       end
     end
 
-    context "with self-serve disabled" do
+    context "with self-serve disabled and a production waiting for a payment method" do
       let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+      let(:activation_status) { "pending_payment_method" }
       let(:standalone) do
-        {"selfServe" => false, "environment" => "production", "productionOrganization" => nil, "sandboxOrganization" => nil}
+        {"selfServe" => false, "environment" => "production", "activationStatus" => "active",
+         "productionOrganization" => nil, "sandboxOrganization" => nil}
       end
 
-      it "shows each organization as a standalone production one" do
+      it "opens and shows each organization as an active standalone production one" do
         expect(fetch(production)).to eq(standalone)
         expect(fetch(sandbox)).to eq(standalone)
       end

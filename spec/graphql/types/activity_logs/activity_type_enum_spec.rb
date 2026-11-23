@@ -95,6 +95,9 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         order_form_voided
         order_created
         order_executed
+        plan_wallet_created
+        plan_wallet_updated
+        plan_wallet_deleted
       ]
     )
   end

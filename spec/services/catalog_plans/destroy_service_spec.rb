@@ -30,6 +30,20 @@ RSpec.describe CatalogPlans::DestroyService, :capture_kafka_messages do
     expect(rate_override.reload).to be_discarded
   end
 
+  context "when the plan has wallet templates" do
+    let(:plan_wallet) { create(:plan_wallet, organization:, catalog_plan:) }
+    let(:credit_allocation) { create(:plan_wallet_credit_allocation, organization:, plan_wallet:) }
+
+    before { credit_allocation }
+
+    it "soft deletes them with their credit allocations, without logging each one" do
+      expect(result).to be_success
+      expect(plan_wallet.reload).to be_discarded
+      expect(PlanWalletCreditAllocation.with_discarded.find(credit_allocation.id)).to be_discarded
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(plan_wallet, "plan_wallet.deleted", anything)
+    end
+  end
+
   it "publishes the shared plan.deleted event and legacy activity arguments" do
     phase
 

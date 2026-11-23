@@ -12,6 +12,9 @@ module Contracts
 
     unique :until_executing, on_conflict: :log
 
+    retry_on BaseLockService::FailedToAcquireLock, BaseService::LockAcquisitionFailure,
+      attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
+
     def perform(contract)
       Contracts::ActivateService.call!(contract:)
     end

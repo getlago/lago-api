@@ -234,6 +234,7 @@ RSpec.describe Invoices::Payments::CashfreeService do
     subject { cashfree_service.send(:payment_url_params, payment_intent) }
 
     let(:payment_intent) { create(:payment_intent, invoice:) }
+    let(:expected_link_amount) { 10.0 } # 1000 cents / 100
 
     let(:expected_params) do
       {
@@ -257,7 +258,7 @@ RSpec.describe Invoices::Payments::CashfreeService do
           payment_type: "one-time"
         },
         link_id: "#{SecureRandom.uuid}.#{invoice.payment_attempts}",
-        link_amount: invoice.total_due_amount_cents / 100.to_f,
+        link_amount: expected_link_amount,
         link_currency: invoice.currency.upcase,
         link_purpose: invoice.id,
         link_expiry_time: payment_intent.expires_at.iso8601,
@@ -274,6 +275,7 @@ RSpec.describe Invoices::Payments::CashfreeService do
 
     context "when paid amount is not zero" do
       let(:total_paid_amount_cents) { 1 }
+      let(:expected_link_amount) { 9.99 } # (1000 total - 1 paid) cents / 100
 
       it "return the payload" do
         expect(subject).to eq(expected_params)
@@ -283,6 +285,60 @@ RSpec.describe Invoices::Payments::CashfreeService do
     context "when paid amount is zero" do
       it "returns the payload" do
         expect(subject).to eq(expected_params)
+      end
+    end
+
+    context "when the currency has three decimals" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 12_345,
+          total_paid_amount_cents:,
+          currency: "KWD",
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the amount in the currency unit" do
+        expect(subject[:link_amount]).to eq(12.345) # 12345 fils / 1000 fils per dinar
+      end
+    end
+
+    context "when the currency has no decimals" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 12_345,
+          total_paid_amount_cents:,
+          currency: "JPY",
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the amount in the currency unit" do
+        expect(subject[:link_amount]).to eq(12_345.0) # 12345 yen, 1 subunit per yen
+      end
+    end
+
+    context "when the currency has two decimals" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 12_345,
+          total_paid_amount_cents:,
+          currency: "INR",
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the amount in the currency unit" do
+        expect(subject[:link_amount]).to eq(123.45) # 12345 paise / 100
       end
     end
   end
