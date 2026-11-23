@@ -6,7 +6,7 @@ RSpec.describe ::V2::CatalogWalletResolvedAlertSerializer do
   subject(:serializer) { described_class.new(resolved_alert.reload, root_name: "resolved_alert") }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:, external_id: "acme") }
+  let_it_be(:customer) { create(:customer, organization:, external_id: "acme", currency: "USD") }
   let_it_be(:contract) { create(:contract, customer:, external_id: "ctr_123") }
   let_it_be(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid", currency: "USD") }
 
