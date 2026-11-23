@@ -106,7 +106,7 @@ RSpec.describe BillingEngineMigrations::Lookup do
       end
 
       it "reloads it after the refresh interval with one query" do
-        travel(described_class::REFRESH_INTERVAL) do
+        travel(described_class::REFRESH_INTERVAL + 1.second) do
           statements = capture_sql { expect(described_class.for_source(organization.id)).to be_nil }
 
           expect(statements.size).to eq(1)
@@ -131,6 +131,66 @@ RSpec.describe BillingEngineMigrations::Lookup do
     end
   end
 
+  context "when another thread is reloading a stale snapshot" do
+    let(:locked) { Queue.new }
+    let(:release) { Queue.new }
+
+    before do
+      described_class.for_source(organization.id)
+      allow(described_class).to receive(:load_snapshot).and_call_original
+    end
+
+    it "answers from the stale snapshot without waiting for the reload" do
+      organization_id = organization.id
+
+      travel(described_class::REFRESH_INTERVAL + 1.second) do
+        holder = Thread.new do
+          described_class::REFRESH_LOCK.synchronize do
+            locked << true
+            release.pop
+          end
+        end
+        locked.pop
+
+        reader = Thread.new { described_class.for_source(organization_id) }
+
+        expect(reader.join(5)&.value).to have_attributes(id: migration.id)
+        expect(described_class).not_to have_received(:load_snapshot)
+      ensure
+        release << true
+        holder&.join
+      end
+    end
+  end
+
+  context "when a reload fails" do
+    before do
+      described_class.for_source(organization.id)
+      allow(described_class).to receive(:load_snapshot).and_raise(ActiveRecord::ConnectionNotEstablished)
+      allow(Rails.logger).to receive(:error)
+    end
+
+    it "serves the stale snapshot and retries after the retry interval" do
+      travel(described_class::REFRESH_INTERVAL + 1.second) do
+        expect(described_class.for_source(organization.id)).to have_attributes(id: migration.id)
+        expect(described_class.for_source(organization.id)).to have_attributes(id: migration.id)
+        expect(described_class).to have_received(:load_snapshot).once
+        expect(Rails.logger).to have_received(:error).with(/lookup reload failed/)
+      end
+
+      travel(described_class::REFRESH_INTERVAL + described_class::RETRY_INTERVAL + 2.seconds) do
+        expect(described_class.for_source(organization.id)).to have_attributes(id: migration.id)
+        expect(described_class).to have_received(:load_snapshot).twice
+      end
+    end
+
+    it "raises when there is no snapshot to fall back on" do
+      described_class.expire!
+
+      expect { described_class.for_source(organization.id) }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+    end
+  end
+
   context "when the snapshot is loaded inside a transaction that rolls back" do
     it "drops the rolled back row" do
       ActiveRecord::Base.transaction(requires_new: true) do
@@ -150,6 +210,35 @@ RSpec.describe BillingEngineMigrations::Lookup do
       described_class.expire!
 
       expect(capture_sql { described_class.for_source(organization.id) }.size).to eq(1)
+    end
+
+    context "when a reload started before it" do
+      let(:loading) { Queue.new }
+      let(:release) { Queue.new }
+
+      before do
+        described_class.expire!
+        allow(described_class).to receive(:load_snapshot) do
+          loading << true
+          release.pop
+          described_class::Snapshot.new(by_source: {}, by_shadow: {}, expires_at: 1.hour.from_now)
+        end
+      end
+
+      it "drops the snapshot that reload loads" do
+        organization_id = organization.id
+        reader = Thread.new { described_class.for_source(organization_id) }
+        loading.pop
+        expirer = Thread.new { described_class.expire! }
+        Thread.pass until expirer.status == "sleep" || !expirer.alive?
+        release << true
+        [reader, expirer].each(&:join)
+
+        release << true
+        described_class.for_source(organization_id)
+
+        expect(described_class).to have_received(:load_snapshot).twice
+      end
     end
   end
 end
