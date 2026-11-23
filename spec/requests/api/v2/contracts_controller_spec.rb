@@ -9,7 +9,7 @@ RSpec.describe Api::V2::ContractsController do
   # A contract is never deleted, so it renders no deleted_at.
   let(:flat_keys) do
     %i[
-      lago_id external_id code lago_customer_id external_customer_id name plan_code status billing_time
+      lago_id external_id code lago_customer_id external_customer_id name plan_code status
       consolidate_invoice purchase_order_number billing_anchor_date effective_billing_anchor_date started_at
       ended_at terminated_at canceled_at skip_invoice_custom_sections created_at updated_at
     ]
@@ -28,6 +28,17 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     include_examples "requires API permission", "contract", "write"
+
+    context "with the removed billing_time parameter" do
+      let(:create_params) { super().merge(billing_time: "weekly") }
+
+      it "ignores it and creates a contract without billing_time in the response" do
+        expect { subject }.to change(Contract, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract].keys).to match_array(flat_keys)
+      end
+    end
 
     context "when the billing schedule is locked" do
       before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
@@ -308,7 +319,6 @@ RSpec.describe Api::V2::ContractsController do
           name: nil,
           plan_code: catalog_plan.code,
           status: "active",
-          billing_time: "calendar",
           consolidate_invoice: true,
           purchase_order_number: nil,
           billing_anchor_date: nil,
@@ -674,6 +684,30 @@ RSpec.describe Api::V2::ContractsController do
 
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
     let(:update_params) { {name: "Renamed"} }
+
+    context "with the removed billing_time parameter" do
+      let(:update_params) { super().merge(billing_time: "anniversary") }
+
+      it "ignores it and updates the contract" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract.reload.name).to eq("Renamed")
+        expect(json[:contract].keys).to match_array(flat_keys)
+      end
+
+      context "when the contract is active" do
+        let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+        it "does not treat it as a change to a locked field" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(contract.reload.name).to eq("Renamed")
+          expect(json[:contract].keys).to match_array(flat_keys)
+        end
+      end
+    end
 
     context "when the billing schedule is locked" do
       before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }

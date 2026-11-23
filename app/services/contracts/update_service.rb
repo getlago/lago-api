@@ -107,7 +107,6 @@ module Contracts
       # An active contract only gets here with its locked fields unchanged;
       # writing them back would still version them on a signed contract.
       if contract.editable?
-        contract.billing_time = params[:billing_time] if params[:billing_time].present?
         contract.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
         contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
         contract.catalog_plan = catalog_plan if params.key?(:plan_code)
@@ -171,8 +170,6 @@ module Contracts
       case field
       when :plan_code
         catalog_plan != contract.catalog_plan
-      when :billing_time
-        params[:billing_time].present? && params[:billing_time].to_s != contract.billing_time
       when :started_at
         params[:started_at].present? && started_at_in_customer_timezone.to_i != contract.started_at.to_i
       when :billing_anchor_date

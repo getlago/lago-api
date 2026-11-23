@@ -36,8 +36,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       catalog_plan:,
       external_id: "contract-1",
       code: "initial",
-      status: "active",
-      billing_time: "calendar"
+      status: "active"
     )
     expect(contract.started_at).to be_within(5.seconds).of(Time.current)
     expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
@@ -399,15 +398,6 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
 
     it "creates the new contract" do
       expect(result).to be_success
-    end
-  end
-
-  context "with an invalid billing_time" do
-    let(:params) { super().merge(billing_time: "weekly") }
-
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:billing_time]).to be_present
     end
   end
 

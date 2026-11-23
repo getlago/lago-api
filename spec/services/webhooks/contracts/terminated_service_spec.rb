@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Webhooks::Contracts::TerminatedService do
   subject(:webhook_service) { described_class.new(object: contract) }
 
-  let(:contract) { create(:contract, :terminated, external_id: "contract_external_id", name: "Annual agreement", billing_time: :calendar, billing_anchor_date: Date.new(2026, 1, 1), started_at: Time.zone.parse("2026-01-01T00:00:00Z"), consolidate_invoice: false, purchase_order_number: "PO-123", skip_invoice_custom_sections: true) }
+  let(:contract) { create(:contract, :terminated, external_id: "contract_external_id", name: "Annual agreement", billing_anchor_date: Date.new(2026, 1, 1), started_at: Time.zone.parse("2026-01-01T00:00:00Z"), consolidate_invoice: false, purchase_order_number: "PO-123", skip_invoice_custom_sections: true) }
   let(:rate_card) { create(:rate_card, organization: contract.organization, code: "standard") }
   let(:applied_rate_card) do
     create(:contract_rate_card, organization: contract.organization, contract:, rate_card:, units: 2,
@@ -35,7 +35,6 @@ RSpec.describe Webhooks::Contracts::TerminatedService do
           "name" => "Annual agreement",
           "plan_code" => nil,
           "status" => "terminated",
-          "billing_time" => "calendar",
           "consolidate_invoice" => false,
           "purchase_order_number" => "PO-123",
           "billing_anchor_date" => "2026-01-01",
