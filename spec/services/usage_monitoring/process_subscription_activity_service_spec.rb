@@ -14,7 +14,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
   before do
     subscription_activity
     allow(::Invoices::CustomerUsageService).to receive(:call)
-      .and_return(double(usage: mocked_current_usage)) # rubocop:disable RSpec/VerifiedDoubles
+      .and_return(Invoices::CustomerUsageService::Result.new.tap { it.usage = mocked_current_usage })
     allow(LifetimeUsages::CalculateService).to receive(:call!)
     allow(LifetimeUsages::CheckThresholdsService).to receive(:call!)
   end
@@ -121,9 +121,9 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
     it "processes the alerts" do
       service.call
       expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).exactly(4).times
-      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert, alertable: subscription, current_metrics: mocked_current_usage)
-      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage)
-      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
       expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_4, alertable: subscription, current_metrics: subscription.lifetime_usage)
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
@@ -134,9 +134,15 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       it "computes the current usage once for progressive billing and the alerts" do
         service.call
 
-        expect(::Invoices::CustomerUsageService).to have_received(:call).once
+        expect(::Invoices::CustomerUsageService).to have_received(:call).once.with(
+          customer:,
+          subscription:,
+          apply_taxes: false,
+          with_cache: true,
+          use_usage_buckets: true
+        )
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert:, alertable: subscription, current_metrics: mocked_current_usage)
+          .with(alert:, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
       end
     end
 
@@ -152,21 +158,21 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       it "still processes the other alerts and raises the first error" do
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call).and_call_original
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
-          .with(alert: alert, alertable: subscription, current_metrics: mocked_current_usage)
+          .with(alert: alert, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
           .and_raise(StandardError, "first alert failed")
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
-          .with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage)
+          .with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
-          .with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage)
+          .with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
           .with(alert: alert_4, alertable: subscription, current_metrics: subscription.lifetime_usage)
 
         expect { service.call }.to raise_error(StandardError, "first alert failed")
 
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage)
+          .with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage)
+          .with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
           .with(alert: alert_4, alertable: subscription, current_metrics: subscription.lifetime_usage)
         expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
@@ -179,7 +185,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       it "processes alert and then raise" do
         allow(LifetimeUsages::CheckThresholdsService).to receive(:call!).and_raise(StandardError, "boom")
         expect { service.call }.to raise_error(StandardError, "boom")
-        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert:, alertable: subscription, current_metrics: mocked_current_usage)
+        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert:, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
         expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
       end
     end
