@@ -183,6 +183,22 @@ RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:d
       end
     end
 
+    context "with several customers per minute" do
+      let(:env) { {"DRY_RUN" => "false", "CUSTOMERS_PER_MINUTE" => "2"} }
+
+      it "spreads the customers evenly over the minute" do
+        freeze_time do
+          expect { task.invoke(organization.id) }.to output(a_string_including("over 1 minute(s)")).to_stdout
+
+          first_customer, second_customer = customers_in_order
+          expect(BillingEngineMigrations::CopyCustomerSubscriptionsJob)
+            .to have_been_enqueued.with(migration, match_array(subscription_ids_of(first_customer))).at(Time.current)
+          expect(BillingEngineMigrations::CopyCustomerSubscriptionsJob)
+            .to have_been_enqueued.with(migration, match_array(subscription_ids_of(second_customer))).at(30.seconds.from_now)
+        end
+      end
+    end
+
     context "with a LIMIT" do
       let(:env) { {"DRY_RUN" => "false", "LIMIT" => "1"} }
 

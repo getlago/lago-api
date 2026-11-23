@@ -18,7 +18,7 @@ class BillingEngineSubscriptionsBackfill
       "(#{customers_per_minute} customer(s) per minute#{", at most #{customer_limit}" if customer_limit})..."
 
     each_customer_batch do |customer_ids|
-      process(candidates.where(customer_id: customer_ids).preload(:plan).to_a)
+      process(candidates.where(customer_id: customer_ids).order(:customer_id, :started_at, :id).preload(:plan).to_a)
     end
 
     puts summary
@@ -103,7 +103,7 @@ class BillingEngineSubscriptionsBackfill
   def enqueue(subscriptions)
     unless dry_run
       BillingEngineMigrations::CopyCustomerSubscriptionsJob
-        .set(wait: (enqueued_customers / customers_per_minute).minutes)
+        .set(wait: (enqueued_customers * 60.0 / customers_per_minute).seconds)
         .perform_later(migration, subscriptions.map(&:id))
     end
 

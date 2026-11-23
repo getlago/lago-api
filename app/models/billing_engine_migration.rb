@@ -13,7 +13,7 @@ class BillingEngineMigration < ApplicationRecord
   validate :organizations_not_in_another_migration
 
   def shadow_organization_isolated?
-    shadow_organization.webhook_endpoints.none? && shadow_billing_entities_sending_outbound.none?
+    !WebhookEndpoint.exists?(organization_id: shadow_organization_id) && shadow_billing_entities_sending_outbound.none?
   end
 
   private
