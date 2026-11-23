@@ -112,7 +112,7 @@ module PaymentRequests
             payment_type: "one-time"
           },
           link_id: "#{SecureRandom.uuid}.#{payable.payment_attempts}",
-          link_amount: payable.total_amount_cents / 100.to_f,
+          link_amount: Money.from_cents(payable.total_amount_cents, payable.currency).to_f,
           link_currency: payable.currency.upcase,
           link_purpose: payable.id,
           link_expiry_time: (Time.current + 10.minutes).iso8601,
