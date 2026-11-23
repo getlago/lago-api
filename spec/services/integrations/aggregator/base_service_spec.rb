@@ -72,6 +72,19 @@ RSpec.describe Integrations::Aggregator::BaseService do
           end
       end
 
+      context "with a flat limit entry" do
+        before do
+          allow(Throttling).to receive(:limits).and_return({quickbooks: {limit: 1, period: 60}})
+        end
+
+        it "retries when the current window ends" do
+          travel_to(Time.zone.parse("2026-11-23 10:00:20")) do
+            expect { throttle }
+              .to raise_error(BaseService::NextWindowThrottlingError) { |error| expect(error.retry_after).to eq(40.seconds) }
+          end
+        end
+      end
+
       context "with a minutely limit" do
         before do
           allow(Throttling).to receive(:limits).and_return({quickbooks: {minutely: {limit: 1, period: 60}}})
