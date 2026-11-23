@@ -62,6 +62,8 @@ module Charges
           taxes_result.raise_if_error!
         end
 
+        Plans::AgentStorefrontGuardService.call(plan:).raise_if_error!
+
         result.charge = charge
       end
 

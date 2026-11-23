@@ -84,7 +84,7 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
   end
 
   describe "plans validation" do
-    let(:plan) { create(:plan, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 0) }
 
     it "accepts plans of the organization with optional top-up limits and free credits" do
       integration.plans = [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000, free_credits_cents: 1000}]
@@ -116,6 +116,19 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
       end
     end
 
+    it "refuses a plan with a subscription fee, a minimum commitment, a fixed charge or a charge minimum" do
+      [
+        create(:plan, organization:, amount_cents: 100),
+        create(:plan, organization:, amount_cents: 0).tap { create(:commitment, plan: it) },
+        create(:plan, organization:, amount_cents: 0).tap { create(:fixed_charge, plan: it) },
+        create(:plan, organization:, amount_cents: 0).tap { create(:standard_charge, plan: it, min_amount_cents: 100) }
+      ].each do |plan_with_fee|
+        integration.plans = [{plan_code: plan_with_fee.code}]
+        expect(integration).not_to be_valid
+        expect(integration.errors.messages[:plans]).to eq(["plan_not_usage_only"])
+      end
+    end
+
     it "refuses a plan that is being deleted" do
       plan.update!(pending_deletion: true)
       integration.plans = [{plan_code: plan.code}]
@@ -140,7 +153,7 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
   end
 
   describe ".with_plan_code" do
-    let(:plan) { create(:plan, organization:) }
+    let(:plan) { create(:plan, organization:, amount_cents: 0) }
 
     it "returns the storefronts that sell the plan" do
       integration.update!(plans: [{plan_code: plan.code}])
@@ -189,6 +202,15 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
       integration.save!
 
       expect(integration.agent_url).to eq("#{ENV["LAGO_API_URL"]}/agents/v1/#{integration.id}")
+    end
+  end
+
+  describe "#auth_document_url and #billing_document_url" do
+    it "are the two documents under the agent URL" do
+      integration.save!
+
+      expect(integration.auth_document_url).to eq("#{integration.agent_url}/AUTH.md")
+      expect(integration.billing_document_url).to eq("#{integration.agent_url}/BILLING.md")
     end
   end
 

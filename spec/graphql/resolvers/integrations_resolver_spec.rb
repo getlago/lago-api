@@ -171,7 +171,9 @@ RSpec.describe Resolvers::IntegrationsResolver do
   end
 
   context "when types is agent_storefront" do
-    let(:agent_storefront_integration) { create(:agent_storefront_integration, organization:, code: "acme_api") }
+    let(:agent_storefront_integration) { create(:agent_storefront_integration, organization:, code: "acme_api", name: "Acme API") }
+    let(:plan) { create(:plan, organization:, code: "count_per_call", name: "Count per call", amount_cents: 0, amount_currency: "USD") }
+    let(:gone_plan) { create(:plan, organization:, code: "gone", amount_cents: 0) }
     let(:query) do
       <<~GQL
         query {
@@ -180,7 +182,17 @@ RSpec.describe Resolvers::IntegrationsResolver do
               ... on AgentStorefrontIntegration {
                 id
                 code
+                name
                 scope
+                paymentProviderCode
+                paymentProvider { code sellerProfile }
+                agentUrl
+                authDocumentUrl
+                billingDocumentUrl
+                claimUrl
+                plans { planCode minimumTopupCents maximumTopupCents freeCreditsCents plan { code name amountCurrency } }
+                hasEnrolledAgents
+                hasAgentsWithStripeCustomer
                 __typename
               }
             }
@@ -190,7 +202,14 @@ RSpec.describe Resolvers::IntegrationsResolver do
       GQL
     end
 
-    before { agent_storefront_integration }
+    before do
+      agent_storefront_integration.update!(plans: [
+        {plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000},
+        {plan_code: gone_plan.code, free_credits_cents: 1000}
+      ])
+      # A plan sold then deleted: its row stays in the settings without a plan behind it.
+      gone_plan.discard!
+    end
 
     it "returns the agent storefront integrations" do
       result = execute_graphql(
@@ -202,11 +221,32 @@ RSpec.describe Resolvers::IntegrationsResolver do
 
       integrations_response = result["data"]["integrations"]
 
+      storefront = agent_storefront_integration
       expect(integrations_response["collection"]).to eq([
         {
-          "id" => agent_storefront_integration.id,
+          "id" => storefront.id,
           "code" => "acme_api",
+          "name" => "Acme API",
           "scope" => "acme_api:use",
+          "paymentProviderCode" => storefront.payment_provider_code,
+          "paymentProvider" => {"code" => storefront.payment_provider_code, "sellerProfile" => nil},
+          "agentUrl" => "#{ENV["LAGO_API_URL"]}/agents/v1/#{storefront.id}",
+          "authDocumentUrl" => "#{ENV["LAGO_API_URL"]}/agents/v1/#{storefront.id}/AUTH.md",
+          "billingDocumentUrl" => "#{ENV["LAGO_API_URL"]}/agents/v1/#{storefront.id}/BILLING.md",
+          "claimUrl" => "#{Rails.application.config.lago_front_url}/agent-claim/#{storefront.id}",
+          "plans" => [
+            {
+              "planCode" => "count_per_call",
+              "minimumTopupCents" => "500",
+              "maximumTopupCents" => "10000",
+              "freeCreditsCents" => nil,
+              "plan" => {"code" => "count_per_call", "name" => "Count per call", "amountCurrency" => "USD"}
+            },
+            # A plan deleted after it was sold keeps its row, without a plan to show.
+            {"planCode" => "gone", "minimumTopupCents" => nil, "maximumTopupCents" => nil, "freeCreditsCents" => "1000", "plan" => nil}
+          ],
+          "hasEnrolledAgents" => false,
+          "hasAgentsWithStripeCustomer" => false,
           "__typename" => "AgentStorefrontIntegration"
         }
       ])

@@ -54,6 +54,21 @@ RSpec.describe Integrations::AgentStorefront::UpdateService do
           end
         end
 
+        context "when plans is nil" do
+          let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
+          let(:update_args) { {name:, plans: nil} }
+
+          before { integration.update!(plans: [{plan_code: plan.code}]) }
+
+          it "keeps the sold plans" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.integration.name).to eq(name)
+            expect(result.integration.plans.map { it["plan_code"] }).to eq([plan.code])
+          end
+        end
+
         context "when the code changes" do
           let(:update_args) { {code: "acme_api_v2", scope: "other:use"} }
 
