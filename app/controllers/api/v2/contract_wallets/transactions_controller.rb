@@ -29,6 +29,14 @@ module Api
           end
         end
 
+        def show
+          wallet_transaction = contract_wallet.transactions.find_by(id: params[:id])
+
+          return not_found_error(resource: "wallet_transaction") unless wallet_transaction
+
+          render_wallet_transaction(wallet_transaction)
+        end
+
         private
 
         def ensure_contract_wallet

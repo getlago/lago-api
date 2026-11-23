@@ -295,4 +295,116 @@ describe Api::V2::ContractWallets::TransactionsController do
       end
     end
   end
+
+  describe "GET /api/v2/contracts/:external_id/wallets/:wallet_code/transactions/:id" do
+    subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/wallets/#{wallet_code}/transactions/#{id}", query) }
+
+    let(:id) { wallet_transaction.id }
+    let(:query) { {} }
+
+    before { contract_wallet }
+
+    include_examples "requires API permission", "contract_wallet", "read"
+    include_examples "requires the catalog_wallets flag"
+    include_examples "requires the contract wallet"
+
+    it "returns the transaction" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet_transaction]).to eq(
+        lago_id: wallet_transaction.id,
+        lago_wallet_id: contract_wallet.id,
+        wallet_code: "ai_credits",
+        lago_invoice_id: nil,
+        lago_credit_allocation_id: nil,
+        credit_allocation_code: nil,
+        direction: "inbound",
+        status: "settled",
+        reason: "top_up",
+        allocation_type: nil,
+        currency: "USD",
+        purchase_amount_cents: 5000,
+        credit_amount_cents: 10_000,
+        remaining_credit_amount_cents: 7500,
+        priority: 10,
+        settled_at: wallet_transaction.settled_at.iso8601(6),
+        failed_at: nil,
+        created_at: "2026-10-03T10:00:00.000000Z",
+        updated_at: wallet_transaction.updated_at.iso8601(6)
+      )
+    end
+
+    context "when the transaction is outbound" do
+      let(:invoice) { create(:invoice, organization:, customer:) }
+      let(:wallet_transaction) do
+        create(:catalog_wallet_transaction, :invoice_application, organization:, catalog_wallet: contract_wallet, invoice:,
+          credit_amount_cents: 2500)
+      end
+
+      it "returns it with the invoice it paid and null purchase and remaining amounts" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction]).to include(
+          lago_invoice_id: invoice.id, direction: "outbound", status: "settled", reason: "invoice_application", allocation_type: nil,
+          purchase_amount_cents: nil, credit_amount_cents: 2500, remaining_credit_amount_cents: nil
+        )
+      end
+    end
+
+    context "when it does not exist" do
+      let(:id) { SecureRandom.uuid }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("wallet_transaction")
+      end
+    end
+
+    context "when the id is not a uuid" do
+      let(:id) { "latest" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("wallet_transaction")
+      end
+    end
+
+    context "when it belongs to another wallet of the contract" do
+      let(:id) do
+        create(:catalog_wallet_transaction, organization:, catalog_wallet: create(:catalog_wallet, organization:, customer:, contract:)).id
+      end
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("wallet_transaction")
+      end
+    end
+
+    context "with an expansion" do
+      let(:query) { {expands: %w[invoice]} }
+
+      it "returns an invalid request error" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+      end
+    end
+
+    context "when the contract has ended" do
+      let(:contract) { create(:contract, :terminated, organization:, customer:, external_id: "acme-pro") }
+
+      it "returns the transaction" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction][:lago_id]).to eq(wallet_transaction.id)
+      end
+    end
+  end
 end

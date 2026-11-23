@@ -107,7 +107,7 @@ Rails.application.routes.draw do
         # wallet code by the wallet routes.
         resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_wallets" do
           scope module: :contract_wallets do
-            resources :transactions, only: %i[index]
+            resources :transactions, only: %i[index show]
           end
         end
       end
