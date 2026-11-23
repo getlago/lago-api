@@ -533,6 +533,61 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     end
   end
 
+  context "when the subscription was loaded as active before its termination committed" do
+    let(:terminated_at) { 1.hour.ago.change(usec: 0) }
+
+    before { Subscription.find(subscription.id).update!(status: :terminated, terminated_at:) }
+
+    it "does not create a contract from the stale copy" do
+      expect { result }.not_to change { shadow_organization.contracts.count }
+
+      expect(result).to be_success
+      expect(subscription).to be_terminated
+    end
+
+    context "when the subscription already has a live shadow contract" do
+      let(:contract) { create_shadow_contract(code: subscription.id) }
+
+      before { contract }
+
+      it "terminates the contract" do
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(status: "terminated", terminated_at:)
+      end
+    end
+  end
+
+  context "when the copy runs" do
+    let(:lock_key) { "billing-engine-migration-subscription-#{subscription.id}" }
+
+    it "reads and writes the contracts while holding the copy lock of the subscription" do
+      allow(Contracts::CreateService).to receive(:call).and_wrap_original do |original, **args|
+        expect(Subscription.advisory_lock_exists?(lock_key)).to be(true)
+        original.call(**args)
+      end
+
+      expect(result).to be_success
+      expect(Contracts::CreateService).to have_received(:call)
+      expect(Subscription.advisory_lock_exists?(lock_key)).to be(false)
+    end
+  end
+
+  context "when a live contract with the external id has the id of a terminated subscription of another organization" do
+    let(:foreign_subscription) { create(:subscription, :terminated) }
+    let(:contract) { create_shadow_contract(code: foreign_subscription.id) }
+
+    before do
+      contract
+      allow(Rails.logger).to receive(:info)
+    end
+
+    it "leaves the contract live and skips the subscription" do
+      expect(result).to be_success
+      expect(contract.reload.status).to eq("active")
+      expect(Rails.logger).to have_received(:info).with(a_string_including("external_id_taken_by_other_subscription"))
+    end
+  end
+
   context "when the subscription is terminated and its shadow contract already ended" do
     let(:subscription) { create(:subscription, :terminated, organization:, customer:, plan:) }
 
@@ -608,6 +663,20 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
         expect(previous_contract.reload.status).to eq("terminated")
         expect(shadow_organization.contracts.live.where(external_id: subscription.external_id)).to be_empty
         expect(Rails.logger).to have_received(:info).with(a_string_including("plan_override_not_supported"))
+      end
+    end
+
+    context "when the previous subscription was canceled before it started" do
+      let(:previous_subscription) do
+        create(:subscription, :canceled, organization:, customer:, plan: previous_plan, external_id: subscription.external_id)
+      end
+
+      it "terminates the previous contract now" do
+        freeze_time do
+          expect(result).to be_success
+          expect(previous_subscription.terminated_at).to be_nil
+          expect(previous_contract.reload).to have_attributes(status: "terminated", terminated_at: Time.current)
+        end
       end
     end
 

@@ -13,12 +13,7 @@ module BillingEngineMigrations
     def call
       return result unless migration.shadowing? && subscription.organization_id == migration.organization_id
 
-      if subscription_ended? || !mapped_plan?
-        terminate_own_contract
-      elsif subscription.active?
-        copy_active_subscription
-      end
-
+      SubscriptionCopyLockService.call(subscription:) { copy_latest_state }
       result
     end
 
@@ -27,6 +22,16 @@ module BillingEngineMigrations
     attr_reader :migration, :subscription
 
     delegate :shadow_organization, to: :migration
+
+    def copy_latest_state
+      subscription.reload
+
+      if subscription_ended? || !mapped_plan?
+        terminate_own_contract
+      elsif subscription.active?
+        copy_active_subscription
+      end
+    end
 
     def subscription_ended?
       subscription.terminated? || subscription.canceled?

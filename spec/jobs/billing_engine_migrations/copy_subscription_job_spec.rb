@@ -40,6 +40,17 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionJob do
     end
   end
 
+  context "when another copy of the subscription is running" do
+    before do
+      allow(BillingEngineMigrations::CopySubscriptionService).to receive(:call!)
+        .and_raise(BaseLockService::FailedToAcquireLock, "Failed to acquire lock")
+    end
+
+    it "retries the copy" do
+      expect { copy_job.perform_now(migration.id, subscription) }.to have_enqueued_job(described_class).with(migration.id, subscription)
+    end
+  end
+
   context "when the copy fails" do
     let(:failure) do
       BaseService::Result.new.single_validation_failure!(field: :plan_code, error_code: "value_is_invalid").error
