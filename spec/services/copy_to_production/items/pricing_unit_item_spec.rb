@@ -1,0 +1,32 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe CopyToProduction::Items::PricingUnitItem do
+  subject(:item) { described_class.new(sandbox:, production:) }
+
+  let(:production) { create(:organization) }
+  let(:sandbox) { create(:organization, :sandbox, production_organization: production) }
+  let(:pricing_unit) { create(:pricing_unit, organization: sandbox, code: "credits") }
+
+  it "answers its item type and no activity type" do
+    expect(item.item_type).to eq("pricing_unit")
+    expect(item.activity_type).to be_nil
+  end
+
+  describe "#find_existing" do
+    let!(:live_pricing_unit) { create(:pricing_unit, organization: production, code: "credits") }
+
+    it "finds the production pricing unit with the same code" do
+      expect(item.find_existing(pricing_unit)).to eq(live_pricing_unit)
+    end
+
+    context "when only another organization has the code" do
+      let!(:live_pricing_unit) { create(:pricing_unit, code: "credits") }
+
+      it "finds nothing" do
+        expect(item.find_existing(pricing_unit)).to be_nil
+      end
+    end
+  end
+end

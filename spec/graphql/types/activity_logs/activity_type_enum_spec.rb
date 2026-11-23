@@ -62,15 +62,18 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         product_category_created
         product_category_updated
         product_category_deleted
+        product_category_copied_to_production
         product_created
         product_updated
         product_deleted
+        product_copied_to_production
         product_filter_created
         product_filter_updated
         product_filter_deleted
         rate_card_created
         rate_card_updated
         rate_card_deleted
+        rate_card_copied_to_production
         rate_card_rate_created
         rate_card_rate_updated
         rate_card_rate_deleted

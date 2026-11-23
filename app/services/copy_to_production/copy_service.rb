@@ -29,7 +29,7 @@ module CopyToProduction
       if !organization.sandbox? || !production
         return result.forbidden_failure!(code: "copy_to_production_sandbox_only")
       end
-      return result.not_found_failure!(resource: item_type) unless source_record
+      return result.not_found_failure!(resource: item_type) if !Items.copyable?(item_type) || !source_record
 
       # The create services log and track after the commit, attributed to the user's production membership.
       CurrentContext.set(membership_id: production_membership&.id) do
@@ -96,8 +96,8 @@ module CopyToProduction
       result.forbidden_failure!(code: "copy_to_production_parent_missing").raise_if_error!
     end
 
-    # Dependencies come before the items that reference them, the requested item last. Each one is reused when production
-    # has its code: it is neither copied nor visited further, and nothing is visited when the requested item is live.
+    # Dependencies come before what references them, children after what they belong to. An item production has by
+    # code is reused and not visited further; nothing is visited when the requested item is live.
     def build_plan
       requested = Step.new(item:, source: source_record, existing: item.find_existing(source_record))
       return Plan.new(requested:, copied: [], reused: [], missing_parent: nil) if requested.existing
@@ -113,20 +113,26 @@ module CopyToProduction
         existing ? reused << parent.with(existing:) : missing_parent = parent
       end
 
-      visit(requested, copied, reused, Set.new)
+      visit(requested, copied, reused, Set.new, children: true)
       Plan.new(requested:, copied:, reused:, missing_parent:)
     end
 
-    def visit(step, copied, reused, seen)
-      step.item.dependencies(step.source).each do |dependency_type, dependency_source|
-        dependency = Step.new(item: build_item(dependency_type), source: dependency_source, existing: nil)
-        next unless seen.add?(dependency.key)
-
-        existing = dependency.item.find_existing(dependency_source)
-        existing ? reused << dependency.with(existing:) : visit(dependency, copied, reused, seen)
-      end
-
+    # Lists the step after its dependencies and, with `children`, before what belongs to it. Dependencies bring their
+    # own dependencies only.
+    def visit(step, copied, reused, seen, children:)
+      visit_all(step.item.dependencies(step.source), copied, reused, seen, children: false)
       copied << step
+      visit_all(step.item.children(step.source), copied, reused, seen, children: true) if children
+    end
+
+    def visit_all(pairs, copied, reused, seen, children:)
+      pairs.each do |type, source|
+        step = Step.new(item: build_item(type), source:, existing: nil)
+        next unless seen.add?(step.key)
+
+        existing = step.item.find_existing(source)
+        existing ? reused << step.with(existing:) : visit(step, copied, reused, seen, children:)
+      end
     end
 
     # Creates each item to copy in plan order through its create service, which raises BaseService::FailedResult on a
