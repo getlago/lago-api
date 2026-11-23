@@ -5,7 +5,7 @@ module BillingEngineMigrations
     Result = BaseResult[:plans]
 
     PlanReport = Data.define(:plan_code, :catalog_plan_code, :outcome, :error, :entries, :gaps)
-    Entry = Data.define(:product, :product_filter, :rate_card, :rate, :units)
+    Entry = Data.define(:product, :product_filter, :rate_card, :rate, :units, :priced_filters)
 
     ProductConflictError = Class.new(StandardError)
 
@@ -56,12 +56,14 @@ module BillingEngineMigrations
         return add_report(**report, outcome: :failed, error: "billable_metrics_not_copied: #{missing_metrics.sort.join(", ")}")
       end
 
+      planned_before = planned_product_filters.dup
       report[:entries] = entries(plan, catalog_plan_code)
       return add_report(**report, outcome: :would_create) if dry_run
 
       create_catalog_plan(plan, catalog_plan_code, report[:entries])
       add_report(**report, outcome: :created)
     rescue BaseService::FailedResult, ActiveRecord::RecordInvalid, ProductConflictError => e
+      @planned_product_filters = planned_before if planned_before
       add_report(**report, outcome: :failed, error: e.message)
     end
 
@@ -84,7 +86,7 @@ module BillingEngineMigrations
     end
 
     def attach_rate_card(catalog_plan, entry)
-      product = find_or_create_product(entry.product)
+      product = find_or_create_product(entry.product, entry.priced_filters)
       product_filter = entry.product_filter && find_or_create_product_filter(product, entry.product_filter)
 
       rate_card = RateCards::CreateService.call!(
@@ -96,15 +98,18 @@ module BillingEngineMigrations
       PlanRateCards::CreateService.call!(catalog_plan:, params: {rate_card_code: rate_card.code, units: entry.units})
     end
 
-    def find_or_create_product(params)
+    def find_or_create_product(params, priced_filters)
       product = shadow_organization.products.find_by(code: params[:code])
       return Products::CreateService.call!(organization: shadow_organization, params:).product unless product
 
       if product.product_type != params[:product_type] || product.billable_metric_id != params[:billable_metric_id]
         raise ProductConflictError, "product_exists_with_another_type_or_metric: #{product.code}"
       end
-
-      product
+      if product_filter_set(product).subset?(priced_filters)
+        product
+      else
+        raise ProductConflictError, "product_has_unpriced_filters: #{product.code}"
+      end
     end
 
     def find_or_create_product_filter(product, params)
@@ -146,6 +151,7 @@ module BillingEngineMigrations
           billable_metric_id: nil
         },
         product_filter: nil,
+        priced_filters: Set.new,
         rate_card: {
           code: "#{catalog_plan_code}_subscription_fee",
           name: plan.invoice_name,
@@ -178,6 +184,7 @@ module BillingEngineMigrations
           billable_metric_id: nil
         },
         product_filter: nil,
+        priced_filters: Set.new,
         rate_card: {
           code: "#{catalog_plan_code}_#{fixed_charge.code}",
           name: fixed_charge.invoice_display_name.presence || add_on.invoice_name,
@@ -199,8 +206,9 @@ module BillingEngineMigrations
 
     def charge_entries(plan, catalog_plan_code, charge, effective_from)
       billable_metric = charge.billable_metric
+      priced_filters = charge.filters.map { normalized_filter_values(product_filter_values(it)) }.to_set
       product = {
-        code: billable_metric.code,
+        code: metered_product_code(catalog_plan_code, charge, priced_filters),
         name: billable_metric.name,
         description: billable_metric.description,
         product_type: "metered",
@@ -225,7 +233,7 @@ module BillingEngineMigrations
         **(plan.charges_billed_in_monthly_split_intervals? ? MONTHLY_INTERVAL : PLAN_INTERVALS.fetch(plan.interval))
       }
 
-      default_entry = Entry.new(product:, product_filter: nil, rate_card:, rate:, units: nil)
+      default_entry = Entry.new(product:, product_filter: nil, priced_filters:, rate_card:, rate:, units: nil)
       filter_entries = charge.filters.map do |charge_filter|
         filter_code = charge_filter.code.presence || ChargeFilter.generate_code(charge_filter.to_h)
 
@@ -237,6 +245,7 @@ module BillingEngineMigrations
             invoice_display_name: charge_filter.invoice_display_name,
             values: product_filter_values(charge_filter)
           },
+          priced_filters:,
           rate_card: rate_card.merge(code: "#{rate_card[:code]}_#{filter_code}"),
           rate: rate.merge(rate_properties: rate_properties(charge.charge_model, charge_filter.properties)),
           units: nil
@@ -255,6 +264,32 @@ module BillingEngineMigrations
         range.merge("from_value" => index.zero? ? 0 : ranges[index - 1]["to_value"])
       end
       properties.merge("volume_ranges" => adjacent_ranges)
+    end
+
+    # The default rate card of a product skips usage matching any of its filters, priced or not, so
+    # a metered product is shared only by charges that price the same filters.
+    def metered_product_code(catalog_plan_code, charge, priced_filters)
+      code = charge.billable_metric.code
+      filters = planned_product_filters.fetch(code) { shadow_product_filters(code) }
+      code = "#{catalog_plan_code}_#{charge.code}" unless filters.nil? || filters == priced_filters
+
+      planned_product_filters[code] ||= priced_filters
+      code
+    end
+
+    def shadow_product_filters(code)
+      product = shadow_organization.products.find_by(code:)
+      product && product_filter_set(product)
+    end
+
+    def product_filter_set(product)
+      product.filters.includes(values: :billable_metric_filter).map do |filter|
+        normalized_filter_values(filter.values.map { {key: it.key, value: it.value} })
+      end.to_set
+    end
+
+    def planned_product_filters
+      @planned_product_filters ||= {}
     end
 
     def product_filter_values(charge_filter)

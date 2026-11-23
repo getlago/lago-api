@@ -164,7 +164,7 @@ RSpec.describe BillingEngineMigrations::ConvertPlansService do
     end
   end
 
-  context "when two plans charge the same billable metric" do
+  context "when another plan charges the same billable metric without its filters" do
     let(:plan_mapping) { {"pro_monthly" => "pro_monthly_v2", "pro_yearly" => "pro_yearly_v2"} }
 
     before do
@@ -172,14 +172,78 @@ RSpec.describe BillingEngineMigrations::ConvertPlansService do
       create(:standard_charge, plan: yearly, billable_metric:, code: "api_calls_charge", invoice_display_name: nil)
     end
 
-    it "reuses the product and bills the yearly plan's charges monthly" do
+    it "prices it on a product of its own and bills its charges monthly" do
       expect(result.plans.map(&:outcome)).to eq(%i[created created])
 
-      expect(shadow_organization.products.where(code: "api_calls").count).to eq(1)
-      expect(shadow_organization.rate_cards.find_by!(code: "pro_yearly_v2_api_calls_charge").rates.sole)
-        .to have_attributes(billing_interval_unit: "month", billing_interval_count: 1)
+      yearly_card = shadow_organization.rate_cards.find_by!(code: "pro_yearly_v2_api_calls_charge")
+      expect(yearly_card.product).to have_attributes(code: "pro_yearly_v2_api_calls_charge", product_type: "metered")
+      expect(yearly_card.product.filters).to be_empty
+      expect(shadow_organization.rate_cards.find_by!(code: "pro_monthly_v2_api_calls_charge").product.code).to eq("api_calls")
+      expect(yearly_card.rates.sole).to have_attributes(billing_interval_unit: "month", billing_interval_count: 1)
       expect(shadow_organization.rate_cards.find_by!(code: "pro_yearly_v2_subscription_fee").rates.sole)
         .to have_attributes(billing_interval_unit: "year", billing_interval_count: 1)
+    end
+
+    it "bills an event matching the other plan's filter on its default rate card" do
+      result
+
+      rate_card = shadow_organization.rate_cards.find_by!(code: "pro_yearly_v2_api_calls_charge")
+      contract_rate_card = create(:contract_rate_card, organization: shadow_organization, rate_card:)
+      billing_segment = build(
+        :billing_segment,
+        organization: shadow_organization,
+        customer: contract_rate_card.contract.customer,
+        contract: contract_rate_card.contract,
+        contract_rate_card:,
+        rate_card_rate: rate_card.rates.sole
+      )
+      event = build(
+        :event,
+        organization_id: shadow_organization.id,
+        external_subscription_id: contract_rate_card.contract.external_id,
+        code: "api_calls",
+        properties: {"region" => "eu"}
+      )
+
+      buckets = Fees::ChargeService::Sources::BillingSegment.new(billing_segment:).pricing_buckets(event:)
+      expect(buckets.map(&:product_filter)).to eq([nil])
+    end
+  end
+
+  context "when another plan charges the same billable metric with the same filters" do
+    let(:plan_mapping) { {"pro_monthly" => "pro_monthly_v2", "pro_yearly" => "pro_yearly_v2"} }
+
+    before do
+      yearly = create(:plan, organization:, code: "pro_yearly", interval: "yearly", amount_currency: "EUR")
+      yearly_charge = create(:standard_charge, plan: yearly, billable_metric:, code: "api_calls_charge", invoice_display_name: nil)
+      yearly_filter = create(:charge_filter, charge: yearly_charge, code: "eu_only", properties: {amount: "1"})
+      create(:charge_filter_value, charge_filter: yearly_filter, billable_metric_filter: metric_filter, values: ["eu"])
+    end
+
+    it "reuses the product and its filter" do
+      expect(result.plans.map(&:outcome)).to eq(%i[created created])
+
+      product = shadow_organization.products.find_by!(code: "api_calls")
+      expect(product.filters.map(&:code)).to eq(["region_eu"])
+      expect(shadow_organization.rate_cards.find_by!(code: "pro_yearly_v2_api_calls_charge_eu_only"))
+        .to have_attributes(product:, product_filter: product.filters.sole)
+    end
+  end
+
+  context "when the shadow product of the charge has a filter the plan does not price" do
+    before do
+      shadow_metric = shadow_organization.billable_metrics.find_by!(code: "api_calls")
+      %w[api_calls pro_monthly_v2_api_calls_charge].each do |code|
+        product = create(:product, organization: shadow_organization, billable_metric: shadow_metric, code:)
+        product_filter = create(:product_filter, organization: shadow_organization, product:)
+        create(:product_filter_value, organization: shadow_organization, product_filter:, billable_metric_filter: shadow_metric.filters.sole, value: "us")
+      end
+    end
+
+    it "reports the error and rolls the whole plan back" do
+      expect(result.plans.sole).to have_attributes(outcome: :failed, error: "product_has_unpriced_filters: pro_monthly_v2_api_calls_charge")
+      expect(shadow_organization.catalog_plans).to be_empty
+      expect(shadow_organization.rate_cards).to be_empty
     end
   end
 
