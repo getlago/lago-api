@@ -13,6 +13,10 @@ module UsageMonitoring
     has_many :all_triggered_alerts,
       class_name: "UsageMonitoring::CatalogWalletTriggeredAlert",
       inverse_of: :alert
+
+    def find_value(catalog_wallet)
+      balance? ? catalog_wallet.balance_cents : catalog_wallet.ongoing_balance_cents
+    end
   end
 end
 
