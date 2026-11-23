@@ -43,6 +43,7 @@ RSpec.describe V2::ContractAlertSerializer do
       applies_to: {type: "contract"},
       product_code: "llm_tokens",
       product_filter_code: "opus",
+      with_product_filters: false,
       direction: "increasing",
       thresholds: [
         {code: "warn", value: BigDecimal("1000000"), recurring: false, notify_on: %w[triggered]},

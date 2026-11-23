@@ -50,6 +50,7 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
       name: "Opus tokens",
       product:,
       product_filter:,
+      with_product_filters: false,
       direction: "increasing",
       previous_value: 0,
       previous_windows: {},
@@ -87,9 +88,34 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
   context "with an amount alert on a product" do
     let(:params) { {alert_type: "usage_amount", code: "spend", product_code: product.code, thresholds: [{value: 10_000_00}]} }
 
-    it "creates the alert on the product" do
+    it "creates the alert on the product's own fees" do
       expect(result).to be_success
-      expect(result.alert).to have_attributes(product:, product_filter: nil)
+      expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: false)
+    end
+
+    context "with with_product_filters" do
+      before { params[:with_product_filters] = "true" }
+
+      it "creates the alert on the product and its filters" do
+        expect(result).to be_success
+        expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: true)
+      end
+    end
+  end
+
+  context "with with_product_filters on a product filter" do
+    before { params[:with_product_filters] = true }
+
+    it "returns a validation failure on with_product_filters" do
+      expect(result.error.messages).to eq({with_product_filters: ["value_is_invalid"]})
+    end
+  end
+
+  context "with with_product_filters on the whole contract" do
+    let(:params) { {alert_type: "usage_amount", code: "spend", with_product_filters: true, thresholds: [{value: 10_000_00}]} }
+
+    it "returns a validation failure on with_product_filters" do
+      expect(result.error.messages).to eq({with_product_filters: ["value_is_invalid"]})
     end
   end
 

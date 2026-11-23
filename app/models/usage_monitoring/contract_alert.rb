@@ -39,6 +39,7 @@ module UsageMonitoring
     validates :contract_external_id, presence: true
     validates :product, presence: true, if: :need_product?
     validate :validate_product_filter_belongs_to_product
+    validate :validate_with_product_filters
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize
@@ -60,6 +61,11 @@ module UsageMonitoring
 
       errors.add(:product_filter, :invalid) if product_filter.product_id != product.id
     end
+
+    # The flag only widens a product scope to the product's filter cards
+    def validate_with_product_filters
+      errors.add(:with_product_filters, :invalid) if with_product_filters && (product.nil? || product_filter.present?)
+    end
   end
 end
 
@@ -77,6 +83,7 @@ end
 #  name                 :string
 #  previous_value       :decimal(30, 5)   default(0.0), not null
 #  previous_windows     :jsonb            not null
+#  with_product_filters :boolean          default(FALSE), not null
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  contract_external_id :string           not null

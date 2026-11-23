@@ -7417,7 +7417,8 @@ CREATE TABLE public.usage_monitoring_contract_alerts (
     last_processed_at timestamp(6) without time zone,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    with_product_filters boolean DEFAULT false NOT NULL
 );
 
 
@@ -18870,6 +18871,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123185222'),
 ('20261123142220'),
 ('20261123142148'),
 ('20261123142145'),

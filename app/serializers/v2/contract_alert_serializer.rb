@@ -14,6 +14,7 @@ module V2
         applies_to: {type: "contract"},
         product_code: model.product&.code,
         product_filter_code: model.product_filter&.code,
+        with_product_filters: model.with_product_filters,
         direction: model.direction,
         thresholds:,
         previous_value: model.previous_value

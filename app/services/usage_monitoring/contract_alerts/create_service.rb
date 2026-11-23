@@ -44,7 +44,8 @@ module UsageMonitoring
             code: params[:code],
             name: params[:name],
             product:,
-            product_filter:
+            product_filter:,
+            with_product_filters: ActiveModel::Type::Boolean.new.cast(params[:with_product_filters]) == true
           )
           alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
           seed_alarms_already_past(alert, contract)

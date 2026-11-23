@@ -19,6 +19,7 @@ end
 #  name                 :string
 #  previous_value       :decimal(30, 5)   default(0.0), not null
 #  previous_windows     :jsonb            not null
+#  with_product_filters :boolean          default(FALSE), not null
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  contract_external_id :string           not null
