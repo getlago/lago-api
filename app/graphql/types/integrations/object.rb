@@ -13,7 +13,8 @@ module Types
         Types::Integrations::Xero,
         Types::Integrations::Quickbooks,
         Types::Integrations::Hubspot,
-        Types::Integrations::Salesforce
+        Types::Integrations::Salesforce,
+        Types::Integrations::AgentStorefront
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -35,6 +36,8 @@ module Types
           Types::Integrations::Hubspot
         when "Integrations::SalesforceIntegration"
           Types::Integrations::Salesforce
+        when "Integrations::AgentStorefrontIntegration"
+          Types::Integrations::AgentStorefront
         else
           raise "Unexpected integration type: #{object.inspect}"
         end
