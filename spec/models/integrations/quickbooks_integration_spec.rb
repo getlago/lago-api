@@ -215,6 +215,12 @@ RSpec.describe Integrations::QuickbooksIntegration do
     it "returns quickbooks" do
       expect(quickbooks_integration.provider_key).to eq("quickbooks")
     end
+
+    it "returns quickbooks for a sandbox integration too" do
+      quickbooks_integration.sandbox = true
+
+      expect(quickbooks_integration.provider_key).to eq("quickbooks")
+    end
   end
 
   describe "organization.quickbooks_integrations" do
