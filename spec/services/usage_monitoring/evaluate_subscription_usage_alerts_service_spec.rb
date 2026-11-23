@@ -58,7 +58,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
       )
       alerts.each do |alert|
         expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert:, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: alert.billable_metric_id)
+          .with(alert:, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: nil)
       end
     end
 
@@ -71,7 +71,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
         expect(::Invoices::CustomerUsageService).not_to have_received(:call)
         alerts.each do |alert|
           expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-            .with(alert:, alertable: subscription, current_metrics: full_plan_usage, expected_billable_metric_id: alert.billable_metric_id)
+            .with(alert:, alertable: subscription, current_metrics: full_plan_usage, expected_billable_metric_id: nil)
         end
       end
     end
@@ -285,7 +285,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
         .with(alert: amount_alert, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: nil)
         .and_raise(StandardError, "first alert failed")
       allow(UsageMonitoring::ProcessAlertService).to receive(:call)
-        .with(alert: metric_units_alert, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: billable_metric.id)
+        .with(alert: metric_units_alert, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: nil)
         .and_raise(StandardError, "second alert failed")
     end
 
@@ -308,7 +308,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     end
   end
 
-  describe "the scoped usage and the full plan usage agree" do
+  context "when compared with the full plan usage" do
     let(:other_metric) { create(:billable_metric, organization:) }
     let(:metric_off_plan) { create(:billable_metric, organization:) }
     let(:off_plan_alert) do
@@ -333,7 +333,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
         create_list(:event, 2, organization_id: organization.id, subscription:, code: other_metric.code)
       end
 
-      it "gives the alert the value of the full plan usage" do
+      it "gives the per-metric alert the value of the full plan usage" do
         result
 
         expect(full_plan_value).to eq(3)
@@ -363,7 +363,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
         end
       end
 
-      it "gives the alert the value of the full plan usage" do
+      it "gives the per-metric alert the value of the full plan usage" do
         result
 
         expect(full_plan_value).to eq(4)

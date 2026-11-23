@@ -41,7 +41,7 @@ module UsageMonitoring
             alert:,
             alertable: subscription,
             current_metrics: current_usage,
-            expected_billable_metric_id: alert.billable_metric_id
+            expected_billable_metric_id: (alert.billable_metric_id if scoped_to_metrics)
           )
         end
       rescue => e
@@ -57,7 +57,7 @@ module UsageMonitoring
 
     delegate :organization, to: :subscription
 
-    attr_reader :subscription, :alerts, :full_plan_usage
+    attr_reader :subscription, :alerts, :full_plan_usage, :scoped_to_metrics
 
     # Callers build the alert list themselves, so a wrong one would trigger alerts against this subscription.
     def check_alerts_belong_to_subscription!
@@ -90,7 +90,9 @@ module UsageMonitoring
       end
     end
 
+    # A full plan usage holds every metric, so only a usage scoped to the alerts' metrics goes stale when one changes.
     def metric_usage
+      @scoped_to_metrics = true
       billable_metric_ids = current_usage_alerts.map(&:billable_metric_id).uniq
       charge_ids = subscription.plan.charges.where(billable_metric_id: billable_metric_ids).ids
       return empty_usage if charge_ids.empty?
