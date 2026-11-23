@@ -1,0 +1,21 @@
+SELECT
+    bs.organization_id,
+    bs.id AS lago_id,
+    bs.contract_id AS lago_contract_id,
+    bs.customer_id AS lago_customer_id,
+    bs.contract_rate_card_id AS lago_contract_rate_card_id,
+    bs.invoice_id AS lago_invoice_id,
+    bs.rate_card_rate_id AS lago_rate_card_rate_id,
+    bs.rate_override_id AS lago_rate_override_id,
+    bs.pricing_unit_id AS lago_pricing_unit_id,
+    bs.rate_properties,
+    bs.currency,
+    bs.billing_at,
+    bs.started_at,
+    bs.ended_at,
+    bs.cycle_started_at,
+    bs.proration_ratio,
+    bs.status::text AS status,
+    bs.created_at,
+    bs.updated_at
+FROM billing_segments AS bs;

@@ -1648,6 +1648,7 @@ DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_coupons;
 DROP VIEW IF EXISTS public.exports_charges;
+DROP VIEW IF EXISTS public.exports_billing_segments;
 DROP VIEW IF EXISTS public.exports_billing_entities;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
@@ -4334,6 +4335,33 @@ CREATE VIEW public.exports_billing_entities AS
     be.archived_at,
     be.deleted_at
    FROM public.billing_entities be;
+
+
+--
+-- Name: exports_billing_segments; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_billing_segments AS
+ SELECT bs.organization_id,
+    bs.id AS lago_id,
+    bs.contract_id AS lago_contract_id,
+    bs.customer_id AS lago_customer_id,
+    bs.contract_rate_card_id AS lago_contract_rate_card_id,
+    bs.invoice_id AS lago_invoice_id,
+    bs.rate_card_rate_id AS lago_rate_card_rate_id,
+    bs.rate_override_id AS lago_rate_override_id,
+    bs.pricing_unit_id AS lago_pricing_unit_id,
+    bs.rate_properties,
+    bs.currency,
+    bs.billing_at,
+    bs.started_at,
+    bs.ended_at,
+    bs.cycle_started_at,
+    bs.proration_ratio,
+    (bs.status)::text AS status,
+    bs.created_at,
+    bs.updated_at
+   FROM public.billing_segments bs;
 
 
 --
@@ -18773,6 +18801,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123222622'),
 ('20261123142148'),
 ('20261123142145'),
 ('20261123142142'),
