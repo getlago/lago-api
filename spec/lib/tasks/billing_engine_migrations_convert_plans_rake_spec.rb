@@ -7,7 +7,7 @@ require "rake"
 RSpec.describe "billing_engine_migrations:convert_plans" do # rubocop:disable RSpec/DescribeClass
   let_it_be(:organization) { create(:organization) }
   let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
-  let_it_be(:plan) do
+  let_it_be(:plan, refind: true) do
     create(:plan, organization:, code: "pro_monthly", amount_cents: 10_000, amount_currency: "EUR", trial_period: 14)
   end
   let_it_be(:charge) do

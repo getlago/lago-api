@@ -9,7 +9,7 @@ RSpec.describe BillingEngineMigrations::ConvertPlansService do
   let_it_be(:tax) { create(:tax, organization:, code: "vat_fr") }
   let_it_be(:billable_metric) { create(:sum_billable_metric, organization:, code: "api_calls", name: "API calls") }
   let_it_be(:metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
-  let_it_be(:plan) do
+  let_it_be(:plan, refind: true) do
     create(
       :plan,
       organization:,
@@ -24,11 +24,11 @@ RSpec.describe BillingEngineMigrations::ConvertPlansService do
       created_at: Time.zone.parse("2026-01-10T08:30:00Z")
     )
   end
-  let_it_be(:add_on) { create(:add_on, organization:, code: "onboarding", name: "Onboarding", invoice_display_name: nil) }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:, code: "onboarding", name: "Onboarding", invoice_display_name: nil) }
   let_it_be(:fixed_charge) do
     create(:fixed_charge, plan:, add_on:, code: "onboarding_fee", units: 2, properties: {amount: "50"}, invoice_display_name: nil)
   end
-  let_it_be(:charge) do
+  let_it_be(:charge, refind: true) do
     create(
       :volume_charge,
       plan:,
