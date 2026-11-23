@@ -12,7 +12,7 @@ class BillingEngineMigration < ApplicationRecord
   validate :shadow_organization_differs_from_organization
   validate :plan_mapping_is_valid
   validate :organizations_not_in_another_migration
-  validate :v2_read_endpoints_are_native
+  validate :v2_read_endpoints_are_native, if: :v2_read_endpoints_changed?
 
   after_commit :expire_lookup
   after_rollback :expire_lookup

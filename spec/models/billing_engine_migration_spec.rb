@@ -130,6 +130,28 @@ RSpec.describe BillingEngineMigration do
 
         it { expect(migration).not_to be_valid }
       end
+
+      context "when it is not an array" do
+        let(:v2_read_endpoints) { nil }
+
+        it { expect(migration).not_to be_valid }
+      end
+    end
+
+    context "when a stored endpoint no longer has a native v2 route" do
+      subject(:migration) { create(:billing_engine_migration) }
+
+      before { migration.update_columns(v2_read_endpoints: %w[contracts removed_endpoint]) } # rubocop:disable Rails/SkipsModelValidations
+
+      it "still saves other changes" do
+        expect { migration.update!(status: "paused") }.to change { migration.reload.status }.to("paused")
+      end
+
+      it "rejects a new list that keeps it" do
+        migration.v2_read_endpoints = %w[removed_endpoint]
+
+        expect(migration).not_to be_valid
+      end
     end
   end
 
