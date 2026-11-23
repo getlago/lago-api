@@ -209,7 +209,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
 
       it "refuses the write" do
         expect(result).to be_failure
-        expect(result.error.code).to eq("wallet_alerts_read_only")
+        expect(result.error.code).to eq("contract_not_live")
       end
     end
 

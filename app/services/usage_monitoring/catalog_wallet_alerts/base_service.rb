@@ -20,7 +20,9 @@ module UsageMonitoring
 
           if wallet.discarded?
             result.not_found_failure!(resource: "contract_wallet")
-          elsif wallet.alerts_read_only?
+          elsif Contract::LIVE_STATUSES.exclude?(wallet.contract.status)
+            result.forbidden_failure!(code: "contract_not_live")
+          elsif wallet.terminated_at?
             result.forbidden_failure!(code: "wallet_alerts_read_only")
           end
         end
