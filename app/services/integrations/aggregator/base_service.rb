@@ -13,6 +13,12 @@ module Integrations
       ORCHESTRATOR_FAILURE_PATTERN = %r{POST https?://nango-orchestrator-svc\.nango/v1/immediate failed}
       # NOTE: Providers whose throttled jobs wait for the next rate limit window instead of backing off
       NEXT_WINDOW_RETRY_PROVIDERS = %i[quickbooks].freeze
+      # NOTE: Errors of a Nango read other than an HTTP status: an unparsable body or a connection failure
+      LOOKUP_ERRORS = [
+        JSON::ParserError,
+        *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES,
+        *LagoHttpClient::Client::CONNECT_FALLBACK_ERRORS
+      ].uniq.freeze
 
       def self.retryable_errors
         [
@@ -141,6 +147,19 @@ module Integrations
           "Authorization" => "Bearer #{secret_key}",
           "Provider-Config-Key" => provider_key
         }
+      end
+
+      # Never the response body, the headers, the URI or the connection id: they can hold OAuth credentials
+      # or the QuickBooks realm id.
+      def log_nango_failure(label, error, status: nil)
+        details = {
+          organization_id: integration.organization_id,
+          provider_config_key: provider_key,
+          error: error.class.name,
+          status:
+        }.compact
+
+        Rails.logger.warn("#{label} #{details.to_json}")
       end
 
       def trigger_action(input)
