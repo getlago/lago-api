@@ -14,7 +14,9 @@ module V2
     def serialize
       {
         lago_id: model.id,
+        lago_contract_id: model.contract_id,
         external_contract_id: model.contract.external_id,
+        contract_code: model.contract.code,
         external_customer_id: model.customer.external_id,
         code: model.code,
         name: model.name,
