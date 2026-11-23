@@ -40,8 +40,8 @@ RSpec.describe "billing_engine_migrations:parity" do # rubocop:disable RSpec/Des
       started_at:, **attributes)
   end
 
-  def send_event(event_organization, external_subscription_id)
-    create(:event, organization_id: event_organization.id, external_subscription_id:, code: "api_calls",
+  def send_event(event_organization, external_subscription_id, code: "api_calls")
+    create(:event, organization_id: event_organization.id, external_subscription_id:, code:,
       timestamp: Time.zone.parse("2027-02-05"))
   end
 
@@ -111,6 +111,21 @@ RSpec.describe "billing_engine_migrations:parity" do # rubocop:disable RSpec/Des
       end
     end
 
+    context "when the subscription and its contract end at the same second" do
+      let(:ending_at) { Time.zone.parse("2027-03-15 10:00:00") }
+      let(:subscription) do
+        create(:subscription, organization:, customer:, plan:, started_at:, subscription_at: started_at,
+          ending_at: ending_at + 0.123456)
+      end
+      let(:contract) { create_shadow_contract(external_id: subscription.external_id, code: subscription.id, ended_at: ending_at) }
+
+      it "compares them" do
+        expect { task.invoke(organization.id) }.to output(
+          a_string_including("Contracts compared: 1, matching: 1, mismatches: 0, skipped: 0, errors: 0")
+        ).to_stdout
+      end
+    end
+
     context "when the migration is paused" do
       let(:status) { "paused" }
 
@@ -140,6 +155,33 @@ RSpec.describe "billing_engine_migrations:parity" do # rubocop:disable RSpec/Des
       it "reports the contract and the metric with both amounts" do
         expect { task.invoke(organization.id) }.to output(
           a_string_including("metric api_calls: V1 200 cents / 1.0 units, V2 400 cents / 2.0 units", "mismatches: 1")
+        ).to_stdout
+      end
+    end
+
+    context "when V1 has two charges on the metric" do
+      before { create(:standard_charge, plan:, billable_metric:, properties: {amount: "1"}) }
+
+      it "compares the sum of their fees" do
+        expect { task.invoke(organization.id) }.to output(
+          a_string_including("metric api_calls: V1 300 cents / 2.0 units, V2 200 cents / 1.0 units")
+        ).to_stdout
+      end
+    end
+
+    context "when a metric has usage on V1 only" do
+      before do
+        storage = create(:billable_metric, organization:, code: "storage", aggregation_type: :count_agg)
+        create(:standard_charge, plan:, billable_metric: storage, properties: {amount: "3"})
+        send_event(organization, subscription.external_id, code: "storage")
+      end
+
+      it "reports no usage for it on V2" do
+        expect { task.invoke(organization.id) }.to output(
+          a_string_including(
+            "metric storage: V1 300 cents / 1.0 units, V2 0 cents / 0.0 units",
+            "Contracts compared: 1, matching: 0, mismatches: 1"
+          )
         ).to_stdout
       end
     end
