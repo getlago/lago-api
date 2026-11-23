@@ -5,6 +5,7 @@ module BillingEngineMigrations
     Result = BaseResult[
       :created_features,
       :created_privileges,
+      :updated_privileges,
       :catalog_plans,
       :missing_plan_codes,
       :missing_catalog_plan_codes,
@@ -23,6 +24,7 @@ module BillingEngineMigrations
         features_result = CopyFeaturesService.call!(migration:)
         result.created_features = features_result.created_features
         result.created_privileges = features_result.created_privileges
+        result.updated_privileges = features_result.updated_privileges
 
         sync_catalog_plans(features_result.features)
       end
@@ -44,9 +46,8 @@ module BillingEngineMigrations
       result.catalog_plans = {}
       result.conflicting_catalog_plan_codes = []
 
-      entitlements_by_catalog_plan_code.sort.each do |catalog_plan_code, entitlement_sets|
-        catalog_plan = catalog_plans[catalog_plan_code]
-        next unless catalog_plan
+      entitlements_by_catalog_plan_code.slice(*catalog_plans.keys).sort.each do |catalog_plan_code, entitlement_sets|
+        catalog_plan = catalog_plans.fetch(catalog_plan_code)
 
         if entitlement_sets.uniq.many?
           result.conflicting_catalog_plan_codes << catalog_plan_code
@@ -54,6 +55,7 @@ module BillingEngineMigrations
           result.catalog_plans[catalog_plan_code] = SyncCatalogPlanEntitlementsService.call!(
             catalog_plan:,
             entitlements: entitlement_sets.first,
+            current_entitlements: current_entitlements.fetch(catalog_plan.id, []),
             features:
           )
         end
@@ -78,8 +80,21 @@ module BillingEngineMigrations
         .to_a
     end
 
+    # Locked in one query and in code order, so two runs cannot deadlock. Under FOR NO KEY UPDATE, PostgreSQL
+    # rechecks deleted_at on a row discarded meanwhile and leaves it out, so it is reported as missing.
     def catalog_plans
-      @catalog_plans ||= migration.shadow_organization.catalog_plans.where(code: plan_mapping.values).index_by(&:code)
+      @catalog_plans ||= migration.shadow_organization.catalog_plans
+        .where(code: plan_mapping.values)
+        .order(:code)
+        .lock("FOR NO KEY UPDATE")
+        .index_by(&:code)
+    end
+
+    def current_entitlements
+      @current_entitlements ||= ::Entitlement::Entitlement
+        .where(catalog_plan_id: catalog_plans.values.map(&:id))
+        .includes(:values)
+        .group_by(&:catalog_plan_id)
     end
   end
 end

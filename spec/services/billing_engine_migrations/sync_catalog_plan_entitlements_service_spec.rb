@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe BillingEngineMigrations::SyncCatalogPlanEntitlementsService do
-  subject(:result) { described_class.call(catalog_plan:, entitlements:, features:) }
+  subject(:result) { sync }
 
   let_it_be(:organization) { create(:organization) }
   let_it_be(:catalog_plan, refind: true) { create(:catalog_plan, organization:) }
@@ -16,6 +16,11 @@ RSpec.describe BillingEngineMigrations::SyncCatalogPlanEntitlementsService do
 
   let(:features) { Entitlement::Feature.where(organization:).includes(:privileges).index_by(&:code) }
   let(:entitlements) { {"seats" => {"max" => "10", "tier" => "gold"}, "sso" => {}} }
+
+  def sync
+    current_entitlements = Entitlement::Entitlement.where(catalog_plan:).includes(:values).to_a
+    described_class.call(catalog_plan:, entitlements:, current_entitlements:, features:)
+  end
 
   def entitlements_of(owner)
     Entitlement::Entitlement.where(catalog_plan: owner).includes(:feature, values: :privilege).to_h do |entitlement|
@@ -37,7 +42,7 @@ RSpec.describe BillingEngineMigrations::SyncCatalogPlanEntitlementsService do
   end
 
   it "changes nothing on a second run" do
-    described_class.call(catalog_plan:, entitlements:, features:)
+    sync
 
     expect { result }
       .to not_change { Entitlement::Entitlement.unscoped.count }
@@ -82,6 +87,24 @@ RSpec.describe BillingEngineMigrations::SyncCatalogPlanEntitlementsService do
       expect(api_entitlement.reload).to be_discarded
       expect(Entitlement::EntitlementValue.with_discarded.where(id: [seats_tier_value.id, api_calls_value.id]))
         .to all(be_discarded)
+    end
+  end
+
+  context "when the catalog plan has a value on a discarded privilege" do
+    let(:entitlements) { {"seats" => {"max" => "10"}} }
+    let(:seats_entitlement) { create(:entitlement, :catalog_plan, catalog_plan:, feature: seats) }
+    let(:legacy_value) do
+      legacy = create(:privilege, feature: seats, code: "legacy", value_type: "string")
+      create(:entitlement_value, entitlement: seats_entitlement, privilege: legacy, value: "kept").tap { legacy.discard! }
+    end
+
+    before { legacy_value }
+
+    it "leaves the value as it is" do
+      expect(result).to be_success
+      expect(result.created_values).to eq(%w[seats.max])
+      expect(result.removed_values).to eq([])
+      expect(legacy_value.reload).not_to be_discarded
     end
   end
 

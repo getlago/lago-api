@@ -5,19 +5,19 @@ module BillingEngineMigrations
     Result = BaseResult[:created_entitlements, :removed_entitlements, :created_values, :updated_values, :removed_values]
 
     # entitlements: {feature_code => {privilege_code => value}}, the state the catalog plan ends in.
-    # features: the shadow organization features by code, with their privileges loaded.
-    def initialize(catalog_plan:, entitlements:, features:)
+    # current_entitlements: the live entitlements of the catalog plan with their values loaded, read under a
+    # FOR NO KEY UPDATE lock on it, as Entitlement::Concerns::OwnerLockConcern locks a plan for its entitlement writes.
+    # features: every live feature of the shadow organization by code, with its privileges loaded.
+    def initialize(catalog_plan:, entitlements:, current_entitlements:, features:)
       @catalog_plan = catalog_plan
       @entitlements = entitlements
+      @current_entitlements = current_entitlements
       @features = features
       super
     end
 
     def call
       ActiveRecord::Base.transaction do
-        # FOR NO KEY UPDATE, as Entitlement::Concerns::OwnerLockConcern locks a plan for its entitlement writes.
-        catalog_plan.lock!("FOR NO KEY UPDATE")
-
         remove_entitlements
         entitlement_ids = kept_entitlement_ids.merge(create_entitlements)
         sync_values(entitlement_ids)
@@ -28,13 +28,21 @@ module BillingEngineMigrations
 
     private
 
-    attr_reader :catalog_plan, :entitlements, :features
+    attr_reader :catalog_plan, :entitlements, :current_entitlements, :features
+
+    def features_by_id
+      @features_by_id ||= features.values.index_by(&:id)
+    end
+
+    def privileges_by_id
+      @privileges_by_id ||= features.values.flat_map(&:privileges).index_by(&:id)
+    end
 
     def existing_entitlements
-      @existing_entitlements ||= catalog_plan.entitlements
-        .includes(:feature, values: :privilege)
-        .select(&:feature)
-        .index_by { it.feature.code }
+      @existing_entitlements ||= current_entitlements.filter_map do |entitlement|
+        feature = features_by_id[entitlement.entitlement_feature_id]
+        [feature.code, entitlement] if feature
+      end.to_h
     end
 
     def kept_entitlement_ids
@@ -61,8 +69,7 @@ module BillingEngineMigrations
       end
       inserted = ::Entitlement::Entitlement.insert_all!(rows, returning: %i[id entitlement_feature_id]) # rubocop:disable Rails/SkipsModelValidations
 
-      feature_codes = features.values.to_h { [it.id, it.code] }
-      inserted.to_h { [feature_codes.fetch(it["entitlement_feature_id"]), it["id"]] }
+      inserted.to_h { [features_by_id.fetch(it["entitlement_feature_id"]).code, it["id"]] }
     end
 
     def sync_values(entitlement_ids)
@@ -93,7 +100,10 @@ module BillingEngineMigrations
 
     def current_values(feature_code)
       values = existing_entitlements[feature_code]&.values || []
-      values.select(&:privilege).index_by { it.privilege.code }
+      values.filter_map do |value|
+        privilege = privileges_by_id[value.entitlement_privilege_id]
+        [privilege.code, value] if privilege
+      end.to_h
     end
 
     def value_row(entitlement_id, feature_code, privilege_code, value)
