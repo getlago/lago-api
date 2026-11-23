@@ -14,7 +14,11 @@ RSpec.describe Signups::CreateOrganizationService do
   let(:source) { "github" }
   let(:admin_role) { create(:role, :admin) }
 
-  before { admin_role }
+  before do
+    admin_role
+    allow(Rails.application.config).to receive(:lago_front_url).and_return("https://app.eu.getlago.com")
+    stub_const("ENV", ENV.to_h.merge("LAGO_CLOUD" => "true"))
+  end
 
   it "creates the production organization and its sandbox, with the user admin of both" do
     expect { result }.to change(Organization, :count).by(2)
@@ -25,6 +29,29 @@ RSpec.describe Signups::CreateOrganizationService do
       production_organization_id: result.organization.id)
     expect(user.memberships.active.map { [it.organization_id, it.roles.map(&:code)] })
       .to match_array([[result.organization.id, ["admin"]], [result.sandbox_organization.id, ["admin"]]])
+  end
+
+  it "opens the production organization while the payment method switch is off" do
+    expect(result.organization.reload.activation_status).to eq("active")
+    expect(result.sandbox_organization.reload.activation_status).to eq("active")
+  end
+
+  context "with the payment method switch on" do
+    let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD" => "true") }
+
+    it "creates the production waiting for a payment method and the sandbox open" do
+      expect(result).to be_success
+      expect(result.organization.reload.activation_status).to eq("pending_payment_method")
+      expect(result.sandbox_organization.reload.activation_status).to eq("active")
+    end
+
+    it "tells analytics the production waits for a payment method" do
+      result
+
+      expect(SegmentTrackJob).to have_been_enqueued
+        .with(hash_including(event: "organization_registered",
+          properties: hash_including(activation_status: "pending_payment_method")))
+    end
   end
 
   it "answers with a user who no longer needs an organization" do
@@ -48,14 +75,38 @@ RSpec.describe Signups::CreateOrganizationService do
     expect(SegmentTrackJob).to have_been_enqueued.with(
       membership_id: "membership/#{membership.id}",
       event: "organization_registered",
-      properties: {organization_name: "Acme", organization_id: result.organization.id, email: "jane@getlago.com"}
+      properties: {
+        organization_name: "Acme",
+        organization_id: result.organization.id,
+        email: "jane@getlago.com",
+        self_serve: true,
+        sandbox_organization_id: result.sandbox_organization.id,
+        activation_status: "active",
+        role: "engineering",
+        source: "github",
+        region: "app.eu.getlago.com"
+      }
     )
+  end
+
+  context "when LAGO_FRONT_URL cannot be parsed" do
+    before { allow(Rails.application.config).to receive(:lago_front_url).and_return("https://exa mple.com") }
+
+    it "creates the pair and sends no region" do
+      expect(result).to be_success
+      expect(SegmentTrackJob).to have_been_enqueued
+        .with(hash_including(event: "organization_registered", properties: hash_including(region: nil)))
+    end
   end
 
   context "without a source" do
     let(:source) { nil }
 
-    it { is_expected.to be_success }
+    it "sends a nil source to analytics" do
+      expect(result).to be_success
+      expect(SegmentTrackJob).to have_been_enqueued
+        .with(hash_including(event: "organization_registered", properties: hash_including(source: nil)))
+    end
   end
 
   context "with an invalid name" do

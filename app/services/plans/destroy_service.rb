@@ -29,13 +29,19 @@ module Plans
       invoices = Invoice.draft.joins(:plans).where(plans: {id: plan.id}).distinct
       invoices.find_each { |invoice| Invoices::RefreshDraftAndFinalizeService.call(invoice:) }
 
-      # rubocop:disable Rails/SkipsModelValidations
-      plan.entitlement_values.update_all(deleted_at: Time.current)
-      plan.entitlements.update_all(deleted_at: Time.current)
-      # rubocop:enable Rails/SkipsModelValidations
+      # NOTE: The plan lock runs this after any entitlement write of the plan that holds it, and makes
+      #       the writes that wait for it find the plan discarded.
+      ActiveRecord::Base.transaction do
+        plan.lock!("FOR NO KEY UPDATE")
 
-      plan.pending_deletion = false
-      plan.discard!
+        # rubocop:disable Rails/SkipsModelValidations
+        plan.entitlement_values.update_all(deleted_at: Time.current)
+        plan.entitlements.update_all(deleted_at: Time.current)
+        # rubocop:enable Rails/SkipsModelValidations
+
+        plan.pending_deletion = false
+        plan.discard!
+      end
 
       result.plan = plan
       result

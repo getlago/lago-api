@@ -22,7 +22,9 @@ module Wallets
       return result.forbidden_failure! if x402_enable_forbidden?
       return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
+      return result.forbidden_failure! if invoice_usage_on_expiration_forbidden?
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
+      return result unless valid_expiration_change?
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
       return result unless valid_payment_method?
@@ -47,6 +49,9 @@ module Wallets
         wallet.payment_term = params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h if params.key?(:payment_term)
         unless params[:invoice_requires_successful_payment].nil?
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
+        end
+        unless params[:invoice_usage_on_expiration].nil?
+          wallet.invoice_usage_on_expiration = ActiveModel::Type::Boolean.new.cast(params[:invoice_usage_on_expiration])
         end
         wallet.x402_enabled = x402_enabled_param unless x402_enabled_param.nil?
         wallet.paid_top_up_min_amount_cents = params[:paid_top_up_min_amount_cents] if params.key?(:paid_top_up_min_amount_cents)
@@ -141,6 +146,14 @@ module Wallets
       return true if Validators::ExpirationDateValidator.valid?(expiration_at)
 
       result.single_validation_failure!(field: :expiration_at, error_code: "invalid_date")
+      false
+    end
+
+    # Moving the date would leave the usage after the invoiced expiration without an expiration invoice.
+    def valid_expiration_change?
+      return true unless params.key?(:expiration_at) && wallet.reserved_for_expiration_invoice?
+
+      result.single_validation_failure!(field: :expiration_at, error_code: "expiration_already_invoiced")
       false
     end
 
@@ -248,6 +261,11 @@ module Wallets
 
     def organization_flag_disabled?(flag)
       !organization_flag_enabled?(flag)
+    end
+
+    def invoice_usage_on_expiration_forbidden?
+      ActiveModel::Type::Boolean.new.cast(params[:invoice_usage_on_expiration]) &&
+        (!License.premium? || organization_flag_disabled?(:invoice_usage_on_wallet_expiration))
     end
 
     def connections_requested?

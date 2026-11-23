@@ -6,6 +6,10 @@ module PaymentProviders
       class AuthorizeService < BaseService
         Result = BaseResult[:stripe_payment_intent]
 
+        # The authorization is a manual-capture hold, which Stripe refuses for these types.
+        # Card and Link can be held.
+        NON_HOLDABLE_METHOD_TYPES = %w[sepa_debit us_bank_account bacs_debit boleto customer_balance].freeze
+
         def initialize(amount:, currency:, provider_customer:, payment_method:, unique_id:, metadata: {})
           @amount = amount
           @currency = currency
@@ -27,6 +31,13 @@ module PaymentProviders
             )
           end
 
+          if NON_HOLDABLE_METHOD_TYPES.include?(payment_method_type)
+            return result.single_validation_failure!(
+              field: :payment_method_id,
+              error_code: "payment_method_not_supported_for_authorization"
+            )
+          end
+
           payment_intent = create_payment_intent
 
           result.stripe_payment_intent = payment_intent
@@ -44,13 +55,25 @@ module PaymentProviders
 
         private
 
+        # Only known for a stored payment method whose details came from Stripe. When it is unknown,
+        # Stripe decides, as before.
+        def payment_method_type
+          return if payment_method.blank? || payment_method.details.blank?
+
+          payment_method.details.with_indifferent_access[:type]
+        end
+
         def find_provider_method_id
           @payment_method_id = if payment_method.present?
             payment_method.provider_method_id
           elsif provider_customer.payment_method_id.present?
             provider_customer.payment_method_id
           else
-            PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService.call!(provider_customer:).payment_method_id
+            # Cards only: the pre-authorization is a manual-capture hold, which bank debits cannot do
+            PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService.call!(
+              provider_customer:,
+              types: %w[card]
+            ).payment_method_id
           end
         end
 

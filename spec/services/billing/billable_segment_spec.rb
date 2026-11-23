@@ -36,6 +36,13 @@ RSpec.describe Billing::BillableSegment do
     end
   end
 
+  describe "#billing_at" do
+    it "carries the single periodic obligation instant" do
+      expect(segment.billing_at).to eq(attributes[:billing_at])
+      expect(segment.members).not_to include(:due_at)
+    end
+  end
+
   describe "the pricing invariant" do
     let(:rate) { nil }
 
