@@ -12894,6 +12894,7 @@ enum ProviderPaymentMethodsEnum {
   customer_balance
   link
   sepa_debit
+  shared_payment_token
   us_bank_account
 }
 
