@@ -30,6 +30,7 @@ RSpec.describe NextWindowThrottlingRetryable do
 
     expect(retry_at).to eq(60.seconds.from_now.to_f)
     expect(job).to have_received(:rand).with(0..30)
+    expect(job.exception_executions).to eq("[BaseService::NextWindowThrottlingError]" => 1)
   end
 
   context "with the maximum jitter" do
@@ -42,22 +43,71 @@ RSpec.describe NextWindowThrottlingRetryable do
     end
   end
 
-  context "when the error carries a retry delay" do
-    let(:error) { BaseService::NextWindowThrottlingError.new(provider_name: :quickbooks, retry_after: 5.minutes) }
+  context "when the error carries the time left in the window" do
+    let(:error) { BaseService::NextWindowThrottlingError.new(provider_name: :quickbooks, retry_after: 15.seconds) }
 
-    it "retries after that delay" do
+    it "retries when that window ends" do
       handle
 
-      expect(retry_at).to eq(5.minutes.from_now.to_f)
+      expect(retry_at).to eq(15.seconds.from_now.to_f)
     end
   end
 
-  context "when the error already occurred 30 times" do
-    before { job.exception_executions = {"[BaseService::NextWindowThrottlingError]" => 30} }
+  context "when the job was already throttled 4 times" do
+    before { job.exception_executions = {"[BaseService::NextWindowThrottlingError]" => 4} }
 
-    it "keeps retrying without an attempt cap" do
-      expect(handle).to be_truthy
-      expect(retry_at).to eq(60.seconds.from_now.to_f)
+    it "waits one more window per earlier retry" do
+      handle
+
+      expect(retry_at).to eq(300.seconds.from_now.to_f)
+    end
+  end
+
+  context "when the job was already throttled 20 times" do
+    before { job.exception_executions = {"[BaseService::NextWindowThrottlingError]" => 20} }
+
+    it "waits 10 minutes at most" do
+      handle
+
+      expect(retry_at).to eq(600.seconds.from_now.to_f)
+    end
+  end
+
+  context "when the job was already throttled 39 times" do
+    before { job.exception_executions = {"[BaseService::NextWindowThrottlingError]" => 39} }
+
+    it "stops retrying and raises the error" do
+      expect { handle }.to raise_error(BaseService::NextWindowThrottlingError)
+      expect(ActiveJob::Base.queue_adapter.enqueued_jobs).to be_empty
+    end
+  end
+
+  context "when the job is throttled on every run" do
+    let(:job_class) do
+      Class.new(ApplicationJob) do
+        include NextWindowThrottlingRetryable
+
+        def perform
+          raise BaseService::NextWindowThrottlingError.new(provider_name: :quickbooks)
+        end
+      end
+    end
+
+    def run_enqueued
+      perform_enqueued_jobs(only: job_class, at: 15.minutes.from_now)
+    end
+
+    it "re-enqueues the job until the bound, then raises and leaves nothing enqueued" do
+      job_class.perform_later
+
+      (NextWindowThrottlingRetryable::NEXT_WINDOW_MAX_ATTEMPTS - 1).times { run_enqueued }
+
+      enqueued = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j[:job] == job_class }
+      expect(enqueued.size).to eq(1)
+      expect(enqueued.first["exception_executions"]).to eq("[BaseService::NextWindowThrottlingError]" => 39)
+
+      expect { run_enqueued }.to raise_error(BaseService::NextWindowThrottlingError)
+      expect(ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j| j[:job] == job_class }).to be_empty
     end
   end
 

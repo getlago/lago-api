@@ -88,10 +88,24 @@ module Integrations
 
       def throttling_error(provider_name)
         if NEXT_WINDOW_RETRY_PROVIDERS.include?(provider_name.to_sym)
-          return BaseService::NextWindowThrottlingError.new(provider_name:)
+          return BaseService::NextWindowThrottlingError.new(provider_name:, retry_after: next_window_in(provider_name))
         end
 
         BaseService::ThrottlingError.new(provider_name:)
+      end
+
+      # The throttling gem counts in fixed buckets (Time.now.to_i / period): the next one opens at the
+      # end of the shortest period. Limits are either one flat entry ({limit:, period:}) or named
+      # entries ({minutely: {limit:, period:}}). Only the next-window providers reach this, and QuickBooks
+      # has a single minutely limit, so the shortest period is the one that refused the call.
+      def next_window_in(provider_name)
+        limits = Throttling.limits[provider_name.to_sym]
+        limits = {limit: limits} if limits.is_a?(Hash) && limits.key?(:period)
+        periods = Array(limits&.values).filter_map { |limit| limit[:period].to_i if limit.is_a?(Hash) }.select(&:positive?)
+        return BaseService::NextWindowThrottlingError::DEFAULT_RETRY_AFTER if periods.blank?
+
+        period = periods.min
+        (period - Time.current.to_i % period).seconds
       end
 
       def throttle_key

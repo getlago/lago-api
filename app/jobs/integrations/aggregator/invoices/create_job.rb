@@ -52,7 +52,8 @@ module Integrations
           #   and the safest assumption is that the record might already exist there.
           #   Skips a duplicate POST that would either fail NetSuite's tranid uniqueness
           #   or duplicate the invoice on Netsuite
-          if find_first || executions > 1
+          #   A next-window throttling retry never reached the provider, so it is not counted.
+          if find_first || provider_attempts > 1
             reconcile_result = Integrations::Aggregator::Invoices::ReconcileService.call!(invoice:)
             return if reconcile_result.external_id.present?
           end
@@ -61,6 +62,10 @@ module Integrations
         end
 
         private
+
+        def provider_attempts
+          executions - exception_executions.fetch("[BaseService::NextWindowThrottlingError]", 0)
+        end
 
         def integration_provider_key
           invoice = arguments.first[:invoice]
