@@ -10,6 +10,34 @@ RSpec.shared_examples "requires current organization" do
   it "requires a current organization" do
     expect(described_class.ancestors).to include(RequiredOrganization)
   end
+
+  context "with an organization waiting for a payment method" do
+    include_context "with self-serve enabled"
+
+    let(:waiting_organization) do
+      # The class's own checks must pass first, so it gets the flag a catalog operation requires.
+      feature_flags = described_class.ancestors.include?(RequiresProductCatalog) ? ["product_catalog"] : []
+      create(:organization, :self_serve, activation_status: "pending_payment_method", feature_flags:)
+    end
+    let(:waiting_membership) { create(:membership, organization: waiting_organization) }
+    let(:waiting_context) do
+      values = {
+        current_user: waiting_membership.user,
+        current_organization: waiting_organization,
+        current_membership: waiting_membership,
+        permissions: Permission.permissions_hash(:admin)
+      }
+      GraphQL::Query.new(LagoApiSchema, "{ __typename }", context: values).context
+    end
+
+    it "refuses it with organization_inactive" do
+      operation = described_class.new(object: nil, context: waiting_context, field: nil)
+
+      expect { operation.send(:ready?) }.to raise_error(GraphQL::ExecutionError) { |error|
+        expect(error.extensions).to include(status: 403, code: "organization_inactive")
+      }
+    end
+  end
 end
 
 RSpec.shared_examples "requires permission" do |permission|

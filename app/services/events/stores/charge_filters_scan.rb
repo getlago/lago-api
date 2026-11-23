@@ -23,6 +23,8 @@ module Events
     # combines the rows back to its own keys, which count, sum, max and latest allow: a sum of
     # sums, a max of maxes, the latest of the latest values.
     class ChargeFiltersScan
+      include Events::Stores::Utils::ClickhouseSqlHelpers
+
       SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
 
       # Only read with the incremental cache, so that the organizations reading the charges with
@@ -465,7 +467,7 @@ module Events
             toUnixTimestamp64Milli(max(events_enriched.timestamp))
           SQL
         else
-          "sum(events_enriched.decimal_value), count()"
+          "sum(#{wide_decimal_sql("events_enriched.decimal_value")}), count()"
         end
       end
 
@@ -473,8 +475,8 @@ module Events
         ingested_before_watermark = ActiveRecord::Base.sanitize_sql_for_conditions(["events_enriched.enriched_at <= ?", watermark])
 
         <<~SQL.squish
-          sum(events_enriched.decimal_value),
-          sumIf(events_enriched.decimal_value, #{ingested_before_watermark}),
+          sum(#{wide_decimal_sql("events_enriched.decimal_value")}),
+          sumIf(#{wide_decimal_sql("events_enriched.decimal_value")}, #{ingested_before_watermark}),
           count(),
           countIf(#{ingested_before_watermark})
         SQL

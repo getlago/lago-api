@@ -9,6 +9,7 @@ RSpec.describe Types::Admin::OrganizationType do
     expect(subject.graphql_name).to eq("AdminOrganization")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:email).of_type("String")
+    expect(subject).to have_field(:activation_status).of_type("OrganizationActivationStatusEnum!")
     expect(subject).to have_field(:environment).of_type("OrganizationEnvironmentEnum!")
     expect(subject).to have_field(:feature_flags).of_type("[String!]!")
     expect(subject).to have_field(:id).of_type("ID!")

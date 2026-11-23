@@ -16,6 +16,8 @@ module IntegrationCollectionMappings
         IntegrationCollectionMappings::AvalaraCollectionMapping
       when "Integrations::XeroIntegration"
         IntegrationCollectionMappings::XeroCollectionMapping
+      when "Integrations::QuickbooksIntegration"
+        IntegrationCollectionMappings::QuickbooksCollectionMapping
       else
         raise(NotImplementedError)
       end

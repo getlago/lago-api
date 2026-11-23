@@ -135,7 +135,7 @@ RSpec.describe Fees::AdvanceChargesService do
       let(:rate_override) { create(:rate_override, organization:) }
       let(:segment_ended_at) { BillingSegment.inclusive_end(billing_at + 1.month) }
       let(:billing_segment) do
-        create(
+        build(
           :billing_segment,
           organization:,
           customer:,
@@ -147,8 +147,7 @@ RSpec.describe Fees::AdvanceChargesService do
           billing_at:,
           cycle_started_at: billing_at,
           started_at: billing_at,
-          ended_at: segment_ended_at,
-          status: :processing
+          ended_at: segment_ended_at
         )
       end
       let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:) }
@@ -264,7 +263,7 @@ RSpec.describe Fees::AdvanceChargesService do
         let(:second_fee_succeeded_at) { billing_at + 1.day }
         let(:second_fee_properties) { second_metered_item.filtered_for_charge_boundaries }
         let(:second_segment) do
-          create(
+          build(
             :billing_segment,
             organization:,
             customer:,
@@ -275,8 +274,7 @@ RSpec.describe Fees::AdvanceChargesService do
             billing_at:,
             cycle_started_at: billing_at,
             started_at: billing_at,
-            ended_at: second_segment_ended_at,
-            status: :processing
+            ended_at: second_segment_ended_at
           )
         end
         let(:second_metered_item) do

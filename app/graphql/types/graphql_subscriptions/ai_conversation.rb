@@ -31,7 +31,8 @@ module Types
         # The saved context keeps the state of subscribe time, so the token and access are checked again during the stream.
         # Ending with an error, rather than silently, lets the client show why the answer stopped.
         unsubscribe(execution_error(error: "token_expired", status: 401, code: "token_expired")) if token_expired?
-        unsubscribe(forbidden_error(code: "forbidden")) unless still_allowed?
+        refusal_code = access_refusal_code
+        unsubscribe(forbidden_error(code: refusal_code)) if refusal_code
 
         object
       end
@@ -43,21 +44,29 @@ module Types
       end
 
       # Access needs several queries, so it is checked at most every ACCESS_CHECK_INTERVAL, and always on the last chunk.
-      def still_allowed?
+      # Nil while access is allowed, else the code that ends the stream.
+      def access_refusal_code
         checked_at = context[:channel].access_checked_at
         subscription_id = context[:subscription_id]
-        return true if !object[:done] && checked_at[subscription_id]&.after?(ACCESS_CHECK_INTERVAL.ago)
+        return if !object[:done] && checked_at[subscription_id]&.after?(ACCESS_CHECK_INTERVAL.ago)
 
-        allowed = access_allowed?
-        allowed ? checked_at[subscription_id] = Time.current : checked_at.delete(subscription_id)
-        allowed
+        refusal_code = current_refusal_code
+        refusal_code ? checked_at.delete(subscription_id) : checked_at[subscription_id] = Time.current
+        refusal_code
       end
 
-      def access_allowed?
+      # An organization waiting for a payment method gets its own code, so the client can route to the activation screen.
+      def current_refusal_code
         membership = Membership.active.find_by(id: current_membership.id)
-        return false unless membership&.organization&.accessible_by_session?(**context[:session_claims])
+        organization = membership&.organization
 
-        membership.permissions_hash[REQUIRED_PERMISSION]
+        if !organization&.accessible_by_session?(**context[:session_claims])
+          "forbidden"
+        elsif organization.awaiting_payment_method?
+          "organization_inactive"
+        elsif !membership.permissions_hash[REQUIRED_PERMISSION]
+          "forbidden"
+        end
       end
     end
   end
