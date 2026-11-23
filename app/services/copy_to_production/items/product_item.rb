@@ -15,12 +15,16 @@ module CopyToProduction
         sandbox.products.includes(:product_category, *PRELOADS).find_by(id:)
       end
 
+      # Reused only from the live category with the code of its own: a live product with its code elsewhere refuses
+      # the copy.
       def find_existing(source)
-        production.products.find_by(code: source.code)
+        live_product = production.products.includes(:product_category).find_by(code: source.code)
+        live_product if live_product&.product_category&.code == source.product_category&.code
       end
 
+      # A deleted metric is never brought along: the product refuses the copy instead.
       def dependencies(source)
-        source.billable_metric ? [["billable_metric", source.billable_metric]] : []
+        (source.billable_metric && !source.billable_metric.discarded?) ? [["billable_metric", source.billable_metric]] : []
       end
 
       def parent(source)
@@ -29,6 +33,9 @@ module CopyToProduction
 
       # A product filter names its metric's filters by key and value, which a reused production metric may lack.
       def refusal(source)
+        return "copy_to_production_code_conflict" if production.products.exists?(code: source.code)
+        return "copy_to_production_target_deleted" if source.billable_metric&.discarded?
+
         "copy_to_production_filter_missing" if source.billable_metric && source.filters.any? && missing_metric_filter?(source)
       end
 
@@ -45,7 +52,8 @@ module CopyToProduction
           )
         ).product
 
-        source.filters.sort_by(&:code).each { copy_filter!(product, it) }
+        # Filter precedence breaks ties by age, so production gets them in the sandbox's creation order.
+        source.filters.sort_by { [it.created_at, it.id] }.each { copy_filter!(product, it) }
         product
       end
 

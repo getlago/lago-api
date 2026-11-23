@@ -24,8 +24,11 @@ module CopyToProduction
         nil
       end
 
+      # A prorated card needs a recurring metric that is not a weighted sum, which a reused live metric may not be.
       def refusal(source)
-        "copy_to_production_code_conflict" if production.rate_cards.exists?(code: source.code)
+        return "copy_to_production_code_conflict" if production.rate_cards.exists?(code: source.code)
+
+        "copy_to_production_metric_mismatch" if source.proration? && prorating_metric_mismatch?(source.product)
       end
 
       def dependencies(source)
@@ -56,6 +59,22 @@ module CopyToProduction
       end
 
       private
+
+      # As RateCard#validate_proration reads it on the live metric the card will bill: the live product's, or the
+      # production metric with the code of the product's.
+      def prorating_metric_mismatch?(product)
+        return false unless product.metered?
+
+        live_product = production.products.includes(:billable_metric).find_by(code: product.code)
+        live_metric = if live_product
+          live_product.billable_metric
+        elsif product.billable_metric
+          production.billable_metrics.find_by(code: product.billable_metric.code)
+        end
+        return false unless live_metric
+
+        !live_metric.recurring? || live_metric.weighted_sum_agg?
+      end
 
       # Production starts at the sandbox's active rate, effective from now, followed by its pending rates. The
       # superseded rates are history of the sandbox: a rate cannot be created in the past.

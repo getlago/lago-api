@@ -27,12 +27,21 @@ RSpec.describe CopyToProduction::Items::ProductItem do
   end
 
   describe "#find_existing" do
-    let(:live_product) { create(:product, organization: production, code: "api") }
+    let(:live_category) { create(:product_category, organization: production, code: category.code) }
+    let(:live_product) { create(:product, organization: production, product_category: live_category, code: "api") }
 
     before { live_product }
 
-    it "finds the kept production product with the same code" do
+    it "finds the kept production product with the same code in the live category" do
       expect(item.find_existing(product)).to eq(live_product)
+    end
+
+    context "when the production product is in another category" do
+      let(:live_category) { create(:product_category, organization: production, code: "other") }
+
+      it "finds nothing" do
+        expect(item.find_existing(product)).to be_nil
+      end
     end
 
     context "when the production product is deleted" do
@@ -54,6 +63,36 @@ RSpec.describe CopyToProduction::Items::ProductItem do
 
       it "lists nothing" do
         expect(item.dependencies(product)).to eq([])
+      end
+    end
+
+    context "when its metric is deleted" do
+      before { metric.discard! }
+
+      it "lists nothing" do
+        expect(item.dependencies(product.reload)).to eq([])
+      end
+    end
+  end
+
+  describe "#refusal" do
+    it "answers nil" do
+      expect(item.refusal(product)).to be_nil
+    end
+
+    context "when production uses its code" do
+      before { create(:product, organization: production, code: "api") }
+
+      it "answers copy_to_production_code_conflict" do
+        expect(item.refusal(product)).to eq("copy_to_production_code_conflict")
+      end
+    end
+
+    context "when its metric is deleted" do
+      before { metric.discard! }
+
+      it "answers copy_to_production_target_deleted" do
+        expect(item.refusal(product.reload)).to eq("copy_to_production_target_deleted")
       end
     end
   end

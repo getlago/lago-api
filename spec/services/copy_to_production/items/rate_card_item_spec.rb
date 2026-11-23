@@ -40,6 +40,57 @@ RSpec.describe CopyToProduction::Items::RateCardItem do
         expect(item.refusal(rate_card)).to be_nil
       end
     end
+
+    context "with a prorated card" do
+      let(:metric) { create(:billable_metric, :recurring, organization: sandbox, code: "seats", aggregation_type: "sum_agg", field_name: "seats") }
+      let(:product) { create(:product, organization: sandbox, billable_metric: metric, code: "api") }
+      let(:rate_card) { create(:rate_card, organization: sandbox, product:, code: "api_eur", proration: true) }
+      let(:live_rate_card) { nil }
+
+      it "answers nil when production has no metric with the code of its product's" do
+        expect(item.refusal(rate_card)).to be_nil
+      end
+
+      context "when production has a recurring metric with that code" do
+        before do
+          create(:billable_metric, :recurring, organization: production, code: "seats", aggregation_type: "sum_agg", field_name: "seats")
+        end
+
+        it "answers nil" do
+          expect(item.refusal(rate_card)).to be_nil
+        end
+      end
+
+      context "when production has a metric with that code that is not recurring" do
+        before { create(:billable_metric, organization: production, code: "seats") }
+
+        it "answers copy_to_production_metric_mismatch" do
+          expect(item.refusal(rate_card)).to eq("copy_to_production_metric_mismatch")
+        end
+      end
+
+      context "when production has a weighted sum metric with that code" do
+        before do
+          create(:billable_metric, :recurring, organization: production, code: "seats", aggregation_type: "weighted_sum_agg", weighted_interval: "seconds",
+            field_name: "seats")
+        end
+
+        it "answers copy_to_production_metric_mismatch" do
+          expect(item.refusal(rate_card)).to eq("copy_to_production_metric_mismatch")
+        end
+      end
+
+      context "when the live product with its product's code bills another metric" do
+        before do
+          create(:billable_metric, :recurring, organization: production, code: "seats", aggregation_type: "sum_agg", field_name: "seats")
+          create(:product, organization: production, code: "api", billable_metric: create(:billable_metric, organization: production))
+        end
+
+        it "reads that metric" do
+          expect(item.refusal(rate_card)).to eq("copy_to_production_metric_mismatch")
+        end
+      end
+    end
   end
 
   describe "#dependencies" do
