@@ -6,7 +6,7 @@ module Types
       class UpdateInput < Types::BaseInputObject
         graphql_name "UpdateQuickbooksIntegrationInput"
 
-        argument :id, ID, required: false
+        argument :id, ID, required: true
 
         argument :code, String, required: false
         argument :name, String, required: false

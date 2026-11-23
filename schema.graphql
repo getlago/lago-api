@@ -17297,7 +17297,7 @@ input UpdateQuickbooksIntegrationInput {
   """
   clientMutationId: String
   code: String
-  id: ID
+  id: ID!
   name: String
   syncCreditNotes: Boolean
   syncInvoices: Boolean

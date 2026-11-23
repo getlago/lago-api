@@ -127,13 +127,33 @@ RSpec.describe Mutations::Integrations::Quickbooks::Create, :premium do
     end
   end
 
+  context "when Nango does not know the connection in this environment" do
+    let(:response_status) { 404 }
+    let(:response_body) { {"error" => "fake-nango-error-body"}.to_json }
+
+    it "returns a third party error saying the connection was not found and stores nothing" do
+      expect { result }.not_to change(Integrations::QuickbooksIntegration, :count)
+
+      expect_graphql_error(
+        result:,
+        message: "third_party_error",
+        details: {error: "Nango: connection_not_found - QuickBooks connection not found for this environment"}
+      )
+      expect(result.to_h.to_json).not_to include("fake-nango-error-body")
+    end
+  end
+
   context "when Nango returns no realm id" do
     let(:response_body) { {"connection_config" => {}}.to_json }
 
-    it "returns a validation error on realmId and stores nothing" do
+    it "returns a third party error naming the missing company id and stores nothing" do
       expect { result }.not_to change(Integrations::QuickbooksIntegration, :count)
 
-      expect_unprocessable_entity(result, details: {realmId: ["value_is_mandatory"]})
+      expect_graphql_error(
+        result:,
+        message: "third_party_error",
+        details: {error: "Nango: realm_id_missing - QuickBooks connection has no company id"}
+      )
     end
   end
 

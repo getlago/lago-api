@@ -16,6 +16,8 @@ module Types
       field :sync_invoices, Boolean
       field :sync_payments, Boolean
 
+      # IntegrationCollectionMappings::QuickbooksCollectionMapping does not exist yet:
+      # this returns false until the QuickBooks mapping model lands.
       def has_mappings_configured
         object.integration_collection_mappings.where(type: "IntegrationCollectionMappings::QuickbooksCollectionMapping").any?
       end

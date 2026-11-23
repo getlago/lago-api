@@ -74,21 +74,23 @@ RSpec.describe Resolvers::IntegrationsResolver do
   end
 
   context "when types is quickbooks" do
-    # Only the metadata is selected: the Integration union has no QuickBooks member yet, so
-    # resolving the collection would raise on a QuickBooks row.
     let(:query) do
       <<~GQL
         query {
           integrations(limit: 5, types: [quickbooks]) {
+            collection {
+              ... on QuickbooksIntegration { id }
+            }
             metadata { currentPage, totalCount }
           }
         }
       GQL
     end
+    let(:quickbooks_integration) { create(:quickbooks_integration, organization:) }
 
     # The organization already has a NetSuite and a Xero integration from the top-level setup.
     before do
-      create(:quickbooks_integration, organization:)
+      quickbooks_integration
       create(:quickbooks_integration, organization: create(:organization))
     end
 
@@ -104,6 +106,7 @@ RSpec.describe Resolvers::IntegrationsResolver do
 
       integrations_response = result["data"]["integrations"]
 
+      expect(integrations_response["collection"]).to eq([{"id" => quickbooks_integration.id}])
       expect(integrations_response["metadata"]["currentPage"]).to eq(1)
       expect(integrations_response["metadata"]["totalCount"]).to eq(1)
     end

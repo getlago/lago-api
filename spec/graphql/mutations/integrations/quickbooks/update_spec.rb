@@ -120,6 +120,15 @@ RSpec.describe Mutations::Integrations::Quickbooks::Update, :premium do
     end
   end
 
+  context "when the input has no id" do
+    let(:input) { {name:} }
+
+    it "is refused by the schema" do
+      expect(result["errors"].first["message"]).to include("id")
+      expect(integration.reload.name).to eq("QuickBooks Integration")
+    end
+  end
+
   context "when the input sets sandbox" do
     let(:input) { {id: integration.id, sandbox: false} }
 

@@ -45,6 +45,7 @@ RSpec.describe Types::Integrations::Quickbooks do
 
     context "with a QuickBooks collection mapping" do
       # No QuickBooks collection mapping class exists yet, so the row gets its STI type written directly.
+      # Replace this update!(type: ...) override with the QuickBooks collection mapping factory once the model exists.
       before do
         create(:xero_collection_mapping, integration:)
           .update!(type: "IntegrationCollectionMappings::QuickbooksCollectionMapping")
