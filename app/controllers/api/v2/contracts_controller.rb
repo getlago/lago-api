@@ -86,7 +86,6 @@ module Api
           :code,
           :name,
           :plan_code,
-          :billing_time,
           :billing_anchor_date,
           :started_at,
           :ended_at,
@@ -103,7 +102,6 @@ module Api
         params.require(:contract).permit(
           :name,
           :plan_code,
-          :billing_time,
           :billing_anchor_date,
           :started_at,
           :ended_at,
