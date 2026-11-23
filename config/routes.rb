@@ -103,7 +103,13 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
-        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_wallets"
+        # The transaction routes are drawn first, so a path that ends with `transactions` is not read as a
+        # wallet code by the wallet routes.
+        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_wallets" do
+          scope module: :contract_wallets do
+            resources :transactions, only: %i[index]
+          end
+        end
       end
       # A contract is never destroyed — DELETE ends its lifecycle, the same
       # idiom subscriptions follow.
