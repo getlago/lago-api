@@ -72,7 +72,7 @@ module BillingEngineMigrations
         next unless terminated_at_by_subscription_id.key?(contract.code)
 
         terminate(contract, timestamp: terminated_at_by_subscription_id[contract.code])
-        return if result.failure?
+        break if result.failure?
       end
 
       @shadow_contracts = nil

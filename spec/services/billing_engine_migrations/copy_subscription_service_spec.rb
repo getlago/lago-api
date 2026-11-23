@@ -761,7 +761,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     end
   end
 
-  def create_shadow_contract(code:, **attributes)
+  def create_shadow_contract(code:, started_at: 1.month.ago, **attributes)
     shadow_customer = shadow_organization.customers.find_by(external_id: customer.external_id) ||
       create(:customer, organization: shadow_organization, external_id: customer.external_id)
 
@@ -771,7 +771,8 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       customer: shadow_customer,
       external_id: subscription.external_id,
       code:,
-      **{started_at: 1.month.ago}.merge(attributes)
+      started_at:,
+      **attributes
     )
   end
 
