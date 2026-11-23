@@ -60,6 +60,108 @@ describe "Invoice Payments Scenarios" do
     end
   end
 
+  context "with Adyen" do
+    let(:adyen_provider) { create(:adyen_provider, organization:) }
+    let(:adyen_customer) do
+      create(:adyen_customer, customer:, payment_provider: adyen_provider, provider_customer_id: "adyen_shopper_1")
+    end
+    let(:customer) do
+      create(:customer, organization:, currency:, net_payment_term: 2, payment_term: {term_type: "net", days: 2})
+    end
+    let(:add_on) { create(:add_on, organization:, amount_cents:, amount_currency: currency) }
+
+    let(:event_json) do
+      fixture = JSON.parse(File.read(Rails.root.join("spec/fixtures/adyen/webhook_authorisation_payment_response.json")))
+      event = fixture["notificationItems"].first["NotificationRequestItem"]
+      event["pspReference"] = "psp_link_#{currency}"
+      event["amount"] = {"currency" => currency, "value" => adyen_value}
+      event["additionalData"]["metadata.lago_invoice_id"] = customer.invoices.sole.id
+      event["additionalData"]["metadata.lago_customer_id"] = customer.id
+      event["additionalData"]["metadata.payment_type"] = "one-time"
+      event.to_json
+    end
+
+    before do
+      customer.update!(payment_provider: :adyen, payment_provider_code: adyen_provider.code)
+      adyen_customer
+    end
+
+    shared_examples "an Adyen payment in Adyen minor units" do
+      context "with a default payment method" do
+        before do
+          create(:payment_method, payment_provider_customer: adyen_customer, provider_method_id: "adyen_pm_1", is_default: true)
+
+          stub_adyen_checkout("paymentMethods", body: {storedPaymentMethods: [{id: "adyen_pm_1"}]})
+          stub_adyen_checkout(
+            "payments",
+            body: {pspReference: "psp_1", resultCode: "Authorised", amount: {currency:, value: adyen_value}}
+          )
+        end
+
+        it "charges the converted amount and records the invoice amount as paid" do
+          travel_to(DateTime.new(2025, 1, 1, 10)) do
+            create_one_off_invoice(customer, [add_on], currency:)
+
+            invoice = customer.invoices.sole
+
+            expect(WebMock).to have_requested(:post, %r{/payments\z}).with { JSON.parse(it.body).dig("amount", "value") == adyen_value }
+            expect(invoice.total_amount_cents).to eq(amount_cents)
+            expect(invoice.total_paid_amount_cents).to eq(amount_cents)
+            expect(invoice.payment_status).to eq("succeeded")
+          end
+        end
+      end
+
+      context "without a payment method" do
+        before do
+          stub_adyen_checkout("payments", body: {pspReference: "psp_1", resultCode: "Authorised"})
+          stub_adyen_checkout("paymentLinks", body: {url: "https://test.adyen.link/PL1", id: "PL1"})
+        end
+
+        it "sends the converted amount on the payment link and records the authorised amount in Lago units" do
+          travel_to(DateTime.new(2025, 1, 1, 10)) do
+            create_one_off_invoice(customer, [add_on], currency:)
+
+            invoice = customer.invoices.sole
+            expect(WebMock).not_to have_requested(:post, %r{/payments\z})
+            expect(invoice.total_amount_cents).to eq(amount_cents)
+            expect(invoice.payment_status).to eq("pending")
+
+            post_with_token(organization, "/api/v1/invoices/#{invoice.id}/payment_url")
+
+            expect(response).to have_http_status(:ok)
+            expect(json[:invoice_payment_details][:payment_url]).to eq("https://test.adyen.link/PL1")
+            expect(WebMock).to have_requested(:post, %r{/paymentLinks\z}).with { JSON.parse(it.body).dig("amount", "value") == adyen_value }
+
+            PaymentProviders::Adyen::HandleEventJob.perform_now(organization:, event_json:)
+
+            invoice.reload
+            expect(invoice.payments.sole.amount_cents).to eq(amount_cents)
+            expect(invoice.total_paid_amount_cents).to eq(amount_cents)
+            expect(invoice.total_due_amount_cents).to eq(0)
+            expect(invoice.payment_status).to eq("succeeded")
+          end
+        end
+      end
+    end
+
+    context "with HUF, which Adyen counts in 2 decimals" do
+      let(:currency) { "HUF" }
+      let(:amount_cents) { 50_000 }
+      let(:adyen_value) { 5_000_000 } # 50_000 * 100
+
+      it_behaves_like "an Adyen payment in Adyen minor units"
+    end
+
+    context "with IDR, which Adyen counts in 0 decimals" do
+      let(:currency) { "IDR" }
+      let(:amount_cents) { 1_234_500 }
+      let(:adyen_value) { 12_345 } # 1_234_500 / 100
+
+      it_behaves_like "an Adyen payment in Adyen minor units"
+    end
+  end
+
   context "with Stripe and a currency Stripe reads in hundredths" do
     include_context "with Stripe configured for customer"
 
