@@ -13,6 +13,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         plan_created
         plan_updated
         plan_deleted
+        plan_copied_to_production
         customer_created
         customer_updated
         customer_deleted
@@ -83,6 +84,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         plan_entitlement_created
         plan_entitlement_updated
         plan_entitlement_deleted
+        plan_rate_card_copied_to_production
         contract_rate_card_created
         contract_rate_card_updated
         contract_rate_card_deleted

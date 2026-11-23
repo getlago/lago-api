@@ -211,6 +211,43 @@ RSpec.describe Coupons::CreateService do
       end
     end
 
+    context "with catalog plan limitations" do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:create_args) do
+        {
+          name: "Super Coupon",
+          code: "free-beer",
+          organization_id: organization.id,
+          coupon_type: "fixed_amount",
+          frequency: "once",
+          amount_cents: 100,
+          amount_currency: "EUR",
+          expiration: "no_expiration",
+          applies_to: {catalog_plan_ids: [catalog_plan.id]}
+        }
+      end
+
+      it "creates a coupon limited to the catalog plan" do
+        result = described_class.call(create_args)
+
+        expect(result).to be_success
+        expect(result.coupon.limited_plans).to be(true)
+        expect(result.coupon.coupon_targets.map { [it.catalog_plan, it.plan_id, it.organization_id] })
+          .to eq([[catalog_plan, nil, organization.id]])
+      end
+
+      context "when the catalog plan belongs to another organization" do
+        let(:catalog_plan) { create(:catalog_plan, organization: create(:organization)) }
+
+        it "returns a not found failure" do
+          result = described_class.call(create_args)
+
+          expect(result).to be_failure
+          expect(result.error.error_code).to eq("plans_not_found")
+        end
+      end
+    end
+
     context "with plan limitations in api context" do
       let_it_be(:plan) { create(:plan, organization:) }
       let(:create_args) do

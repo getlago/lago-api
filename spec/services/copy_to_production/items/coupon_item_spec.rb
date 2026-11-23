@@ -37,6 +37,23 @@ RSpec.describe CopyToProduction::Items::CouponItem do
     end
   end
 
+  describe "#parents" do
+    let(:pro) { create(:catalog_plan, organization: sandbox, code: "pro") }
+    let(:basic) { create(:catalog_plan, organization: sandbox, code: "basic") }
+    let(:deleted_plan) { create(:catalog_plan, organization: sandbox, code: "old") }
+
+    before do
+      create(:coupon_catalog_plan, coupon:, catalog_plan: pro)
+      create(:coupon_catalog_plan, coupon:, catalog_plan: basic)
+      create(:coupon_catalog_plan, coupon:, catalog_plan: deleted_plan)
+      deleted_plan.discard!
+    end
+
+    it "lists the kept targeted catalog plans by code" do
+      expect(item.parents(coupon.reload)).to eq([["catalog_plan", basic], ["catalog_plan", pro]])
+    end
+  end
+
   describe "#refusal" do
     it "accepts a coupon without targets" do
       expect(item.refusal(coupon)).to be_nil
@@ -122,11 +139,28 @@ RSpec.describe CopyToProduction::Items::CouponItem do
       end
     end
 
-    context "when the coupon targets a catalog plan" do
-      before { create(:coupon_catalog_plan, coupon:, catalog_plan: create(:catalog_plan, organization: sandbox)) }
+    context "when the coupon targets catalog plans" do
+      let(:plan) { create(:catalog_plan, organization: sandbox) }
+      let(:other_plan) { create(:catalog_plan, organization: sandbox) }
 
-      it "refuses it" do
-        expect(item.refusal(coupon.reload)).to eq("copy_to_production_unsupported_target")
+      before do
+        create(:coupon_catalog_plan, coupon:, catalog_plan: plan)
+        create(:coupon_catalog_plan, coupon:, catalog_plan: other_plan)
+      end
+
+      it "accepts it" do
+        expect(item.refusal(coupon.reload)).to be_nil
+      end
+
+      context "when all of them are deleted" do
+        before do
+          plan.discard!
+          other_plan.discard!
+        end
+
+        it "refuses it" do
+          expect(item.refusal(coupon.reload)).to eq("copy_to_production_target_deleted")
+        end
       end
     end
   end
