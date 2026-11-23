@@ -463,6 +463,36 @@ RSpec.describe Resolvers::CustomersResolver do
     end
   end
 
+  context "with active contracts" do
+    let(:query) do
+      <<~GQL
+        query($page: Int, $limit: Int) {
+          customers(page: $page, limit: $limit) {
+            collection { id activeContractsCount }
+          }
+        }
+      GQL
+    end
+
+    let(:customers) { create_list(:customer, 3, organization:, billing_entity: billing_entity1) }
+
+    before do
+      create_pair(:contract, customer: customers.first)
+      create(:contract, :pending, customer: customers.first)
+      create(:contract, :terminated, customer: customers.second)
+      create(:contract, customer: customers.third)
+    end
+
+    it "counts the active contracts of every customer in a single query" do
+      result = nil
+      statements = capture_sql { result = execute_query(query:, variables: {page: 1, limit: 5}) }
+
+      counts = result["data"]["customers"]["collection"].to_h { [it["id"], it["activeContractsCount"]] }
+      expect(counts).to eq(customers.first.id => 2, customers.second.id => 0, customers.third.id => 1)
+      expect(statements.grep(/FROM "contracts"/).size).to eq(1)
+    end
+  end
+
   context "with N+1 query detection on associations", bullet: {unused_eager_loading: false} do
     let(:query) do
       <<~GQL
