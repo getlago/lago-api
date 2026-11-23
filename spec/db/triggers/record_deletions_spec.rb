@@ -118,7 +118,8 @@ RSpec.describe "record_deletion trigger", transaction: false do # rubocop:disabl
 
   describe "billing_entities_taxes" do
     it "records the deleted row" do
-      applied_tax = create(:billing_entity_applied_tax, tax:, organization:)
+      billing_entity = create(:billing_entity, organization:)
+      applied_tax = create(:billing_entity_applied_tax, billing_entity:, tax:, organization:)
 
       applied_tax.destroy!
 
