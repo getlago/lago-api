@@ -43,8 +43,6 @@ module Agents
     end
 
     def me
-      return if throttled?(:agent_me_per_ip, request.remote_ip)
-
       result = Agents::Auth::VerifyTokenService.call(storefront:, token: bearer_token, scope: storefront.scope)
 
       if result.success?
