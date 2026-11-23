@@ -68,7 +68,7 @@ RSpec.describe Integrations::Xero::UpdateService do
             before { service_call }
           end
 
-          it_behaves_like "refused on a shadow organization", Integrations::XeroIntegration
+          it_behaves_like "refused on a shadow organization", -> { integration.reload.attributes }
         end
 
         context "with validation error" do

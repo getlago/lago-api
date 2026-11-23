@@ -67,7 +67,7 @@ RSpec.describe Integrations::Hubspot::UpdateService do
             before { service_call }
           end
 
-          it_behaves_like "refused on a shadow organization", Integrations::HubspotIntegration
+          it_behaves_like "refused on a shadow organization", -> { integration.reload.attributes }
         end
 
         context "with validation error" do

@@ -34,7 +34,7 @@ RSpec.describe WebhookEndpoints::UpdateService do
       expect(result.webhook_endpoint.signing_keys).to be_empty
     end
 
-    it_behaves_like "refused on a shadow organization", WebhookEndpoint do
+    it_behaves_like "refused on a shadow organization", -> { webhook_endpoint.reload.attributes } do
       subject { update_service.call }
     end
 

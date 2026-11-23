@@ -71,7 +71,7 @@ RSpec.describe Integrations::Avalara::UpdateService do
             before { service_call }
           end
 
-          it_behaves_like "refused on a shadow organization", Integrations::AvalaraIntegration
+          it_behaves_like "refused on a shadow organization", -> { integration.reload.attributes }
         end
 
         context "with validation error" do

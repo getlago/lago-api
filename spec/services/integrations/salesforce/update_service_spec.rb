@@ -62,7 +62,7 @@ RSpec.describe Integrations::Salesforce::UpdateService do
             before { service_call }
           end
 
-          it_behaves_like "refused on a shadow organization", Integrations::SalesforceIntegration
+          it_behaves_like "refused on a shadow organization", -> { integration.reload.attributes }
         end
 
         context "with validation error" do

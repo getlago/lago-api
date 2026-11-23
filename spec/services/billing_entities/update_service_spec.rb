@@ -152,7 +152,7 @@ RSpec.describe BillingEntities::UpdateService do
         expect(result.billing_entity.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
       end
 
-      it_behaves_like "refused on a shadow organization", BillingEntity do
+      it_behaves_like "refused on a shadow organization", -> { billing_entity.reload.attributes } do
         subject { update_service.call }
       end
 

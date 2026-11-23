@@ -71,7 +71,15 @@ RSpec.describe Integrations::Netsuite::UpdateService do
             before { service_call }
           end
 
-          it_behaves_like "refused on a shadow organization", Integrations::NetsuiteIntegration
+          it_behaves_like "refused on a shadow organization", -> { integration.reload.attributes }
+
+          context "when the organization is the shadow of a migration" do
+            before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+            it "does not send the restlet endpoint to the aggregator" do
+              expect { service_call }.not_to have_enqueued_job(Integrations::Aggregator::SendRestletEndpointJob)
+            end
+          end
 
           it "calls Integrations::Aggregator::SendRestletEndpointJob" do
             service_call
