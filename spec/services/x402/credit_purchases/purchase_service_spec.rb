@@ -1216,6 +1216,22 @@ describe X402::CreditPurchases::PurchaseService do
             expect(result.replayed).to be(true)
           end
         end
+
+        context "when the record is refused on its transaction" do
+          before do
+            refusal = X402::CreditPurchases::RecordService::Result.new
+              .single_validation_failure!(field: :settle_response, error_code: "transaction_already_recorded")
+            allow(X402::CreditPurchases::RecordService).to receive(:call).and_return(refusal)
+          end
+
+          it "answers the winner's row" do
+            expect(result.settlement).to have_attributes(payment_digest: digest, transaction_hash: winner_hash)
+          end
+
+          it "is a replay" do
+            expect(result.replayed).to be(true)
+          end
+        end
       end
 
       context "with a Solana payment" do

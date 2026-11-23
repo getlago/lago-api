@@ -95,11 +95,25 @@ describe X402::Chain::SvmReader do
       expect(rpc_calls).to be_empty
     end
 
-    context "when the TransferChecked data stops inside the amount" do
+    context "when the TransferChecked data ends with the amount" do
       let(:signed_by_buyer) do
         build_solana_transaction(
           keys: ["D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM", buyer, SolanaTransactionBuilder::TOKEN_PROGRAM],
-          instructions: [{program: 2, accounts: [1, 1, 1, 1], data: [12, 1000].pack("CL<")}],
+          instructions: [{program: 2, accounts: [1, 1, 1, 1], data: [12, 1000].pack("CQ<")}],
+          signatures: ["\x00".b * 64, "\x02".b * 64]
+        )
+      end
+
+      it "is the amount" do
+        expect(reader.transfer_amount).to eq(1000)
+      end
+    end
+
+    context "when the TransferChecked data stops one byte inside the amount" do
+      let(:signed_by_buyer) do
+        build_solana_transaction(
+          keys: ["D6ZhtNQ5nT9ZnTHUbqXZsTx5MH2rPFiBBggX4hY1WePM", buyer, SolanaTransactionBuilder::TOKEN_PROGRAM],
+          instructions: [{program: 2, accounts: [1, 1, 1, 1], data: [12].pack("C") + ("\x00".b * 7)}],
           signatures: ["\x00".b * 64, "\x02".b * 64]
         )
       end

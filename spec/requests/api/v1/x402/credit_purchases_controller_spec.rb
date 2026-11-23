@@ -224,6 +224,15 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
         expect(X402::Settlement.sole.payload["settle_response"]).to eq(settle_response.deep_stringify_keys)
       end
 
+      context "with the gate's verify response" do
+        let(:params) { super().merge(verify_response: {isValid: true, payer: payer_address}) }
+
+        it "stores it as sent" do
+          subject
+          expect(X402::Settlement.sole.payload["verify_response"]).to eq("isValid" => true, "payer" => payer_address)
+        end
+      end
+
       context "without an idempotency key" do
         let(:params) { super().except(:idempotency_key) }
 
@@ -247,6 +256,21 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
           subject
           expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
         end
+      end
+    end
+
+    context "with a verify response in settle mode" do
+      let(:params) { super().merge(verify_response: {isValid: true, payer: payer_address}) }
+
+      it "answers 422 on the verify response" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(verify_response: ["not_allowed_in_settle_mode"])
+      end
+
+      it "calls no facilitator" do
+        subject
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
       end
     end
 
