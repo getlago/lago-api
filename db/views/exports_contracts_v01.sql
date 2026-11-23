@@ -1,0 +1,22 @@
+SELECT
+  c.organization_id,
+  c.id AS lago_id,
+  c.customer_id AS lago_customer_id,
+  c.external_id,
+  c.name,
+  c.status::text AS status,
+  c.billing_anchor_date,
+  c.started_at,
+  c.ended_at,
+  c.terminated_at,
+  c.canceled_at,
+  c.catalog_plan_id AS lago_catalog_plan_id,
+  c.billing_entity_id AS lago_billing_entity_id,
+  c.payment_method_id AS lago_payment_method_id,
+  c.payment_method_type::text AS payment_method_type,
+  c.purchase_order_number,
+  c.consolidate_invoice,
+  c.skip_invoice_custom_sections,
+  c.created_at,
+  c.updated_at
+FROM contracts AS c;
