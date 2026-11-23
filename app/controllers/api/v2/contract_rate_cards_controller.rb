@@ -3,15 +3,18 @@
 module Api
   module V2
     class ContractRateCardsController < Api::V2::BaseController
+      include Api::V2::ContractLookup
+
       cursor_paginated_index(ContractRateCard)
       date_range_filtered_index(:created_at)
       serializable_with ::V2::ContractAppliedRateCardSerializer, root: :applied_rate_card
 
       def create
-        return not_found_error(resource: "contract") unless find_contract
+        contract = find_contract(params[:contract_external_id])
+        return not_found_error(resource: "contract") unless contract
 
         result = ::ContractRateCards::CreateService.call(
-          contract: find_contract,
+          contract:,
           params: create_params.to_h.deep_symbolize_keys
         )
 
@@ -56,12 +59,13 @@ module Api
       end
 
       def index
-        return not_found_error(resource: "contract") unless find_contract
+        contract = find_contract(params[:contract_external_id])
+        return not_found_error(resource: "contract") unless contract
 
         result = ::ContractRateCardsQuery.call(
           organization: current_organization,
           pagination: cursor,
-          filters: {contract_id: find_contract.id, **date_range_filters}
+          filters: {contract_id: contract.id, **date_range_filters}
         )
 
         if result.success?
@@ -73,17 +77,9 @@ module Api
 
       private
 
-      def find_contract
-        return @find_contract if defined?(@find_contract)
-
-        @find_contract = current_organization.contracts.live_by_external_id(params[:contract_external_id])
-      end
-
       def find_contract_rate_card
-        contract = find_contract
-        return nil unless contract
-
-        contract.applied_rate_cards.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
+        contract = find_contract(params[:contract_external_id])
+        contract&.applied_rate_cards&.joins(:rate_card)&.find_by(rate_cards: {code: params[:code]})
       end
 
       def create_params

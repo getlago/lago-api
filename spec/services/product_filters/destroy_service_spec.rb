@@ -64,6 +64,39 @@ RSpec.describe ProductFilters::DestroyService, :capture_kafka_messages do
     end
   end
 
+  context "when the filter has contract alerts" do
+    let(:product) { product_filter.product }
+    let(:filter_alert) { create(:contract_usage_units_alert, organization:, product:, product_filter:) }
+    let(:product_alert) { create(:contract_usage_units_alert, organization:, product:) }
+    let(:sibling_filter_alert) do
+      create(:contract_usage_units_alert, organization:, product:, product_filter: create(:product_filter, organization:, product:))
+    end
+    let(:triggered_alert) { create(:contract_triggered_alert, alert: filter_alert) }
+
+    before do
+      freeze_time
+      filter_alert
+      product_alert
+      sibling_filter_alert
+      triggered_alert
+    end
+
+    it "discards the alerts of the filter and deletes their thresholds" do
+      expect(result).to be_success
+      expect(filter_alert.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+      expect(filter_alert.thresholds).to be_empty
+    end
+
+    it "keeps the alerts of its product and of other filters, and the triggered history" do
+      expect(result).to be_success
+      expect(product_alert.reload).not_to be_discarded
+      expect(sibling_filter_alert.reload).not_to be_discarded
+      expect(product_alert.thresholds.count).to eq(1)
+      expect(sibling_filter_alert.thresholds.count).to eq(1)
+      expect(UsageMonitoring::ContractTriggeredAlert.where(id: triggered_alert.id)).to exist
+    end
+  end
+
   context "when the item is attached to a plan" do
     before do
       rate_card = create(:rate_card, organization:, product: product_filter.product)

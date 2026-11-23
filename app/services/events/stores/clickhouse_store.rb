@@ -514,7 +514,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
             SELECT
-              sum(events.decimal_value) as value,
+              sum(#{wide_decimal_sql("events.decimal_value")}) as value,
               #{with_count ? "count()" : "null"} as events_count
             FROM events
           SQL
@@ -535,7 +535,7 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{column_names},
-              sum(events.property),
+              sum(#{wide_decimal_sql("events.property")}),
               #{with_count ? "count()" : "null"}
             FROM events
             GROUP BY #{column_names}
@@ -636,11 +636,7 @@ module Events
           ctes_sql = events_cte_queries(
             select: [
               arel_table[:decimal_value],
-              Arel::Nodes::InfixOperation.new(
-                "*",
-                arel_table[:decimal_value],
-                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
-              ).as("prorated_value")
+              prorated_decimal_value(ratio).as("prorated_value")
             ],
             deduplicated_columns: %w[decimal_value]
           )
@@ -648,7 +644,7 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               sum(events.prorated_value) as prorated_value,
-              sum(events.decimal_value) as value,
+              sum(#{wide_decimal_sql("events.decimal_value")}) as value,
               count() as events_count
             FROM events
           SQL
@@ -670,11 +666,7 @@ module Events
           ctes_sql = events_cte_queries(
             select: groups + [
               arel_table[:decimal_value],
-              Arel::Nodes::InfixOperation.new(
-                "*",
-                arel_table[:decimal_value],
-                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
-              ).as("prorated_value")
+              prorated_decimal_value(ratio).as("prorated_value")
             ],
             deduplicated_columns: %w[decimal_value]
           )
@@ -683,7 +675,7 @@ module Events
             SELECT
               #{group_names},
               sum(events.prorated_value) as prorated_value,
-              sum(events.decimal_value) as value,
+              sum(#{wide_decimal_sql("events.decimal_value")}) as value,
               count() as events_count
             FROM events
             GROUP BY #{group_names}
@@ -711,7 +703,7 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               events.day,
-              sum(events.property) AS day_sum
+              sum(#{wide_decimal_sql("events.property")}) AS day_sum
             FROM events
             GROUP BY events.day
             ORDER BY events.day asc
@@ -733,7 +725,6 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
-                decimal_scale: DECIMAL_SCALE,
                 initial_value: decimal_literal(initial_value || 0)
               }
             ]
@@ -773,8 +764,7 @@ module Events
               sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
               {
                 from_datetime:,
-                to_datetime: to_datetime.ceil,
-                decimal_scale: DECIMAL_SCALE
+                to_datetime: to_datetime.ceil
               }
             ]
           )
@@ -795,7 +785,6 @@ module Events
                 {
                   from_datetime:,
                   to_datetime: to_datetime.ceil,
-                  decimal_scale: DECIMAL_SCALE,
                   initial_value: decimal_literal(initial_value || 0)
                 }
               ]
@@ -865,8 +854,8 @@ module Events
 
       def recurring_sum_sql(watermark)
         <<~SQL.squish
-          sum(events.property) AS value,
-          #{sql_condition("sumIf(events.property, events.enriched_at <= ?)", watermark)} AS snapshot_value,
+          sum(#{wide_decimal_sql("events.property")}) AS value,
+          #{sql_condition("sumIf(#{wide_decimal_sql("events.property")}, events.enriched_at <= ?)", watermark)} AS snapshot_value,
           count() AS events_count,
           #{sql_condition("countIf(events.enriched_at <= ?)", watermark)} AS snapshot_events_count
         SQL
@@ -1061,6 +1050,19 @@ module Events
 
       def arel_table
         @arel_table ||= ::Clickhouse::EventsEnriched.arel_table
+      end
+
+      def wide_decimal_value
+        Arel::Nodes::SqlLiteral.new(wide_decimal_sql("#{arel_table.name}.decimal_value"))
+      end
+
+      # ClickHouse rewrites sum(x * ratio) into sum(x) * ratio, so the value is widened before the product.
+      def prorated_decimal_value(ratio)
+        Arel::Nodes::InfixOperation.new(
+          "*",
+          wide_decimal_value,
+          Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+        )
       end
 
       def grouped_arel_columns(columns = grouped_by)

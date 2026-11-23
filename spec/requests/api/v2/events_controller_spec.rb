@@ -345,6 +345,54 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
     include_examples "validates event input"
     include_examples "handles event expressions", error_field: "base"
 
+    context "with an organization waiting for a payment method", cache: :memory do
+      include_context "with self-serve enabled"
+
+      let(:organization) do
+        create_default(:organization, :self_serve, activation_status: "pending_payment_method",
+          feature_flags: ["product_catalog"])
+      end
+
+      it "refuses the event" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "organization_inactive", details: [])
+      end
+
+      context "when the organization is activated after its api key was cached" do
+        before do
+          ApiKeys::CacheService.call(organization.api_keys.first.value, with_cache: true)
+          Organizations::ActivateService.call!(organization:)
+        end
+
+        it "accepts the event, as activation clears the cache" do
+          request
+
+          expect(response).to have_http_status(:ok)
+        end
+      end
+    end
+
+    context "with an active organization whose api key is cached, then made to wait for a payment method", cache: :memory do
+      include_context "with self-serve enabled"
+
+      let(:organization) { create_default(:organization, :self_serve, feature_flags: ["product_catalog"]) }
+
+      before do
+        ApiKeys::CacheService.call(organization.api_keys.first.value, with_cache: true)
+        organization.update!(activation_status: "pending_payment_method")
+        ApiKeys::CacheService.expire_all_cache(organization)
+      end
+
+      it "refuses the event" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "organization_inactive", details: [])
+      end
+    end
+
     it "creates an event through the existing ingestion service" do
       expect { request }.to change(Event, :count).by(1)
 

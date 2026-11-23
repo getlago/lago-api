@@ -58,6 +58,7 @@ module Contracts
             customer:,
             catalog_plan:,
             external_id: params[:external_id],
+            code: params[:code],
             name: params[:name],
             billing_time: params[:billing_time].presence || "calendar",
             billing_anchor_date: params[:billing_anchor_date],
@@ -84,12 +85,11 @@ module Contracts
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique => e
-      # A concurrent create won the race past the advisory check; same answer
-      # as the check itself. Any other uniqueness violation in the transaction
-      # stays loud instead of masquerading as a duplicate external id.
-      raise unless e.message.include?("index_contracts_on_live_external_id")
-
-      result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
+      if violated_unique_index(e) == "index_contracts_on_live_external_id"
+        result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")
+      else
+        unique_index_failure!(e, "index_contracts_on_organization_id_external_id_code" => :code)
+      end
     rescue BaseService::FailedResult => e
       e.result
     rescue BaseLockService::FailedToAcquireLock => e

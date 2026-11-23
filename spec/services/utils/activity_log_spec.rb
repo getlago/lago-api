@@ -609,6 +609,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               organization:,
               customer:,
               external_id: "acme-2023",
+              code: "default",
               name: "Acme 2023",
               purchase_order_number: "PO-42",
               started_at: Time.current
@@ -623,6 +624,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             expect(produced_payload[:activity_object]).to eq(
               lago_id: contract.id,
               external_id: "acme-2023",
+              code: "default",
               lago_customer_id: customer.id,
               external_customer_id: "acme",
               name: "Acme 2023",
