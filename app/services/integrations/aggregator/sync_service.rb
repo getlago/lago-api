@@ -39,8 +39,7 @@ module Integrations
         when "Integrations::QuickbooksIntegration"
           {
             accounts: "accounts",
-            items: "items",
-            contacts: "customers"
+            items: "items"
           }
         end
 

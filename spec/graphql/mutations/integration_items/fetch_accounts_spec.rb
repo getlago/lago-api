@@ -62,7 +62,18 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts do
 
   context "with a quickbooks integration" do
     let(:integration) { create(:quickbooks_integration, organization:) }
-    let(:fixture_records) { JSON.parse(accounts_response)["records"] }
+    let(:active_account) do
+      JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/quickbooks_accounts_response.json")))["records"].first
+    end
+    let(:inactive_account) { active_account.merge("id" => "2", "name" => "Inactive", "active" => false) }
+    let(:deleted_account) do
+      active_account.merge(
+        "id" => "3",
+        "name" => "Deleted",
+        "_nango_metadata" => active_account["_nango_metadata"].merge("deleted_at" => "2026-01-02T00:00:00.000000+00:00")
+      )
+    end
+    let(:accounts_response) { {records: [active_account, inactive_account, deleted_account], next_cursor: nil}.to_json }
     let(:sync_request) do
       stub_request(:post, "https://api.nango.dev/sync/trigger")
         .with(body: hash_including(provider_config_key: "quickbooks", syncs: ["accounts"]))
@@ -74,7 +85,7 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts do
       sync_request
     end
 
-    it "fetches the quickbooks accounts through the accounts sync" do
+    it "stores the active quickbooks accounts from the accounts sync and skips inactive or deleted ones" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -89,9 +100,9 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts do
 
       expect(sync_request).to have_been_requested.once
       expect(collection.map { |value| value.slice("externalId", "externalName") })
-        .to eq(fixture_records.map { |record| {"externalId" => record["id"], "externalName" => record["name"]} })
-      expect(integration.integration_items.where(item_type: :account).count)
-        .to eq(fixture_records.map { |record| record["id"] }.uniq.count)
+        .to eq([{"externalId" => "79", "externalName" => "Services"}])
+      expect(integration.integration_items.where(item_type: :account).pluck(:external_id, :external_name))
+        .to eq([["79", "Services"]])
     end
   end
 end

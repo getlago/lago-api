@@ -59,7 +59,18 @@ RSpec.describe Mutations::IntegrationItems::FetchItems do
 
   context "with a quickbooks integration" do
     let(:integration) { create(:quickbooks_integration, organization:) }
-    let(:fixture_records) { JSON.parse(items_response)["records"] }
+    let(:active_item) do
+      JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/quickbooks_items_response.json")))["records"].first
+    end
+    let(:inactive_item) { active_item.merge("id" => "2", "name" => "Inactive", "active" => false) }
+    let(:deleted_item) do
+      active_item.merge(
+        "id" => "3",
+        "name" => "Deleted",
+        "_nango_metadata" => active_item["_nango_metadata"].merge("deleted_at" => "2026-01-02T00:00:00.000000+00:00")
+      )
+    end
+    let(:items_response) { {records: [active_item, inactive_item, deleted_item], next_cursor: nil}.to_json }
     let(:sync_request) do
       stub_request(:post, "https://api.nango.dev/sync/trigger")
         .with(body: hash_including(provider_config_key: "quickbooks", syncs: ["items"]))
@@ -71,7 +82,7 @@ RSpec.describe Mutations::IntegrationItems::FetchItems do
       sync_request
     end
 
-    it "fetches the quickbooks items through the items sync" do
+    it "stores the active quickbooks items from the items sync and skips inactive or deleted ones" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -86,9 +97,9 @@ RSpec.describe Mutations::IntegrationItems::FetchItems do
 
       expect(sync_request).to have_been_requested.once
       expect(collection.map { |value| value.slice("externalId", "externalName") })
-        .to eq(fixture_records.map { |record| {"externalId" => record["id"], "externalName" => record["name"]} })
-      expect(integration.integration_items.where(item_type: :standard).count)
-        .to eq(fixture_records.map { |record| record["id"] }.uniq.count)
+        .to eq([{"externalId" => "1", "externalName" => "Consulting"}])
+      expect(integration.integration_items.where(item_type: :standard).pluck(:external_id, :external_name))
+        .to eq([["1", "Consulting"]])
     end
   end
 end

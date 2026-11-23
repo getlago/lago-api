@@ -55,7 +55,7 @@ RSpec.describe Integrations::Aggregator::SyncService do
 
         expect(lago_client).to have_received(:post_with_response) do |payload|
           expect(payload[:provider_config_key]).to eq("quickbooks")
-          expect(payload[:syncs]).to eq(%w[accounts items customers])
+          expect(payload[:syncs]).to eq(%w[accounts items])
         end
       end
 
@@ -78,7 +78,7 @@ RSpec.describe Integrations::Aggregator::SyncService do
 
           expect(lago_client).to have_received(:post_with_response) do |payload|
             expect(payload[:provider_config_key]).to eq("quickbooks-sandbox")
-            expect(payload[:syncs]).to eq(%w[accounts items customers])
+            expect(payload[:syncs]).to eq(%w[accounts items])
           end
         end
       end
