@@ -216,6 +216,67 @@ RSpec.describe Resolvers::CustomerResolver do
     end
   end
 
+  context "when the customer has a QuickBooks and a Xero link" do
+    let(:quickbooks_integration) { create(:quickbooks_integration, organization:, code: "qb_main") }
+    let(:xero_integration) { create(:xero_integration, organization:) }
+    let(:quickbooks_customer) do
+      create(:quickbooks_customer, integration: quickbooks_integration, customer:, organization:, external_customer_id: "58", code: "qb_link")
+    end
+    let(:xero_customer) do
+      create(:xero_customer, integration: xero_integration, customer:, organization:, category: "accounting", is_default: false)
+    end
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!) {
+          customer(id: $customerId) {
+            id
+            integrationCustomers {
+              ... on QuickbooksCustomer {
+                id externalCustomerId integrationId integrationCode integrationType category code isDefault syncWithProvider
+              }
+              ... on XeroCustomer { id integrationType }
+            }
+          }
+        }
+      GQL
+    end
+
+    before do
+      quickbooks_customer
+      xero_customer
+    end
+
+    it "returns the QuickBooks link apart from the Xero link" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id}
+      )
+
+      links = result["data"]["customer"]["integrationCustomers"]
+      expect(links).to contain_exactly(
+        {
+          "id" => quickbooks_customer.id,
+          "externalCustomerId" => "58",
+          "integrationId" => quickbooks_integration.id,
+          "integrationCode" => "qb_main",
+          "integrationType" => "quickbooks",
+          "category" => "accounting",
+          "code" => "qb_link",
+          "isDefault" => quickbooks_customer.is_default,
+          "syncWithProvider" => true
+        },
+        {"id" => xero_customer.id, "integrationType" => "xero"}
+      )
+    end
+
+    it "exposes no quickbooksCustomer field on the customer" do
+      expect(Types::Customers::Object.fields.keys).not_to include("quickbooksCustomer")
+    end
+  end
+
   context "when customer is not found" do
     it "returns an error" do
       result = execute_graphql(

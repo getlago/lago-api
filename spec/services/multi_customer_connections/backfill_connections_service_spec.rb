@@ -72,6 +72,52 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
       end
     end
 
+    context "with a QuickBooks integration_customer missing code and category" do
+      let(:integration) { create(:quickbooks_integration, organization:, code: "quickbooks_us") }
+      let(:int_customer) do
+        # Simulate a legacy row: skipping validation skips the callbacks that derive code and category.
+        build(:quickbooks_customer, customer:, organization:, integration:, category: nil, code: nil).tap do |ic|
+          ic.save!(validate: false)
+        end
+      end
+      let(:unmapped_customer) do
+        build(
+          :netsuite_customer,
+          customer:,
+          organization:,
+          integration: create(:netsuite_integration, organization:),
+          category: nil
+        ).tap { |ic| ic.save!(validate: false) }
+      end
+
+      before do
+        int_customer
+        unmapped_customer
+        stub_const(
+          "IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE",
+          IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE.except("IntegrationCustomers::NetsuiteCustomer")
+        )
+      end
+
+      it "sets the code, derives the accounting category and marks it default" do
+        expect(result.summary[:integration_categories_set]).to eq(1)
+        expect(result.summary[:integration_defaults_set]).to eq(1)
+
+        int_customer.reload
+        expect(int_customer.code).to eq("quickbooks_us")
+        expect(int_customer.category).to eq("accounting")
+        expect(int_customer.is_default).to be(true)
+      end
+
+      it "leaves the category of an unmapped type nil" do
+        result
+
+        unmapped_customer.reload
+        expect(unmapped_customer.category).to be_nil
+        expect(unmapped_customer.is_default).to be(false)
+      end
+    end
+
     context "with an integration_customer whose type CATEGORY_BY_TYPE maps to accounting" do
       let(:integration) { create(:hubspot_integration, organization:, code: "hubspot_eu") }
       let(:int_customer) do

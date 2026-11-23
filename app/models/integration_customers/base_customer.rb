@@ -25,6 +25,7 @@ module IntegrationCustomers
       "anrok" => "IntegrationCustomers::AnrokCustomer",
       "avalara" => "IntegrationCustomers::AvalaraCustomer",
       "xero" => "IntegrationCustomers::XeroCustomer",
+      "quickbooks" => "IntegrationCustomers::QuickbooksCustomer",
       "hubspot" => "IntegrationCustomers::HubspotCustomer",
       "salesforce" => "IntegrationCustomers::SalesforceCustomer"
     }.freeze
@@ -41,6 +42,7 @@ module IntegrationCustomers
       "IntegrationCustomers::AvalaraCustomer" => CATEGORIES[:tax],
       "IntegrationCustomers::NetsuiteCustomer" => CATEGORIES[:accounting],
       "IntegrationCustomers::XeroCustomer" => CATEGORIES[:accounting],
+      "IntegrationCustomers::QuickbooksCustomer" => CATEGORIES[:accounting],
       "IntegrationCustomers::HubspotCustomer" => CATEGORIES[:crm],
       "IntegrationCustomers::SalesforceCustomer" => CATEGORIES[:crm]
     }.freeze

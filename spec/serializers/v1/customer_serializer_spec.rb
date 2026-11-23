@@ -120,6 +120,24 @@ RSpec.describe ::V1::CustomerSerializer do
     end
   end
 
+  context "with a quickbooks link and a xero link" do
+    let(:customer) { create(:customer) }
+    let(:quickbooks_customer) { create(:quickbooks_customer, customer:, external_customer_id: "58") }
+    let(:xero_customer) { create(:xero_customer, customer:) }
+
+    before do
+      quickbooks_customer
+      xero_customer
+    end
+
+    it "nests each link with its own type" do
+      expect(result["customer"]["integration_customers"]).to contain_exactly(
+        hash_including("lago_id" => quickbooks_customer.id, "external_customer_id" => "58", "type" => "quickbooks", "category" => "accounting"),
+        hash_including("lago_id" => xero_customer.id, "type" => "xero", "category" => "accounting")
+      )
+    end
+  end
+
   context "with a stripe customer" do
     let(:stripe_customer) { create(:stripe_customer, customer:) }
 
