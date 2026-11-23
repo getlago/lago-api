@@ -24,6 +24,19 @@ RSpec.describe Agents::DocumentsController, :premium do
     expect(response.body).to include("POST `#{storefront.agent_url}/auth/challenges`")
   end
 
+  context "with BILLING.md" do
+    subject { get("/agents/v1/#{storefront_id}/BILLING.md") }
+
+    it "renders the plans of the connection and how to enroll" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/markdown")
+      expect(response.body).to include("# Billing: #{storefront.name}")
+      expect(response.body).to include("POST `#{storefront.agent_url}/billing/enroll`")
+    end
+  end
+
   context "with an unknown connection" do
     let(:storefront_id) { SecureRandom.uuid }
 
