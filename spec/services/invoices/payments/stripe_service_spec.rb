@@ -54,6 +54,39 @@ RSpec.describe Invoices::Payments::StripeService do
       expect(result.provider_session_id).to eq("cs_123")
     end
 
+    it "sends the unit amount in Lago units for a currency Stripe reads the same way" do
+      described_class.call(:generate_payment_url, invoice, payment_intent)
+
+      expect(::Stripe::Checkout::Session).to have_received(:create).with(
+        hash_including(line_items: [hash_including(price_data: hash_including(unit_amount: 200, currency: "eur"))]),
+        anything
+      )
+    end
+
+    context "when the invoice is in a currency Stripe reads in hundredths" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 50_000,
+          total_paid_amount_cents: 0,
+          currency: "HUF",
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the unit amount in Stripe units" do
+        described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(::Stripe::Checkout::Session).to have_received(:create).with(
+          # 50_000 HUF * 100, Stripe reads HUF in hundredths
+          hash_including(line_items: [hash_including(price_data: hash_including(unit_amount: 5_000_000, currency: "huf"))]),
+          anything
+        )
+      end
+    end
+
     describe "#payment_url_payload" do
       let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload, payment_intent) }
 

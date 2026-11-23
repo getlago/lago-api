@@ -157,7 +157,7 @@ module PaymentProviders
 
         def payment_intent_payload
           payload = {
-            amount: payment.amount_cents,
+            amount: ::PaymentProviders::StripeProvider.to_stripe_amount(payment.amount_cents, payment.amount_currency),
             currency: payment.amount_currency.downcase,
             customer: provider_customer.provider_customer_id,
             payment_method_types: provider_customer.provider_payment_methods,
