@@ -82,7 +82,7 @@ module Invoices
     end
 
     def recurring_invoice?
-      invoice.invoice_subscriptions.first&.recurring? || invoice.billing_segments.exists?
+      invoice.invoice_subscriptions.first&.recurring? || invoice.billing_operations.exists?
     end
 
     def payment_due_date

@@ -16,6 +16,8 @@ RSpec.describe Organization do
     it do
       expect(subject).to define_enum_for(:environment).backed_by_column_of_type(:enum).validating
         .with_values(production: "production", sandbox: "sandbox")
+      expect(subject).to define_enum_for(:activation_status).backed_by_column_of_type(:enum).validating.with_prefix
+        .with_values(pending_payment_method: "pending_payment_method", active: "active")
     end
   end
 
@@ -59,6 +61,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:hubspot_integrations)
       expect(subject).to have_many(:netsuite_integrations)
       expect(subject).to have_many(:xero_integrations)
+      expect(subject).to have_many(:quickbooks_integrations)
       expect(subject).to have_one(:salesforce_integration)
       expect(subject).to have_many(:agent_storefront_integrations)
       expect(subject).to have_many(:data_exports)
@@ -88,6 +91,8 @@ RSpec.describe Organization do
       expect(subject).to have_many(:orders)
       expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
         .conditions(kind: "triggered")
+      expect(subject).to have_many(:contract_alerts).class_name("UsageMonitoring::ContractAlert")
+      expect(subject).to have_many(:contract_activities).class_name("UsageMonitoring::ContractActivity")
     end
   end
 
@@ -297,9 +302,61 @@ RSpec.describe Organization do
     describe "of the defaults" do
       subject(:organization) { create(:organization) }
 
-      it "is a production organization, not self-serve and unlinked" do
+      it "is an active production organization, not self-serve and unlinked" do
         expect(organization.reload).to have_attributes(self_serve: false, environment: "production",
-          production_organization_id: nil)
+          production_organization_id: nil, activation_status: "active")
+      end
+    end
+
+    describe "of activation_status" do
+      let(:self_serve_production) { create(:organization, :self_serve) }
+      let(:regular) { create(:organization) }
+      let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: self_serve_production) }
+
+      context "with a self-serve production organization waiting for a payment method" do
+        subject(:organization) { build(:organization, :self_serve, activation_status: "pending_payment_method") }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "with a regular organization waiting for a payment method" do
+        subject(:organization) { build(:organization, activation_status: "pending_payment_method") }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      context "with a self-serve sandbox waiting for a payment method" do
+        subject(:organization) do
+          build(:organization, :self_serve, :sandbox, production_organization: self_serve_production,
+            activation_status: "pending_payment_method")
+        end
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      context "with an unknown value" do
+        before { organization.activation_status = "suspended" }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      it "refuses a waiting regular organization in the database, for writes that skip validations" do
+        expect { regular.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
+      end
+
+      it "refuses a waiting sandbox in the database, for writes that skip validations" do
+        expect { sandbox.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
       end
     end
 
@@ -429,6 +486,12 @@ RSpec.describe Organization do
 
       context "when it includes a valid integration" do
         subject(:organization) { build(:organization, :premium) }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "when it includes quickbooks" do
+        subject(:organization) { build(:organization, premium_integrations: ["quickbooks"]) }
 
         it { is_expected.to be_valid }
       end
@@ -885,6 +948,62 @@ RSpec.describe Organization do
         it "returns nil" do
           expect(subject).to eq(nil)
         end
+      end
+    end
+  end
+
+  describe "#effective_activation_status" do
+    subject(:organization) { build(:organization, :self_serve, activation_status:) }
+
+    include_context "with self-serve enabled"
+
+    let(:activation_status) { "pending_payment_method" }
+
+    it "is the stored status" do
+      expect(organization.effective_activation_status).to eq("pending_payment_method")
+    end
+
+    context "with an active organization" do
+      let(:activation_status) { "active" }
+
+      it "is active" do
+        expect(organization.effective_activation_status).to eq("active")
+      end
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "is active whatever the stored status" do
+        expect(organization.effective_activation_status).to eq("active")
+      end
+    end
+  end
+
+  describe "#awaiting_payment_method?" do
+    subject(:organization) { build(:organization, :self_serve, activation_status:) }
+
+    include_context "with self-serve enabled"
+
+    let(:activation_status) { "pending_payment_method" }
+
+    it "is true for a pending organization" do
+      expect(organization.awaiting_payment_method?).to be(true)
+    end
+
+    context "with an active organization" do
+      let(:activation_status) { "active" }
+
+      it "is false" do
+        expect(organization.awaiting_payment_method?).to be(false)
+      end
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "is false for a pending organization" do
+        expect(organization.awaiting_payment_method?).to be(false)
       end
     end
   end

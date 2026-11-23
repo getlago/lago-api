@@ -184,7 +184,15 @@ module Customers
     # billed invoice subscriptions used to net already-billed amounts out of ongoing usage.
     def subscription_usages
       @subscription_usages ||= customer.active_subscriptions.map do |subscription|
-        usage_result = ::Invoices::CustomerUsageService.call!(customer:, subscription:, usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER, use_usage_buckets: true)
+        # The ongoing balance is an estimate, so the taxes may come from cached rates instead of
+        # a provider call: every refresh would otherwise call the provider for each customer.
+        usage_result = ::Invoices::CustomerUsageService.call!(
+          customer:,
+          subscription:,
+          usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+          use_usage_buckets: true,
+          reuse_tax_rates: true
+        )
 
         billed_progressive_invoice_subscriptions = ::Subscriptions::ProgressiveBilledAmount
           .call(subscription:, include_generating_invoices:)

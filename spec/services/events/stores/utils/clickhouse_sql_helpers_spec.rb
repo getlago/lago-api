@@ -39,4 +39,21 @@ RSpec.describe Events::Stores::Utils::ClickhouseSqlHelpers do
       expect(helper.decimal_literal("0.000000000000000001")).to eq("0.000000000000000001")
     end
   end
+
+  describe "#wide_decimal_sql" do
+    it "casts the expression to Decimal256 at the decimal scale" do
+      expect(helper.wide_decimal_sql("events.property")).to eq("toDecimal256(events.property, 26)")
+    end
+
+    it "sums Decimal128 values above 1.70e12 without wrapping", clickhouse: true do
+      sql = <<~SQL
+        SELECT sum(#{helper.wide_decimal_sql("x")}) AS value
+        FROM (SELECT toDecimal128('8000000000', 26) AS x FROM numbers(250))
+      SQL
+
+      value = Events::Stores::Utils::ClickhouseConnection.connection_with_retry { it.select_value(sql) }
+
+      expect(value).to eq(BigDecimal("2000000000000")) # 250 x 8e9
+    end
+  end
 end

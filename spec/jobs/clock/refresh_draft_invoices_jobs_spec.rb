@@ -60,18 +60,13 @@ describe Clock::RefreshDraftInvoicesJob, job: true do
       let(:customer) { create(:customer) }
       let(:invoice_subscription) { nil }
       let(:contract) { create(:contract, organization: customer.organization, customer:) }
-      let(:billing_segment) do
-        create(
-          :billing_segment,
-          organization: customer.organization,
-          customer:,
-          contract:,
-          invoice:,
-          status: :done
-        )
+      let(:contract_rate_card) { create(:contract_rate_card, organization: customer.organization, contract:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization: customer.organization, rate_card: contract_rate_card.rate_card) }
+      let(:product_fee) do
+        create(:product_fee, invoice:, contract:, contract_rate_card:, rate_card_rate:, organization: customer.organization)
       end
 
-      before { billing_segment }
+      before { product_fee }
 
       it "enqueues its refresh job without a legacy subscription" do
         described_class.perform_now

@@ -83,6 +83,21 @@ FactoryBot.define do
     end
   end
 
+  factory :quickbooks_integration, class: "Integrations::QuickbooksIntegration" do
+    organization
+    type { "Integrations::QuickbooksIntegration" }
+    code { "quickbooks" }
+    name { "QuickBooks Integration" }
+
+    secrets do
+      {connection_id: "quickbooks-test-connection"}.to_json
+    end
+
+    settings do
+      {realm_id: "1234567890", sandbox: false, sync_invoices: false, sync_credit_notes: false, sync_payments: false}
+    end
+  end
+
   factory :hubspot_integration, class: "Integrations::HubspotIntegration" do
     organization
     type { "Integrations::HubspotIntegration" }

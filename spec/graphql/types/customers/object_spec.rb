@@ -77,6 +77,7 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:deleted_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
 
+    expect(subject).to have_field(:active_contracts_count).of_type("Int!")
     expect(subject).to have_field(:active_subscriptions_count).of_type("Int!")
     expect(subject).to have_field(:credit_notes_balance_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:credit_notes_balances).of_type("[CustomerCreditNotesBalance!]!")
