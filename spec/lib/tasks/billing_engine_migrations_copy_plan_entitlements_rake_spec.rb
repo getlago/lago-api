@@ -15,15 +15,8 @@ RSpec.describe "billing_engine_migrations:copy_plan_entitlements" do # rubocop:d
   let(:task) { Rake::Task["billing_engine_migrations:copy_plan_entitlements"] }
   let(:env) { {} }
   let(:status) { "shadowing" }
-  let(:migration) do
-    create(
-      :billing_engine_migration,
-      organization:,
-      shadow_organization:,
-      status:,
-      plan_mapping: {"pro" => "pro_v2", "basic" => "basic_v2"}
-    )
-  end
+  let(:plan_mapping) { {"pro" => "pro_v2", "basic" => "basic_v2"} }
+  let(:migration) { create(:billing_engine_migration, organization:, shadow_organization:, status:, plan_mapping:) }
 
   before_all do
     create(:entitlement_value, entitlement: create(:entitlement, plan: pro, feature: seats), privilege: seats_max, value: "10")
@@ -73,7 +66,7 @@ RSpec.describe "billing_engine_migrations:copy_plan_entitlements" do # rubocop:d
           "[DRY RUN] would create value seats.max on catalog plan pro_v2",
           "[DRY RUN] skipped plan basic (plan_not_found)",
           "[DRY RUN] skipped catalog plan basic_v2 (catalog_plan_not_found)",
-          "Features: 1 created. Privileges: 1 created. Catalog plans: 1 synced. Mappings skipped: 2. " \
+          "Features: 1 created. Privileges: 1 created, 0 updated. Catalog plans: 1 synced. Mappings skipped: 1. " \
           "Entitlements: 1 created, 0 removed. Values: 1 created, 0 updated, 0 removed. [DRY RUN]"
         )
       ).to_stdout
@@ -97,6 +90,78 @@ RSpec.describe "billing_engine_migrations:copy_plan_entitlements" do # rubocop:d
 
       expect(shadow_organization.features.pluck(:code)).to eq(%w[seats])
       expect(pro_catalog_plan.entitlement_values.pluck(:value)).to eq(%w[10])
+    end
+  end
+
+  context "when the catalog plan already has entitlements that differ from the plan" do
+    let(:shadow_tier) do
+      Entitlement::Privilege.find_by!(organization: shadow_organization, code: "tier")
+    end
+
+    before do
+      create(:privilege, feature: seats, code: "tier", value_type: "select", config: {select_options: %w[silver gold]})
+
+      shadow_seats = create(:feature, organization: shadow_organization, code: "seats")
+      shadow_max = create(:privilege, feature: shadow_seats, code: "max", value_type: "integer")
+      shadow_old = create(:privilege, feature: shadow_seats, code: "old", value_type: "string")
+      create(:privilege, feature: shadow_seats, code: "tier", value_type: "select", config: {select_options: %w[silver]})
+      shadow_seats_entitlement = create(:entitlement, :catalog_plan, catalog_plan: pro_catalog_plan, feature: shadow_seats)
+      create(:entitlement_value, entitlement: shadow_seats_entitlement, privilege: shadow_max, value: "5")
+      create(:entitlement_value, entitlement: shadow_seats_entitlement, privilege: shadow_old, value: "x")
+
+      legacy = create(:feature, organization: shadow_organization, code: "legacy")
+      create(:entitlement, :catalog_plan, catalog_plan: pro_catalog_plan, feature: legacy)
+    end
+
+    it "lists the updates and removals it would make, and rolls them back" do
+      expect { task.invoke(organization.id) }.to output(
+        a_string_including(
+          "[DRY RUN] would update privilege seats.tier",
+          "[DRY RUN] would remove entitlement legacy on catalog plan pro_v2",
+          "[DRY RUN] would update value seats.max on catalog plan pro_v2",
+          "[DRY RUN] would remove value seats.old on catalog plan pro_v2",
+          "Features: 0 created. Privileges: 0 created, 1 updated. Catalog plans: 1 synced. Mappings skipped: 1. " \
+          "Entitlements: 0 created, 1 removed. Values: 0 created, 1 updated, 1 removed. [DRY RUN]"
+        )
+      ).to_stdout
+
+      expect(shadow_tier.config).to eq({"select_options" => %w[silver]})
+      expect(pro_catalog_plan.entitlements.count).to eq(2)
+      expect(pro_catalog_plan.entitlement_values.pluck(:value)).to match_array(%w[5 x])
+    end
+
+    context "when DRY_RUN is disabled" do
+      let(:env) { {"DRY_RUN" => "false"} }
+
+      it "updates the privilege, then brings the catalog plan to the plan entitlements" do
+        expect { task.invoke(organization.id) }.to output(
+          a_string_including(
+            "[LIVE] updated privilege seats.tier",
+            "[LIVE] removed entitlement legacy on catalog plan pro_v2",
+            "[LIVE] updated value seats.max on catalog plan pro_v2",
+            "[LIVE] removed value seats.old on catalog plan pro_v2"
+          )
+        ).to_stdout
+
+        expect(shadow_tier.config).to eq({"select_options" => %w[silver gold]})
+        expect(pro_catalog_plan.entitlements.joins(:feature).pluck("entitlement_features.code")).to eq(%w[seats])
+        expect(pro_catalog_plan.entitlement_values.pluck(:value)).to eq(%w[10])
+      end
+    end
+  end
+
+  context "when two plans with different entitlements are mapped to the same catalog plan" do
+    let(:plan_mapping) { {"pro" => "pro_v2", "pro_legacy" => "pro_v2"} }
+
+    before { create(:plan, organization:, code: "pro_legacy") }
+
+    it "skips the catalog plan and counts each mapping" do
+      expect { task.invoke(organization.id) }.to output(
+        a_string_including(
+          "[DRY RUN] skipped catalog plan pro_v2 (mapped_plans_have_different_entitlements)",
+          "Catalog plans: 0 synced. Mappings skipped: 2."
+        )
+      ).to_stdout
     end
   end
 

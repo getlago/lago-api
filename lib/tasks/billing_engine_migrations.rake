@@ -171,6 +171,7 @@ class BillingEnginePlanEntitlementsCopy
   def report(result)
     list("create", "feature", result.created_features)
     list("create", "privilege", result.created_privileges)
+    list("update", "privilege", result.updated_privileges)
     result.catalog_plans.each { |code, plan_result| report_catalog_plan(code, plan_result) }
     result.missing_plan_codes.each { puts "  [#{mode}] skipped plan #{it} (plan_not_found)" }
     result.missing_catalog_plan_codes.each { puts "  [#{mode}] skipped catalog plan #{it} (catalog_plan_not_found)" }
@@ -198,13 +199,18 @@ class BillingEnginePlanEntitlementsCopy
   end
 
   def summary(result)
-    skipped = result.missing_plan_codes + result.missing_catalog_plan_codes + result.conflicting_catalog_plan_codes
-
-    "Features: #{result.created_features.size} created. Privileges: #{result.created_privileges.size} created. " \
-      "Catalog plans: #{result.catalog_plans.size} synced. Mappings skipped: #{skipped.size}. " \
+    "Features: #{result.created_features.size} created. " \
+      "Privileges: #{result.created_privileges.size} created, #{result.updated_privileges.size} updated. " \
+      "Catalog plans: #{result.catalog_plans.size} synced. Mappings skipped: #{skipped_mappings(result)}. " \
       "Entitlements: #{plan_count(result, :created_entitlements)} created, #{plan_count(result, :removed_entitlements)} removed. " \
       "Values: #{plan_count(result, :created_values)} created, #{plan_count(result, :updated_values)} updated, " \
       "#{plan_count(result, :removed_values)} removed. [#{mode}]"
+  end
+
+  def skipped_mappings(result)
+    migration.plan_mapping.count do |plan_code, catalog_plan_code|
+      result.missing_plan_codes.include?(plan_code) || !result.catalog_plans.key?(catalog_plan_code)
+    end
   end
 
   def plan_count(result, field)
