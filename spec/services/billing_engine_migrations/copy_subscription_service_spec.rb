@@ -6,7 +6,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
   subject(:result) { described_class.call(migration:, subscription:) }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:shadow_organization) { create(:organization, feature_flags: ["product_catalog"]) }
+  let_it_be(:shadow_organization) { create(:shadow_organization) }
   let_it_be(:plan) { create(:plan, organization:) }
   let_it_be(:catalog_plan) { create(:catalog_plan, organization: shadow_organization) }
   let_it_be(:customer) do
@@ -48,7 +48,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     )
   end
 
-  before { create(:billing_entity, organization: shadow_organization, code: shadow_entity_code) }
+  before { create(:billing_entity, organization: shadow_organization, code: shadow_entity_code, email_settings: []) }
 
   it "creates the customer and the contract in the shadow organization" do
     expect { result }
@@ -121,10 +121,17 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     end
   end
 
-  context "when the shadow organization already has a live contract with the subscription external id" do
+  context "when the subscription already has a live contract" do
     before do
       shadow_customer = create(:customer, organization: shadow_organization, external_id: customer.external_id)
-      create(:contract, :pending, organization: shadow_organization, customer: shadow_customer, external_id: subscription.external_id)
+      create(
+        :contract,
+        :pending,
+        organization: shadow_organization,
+        customer: shadow_customer,
+        external_id: subscription.external_id,
+        code: subscription.id
+      )
     end
 
     it "does not create another one" do
@@ -132,6 +139,34 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
 
       expect(result).to be_success
       expect(result.contract).to be_nil
+    end
+  end
+
+  context "when a live contract of another subscription has the subscription external id" do
+    before do
+      allow(Rails.logger).to receive(:info)
+      create(
+        :contract,
+        customer: create(:customer, organization: shadow_organization),
+        external_id: subscription.external_id,
+        code: "other-subscription-id"
+      )
+    end
+
+    it "skips the subscription and logs it" do
+      expect { result }
+        .to not_change { shadow_organization.contracts.count }
+        .and not_change { shadow_organization.customers.count }
+
+      expect(result).to be_success
+      expect(result.contract).to be_nil
+      expect(Rails.logger).to have_received(:info).with(
+        a_string_including(
+          "external_id_taken_by_other_subscription",
+          "subscription #{subscription.external_id}",
+          "migration #{migration.id}"
+        )
+      )
     end
   end
 
@@ -365,6 +400,25 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
           "subscription #{subscription.external_id}",
           "migration #{migration.id}"
         )
+      )
+    end
+  end
+
+  context "when the shadow organization has a webhook endpoint" do
+    before do
+      allow(Rails.logger).to receive(:warn)
+      create(:webhook_endpoint, organization: shadow_organization)
+    end
+
+    it "logs the failure, returns it and creates nothing" do
+      expect { result }
+        .to not_change { shadow_organization.customers.count }
+        .and not_change { shadow_organization.contracts.count }
+
+      expect(result).to be_failure
+      expect(result.error.code).to eq("shadow_organization_not_isolated")
+      expect(Rails.logger).to have_received(:warn).with(
+        a_string_including("cannot create customer", "subscription #{subscription.external_id}")
       )
     end
   end

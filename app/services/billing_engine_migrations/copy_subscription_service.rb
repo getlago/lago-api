@@ -13,12 +13,9 @@ module BillingEngineMigrations
     def call
       return result unless in_scope?
 
-      if plan_override?
-        log(:info, "skipped: plan_override_not_supported")
-        return result
-      end
-
+      return skip("plan_override_not_supported") if plan_override?
       return result if already_ended? || already_copied?
+      return skip("external_id_taken_by_other_subscription") if external_id_taken?
 
       customer_result = CopyCustomerService.call(migration:, customer: subscription.customer)
       return fail_with(customer_result, "cannot create customer") if customer_result.failure?
@@ -49,7 +46,17 @@ module BillingEngineMigrations
     end
 
     def already_copied?
-      shadow_organization.contracts.live.exists?(external_id: subscription.external_id)
+      live_contract_code == subscription.id
+    end
+
+    def external_id_taken?
+      !live_contract_code.nil? && !already_copied?
+    end
+
+    def live_contract_code
+      return @live_contract_code if defined?(@live_contract_code)
+
+      @live_contract_code = shadow_organization.contracts.live.where(external_id: subscription.external_id).pick(:code)
     end
 
     def create_contract(shadow_customer)
@@ -104,6 +111,11 @@ module BillingEngineMigrations
 
     def date_in_customer_timezone(time)
       time&.in_time_zone(subscription.customer.applicable_timezone)&.to_date
+    end
+
+    def skip(reason)
+      log(:info, "skipped: #{reason}")
+      result
     end
 
     def fail_with(inner_result, message)
