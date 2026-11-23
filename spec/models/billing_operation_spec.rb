@@ -148,6 +148,19 @@ RSpec.describe BillingOperation do
       expect(operation).to validate_inclusion_of(:action_type).in_array(described_class::ACTION_TYPES.values)
       expect(operation).to validate_presence_of(:billing_at)
       expect(operation).to validate_presence_of(:target_cycle_started_at)
+      expect(operation).to validate_presence_of(:coverage_started_at)
+      expect(operation).to validate_presence_of(:coverage_ended_at)
+    end
+
+    describe "coverage validation" do
+      let(:operation) do
+        build(:billing_operation, coverage_started_at: Time.utc(2026, 11, 1), coverage_ended_at: Time.utc(2026, 11, 1))
+      end
+
+      it "requires the exclusive end to follow the start" do
+        expect(operation).not_to be_valid
+        expect(operation.errors.where(:coverage_ended_at, :greater_than)).to be_present
+      end
     end
 
     describe "identity validation" do

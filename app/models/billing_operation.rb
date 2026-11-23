@@ -35,7 +35,8 @@ class BillingOperation < ApplicationRecord
   enum :cancellation_reason, CANCELLATION_REASONS, prefix: true, validate: {allow_nil: true}
 
   validates :action_type, inclusion: {in: ACTION_TYPES.values}
-  validates :billing_at, :target_cycle_started_at, presence: true
+  validates :billing_at, :target_cycle_started_at, :coverage_started_at, :coverage_ended_at, presence: true
+  validates :coverage_ended_at, comparison: {greater_than: :coverage_started_at}, if: -> { coverage_started_at.present? && coverage_ended_at.present? }
   validate :validate_identity, if: :identity_changed?
   validate :validate_state
 
@@ -106,6 +107,8 @@ end
 #  billing_at              :datetime         not null
 #  cancellation_reason     :enum
 #  cancelled_at            :datetime
+#  coverage_ended_at       :datetime         not null
+#  coverage_started_at     :datetime         not null
 #  processed_at            :datetime
 #  reason                  :enum             not null
 #  target_cycle_started_at :datetime         not null

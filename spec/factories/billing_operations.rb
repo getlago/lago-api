@@ -12,5 +12,7 @@ FactoryBot.define do
     reason { :contract_activation }
     billing_at { Time.current }
     target_cycle_started_at { Time.current.beginning_of_month }
+    coverage_started_at { target_cycle_started_at }
+    coverage_ended_at { coverage_started_at&.+(1.month) }
   end
 end

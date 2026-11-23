@@ -21,7 +21,9 @@ module BillingOperations
         action_type:,
         reason:,
         billing_at: planned_operation.billing_at,
-        target_cycle_started_at: planned_operation.cycle_started_at
+        target_cycle_started_at: planned_operation.cycle_started_at,
+        coverage_started_at: planned_operation.coverage_started_at,
+        coverage_ended_at: planned_operation.coverage_ended_at
       )
       result
     rescue ActiveRecord::RecordInvalid => e

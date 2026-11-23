@@ -30,7 +30,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     obligation = schedule.next_obligation(from: contract_rate_card.effective_date.in_time_zone(timezone))
     while obligation && obligation.billing_at <= by
       obligations << obligation
-      obligation = schedule.next_obligation(from: obligation.cycle.started_at, after: obligation.billing_at)
+      obligation = schedule.next_obligation(from: obligation.segments.last.ended_at)
     end
     obligations
   end
@@ -76,8 +76,8 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         described_class.call!(contract_rate_card:).schedule
       end
       expect(queries.size).to eq(1)
-      loaded_obligation = loaded.next_obligation(from: Time.utc(2026, 1, 15))
-      unloaded_obligation = unloaded.next_obligation(from: Time.utc(2026, 1, 15))
+      loaded_obligation = loaded.obligation_at(Time.utc(2026, 1, 15))
+      unloaded_obligation = unloaded.obligation_at(Time.utc(2026, 1, 15))
       expect(loaded_obligation.billing_at).to eq(unloaded_obligation.billing_at)
       expect([loaded_obligation.cycle.index, loaded_obligation.cycle.started_at, loaded_obligation.cycle.ended_at])
         .to eq([unloaded_obligation.cycle.index, unloaded_obligation.cycle.started_at, unloaded_obligation.cycle.ended_at])
@@ -90,7 +90,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "groups them by cycle by default" do
-      obligation = result.schedule.next_obligation(from: Time.utc(2026, 1, 15))
+      obligation = result.schedule.obligation_at(Time.utc(2026, 1, 15))
       expect(obligation.billing_at).to eq(Time.utc(2026, 2, 1))
       expect(obligation.segments.size).to eq(2)
     end
@@ -99,7 +99,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       let(:billing_scope) { "segment" }
 
       it "propagates the scope to the schedule" do
-        obligation = result.schedule.next_obligation(from: Time.utc(2026, 1, 15))
+        obligation = result.schedule.obligation_at(Time.utc(2026, 1, 15))
         expect(obligation.billing_at).to eq(Time.utc(2026, 1, 20))
         expect(obligation.segments.size).to eq(1)
       end
@@ -198,7 +198,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       contract.update!(ended_at: Time.utc(2026, 1, 20, 12))
       schedule = described_class.call!(contract_rate_card:).schedule
 
-      expect(schedule.next_obligation(from: contract.ended_at, after: contract.ended_at)&.billing_at).to be_nil
+      expect(schedule.next_obligation(from: contract.ended_at)&.billing_at).to be_nil
     end
   end
 

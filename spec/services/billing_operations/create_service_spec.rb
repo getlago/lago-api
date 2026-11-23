@@ -12,7 +12,8 @@ RSpec.describe BillingOperations::CreateService do
   let(:started_at) { Time.zone.parse("2026-10-01") }
   let(:planned_operation) do
     BillingOperations::Schedule::PlannedOperation.new(
-      cycle_started_at: started_at, billing_at: started_at
+      cycle_started_at: started_at, billing_at: started_at,
+      coverage_started_at: started_at, coverage_ended_at: started_at + 1.month
     )
   end
   let(:attributes) do
@@ -51,15 +52,56 @@ RSpec.describe BillingOperations::CreateService do
     end
   end
 
+  context "with a plan built from the schedule" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1)) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance") }
+    let(:billing_scope) { "cycle" }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
+        effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1))
+    end
+    let(:planned_operation) do
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
+      BillingOperations::Schedule::BuildPlannedOperation.call!(schedule:, at: Time.utc(2026, 11, 1)).planned_operation
+    end
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 1),
+        billing_interval_count: 1, billing_interval_unit: "month")
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 15),
+        billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    it "stores the full cycle's half-open coverage" do
+      expect(result.operation.reload).to have_attributes(
+        coverage_started_at: Time.utc(2026, 11, 1), coverage_ended_at: Time.utc(2026, 12, 1)
+      )
+    end
+
+    context "with segment scope" do
+      let(:billing_scope) { "segment" }
+
+      it "stores only the first segment's half-open coverage" do
+        expect(result.operation.reload).to have_attributes(
+          coverage_started_at: Time.utc(2026, 11, 1), coverage_ended_at: Time.utc(2026, 11, 15)
+        )
+      end
+    end
+  end
+
   [
     [:action_type, "invalid_action"],
     [:reason, "invalid_causation"],
     [:billing_at, nil],
-    [:cycle_started_at, nil]
+    [:cycle_started_at, nil],
+    [:coverage_started_at, nil],
+    [:coverage_ended_at, nil]
   ].each do |attribute, value|
     context "when #{attribute} is invalid" do
       let(:attributes) do
-        if [:billing_at, :cycle_started_at].include?(attribute)
+        if [:billing_at, :cycle_started_at, :coverage_started_at, :coverage_ended_at].include?(attribute)
           super().merge(planned_operation: planned_operation.with(**{attribute => value}))
         else
           super().merge(attribute => value)

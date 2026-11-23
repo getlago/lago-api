@@ -47,7 +47,7 @@ RSpec.describe Billing::RateCards::Schedule do
     obligation = schedule.next_obligation(from: cycle.started_at)
     while obligation && obligation.cycle.started_at == cycle.started_at && obligation.billing_at <= asked_at
       segments.concat(obligation.segments.map { |segment| [obligation, segment] })
-      obligation = schedule.next_obligation(from: cycle.started_at, after: obligation.billing_at)
+      obligation = schedule.next_obligation(from: obligation.segments.last.ended_at)
     end
     segments
   end
@@ -177,7 +177,7 @@ RSpec.describe Billing::RateCards::Schedule do
     it "finds the obligation of the cycle covering an instant" do
       at = cycles[1].started_at + 1.day
 
-      expect(schedule.next_obligation(from: at).billing_at).to eq(cycles[1].ended_at)
+      expect(schedule.obligation_at(at).billing_at).to eq(cycles[1].ended_at)
     end
 
     it "finds a later cycle after querying an earlier cycle" do

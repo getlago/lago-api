@@ -23,7 +23,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     obligation = schedule.next_obligation(from: contract_rate_card.effective_date.in_time_zone("UTC"))
     while obligation && obligation.billing_at <= by
       obligations << obligation
-      obligation = schedule.next_obligation(from: obligation.cycle.started_at, after: obligation.billing_at)
+      obligation = schedule.next_obligation(from: obligation.segments.last.ended_at)
     end
     obligations
   end
@@ -326,7 +326,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "stops producing cycles after the termination" do
-      expect(schedule.next_obligation(from: Time.utc(2027, 1, 1), after: Time.utc(2027, 1, 1))&.billing_at).to be_nil
+      expect(schedule.next_obligation(from: Time.utc(2027, 1, 1))&.billing_at).to be_nil
     end
   end
 end

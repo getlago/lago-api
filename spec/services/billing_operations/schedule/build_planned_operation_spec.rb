@@ -24,9 +24,10 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   let(:timestamp) { Time.utc(2026, 11, 1) }
   let(:after) { nil }
   let(:target_cycle_started_at) { Time.utc(2026, 11, 1, 7) }
+  let(:coverage_ended_at) { Time.utc(2026, 12, 1, 8) }
   let(:after_operation) do
     build_stubbed(:billing_operation, organization:, customer:, contract_rate_card:,
-      billing_at: after, target_cycle_started_at:)
+      billing_at: after, target_cycle_started_at:, coverage_started_at: target_cycle_started_at, coverage_ended_at:)
   end
   let(:planning) { after ? {after_operation:} : {at: timestamp} }
   let(:rate_effective_from) { Time.utc(2026, 11, 1) }
@@ -68,10 +69,10 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     context "when billing in arrears" do
       let(:billing_timing) { "arrears" }
 
-      it "retains the closing segment due at the boundary" do
+      it "selects the segment opening at the boundary" do
         expect(result.planned_operation).to have_attributes(
           cycle_started_at: Time.utc(2026, 11, 1, 7),
-          billing_at: timestamp
+          billing_at: Time.utc(2026, 12, 1, 8)
         )
       end
 
@@ -111,10 +112,10 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
         create(:rate_card, organization:, product:, billing_timing:, regroup_paid_fees: :invoice, display_on_invoice: false)
       end
 
-      it "retains the closing segment due at its service end" do
+      it "selects the segment opening at the boundary" do
         expect(result.planned_operation).to have_attributes(
           cycle_started_at: Time.utc(2026, 11, 1, 7),
-          billing_at: timestamp
+          billing_at: Time.utc(2026, 12, 1, 8)
         )
       end
 
@@ -132,6 +133,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     context "when selecting after the boundary was completed" do
       let(:billing_timing) { "arrears" }
       let(:after) { timestamp }
+      let(:coverage_ended_at) { timestamp }
 
       it "skips the boundary and selects the next closing segment" do
         expect(result.planned_operation).to have_attributes(
@@ -159,12 +161,13 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
       let(:billing_scope) { "segment" }
       let(:timestamp) { Time.utc(2026, 11, 1, 7) }
       let(:after) { Time.utc(2026, 11, 15) }
+      let(:coverage_ended_at) { Time.utc(2026, 11, 15) }
 
       before do
         create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 15), billing_interval_count: 1, billing_interval_unit: "month")
       end
 
-      it "uses the next close's end to compare with the completed billing instant" do
+      it "plans the next uncovered segment's close" do
         expect(result.planned_operation).to have_attributes(
           cycle_started_at: Time.utc(2026, 11, 1, 7),
           billing_at: Time.utc(2026, 12, 1, 8)
@@ -184,16 +187,17 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     end
   end
 
-  context "when selecting an operation strictly after a completed billing instant" do
+  context "when selecting after completed segment coverage" do
     let(:billing_scope) { "segment" }
     let(:timestamp) { Time.utc(2026, 11, 1, 7) }
     let(:after) { Time.utc(2026, 11, 1, 7) }
+    let(:coverage_ended_at) { Time.utc(2026, 11, 15) }
 
     before do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 15), billing_interval_count: 1, billing_interval_unit: "month")
     end
 
-    it "skips the segment due at that instant, including within the same cycle" do
+    it "skips completed coverage within the same cycle" do
       expect(result.planned_operation).to have_attributes(
         cycle_started_at: Time.utc(2026, 11, 1, 7),
         billing_at: Time.utc(2026, 11, 15)
@@ -202,11 +206,147 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
 
     context "when the scope covers the cycle" do
       let(:billing_scope) { "cycle" }
+      let(:coverage_ended_at) { Time.utc(2026, 12, 1, 8) }
 
       it "advances to the next cycle without billing again at the rate change" do
         expect(result.planned_operation).to have_attributes(
           cycle_started_at: Time.utc(2026, 12, 1, 8), billing_at: Time.utc(2026, 12, 1, 8)
         )
+      end
+    end
+  end
+
+  context "with stored coverage on a previous operation" do
+    let(:billing_scope) { "segment" }
+    let(:after) { target_cycle_started_at }
+    let(:coverage_ended_at) { Time.utc(2026, 12, 1, 8) }
+    let(:action_type) { "renew_fixed_advance" }
+    let(:after_operation) do
+      build_stubbed(:billing_operation, organization:, customer:, contract_rate_card:, action_type:,
+        billing_at: after, target_cycle_started_at:, coverage_started_at: target_cycle_started_at, coverage_ended_at:)
+    end
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 15),
+        billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    it "does not reopen previously covered time and includes the next boundary" do
+      expect(result.planned_operation).to have_attributes(
+        cycle_started_at: Time.utc(2026, 12, 1, 8), billing_at: Time.utc(2026, 12, 1, 8)
+      )
+    end
+
+    context "when the previous segment ended at the rate change" do
+      let(:coverage_ended_at) { Time.utc(2026, 11, 15) }
+
+      it "plans the segment beginning at that boundary" do
+        expect(result.planned_operation.billing_at).to eq(Time.utc(2026, 11, 15))
+      end
+    end
+
+    context "when stored coverage ends within a newly inserted segment" do
+      let(:coverage_ended_at) { Time.utc(2026, 11, 20) }
+
+      it "skips the overlapping segment instead of reopening it" do
+        expect(result.planned_operation.billing_at).to eq(Time.utc(2026, 12, 1, 8))
+      end
+    end
+
+    context "when the next coverage boundary is also the previous billing instant" do
+      let(:after) { Time.utc(2026, 12, 1, 8) }
+
+      it "does not skip unowned coverage because its billing date matches" do
+        expect(result.planned_operation.billing_at).to eq(Time.utc(2026, 12, 1, 8))
+      end
+    end
+
+    context "when billing was late, after the next coverage began" do
+      let(:coverage_ended_at) { Time.utc(2026, 11, 15) }
+      let(:after) { Time.utc(2026, 11, 20) }
+
+      it "does not skip the next unowned segment" do
+        expect(result.planned_operation).to have_attributes(
+          coverage_started_at: Time.utc(2026, 11, 15), billing_at: Time.utc(2026, 11, 15)
+        )
+      end
+    end
+
+    context "when the scope covers the cycle" do
+      let(:billing_scope) { "cycle" }
+
+      it "continues at the next cycle" do
+        expect(result.planned_operation).to have_attributes(
+          coverage_started_at: Time.utc(2026, 12, 1, 8), billing_at: Time.utc(2026, 12, 1, 8)
+        )
+      end
+    end
+
+    context "when the previous operation is an arrears close" do
+      let(:action_type) { "close_fixed_arrears" }
+      let(:billing_timing) { "arrears" }
+      let(:after) { Time.utc(2026, 11, 15) }
+
+      it "skips segments within the stored coverage" do
+        expect(result.planned_operation).to have_attributes(
+          coverage_started_at: Time.utc(2026, 12, 1, 8), billing_at: Time.utc(2027, 1, 1, 8)
+        )
+      end
+
+      context "when only the first segment was covered" do
+        let(:coverage_ended_at) { Time.utc(2026, 11, 15) }
+
+        it "includes the next segment even though billing is at its end" do
+          expect(result.planned_operation).to have_attributes(
+            coverage_started_at: Time.utc(2026, 11, 15), billing_at: Time.utc(2026, 12, 1, 8)
+          )
+        end
+      end
+
+      context "when metered in arrears" do
+        let(:product) { create(:product, organization:) }
+        let(:action_type) { "close_metered_arrears" }
+
+        it "respects the stored end" do
+          expect(result.planned_operation).to have_attributes(
+            coverage_started_at: Time.utc(2026, 12, 1, 8), billing_at: Time.utc(2027, 1, 1, 8)
+          )
+        end
+      end
+    end
+
+    context "when regrouping paid metered fees" do
+      let(:product) { create(:product, organization:) }
+      let(:rate_card) do
+        create(:rate_card, organization:, product:, billing_timing:, regroup_paid_fees: :invoice, display_on_invoice: false)
+      end
+      let(:action_type) { "regroup_paid_fees" }
+      let(:after) { Time.utc(2026, 11, 15) }
+
+      it "respects the coverage end independently of the close date" do
+        expect(result.planned_operation).to have_attributes(
+          coverage_started_at: Time.utc(2026, 12, 1, 8), billing_at: Time.utc(2027, 1, 1, 8)
+        )
+      end
+    end
+
+    context "when renewing recurring metered usage in advance" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:product) { create(:product, organization:, billable_metric:) }
+      let(:action_type) { "renew_recurring_metered_advance" }
+
+      it "respects the stored end" do
+        expect(result.planned_operation).to have_attributes(
+          coverage_started_at: Time.utc(2026, 12, 1, 8), billing_at: Time.utc(2026, 12, 1, 8)
+        )
+      end
+    end
+
+    context "when planning after a reconciliation operation" do
+      let(:action_type) { "reconcile_advance_coverage" }
+
+      it "uses the same coverage boundary" do
+        expect(result.planned_operation.billing_at).to eq(Time.utc(2026, 12, 1, 8))
       end
     end
   end
@@ -228,6 +368,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     let(:billing_timing) { "arrears" }
     let(:timestamp) { Time.utc(2026, 11, 1, 7) }
     let(:after) { Time.utc(2026, 11, 15) }
+    let(:coverage_ended_at) { Time.utc(2026, 11, 15) }
 
     before do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 15), billing_interval_count: 1, billing_interval_unit: "month")
@@ -250,13 +391,46 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
       create(:contract, :terminated, organization:, customer:, started_at: timestamp, ended_at:, terminated_at:)
     end
     let(:after) { Time.utc(2026, 11, 5) }
+    let(:coverage_ended_at) { Time.utc(2026, 11, 5) }
+    let(:billing_scope) { "segment" }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 5),
+        billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    context "when the final coverage is one microsecond long" do
+      let(:ended_at) { Time.utc(2026, 11, 5) + Rational(1, 1_000_000) }
+      let(:planning) { {at: BillingSegment.inclusive_end(ended_at)} }
+
+      it "selects the final segment rather than the segment closing at the cut" do
+        expect(result.planned_operation).to have_attributes(
+          coverage_started_at: Time.utc(2026, 11, 5), coverage_ended_at: ended_at
+        )
+      end
+    end
 
     it "plans the outstanding final close at termination" do
       expect(result.planned_operation).to have_attributes(cycle_started_at: timestamp, billing_at: terminated_at)
     end
 
+    context "with stored coverage ending at a segment boundary" do
+      let(:billing_scope) { "segment" }
+      let(:after_operation) do
+        build_stubbed(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+          billing_at: after, target_cycle_started_at: timestamp, coverage_started_at: timestamp, coverage_ended_at: after)
+      end
+
+      it "projects the remaining segment's billing to termination" do
+        expect(result.planned_operation).to have_attributes(
+          coverage_started_at: after, coverage_ended_at: ended_at, billing_at: terminated_at
+        )
+      end
+    end
+
     context "when the close at the planned end was completed" do
       let(:after) { ended_at }
+      let(:coverage_ended_at) { ended_at }
 
       it "does not reopen the completed coverage at termination" do
         expect(result).to be_success
@@ -266,6 +440,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
 
     context "when the close at termination was completed" do
       let(:after) { terminated_at }
+      let(:coverage_ended_at) { ended_at }
 
       it "returns no further obligation" do
         expect(result.planned_operation).to be_nil
@@ -285,7 +460,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   end
 
   context "with an exhausted schedule" do
-    let(:schedule) { instance_double(Billing::RateCards::Schedule, next_obligation: nil) }
+    let(:schedule) { instance_double(Billing::RateCards::Schedule, obligation_at: nil, next_obligation: nil) }
 
     it "returns no planned operation" do
       expect(result).to be_success

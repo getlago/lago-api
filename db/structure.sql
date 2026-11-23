@@ -3059,7 +3059,9 @@ CREATE TABLE public.billing_operations (
     target_cycle_started_at timestamp(6) without time zone NOT NULL,
     processed_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    coverage_started_at timestamp(6) without time zone NOT NULL,
+    coverage_ended_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -18114,6 +18116,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261120155610'),
 ('20261117151151'),
 ('20261116121445'),
 ('20261116121442'),

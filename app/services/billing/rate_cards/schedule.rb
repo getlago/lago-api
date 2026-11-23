@@ -42,9 +42,8 @@ module Billing
         Obligation.new(cycle:, segments:, billing_at:, terms:, termination_billing_at: termination_date_for(billing_at))
       end
 
-      # `from` names the target cycle when billing belongs to an earlier cycle than its instant.
-      def next_obligation(from:, after: nil)
-        obligations(from:).find { it.selectable_from?(from, after:) }
+      def next_obligation(from:)
+        obligations(from:).find { it.segments.first.started_at >= from }
       end
 
       def obligations_due_by(timestamp, from:, after: nil)

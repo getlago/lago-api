@@ -45,7 +45,7 @@ module BillingOperations
         .earliest_per_contract_rate_card
 
       BillingOperation.from(operations, :billing_operations)
-        .includes(contract_rate_card: [:terms, {contract: :customer}, {rate_card: {product: :billable_metric}}])
+        .includes(contract_rate_card: {contract: :customer, rate_card: {product: :billable_metric}})
         .order(:billing_at, :contract_rate_card_id, :created_at, :id)
     end
 
@@ -117,6 +117,7 @@ module BillingOperations
         records: operations.map(&:contract_rate_card),
         associations: [
           :organization,
+          :terms,
           {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override},
@@ -229,6 +230,10 @@ module BillingOperations
     # The clock moves to the obligation after this one, in the same transaction as the billing.
     def complete_operations(operation_resolutions)
       operation_resolutions.each do |operation, resolution|
+        if resolution.obligation
+          operation.coverage_started_at = resolution.obligation.segments.first.started_at
+          operation.coverage_ended_at = resolution.obligation.segments.last.ended_at
+        end
         operation.update!(processed_at: timestamp)
         operation.contract_rate_card.update!(next_billing_at: next_planned_operation(operation, resolution)&.billing_at)
       end
