@@ -110,7 +110,10 @@ RSpec.describe IntegrationCustomers::UpdateConnectionService do
       let(:integration_customer) { create(:quickbooks_customer, integration:, customer:, code: "old_code") }
       let(:params) { {code: "new_code", external_customer_id: "58"} }
 
-      before { allow(Integrations::Aggregator::Contacts::UpdateService).to receive(:call) }
+      before do
+        allow(Integrations::Aggregator::Contacts::UpdateService)
+          .to receive(:call).and_return(Integrations::Aggregator::Contacts::UpdateService::Result.new)
+      end
 
       it "enqueues the update job with the integration customer params" do
         expect { update_service.call }.to have_enqueued_job(IntegrationCustomers::UpdateJob).with(
@@ -124,12 +127,13 @@ RSpec.describe IntegrationCustomers::UpdateConnectionService do
         )
       end
 
-      it "stores the new external customer id without calling the provider" do
+      it "stores the new external customer id and updates the customer in the provider" do
         update_service.call
         perform_enqueued_jobs(only: IntegrationCustomers::UpdateJob)
 
         expect(integration_customer.reload).to have_attributes(external_customer_id: "58", code: "new_code")
-        expect(Integrations::Aggregator::Contacts::UpdateService).not_to have_received(:call)
+        expect(Integrations::Aggregator::Contacts::UpdateService)
+          .to have_received(:call).with(integration:, integration_customer:)
       end
     end
 

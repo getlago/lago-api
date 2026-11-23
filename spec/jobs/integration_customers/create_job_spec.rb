@@ -36,13 +36,45 @@ RSpec.describe IntegrationCustomers::CreateJob do
       {integration_type: "quickbooks", integration_code: integration.code, sync_with_provider: true}
     end
 
-    before { allow(Integrations::Aggregator::Contacts::CreateService).to receive(:call) }
+    let(:create_result) do
+      result = Integrations::Aggregator::Contacts::CreateService::Result.new
+      result.contact_id = "1042"
+      result
+    end
 
-    it "succeeds without creating the contact in the provider" do
+    before do
+      allow(Integrations::Aggregator::Contacts::CreateService)
+        .to receive(:call).and_return(create_result)
+    end
+
+    it "creates the contact in the provider and stores the integration customer" do
       expect { described_class.perform_now(integration_customer_params:, integration:, customer:) }
-        .not_to change(IntegrationCustomers::BaseCustomer, :count)
+        .to change(IntegrationCustomers::QuickbooksCustomer, :count).by(1)
 
-      expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
+      expect(Integrations::Aggregator::Contacts::CreateService)
+        .to have_received(:call).with(integration:, customer:, subsidiary_id: nil)
+      expect(customer.reload.quickbooks_customer.external_customer_id).to eq("1042")
+    end
+
+    context "when the contact creation in the provider fails" do
+      let(:create_result) do
+        result = Integrations::Aggregator::Contacts::CreateService::Result.new
+        result.service_failure!(code: "action_script_runtime_error", message: "Duplicate Name Exists Error")
+        result
+      end
+
+      it "raises the failure" do
+        expect { described_class.perform_now(integration_customer_params:, integration:, customer:) }
+          .to raise_error(BaseService::ServiceFailure)
+      end
+
+      it "does not create integration customer" do
+        expect do
+          described_class.perform_now(integration_customer_params:, integration:, customer:)
+        rescue BaseService::ServiceFailure
+          nil
+        end.not_to change(IntegrationCustomers::BaseCustomer, :count)
+      end
     end
   end
 

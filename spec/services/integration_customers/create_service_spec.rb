@@ -29,8 +29,17 @@ RSpec.describe IntegrationCustomers::CreateService do
       let(:integration) { create(:quickbooks_integration, organization:) }
       let(:integration_type) { "quickbooks" }
       let(:integration_code) { integration.code }
+      let(:contact_id) { "1042" }
+      let(:create_result) do
+        result = Integrations::Aggregator::Contacts::CreateService::Result.new
+        result.contact_id = contact_id
+        result
+      end
 
-      before { allow(Integrations::Aggregator::Contacts::CreateService).to receive(:call) }
+      before do
+        allow(Integrations::Aggregator::Contacts::CreateService)
+          .to receive(:call).and_return(create_result)
+      end
 
       context "when customer external id is present" do
         let(:external_customer_id) { "58" }
@@ -69,13 +78,36 @@ RSpec.describe IntegrationCustomers::CreateService do
         let(:external_customer_id) { nil }
         let(:sync_with_provider) { true }
 
-        it "succeeds without creating integration customer" do
+        it "creates the customer in QuickBooks and stores its id" do
           result = nil
-          expect { result = service_call }.not_to change(IntegrationCustomers::BaseCustomer, :count)
+          expect { result = service_call }.to change(IntegrationCustomers::QuickbooksCustomer, :count).by(1)
 
           expect(result).to be_success
-          expect(result.integration_customer).to be_nil
-          expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
+          expect(result.integration_customer).to have_attributes(
+            external_customer_id: contact_id,
+            sync_with_provider: true,
+            category: "accounting",
+            is_default: true,
+            code: integration.code
+          )
+          expect(Integrations::Aggregator::Contacts::CreateService)
+            .to have_received(:call).with(integration:, customer:, subsidiary_id: nil)
+        end
+
+        context "when the customer creation in QuickBooks fails" do
+          let(:create_result) do
+            result = Integrations::Aggregator::Contacts::CreateService::Result.new
+            result.service_failure!(code: "action_script_runtime_error", message: "Duplicate Name Exists Error")
+            result
+          end
+
+          it "fails without creating integration customer" do
+            result = nil
+            expect { result = service_call }.not_to change(IntegrationCustomers::BaseCustomer, :count)
+
+            expect(result).not_to be_success
+            expect(result.error.code).to eq("action_script_runtime_error")
+          end
         end
       end
     end
