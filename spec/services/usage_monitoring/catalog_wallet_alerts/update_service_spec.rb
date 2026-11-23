@@ -170,6 +170,96 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
     let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
     let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "balance", code: "low_balance", name: "Low balance") }
 
+    context "when the alert is watching the balance" do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "balance", code: "low_balance", previous_value: 1_500, last_processed_at: 1.hour.ago) }
+      let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}, {code: "low", value: "1000", notify_on: %w[triggered resolved]}]} }
+
+      it "seeds the opted-in line the edit puts in alarm and sends nothing" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(result).to be_success
+        # 2000 is above the balance of 1500, so it is in alarm; 1000 is below it
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to have_attributes(kind: "seeded", catalog_wallet:, current_value: 1_500, previous_value: 1_500)
+        expect(seeded.crossed_thresholds).to eq([{"code" => "warning", "value" => "2000.0", "recurring" => false}])
+      end
+    end
+
+    context "when an ongoing balance alert started on an empty wallet" do
+      let(:contract) { create(:contract, customer:) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", previous_value: 0, last_processed_at: 1.hour.ago) }
+      # The same line as before, opted in and in alarm at 0
+      let(:params) { {thresholds: [{code: "low", value: "10000", notify_on: %w[triggered resolved]}]} }
+
+      it "seeds nothing, as its baseline did" do
+        expect(result).to be_success
+        expect(alert.all_triggered_alerts).to be_empty
+      end
+
+      context "when money reached the wallet before the next evaluation" do
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: 1_500) }
+        let(:params) { {thresholds: [{code: "mid", value: "1000", notify_on: %w[triggered resolved]}, {code: "low", value: "10000", notify_on: %w[triggered resolved]}]} }
+
+        it "seeds only the line still in alarm at the new value" do
+          expect(result).to be_success
+          # 1000 is in alarm at 0 but not at 1500: the evaluation recovers it. 10000 is in alarm at both, as a create would seed it
+          expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["low"])
+        end
+      end
+    end
+
+    context "when the balance went down since the alert was last observed" do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 600) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "balance", code: "low_balance", previous_value: 800, last_processed_at: 1.hour.ago) }
+      let(:params) { {thresholds: [{code: "high", value: "1000", notify_on: %w[triggered resolved]}, {code: "mid", value: "700", notify_on: %w[triggered resolved]}]} }
+
+      it "seeds the line in alarm at both values and leaves the one the evaluation crosses" do
+        expect(result).to be_success
+        # 1000 is in alarm at 800 and at 600. 700 is only at 600, so the next evaluation crosses it and announces it
+        expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["high"])
+      end
+    end
+
+    context "when an ongoing balance alert watches a funded wallet whose ongoing balance is below 0" do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: -500) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", previous_value: -500, last_processed_at: 1.hour.ago) }
+      let(:params) { {thresholds: [{code: "zero", value: "0", notify_on: %w[triggered resolved]}]} }
+
+      it "seeds the line the edit puts in alarm, as a create on that wallet would" do
+        expect(result).to be_success
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to have_attributes(kind: "seeded", current_value: -500, previous_value: -500)
+        expect(seeded.crossed_thresholds).to eq([{"code" => "zero", "value" => "0.0", "recurring" => false}])
+      end
+
+      context "when the ongoing balance is 0" do
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 500, ongoing_balance_cents: 0) }
+        let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", previous_value: 0, last_processed_at: 1.hour.ago) }
+
+        it "seeds the line too" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["zero"])
+        end
+      end
+    end
+
+    # Created while the contract was pending: nothing starts it when money arrives yet
+    context "when a balance alert has no baseline on a funded wallet" do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
+      let(:params) { {thresholds: [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}]} }
+
+      it "changes the thresholds and seeds nothing" do
+        expect(result).to be_success
+        expect(alert.reload.previous_value).to be_nil
+        expect(alert.all_triggered_alerts).to be_empty
+      end
+    end
+
     it "updates the name and replaces the thresholds, recording and sending nothing" do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
 

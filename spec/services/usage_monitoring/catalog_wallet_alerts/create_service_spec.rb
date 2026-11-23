@@ -231,10 +231,40 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
 
     context "when the contract is active" do
       let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
 
-      it "creates the alert" do
-        expect(result).to be_success
-        expect(catalog_wallet.alerts).to eq([result.alert])
+      before { params[:thresholds] = [{code: "warning", value: "2000", notify_on: %w[triggered resolved]}] }
+
+      it "watches at once from the balance, seeding the line already past and sending nothing" do
+        freeze_time do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(result).to be_success
+          expect(result.alert).to have_attributes(previous_value: 1_500, last_processed_at: Time.current)
+          seeded = result.alert.all_triggered_alerts.sole
+          expect(seeded).to have_attributes(kind: "seeded", current_value: 1_500, previous_value: 1_500)
+          expect(seeded.crossed_thresholds).to eq([{"code" => "warning", "value" => "2000.0", "recurring" => false}])
+        end
+      end
+
+      context "when the wallet is empty" do
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
+
+        it "creates a balance alert that waits for money" do
+          expect(result).to be_success
+          expect(result.alert).to have_attributes(previous_value: nil, last_processed_at: nil)
+          expect(result.alert.all_triggered_alerts).to be_empty
+        end
+
+        context "with an ongoing balance alert" do
+          before { params.merge!(alert_type: "ongoing_balance", thresholds: [{code: "empty", value: "0", notify_on: %w[triggered resolved]}]) }
+
+          it "watches at once from 0 and seeds nothing" do
+            expect(result).to be_success
+            expect(result.alert.previous_value).to eq(0)
+            expect(result.alert.all_triggered_alerts).to be_empty
+          end
+        end
       end
     end
 

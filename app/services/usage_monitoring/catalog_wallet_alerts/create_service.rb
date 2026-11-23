@@ -35,6 +35,12 @@ module UsageMonitoring
           alert = wallet.alerts.create!(organization:, alert_type: params[:alert_type].to_s, code: params[:code], name: params[:name])
           alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
 
+          # On an active contract the alert watches at once, without announcing the lines already past
+          if wallet.is_a?(CatalogWallet) && wallet.contract.active?
+            BaselineService.call!(catalog_wallet: wallet)
+            alert.reload
+          end
+
           result.alert = alert
         end
 
