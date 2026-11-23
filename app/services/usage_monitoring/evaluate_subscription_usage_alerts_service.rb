@@ -29,8 +29,6 @@ module UsageMonitoring
         exception_to_raise ||= e
       end
 
-      trace_usage_path
-
       raise exception_to_raise if exception_to_raise
 
       result
@@ -51,30 +49,13 @@ module UsageMonitoring
     end
 
     def current_usage
-      @current_usage ||= if full_plan_usage
-        @usage_path = "full_plan_reused"
-        full_plan_usage
-      else
-        @usage_path = "full_plan_failed"
-        compute_full_plan_usage.tap { @usage_path = "full_plan" if it }
-      end
-    end
-
-    def compute_full_plan_usage
-      ::Invoices::CustomerUsageService.call(
+      @current_usage ||= full_plan_usage || ::Invoices::CustomerUsageService.call(
         customer: subscription.customer,
         subscription:,
         apply_taxes: false, # Never use taxes for alerting
         with_cache: true,
         use_usage_buckets: true
       ).usage
-    end
-
-    def trace_usage_path
-      OpenTelemetry::Trace.current_span.add_attributes(
-        "usage_monitoring.alerts_count" => alerts.size,
-        "usage_monitoring.usage_path" => @usage_path || "none"
-      )
     end
   end
 end
