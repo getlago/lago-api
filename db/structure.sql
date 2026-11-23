@@ -1531,11 +1531,6 @@ DROP TABLE IF EXISTS public.quote_versions;
 DROP SEQUENCE IF EXISTS public.quote_owners_id_seq;
 DROP TABLE IF EXISTS public.quote_owners;
 DROP TABLE IF EXISTS public.quantified_events;
-DROP TABLE IF EXISTS public.products;
-DROP TABLE IF EXISTS public.product_filters;
-DROP TABLE IF EXISTS public.product_filter_values;
-DROP TABLE IF EXISTS public.product_categories;
-DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.presentation_breakdowns;
 DROP TABLE IF EXISTS public.plan_wallets;
@@ -1586,6 +1581,15 @@ DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
 DROP VIEW IF EXISTS public.exports_record_deletions;
 DROP TABLE IF EXISTS public.record_deletions;
+DROP VIEW IF EXISTS public.exports_products;
+DROP TABLE IF EXISTS public.products;
+DROP VIEW IF EXISTS public.exports_product_filters;
+DROP TABLE IF EXISTS public.product_filters;
+DROP TABLE IF EXISTS public.product_filter_values;
+DROP VIEW IF EXISTS public.exports_product_categories;
+DROP TABLE IF EXISTS public.product_categories;
+DROP VIEW IF EXISTS public.exports_pricing_units;
+DROP TABLE IF EXISTS public.pricing_units;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
 DROP VIEW IF EXISTS public.exports_payments;
@@ -5445,6 +5449,174 @@ CREATE VIEW public.exports_plans AS
 
 
 --
+-- Name: pricing_units; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pricing_units (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying NOT NULL,
+    code character varying NOT NULL,
+    short_name character varying NOT NULL,
+    description text,
+    organization_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_pricing_units; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_pricing_units AS
+ SELECT pu.organization_id,
+    pu.id AS lago_id,
+    pu.code,
+    pu.name,
+    pu.short_name,
+    pu.description,
+    pu.created_at,
+    pu.updated_at
+   FROM public.pricing_units pu;
+
+
+--
+-- Name: product_categories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_categories (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    description character varying,
+    invoice_display_name character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_product_categories; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_product_categories AS
+ SELECT pc.organization_id,
+    pc.id AS lago_id,
+    pc.code,
+    pc.name,
+    pc.description,
+    pc.invoice_display_name,
+    pc.created_at,
+    pc.updated_at,
+    pc.deleted_at
+   FROM public.product_categories pc;
+
+
+--
+-- Name: product_filter_values; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_filter_values (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_filter_id uuid NOT NULL,
+    billable_metric_filter_id uuid NOT NULL,
+    value character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: product_filters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_filters (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    name character varying NOT NULL,
+    code character varying NOT NULL,
+    description character varying,
+    invoice_display_name character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_product_filters; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_product_filters AS
+ SELECT pf.organization_id,
+    pf.id AS lago_id,
+    pf.product_id AS lago_product_id,
+    pf.code,
+    pf.name,
+    pf.description,
+    pf.invoice_display_name,
+    pf.created_at,
+    GREATEST(pf.updated_at, pfv_stats.updated_at) AS updated_at,
+    pf.deleted_at,
+    COALESCE(pfv_stats.kept_values, '[]'::json) AS "values"
+   FROM (public.product_filters pf
+     LEFT JOIN LATERAL ( SELECT max(pfv.updated_at) AS updated_at,
+            json_agg(json_build_object('key', bmf.key, 'value', pfv.value) ORDER BY pfv.created_at, pfv.id) FILTER (WHERE (pfv.deleted_at IS NULL)) AS kept_values
+           FROM (public.product_filter_values pfv
+             JOIN public.billable_metric_filters bmf ON ((bmf.id = pfv.billable_metric_filter_id)))
+          WHERE (pfv.product_filter_id = pf.id)) pfv_stats ON (true));
+
+
+--
+-- Name: products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.products (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_category_id uuid,
+    billable_metric_id uuid,
+    add_on_id uuid,
+    charge_id uuid,
+    product_type public.product_type NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    invoice_display_name character varying,
+    description text,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_products; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_products AS
+ SELECT p.organization_id,
+    p.id AS lago_id,
+    p.product_category_id AS lago_product_category_id,
+    p.billable_metric_id AS lago_billable_metric_id,
+    p.add_on_id AS lago_add_on_id,
+    p.charge_id AS lago_charge_id,
+    (p.product_type)::text AS product_type,
+    p.code,
+    p.name,
+    p.invoice_display_name,
+    p.description,
+    p.created_at,
+    p.updated_at,
+    p.deleted_at
+   FROM public.products p;
+
+
+--
 -- Name: record_deletions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6466,95 +6638,6 @@ CREATE TABLE public.pricing_unit_usages (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     precise_unit_amount numeric(30,15) DEFAULT 0.0 NOT NULL
-);
-
-
---
--- Name: pricing_units; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.pricing_units (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    name character varying NOT NULL,
-    code character varying NOT NULL,
-    short_name character varying NOT NULL,
-    description text,
-    organization_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: product_categories; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.product_categories (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    description character varying,
-    invoice_display_name character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: product_filter_values; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.product_filter_values (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_filter_id uuid NOT NULL,
-    billable_metric_filter_id uuid NOT NULL,
-    value character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: product_filters; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.product_filters (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_id uuid NOT NULL,
-    name character varying NOT NULL,
-    code character varying NOT NULL,
-    description character varying,
-    invoice_display_name character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: products; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.products (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_category_id uuid,
-    billable_metric_id uuid,
-    add_on_id uuid,
-    charge_id uuid,
-    product_type public.product_type NOT NULL,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    invoice_display_name character varying,
-    description text,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -18437,6 +18520,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123142148'),
+('20261123142145'),
+('20261123142142'),
+('20261123142140'),
 ('20261123112950'),
 ('20261123112949'),
 ('20261123100000'),
