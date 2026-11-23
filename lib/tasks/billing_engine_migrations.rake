@@ -1,27 +1,34 @@
 # frozen_string_literal: true
 
 class BillingEngineSubscriptionsBackfill
-  BATCH_SIZE = 1_000
+  CUSTOMER_BATCH_SIZE = 1_000
 
-  def initialize(migration:, dry_run:)
+  def initialize(migration:, dry_run:, customers_per_minute:, customer_limit: nil)
     @migration = migration
     @dry_run = dry_run
-    @enqueued = 0
+    @customers_per_minute = customers_per_minute
+    @customer_limit = customer_limit
+    @enqueued_customers = 0
+    @enqueued_subscriptions = 0
     @skipped = Hash.new(0)
   end
 
   def run
-    puts "Starting subscriptions backfill [#{mode}] for organization #{migration.organization_id}..."
+    puts "Starting subscriptions backfill [#{mode}] for organization #{migration.organization_id} " \
+      "(#{customers_per_minute} customer(s) per minute#{", at most #{customer_limit}" if customer_limit})..."
 
-    candidates.find_in_batches(batch_size: BATCH_SIZE) { |subscriptions| process(subscriptions) }
+    each_customer_batch do |customer_ids|
+      process(candidates.where(customer_id: customer_ids).preload(:plan).to_a)
+    end
 
-    puts "#{dry_run ? "Would enqueue" : "Enqueued"} #{enqueued} subscription(s), " \
-      "skipped #{skipped.values.sum}#{skipped_breakdown} [#{mode}]"
+    puts summary
+    puts "Stopped at #{customer_limit} customer(s): run the task again once these jobs have run" if customer_limit_reached?
   end
 
   private
 
-  attr_reader :migration, :dry_run, :enqueued, :skipped
+  attr_reader :migration, :dry_run, :customers_per_minute, :customer_limit,
+    :enqueued_customers, :enqueued_subscriptions, :skipped
 
   def mode
     dry_run ? "DRY RUN" : "LIVE"
@@ -32,32 +39,59 @@ class BillingEngineSubscriptionsBackfill
       .active
       .joins(:plan)
       .where(plans: {code: migration.plan_mapping.keys})
-      .preload(:plan)
   end
 
-  def process(subscriptions)
-    copied_external_ids = live_contract_external_ids(subscriptions)
+  def each_customer_batch
+    last_customer_id = nil
 
-    subscriptions.each do |subscription|
-      reason = skip_reason(subscription, copied_external_ids)
-      reason ? skip(subscription, reason) : enqueue(subscription)
+    until customer_limit_reached?
+      customer_ids = customer_ids_after(last_customer_id)
+      break if customer_ids.empty?
+
+      yield customer_ids
+      last_customer_id = customer_ids.last
     end
   end
 
-  def live_contract_external_ids(subscriptions)
-    migration.shadow_organization.contracts.live
-      .where(external_id: subscriptions.map(&:external_id))
-      .pluck(:external_id)
-      .to_set
+  def customer_ids_after(customer_id)
+    scope = candidates.distinct.order(:customer_id).limit(CUSTOMER_BATCH_SIZE)
+    scope = scope.where(Subscription.arel_table[:customer_id].gt(customer_id)) if customer_id
+    scope.pluck(:customer_id)
   end
 
-  def skip_reason(subscription, copied_external_ids)
+  def process(subscriptions)
+    codes = live_contract_codes(subscriptions)
+
+    subscriptions.group_by(&:customer_id).each_value do |customer_subscriptions|
+      break if customer_limit_reached?
+
+      to_copy = customer_subscriptions.reject { |subscription| skipped?(subscription, codes) }
+      enqueue(to_copy) if to_copy.any?
+    end
+  end
+
+  def live_contract_codes(subscriptions)
+    migration.shadow_organization.contracts.live
+      .where(external_id: subscriptions.map(&:external_id))
+      .pluck(:external_id, :code)
+      .to_h
+  end
+
+  def skipped?(subscription, live_contract_codes)
+    reason = skip_reason(subscription, live_contract_codes[subscription.external_id])
+    skip(subscription, reason) if reason
+    reason.present?
+  end
+
+  def skip_reason(subscription, live_contract_code)
     if subscription.plan.parent_id.present?
       "plan_override_not_supported"
     elsif subscription.ending_at&.past?
       "already_ended"
-    elsif copied_external_ids.include?(subscription.external_id)
+    elsif live_contract_code == subscription.id
       "already_copied"
+    elsif live_contract_code
+      "external_id_taken_by_other_subscription"
     end
   end
 
@@ -66,10 +100,32 @@ class BillingEngineSubscriptionsBackfill
     puts "  [#{mode}] #{dry_run ? "would skip" : "skipped"} subscription #{subscription.external_id} (#{reason})"
   end
 
-  def enqueue(subscription)
-    @enqueued += 1
-    BillingEngineMigrations::CopySubscriptionJob.perform_later(migration, subscription) unless dry_run
-    puts "  [#{mode}] #{dry_run ? "would copy" : "enqueued"} subscription #{subscription.external_id}"
+  def enqueue(subscriptions)
+    unless dry_run
+      BillingEngineMigrations::CopyCustomerSubscriptionsJob
+        .set(wait: (enqueued_customers / customers_per_minute).minutes)
+        .perform_later(migration, subscriptions.map(&:id))
+    end
+
+    @enqueued_customers += 1
+    @enqueued_subscriptions += subscriptions.size
+    subscriptions.each do |subscription|
+      puts "  [#{mode}] #{dry_run ? "would copy" : "enqueued"} subscription #{subscription.external_id}"
+    end
+  end
+
+  def customer_limit_reached?
+    customer_limit.present? && enqueued_customers >= customer_limit
+  end
+
+  def summary
+    "#{dry_run ? "Would enqueue" : "Enqueued"} #{enqueued_subscriptions} subscription(s) " \
+      "of #{enqueued_customers} customer(s) over #{spread_minutes} minute(s), " \
+      "skipped #{skipped.values.sum}#{skipped_breakdown} [#{mode}]"
+  end
+
+  def spread_minutes
+    enqueued_customers.fdiv(customers_per_minute).ceil
   end
 
   def skipped_breakdown
@@ -90,7 +146,21 @@ namespace :billing_engine_migrations do
     migration = BillingEngineMigration.find_by(organization_id:)
     abort "No billing engine migration for organization #{organization_id}" unless migration
     abort "Billing engine migration #{migration.id} is #{migration.status}, not shadowing" unless migration.shadowing?
+    unless migration.shadow_organization_isolated?
+      abort "Shadow organization #{migration.shadow_organization_id} has webhook endpoints, invoice emails or a dunning campaign"
+    end
 
-    BillingEngineSubscriptionsBackfill.new(migration:, dry_run: ENV.fetch("DRY_RUN", "true") != "false").run
+    customers_per_minute = Integer(ENV.fetch("CUSTOMERS_PER_MINUTE", "60"), exception: false)
+    abort "CUSTOMERS_PER_MINUTE must be a positive integer" unless customers_per_minute&.positive?
+
+    customer_limit = ENV["LIMIT"].presence && Integer(ENV["LIMIT"], exception: false)
+    abort "LIMIT must be a positive integer" if ENV["LIMIT"].present? && !customer_limit&.positive?
+
+    BillingEngineSubscriptionsBackfill.new(
+      migration:,
+      dry_run: ENV.fetch("DRY_RUN", "true") != "false",
+      customers_per_minute:,
+      customer_limit:
+    ).run
   end
 end
