@@ -47,6 +47,42 @@ RSpec.describe Api::ShadowOrganizationReads, type: :request, product_catalog: fa
 
       expect(response).to be_v2_not_found_error("contract")
     end
+
+    context "with members in both organizations" do
+      let(:membership) { create(:membership, organization:) }
+      let(:shadow_membership) { create(:membership, organization: shadow_organization) }
+
+      before do
+        membership
+        shadow_membership
+        allow(CurrentContext).to receive(:api_key_id=).and_call_original
+        allow(CurrentContext).to receive(:membership=).and_call_original
+      end
+
+      it "keeps the api key and the tracing membership of the v1 organization" do
+        get_with_token(organization, "/api/v2/contracts/subscription-1")
+
+        expect(response).to have_http_status(:success)
+        expect(CurrentContext).to have_received(:api_key_id=).with(organization.api_keys.first.id)
+        expect(CurrentContext).not_to have_received(:api_key_id=).with(shadow_organization.api_keys.first.id)
+        expect(CurrentContext).to have_received(:membership=).with("membership/#{membership.id}")
+        expect(CurrentContext).not_to have_received(:membership=).with("membership/#{shadow_membership.id}")
+      end
+    end
+  end
+
+  context "with a GET on an endpoint the migration opens when the shadow organization is not on the product catalog" do
+    let(:shadow_organization) { create(:shadow_organization, feature_flags: []) }
+
+    before { organization.update!(feature_flags: ["product_catalog"]) }
+
+    it "refuses it on the flag of the shadow organization" do
+      get_with_token(organization, "/api/v2/contracts/subscription-1")
+
+      expect(response).to have_http_status(:forbidden)
+      expect(json[:code]).to eq("feature_unavailable")
+      expect(served_from).to eq("shadow_organization")
+    end
   end
 
   context "with a write on an endpoint the migration opens" do
