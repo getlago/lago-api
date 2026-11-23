@@ -55,7 +55,7 @@ module IntegrationCustomers
     validate :only_one_tax_integration_per_customer, if: :tax_kind?
 
     scope :accounting_kind, -> do
-      where(type: %w[IntegrationCustomers::NetsuiteCustomer IntegrationCustomers::XeroCustomer])
+      where(type: CATEGORY_BY_TYPE.select { |_, category| category == CATEGORIES[:accounting] }.keys)
     end
 
     scope :tax_kind, -> do

@@ -72,6 +72,60 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
       end
     end
 
+    context "with an integration_customer whose type CATEGORY_BY_TYPE maps to accounting" do
+      let(:integration) { create(:hubspot_integration, organization:, code: "hubspot_eu") }
+      let(:int_customer) do
+        # Simulate a legacy row: skipping validation skips the callbacks that derive code and category.
+        build(:hubspot_customer, customer:, organization:, integration:, category: nil).tap do |ic|
+          ic.save!(validate: false)
+        end
+      end
+
+      before do
+        int_customer
+        stub_const(
+          "IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE",
+          IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE.merge("IntegrationCustomers::HubspotCustomer" => "accounting")
+        )
+      end
+
+      it "derives the category from the model map" do
+        expect(result.summary[:integration_categories_set]).to eq(1)
+        expect(result.summary[:integration_defaults_set]).to eq(1)
+
+        int_customer.reload
+        expect(int_customer.category).to eq("accounting")
+        expect(int_customer.is_default).to be(true)
+      end
+    end
+
+    context "with an integration_customer whose type is absent from CATEGORY_BY_TYPE" do
+      let(:integration) { create(:netsuite_integration, organization:, code: "netsuite_eu") }
+      let(:int_customer) do
+        # Simulate a legacy row: skipping validation skips the callbacks that derive code and category.
+        build(:netsuite_customer, customer:, organization:, integration:, category: nil).tap do |ic|
+          ic.save!(validate: false)
+        end
+      end
+
+      before do
+        int_customer
+        stub_const(
+          "IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE",
+          IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE.except("IntegrationCustomers::NetsuiteCustomer")
+        )
+      end
+
+      it "leaves the category nil and sets no default" do
+        expect(result.summary[:integration_categories_set]).to eq(0)
+        expect(result.summary[:integration_defaults_set]).to eq(0)
+
+        int_customer.reload
+        expect(int_customer.category).to be_nil
+        expect(int_customer.is_default).to be(false)
+      end
+    end
+
     context "when the backfill already ran (idempotency)" do
       let(:provider) { create(:stripe_provider, organization:, code: "stripe_eu") }
       let(:integration) { create(:anrok_integration, organization:, code: "anrok_eu") }
