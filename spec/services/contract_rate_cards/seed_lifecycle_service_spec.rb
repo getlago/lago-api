@@ -14,8 +14,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
       organization:,
       contract:,
       effective_date: Date.new(2026, 10, 1),
-      billing_anchor_date: Date.new(2026, 10, 1),
-      next_billing_at: Time.zone.parse("2026-10-01")
+      billing_anchor_date: Date.new(2026, 10, 1)
     )
   end
   let(:unit) do
@@ -31,8 +30,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
     expect(result).to be_success
     expect(contract_rate_card.reload).to have_attributes(
       effective_date: Date.new(2026, 11, 15),
-      billing_anchor_date: Date.new(2026, 11, 15),
-      next_billing_at: Time.zone.parse("2026-11-15")
+      billing_anchor_date: Date.new(2026, 11, 15)
     )
     expect(unit.reload).to have_attributes(units: 12, effective_date: Date.new(2026, 11, 15))
   end
@@ -117,10 +115,10 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:)
     end
 
-    it "waits for the billing date of the current period, its end on an arrears card" do
+    it "starts at the first unpaid period close" do
       result
 
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-15"))
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-09-15"))
     end
   end
 end

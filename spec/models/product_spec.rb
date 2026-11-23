@@ -29,6 +29,7 @@ RSpec.describe Product do
       expect(product).to belong_to(:charge).optional
       expect(product).to have_many(:filters).class_name("ProductFilter").inverse_of(:product)
       expect(product).to have_many(:rate_cards)
+      expect(product).to have_many(:contract_alerts).class_name("UsageMonitoring::ContractAlert")
       expect(product).to have_many(:integration_mappings)
         .class_name("IntegrationMappings::BaseMapping")
         .dependent(:destroy)
@@ -38,6 +39,26 @@ RSpec.describe Product do
       expect(product).to have_many(:xero_mappings)
         .class_name("IntegrationMappings::XeroMapping")
         .dependent(:destroy)
+      expect(product).to have_many(:quickbooks_mappings)
+        .class_name("IntegrationMappings::QuickbooksMapping")
+        .dependent(:destroy)
+    end
+
+    context "with contract alerts" do
+      let(:product) { create(:product) }
+      let(:organization) { product.organization }
+      let(:alert) { create(:contract_usage_units_alert, organization:, product:) }
+
+      before do
+        alert
+        create(:contract_usage_units_alert, organization:, product:, code: "discarded", deleted_at: Time.current)
+        create(:contract_usage_units_alert, organization:, product: create(:product, organization:))
+        create(:contract_usage_units_alert, organization: create(:organization), product:)
+      end
+
+      it "lists the kept alerts on the product in its organization only" do
+        expect(product.contract_alerts).to eq([alert])
+      end
     end
   end
 

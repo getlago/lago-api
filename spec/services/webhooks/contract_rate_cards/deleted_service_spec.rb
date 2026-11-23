@@ -16,9 +16,9 @@ RSpec.describe Webhooks::ContractRateCards::DeletedService do
       contract:,
       rate_card:,
       units: 2.5,
+      next_billing_at: Time.zone.parse("2026-02-03T04:05:06Z"),
       effective_date: Date.new(2026, 1, 2),
-      billing_anchor_date: Date.new(2026, 1, 3),
-      next_billing_at: Time.zone.parse("2026-02-03T04:05:06Z")
+      billing_anchor_date: Date.new(2026, 1, 3)
     )
   end
 

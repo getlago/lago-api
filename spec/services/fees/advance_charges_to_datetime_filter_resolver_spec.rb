@@ -87,7 +87,7 @@ RSpec.describe Fees::AdvanceChargesToDatetimeFilterResolver do
         :billing_segment,
         organization:, customer:, contract:, contract_rate_card:, rate_card_rate:,
         currency: "USD", billing_at: ended_at, cycle_started_at: started_at,
-        started_at:, ended_at:, status: :processing
+        started_at:, ended_at:
       )
     end
 

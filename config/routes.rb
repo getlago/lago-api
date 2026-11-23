@@ -83,12 +83,21 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
+        # The route with an alert code is drawn first, so an alert coded `alerts` is not read as a
+        # wallet code by the index.
+        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets" do
+          scope module: :plan_wallets do
+            resources :alerts, param: :code, code: /.*/, only: %i[show update destroy]
+            resources :alerts, only: %i[index create]
+          end
+        end
         draw(:plan_nested_api)
       end
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
         get :current_usage, on: :member, to: "contracts/usage#current"
+        resources :alerts, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "contracts/alerts"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
@@ -159,6 +168,13 @@ Rails.application.routes.draw do
     get "invoice_payments/:token", to: "invoice_payments#show", as: :invoice_payment
     post "invoice_payments/:token", to: "invoice_payments#create"
   end
+
+  # The only admin route outside local environments, drawn when self-serve is on and its key is set; anything else
+  # falls through to the 404 below, so self-hosted installs never expose it.
+  post "admin/organizations/:id/activate",
+    to: "admin/organization_activations#create",
+    as: :admin_organization_activation,
+    constraints: ->(_request) { Lago::SelfServe.enabled? && Lago::SelfServe.billing_accounts_key.present? }
 
   if Rails.env.local?
     namespace :admin do
