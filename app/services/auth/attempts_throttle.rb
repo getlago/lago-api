@@ -47,7 +47,7 @@ module Auth
       agent_challenge_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
       agent_challenge_per_key: Rule.new(limit: 10, period: 1.minute, identifier: %i[public_key ip]),
       agent_proof_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
-      agent_me_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip)
+      agent_me_failed_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip)
     }.freeze
 
     # Built on first use only, and once per process.

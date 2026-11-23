@@ -18,8 +18,19 @@ module Agents
     def throttled?(rule, *identifiers)
       return false unless ::Auth::AttemptsThrottle.hit!(rule, *identifiers)
 
-      render(json: {status: 429, error: "Too Many Requests", code: "too_many_requests"}, status: :too_many_requests)
+      too_many_requests
       true
+    end
+
+    def limit_reached?(rule, *identifiers)
+      return false unless ::Auth::AttemptsThrottle.at_limit?(rule, *identifiers)
+
+      too_many_requests
+      true
+    end
+
+    def too_many_requests
+      render(json: {status: 429, error: "Too Many Requests", code: "too_many_requests"}, status: :too_many_requests)
     end
   end
 end
