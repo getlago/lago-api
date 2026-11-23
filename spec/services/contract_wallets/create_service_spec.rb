@@ -59,6 +59,12 @@ describe ContractWallets::CreateService do
     expect(Utils::ActivityLog).to have_received(:produce).with(result.contract_wallet, "contract_wallet.created", after_commit: true)
   end
 
+  it "locks the contract without holding back the rows that reference it" do
+    statements = capture_sql { result }
+
+    expect(statements).to include(a_string_matching(/FROM "contracts".*FOR NO KEY UPDATE/))
+  end
+
   context "with only the required fields" do
     let(:params) { {code: "ai_credits", currency: "USD"} }
 

@@ -26,6 +26,12 @@ describe ContractWallets::DestroyService do
     expect(Utils::ActivityLog).to have_received(:produce).with(contract_wallet, "contract_wallet.deleted", after_commit: true)
   end
 
+  it "locks the contract without holding back the rows that reference it" do
+    statements = capture_sql { result }
+
+    expect(statements).to include(a_string_matching(/FROM "contracts".*FOR NO KEY UPDATE/))
+  end
+
   context "when the wallet has taxes, a scope and spent credit" do
     let(:applied_tax) { create(:catalog_wallet_applied_tax, organization:, catalog_wallet: contract_wallet) }
     let(:selector) { create(:catalog_wallet_selector, organization:, catalog_wallet: contract_wallet) }
