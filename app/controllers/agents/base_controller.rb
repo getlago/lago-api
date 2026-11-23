@@ -26,6 +26,13 @@ module Agents
       true
     end
 
+    def limit_reached?(rule, *identifiers)
+      return false unless ::Auth::AttemptsThrottle.at_limit?(rule, *identifiers)
+
+      render_too_many_requests
+      true
+    end
+
     # A service counts an attempt itself when the limit only applies once its checks passed.
     def too_many_requests?(result)
       result.error.is_a?(BaseService::ForbiddenFailure) && result.error.code == "too_many_requests"
