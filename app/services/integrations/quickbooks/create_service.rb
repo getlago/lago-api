@@ -37,6 +37,8 @@ module Integrations
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
+      rescue ActiveRecord::RecordNotUnique => e
+        unique_index_failure!(e, Integrations::QuickbooksIntegration::UNIQUE_INDEXES)
       end
 
       private

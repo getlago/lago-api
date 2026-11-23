@@ -76,6 +76,25 @@ RSpec.describe Integrations::Quickbooks::UpdateService do
           organization.update!(premium_integrations: ["quickbooks"])
         end
 
+        context "when a sync flag is set to null" do
+          let(:integration) do
+            create(
+              :quickbooks_integration,
+              organization:,
+              settings: {realm_id: "1234567890", sandbox: false, sync_invoices: true, sync_credit_notes: true, sync_payments: true}
+            )
+          end
+          let(:update_args) { {sync_invoices: nil} }
+
+          it "stores false, as create does" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(integration.reload.settings["sync_invoices"]).to be(false)
+            expect(integration.settings["sync_credit_notes"]).to be(true)
+          end
+        end
+
         context "without validation errors" do
           it "updates the name, the code and the sync flags" do
             result = service_call

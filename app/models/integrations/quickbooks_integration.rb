@@ -2,6 +2,12 @@
 
 module Integrations
   class QuickbooksIntegration < BaseIntegration
+    # Unique indexes of a QuickBooks row and the field each one guards, for `unique_index_failure!`.
+    UNIQUE_INDEXES = {
+      "index_integrations_on_organization_id_and_quickbooks_realm_id" => :realm_id,
+      "index_integrations_on_code_and_organization_id" => :code
+    }.freeze
+
     validates :connection_id, presence: true
     validate :realm_id_uniqueness
 
@@ -15,6 +21,7 @@ module Integrations
 
     private
 
+    # Gives the friendly error before the insert. The unique index enforces it under concurrency.
     def realm_id_uniqueness
       return if realm_id.blank?
 

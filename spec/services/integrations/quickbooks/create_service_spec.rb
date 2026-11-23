@@ -186,7 +186,7 @@ RSpec.describe Integrations::Quickbooks::CreateService do
           end
         end
 
-        [404, 500].each do |status|
+        {404 => "connection_not_found", 500 => "connection_lookup_failed"}.each do |status, error_code|
           context "when Nango answers #{status}" do
             let(:response_status) { status }
             let(:response_body) { {"error" => "fake-nango-error-body"}.to_json }
@@ -199,7 +199,7 @@ RSpec.describe Integrations::Quickbooks::CreateService do
               expect(result).not_to be_success
               expect(result.error).to be_a(BaseService::ThirdPartyFailure)
               expect(result.error.third_party).to eq("Nango")
-              expect(result.error.error_code).to eq("connection_lookup_failed")
+              expect(result.error.error_code).to eq(error_code)
               expect(result.error.message).not_to include("fake-nango-error-body")
               expect(result.integration).to be_nil
             end
@@ -217,12 +217,12 @@ RSpec.describe Integrations::Quickbooks::CreateService do
 
           it_behaves_like "a refused creation"
 
-          it "returns a validation failure on realm_id" do
+          it "returns a third party failure" do
             result = service_call
 
             expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages).to eq({realm_id: ["value_is_mandatory"]})
+            expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+            expect(result.error.error_code).to eq("realm_id_missing")
             expect(result.integration).to be_nil
           end
         end
@@ -240,6 +240,59 @@ RSpec.describe Integrations::Quickbooks::CreateService do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
             expect(result.error.messages).to eq({realm_id: ["value_already_exist"]})
+          end
+        end
+
+        context "when a concurrent create stores a conflicting row after the validations passed" do
+          # The row lands between the validations of save! and the insert, as in a real race, so only
+          # the unique index can refuse it. It is saved without validations, as the other request was.
+          def insert_conflicting_row(code:, realm_id:)
+            build(:quickbooks_integration, organization:, name: "Concurrent QuickBooks", code:, settings: {realm_id:})
+              .save!(validate: false)
+          end
+
+          before do
+            conflict = conflicting_row
+            wrapped = false
+            allow(Integrations::QuickbooksIntegration).to receive(:new).and_wrap_original do |original, *args, **kwargs|
+              integration = original.call(*args, **kwargs)
+              next integration if wrapped
+
+              # Only the service's own record races; the conflicting row is saved as is.
+              wrapped = true
+              allow(integration).to receive(:save!).and_wrap_original do |save, *save_args, **options|
+                integration.validate!
+                insert_conflicting_row(**conflict)
+                save.call(*save_args, **options, validate: false)
+              end
+              integration
+            end
+          end
+
+          context "with the same company" do
+            let(:conflicting_row) { {code: "quickbooks_concurrent", realm_id:} }
+
+            it "returns a validation failure on realm_id from the unique index" do
+              result = service_call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages).to eq({realm_id: ["value_already_exist"]})
+              expect(Integrations::QuickbooksIntegration.where(organization:).count).to eq(1)
+            end
+          end
+
+          context "with the same code" do
+            let(:conflicting_row) { {code:, realm_id: "9999999999"} }
+
+            it "returns a validation failure on code from the unique index" do
+              result = service_call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages).to eq({code: ["value_already_exist"]})
+              expect(Integrations::QuickbooksIntegration.where(organization:).count).to eq(1)
+            end
           end
         end
 
