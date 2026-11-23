@@ -12,7 +12,7 @@ module PaymentProviders
 
     def call
       return result.not_found_failure!(resource: "payment_provider") unless payment_provider
-      return result.not_allowed_failure!(code: "payment_provider_used_by_agent_storefront") if used_by_agent_storefront?
+      return result.forbidden_failure!(code: "payment_provider_used_by_agent_storefront") if used_by_agent_storefront?
 
       customer_ids = payment_provider.customer_ids
 

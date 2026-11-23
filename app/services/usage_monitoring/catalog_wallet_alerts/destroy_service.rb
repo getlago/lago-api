@@ -13,16 +13,17 @@ module UsageMonitoring
       def call
         return result.not_found_failure!(resource: "alert") unless alert
 
-        # Template writes lock the plan wallet, so a contract copying its templates sees one version of them
-        alert.plan_wallet.with_lock do
-          return result.not_found_failure!(resource: "plan_wallet") if alert.plan_wallet.discarded?
+        ActiveRecord::Base.transaction do
+          lock_wallet(wallet_of(alert))
+          return result unless result.success?
 
-          # Read again under the lock: a write that held it may have changed the template or deleted it
-          template = PlanWalletAlert.find_by(id: alert.id)
-          return result.not_found_failure!(resource: "alert") unless template
+          # Read again under the lock: a write that held it may have changed the alert or deleted it
+          current = alert.class.lock.find_by(id: alert.id)
+          return result.not_found_failure!(resource: "alert") unless current
 
-          template.destroy!
-          result.alert = template
+          # Gone for good with its thresholds: the history of a contract wallet alert keeps its own copy of it
+          current.destroy!
+          result.alert = current
         end
 
         result
