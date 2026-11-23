@@ -2,19 +2,15 @@
 
 module BillingEngineMigrations
   # The V1 subscriptions whose events are copied to the shadow organization: active, on a mapped
-  # plan and not on an override. Each process keeps their external ids per migration for a few
-  # minutes. An id missing from that snapshot is looked up once, so a subscription created since is
-  # found on its first event, and an unmapped one costs a query once per refresh, not per event.
+  # plan and not on an override. Each process remembers, per migration and for a minute, the ids it
+  # found mapped. Unmapped ids are never remembered: a plan change keeps the external id, so one
+  # moving onto a mapped plan is copied from its next event.
   class MappedSubscriptions
-    REFRESH_INTERVAL = 5.minutes
+    REFRESH_INTERVAL = Lookup::REFRESH_INTERVAL
 
-    Snapshot = Data.define(:plan_mapping, :plan_ids, :mapped, :unmapped, :expires_at) do
+    Snapshot = Data.define(:plan_mapping, :plan_ids, :mapped, :expires_at) do
       def current_for?(migration)
         Time.current < expires_at && plan_mapping == migration.plan_mapping
-      end
-
-      def known?(external_id)
-        mapped.key?(external_id) || unmapped.key?(external_id)
       end
     end
 
@@ -23,7 +19,8 @@ module BillingEngineMigrations
     class << self
       def filter(migration, external_ids)
         snapshot = snapshot_for(migration)
-        resolve(migration, snapshot, external_ids.uniq.reject { snapshot.known?(it) })
+        unknown_ids = external_ids.uniq.reject { snapshot.mapped.key?(it) }
+        remember_mapped(migration, snapshot, unknown_ids) if unknown_ids.any?
 
         external_ids.select { snapshot.mapped.key?(it) }.to_set
       end
@@ -36,31 +33,29 @@ module BillingEngineMigrations
 
       def snapshot_for(migration)
         current = SNAPSHOTS[migration.id]
-        return current if current&.current_for?(migration)
 
-        SNAPSHOTS.compute(migration.id) do |latest|
-          latest&.current_for?(migration) ? latest : load_snapshot(migration)
+        if current&.current_for?(migration)
+          current
+        else
+          SNAPSHOTS[migration.id] = load_snapshot(migration)
         end
       end
 
       def load_snapshot(migration)
-        plan_ids = mapped_plan_ids(migration)
-
         Snapshot.new(
           plan_mapping: migration.plan_mapping,
-          plan_ids:,
-          mapped: id_set(active_subscriptions(migration, plan_ids).distinct.pluck(:external_id)),
-          unmapped: Concurrent::Map.new,
+          plan_ids: mapped_plan_ids(migration),
+          mapped: Concurrent::Map.new,
           expires_at: REFRESH_INTERVAL.from_now
         )
       end
 
-      def resolve(migration, snapshot, unknown_ids)
-        return if unknown_ids.empty?
-
-        found = active_subscriptions(migration, snapshot.plan_ids).where(external_id: unknown_ids).distinct.pluck(:external_id)
-        found.each { snapshot.mapped[it] = true }
-        (unknown_ids - found).each { snapshot.unmapped[it] = true }
+      def remember_mapped(migration, snapshot, external_ids)
+        active_subscriptions(migration, snapshot.plan_ids)
+          .where(external_id: external_ids)
+          .distinct
+          .pluck(:external_id)
+          .each { snapshot.mapped[it] = true }
       end
 
       def mapped_plan_ids(migration)
@@ -68,13 +63,11 @@ module BillingEngineMigrations
       end
 
       def active_subscriptions(migration, plan_ids)
-        return Subscription.none if plan_ids.empty?
-
-        Subscription.active.where(organization_id: migration.organization_id, plan_id: plan_ids)
-      end
-
-      def id_set(external_ids)
-        external_ids.each_with_object(Concurrent::Map.new) { |external_id, set| set[external_id] = true }
+        if plan_ids.empty?
+          Subscription.none
+        else
+          Subscription.active.where(organization_id: migration.organization_id, plan_id: plan_ids)
+        end
       end
     end
   end

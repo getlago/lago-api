@@ -12,7 +12,7 @@ RSpec.describe BillingEngineMigrations::MappedSubscriptions do
 
   let_it_be(:mapped_subscription, refind: true) { create(:subscription, customer:, plan: mapped_plan, external_id: "mapped") }
   let_it_be(:override_subscription) { create(:subscription, customer:, plan: override_plan, external_id: "override") }
-  let_it_be(:unmapped_subscription) { create(:subscription, customer:, plan: unmapped_plan, external_id: "unmapped") }
+  let_it_be(:unmapped_subscription, refind: true) { create(:subscription, customer:, plan: unmapped_plan, external_id: "unmapped") }
   let_it_be(:terminated_subscription) { create(:subscription, :terminated, customer:, plan: mapped_plan, external_id: "terminated") }
   let_it_be(:other_organization_subscription) do
     other_organization = create(:organization)
@@ -37,43 +37,61 @@ RSpec.describe BillingEngineMigrations::MappedSubscriptions do
       expect(described_class.filter(migration, external_ids)).to eq(Set["mapped"])
     end
 
-    it "answers the ids it has seen without a query" do
+    it "answers the mapped ids it has seen without a query" do
       described_class.filter(migration, external_ids)
 
-      statements = capture_sql { described_class.filter(migration, external_ids) }
+      statements = capture_sql { described_class.filter(migration, ["mapped"]) }
 
       expect(statements).to be_empty
+    end
+
+    it "looks the unmapped ids up again with one query" do
+      described_class.filter(migration, external_ids)
+
+      statements = capture_sql { expect(described_class.filter(migration, external_ids)).to eq(Set["mapped"]) }
+
+      expect(statements.size).to eq(1)
     end
 
     context "when a subscription is created after the snapshot is loaded" do
       before { described_class.filter(migration, external_ids) }
 
-      it "finds it on its first event with one query" do
+      it "finds it on its first event" do
         create(:subscription, customer:, plan: mapped_plan, external_id: "new")
 
-        statements = capture_sql { expect(described_class.filter(migration, %w[mapped new])).to eq(Set["mapped", "new"]) }
-
-        expect(statements.size).to eq(1)
+        expect(described_class.filter(migration, %w[mapped new])).to eq(Set["mapped", "new"])
       end
     end
 
-    context "when an unmapped id was already looked up" do
+    context "when an unmapped subscription moves onto a mapped plan under the same external id" do
       before { described_class.filter(migration, external_ids) }
 
-      it "does not look it up again before the refresh" do
-        create(:subscription, customer:, plan: mapped_plan, external_id: "unknown")
+      it "keeps it before the refresh" do
+        unmapped_subscription.update!(status: :terminated, terminated_at: Time.current)
+        create(:subscription, customer:, plan: mapped_plan, external_id: "unmapped")
 
         travel(described_class::REFRESH_INTERVAL - 1.second) do
-          expect(described_class.filter(migration, ["unknown"])).to be_empty
+          expect(described_class.filter(migration, external_ids)).to eq(Set["mapped", "unmapped"])
+        end
+      end
+    end
+
+    context "when a mapped subscription leaves its mapped plan" do
+      before do
+        described_class.filter(migration, external_ids)
+        mapped_subscription.update!(status: :terminated, terminated_at: Time.current)
+        create(:subscription, customer:, plan: unmapped_plan, external_id: "mapped")
+      end
+
+      it "keeps it until the refresh" do
+        travel(described_class::REFRESH_INTERVAL - 1.second) do
+          expect(described_class.filter(migration, external_ids)).to eq(Set["mapped"])
         end
       end
 
-      it "reloads the snapshot after the refresh interval" do
-        create(:subscription, customer:, plan: mapped_plan, external_id: "unknown")
-        mapped_subscription.update!(status: :terminated, terminated_at: Time.current)
-
+      it "drops it after the refresh" do
         travel(described_class::REFRESH_INTERVAL + 1.second) do
-          expect(described_class.filter(migration, external_ids)).to eq(Set["unknown"])
+          expect(described_class.filter(migration, external_ids)).to be_empty
         end
       end
     end
