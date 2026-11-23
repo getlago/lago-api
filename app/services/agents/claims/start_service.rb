@@ -20,7 +20,7 @@ module Agents
         return result.single_validation_failure!(error_code: "enrollment_required") unless claim.registration.customer
         return result.single_validation_failure!(field: :email, error_code: "invalid_email_format") unless valid_email?
         # Counted once the code is good, so bogus codes sent with someone's address cannot use up their mailbox budget.
-        return result.not_allowed_failure!(code: "too_many_requests") if mailbox_throttled?
+        return result.forbidden_failure!(code: "too_many_requests") if mailbox_throttled?
 
         claim.with_lock do
           # Verified since it was loaded: the claim is spent.
