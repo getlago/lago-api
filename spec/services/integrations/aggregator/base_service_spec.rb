@@ -65,6 +65,8 @@ RSpec.describe Integrations::Aggregator::BaseService do
       let(:provider_name) { :quickbooks }
 
       it "raises the next window throttling error, retried after 60 seconds when no limit is configured" do
+        allow(Throttling).to receive(:limits).and_return({})
+
         expect { throttle }
           .to raise_error(BaseService::NextWindowThrottlingError) do |error|
             expect(error.provider_name).to eq(:quickbooks)
@@ -301,35 +303,48 @@ RSpec.describe Integrations::Aggregator::BaseService do
     subject(:throttle_key) { described_class.new(integration:).send(:throttle_key) }
 
     context "with QuickBooks integrations" do
-      let(:connection_id_a) { "quickbooks-placeholder-connection-a" }
-      let(:connection_id_b) { "quickbooks-placeholder-connection-b" }
-      let(:integration_a) do
-        create(:quickbooks_integration, code: "quickbooks_a", secrets: {connection_id: connection_id_a}.to_json)
-      end
-      let(:integration_b) do
-        create(:quickbooks_integration, code: "quickbooks_b", secrets: {connection_id: connection_id_b}.to_json)
-      end
-      let(:key_a) { described_class.new(integration: integration_a).send(:throttle_key) }
-      let(:key_b) { described_class.new(integration: integration_b).send(:throttle_key) }
-
-      it "uses the SHA-256 digest of each connection id" do
-        expect(key_a).to eq(Digest::SHA2.hexdigest(connection_id_a))
-        expect(key_b).to eq(Digest::SHA2.hexdigest(connection_id_b))
-        expect(key_a).to match(/\A\h{64}\z/)
-        expect(key_b).to match(/\A\h{64}\z/)
+      def quickbooks_integration(connection_id:, realm_id:, sandbox: false, organization: create(:organization))
+        create(
+          :quickbooks_integration,
+          organization:,
+          secrets: {connection_id:}.to_json,
+          settings: {realm_id:, sandbox:, sync_invoices: false, sync_credit_notes: false, sync_payments: false}
+        )
       end
 
-      it "gives different keys to different connections" do
-        expect(key_a).not_to eq(key_b)
+      def key_for(integration)
+        described_class.new(integration:).send(:throttle_key)
       end
 
-      it "never holds the raw connection id" do
-        expect(key_a).not_to include(connection_id_a)
-        expect(key_b).not_to include(connection_id_b)
+      let(:integration_a) { quickbooks_integration(connection_id: "quickbooks-placeholder-connection-a", realm_id: "1111111111") }
+      let(:integration_b) { quickbooks_integration(connection_id: "quickbooks-placeholder-connection-b", realm_id: "2222222222") }
+
+      it "uses the SHA-256 digest of the provider key and the company id" do
+        expect(key_for(integration_a)).to eq(Digest::SHA2.hexdigest("quickbooks:1111111111"))
+        expect(key_for(integration_b)).to eq(Digest::SHA2.hexdigest("quickbooks:2222222222"))
       end
 
-      it "gives the same key for the same connection" do
-        expect(described_class.new(integration: integration_a).send(:throttle_key)).to eq(key_a)
+      it "gives different keys to different companies" do
+        expect(key_for(integration_a)).not_to eq(key_for(integration_b))
+      end
+
+      it "gives the same key to two connections to the same company" do
+        other = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: "1111111111")
+
+        expect(key_for(other)).to eq(key_for(integration_a))
+      end
+
+      it "keeps a sandbox company apart from a production company with the same id" do
+        sandbox = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: "1111111111", sandbox: true)
+
+        expect(key_for(sandbox)).to eq(Digest::SHA2.hexdigest("quickbooks-sandbox:1111111111"))
+        expect(key_for(sandbox)).not_to eq(key_for(integration_a))
+      end
+
+      it "falls back to the digest of the connection id when the company id is blank" do
+        integration = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: nil)
+
+        expect(key_for(integration)).to eq(Digest::SHA2.hexdigest("quickbooks-placeholder-connection-c"))
       end
     end
 
@@ -361,17 +376,22 @@ RSpec.describe Integrations::Aggregator::BaseService do
   end
 
   describe "#throttle! with a real counter" do
+    def quickbooks_integration(connection_id:, realm_id:, sandbox: false, organization: create(:organization))
+      create(
+        :quickbooks_integration,
+        organization:,
+        secrets: {connection_id:}.to_json,
+        settings: {realm_id:, sandbox:, sync_invoices: false, sync_credit_notes: false, sync_payments: false}
+      )
+    end
+
     let(:store) { ActiveSupport::Cache::MemoryStore.new }
     let(:store_keys) { store.instance_variable_get(:@data).keys }
 
     let(:connection_id_a) { "quickbooks-placeholder-connection-a" }
     let(:connection_id_b) { "quickbooks-placeholder-connection-b" }
-    let(:integration_a) do
-      create(:quickbooks_integration, code: "quickbooks_a", secrets: {connection_id: connection_id_a}.to_json)
-    end
-    let(:integration_b) do
-      create(:quickbooks_integration, code: "quickbooks_b", secrets: {connection_id: connection_id_b}.to_json)
-    end
+    let(:integration_a) { quickbooks_integration(connection_id: connection_id_a, realm_id: "1111111111") }
+    let(:integration_b) { quickbooks_integration(connection_id: connection_id_b, realm_id: "2222222222") }
     let(:service_a) { described_class.new(integration: integration_a) }
     let(:service_b) { described_class.new(integration: integration_b) }
 
@@ -390,7 +410,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
         end
     end
 
-    it "counts each QuickBooks connection apart and never stores the raw connection id" do
+    it "counts each QuickBooks company apart and never stores the company or connection id" do
       150.times { service_a.send(:throttle!, :quickbooks) }
 
       expect { service_a.send(:throttle!, :quickbooks) }
@@ -399,11 +419,28 @@ RSpec.describe Integrations::Aggregator::BaseService do
         end
       expect { service_b.send(:throttle!, :quickbooks) }.not_to raise_error
 
-      expect(store_keys).to include(a_string_including(Digest::SHA2.hexdigest(connection_id_a)))
-      expect(store_keys).to include(a_string_including(Digest::SHA2.hexdigest(connection_id_b)))
+      expect(store_keys).to include(a_string_including(Digest::SHA2.hexdigest("quickbooks:1111111111")))
+      expect(store_keys).to include(a_string_including(Digest::SHA2.hexdigest("quickbooks:2222222222")))
       expect(store_keys).to all(start_with("throttle:quickbooks:client:"))
+      expect(store_keys.join).not_to include("1111111111")
       expect(store_keys.join).not_to include(connection_id_a)
-      expect(store_keys.join).not_to include(connection_id_b)
+    end
+
+    it "shares one counter between two organizations connected to the same company" do
+      other_org = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: "1111111111")
+
+      150.times { service_a.send(:throttle!, :quickbooks) }
+
+      expect { described_class.new(integration: other_org).send(:throttle!, :quickbooks) }
+        .to raise_error(BaseService::NextWindowThrottlingError)
+    end
+
+    it "counts a sandbox company apart from a production company with the same id" do
+      sandbox = quickbooks_integration(connection_id: "quickbooks-placeholder-connection-c", realm_id: "1111111111", sandbox: true)
+
+      150.times { service_a.send(:throttle!, :quickbooks) }
+
+      expect { described_class.new(integration: sandbox).send(:throttle!, :quickbooks) }.not_to raise_error
     end
 
     it "still raises the regular throttling error on the 11th NetSuite call in a second" do

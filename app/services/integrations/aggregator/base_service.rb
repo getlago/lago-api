@@ -109,14 +109,17 @@ module Integrations
       end
 
       def throttle_key
-        # Hubspot, Xero and Avalara calls are throttled globally, others per client id, api key or connection id (digested)
+        # Hubspot, Xero and Avalara calls are throttled globally, NetSuite per client id and Anrok per api key.
+        # Intuit counts QuickBooks calls per company, so they are throttled per company (realm id) and Nango
+        # provider key, which keeps sandbox and production companies apart. Before the realm id is known,
+        # the connection id is used. Every per-tenant value is digested.
         case provider
         when "netsuite"
           Digest::SHA2.hexdigest(integration.client_id)
         when "anrok"
           Digest::SHA2.hexdigest(integration.api_key)
         when "quickbooks"
-          Digest::SHA2.hexdigest(integration.connection_id)
+          Digest::SHA2.hexdigest(integration.realm_id.present? ? "#{provider_key}:#{integration.realm_id}" : integration.connection_id)
         else
           provider.to_s
         end

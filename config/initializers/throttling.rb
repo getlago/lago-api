@@ -53,9 +53,10 @@ Throttling.limits = {
       period: 1
     }
   },
-  quickbooks: { # Rate limit: 150 actions per minute per connection
-    # One Nango action makes up to 3 Intuit calls, and Intuit allows 500 calls per minute per company.
-    # 150 actions make at most 450 calls, which leaves 50 calls a minute free for syncs.
+  quickbooks: { # Rate limit: 150 actions per minute per QuickBooks company
+    # An estimate: Intuit allows 500 calls per minute per company. Sized for at most 3 Intuit calls per Nango
+    # action, which leaves 50 calls a minute free for syncs. Counted per fixed minute, so up to 2 x 150 actions
+    # can land within 60 seconds around a minute boundary. Revisit once the QuickBooks actions exist.
     minutely: {
       limit: 150,
       period: 60
@@ -68,4 +69,4 @@ Throttling.limits = {
 # Throttling.for(:xero).check(:client, 'xero')
 # Throttling.for(:netsuite).check(:client, integration.client_id)
 # Throttling.for(:anrok).check(:client, integration.api_key)
-# Throttling.for(:quickbooks).check(:client, Digest::SHA2.hexdigest(integration.connection_id))
+# Throttling.for(:quickbooks).check(:client, Digest::SHA2.hexdigest("#{provider_key}:#{integration.realm_id}"))
