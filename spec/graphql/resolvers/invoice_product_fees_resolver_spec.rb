@@ -113,6 +113,27 @@ RSpec.describe Resolvers::InvoiceProductFeesResolver do
     end
   end
 
+  context "with a fee taxed twice" do
+    let(:query) do
+      <<~GQL
+        query($invoiceId: ID!) {
+          invoiceProductFees(invoiceId: $invoiceId) {
+            collection { appliedTaxes { taxRate } }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:fee_applied_tax, fee:, organization:, tax_rate: 5.5)
+      create(:fee_applied_tax, fee:, organization:, tax_rate: 20.0)
+    end
+
+    it "lists the highest rate first" do
+      expect(execution["data"]["invoiceProductFees"]["collection"]).to eq([{"appliedTaxes" => [{"taxRate" => 20.0}, {"taxRate" => 5.5}]}])
+    end
+  end
+
   context "when the invoice is not found" do
     let(:variables) { {invoiceId: create(:invoice, organization: create(:organization)).id} }
 

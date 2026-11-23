@@ -8,8 +8,8 @@ class InvoiceProductFeesQuery < BaseQuery
   Filters = BaseFilters[
     :invoice_id,
     :contract_id,
-    :product_category_id,
-    :standalone_products,
+    :product_category_ids,
+    :without_product_category,
     :product_ids,
     :product_filter_ids,
     :without_product_filter,
@@ -33,10 +33,9 @@ class InvoiceProductFeesQuery < BaseQuery
 
     fees = base_scope
     fees = with_contract(fees) if filters.contract_id.present?
-    fees = with_product_category(fees) if filters.product_category_id.present?
-    fees = fees.where(products: {product_category_id: nil}) if standalone_products?
+    fees = in_ids_or_none(fees, "products.product_category_id", filters.product_category_ids, without_product_category?) if filters.product_category_ids.present? || without_product_category?
     fees = with_products(fees) if filters.product_ids.present?
-    fees = with_product_filter(fees) if filters.product_filter_ids.present? || without_product_filter?
+    fees = in_ids_or_none(fees, "product_filters.id", filters.product_filter_ids, without_product_filter?) if filters.product_filter_ids.present? || without_product_filter?
     fees = fees.where("products.product_type = ?", filters.product_type) if filters.product_type.present?
     fees = with_search_term(fees) if search_term.present?
 
@@ -66,22 +65,16 @@ class InvoiceProductFeesQuery < BaseQuery
     scope.where("fees.contract_id IN (?)", uuids(filters.contract_id))
   end
 
-  def with_product_category(scope)
-    scope.where("products.product_category_id IN (?)", uuids(filters.product_category_id))
-  end
-
   def with_products(scope)
     scope.where("fees.invoiceable_id IN (?)", uuids(filters.product_ids))
   end
 
-  # A multi-select: the chosen filters OR "no filter".
-  def with_product_filter(scope)
-    ids = uuids(filters.product_filter_ids)
-
-    if without_product_filter?
-      scope.where("product_filters.id IN (?) OR product_filters.id IS NULL", ids)
+  # A multi-select: the chosen ids OR "none", as the other catalog lists combine them.
+  def in_ids_or_none(scope, column, ids, none)
+    if none
+      scope.where("#{column} IN (?) OR #{column} IS NULL", uuids(ids))
     else
-      scope.where("product_filters.id IN (?)", ids)
+      scope.where("#{column} IN (?)", uuids(ids))
     end
   end
 
@@ -129,8 +122,8 @@ class InvoiceProductFeesQuery < BaseQuery
     Array(values).map(&:to_s).grep(UUID_REGEX)
   end
 
-  def standalone_products?
-    ActiveModel::Type::Boolean.new.cast(filters.standalone_products)
+  def without_product_category?
+    ActiveModel::Type::Boolean.new.cast(filters.without_product_category)
   end
 
   def without_product_filter?

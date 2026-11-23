@@ -13623,7 +13623,7 @@ type Query {
   """
   Query the product fees of an invoice, in the order of the invoice PDF
   """
-  invoiceProductFees(contractId: ID, invoiceId: ID!, limit: Int, page: Int, productCategoryId: ID, productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, standaloneProducts: Boolean, withoutProductFilter: Boolean): FeeCollection!
+  invoiceProductFees(contractId: ID, invoiceId: ID!, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): FeeCollection!
 
   """
   Query invoiced usage of an organization

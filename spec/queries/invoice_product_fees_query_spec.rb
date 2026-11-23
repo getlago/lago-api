@@ -135,6 +135,47 @@ RSpec.describe InvoiceProductFeesQuery do
     end
   end
 
+  context "with a second category that sorts before Food, whose product sorts after Food's" do
+    let(:drinks) { create(:product_category, organization:, name: "Drinks", invoice_display_name: nil) }
+    let(:zinfandel) { create(:product, organization:, product_category: drinks, name: "Zinfandel", code: "zinfandel", invoice_display_name: nil) }
+
+    before { product_fee(annual, zinfandel, amount_cents: 11) }
+
+    it "sorts the categories by name" do
+      expect(amounts).to eq([11, 3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+
+    it "lists the groups in the order of the product catalog tree" do
+      expect(fee_groups).to eq(tree_groups & fee_groups)
+    end
+  end
+
+  context "with an unfiltered fee next to filtered fees of the same product" do
+    before { product_fee(annual, salad, amount_cents: 12) }
+
+    it "lists the product's own row before its filters" do
+      expect(amounts).to eq([3_001, 12, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+
+    it "lists the groups in the order of the product catalog tree" do
+      expect(fee_groups).to eq(tree_groups & fee_groups)
+    end
+  end
+
+  context "with a contract without a name, on a plan" do
+    let(:brunch) { create(:catalog_plan, organization:, name: "Bistro brunch", invoice_display_name: nil) }
+
+    before { product_fee(create(:contract, organization:, customer:, name: nil, catalog_plan: brunch), wine, amount_cents: 13) }
+
+    it "sorts it on the plan name" do
+      expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 13, 6_000, 3_000, 6_001])
+    end
+
+    it "lists the groups in the order of the product catalog tree" do
+      expect(fee_groups).to eq(tree_groups & fee_groups)
+    end
+  end
+
   context "with a contract without a name or a plan" do
     before { product_fee(create(:contract, organization:, customer:, name: nil, catalog_plan: nil), wine, amount_cents: 1) }
 
@@ -143,12 +184,24 @@ RSpec.describe InvoiceProductFeesQuery do
     end
   end
 
-  it "leaves out the fees of other invoices and other fee types" do
-    other_invoice = create(:invoice, organization:, customer:)
-    product_fee(annual, wine, amount_cents: 1, fee_invoice: other_invoice)
-    create(:fee, invoice:, organization:, amount_cents: 2)
+  context "with fees of another invoice and of another type" do
+    before do
+      product_fee(annual, wine, amount_cents: 1, fee_invoice: create(:invoice, organization:, customer:))
+      create(:fee, invoice:, organization:, amount_cents: 2)
+    end
 
-    expect(amounts).not_to include(1, 2)
+    it "leaves them out" do
+      expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+  end
+
+  context "when the invoice is still generating" do
+    let(:filters) { {invoice_id: create(:invoice, organization:, customer:, status: :generating).id} }
+
+    it "fails with a not found error" do
+      expect(result).to be_failure
+      expect(result.error.error_code).to eq("invoice_not_found")
+    end
   end
 
   context "when the invoice belongs to another organization" do
@@ -168,16 +221,24 @@ RSpec.describe InvoiceProductFeesQuery do
     end
   end
 
-  context "with a product category filter" do
-    let(:filters) { {invoice_id: invoice.id, product_category_id: food.id} }
+  context "with a product categories filter" do
+    let(:filters) { {invoice_id: invoice.id, product_category_ids: [food.id]} }
 
     it "leaves out the standalone products" do
       expect(amounts).to eq([3_001, 14_000, 10_000, 6_000, 3_000, 6_001])
     end
+
+    context "with the products without a category" do
+      let(:filters) { {invoice_id: invoice.id, product_category_ids: [food.id], without_product_category: true} }
+
+      it "returns the union of both" do
+        expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+      end
+    end
   end
 
-  context "with the standalone products filter" do
-    let(:filters) { {invoice_id: invoice.id, standalone_products: true} }
+  context "with the products without a category alone" do
+    let(:filters) { {invoice_id: invoice.id, without_product_category: true} }
 
     it "returns the fees of products without a category" do
       expect(amounts).to eq([5_000])
@@ -216,6 +277,14 @@ RSpec.describe InvoiceProductFeesQuery do
     end
   end
 
+  context "with the fees without a filter alone" do
+    let(:filters) { {invoice_id: invoice.id, without_product_filter: true} }
+
+    it "returns the unfiltered fees, true-ups of unfiltered fees included" do
+      expect(amounts).to eq([3_001, 5_000, 6_000, 3_000, 6_001])
+    end
+  end
+
   context "with a product type filter" do
     let(:filters) { {invoice_id: invoice.id, product_type: "fixed"} }
 
@@ -243,7 +312,7 @@ RSpec.describe InvoiceProductFeesQuery do
   end
 
   context "with empty id lists" do
-    let(:filters) { {invoice_id: invoice.id, contract_id: "", product_category_id: "", product_ids: [], product_filter_ids: []} }
+    let(:filters) { {invoice_id: invoice.id, contract_id: "", product_category_ids: [], product_ids: [], product_filter_ids: []} }
 
     it "does not filter" do
       expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
@@ -269,8 +338,19 @@ RSpec.describe InvoiceProductFeesQuery do
   context "with a discarded product" do
     before { wine.discard! }
 
-    it "still returns its fees" do
-      expect(amounts).to include(5_000)
+    it "still returns its fees, in place" do
+      expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
+    end
+  end
+
+  context "with a discarded category and filter" do
+    before do
+      food.discard!
+      caesar.discard!
+    end
+
+    it "still returns their fees, in place" do
+      expect(amounts).to eq([3_001, 14_000, 10_000, 5_000, 6_000, 3_000, 6_001])
     end
   end
 

@@ -12,12 +12,12 @@ module Resolvers
     argument :invoice_id, ID, required: true
 
     argument :contract_id, ID, required: false
-    argument :product_category_id, ID, required: false
+    argument :product_category_ids, [ID], required: false
     argument :product_filter_ids, [ID], required: false
     argument :product_ids, [ID], required: false
     argument :product_type, Types::Products::ProductTypeEnum, required: false
     argument :search_term, String, required: false
-    argument :standalone_products, Boolean, required: false
+    argument :without_product_category, Boolean, required: false
     argument :without_product_filter, Boolean, required: false
 
     argument :limit, Integer, required: false
