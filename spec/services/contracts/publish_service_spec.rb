@@ -153,6 +153,42 @@ RSpec.describe Contracts::PublishService do
     end
   end
 
+  context "when the contract ends now" do
+    let(:started_at) { 2.months.ago }
+
+    before do
+      freeze_time
+      contract.update!(ended_at: Time.current)
+    end
+
+    it "refuses to publish it" do
+      expect(result.error.messages).to eq(ended_at: ["already_ended"])
+      expect(contract.reload).to be_draft
+    end
+  end
+
+  context "when the contract ends in the future" do
+    let(:started_at) { 1.month.ago }
+
+    before { contract.update!(ended_at: 1.day.from_now) }
+
+    it "activates it" do
+      expect(result).to be_success
+      expect(contract.reload).to be_active
+    end
+  end
+
+  context "when the contract starts now" do
+    let(:started_at) { Time.current }
+
+    before { freeze_time }
+
+    it "activates it" do
+      expect(result).to be_success
+      expect(contract.reload).to be_active
+    end
+  end
+
   context "when the customer was deleted" do
     before { customer.discard! }
 
