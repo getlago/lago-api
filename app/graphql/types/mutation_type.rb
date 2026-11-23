@@ -141,6 +141,7 @@ module Types
     field :destroy_integration_mapping, mutation: Mutations::IntegrationMappings::Destroy
 
     field :fetch_integration_accounts, mutation: Mutations::IntegrationItems::FetchAccounts
+    field :fetch_integration_customers, mutation: Mutations::IntegrationItems::FetchCustomers
     field :fetch_integration_items, mutation: Mutations::IntegrationItems::FetchItems
 
     field :sync_hubspot_integration_invoice, mutation: Mutations::Integrations::Hubspot::SyncInvoice
