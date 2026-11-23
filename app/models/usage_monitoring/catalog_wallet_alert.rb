@@ -14,8 +14,13 @@ module UsageMonitoring
       class_name: "UsageMonitoring::CatalogWalletTriggeredAlert",
       inverse_of: :alert
 
+    # Nil while the wallet's ongoing balance was never computed: its column then holds a default, not a balance
     def find_value(catalog_wallet)
-      balance? ? catalog_wallet.balance_cents : catalog_wallet.ongoing_balance_cents
+      if balance?
+        catalog_wallet.balance_cents
+      elsif catalog_wallet.last_ongoing_balance_sync_at?
+        catalog_wallet.ongoing_balance_cents
+      end
     end
   end
 end

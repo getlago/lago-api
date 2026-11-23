@@ -52,7 +52,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlert do
   end
 
   describe "#find_value" do
-    let(:catalog_wallet) { build(:catalog_wallet, balance_cents: 1_500, ongoing_balance_cents: 1_200) }
+    let(:catalog_wallet) { build(:catalog_wallet, balance_cents: 1_500, ongoing_balance_cents: 1_200, last_ongoing_balance_sync_at: 1.hour.ago) }
 
     it "reads the balance of a balance alert" do
       expect(build(:catalog_wallet_alert, alert_type: "balance").find_value(catalog_wallet)).to eq(1_500)
@@ -60,6 +60,15 @@ RSpec.describe UsageMonitoring::CatalogWalletAlert do
 
     it "reads the ongoing balance of an ongoing balance alert" do
       expect(build(:catalog_wallet_alert, alert_type: "ongoing_balance").find_value(catalog_wallet)).to eq(1_200)
+    end
+
+    context "when the wallet's ongoing balance was never computed" do
+      let(:catalog_wallet) { build(:catalog_wallet, balance_cents: 1_500, ongoing_balance_cents: 0) }
+
+      it "has no value for an ongoing balance alert and still reads the balance" do
+        expect(build(:catalog_wallet_alert, alert_type: "ongoing_balance").find_value(catalog_wallet)).to be_nil
+        expect(build(:catalog_wallet_alert, alert_type: "balance").find_value(catalog_wallet)).to eq(1_500)
+      end
     end
   end
 

@@ -257,12 +257,24 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
         end
 
         context "with an ongoing balance alert" do
+          let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, last_ongoing_balance_sync_at: 1.hour.ago) }
+
           before { params.merge!(alert_type: "ongoing_balance", thresholds: [{code: "empty", value: "0", notify_on: %w[triggered resolved]}]) }
 
           it "watches at once from 0 and seeds nothing" do
             expect(result).to be_success
             expect(result.alert.previous_value).to eq(0)
             expect(result.alert.all_triggered_alerts).to be_empty
+          end
+
+          context "when the wallet's ongoing balance was never computed" do
+            let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
+
+            it "creates an alert that waits for it" do
+              expect(result).to be_success
+              expect(result.alert).to have_attributes(previous_value: nil, last_processed_at: nil)
+              expect(result.alert.all_triggered_alerts).to be_empty
+            end
           end
         end
       end
