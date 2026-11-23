@@ -54,6 +54,50 @@ RSpec.describe Resolvers::FeeResolver do
     end
   end
 
+  context "with an add_on fee" do
+    let(:add_on) { create(:add_on, organization:) }
+    let(:fee) do
+      create(
+        :one_off_fee,
+        organization:,
+        add_on:,
+        properties: {
+          "from_datetime" => "2026-08-05T00:00:00.000-07:00",
+          "to_datetime" => "2026-08-05T23:59:59.999-07:00"
+        }
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query($feeId: ID!) {
+          fee(id: $feeId) {
+            id
+            properties {
+              fromDatetime
+              toDatetime
+            }
+          }
+        }
+      GQL
+    end
+
+    it "returns the fee's stored period, matching Query.invoice" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {feeId: fee.id}
+      )
+
+      expect(result["data"]["fee"]["properties"]).to eq(
+        "fromDatetime" => "2026-08-05T00:00:00+00:00",
+        "toDatetime" => "2026-08-05T00:00:00+00:00"
+      )
+    end
+  end
+
   context "when the fee belongs to another organization" do
     let(:other_organization) { create(:organization) }
     let(:fee) { create(:charge_fee, organization: other_organization) }

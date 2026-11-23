@@ -14,6 +14,7 @@ module Resolvers
     type Types::Fees::Object, null: true
 
     def resolve(id:)
+      context.scoped_set!(:preserve_add_on_fee_period_dates, true)
       current_organization.fees.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "fee")
