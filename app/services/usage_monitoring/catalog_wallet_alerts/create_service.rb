@@ -5,14 +5,14 @@ module UsageMonitoring
     class CreateService < BaseService
       Result = BaseResult[:alert]
 
-      def initialize(plan_wallet:, params:)
-        @plan_wallet = plan_wallet
+      def initialize(params:, plan_wallet: nil, catalog_wallet: nil)
+        @wallet = plan_wallet || catalog_wallet
         @params = params.to_h.with_indifferent_access
         super
       end
 
       def call
-        return result.not_found_failure!(resource: "plan_wallet") unless plan_wallet
+        return result.not_found_failure!(resource: "wallet") unless wallet
 
         validate_single_values(params, %i[code name])
         return result unless result.success?
@@ -28,11 +28,11 @@ module UsageMonitoring
         validate_thresholds(params[:thresholds], params[:alert_type].to_s)
         return result unless result.success?
 
-        # Template writes lock the plan wallet, so a contract copying its templates sees one version of them
-        plan_wallet.with_lock do
-          return result.not_found_failure!(resource: "plan_wallet") if plan_wallet.discarded?
+        ActiveRecord::Base.transaction do
+          lock_wallet(wallet)
+          return result unless result.success?
 
-          alert = plan_wallet.alerts.create!(organization:, alert_type: params[:alert_type].to_s, code: params[:code], name: params[:name])
+          alert = wallet.alerts.create!(organization:, alert_type: params[:alert_type].to_s, code: params[:code], name: params[:name])
           alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
 
           result.alert = alert
@@ -42,18 +42,18 @@ module UsageMonitoring
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
       rescue ActiveRecord::RecordNotUnique => e
-        if violated_unique_index(e) == "idx_plan_wallet_alerts_alert_type_unique"
+        if TYPE_UNIQUE_INDEXES.include?(violated_unique_index(e))
           result.single_validation_failure!(field: :base, error_code: "alert_already_exists")
         else
-          unique_index_failure!(e, "idx_plan_wallet_alerts_code_unique" => :code)
+          unique_index_failure!(e, CODE_UNIQUE_INDEXES)
         end
       end
 
       private
 
-      attr_reader :plan_wallet, :params
+      attr_reader :wallet, :params
 
-      delegate :organization, to: :plan_wallet
+      delegate :organization, to: :wallet
     end
   end
 end
