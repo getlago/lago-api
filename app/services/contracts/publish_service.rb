@@ -52,15 +52,16 @@ module Contracts
             result.single_validation_failure!(field: :external_id, error_code:).raise_if_error!
           end
 
-          # The block records the move out of draft; an activation logs contract.started after it.
+          # The block covers the activation too, so the logged change ends at the status
+          # that commits: a contract activated here was never pending.
           Utils::ActivityLog.produce_after_commit(contract, "contract.updated") do
             contract.update!(status: :pending)
+            SendWebhookJob.perform_after_commit("contract.updated", contract)
+
+            # Inside the transaction, so an activation that fails rolls back the move to pending.
+            Contracts::ActivateService.call!(contract:) if contract.started_at <= Time.current
             result
           end
-          SendWebhookJob.perform_after_commit("contract.updated", contract)
-
-          # Inside the transaction, so an activation that fails rolls back the move to pending.
-          Contracts::ActivateService.call!(contract:) if contract.started_at <= Time.current
 
           result.contract = contract
         end

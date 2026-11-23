@@ -41,6 +41,19 @@ RSpec.describe Contracts::PublishService do
       expect(payload).to include("activity_type" => "contract.updated", "resource_id" => contract.id)
       expect(payload.fetch("activity_object_changes")).to eq("status" => %w[draft pending])
     end
+
+    context "when the start has passed" do
+      let(:started_at) { 1.month.ago }
+
+      it "records the move from draft to active, never pending" do
+        expect(result).to be_success
+
+        payloads = kafka_messages.map { JSON.parse(it.fetch(:payload)) }.index_by { it.fetch("activity_type") }
+        expect(payloads.keys).to match_array(%w[contract.updated contract.started])
+        expect(payloads.fetch("contract.updated").fetch("activity_object_changes")).to eq("status" => %w[draft active])
+        expect(payloads.fetch("contract.updated").dig("activity_object", "status")).to eq("active")
+      end
+    end
   end
 
   context "when the start has passed" do
