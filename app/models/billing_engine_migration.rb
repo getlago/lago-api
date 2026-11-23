@@ -13,7 +13,7 @@ class BillingEngineMigration < ApplicationRecord
   validate :shadow_organization_differs_from_organization
   validate :plan_mapping_is_valid
   validate :organizations_not_in_another_migration
-  validate :events_copy_source_unchanged_while_shadowing, on: :update
+  validate :events_copy_source_switched_once_paused_everywhere, on: :update
 
   after_commit :expire_lookup
   after_rollback :expire_lookup
@@ -43,10 +43,14 @@ class BillingEngineMigration < ApplicationRecord
     errors.add(:shadow_organization, :invalid) if shadow_organization.present? && shadow_organization == organization
   end
 
-  # Processes see a change up to a minute late, so switching sources while shadowing could copy an
-  # event on both paths or on neither.
-  def events_copy_source_unchanged_while_shadowing
-    errors.add(:events_copy_source, :invalid) if events_copy_source_changed? && shadowing?
+  # Processes see a change up to a minute late: once every process sees the pause, none still copies
+  # from the old source while another copies from the new one.
+  def events_copy_source_switched_once_paused_everywhere
+    errors.add(:events_copy_source, :invalid) if events_copy_source_changed? && !paused_everywhere?
+  end
+
+  def paused_everywhere?
+    status_was == STATUSES[:paused] && updated_at_was <= BillingEngineMigrations::Lookup::REFRESH_INTERVAL.ago
   end
 
   def organizations_not_in_another_migration

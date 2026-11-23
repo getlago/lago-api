@@ -67,7 +67,9 @@ RSpec.describe BillingEngineMigration do
     end
 
     describe "events_copy_source validation" do
-      subject(:migration) { create(:billing_engine_migration, status:) }
+      subject(:migration) { create(:billing_engine_migration, status:, updated_at:) }
+
+      let(:updated_at) { (BillingEngineMigrations::Lookup::REFRESH_INTERVAL + 1.second).ago }
 
       before { migration.events_copy_source = "raw_topic" }
 
@@ -78,17 +80,34 @@ RSpec.describe BillingEngineMigration do
           expect(migration).not_to be_valid
           expect(migration.errors.where(:events_copy_source, :invalid)).to be_present
         end
+
+        it "refuses to switch the source and pause at once" do
+          migration.status = "paused"
+
+          expect(migration).not_to be_valid
+          expect(migration.errors.where(:events_copy_source, :invalid)).to be_present
+        end
       end
 
-      context "when the migration is paused" do
+      context "when the migration has been paused for longer than the lookup refresh" do
         let(:status) { "paused" }
 
         it { expect(migration).to be_valid }
 
-        it "refuses to switch the source and resume at once" do
+        it "accepts to switch the source and resume at once" do
           migration.status = "shadowing"
 
+          expect(migration).to be_valid
+        end
+      end
+
+      context "when the migration was paused within the lookup refresh" do
+        let(:status) { "paused" }
+        let(:updated_at) { (BillingEngineMigrations::Lookup::REFRESH_INTERVAL - 1.second).ago }
+
+        it "refuses to switch the source" do
           expect(migration).not_to be_valid
+          expect(migration.errors.where(:events_copy_source, :invalid)).to be_present
         end
       end
 
