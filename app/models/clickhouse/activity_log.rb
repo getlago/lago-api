@@ -60,6 +60,7 @@ module Clickhouse
       billable_metric_created: "billable_metric.created",
       billable_metric_updated: "billable_metric.updated",
       billable_metric_deleted: "billable_metric.deleted",
+      billable_metric_copied_to_production: "billable_metric.copied_to_production",
       plan_created: "plan.created",
       plan_updated: "plan.updated",
       plan_deleted: "plan.deleted",

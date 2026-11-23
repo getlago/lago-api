@@ -172,6 +172,8 @@ orders:
     - manager
   execute:
     - manager
+copy_to_production:
+  create:
 organization:
   view:
     - finance

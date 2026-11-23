@@ -108,6 +108,11 @@ enum ActivityTypeEnum {
   billable_metric_deleted
 
   """
+  billable_metric.copied_to_production
+  """
+  billable_metric_copied_to_production
+
+  """
   billable_metric.updated
   """
   billable_metric_updated
@@ -9191,6 +9196,86 @@ type MoneyhashProvider {
   successRedirectUrl: String
 }
 
+"""
+Why production refuses to receive an item, as the error code the move would answer
+"""
+enum CopyToProductionBlockingReasonEnum {
+  """
+  The user is not an admin of production
+  """
+  copy_to_production_admin_only
+
+  """
+  The item's parent must be copied to production first
+  """
+  copy_to_production_parent_missing
+
+  """
+  Production is waiting for a payment method
+  """
+  organization_inactive
+
+  """
+  Production already has an item with this code
+  """
+  value_already_exist
+}
+
+"""
+An item of Copy to production, in the sandbox when it is to be copied, in production otherwise
+"""
+type CopyToProductionItem {
+  code: String
+  id: ID!
+  itemType: CopyToProductionItemTypeEnum!
+  name: String
+}
+
+"""
+Item types a sandbox can move to its production organization
+"""
+enum CopyToProductionItemTypeEnum {
+  billable_metric
+}
+
+"""
+Copy to production input arguments
+"""
+input CopyToProductionInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  ID of the item in the sandbox
+  """
+  id: ID!
+  itemType: CopyToProductionItemTypeEnum!
+}
+
+"""
+What moving an item to live mode would copy, reuse or refuse
+"""
+type CopyToProductionPreview {
+  blockingReason: CopyToProductionBlockingReasonEnum
+
+  """
+  Sandbox items to copy, the moved item last
+  """
+  copiedItems: [CopyToProductionItem!]!
+
+  """
+  Sandbox parent to copy to production first
+  """
+  missingParent: CopyToProductionItem
+
+  """
+  Production items reused by code
+  """
+  reusedItems: [CopyToProductionItem!]!
+}
+
 type Mrr {
   amountCents: BigInt
   currency: CurrencyEnum
@@ -10766,6 +10851,16 @@ type Mutation {
     """
     input: MarkOrderFormAsSignedInput!
   ): OrderForm
+
+  """
+  Copies a sandbox item, with the items it references, to the sandbox's production organization
+  """
+  copyToProduction(
+    """
+    Parameters for CopyToProduction
+    """
+    input: CopyToProductionInput!
+  ): CopyToProductionItem
 
   """
   Accepts a membership invite with Okta Oauth
@@ -12452,6 +12547,7 @@ enum PermissionEnum {
   invoices_update
   invoices_view
   invoices_void
+  copy_to_production_create
   order_forms_sign
   order_forms_view
   order_forms_void
@@ -12589,6 +12685,7 @@ type Permissions {
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
+  copyToProductionCreate: Boolean!
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
   orderFormsVoid: Boolean!
@@ -13953,6 +14050,17 @@ type Query {
   Query memberships of an organization
   """
   memberships(limit: Int, page: Int, roleIds: [ID!], searchTerm: String): MembershipCollection!
+
+  """
+  Previews moving a sandbox item to the sandbox's production organization
+  """
+  copyToProductionPreview(
+    """
+    ID of the item in the sandbox
+    """
+    id: ID!
+    itemType: CopyToProductionItemTypeEnum!
+  ): CopyToProductionPreview!
 
   """
   Query MRR of an organization

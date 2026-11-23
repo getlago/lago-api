@@ -92,6 +92,7 @@ module Types
     field :invoiced_usages, resolver: Resolvers::Analytics::InvoicedUsagesResolver
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
+    field :copy_to_production_preview, resolver: Resolvers::CopyToProductionPreviewResolver
     field :mrrs, resolver: Resolvers::Analytics::MrrsResolver
     field :order, resolver: Resolvers::OrderResolver
     field :order_form, resolver: Resolvers::OrderFormResolver

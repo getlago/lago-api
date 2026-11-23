@@ -9,6 +9,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         billable_metric_created
         billable_metric_updated
         billable_metric_deleted
+        billable_metric_copied_to_production
         plan_created
         plan_updated
         plan_deleted

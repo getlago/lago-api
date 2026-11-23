@@ -573,6 +573,12 @@
               "deprecationReason": null
             },
             {
+              "name": "billable_metric_copied_to_production",
+              "description": "billable_metric.copied_to_production",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "plan_created",
               "description": "plan.created",
               "isDeprecated": false,
@@ -48210,6 +48216,263 @@
           "possibleTypes": null
         },
         {
+          "kind": "ENUM",
+          "name": "CopyToProductionBlockingReasonEnum",
+          "description": "Why production refuses to receive an item, as the error code the move would answer",
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "value_already_exist",
+              "description": "Production already has an item with this code",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "organization_inactive",
+              "description": "Production is waiting for a payment method",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "copy_to_production_admin_only",
+              "description": "The user is not an admin of production",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "copy_to_production_parent_missing",
+              "description": "The item's parent must be copied to production first",
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "CopyToProductionItem",
+          "description": "An item of Copy to production, in the sandbox when it is to be copied, in production otherwise",
+          "fields": [
+            {
+              "name": "code",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "id",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "itemType",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CopyToProductionItemTypeEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "CopyToProductionItemTypeEnum",
+          "description": "Item types a sandbox can move to its production organization",
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "billable_metric",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "CopyToProductionInput",
+          "description": "Copy to production input arguments",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "id",
+              "description": "ID of the item in the sandbox",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "itemType",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CopyToProductionItemTypeEnum",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "CopyToProductionPreview",
+          "description": "What moving an item to live mode would copy, reuse or refuse",
+          "fields": [
+            {
+              "name": "blockingReason",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "CopyToProductionBlockingReasonEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "copiedItems",
+              "description": "Sandbox items to copy, the moved item last",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "CopyToProductionItem",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "missingParent",
+              "description": "Sandbox parent to copy to production first",
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "CopyToProductionItem",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "reusedItems",
+              "description": "Production items reused by code",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "CopyToProductionItem",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "inputFields": null,
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
           "kind": "OBJECT",
           "name": "Mrr",
           "description": null,
@@ -52876,6 +53139,35 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "OrderForm",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "copyToProduction",
+              "description": "Copies a sandbox item, with the items it references, to the sandbox's production organization",
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for CopyToProduction",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "CopyToProductionInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "CopyToProductionItem",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -60366,6 +60658,12 @@
               "deprecationReason": null
             },
             {
+              "name": "copy_to_production_create",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "organization_view",
               "description": null,
               "isDeprecated": false,
@@ -61713,6 +62011,22 @@
             },
             {
               "name": "invoicesVoid",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "copyToProductionCreate",
               "description": null,
               "args": [],
               "type": {
@@ -74241,6 +74555,55 @@
                 "ofType": {
                   "kind": "OBJECT",
                   "name": "MembershipCollection",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "copyToProductionPreview",
+              "description": "Previews moving a sandbox item to the sandbox's production organization",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "ID of the item in the sandbox",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "itemType",
+                  "description": null,
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "ENUM",
+                      "name": "CopyToProductionItemTypeEnum",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CopyToProductionPreview",
                   "ofType": null
                 }
               },
