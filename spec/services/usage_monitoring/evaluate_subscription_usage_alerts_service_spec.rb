@@ -120,6 +120,45 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
       end
     end
 
+    context "when a full plan usage is given" do
+      let(:alerts) { [metric_units_alert, lifetime_alert] }
+      let(:full_plan_usage) { instance_double(SubscriptionUsage) }
+
+      it "reuses it without computing a scoped usage" do
+        result
+
+        expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+        expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
+          .with(alert: metric_units_alert, alertable: subscription, current_metrics: full_plan_usage, expected_billable_metric_id: nil)
+      end
+    end
+
+    context "when the scoped usage fails" do
+      let(:alerts) { [metric_units_alert, lifetime_alert] }
+      let(:usage_result) do
+        Invoices::CustomerUsageService::Result.new.service_failure!(code: "usage_buckets_read_failure", message: "unreachable")
+      end
+
+      it "raises the failure after the lifetime alerts" do
+        expect { result }.to raise_error(BaseService::ServiceFailure)
+
+        expect(UsageMonitoring::ProcessAlertService).to have_received(:call).once
+          .with(alert: lifetime_alert, alertable: subscription, current_metrics: lifetime_usage)
+      end
+    end
+
+    context "when the scoped usage fails on a missing customer" do
+      let(:alerts) { [metric_units_alert, lifetime_alert] }
+      let(:usage_result) { Invoices::CustomerUsageService::Result.new.not_found_failure!(resource: "customer") }
+
+      it "raises the failure after the lifetime alerts" do
+        expect { result }.to raise_error(BaseService::NotFoundFailure)
+
+        expect(UsageMonitoring::ProcessAlertService).to have_received(:call).once
+          .with(alert: lifetime_alert, alertable: subscription, current_metrics: lifetime_usage)
+      end
+    end
+
     context "when a charge is removed from the plan before the usage is computed" do
       let(:usage_result) { Invoices::CustomerUsageService::Result.new.not_found_failure!(resource: "charge") }
 
