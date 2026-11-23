@@ -27,7 +27,8 @@ module ContractWallets
       return unknown_tax_application_failure unless params[:tax_application].nil? || known_tax_application?
 
       # Locked so the status check holds: the clock may end the contract meanwhile.
-      contract.with_lock do
+      # Unlike FOR UPDATE, it lets rows that reference the contract be inserted meanwhile.
+      contract.with_lock("FOR NO KEY UPDATE") do
         return result.forbidden_failure!(code: "contract_not_live") unless Contract::LIVE_STATUSES.include?(contract.status)
 
         contract_wallet = contract.wallets.create!(
