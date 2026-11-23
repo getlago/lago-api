@@ -1296,4 +1296,103 @@ RSpec.describe Subscription do
       end
     end
   end
+
+  describe "copy to the shadow organization" do
+    subject(:subscription) { create(:subscription, plan: mapped_plan) }
+
+    let(:mapped_plan) { create(:plan) }
+    let(:migration_status) { "shadowing" }
+
+    before do
+      create(
+        :billing_engine_migration,
+        organization:,
+        status: migration_status,
+        plan_mapping: {mapped_plan.code => "catalog_plan"}
+      )
+    end
+
+    it "enqueues a copy after the subscription is created" do
+      expect { subscription }
+        .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob)
+    end
+
+    context "when the subscription already exists" do
+      before do
+        subscription
+        clear_enqueued_jobs
+      end
+
+      it "enqueues a copy after the subscription is terminated" do
+        expect { subscription.mark_as_terminated! }
+          .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(subscription)
+      end
+
+      it "enqueues a copy after its end date changes" do
+        expect { subscription.update!(ending_at: 1.month.from_now) }
+          .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(subscription)
+      end
+
+      it "enqueues a copy when a later save of the same transaction leaves the status unchanged" do
+        expect do
+          subscription.mark_as_terminated!
+          subscription.update!(name: "Renamed")
+        end.to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionJob).with(subscription)
+      end
+
+      it "does not enqueue a copy for other changes" do
+        expect { subscription.update!(name: "Renamed") }
+          .not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionJob)
+      end
+
+      it "does not enqueue a copy when the transaction rolls back" do
+        expect do
+          described_class.transaction do
+            subscription.mark_as_terminated!
+            raise ActiveRecord::Rollback
+          end
+        end.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionJob)
+      end
+    end
+
+    context "when the plan is not mapped" do
+      subject(:subscription) { create(:subscription, plan:) }
+
+      it "does not enqueue a copy" do
+        expect { subscription }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionJob)
+      end
+    end
+
+    context "when the migration is not shadowing" do
+      let(:migration_status) { "paused" }
+
+      it "does not enqueue a copy" do
+        expect { subscription }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionJob)
+      end
+    end
+
+    context "when the organization has no migration" do
+      subject(:subscription) { create(:subscription, organization: other_organization, plan: other_plan, customer: other_customer) }
+
+      let(:other_organization) { create(:organization) }
+      let(:other_plan) { create(:plan, organization: other_organization, code: mapped_plan.code) }
+      let(:other_customer) { create(:customer, organization: other_organization) }
+
+      before do
+        other_plan
+        other_customer
+        BillingEngineMigrations::Lookup.for_source(other_organization.id)
+      end
+
+      it "does not enqueue a copy" do
+        expect { subscription }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionJob)
+      end
+
+      it "does not query the migrations" do
+        statements = capture_sql { subscription }
+
+        expect(statements.grep(/billing_engine_migrations/)).to be_empty
+      end
+    end
+  end
 end

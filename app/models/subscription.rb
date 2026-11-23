@@ -55,6 +55,9 @@ class Subscription < ApplicationRecord
   validates :external_id, :billing_time, presence: true
   validate :validate_external_id, on: [:create, :update], if: -> { status_changed? }
 
+  # A termination saves the row twice in one transaction, and after_commit only sees the last save.
+  after_save :copy_to_shadow_organization, if: :copy_to_shadow_organization?
+
   STATUSES = [
     :pending,
     :active,
@@ -326,6 +329,25 @@ class Subscription < ApplicationRecord
 
   def last_subscription_fee
     fees.subscription.order(created_at: :desc).first
+  end
+
+  private
+
+  def copy_to_shadow_organization?
+    lifecycle_saved? && on_migrated_plan?
+  end
+
+  def lifecycle_saved?
+    previously_new_record? || saved_change_to_status? || saved_change_to_terminated_at? || saved_change_to_ending_at?
+  end
+
+  def on_migrated_plan?
+    migration = BillingEngineMigrations::Lookup.for_source(organization_id)
+    migration.present? && migration.plan_mapping.key?(plan.code)
+  end
+
+  def copy_to_shadow_organization
+    BillingEngineMigrations::CopySubscriptionJob.perform_after_commit(self)
   end
 end
 

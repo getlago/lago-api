@@ -9,8 +9,9 @@ module BillingEngineMigrations
     retry_on BaseLockService::FailedToAcquireLock, BaseService::LockAcquisitionFailure,
       attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
-    def perform(migration, subscription)
-      BillingEngineMigrations::CopySubscriptionService.call!(migration:, subscription:)
+    def perform(subscription)
+      migration = BillingEngineMigration.find_by(organization_id: subscription.organization_id)
+      BillingEngineMigrations::CopySubscriptionService.call!(migration:, subscription:) if migration
     end
   end
 end
