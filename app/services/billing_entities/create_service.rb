@@ -2,6 +2,8 @@
 
 module BillingEntities
   class CreateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:billing_entity]
 
     def initialize(organization:, params:)
@@ -18,6 +20,7 @@ module BillingEntities
 
     def call
       return result.forbidden_failure! unless organization.can_create_billing_entity?
+      return shadow_outbound_failure if sends_outbound? && shadow_outbound_refused?(organization.id)
 
       unless PaymentTerms::ValidateService.new(result, **params.slice(:payment_term, :net_payment_term)).valid?
         return result
@@ -72,6 +75,10 @@ module BillingEntities
     private
 
     attr_reader :organization, :params, :billing_entity
+
+    def sends_outbound?
+      params[:email_settings].present? || ActiveModel::Type::Boolean.new.cast(params[:eu_tax_management])
+    end
 
     def create_attributes
       @create_attributes ||= params.slice(

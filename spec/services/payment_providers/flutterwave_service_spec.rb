@@ -36,6 +36,10 @@ RSpec.describe PaymentProviders::FlutterwaveService do
       it_behaves_like "produces a security log", "integration.created" do
         before { flutterwave_service.create_or_update(**args) }
       end
+
+      it_behaves_like "refused on a shadow organization", PaymentProviders::FlutterwaveProvider do
+        subject { flutterwave_service.create_or_update(**args) }
+      end
     end
 
     context "when updating an existing provider" do

@@ -7,6 +7,8 @@ module PaymentProviders
     REDIRECT_URI = "#{ENV["LAGO_OAUTH_PROXY_URL"]}/gocardless/callback".freeze
 
     def create_or_update(**args)
+      return shadow_outbound_failure if shadow_outbound_refused?(args[:organization].id)
+
       access_token = if args[:access_code].present?
         oauth.auth_code.get_token(args[:access_code], redirect_uri: REDIRECT_URI)&.token
       end

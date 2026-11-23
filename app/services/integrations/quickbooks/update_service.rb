@@ -14,6 +14,7 @@ module Integrations
       # would switch the Nango provider config while the connection stays the same.
       def call
         return result.not_found_failure!(resource: "integration") unless integration.is_a?(Integrations::QuickbooksIntegration)
+        return shadow_outbound_failure if shadow_outbound_refused?(integration.organization_id)
 
         unless integration.organization.quickbooks_enabled?
           return result.forbidden_failure!(code: "premium_integration_missing")

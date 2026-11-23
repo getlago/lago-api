@@ -5,6 +5,8 @@ module PaymentProviders
     Result = BaseResult[:moneyhash_provider, :signature_key]
 
     def create_or_update(**args)
+      return shadow_outbound_failure if shadow_outbound_refused?(args[:organization].id)
+
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,
         code: args[:code],

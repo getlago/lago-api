@@ -9,6 +9,8 @@ module PaymentProviders
     # REFUND_ACTIONS = %w[created funds_returned paid refund_settled failed].freeze
 
     def create_or_update(**args)
+      return shadow_outbound_failure if shadow_outbound_refused?(args[:organization].id)
+
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,
         code: args[:code],

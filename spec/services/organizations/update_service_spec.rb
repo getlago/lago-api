@@ -575,6 +575,20 @@ RSpec.describe Organizations::UpdateService do
         end
       end
 
+      context "when the organization is the shadow of a migration" do
+        let(:organization) { create(:organization, webhook_url: nil) }
+
+        before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+        it "refuses the update and creates no endpoint" do
+          result = update_service.call
+
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("shadow_organization_outbound_disabled")
+          expect(organization.webhook_endpoints.reload).to be_empty
+        end
+      end
+
       context "when the lowest id endpoint signs with standard_webhooks" do
         let(:organization) { create(:organization, webhook_url: nil) }
         let(:target_webhook_endpoint) do

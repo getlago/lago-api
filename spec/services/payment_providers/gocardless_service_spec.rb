@@ -54,6 +54,10 @@ RSpec.describe PaymentProviders::GocardlessService do
       end
     end
 
+    it_behaves_like "refused on a shadow organization", PaymentProviders::GocardlessProvider do
+      subject { gocardless_service.create_or_update(organization:, access_code:, code:, name:, success_redirect_url:) }
+    end
+
     context "when code was changed" do
       let(:new_code) { "updated_code_3" }
       let(:gocardless_customer) { create(:gocardless_customer, payment_provider:, customer:) }

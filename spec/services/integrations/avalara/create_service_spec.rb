@@ -83,6 +83,8 @@ RSpec.describe Integrations::Avalara::CreateService do
           it_behaves_like "produces a security log", "integration.created" do
             before { service_call }
           end
+
+          it_behaves_like "refused on a shadow organization", Integrations::AvalaraIntegration
         end
 
         context "with validation error" do

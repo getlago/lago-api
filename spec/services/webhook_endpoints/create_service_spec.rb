@@ -41,6 +41,10 @@ RSpec.describe WebhookEndpoints::CreateService do
       )
     end
 
+    it_behaves_like "refused on a shadow organization", WebhookEndpoint do
+      subject { create_service.call }
+    end
+
     it "enqueues the Segment job after commit" do
       result = nil
 

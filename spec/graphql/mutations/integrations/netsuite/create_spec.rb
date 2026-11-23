@@ -73,4 +73,38 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, :premium do
 
     it_behaves_like "produces a security log", "integration.created"
   end
+
+  context "when the organization is the shadow of a migration" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            code:,
+            name:,
+            scriptEndpointUrl: script_endpoint_url,
+            accountId: "012",
+            clientId: "123",
+            clientSecret: "456",
+            tokenId: "xyz",
+            tokenSecret: "zyx",
+            connectionId: "this-is-random-uuid"
+          }
+        }
+      )
+    end
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: membership.organization)
+    end
+
+    it "refuses with shadow_organization_outbound_disabled" do
+      expect { result }.not_to change(Integrations::NetsuiteIntegration, :count)
+
+      expect_graphql_error(result:, message: "shadow_organization_outbound_disabled")
+    end
+  end
 end

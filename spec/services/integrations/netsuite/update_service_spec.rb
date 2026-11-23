@@ -71,6 +71,8 @@ RSpec.describe Integrations::Netsuite::UpdateService do
             before { service_call }
           end
 
+          it_behaves_like "refused on a shadow organization", Integrations::NetsuiteIntegration
+
           it "calls Integrations::Aggregator::SendRestletEndpointJob" do
             service_call
 

@@ -152,6 +152,10 @@ RSpec.describe BillingEntities::UpdateService do
         expect(result.billing_entity.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
       end
 
+      it_behaves_like "refused on a shadow organization", BillingEntity do
+        subject { update_service.call }
+      end
+
       context "when updating invoice grace period" do
         let(:customer) { create(:customer, billing_entity:) }
 
@@ -315,6 +319,26 @@ RSpec.describe BillingEntities::UpdateService do
           expect(result).to be_success
           expect(result.billing_entity.einvoicing).to be true
           expect(result.billing_entity.country).to eq(country)
+        end
+      end
+    end
+
+    context "when the organization is the shadow of a migration" do
+      before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+      it "updates the billing entity when nothing is sent out" do
+        expect(update_service.call).to be_success
+      end
+
+      context "with eu_tax_management" do
+        let(:params) { {eu_tax_management: "true", country: "fr"} }
+
+        it "refuses with shadow_organization_outbound_disabled" do
+          result = update_service.call
+
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("shadow_organization_outbound_disabled")
+          expect(billing_entity.reload.eu_tax_management).to be(false)
         end
       end
     end

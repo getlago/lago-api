@@ -6,6 +6,8 @@ module PaymentProviders
 
     # TODO: Split into 2 dedicated `PaymentProviders::Stripe::(Create|Update)Service`
     def create_or_update(**args)
+      return shadow_outbound_failure if shadow_outbound_refused?(args[:organization_id])
+
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization_id],
         code: args[:code],

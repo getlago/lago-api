@@ -4,6 +4,8 @@ module Integrations
   module Xero
     class CreateService < Integrations::CreateService
       def call(**args) # rubocop:disable Cops/ServiceCallCop
+        return shadow_outbound_failure if shadow_outbound_refused?(args[:organization_id])
+
         organization = Organization.find_by(id: args[:organization_id])
 
         unless organization.xero_enabled?

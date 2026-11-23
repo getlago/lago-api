@@ -34,6 +34,10 @@ RSpec.describe WebhookEndpoints::UpdateService do
       expect(result.webhook_endpoint.signing_keys).to be_empty
     end
 
+    it_behaves_like "refused on a shadow organization", WebhookEndpoint do
+      subject { update_service.call }
+    end
+
     context "when updating with partial params" do
       let(:update_params) do
         {
