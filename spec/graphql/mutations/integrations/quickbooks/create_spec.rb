@@ -78,8 +78,8 @@ RSpec.describe Mutations::Integrations::Quickbooks::Create, :premium do
       expect(WebMock).to have_requested(:get, connection_url).once
     end
 
-    it "does not enqueue a sync job" do
-      expect { result }.not_to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
+    it "enqueues a sync job" do
+      expect { result }.to have_enqueued_job(Integrations::Aggregator::PerformSyncJob)
     end
 
     it_behaves_like "produces a security log", "integration.created" do

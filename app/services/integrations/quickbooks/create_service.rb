@@ -2,7 +2,6 @@
 
 module Integrations
   module Quickbooks
-    # NOTE: No PerformSyncJob is enqueued: the aggregator sync has no QuickBooks branch yet.
     class CreateService < Integrations::CreateService
       def initialize(params:)
         @params = params
@@ -38,6 +37,8 @@ module Integrations
 
         integration.realm_id = lookup.realm_id
         integration.save!
+
+        Integrations::Aggregator::PerformSyncJob.set(wait: 2.seconds).perform_later(integration:)
 
         result.integration = integration
         result
