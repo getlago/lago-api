@@ -59,6 +59,34 @@ describe ContractWallets::DestroyService do
     end
   end
 
+  context "when the wallet has alerts" do
+    let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: contract_wallet) }
+    let(:other_alert) { create(:catalog_wallet_alert, organization:) }
+
+    before do
+      alert
+      other_alert
+    end
+
+    it "deletes them with the wallet and leaves the alerts of other wallets" do
+      expect(result).to be_success
+      expect(UsageMonitoring::CatalogWalletAlert.where(id: [alert.id, other_alert.id])).to eq([other_alert])
+    end
+  end
+
+  context "when the wallet has been credited since it was loaded" do
+    before do
+      contract_wallet
+      CatalogWallet.find(contract_wallet.id).update!(balance_cents: 1)
+    end
+
+    it "refuses it and keeps the wallet" do
+      expect(result).not_to be_success
+      expect(result.error.code).to eq("wallet_holds_credit")
+      expect(contract_wallet.reload).to be_kept
+    end
+  end
+
   context "when the wallet holds credit" do
     let(:balance_cents) { 1 }
 

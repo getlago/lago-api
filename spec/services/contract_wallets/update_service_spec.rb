@@ -207,7 +207,7 @@ describe ContractWallets::UpdateService do
 
         it "fails on that field and changes nothing" do
           expect(result).not_to be_success
-          expect(result.error.messages).to eq({field => ["not_editable"]})
+          expect(result.error.messages).to eq({field => ["value_cannot_be_changed"]})
           expect(contract_wallet.reload).to have_attributes(code: "ai_credits", currency: "USD", tax_application: "tax_on_consumption", priority: 10)
         end
       end

@@ -13,9 +13,9 @@ describe Api::V2::ContractWalletsController do
   end
   let(:flat_keys) do
     %i[
-      lago_id external_contract_id external_customer_id code name invoice_display_name currency tax_application priority
-      applies_to top_up_min_amount_cents top_up_max_amount_cents balance_cents ongoing_balance_cents
-      last_ongoing_balance_sync_at terminated_at created_at updated_at deleted_at
+      lago_id lago_contract_id external_contract_id contract_code external_customer_id code name invoice_display_name
+      currency tax_application priority applies_to top_up_min_amount_cents top_up_max_amount_cents balance_cents
+      ongoing_balance_cents last_ongoing_balance_sync_at terminated_at created_at updated_at deleted_at
     ]
   end
 
@@ -136,6 +136,17 @@ describe Api::V2::ContractWalletsController do
 
           expect(response).to have_http_status(:success)
           expect(json[:contract_wallets].map { it[:code] }).to eq(["ai_credits"])
+        end
+      end
+
+      context "with the code of the ended contract" do
+        subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/wallets", {contract_code: ended_contract.code}) }
+
+        it "returns the wallets of the ended contract only" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:contract_wallets].map { [it[:code], it[:contract_code]] }).to eq([["old_credits", ended_contract.code]])
         end
       end
     end

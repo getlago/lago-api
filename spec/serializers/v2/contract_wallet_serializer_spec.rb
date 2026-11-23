@@ -7,7 +7,7 @@ describe V2::ContractWalletSerializer do
 
   let_it_be(:organization) { create(:organization) }
   let_it_be(:customer) { create(:customer, organization:, external_id: "acme", currency: "USD") }
-  let_it_be(:contract) { create(:contract, organization:, customer:, external_id: "acme-pro") }
+  let_it_be(:contract) { create(:contract, organization:, customer:, external_id: "acme-pro", code: "acme-pro-2026") }
 
   let(:contract_wallet) do
     create(:catalog_wallet, organization:, customer:, contract:, code: "ai_credits", name: "AI credits",
@@ -22,7 +22,9 @@ describe V2::ContractWalletSerializer do
   let(:flat_payload) do
     {
       lago_id: contract_wallet.id,
+      lago_contract_id: contract.id,
       external_contract_id: "acme-pro",
+      contract_code: "acme-pro-2026",
       external_customer_id: "acme",
       code: "ai_credits",
       name: "AI credits",
@@ -82,7 +84,7 @@ describe V2::ContractWalletSerializer do
         {selector_type: "product_category", fee_type: nil, product_category:},
         {selector_type: "product", fee_type: nil, product:, with_product_filters: true},
         {selector_type: "product_filters", fee_type: nil, product_filter:}
-      ].each_with_index do |target, index|
+      ].each_with_index.reverse_each do |target, index|
         create(:catalog_wallet_selector, organization:, catalog_wallet: contract_wallet, created_at: index.minutes.from_now, **target)
       end
     end

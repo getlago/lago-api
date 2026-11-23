@@ -28,7 +28,7 @@ module ContractWallets
       end
 
       if (field = changed_immutable_attribute)
-        return result.single_validation_failure!(field:, error_code: "not_editable")
+        return result.single_validation_failure!(field:, error_code: "value_cannot_be_changed")
       end
 
       # Locked so the status check holds: the clock may end the contract meanwhile.
