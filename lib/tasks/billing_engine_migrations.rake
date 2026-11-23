@@ -355,8 +355,7 @@ class BillingEngineUsageParityReport
       customer: subscription.customer,
       subscription:,
       apply_taxes: false,
-      use_usage_buckets: true,
-      cache_prefilter: true
+      use_usage_buckets: true
     ).usage.fees
 
     sum_by_metric(fees.map { |fee| [fee.billable_metric.code, MetricUsage.new(amount_cents: fee.amount_cents, units: fee.units)] })
