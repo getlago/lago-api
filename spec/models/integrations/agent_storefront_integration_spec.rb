@@ -157,6 +157,21 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
     end
   end
 
+  describe "#agents_with_stripe_customer?" do
+    let(:registration) { create(:agent_registration, storefront: integration) }
+    let(:customer) { create(:customer, organization:, external_id: Agents::ExternalIds.customer(registration)) }
+
+    before { integration.save! }
+
+    it "is true once a registration's customer has a Stripe customer, whatever its subscription" do
+      customer
+      expect(integration.agents_with_stripe_customer?).to be(false)
+
+      create(:stripe_customer, customer:, payment_provider: integration.stripe_provider)
+      expect(integration.agents_with_stripe_customer?).to be(true)
+    end
+  end
+
   describe "#stripe_provider" do
     it "returns the stripe connection named by the code" do
       expect(integration.stripe_provider).to eq(organization.stripe_payment_providers.find_by(code: integration.payment_provider_code))

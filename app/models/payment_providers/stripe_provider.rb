@@ -58,6 +58,7 @@ module PaymentProviders
     secrets_accessors :secret_key
     settings_accessors :supports_3ds
     settings_accessors :require_terms_of_service_consent, default: false
+    settings_accessors :seller_profile
 
     def self.to_stripe_amount(amount_cents, currency)
       if two_decimal_override_currency?(currency)
