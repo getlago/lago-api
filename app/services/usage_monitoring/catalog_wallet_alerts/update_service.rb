@@ -29,23 +29,26 @@ module UsageMonitoring
           return result unless result.success?
         end
 
-        # Template writes lock the plan wallet, so a contract copying its templates sees one version of them
-        alert.plan_wallet.with_lock do
-          return result.not_found_failure!(resource: "plan_wallet") if alert.plan_wallet.discarded?
+        ActiveRecord::Base.transaction do
+          lock_wallet(wallet_of(alert))
+          return result unless result.success?
 
-          # Read again under the lock: a write that held it may have changed the template or deleted it
-          template = PlanWalletAlert.find_by(id: alert.id)
-          return result.not_found_failure!(resource: "alert") unless template
+          # Read again under the lock: a write that held it may have changed the alert or deleted it
+          current = alert.class.lock.find_by(id: alert.id)
+          return result.not_found_failure!(resource: "alert") unless current
 
-          template.name = params[:name] if params.key?(:name)
-          # The thresholds are part of the template's body, so replacing them dates it too
-          template.updated_at = Time.current if params.key?(:thresholds)
-          template.save!
+          current.name = params[:name] if params.key?(:name)
+          # The thresholds are part of the alert's body, so replacing them dates it too
+          current.updated_at = Time.current if params.key?(:thresholds)
+          current.save!
 
-          # A template has no observed value, so only the thresholds change
-          replace_thresholds(template, nil, keep_previous_notify_on(template, params[:thresholds])) if params.key?(:thresholds)
+          if params.key?(:thresholds)
+            # An alert with a baseline edits as v1 does: an alarm the edit closes sends alert.resolved
+            wallet = current.catalog_wallet if watching?(current)
+            replace_thresholds(current, wallet, keep_previous_notify_on(current, params[:thresholds]))
+          end
 
-          result.alert = template
+          result.alert = current
         end
 
         result
@@ -56,6 +59,16 @@ module UsageMonitoring
       private
 
       attr_reader :alert, :params
+
+      def watching?(alert)
+        alert.is_a?(CatalogWalletAlert) && !alert.previous_value.nil?
+      end
+
+      # Seeds what a create would seed now, the opted-in lines in alarm at the value of a wallet holding money, less
+      # those the next evaluation crosses or recovers: it keeps the lines in alarm at the stored value too
+      def seed_after_edit(alert, wallet)
+        seed_alarms_already_past(alert, wallet, still_in_alarm_at: alert.find_value(wallet)) if wallet&.funded?
+      end
     end
   end
 end

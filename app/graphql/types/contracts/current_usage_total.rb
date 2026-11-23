@@ -9,6 +9,8 @@ module Types
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true,
         description: "Earliest billing window start across the contract's rate cards, null with no usage"
+      field :product_category_totals, [Types::Contracts::CurrentUsageCategoryTotal], null: false,
+        description: "The total split by product category, each one priced and taxed in the same pass as the total"
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :taxes_unavailable, Boolean, null: false,
         description: "True when the tax provider failed and amount/total above are the untaxed fallback"

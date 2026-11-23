@@ -80,4 +80,22 @@ RSpec.describe Mutations::Integrations::Destroy do
       expect_forbidden_error(result)
     end
   end
+
+  context "with a QuickBooks integration" do
+    let(:integration) { create(:quickbooks_integration, organization:) }
+
+    it "deletes the QuickBooks integration" do
+      expect { result }.to change(::Integrations::QuickbooksIntegration, :count).by(-1)
+      expect(result["data"]["destroyIntegration"]["id"]).to eq(integration.id)
+    end
+
+    context "when the QuickBooks integration belongs to another organization" do
+      let(:integration) { create(:quickbooks_integration, organization: create(:organization)) }
+
+      it "does not delete the QuickBooks integration" do
+        expect { result }.not_to change(::Integrations::QuickbooksIntegration, :count)
+        expect_not_found(result)
+      end
+    end
+  end
 end

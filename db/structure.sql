@@ -853,6 +853,7 @@ DROP INDEX IF EXISTS public.index_invoice_connections_on_integration_customer_id
 DROP INDEX IF EXISTS public.index_invites_on_token;
 DROP INDEX IF EXISTS public.index_invites_on_organization_id;
 DROP INDEX IF EXISTS public.index_invites_on_membership_id;
+DROP INDEX IF EXISTS public.index_integrations_on_organization_id_and_quickbooks_realm_id;
 DROP INDEX IF EXISTS public.index_integrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_integrations_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_syncable;
@@ -1622,7 +1623,6 @@ DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
 DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_coupons;
-DROP VIEW IF EXISTS public.exports_contract_daily_usages;
 DROP VIEW IF EXISTS public.exports_charges;
 DROP VIEW IF EXISTS public.exports_billing_entities;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
@@ -2026,6 +2026,7 @@ CREATE TYPE public.contract_rate_cards_terms_application_timing AS ENUM (
 --
 
 CREATE TYPE public.contract_status AS ENUM (
+    'draft',
     'pending',
     'active',
     'terminated',
@@ -4271,29 +4272,6 @@ CREATE VIEW public.exports_charges AS
 
 
 --
--- Name: exports_contract_daily_usages; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.exports_contract_daily_usages AS
- SELECT du.organization_id,
-    du.id AS lago_id,
-    du.from_datetime,
-    du.to_datetime,
-    du.refreshed_at,
-    du.usage_date,
-    du.usage AS daily_usage,
-    du.usage_diff AS daily_usage_diff,
-    du.created_at,
-    du.updated_at,
-    du.customer_id AS lago_customer_id,
-    du.contract_id AS lago_contract_id,
-    du.external_contract_id,
-    du.contract_rate_card_id AS lago_contract_rate_card_id
-   FROM public.daily_usages du
-  WHERE (du.contract_id IS NOT NULL);
-
-
---
 -- Name: exports_coupons; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4592,9 +4570,11 @@ CREATE VIEW public.exports_daily_usages AS
     du.updated_at,
     du.customer_id AS lago_customer_id,
     du.subscription_id AS lago_subscription_id,
-    du.external_subscription_id
-   FROM public.daily_usages du
-  WHERE (du.contract_id IS NULL);
+    du.external_subscription_id,
+    du.contract_id AS lago_contract_id,
+    du.external_contract_id,
+    du.contract_rate_card_id AS lago_contract_rate_card_id
+   FROM public.daily_usages du;
 
 
 --
@@ -10826,7 +10806,7 @@ CREATE INDEX index_contracts_on_customer_id ON public.contracts USING btree (cus
 -- Name: index_contracts_on_live_external_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['pending'::public.contract_status, 'active'::public.contract_status]));
+CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['draft'::public.contract_status, 'pending'::public.contract_status, 'active'::public.contract_status]));
 
 
 --
@@ -12101,6 +12081,13 @@ CREATE UNIQUE INDEX index_integrations_on_code_and_organization_id ON public.int
 --
 
 CREATE INDEX index_integrations_on_organization_id ON public.integrations USING btree (organization_id);
+
+
+--
+-- Name: index_integrations_on_organization_id_and_quickbooks_realm_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_integrations_on_organization_id_and_quickbooks_realm_id ON public.integrations USING btree (organization_id, ((settings ->> 'realm_id'::text))) WHERE (((type)::text = 'Integrations::QuickbooksIntegration'::text) AND ((settings ->> 'realm_id'::text) IS NOT NULL));
 
 
 --
@@ -18450,6 +18437,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123112950'),
+('20261123112949'),
+('20261123100000'),
 ('20261119191519'),
 ('20261119191515'),
 ('20261118162728'),
@@ -18458,6 +18448,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261118155957'),
 ('20261117160252'),
 ('20261117160249'),
+('20261116175753'),
+('20261116175747'),
+('20261116175742'),
 ('20261116121445'),
 ('20261116121442'),
 ('20261116121439'),
