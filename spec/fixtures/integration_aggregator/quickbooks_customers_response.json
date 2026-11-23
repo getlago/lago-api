@@ -1,0 +1,51 @@
+{
+  "records": [
+    {
+      "id": "58",
+      "display_name": "Northwind Analytics",
+      "company_name": "Northwind Analytics Inc",
+      "email": "billing@northwind.example.com",
+      "phone": "(555) 010-0101",
+      "mobile": "(555) 010-0102",
+      "billing_address_line1": "100 Example Street",
+      "billing_city": "Springfield",
+      "billing_country": "US",
+      "billing_postal_code": "00001",
+      "active": true,
+      "created_at": "2026-01-01T00:00:00-08:00",
+      "updated_at": "2026-01-01T00:00:00-08:00",
+      "_nango_metadata": {
+        "first_seen_at": "2026-01-01T00:00:00.000000+00:00",
+        "last_modified_at": "2026-01-01T00:00:00.000000+00:00",
+        "last_action": "ADDED",
+        "deleted_at": null,
+        "pruned_at": null,
+        "cursor": "cursor-1"
+      }
+    },
+    {
+      "id": "59",
+      "display_name": "Acme Robotics",
+      "company_name": "Acme Robotics LLC",
+      "email": "accounts@acme.example.com",
+      "phone": "(555) 010-0201",
+      "mobile": null,
+      "billing_address_line1": "200 Sample Avenue",
+      "billing_city": "Shelbyville",
+      "billing_country": "US",
+      "billing_postal_code": "00002",
+      "active": true,
+      "created_at": "2026-01-01T00:00:00-08:00",
+      "updated_at": "2026-01-01T00:00:00-08:00",
+      "_nango_metadata": {
+        "first_seen_at": "2026-01-01T00:00:00.000000+00:00",
+        "last_modified_at": "2026-01-01T00:00:00.000000+00:00",
+        "last_action": "ADDED",
+        "deleted_at": null,
+        "pruned_at": null,
+        "cursor": "cursor-2"
+      }
+    }
+  ],
+  "next_cursor": null
+}
