@@ -5,7 +5,7 @@ module PaymentMethods
     def valid?
       return true unless args[:payment_method]
 
-      valid_payment_method_attributes?
+      valid_payment_method_attributes? && valid_shared_payment_token?
 
       if errors?
         result.validation_failure!(errors:)
@@ -25,6 +25,14 @@ module PaymentMethods
       return true if result.payment_method.nil? && args[:payment_method][:payment_method_type].to_s == "manual"
 
       add_error(field: :payment_method, error_code: "invalid_payment_method")
+    end
+
+    def valid_shared_payment_token?
+      if result.payment_method&.shared_payment_token? && !args[:allow_shared_payment_token]
+        add_error(field: :payment_method, error_code: "invalid_payment_method")
+      else
+        true
+      end
     end
   end
 end

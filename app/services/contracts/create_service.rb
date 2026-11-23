@@ -75,7 +75,6 @@ module Contracts
             external_id: params[:external_id],
             code: params[:code],
             name: params[:name],
-            billing_time: params[:billing_time].presence || "calendar",
             billing_anchor_date: params[:billing_anchor_date],
             started_at:,
             ended_at: ended_at_in_customer_timezone,

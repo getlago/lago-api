@@ -36,8 +36,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       catalog_plan:,
       external_id: "contract-1",
       code: "initial",
-      status: "active",
-      billing_time: "calendar"
+      status: "active"
     )
     expect(contract.started_at).to be_within(5.seconds).of(Time.current)
     expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
@@ -241,6 +240,19 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
         wallet = result.contract.wallets.sole
         expect(wallet).to have_attributes(code: "ai_credits", customer:)
         expect(wallet.selectors.sole).to have_attributes(selector_type: "fee_type", fee_type: "metered", plan_wallet_id: nil)
+      end
+
+      context "when the wallet template has an alert" do
+        let(:alert_template) { create(:plan_wallet_alert, organization:, plan_wallet:, code: "low_balance") }
+
+        before { create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: alert_template, value: 2_000) }
+
+        it "gives the contract's wallet its own copy of the alert" do
+          alert = result.contract.wallets.sole.alerts.sole
+
+          expect(alert).to have_attributes(code: "low_balance", previous_value: nil)
+          expect(alert.thresholds.sole.value).to eq(2_000)
+        end
       end
 
       context "when the contract starts in the future" do
@@ -480,15 +492,6 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
 
     it "creates the new contract" do
       expect(result).to be_success
-    end
-  end
-
-  context "with an invalid billing_time" do
-    let(:params) { super().merge(billing_time: "weekly") }
-
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:billing_time]).to be_present
     end
   end
 

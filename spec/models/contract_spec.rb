@@ -14,10 +14,6 @@ RSpec.describe Contract do
         .backed_by_column_of_type(:enum)
         .validating
         .with_values(draft: "draft", pending: "pending", active: "active", terminated: "terminated", canceled: "canceled")
-      expect(subject).to define_enum_for(:billing_time)
-        .backed_by_column_of_type(:enum)
-        .validating
-        .with_values(calendar: "calendar", anniversary: "anniversary")
       expect(subject).to define_enum_for(:payment_method_type)
         .backed_by_column_of_type(:enum)
         .validating
