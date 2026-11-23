@@ -90,8 +90,21 @@ RSpec.describe DunningCampaigns::CreateService do
           end
         end
 
+        context "when the organization is the shadow of a migration" do
+          before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+          it "creates a dunning campaign that is not applied" do
+            expect { create_service.call }.to change(DunningCampaign, :count).by(1)
+              .and not_change { billing_entity.reload.applied_dunning_campaign_id }
+          end
+        end
+
         context "with applied_to_organization true" do
           let(:applied_to_organization) { true }
+
+          it_behaves_like "refused on a shadow organization", DunningCampaign do
+            subject { create_service.call }
+          end
 
           it "updates the default billing entity with applied_dunning_campaign" do
             result = create_service.call

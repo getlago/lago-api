@@ -54,6 +54,17 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
               .to(nil)
           end
 
+          context "when the organization is the shadow of a migration" do
+            before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+            it "removes the applied dunning campaign" do
+              expect { update_service.call }
+                .to change { billing_entity.reload.applied_dunning_campaign_id }
+                .from(dunning_campaign_1.id)
+                .to(nil)
+            end
+          end
+
           it "resets customer attempts only on fallback customers for this billing entity" do
             expect {
               update_service.call
@@ -87,6 +98,10 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
 
           it_behaves_like "produces a security log", "billing_entity.updated" do
             before { update_service.call }
+          end
+
+          it_behaves_like "refused on a shadow organization", -> { billing_entity.reload.applied_dunning_campaign_id } do
+            subject { update_service.call }
           end
 
           it "resets only fallback customers of this billing entity attempts" do

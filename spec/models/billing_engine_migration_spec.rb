@@ -134,6 +134,18 @@ RSpec.describe BillingEngineMigration do
       it { expect(migration).not_to be_shadow_organization_isolated }
     end
 
+    context "when a customer of the shadow organization has a dunning campaign" do
+      before do
+        create(
+          :customer,
+          organization: shadow_organization,
+          applied_dunning_campaign: create(:dunning_campaign, organization: shadow_organization)
+        )
+      end
+
+      it { expect(migration).not_to be_shadow_organization_isolated }
+    end
+
     context "when only the v1 organization has outbound settings" do
       before { create(:webhook_endpoint, organization: migration.organization) }
 

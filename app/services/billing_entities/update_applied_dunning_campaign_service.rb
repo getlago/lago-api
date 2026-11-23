@@ -2,6 +2,8 @@
 
 module BillingEntities
   class UpdateAppliedDunningCampaignService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:billing_entity]
     def initialize(billing_entity:, applied_dunning_campaign_id: nil)
       @billing_entity = billing_entity
@@ -11,6 +13,7 @@ module BillingEntities
 
     def call
       return result.not_found_failure!(resource: "billing_entity") if billing_entity.nil?
+      return shadow_outbound_failure if applied_dunning_campaign_id.present? && shadow_outbound_refused?(billing_entity.organization_id)
       return if billing_entity.applied_dunning_campaign_id == applied_dunning_campaign_id
 
       old_campaign = billing_entity.applied_dunning_campaign
