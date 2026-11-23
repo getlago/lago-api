@@ -86,6 +86,7 @@ RSpec.describe ContractRateCard do
       end
       let(:pending_contract) { create(:contract, organization:, customer:, started_at:, status: :pending) }
       let(:canceled_contract) { create(:contract, organization:, customer:, started_at:, status: :canceled) }
+      let(:draft_contract) { create(:contract, organization:, customer:, started_at:, status: :draft) }
       let(:future_cursor_contract) { create(:contract, organization:, customer:, started_at:) }
       let(:empty_cursor_contract) { create(:contract, organization:, customer:, started_at:) }
 
@@ -93,6 +94,7 @@ RSpec.describe ContractRateCard do
       let(:terminated_card) { create(:contract_rate_card, organization:, contract: terminated_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
       let(:pending_card) { create(:contract_rate_card, organization:, contract: pending_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
       let(:canceled_card) { create(:contract_rate_card, organization:, contract: canceled_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
+      let(:draft_card) { create(:contract_rate_card, organization:, contract: draft_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
       let(:future_cursor_card) { create(:contract_rate_card, organization:, contract: future_cursor_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp + 1.minute) }
       let(:empty_cursor_card) { create(:contract_rate_card, organization:, contract: empty_cursor_contract, rate_card:, effective_date: Date.new(2026, 11, 1), next_billing_at: timestamp) }
 
@@ -102,7 +104,7 @@ RSpec.describe ContractRateCard do
 
       before do
         create(:rate_card_rate, organization:, rate_card:, effective_from: started_at)
-        [active_card, terminated_card, pending_card, canceled_card, future_cursor_card]
+        [active_card, terminated_card, pending_card, canceled_card, draft_card, future_cursor_card]
         empty_cursor_card.update!(next_billing_at: nil)
       end
 

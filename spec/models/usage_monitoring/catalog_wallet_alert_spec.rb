@@ -51,6 +51,18 @@ RSpec.describe UsageMonitoring::CatalogWalletAlert do
     end
   end
 
+  describe "#find_value" do
+    let(:catalog_wallet) { build(:catalog_wallet, balance_cents: 1_500, ongoing_balance_cents: 1_200) }
+
+    it "reads the balance of a balance alert" do
+      expect(build(:catalog_wallet_alert, alert_type: "balance").find_value(catalog_wallet)).to eq(1_500)
+    end
+
+    it "reads the ongoing balance of an ongoing balance alert" do
+      expect(build(:catalog_wallet_alert, alert_type: "ongoing_balance").find_value(catalog_wallet)).to eq(1_200)
+    end
+  end
+
   describe "database constraints" do
     let(:existing) { create(:catalog_wallet_alert, alert_type: "balance", code: "low") }
 
