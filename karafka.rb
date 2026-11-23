@@ -139,6 +139,20 @@ class KarafkaApp < Karafka::App
       end
     end
   end
+
+  if ENV["LAGO_KAFKA_BILLING_ENGINE_MIGRATION_EVENTS_TOPIC"].present?
+    routes.draw do
+      consumer_group :lago_billing_engine_migration_events_consumer do
+        topic ENV["LAGO_KAFKA_BILLING_ENGINE_MIGRATION_EVENTS_TOPIC"] do
+          consumer BillingEngineMigrationEventsConsumer
+
+          # The raw events topic: a new group starts at its end instead of replaying its retention.
+          initial_offset "latest"
+          max_messages 1_000
+        end
+      end
+    end
+  end
 end
 
 Karafka::Process.tags.add(:application_name, "lago-api")

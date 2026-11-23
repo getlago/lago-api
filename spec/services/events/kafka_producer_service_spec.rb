@@ -59,6 +59,27 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
         end
       end
 
+      context "when the delivery must be confirmed" do
+        subject(:producer_service) { described_class.new(events:, organization:, sync: true) }
+
+        it "waits for Kafka to acknowledge the events" do
+          producer_service.call
+
+          expect(karafka_producer).to have_received(:produce_many_sync) do |messages|
+            expect(messages.map { it[:topic] }).to eq(%w[raw_events raw_events])
+          end
+          expect(karafka_producer).not_to have_received(:produce_many_async)
+        end
+
+        context "when Kafka refuses an event" do
+          before { allow(karafka_producer).to receive(:produce_many_sync).and_raise(WaterDrop::Errors::ProduceManyError.new([], "boom")) }
+
+          it "raises" do
+            expect { producer_service.call }.to raise_error(WaterDrop::Errors::ProduceManyError)
+          end
+        end
+      end
+
       context "when the organization uses the product catalog" do
         let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
 
