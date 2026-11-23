@@ -59,32 +59,30 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
     end
   end
 
-  describe "shared concurrency limit and the QuickBooks per-connection rule" do
+  describe "shared concurrency limit and the QuickBooks per-company rule" do
     let(:strategy) { Sidekiq::Throttled::Registry.get(:concurrency_limit) }
     let(:shared_key) { "throttled:concurrency_limit:concurrency.v2" }
-    let(:quickbooks_type) { "Integrations::QuickbooksIntegration" }
     let(:organization) { create(:organization) }
 
-    # A QuickBooks row is a NetSuite row whose type is rewritten: the type has no model yet,
-    # so the row is never loaded again and only its id is used. The link of the customer gets
-    # a type outside accounting_kind the same way.
+    # The QuickBooks customer link has no model yet: a NetSuite link whose type is rewritten
+    # stands in for it, outside accounting_kind.
     let(:quickbooks_customer_type) { "IntegrationCustomers::QuickbooksCustomer" }
-    let(:integration_a) { create(:netsuite_integration, organization:) }
-    let(:integration_b) { create(:netsuite_integration, organization:) }
+    let(:integration_a) { create(:quickbooks_integration, organization:, code: "quickbooks_a", settings: {realm_id: "1111111111"}) }
+    let(:integration_b) { create(:quickbooks_integration, organization:, code: "quickbooks_b", settings: {realm_id: "2222222222"}) }
     let(:customer_a) { create(:customer, organization:) }
     let(:customer_b) { create(:customer, organization:) }
     let(:args_a) { invoice_job_args(customer_a) }
     let(:args_b) { invoice_job_args(customer_b) }
-    let(:key_a) { connection_key(integration_a) }
-    let(:key_b) { connection_key(integration_b) }
+    let(:key_a) { company_key(integration_a) }
+    let(:key_b) { company_key(integration_b) }
 
     def invoice_job_args(customer)
       invoice = create(:invoice, customer:, organization:)
       Integrations::Aggregator::Invoices::CreateJob.new(invoice:).serialize["arguments"]
     end
 
-    def connection_key(integration)
-      "#{shared_key}:#{Digest::SHA256.hexdigest(integration.id)}"
+    def company_key(integration)
+      "#{shared_key}:#{Digest::SHA256.hexdigest("quickbooks:#{integration.realm_id}")}"
     end
 
     def throttle_keys
@@ -116,14 +114,13 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
       {integration_a => customer_a, integration_b => customer_b}.each do |integration, customer|
         create(:netsuite_customer, integration:, customer:)
           .update_column(:type, quickbooks_customer_type) # rubocop:disable Rails/SkipsModelValidations
-        integration.update_column(:type, quickbooks_type) # rubocop:disable Rails/SkipsModelValidations
       end
     end
 
     after { clear_throttle_keys }
 
     describe "QuickBooks jobs" do
-      it "runs at most 3 jobs of one connection and still admits another connection" do
+      it "runs at most 3 jobs of one company and still admits another company" do
         admitted_a, refused_a = fetch(4, args_a)
         admitted_b, refused_b = fetch(2, args_b)
 
@@ -138,7 +135,7 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
         expect(jids_in(shared_key)).to match_array(admitted_a + admitted_b)
       end
 
-      it "caps each connection on its own count" do
+      it "caps each company on its own count" do
         admitted_a, = fetch(1, args_a)
         admitted_b, refused_b = fetch(4, args_b)
         more_a, refused_a = fetch(1, args_a)
@@ -162,7 +159,7 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
         expect(jids_in(key_a)).to match_array(admitted)
       end
 
-      it "frees the slot of the connection when a job finishes", cache: :memory do
+      it "frees the slot of the company when a job finishes", cache: :memory do
         admitted, refused = fetch(4, args_a)
         expect(refused.size).to eq(1)
 
@@ -205,7 +202,7 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
         end
       end
 
-      it "counts the job under its connection and writes no key ending in :none" do
+      it "counts the job under its company and writes no key ending in :none" do
         admitted, refused = fetch(1, args_a)
 
         expect(admitted.size).to eq(1)
@@ -245,7 +242,7 @@ RSpec.describe "Throttling initializer" do # rubocop:disable RSpec/DescribeClass
       end
     end
 
-    describe "arguments that resolve to no connection" do
+    describe "arguments that resolve to no company" do
       let(:unresolved) do
         {
           "nil" => [nil],

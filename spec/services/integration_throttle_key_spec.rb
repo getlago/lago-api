@@ -3,21 +3,19 @@
 require "rails_helper"
 
 RSpec.describe IntegrationThrottleKey do
-  let(:quickbooks_type) { "Integrations::QuickbooksIntegration" }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:credit_note) { create(:credit_note, customer:, invoice:) }
   let(:payment) { create(:payment, payable: invoice) }
 
-  # A QuickBooks row is a NetSuite row whose type is rewritten: the type has no model yet,
-  # so the row is never loaded again and only its id is used. The link of the customer gets
-  # a type outside accounting_kind the same way.
+  # The QuickBooks customer link has no model yet: a NetSuite link whose type is rewritten
+  # stands in for it, outside accounting_kind.
   let(:quickbooks_customer_type) { "IntegrationCustomers::QuickbooksCustomer" }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:integration_id) { integration.id }
+  let(:realm_id) { "1111111111" }
+  let(:integration) { quickbooks_integration(realm_id:) }
   let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
-  let(:integration_gid) { "gid://#{GlobalID.app}/#{quickbooks_type}/#{integration_id}" }
+  let(:integration_gid) { integration.to_gid.to_s }
 
   let(:invoice_args) { Integrations::Aggregator::Invoices::CreateJob.new(invoice:).serialize["arguments"] }
   let(:credit_note_args) { Integrations::Aggregator::CreditNotes::CreateJob.new(credit_note:).serialize["arguments"] }
@@ -41,7 +39,17 @@ RSpec.describe IntegrationThrottleKey do
 
   let(:record_shapes) { %i[invoice_args credit_note_args payment_args] }
   let(:integration_shapes) { %i[create_customer_args update_customer_args] }
-  let(:quickbooks_suffix) { Digest::SHA256.hexdigest(integration_id) }
+  let(:quickbooks_suffix) { Digest::SHA256.hexdigest("quickbooks:#{realm_id}") }
+
+  def quickbooks_integration(realm_id:, sandbox: false, organization: self.organization, **attributes)
+    create(
+      :quickbooks_integration,
+      organization:,
+      code: "quickbooks_#{SecureRandom.hex(4)}",
+      settings: {realm_id:, sandbox:, sync_invoices: false, sync_credit_notes: false, sync_payments: false},
+      **attributes
+    )
+  end
 
   def resolve(args)
     [described_class.limit(*args), described_class.key_suffix(*args)]
@@ -58,25 +66,43 @@ RSpec.describe IntegrationThrottleKey do
     context "when the customer is connected to a QuickBooks integration" do
       before do
         integration_customer.update_column(:type, quickbooks_customer_type) # rubocop:disable Rails/SkipsModelValidations
-        integration.update_column(:type, quickbooks_type) # rubocop:disable Rails/SkipsModelValidations
       end
 
-      it "returns the limit and a digest of the integration id for the jobs of a record" do
+      it "returns the limit and a digest of the QuickBooks company for the jobs of a record" do
         record_shapes.each do |shape|
           expect(resolve(public_send(shape))).to eq([3, quickbooks_suffix]), shape.to_s
         end
 
         expect(quickbooks_suffix).to match(/\A\h{64}\z/)
-        expect(quickbooks_suffix).not_to include(integration_id)
+        expect(quickbooks_suffix).not_to include(realm_id)
       end
 
-      it "returns the limit and the same digest for the integration customer jobs without a query" do
+      # Pinned to the null store: an earlier `cache: :memory` example leaves its store in Rails.cache.
+      it "returns the limit and the same digest for the integration customer jobs, reading only the integration", cache: :null do
         integration_shapes.each do |shape|
           args = public_send(shape)
           resolved = nil
 
-          expect(capture_sql { resolved = resolve(args) }).to be_empty, shape.to_s
+          statements = capture_sql { resolved = resolve(args) }
+          expect(statements).not_to be_empty, shape.to_s
+          expect(statements).to all(include('FROM "integrations"')), shape.to_s
           expect(resolved).to eq([3, quickbooks_suffix]), shape.to_s
+        end
+      end
+
+      context "with a sandbox company" do
+        let(:integration) { quickbooks_integration(realm_id:, sandbox: true) }
+
+        it "returns a digest of the sandbox company, apart from the production one" do
+          expect(resolve(invoice_args)).to eq([3, Digest::SHA256.hexdigest("quickbooks-sandbox:#{realm_id}")])
+        end
+      end
+
+      context "when the integration has no company id" do
+        let(:integration) { quickbooks_integration(realm_id: nil) }
+
+        it "returns a digest of the integration id" do
+          expect(resolve(invoice_args)).to eq([3, Digest::SHA256.hexdigest(integration.id)])
         end
       end
 
@@ -129,38 +155,46 @@ RSpec.describe IntegrationThrottleKey do
         expect(statements).not_to be_empty
       end
 
-      context "with a second QuickBooks connection" do
-        let(:other_customer) { create(:customer, organization:) }
-        let(:other_integration) { create(:netsuite_integration, organization:) }
-        let(:other_invoice) { create(:invoice, customer: other_customer, organization:) }
+      context "with another QuickBooks integration" do
+        let(:other_organization) { create(:organization) }
+        let(:other_customer) { create(:customer, organization: other_organization) }
+        let(:other_invoice) { create(:invoice, customer: other_customer, organization: other_organization) }
         let(:other_args) { Integrations::Aggregator::Invoices::CreateJob.new(invoice: other_invoice).serialize["arguments"] }
 
         before do
           create(:netsuite_customer, integration: other_integration, customer: other_customer)
             .update_column(:type, quickbooks_customer_type) # rubocop:disable Rails/SkipsModelValidations
-          other_integration.update_column(:type, quickbooks_type) # rubocop:disable Rails/SkipsModelValidations
         end
 
-        it "returns one suffix per connection" do
-          expect(described_class.key_suffix(*other_args)).to eq(Digest::SHA256.hexdigest(other_integration.id))
-          expect(described_class.key_suffix(*other_args)).not_to eq(described_class.key_suffix(*invoice_args))
+        context "when it is connected to another company" do
+          let(:other_integration) { quickbooks_integration(realm_id: "2222222222", organization: other_organization) }
+
+          it "returns one suffix per company" do
+            expect(described_class.key_suffix(*other_args)).to eq(Digest::SHA256.hexdigest("quickbooks:2222222222"))
+            expect(described_class.key_suffix(*other_args)).not_to eq(described_class.key_suffix(*invoice_args))
+          end
+        end
+
+        context "when it is connected to the same company from another organization" do
+          let(:other_integration) { quickbooks_integration(realm_id:, organization: other_organization) }
+
+          it "returns the same suffix, so both share the company's slots" do
+            expect(described_class.key_suffix(*other_args)).to eq(described_class.key_suffix(*invoice_args))
+          end
         end
       end
 
       context "when the customer is linked to two QuickBooks integrations" do
         let(:integration_ids) { [SecureRandom.uuid, SecureRandom.uuid].sort }
         # The first link created points to the highest id, so the insertion order is not the answer.
-        let(:integration) { create(:netsuite_integration, organization:, id: integration_ids.last) }
-        let(:lowest_integration) { create(:xero_integration, organization:, id: integration_ids.first) }
+        let(:integration) { quickbooks_integration(realm_id:, id: integration_ids.last) }
+        let(:lowest_integration) { quickbooks_integration(realm_id: "3333333333", id: integration_ids.first) }
 
         # The second link takes another type outside accounting_kind: a customer has one link per type.
-        before do
-          create(:hubspot_customer, integration: lowest_integration, customer:)
-          lowest_integration.update_column(:type, quickbooks_type) # rubocop:disable Rails/SkipsModelValidations
-        end
+        before { create(:hubspot_customer, integration: lowest_integration, customer:) }
 
-        it "returns the digest of the lowest integration id on every call" do
-          expected = Digest::SHA256.hexdigest(integration_ids.first)
+        it "returns the digest of the company of the lowest integration id on every call" do
+          expected = Digest::SHA256.hexdigest("quickbooks:3333333333")
 
           3.times { expect(described_class.key_suffix(*invoice_args)).to eq(expected) }
           expect(resolve(credit_note_args)).to eq([3, expected])
@@ -178,10 +212,10 @@ RSpec.describe IntegrationThrottleKey do
           }]
         end
 
-        it "resolves from the integration entry without a query" do
+        it "resolves from the integration entry without looking up the record" do
           args
 
-          expect(capture_sql { resolved }).to be_empty
+          expect(capture_sql { resolved }).to all(include('FROM "integrations"'))
           expect(resolved).to eq([3, quickbooks_suffix])
         end
       end
