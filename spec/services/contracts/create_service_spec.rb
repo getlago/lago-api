@@ -36,8 +36,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       catalog_plan:,
       external_id: "contract-1",
       code: "initial",
-      status: "active",
-      billing_time: "calendar"
+      status: "active"
     )
     expect(contract.started_at).to be_within(5.seconds).of(Time.current)
     expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
@@ -296,6 +295,87 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     end
   end
 
+  context "when creating a draft" do
+    let(:params) { super().merge(status: "draft", started_at:) }
+    let(:started_at) { 1.month.ago.iso8601 }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance") }
+
+    before do
+      plan_rate_card = create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 5)
+      create(:rate_phase, organization:, plan_rate_card:, position: 1)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-01-01"), billing_interval_count: 1, billing_interval_unit: "month")
+    end
+
+    it "keeps a draft whose start has passed out of billing, with the plan's cards" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.created", anything)
+        .and not_change(BillingOperation, :count)
+
+      contract = result.contract
+      expect(contract).to be_draft
+      expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
+      expect(contract.applied_rate_cards.sole.terms.sole.units).to eq(5)
+      expect(contract.applied_rate_cards.sole.rate_phases.size).to eq(1)
+      expect(SendWebhookJob).not_to have_been_enqueued.with("contract.started", anything, any_args)
+      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.created")
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
+    end
+
+    context "when it starts now" do
+      let(:started_at) { Time.current.iso8601 }
+
+      it "keeps the draft out of billing" do
+        expect { result }.not_to change(BillingOperation, :count)
+        expect(result.contract).to be_draft
+      end
+    end
+
+    context "when it starts in the future" do
+      let(:started_at) { 1.month.from_now.iso8601 }
+
+      it "keeps a draft rather than a pending contract" do
+        expect(result.contract).to be_draft
+      end
+    end
+
+    context "when an active contract already uses the external id" do
+      before { create(:contract, organization:, customer:, external_id: "contract-1") }
+
+      it "returns a validation failure, as the per-status unique index would not catch it" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages).to eq(external_id: ["value_already_exists"])
+      end
+    end
+
+    context "without a start date" do
+      let(:started_at) { nil }
+
+      it "requires one, as a draft would otherwise bill from its creation once published" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages).to eq(started_at: ["value_is_mandatory"])
+      end
+    end
+  end
+
+  context "with a null status" do
+    let(:params) { super().merge(status: nil) }
+
+    it "creates the contract as when the status is omitted" do
+      expect(result.contract).to be_active
+    end
+  end
+
+  %w[pending active terminated canceled].each do |status|
+    context "with the #{status} status" do
+      let(:params) { super().merge(status:) }
+
+      it "refuses it, as only a draft is chosen by the caller" do
+        expect { result }.not_to change(Contract, :count)
+        expect(result.error.messages).to eq(status: ["value_is_invalid"])
+      end
+    end
+  end
+
   context "with explicit dates" do
     let(:params) do
       super().merge(
@@ -412,15 +492,6 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
 
     it "creates the new contract" do
       expect(result).to be_success
-    end
-  end
-
-  context "with an invalid billing_time" do
-    let(:params) { super().merge(billing_time: "weekly") }
-
-    it "returns a validation failure" do
-      expect(result).not_to be_success
-      expect(result.error.messages[:billing_time]).to be_present
     end
   end
 

@@ -32,6 +32,35 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
       end
     end
 
+    context "when payment intent failed event for a one-time payment in HUF (api_version: #{version})" do
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code: "stripe_1", currency: "HUF") }
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "HUF", total_amount_cents: 50_000, total_paid_amount_cents: 0)
+      end
+
+      let(:event_json) do
+        get_stripe_fixtures("webhooks/payment_intent_payment_failed.json", version:) do |h|
+          h["data"]["object"]["id"] = "pi_one_time"
+          h["data"]["object"]["amount"] = 5_000_000
+          h["data"]["object"]["currency"] = "huf"
+          h["data"]["object"]["metadata"] = {lago_invoice_id: invoice.id, payment_type: "one-time"}
+        end
+      end
+
+      before do
+        create(:stripe_provider, organization:, code: "stripe_1")
+        create(:stripe_customer, customer:)
+      end
+
+      it "stores the Stripe amount in Lago units" do
+        result = event_service.call
+
+        expect(result).to be_success
+        expect(result.payment.amount_cents).to eq(50_000) # 5,000,000 Stripe hundredths / 100
+        expect(result.payment.amount_currency).to eq("HUF")
+      end
+    end
+
     context "when payment intent is canceled" do
       let(:event_json) { get_stripe_fixtures("webhooks/payment_intent_canceled.json", version:) }
 

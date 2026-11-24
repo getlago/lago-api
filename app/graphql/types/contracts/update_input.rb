@@ -13,7 +13,6 @@ module Types
       argument :plan_code, String, required: false
 
       argument :billing_anchor_date, GraphQL::Types::ISO8601Date, required: false
-      argument :billing_time, Types::Contracts::BillingTimeEnum, required: false
       argument :ended_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :started_at, GraphQL::Types::ISO8601DateTime, required: false
 
