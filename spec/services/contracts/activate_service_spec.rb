@@ -139,7 +139,7 @@ RSpec.describe Contracts::ActivateService do
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
     end
 
-    context "when a rate card schedule cannot be built" do
+    context "when a rate card has no rates" do
       let(:failed_product) { create(:product, :fixed, organization:) }
       let(:failed_rate_card) { create(:rate_card, organization:, product: failed_product, billing_timing: "advance") }
       let(:failed_card) do
@@ -155,7 +155,7 @@ RSpec.describe Contracts::ActivateService do
       it "skips the card while activating and scheduling other cards" do
         expect(result).to be_success
         expect(contract.reload).to be_active
-        expect(failed_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 30))
+        expect(failed_card.reload.next_billing_at).to be_nil
         expect(failed_card.billing_operations).to be_empty
         expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
       end

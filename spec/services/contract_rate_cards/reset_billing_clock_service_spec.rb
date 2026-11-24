@@ -41,32 +41,25 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
     expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
   end
 
-  context "with a supplied schedule" do
-    let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule }
-
+  context "with several pending operations" do
     before do
-      schedule
-      allow(Billing::RateCards::BuildScheduleService).to receive(:call).and_raise("unexpected schedule build")
+      [9, 8].each do |day|
+        create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at: Time.utc(2026, 10, day))
+      end
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
+        billing_at: Time.utc(2026, 10, 6))
     end
 
-    it "uses it without rebuilding" do
-      result = described_class.call!(contract_rate_card:, schedule:)
-
-      expect(result.contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
-    end
-  end
-
-  context "with an explicitly nil schedule" do
-    before do
-      allow(Billing::RateCards::BuildScheduleService).to receive(:call).and_raise("unexpected schedule build")
-    end
-
-    it "keeps the cursor without rebuilding" do
-      result = described_class.call!(contract_rate_card:, schedule: nil)
-
+    it "projects the earliest due periodic date without returning a new plan" do
+      result = described_class.call!(contract_rate_card:, timestamp: Time.utc(2026, 10, 9))
       expect(result).to be_success
       expect(result.planned_operation).to be_nil
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-30"))
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 8))
+    end
+
+    it "uses the schedule when the pending periodic operations are still in the future" do
+      result = described_class.call!(contract_rate_card:, timestamp: Time.utc(2026, 10, 7))
+      expect(result.planned_operation.billing_at).to eq(Time.zone.parse("2026-10-07"))
     end
   end
 
@@ -75,9 +68,9 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
 
     before { RateCardRate.where(rate_card:).delete_all }
 
-    it "keeps the clock" do
+    it "clears the clock" do
       expect(result).to be_success
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-30"))
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
     end
   end
 

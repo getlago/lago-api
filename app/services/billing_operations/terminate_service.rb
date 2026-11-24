@@ -24,7 +24,7 @@ module BillingOperations
         end
         # The termination can end coverage early. Replanning from the billing history keeps
         # overdue work and clears a clock with nothing left to bill, such as a later renewal.
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp:)
       end
       result.billing_operations = billing_operations
       result

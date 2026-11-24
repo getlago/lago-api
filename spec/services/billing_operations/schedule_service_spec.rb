@@ -161,12 +161,15 @@ RSpec.describe BillingOperations::ScheduleService do
   end
 
   context "when the schedule cannot be built" do
+    let(:failure) { BaseService::Result.new.service_failure!(code: "invalid_billing_schedule", message: "Invalid interval") }
+
     before do
       allow(Billing::RateCards::BuildScheduleService).to receive(:call!)
-        .and_return(Billing::RateCards::BuildScheduleService::Result.new)
+        .and_raise(failure.error)
     end
 
     it "keeps the existing cursor without creating operations" do
+      expect(result.error).to eq(failure.error)
       expect(result.billing_operations).to be_empty
       expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
     end

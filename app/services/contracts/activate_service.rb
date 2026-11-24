@@ -81,7 +81,7 @@ module Contracts
     def schedule_initial_billing
       created_operation = false
       contract.applied_rate_cards.find_each do |card|
-        planned_operation = ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card).planned_operation
+        planned_operation = ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp:).planned_operation
         next unless planned_operation && planned_operation.billing_at <= timestamp
 
         BillingOperations::CreateService.call!(

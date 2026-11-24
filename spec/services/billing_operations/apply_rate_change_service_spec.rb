@@ -108,9 +108,11 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
 
         before { record_coverage(other_card, ended_at: clock, processed_at:) }
 
-        it "loads completed operations and their segments once for the batch" do
+        it "loads completed operations, their segments, and pending periodic work once for the batch" do
           queries = capture_sql { expect(result).to be_success }
-          expect(queries.grep(/SELECT DISTINCT ON .*FROM "billing_operations"/).size).to eq(1)
+          history_queries = queries.grep(/SELECT DISTINCT ON .*FROM "billing_operations"/)
+          expect(history_queries.grep(/"processed_at" IS NOT NULL/).size).to eq(1)
+          expect(history_queries.grep(/"processed_at" IS NULL/).size).to eq(1)
           expect(queries.grep(/SELECT .*FROM "billing_operation_segments"/).size).to eq(1)
           expect(customer.billing_operations.pending.pluck(:contract_rate_card_id)).to contain_exactly(card.id, other_card.id)
         end
@@ -133,9 +135,9 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       context "when the clock is already earlier" do
         let(:clock) { Time.utc(2026, 11, 10) }
 
-        it "still reconciles the purchased coverage" do
+        it "reconciles the purchased coverage and projects the next renewal from it" do
           expect { result }.to change(reconciliations, :count).by(1)
-          expect(card.reload.next_billing_at).to eq(clock)
+          expect(card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
         end
       end
 
@@ -210,9 +212,9 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   context "when the clock is earlier than the change" do
     let(:clock) { Time.utc(2026, 11, 1) }
 
-    it "does not skip an overdue wake" do
+    it "corrects the stale wake to the first unbilled close" do
       expect(result).to be_success
-      expect(card.reload.next_billing_at).to eq(clock)
+      expect(card.reload.next_billing_at).to eq(effective_from)
     end
   end
 
@@ -269,9 +271,9 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
     context "with an existing clock" do
       let(:clock) { Time.utc(2026, 12, 1) }
 
-      it "does not rewrite the clock" do
+      it "clears the stale wake" do
         expect(result).to be_success
-        expect(card.reload.next_billing_at).to eq(clock)
+        expect(card.reload.next_billing_at).to be_nil
       end
     end
   end

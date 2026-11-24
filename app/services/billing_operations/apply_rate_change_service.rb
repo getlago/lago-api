@@ -37,22 +37,12 @@ module BillingOperations
       ContractRateCard.starting_before_contract_end.where(organization_id: customer.organization_id, rate_card_id: rate.rate_card_id)
         .where(contracts: {customer_id: customer.id, status: Contract::BILLABLE_STATUSES, started_at: ..Time.current})
         .preload(:organization, rate_card: [:rates, {product: :billable_metric}], rate_phases: :rate_override, contract: :customer)
-        .preload(latest_completed_periodic_operation: :segments)
+        .preload(:earliest_pending_periodic_operation, latest_completed_periodic_operation: :segments)
     end
 
     def apply_rate_change(contract_rate_card, rate)
-      return unless contract_rate_card.periodic_billing_action && contract_rate_card.rate_card.rates.any?
-
-      next_billing_at = contract_rate_card.next_billing_at
-      earlier_or_missing = next_billing_at.nil? || rate.effective_from < next_billing_at
-      return unless earlier_or_missing || contract_rate_card.needs_reconciliation?
-
-      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
-      # A postponed rate can displace a future renewal, but overdue work must stay due.
-      if earlier_or_missing || (next_billing_at.future? && schedule.obligation_at(next_billing_at)&.billing_at != next_billing_at)
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, schedule:)
-      end
-      record_reconciliation(contract_rate_card, rate, schedule) if contract_rate_card.needs_reconciliation?
+      schedule = ContractRateCards::ResetBillingClockService.call!(contract_rate_card:).schedule
+      record_reconciliation(contract_rate_card, rate, schedule) if schedule && contract_rate_card.needs_reconciliation?
     end
 
     def record_reconciliation(contract_rate_card, rate, schedule)
