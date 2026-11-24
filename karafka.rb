@@ -106,6 +106,16 @@ class KarafkaApp < Karafka::App
           max_messages 10_000
         end
       end
+
+      # Its own group, so an alerts evaluation never holds back a wallet refresh.
+      consumer_group :lago_usage_alerts_consumer do
+        topic ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"] do
+          consumer SubscriptionUsageAlertsConsumer
+
+          # Alert latency: don't sit on a sparse batch (the default is 1000ms).
+          max_wait_time 100
+        end
+      end
     end
   end
 

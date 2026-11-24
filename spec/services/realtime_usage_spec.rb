@@ -107,6 +107,49 @@ RSpec.describe RealtimeUsage do
     end
   end
 
+  describe ".alerts_enabled?" do
+    subject(:enabled) { described_class.alerts_enabled?(organization) }
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: %w[realtime_usage realtime_usage_alerts])
+    end
+    let(:alerts_enabled) { "true" }
+
+    include_context "with realtime usage availability"
+
+    before { ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"] = alerts_enabled }
+
+    after { ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"] = nil }
+
+    it { expect(enabled).to be(true) }
+
+    context "when the alerts kill switch is off" do
+      let(:alerts_enabled) { nil }
+
+      it { expect(enabled).to be(false) }
+    end
+
+    context "when the alerts kill switch is set to false" do
+      let(:alerts_enabled) { "false" }
+
+      it { expect(enabled).to be(false) }
+    end
+
+    context "when the organization flag is off" do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"]) }
+
+      it { expect(enabled).to be(false) }
+    end
+
+    context "when realtime usage is off for the organization" do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage_alerts"]) }
+
+      it "refuses, because the alerts would wait for buckets nothing reads" do
+        expect(enabled).to be(false)
+      end
+    end
+  end
+
   describe ".recurring_sum_enabled?" do
     subject(:enabled) { described_class.recurring_sum_enabled?(organization) }
 

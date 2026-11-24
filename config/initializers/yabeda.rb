@@ -47,7 +47,7 @@ Yabeda.configure do
   end
 
   # The wallet alerts lane: how a moved balance reached evaluation, and what the consumer did with
-  # it. Like the refresh lane, no organization or wallet id is ever a tag.
+  # it, then the usage alerts lane. Like the refresh lane, no organization, wallet or subscription id is ever a tag.
   group :usage_monitoring do
     counter :wallet_alerts_dispatched_total,
       comment: "Wallets handed to alert evaluation, by the way they were sent (kafka, job, job_fallback)",
@@ -61,6 +61,20 @@ Yabeda.configure do
       comment: "Dispatch of a moved balance to the end of its alert evaluation",
       unit: :seconds,
       buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30]
+
+    counter :usage_alerts_outcomes_total,
+      comment: "Subscriptions a consumed realtime usage triggers batch resolved to, by what the usage alerts consumer did with them",
+      tags: %i[outcome reason]
+
+    histogram :usage_alerts_latency,
+      comment: "Trigger watermark to the end of the usage alerts evaluation it caused",
+      unit: :seconds,
+      buckets: [0.5, 1, 2, 5, 10, 30, 60, 120, 300]
+
+    histogram :usage_alerts_evaluation_duration,
+      comment: "Time spent evaluating a subscription's usage alerts, bucket wait excluded",
+      unit: :seconds,
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]
   end
 
   # Draft tax requests answered from the cache instead of the tax provider. Tags are bounded by
