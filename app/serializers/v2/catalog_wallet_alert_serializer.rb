@@ -9,7 +9,12 @@ module V2
     def serialize
       {
         lago_id: model.id,
-        **owner,
+        lago_wallet_id: wallet.id,
+        wallet_code: wallet.code,
+        currency: wallet.currency,
+        plan_code: template? ? wallet.catalog_plan.code : nil,
+        external_contract_id: template? ? nil : wallet.contract.external_id,
+        external_customer_id: template? ? nil : wallet.customer.external_id,
         code: model.code,
         name: model.name,
         alert_type: model.alert_type,
@@ -23,15 +28,7 @@ module V2
 
     def template? = model.is_a?(::UsageMonitoring::PlanWalletAlert)
 
-    def owner
-      if template?
-        wallet = model.plan_wallet
-        {lago_wallet_id: wallet.id, wallet_code: wallet.code, currency: wallet.currency, plan_code: wallet.catalog_plan.code, external_contract_id: nil, external_customer_id: nil}
-      else
-        wallet = model.catalog_wallet
-        {lago_wallet_id: wallet.id, wallet_code: wallet.code, currency: wallet.currency, plan_code: nil, external_contract_id: wallet.contract.external_id, external_customer_id: wallet.customer.external_id}
-      end
-    end
+    def wallet = template? ? model.plan_wallet : model.catalog_wallet
 
     # By value with the recurring one last, as contract usage alerts render them. Sorted in memory so
     # that a list reads its preloaded thresholds.
