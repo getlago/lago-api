@@ -50,13 +50,16 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
   end
 
   context "when the plan wallet has several templates" do
-    let(:ongoing_template) { create(:plan_wallet_alert, organization:, plan_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", name: nil) }
+    # Created first, though it comes second by code and by alert type
+    let(:ongoing_template) do
+      create(:plan_wallet_alert, organization:, plan_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", name: nil, created_at: 1.minute.ago)
+    end
 
     before { create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: ongoing_template, code: "empty", value: 0) }
 
     it "copies each one with its own thresholds, in the templates' order" do
-      expect(result.alerts.map(&:code)).to eq(%w[low_balance low_ongoing_balance])
-      expect(catalog_wallet.alerts.order(:created_at).pluck(:code)).to eq(%w[low_balance low_ongoing_balance])
+      expect(result.alerts.map(&:code)).to eq(%w[low_ongoing_balance low_balance])
+      expect(catalog_wallet.alerts.order(:created_at).pluck(:code)).to eq(%w[low_ongoing_balance low_balance])
 
       alerts = catalog_wallet.alerts.index_by(&:alert_type)
       expect(alerts.fetch("balance").thresholds.pluck(:value)).to contain_exactly(2_000, 10_000)
@@ -69,21 +72,17 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
       freeze_time { result }
 
       expect(catalog_wallet.alerts.distinct.count(:created_at)).to eq(2)
-      expect(catalog_wallet.alerts.order(:created_at).pluck(:code)).to eq(%w[low_balance low_ongoing_balance])
+      expect(catalog_wallet.alerts.order(:created_at).pluck(:code)).to eq(%w[low_ongoing_balance low_balance])
     end
 
     # The copy runs under the customer's billing lock, so it holds it for one statement per table, not one per row
     it "inserts the alerts in one statement and their thresholds in another" do
       plan_wallet = load_plan_wallet
       wallet = catalog_wallet
-      tables = []
-      subscriber = ->(*, payload) { tables << payload[:sql][/\AINSERT INTO "(\w+)"/, 1] if payload[:sql].start_with?("INSERT") }
 
-      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
-        described_class.call!(plan_wallet:, catalog_wallet: wallet)
-      end
+      inserts = capture_sql { described_class.call!(plan_wallet:, catalog_wallet: wallet) }.grep(/\AINSERT/)
 
-      expect(tables).to eq(%w[usage_monitoring_catalog_wallet_alerts usage_monitoring_catalog_wallet_alert_thresholds])
+      expect(inserts.map { it[/\AINSERT INTO "(\w+)"/, 1] }).to eq(%w[usage_monitoring_catalog_wallet_alerts usage_monitoring_catalog_wallet_alert_thresholds])
     end
   end
 
