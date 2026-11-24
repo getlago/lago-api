@@ -64,17 +64,40 @@ RSpec.describe IntegrationCustomers::BaseCustomer do
     let(:netsuite_customer) { create(:netsuite_customer) }
     let(:xero_customer) { create(:xero_customer) }
     let(:anrok_customer) { create(:anrok_customer) }
+    let(:avalara_customer) { create(:avalara_customer) }
     let(:hubspot_customer) { create(:hubspot_customer) }
+    let(:salesforce_customer) { create(:salesforce_customer) }
 
     before do
       netsuite_customer
       xero_customer
       anrok_customer
+      avalara_customer
       hubspot_customer
+      salesforce_customer
     end
 
     it "returns only accounting kind customers" do
       expect(described_class.accounting_kind).to contain_exactly(netsuite_customer, xero_customer)
+    end
+
+    it "filters on the accounting types of CATEGORY_BY_TYPE" do
+      accounting_types = described_class::CATEGORY_BY_TYPE.select { |_, category| category == "accounting" }.keys
+
+      expect(described_class.accounting_kind.where_values_hash["type"]).to match_array(accounting_types)
+    end
+
+    context "when CATEGORY_BY_TYPE maps another type to accounting" do
+      before do
+        stub_const(
+          "#{described_class}::CATEGORY_BY_TYPE",
+          described_class::CATEGORY_BY_TYPE.merge("IntegrationCustomers::HubspotCustomer" => "accounting")
+        )
+      end
+
+      it "includes links of that type" do
+        expect(described_class.accounting_kind).to contain_exactly(netsuite_customer, xero_customer, hubspot_customer)
+      end
     end
   end
 
