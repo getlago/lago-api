@@ -162,6 +162,20 @@ RSpec.describe Api::V2::Contracts::AlertsController do
       end
     end
 
+    context "with a with_product_filters that is not a boolean" do
+      let(:create_params) { super().except(:product_filter_code).merge(with_product_filters: "no") }
+
+      it "returns a validation error on with_product_filters" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "with_product_filters", meta: {}}]
+        )
+      end
+    end
+
     context "with with_product_filters on a product filter" do
       let(:create_params) { super().merge(with_product_filters: true) }
 

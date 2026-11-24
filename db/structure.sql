@@ -1299,7 +1299,7 @@ DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_product_filter_i
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_organization_id;
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_billable_metric_id;
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_by_period;
-DROP INDEX IF EXISTS public.idx_contract_alerts_scope_unique;
+DROP INDEX IF EXISTS public.idx_contract_alerts_scope_with_filters_unique;
 DROP INDEX IF EXISTS public.idx_contract_alerts_code_unique;
 DROP INDEX IF EXISTS public.idx_contract_activity_unique;
 DROP INDEX IF EXISTS public.idx_contract_activities_enqueued_per_org;
@@ -9384,10 +9384,10 @@ CREATE UNIQUE INDEX idx_contract_alerts_code_unique ON public.usage_monitoring_c
 
 
 --
--- Name: idx_contract_alerts_scope_unique; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_contract_alerts_scope_with_filters_unique; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_contract_alerts_scope_unique ON public.usage_monitoring_contract_alerts USING btree (organization_id, contract_external_id, alert_type, product_id, product_filter_id) NULLS NOT DISTINCT WHERE (deleted_at IS NULL);
+CREATE UNIQUE INDEX idx_contract_alerts_scope_with_filters_unique ON public.usage_monitoring_contract_alerts USING btree (organization_id, contract_external_id, alert_type, product_id, product_filter_id, with_product_filters) NULLS NOT DISTINCT WHERE (deleted_at IS NULL);
 
 
 --
@@ -18871,6 +18871,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261124113226'),
 ('20261123185222'),
 ('20261123142220'),
 ('20261123142148'),
