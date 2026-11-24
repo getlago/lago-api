@@ -205,6 +205,46 @@ RSpec.describe Integrations::QuickbooksIntegration do
     end
   end
 
+  describe "#realm_id_mismatch" do
+    it "assigns and retrieve a setting" do
+      quickbooks_integration.realm_id_mismatch = true
+      quickbooks_integration.save!
+
+      expect(quickbooks_integration.reload.realm_id_mismatch).to eq(true)
+    end
+
+    it "returns nil when absent from the settings" do
+      quickbooks_integration.save!
+
+      expect(quickbooks_integration.reload.settings).not_to have_key("realm_id_mismatch")
+      expect(quickbooks_integration.realm_id_mismatch).to be_nil
+    end
+  end
+
+  describe "#realm_id_mismatch?" do
+    [true, "true"].each do |value|
+      it "returns true when realm_id_mismatch is #{value.inspect}" do
+        quickbooks_integration.realm_id_mismatch = value
+
+        expect(quickbooks_integration.realm_id_mismatch?).to eq(true)
+      end
+    end
+
+    [false, "false", nil, "yes", 1].each do |value|
+      it "returns false when realm_id_mismatch is #{value.inspect}" do
+        quickbooks_integration.realm_id_mismatch = value
+
+        expect(quickbooks_integration.realm_id_mismatch?).to eq(false)
+      end
+    end
+
+    it "returns false when realm_id_mismatch is absent from the settings" do
+      quickbooks_integration.settings = {realm_id: "1234567890"}
+
+      expect(quickbooks_integration.realm_id_mismatch?).to eq(false)
+    end
+  end
+
   describe "#external_id_key" do
     it "returns id" do
       expect(quickbooks_integration.external_id_key).to eq("id")

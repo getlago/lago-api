@@ -72,6 +72,18 @@ RSpec.describe Integrations::Aggregator::ConnectionService do
     end
   end
 
+  context "when the integration is flagged with a realm id mismatch" do
+    let(:settings) { {realm_id: "1234567890", realm_id_mismatch: true, sandbox:} }
+
+    it "still asks Nango and returns the realm id" do
+      expect(integration.realm_id_mismatch?).to eq(true)
+      expect(result).to be_success
+      expect(result.realm_id).to eq("1234567890")
+      expect(WebMock).to have_requested(:get, connection_url).with(headers: request_headers).once
+      expect(log_output.string).not_to include("QuickBooks call blocked")
+    end
+  end
+
   context "when the integration is a sandbox" do
     let(:sandbox) { true }
     let(:provider_config_key) { "quickbooks-sandbox" }
