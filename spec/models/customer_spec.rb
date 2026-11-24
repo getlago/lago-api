@@ -1334,7 +1334,11 @@ RSpec.describe Customer do
     end
 
     context "when the organization is the shadow of a migration" do
-      let(:migration) { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+      let(:migration) do
+        shadow_organization = Organization.find(organization.id)
+        shadow_organization.update!(clickhouse_events_store: true)
+        create(:billing_engine_migration, organization: create(:organization), shadow_organization:)
+      end
 
       it "enqueues nothing" do
         expect { customer.update!(name: "New name") }.not_to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob)
