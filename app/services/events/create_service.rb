@@ -45,6 +45,7 @@ module Events
       # downstream either.
       enqueue_post_process(event) unless organization.clickhouse_events_store?
       produce_kafka_event(event)
+      BillingEngineMigrations::ApiEventsCopy.enqueue(organization:, events: event)
 
       result
     rescue ActiveRecord::RecordInvalid => e

@@ -81,6 +81,32 @@ RSpec.describe Api::V1::EventsController do
       expect(json[:event][:external_subscription_id]).to eq(subscription.external_id)
     end
 
+    context "when the organization copies its events to a shadow organization" do
+      before { create(:billing_engine_migration, organization:) }
+
+      it "enqueues the copy of the event" do
+        expect { subject }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
+
+        expect(response).to have_http_status(:ok)
+      end
+
+      context "when the copy cannot be enqueued" do
+        before do
+          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_call_original
+          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+            .with(instance_of(BillingEngineMigrations::CopyApiEventsJob))
+            .and_raise(RedisClient::CannotConnectError.new("no connection"))
+        end
+
+        it "answers as without a migration" do
+          expect { subject }.to change(Event, :count).by(1)
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:event][:transaction_id]).to eq(create_params[:transaction_id])
+        end
+      end
+    end
+
     context "with a transaction id longer than the v2 limit" do
       let(:create_params) { super().merge(transaction_id: "a" * 1_001) }
 

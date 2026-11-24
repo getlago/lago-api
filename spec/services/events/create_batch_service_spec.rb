@@ -396,6 +396,36 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
+    context "when the organization copies its events to a shadow organization" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      before { create(:billing_engine_migration, organization:) }
+
+      it "enqueues one copy of the whole batch" do
+        expect { create_batch_service.call }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob).exactly(:once)
+          .with(organization.id, %w[txn_0 txn_1 txn_2].map { hash_including(transaction_id: it, external_subscription_id:) })
+      end
+
+      context "when the copy cannot be enqueued" do
+        before do
+          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(RedisClient::CannotConnectError.new("no connection"))
+        end
+
+        it "accepts the events" do
+          result = create_batch_service.call
+
+          expect(result).to be_success
+          expect(result.events.map(&:transaction_id)).to eq(%w[txn_0 txn_1 txn_2])
+        end
+      end
+    end
+
+    context "when the organization is not migrated" do
+      it "does not enqueue a copy" do
+        expect { create_batch_service.call }.not_to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
+      end
+    end
+
     context "when clickhouse is enabled on the organization" do
       let(:organization) { create(:organization, clickhouse_events_store: true) }
 

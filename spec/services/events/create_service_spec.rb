@@ -254,6 +254,36 @@ RSpec.describe Events::CreateService do
       end
     end
 
+    context "when the organization copies its events to a shadow organization" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      before { create(:billing_engine_migration, organization:) }
+
+      it "enqueues the copy of the event" do
+        expect { create_service.call }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
+          .with(organization.id, [hash_including(transaction_id:, external_subscription_id:, code:)])
+      end
+
+      context "when the copy cannot be enqueued" do
+        before do
+          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(RedisClient::CannotConnectError.new("no connection"))
+        end
+
+        it "accepts the event" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.event.transaction_id).to eq(transaction_id)
+        end
+      end
+    end
+
+    context "when the organization is not migrated" do
+      it "does not enqueue a copy" do
+        expect { create_service.call }.not_to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
+      end
+    end
+
     context "with an expression configured on the billable metric" do
       let(:billable_metric) { create(:sum_billable_metric, code:, organization:, field_name: "result", expression: "event.properties.left + event.properties.right") }
 
