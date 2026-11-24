@@ -12,7 +12,7 @@ RSpec.describe "billing_engine_migrations:parity" do # rubocop:disable RSpec/Des
     create(:customer, organization: shadow_organization, external_id: customer.external_id, timezone: "UTC", currency: "EUR")
   end
   let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls", aggregation_type: :count_agg) }
-  let_it_be(:plan, refind: true) { create(:plan, organization:, interval: "monthly", amount_currency: "EUR") }
+  let_it_be(:plan, freeze: false) { create(:plan, organization:, interval: "monthly", amount_currency: "EUR") }
   let_it_be(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "2"}) }
   let_it_be(:shadow_billable_metric) do
     create(:billable_metric, organization: shadow_organization, code: "api_calls", aggregation_type: :count_agg)
