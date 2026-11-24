@@ -14,7 +14,7 @@ module Integrations
         raise NotImplementedError
       end
 
-      # QuickBooks deactivates items and accounts instead of deleting them, so they must not reach the pickers.
+      # QuickBooks deactivates items, accounts and customers instead of deleting them, so they must not reach the pickers.
       def unavailable_record?(record)
         return false unless integration.is_a?(Integrations::QuickbooksIntegration)
 

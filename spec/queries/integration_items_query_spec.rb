@@ -96,6 +96,82 @@ RSpec.describe IntegrationItemsQuery do
     end
   end
 
+  context "with customer items" do
+    let(:customer_first) do
+      create(:integration_item, integration:, item_type: "customer", external_account_code: nil, external_name: "Acme Corp")
+    end
+    let(:customer_second) do
+      create(:integration_item, integration:, item_type: "customer", external_account_code: nil, external_name: "Beta Inc")
+    end
+    let(:standard_item) { create(:integration_item, integration:, item_type: "standard") }
+    let(:account_item) { create(:integration_item, integration:, item_type: "account") }
+    let(:other_integration_customer) do
+      create(:integration_item, integration: integration_second, item_type: "customer", external_account_code: nil)
+    end
+
+    before do
+      customer_first
+      customer_second
+      standard_item
+      account_item
+      other_integration_customer
+    end
+
+    context "when filtering by customer item type" do
+      let(:filters) { {integration_id: integration.id, item_type: "customer"} }
+
+      it "returns only the customer items of the integration" do
+        expect(returned_ids).to contain_exactly(customer_first.id, customer_second.id)
+        expect(returned_ids).not_to include(standard_item.id)
+        expect(returned_ids).not_to include(account_item.id)
+        expect(returned_ids).not_to include(integration_item_first.id)
+        expect(returned_ids).not_to include(integration_item_fourth.id)
+        expect(returned_ids).not_to include(other_integration_customer.id)
+      end
+    end
+
+    context "when filtering by standard item type" do
+      let(:filters) { {integration_id: integration.id, item_type: "standard"} }
+
+      it "does not return customer items" do
+        expect(returned_ids).to include(standard_item.id)
+        expect(returned_ids).not_to include(customer_first.id)
+        expect(returned_ids).not_to include(customer_second.id)
+      end
+    end
+
+    context "when filtering by account item type" do
+      let(:filters) { {integration_id: integration.id, item_type: "account"} }
+
+      it "does not return customer items" do
+        expect(returned_ids).to contain_exactly(account_item.id)
+        expect(returned_ids).not_to include(customer_first.id)
+        expect(returned_ids).not_to include(customer_second.id)
+      end
+    end
+
+    context "when searching customers by display name" do
+      let(:filters) { {integration_id: integration.id, item_type: "customer"} }
+      let(:search_term) { "Acme" }
+
+      it "returns the matching customer only" do
+        expect(returned_ids).to contain_exactly(customer_first.id)
+        expect(returned_ids).not_to include(customer_second.id)
+      end
+    end
+
+    context "when paginating customers" do
+      let(:filters) { {integration_id: integration.id, item_type: "customer"} }
+      let(:pagination) { {page: 2, limit: 1} }
+
+      it "returns the second customer and counts only customers" do
+        expect(returned_ids).to eq([customer_second.id])
+        expect(result.integration_items.total_count).to eq(2)
+        expect(result.integration_items.total_pages).to eq(2)
+      end
+    end
+  end
+
   context "when searching by name" do
     let(:search_term) { "Findme" }
 
