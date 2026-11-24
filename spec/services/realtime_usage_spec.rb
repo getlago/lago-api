@@ -94,6 +94,19 @@ RSpec.describe RealtimeUsage do
     end
   end
 
+  describe ".consistent_reads", clickhouse: true do
+    def sequential_consistency
+      Clickhouse::BaseRecord.connection.select_value("SELECT getSetting('select_sequential_consistency')").to_i
+    end
+
+    it "reads with sequential consistency inside the block only" do
+      inside = described_class.consistent_reads { sequential_consistency }
+
+      expect(inside).to eq(1)
+      expect(sequential_consistency).to eq(0)
+    end
+  end
+
   describe ".recurring_sum_enabled?" do
     subject(:enabled) { described_class.recurring_sum_enabled?(organization) }
 

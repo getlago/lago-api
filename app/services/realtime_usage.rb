@@ -25,7 +25,18 @@ module RealtimeUsage
   # comparison only opens on charges it found served.
   class RecurringFallbackError < StandardError; end
 
+  # Replicas apply a write seconds apart, so a read after the bucket wait could land on one that lacks the bucket the
+  # wait saw, or the raw events of charges served from the events store. On SharedMergeTree the replica syncs its
+  # parts first, at a few ms per query; on non-replicated tables it is a no-op.
+  CONSISTENT_READ_SETTINGS = {select_sequential_consistency: 1}.freeze
+
   class << self
+    def consistent_reads(&)
+      ::Clickhouse::BaseRecord.with_connection do |connection|
+        connection.with_settings(**CONSISTENT_READ_SETTINGS, &)
+      end
+    end
+
     # Opens the flag and the kill switch for the duration of the block. Reserved for the parity
     # comparison, which has to exercise the bucket path on an organization the flag is off for;
     # production callers never open it.

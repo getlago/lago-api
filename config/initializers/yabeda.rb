@@ -15,8 +15,8 @@ Yabeda.configure do
   default_tag :environment, Rails.env
   default_tag :version, ENV["LAGO_VERSION"] || "unknown"
 
-  # The wallet refresh lane: the consumer reports what a batch did with each customer, the refresh
-  # service reports the wait it owns. No organization, customer or subscription id is ever a tag —
+  # The realtime usage lanes: the wallet refresh consumer reports what a batch did with each customer,
+  # and the bucket wait is reported per lane. No organization, customer or subscription id is ever a tag —
   # the series count has to stay a function of the reason list, not of the customer base.
   group :realtime_usage do
     counter :wallet_refresh_messages_total,
@@ -39,9 +39,10 @@ Yabeda.configure do
       unit: :seconds,
       buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]
 
-    histogram :wallet_refresh_bucket_wait,
-      comment: "Time a refresh spent waiting for the usage buckets to reach the trigger watermark",
+    histogram :bucket_wait,
+      comment: "Time a lane spent waiting for the usage buckets to reach the trigger watermark",
       unit: :seconds,
+      tags: %i[lane],
       buckets: [0.1, 0.25, 0.5, 1, 2, 5]
   end
 
