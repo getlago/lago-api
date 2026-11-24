@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEngineMigrationEventsConsumer, :capture_kafka_messages do
+RSpec.describe BillingEngineMigrationEventsConsumer do
   subject(:consumer) { karafka.consumer_for("raw_events") }
 
   # The topic is unset in tests, so karafka.rb draws no route.
@@ -32,6 +32,7 @@ RSpec.describe BillingEngineMigrationEventsConsumer, :capture_kafka_messages do
   let(:outcomes) { Yabeda.billing_engine_migrations.events_copy_total }
   let(:failures) { Yabeda.billing_engine_migrations.events_copy_failures_total }
   let(:lag) { Yabeda.billing_engine_migrations.events_copy_lag }
+  let(:kafka_messages) { [] }
 
   def raw_event(organization_id, transaction_id, external_subscription_id: "sub-mapped")
     {
@@ -60,6 +61,8 @@ RSpec.describe BillingEngineMigrationEventsConsumer, :capture_kafka_messages do
     allow(outcomes).to receive(:increment)
     allow(failures).to receive(:increment)
     allow(lag).to receive(:measure)
+    # karafka.produce goes through Karafka.producer, so only the copy is stubbed, not the producer.
+    allow(Karafka.producer).to receive(:produce_many_sync) { |messages| kafka_messages.concat(messages) }
 
     karafka.produce(raw_event(organization.id, "tr-1"))
     karafka.produce(raw_event(organization.id, "tr-2", external_subscription_id: "sub-unmapped"))
@@ -124,7 +127,7 @@ RSpec.describe BillingEngineMigrationEventsConsumer, :capture_kafka_messages do
   end
 
   context "when the copy fails" do
-    before { allow(karafka_producer).to receive(:produce_many_sync).and_raise(WaterDrop::Errors::ProduceManyError.new([], "boom")) }
+    before { allow(Karafka.producer).to receive(:produce_many_sync).and_raise(WaterDrop::Errors::ProduceManyError.new([], "boom")) }
 
     it "reports the failure and raises so the batch is retried" do
       expect { consumer.consume }.to raise_error(WaterDrop::Errors::ProduceManyError)
