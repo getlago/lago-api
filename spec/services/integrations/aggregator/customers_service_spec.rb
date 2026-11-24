@@ -119,16 +119,24 @@ RSpec.describe Integrations::Aggregator::CustomersService do
     end
 
     context "when every response has a next cursor" do
+      let!(:old_customer) { create(:integration_item, integration:, item_type: :customer, external_id: "1") }
+
       before do
+        allow(Rails.logger).to receive(:warn)
         allow(lago_client).to receive(:get)
           .with(headers: anything, params: anything)
-          .and_return({"records" => [], "next_cursor" => "c"})
+          .and_return(aggregator_response.merge("next_cursor" => "c"))
       end
 
-      it "stops after the maximum number of requests" do
-        customers_service.call
+      it "stops at the request limit, fails and keeps the existing customer items" do
+        result = customers_service.call
 
-        expect(lago_client).to have_received(:get).exactly(15).times
+        expect(lago_client).to have_received(:get).exactly(25).times
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("integration_customers_limit_exceeded")
+        expect(integration.integration_items.customer.pluck(:id)).to eq([old_customer.id])
+        expect(Rails.logger).to have_received(:warn)
+          .with(%(QuickBooks customers over the fetch limit {"integration_id":"#{integration.id}","fetched":50}))
       end
     end
 

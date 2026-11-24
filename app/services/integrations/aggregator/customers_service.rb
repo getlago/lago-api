@@ -6,47 +6,61 @@ module Integrations
       Result = BaseResult[:customers]
 
       LIMIT = 450
-      MAX_SUBSEQUENT_REQUESTS = 15
+      MAX_REQUESTS = 25
 
       def call
-        @cursor = nil
-        @items = []
+        records = fetch_available_records
+        return result if result.failure?
+
+        ids = []
 
         ActiveRecord::Base.transaction do
-          integration.integration_items.where(item_type: :customer).destroy_all
-
-          MAX_SUBSEQUENT_REQUESTS.times do
-            response = fetch_records(limit: LIMIT, cursor:)
-
-            handle_customers(response["records"].reject { |customer| unavailable_record?(customer) })
-            @cursor = response["next_cursor"]
-
-            break if cursor.blank?
-          end
+          integration.integration_items.where(item_type: :customer).delete_all
+          ids = insert_customers(records)
         end
-        result.customers = items
 
+        result.customers = IntegrationItem.where(id: ids).in_order_of(:id, ids)
         result
       end
 
       private
 
-      attr_reader :cursor, :items
+      def fetch_available_records
+        records = []
+        cursor = nil
 
-      def handle_customers(new_items)
-        new_items.each do |item|
-          integration_item = IntegrationItem.new(
-            organization_id: integration.organization_id,
-            integration:,
-            external_id: item["id"],
-            external_name: item["display_name"],
-            item_type: :customer
-          )
+        MAX_REQUESTS.times do
+          response = fetch_records(limit: LIMIT, cursor:)
+          records.concat(response["records"].reject { |record| unavailable_record?(record) })
+          cursor = response["next_cursor"]
 
-          integration_item.save!
-
-          @items << integration_item
+          return records if cursor.blank?
         end
+
+        Rails.logger.warn(
+          "QuickBooks customers over the fetch limit #{{integration_id: integration.id, fetched: records.size}.to_json}"
+        )
+        result.service_failure!(
+          code: "integration_customers_limit_exceeded",
+          message: "More than #{MAX_REQUESTS * LIMIT} customers to fetch"
+        )
+      end
+
+      # Ids are unique per QuickBooks company, so the uniqueness validation adds nothing,
+      # and a bulk insert keeps customer names out of the versions table.
+      def insert_customers(records)
+        rows = records.uniq { |record| record["id"] }.map do |record|
+          {
+            organization_id: integration.organization_id,
+            integration_id: integration.id,
+            external_id: record["id"],
+            external_name: record["display_name"],
+            item_type: IntegrationItem.item_types[:customer]
+          }
+        end
+        return [] if rows.empty?
+
+        IntegrationItem.insert_all!(rows, returning: %w[id]).rows.flatten # rubocop:disable Rails/SkipsModelValidations
       end
 
       def model

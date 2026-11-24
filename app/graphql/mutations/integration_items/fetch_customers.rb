@@ -17,6 +17,7 @@ module Mutations
 
       def resolve(**args)
         integration = current_organization.integrations.find_by(id: args[:integration_id])
+        return not_found_error(resource: "integration") unless integration.is_a?(::Integrations::QuickbooksIntegration)
 
         ::Integrations::Aggregator::SyncService.call(integration:, options: {only_customers: true})
 

@@ -107,4 +107,28 @@ RSpec.describe Mutations::IntegrationItems::FetchCustomers do
       expect_graphql_error(result:, message: "action_script_runtime_error")
     end
   end
+
+  context "with a Xero integration" do
+    let(:integration) { create(:xero_integration, organization:) }
+
+    it "returns not found and calls nothing" do
+      result = fetch_customers
+
+      expect_graphql_error(result:, message: "Resource not found")
+      expect(sync_request).not_to have_been_requested
+      expect(records_request).not_to have_been_requested
+    end
+  end
+
+  context "with an integration of another organization" do
+    let(:integration) { create(:quickbooks_integration, organization: create(:organization)) }
+
+    it "returns not found and calls nothing" do
+      result = fetch_customers
+
+      expect_graphql_error(result:, message: "Resource not found")
+      expect(sync_request).not_to have_been_requested
+      expect(records_request).not_to have_been_requested
+    end
+  end
 end
