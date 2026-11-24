@@ -82,6 +82,37 @@ RSpec.describe Api::ShadowOrganizationReads, type: :request do
     end
   end
 
+  context "with a read-only POST on an endpoint the migration opens" do
+    let(:v2_read_endpoints) { %w[credit_notes] }
+    let(:shadow_invoice) { create(:invoice, organization: shadow_organization, customer: shadow_customer) }
+    let(:v1_invoice) { create(:invoice, organization:, customer: create(:customer, organization:)) }
+
+    it "estimates a credit note on the shadow organization and writes nothing" do
+      expect { post_with_token(organization, "/api/v2/credit_notes/estimate", {credit_note: {invoice_id: shadow_invoice.id, items: []}}) }
+        .not_to change(CreditNote, :count)
+
+      expect(json[:code]).not_to eq("organization_migration_read_only")
+      expect(served_from).to eq("shadow_organization")
+    end
+
+    it "does not find an invoice of the v1 organization" do
+      post_with_token(organization, "/api/v2/credit_notes/estimate", {credit_note: {invoice_id: v1_invoice.id, items: []}})
+
+      expect(response).to be_v2_not_found_error("invoice")
+      expect(served_from).to eq("shadow_organization")
+    end
+  end
+
+  context "with a read-only POST on an endpoint the migration does not open" do
+    it "answers as before, from the v1 organization" do
+      post_with_token(organization, "/api/v2/credit_notes/estimate", {credit_note: {invoice_id: SecureRandom.uuid, items: []}})
+
+      expect(response).to have_http_status(:forbidden)
+      expect(json[:code]).to eq("feature_unavailable")
+      expect(served_from).to be_nil
+    end
+  end
+
   context "with a GET on an endpoint the migration opens when the shadow organization is not on the product catalog" do
     let(:shadow_organization) { create(:shadow_organization, feature_flags: []) }
 

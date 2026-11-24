@@ -7,6 +7,8 @@ module Api
     extend ActiveSupport::Concern
 
     SERVED_FROM_HEADER = "X-Lago-Served-From"
+    # POST actions that compute an answer and write nothing.
+    READ_ONLY_POST_ACTIONS = {"api/v2/credit_notes" => %w[estimate]}.freeze
 
     included do
       before_action :serve_reads_from_shadow_organization
@@ -25,7 +27,9 @@ module Api
     end
 
     def read_request?
-      request.get? || request.head?
+      return true if request.get? || request.head?
+
+      request.post? && READ_ONLY_POST_ACTIONS.fetch(controller_path, []).include?(action_name)
     end
   end
 end
