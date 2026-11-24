@@ -30,6 +30,22 @@ RSpec.describe IntegrationCustomers::CreateJob do
     end
   end
 
+  describe "#perform with a quickbooks integration" do
+    let(:integration) { create(:quickbooks_integration) }
+    let(:integration_customer_params) do
+      {integration_type: "quickbooks", integration_code: integration.code, sync_with_provider: true}
+    end
+
+    before { allow(Integrations::Aggregator::Contacts::CreateService).to receive(:call) }
+
+    it "succeeds without creating the contact in the provider" do
+      expect { described_class.perform_now(integration_customer_params:, integration:, customer:) }
+        .not_to change(IntegrationCustomers::BaseCustomer, :count)
+
+      expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
+    end
+  end
+
   describe "#lock_key_arguments" do
     it "returns customer and integration for the lock key" do
       job = described_class.new(

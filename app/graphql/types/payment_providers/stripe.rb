@@ -11,6 +11,7 @@ module Types
 
       field :require_terms_of_service_consent, Boolean, null: true
       field :secret_key, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
+      field :seller_profile, String, null: true, permission: "organization:integrations:view"
       field :success_redirect_url, String, null: true, permission: "organization:integrations:view"
       field :supports_3ds, Boolean, null: true
     end

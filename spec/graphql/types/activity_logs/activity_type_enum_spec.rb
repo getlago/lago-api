@@ -98,6 +98,9 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         plan_wallet_created
         plan_wallet_updated
         plan_wallet_deleted
+        contract_wallet_created
+        contract_wallet_updated
+        contract_wallet_deleted
       ]
     )
   end

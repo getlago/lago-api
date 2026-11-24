@@ -10,17 +10,14 @@ class Contract < ApplicationRecord
   include PaperTrailTraceable
   include Terminatable
 
+  self.ignored_columns += %w[billing_time]
+
   STATUSES = {
     draft: "draft",
     pending: "pending",
     active: "active",
     terminated: "terminated",
     canceled: "canceled"
-  }.freeze
-
-  BILLING_TIMES = {
-    calendar: "calendar",
-    anniversary: "anniversary"
   }.freeze
 
   PAYMENT_METHOD_TYPES = {provider: "provider", manual: "manual"}.freeze
@@ -53,7 +50,6 @@ class Contract < ApplicationRecord
   has_one :contract_activity, class_name: "UsageMonitoring::ContractActivity"
 
   enum :status, STATUSES, validate: true
-  enum :billing_time, BILLING_TIMES, validate: true
   enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
 
   # A draft is live (it holds its external id, stays editable and can be
@@ -164,7 +160,6 @@ end
 #
 #  id                           :uuid             not null, primary key
 #  billing_anchor_date          :date
-#  billing_time                 :enum             default("calendar"), not null
 #  canceled_at                  :datetime
 #  code                         :string
 #  consolidate_invoice          :boolean          default(TRUE), not null

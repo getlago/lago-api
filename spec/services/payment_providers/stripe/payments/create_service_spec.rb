@@ -119,6 +119,68 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       end
     end
 
+    context "when the currency is one Stripe reads in hundredths" do
+      let(:currency) { "HUF" }
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 50_000,
+          currency:,
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the amount in Stripe units" do
+        create_service.call
+
+        expect(Stripe::PaymentIntent).to have_received(:create).with(
+          hash_including(amount: 50_000 * 100, currency: "huf"), # 50,000 HUF, which Stripe reads in hundredths
+          anything
+        )
+      end
+
+      context "when the payable is a payment request" do
+        let(:payment_request) do
+          create(:payment_request, customer:, amount_cents: 50_000, currency:, invoices: [invoice])
+        end
+        let(:payment) do
+          create(
+            :payment,
+            payable: payment_request,
+            status: "pending",
+            payment_provider: stripe_payment_provider,
+            payment_provider_customer: stripe_customer,
+            payment_method:,
+            amount_cents: payment_request.total_amount_cents,
+            amount_currency: payment_request.currency,
+            provider_payment_id: nil
+          )
+        end
+
+        it "sends the amount in Stripe units" do
+          create_service.call
+
+          expect(Stripe::PaymentIntent).to have_received(:create).with(
+            hash_including(amount: 50_000 * 100, currency: "huf"), # 50,000 HUF, which Stripe reads in hundredths
+            anything
+          )
+        end
+      end
+    end
+
+    context "when the currency is EUR" do
+      it "sends the amount unchanged" do
+        create_service.call
+
+        expect(Stripe::PaymentIntent).to have_received(:create).with(
+          hash_including(amount: 200, currency: "eur"), # invoice total_amount_cents, EUR has two decimals in Lago and Stripe
+          anything
+        )
+      end
+    end
+
     context "when the invoice has already been paid" do
       before { invoice.update!(payment_status: :succeeded) }
 

@@ -318,6 +318,19 @@ describe Api::V2::PlanWalletsController do
       end
     end
 
+    [["a string", "ai_credits"], ["a list", [{code: "ai_credits"}]]].each do |description, root|
+      context "when the plan_wallet root is #{description}" do
+        let(:create_params) { root }
+
+        it "returns a missing parameter error and adds nothing" do
+          expect { subject }.not_to change(PlanWallet, :count)
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "plan_wallet", meta: {}}])
+        end
+      end
+    end
+
     context "when a tax does not exist" do
       let(:create_params) { super().merge(tax_codes: ["unknown"]) }
 
@@ -487,6 +500,19 @@ describe Api::V2::PlanWalletsController do
         expect(response).to have_http_status(:success)
         expect(json[:plan_wallet]).to include(lago_id: plan_wallet.id, priority: 20)
         expect(json[:plan_wallet].keys).to eq(flat_keys)
+      end
+    end
+
+    [["a string", "ai_credits"], ["a list", [{priority: 20}]]].each do |description, root|
+      context "when the plan_wallet root is #{description}" do
+        let(:update_params) { root }
+
+        it "returns a missing parameter error and changes nothing" do
+          expect { subject }.not_to change { plan_wallet.reload.attributes }
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "plan_wallet", meta: {}}])
+        end
       end
     end
 
