@@ -91,6 +91,14 @@ RSpec.describe ApiKeys::MemberPermissions do
       end
     end
 
+    context "when the member can view contracts" do
+      let(:role) { create(:role, organization:, permissions: %w[contracts:view]) }
+
+      it "grants read on their wallets" do
+        expect(permissions["contract_wallet"]).to eq(["read"])
+      end
+    end
+
     context "when the member can edit plans but not their charges" do
       let(:role) do
         create(:role, organization:, permissions: %w[plans:view plans:create plans:update plans:delete])
