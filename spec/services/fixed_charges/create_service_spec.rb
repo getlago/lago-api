@@ -485,5 +485,19 @@ RSpec.describe FixedCharges::CreateService do
           .once
       end
     end
+
+    context "when an agent storefront sells the plan" do
+      let(:plan) { create(:plan, organization:, amount_cents: 0) }
+      let(:params) { {add_on_id: add_on.id, code: "seat", charge_model: "standard", properties: {amount: "100"}} }
+
+      before { create(:agent_storefront_integration, organization:).update!(plans: [{plan_code: plan.code}]) }
+
+      it "refuses the fixed charge and creates nothing" do
+        expect { result }.not_to change(FixedCharge, :count)
+
+        expect(result).to be_failure
+        expect(result.error.code).to eq("plan_sold_by_agent_storefront")
+      end
+    end
   end
 end

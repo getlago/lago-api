@@ -56,6 +56,8 @@ module Integrations
         "Integrations::HubspotIntegration"
       when "salesforce"
         "Integrations::SalesforceIntegration"
+      when "agent_storefront"
+        "Integrations::AgentStorefrontIntegration"
       else
         raise(NotImplementedError)
       end
