@@ -44,8 +44,9 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     plan_alert
     metric_alert
 
-    allow(RealtimeUsage::BucketWatermark).to receive(:consistent_reads).and_yield
-    allow(RealtimeUsage::BucketWatermark).to receive(:wait).and_return(wait_reason)
+    allow(RealtimeUsage).to receive(:consistent_reads).and_yield
+    allow(RealtimeUsage::WaitForBucketsService).to receive(:call)
+      .and_return(RealtimeUsage::WaitForBucketsService::Result.new.tap { it.reason = wait_reason })
     allow(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to receive(:call!)
     allow(outcomes).to receive(:increment)
     allow(latency).to receive(:measure)
@@ -70,11 +71,12 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
   it "waits for the buckets to reach the trigger watermark, with consistent reads" do
     consumer.consume
 
-    expect(RealtimeUsage::BucketWatermark).to have_received(:consistent_reads)
-    expect(RealtimeUsage::BucketWatermark).to have_received(:wait).with(
+    expect(RealtimeUsage).to have_received(:consistent_reads)
+    expect(RealtimeUsage::WaitForBucketsService).to have_received(:call).with(
       organization_id: organization.id,
       pending: {subscription.id => watermark_ms},
-      lane: :usage_alerts
+      lane: :usage_alerts,
+      log_context: {subscription_id: subscription.id}
     )
   end
 
@@ -106,10 +108,11 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "evaluates once, at the latest watermark, the alerts of every metric of the batch" do
       consumer.consume
 
-      expect(RealtimeUsage::BucketWatermark).to have_received(:wait).with(
+      expect(RealtimeUsage::WaitForBucketsService).to have_received(:call).with(
         organization_id: organization.id,
         pending: {subscription.id => watermark_ms + 1000},
-        lane: :usage_alerts
+        lane: :usage_alerts,
+        log_context: {subscription_id: subscription.id}
       ).once
       expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to have_received(:call!)
         .with(subscription:, alerts: contain_exactly(plan_alert, metric_alert, other_metric_alert)).once
@@ -125,7 +128,7 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "does not wait or evaluate" do
       consumer.consume
 
-      expect(RealtimeUsage::BucketWatermark).not_to have_received(:wait)
+      expect(RealtimeUsage::WaitForBucketsService).not_to have_received(:call)
       expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "no_alert"}, by: 1)
     end
@@ -247,7 +250,7 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
 
   context "when the bucket wait raises" do
     before do
-      allow(RealtimeUsage::BucketWatermark).to receive(:wait).and_raise(Errno::ECONNREFUSED)
+      allow(RealtimeUsage::WaitForBucketsService).to receive(:call).and_raise(Errno::ECONNREFUSED)
       allow(Rails.logger).to receive(:error)
       allow(Sentry).to receive(:capture_exception)
     end

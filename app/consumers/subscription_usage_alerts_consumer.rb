@@ -48,7 +48,7 @@ class SubscriptionUsageAlertsConsumer < ApplicationConsumer
     watermark_ms = subscription_payloads.filter_map { it["last_ingested_at"] }.max
     return report(:skipped, :no_watermark) if watermark_ms.nil?
 
-    reason = RealtimeUsage::BucketWatermark.consistent_reads { evaluate(subscription, alerts, watermark_ms) }
+    reason = RealtimeUsage.consistent_reads { evaluate(subscription, alerts, watermark_ms) }
     return report(:skipped, reason) if reason
 
     report(:evaluated, :none)
@@ -66,11 +66,12 @@ class SubscriptionUsageAlertsConsumer < ApplicationConsumer
   # Evaluating on buckets that have not caught up would stamp the alert with an older usage than
   # the one the event made, so a timeout leaves the subscription to the sweep.
   def evaluate(subscription, alerts, watermark_ms)
-    wait_reason = RealtimeUsage::BucketWatermark.wait(
+    wait_reason = RealtimeUsage::WaitForBucketsService.call(
       organization_id: subscription.organization_id,
       pending: {subscription.id => watermark_ms},
-      lane: :usage_alerts
-    )
+      lane: :usage_alerts,
+      log_context: {subscription_id: subscription.id}
+    ).reason
     return wait_reason if wait_reason
 
     started_at = Time.current
