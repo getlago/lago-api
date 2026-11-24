@@ -30,9 +30,8 @@ class ContractRateCard < ApplicationRecord
     periodic.pending.where(organization_id: card.organization_id).earliest_per_contract_rate_card
   }, class_name: "BillingOperation"
   has_one :latest_completed_periodic_operation, ->(card) {
-    periodic.completed.where(organization_id: card.organization_id, action_type: card.periodic_billing_action, cancelled_at: nil)
+    periodic_history(organization_id: card.organization_id, action_type: card.periodic_billing_action).completed
       .select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
-      .order(:contract_rate_card_id, billing_at: :desc, created_at: :desc, id: :desc)
   }, class_name: "BillingOperation"
   has_many :daily_usages
   has_many :fees
