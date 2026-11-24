@@ -57,14 +57,16 @@ module UsageMonitoring
     end
 
     def evaluate(current, now)
-      # Re-baselining discards the evidence a recovery would be measured against, so it replaces the resolution.
+      # The cards of a contract rebaseline one by one. Its types never roll over as a whole (period_rolled_over?),
+      # so resolution still runs, on the cards still in their window: a renewal alone resolves nothing.
       if alert.is_a?(ContractAlert)
         windows = alert.windows_in_scope(current_metrics)
-        rebaselined = rebaseline_renewed_windows(windows)
-      else
-        rebaselined = period_rolled_over? && alert.window_resets_each_period?(alertable)
-        alert.previous_value = 0 if rebaselined
+        rebaseline_renewed_windows(windows)
       end
+
+      # Re-baselining discards the evidence a recovery would be measured against, so it replaces the resolution.
+      rebaselined = period_rolled_over? && alert.window_resets_each_period?(alertable)
+      alert.previous_value = 0 if rebaselined
 
       crossed_threshold_values = alert.find_thresholds_crossed(current)
 
@@ -82,11 +84,11 @@ module UsageMonitoring
     # measuring the window of the last evaluation. Summing them rather than subtracting the others from
     # previous_value, which is rounded to its column, takes a single card back to exactly 0.
     def rebaseline_renewed_windows(windows)
-      kept = alert.previous_windows.select { |id, _| alert.same_window?(id, windows[id]) }
-      rebaselined = kept.size < alert.previous_windows.size
+      kept = alert.previous_windows.select { |slice, _| alert.same_window?(slice, windows[slice]) }
 
-      alert.previous_value = kept.values.sum(BigDecimal(0)) { BigDecimal(it["value"]) } if rebaselined
-      rebaselined
+      if kept.size < alert.previous_windows.size
+        alert.previous_value = kept.values.sum(BigDecimal(0)) { BigDecimal(it["value"]) }
+      end
     end
 
     def period_rolled_over?

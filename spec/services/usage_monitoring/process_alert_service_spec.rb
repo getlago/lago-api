@@ -687,6 +687,8 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
       let(:opus_card) { card_of(llm_tokens, opus) }
       let(:sonnet_card) { card_of(llm_tokens, sonnet) }
+      let(:opus_slice) { "#{llm_tokens.id}/#{opus.id}" }
+      let(:sonnet_slice) { "#{llm_tokens.id}/#{sonnet.id}" }
       let(:thresholds) { [1_000_000, 2_000_000] }
       let(:previous_value) { 0 }
       let(:previous_windows) { {} }
@@ -706,9 +708,9 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
       before { freeze_time }
 
-      def card_of(product, product_filter = nil, on: contract)
+      def card_of(product, product_filter = nil)
         rate_card = build_stubbed(:rate_card, organization:, product:, product_filter:)
-        build_stubbed(:contract_rate_card, organization:, contract: on, rate_card:)
+        build_stubbed(:contract_rate_card, organization:, contract:, rate_card:)
       end
 
       def card_usage(contract_rate_card, started_at, units, amount_cents: 0)
@@ -720,13 +722,17 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         )
       end
 
-      def evaluate(*rate_card_usages)
-        usage = Contracts::CurrentUsageService::Result.new.tap { it.rate_card_usages = rate_card_usages }
-        described_class.call!(alert:, alertable: contract, current_metrics: usage)
+      def evaluate(*rate_card_usages, measured_at: nil)
+        usage = Contracts::CurrentUsageService::Result.new.tap do
+          it.contract = contract
+          it.rate_card_usages = rate_card_usages
+        end
+        described_class.call!(alert:, alertable: contract, current_metrics: usage, measured_at:)
       end
 
+      # The start of a window is stored in the customer's local time, UTC unless a spec sets a timezone
       def window(started_at, value)
-        {"started_at" => started_at && Time.zone.parse(started_at).utc.iso8601(6), "value" => BigDecimal(value).to_s("F")}
+        {"started_at" => started_at && Time.zone.parse(started_at).strftime("%Y-%m-%dT%H:%M:%S.%6N"), "value" => BigDecimal(value).to_s("F")}
       end
 
       def record_alarm(code, value)
@@ -751,7 +757,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(SendWebhookJob).to have_been_enqueued.once.with("alert.triggered", triggered)
           expect(alert.reload).to have_attributes(
             previous_value: 2_500_000,
-            previous_windows: {opus_card.id => window("2026-11-01", 2_500_000)},
+            previous_windows: {opus_slice => window("2026-11-01", 2_500_000)},
             last_processed_at: Time.current
           )
         end
@@ -759,7 +765,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
       context "when the usage lands on a threshold" do
         let(:previous_value) { 900_000 }
-        let(:previous_windows) { {opus_card.id => window("2026-11-01", 900_000)} }
+        let(:previous_windows) { {opus_slice => window("2026-11-01", 900_000)} }
         let(:rate_card_usages) { [card_usage(opus_card, "2026-11-01", 1_000_000)] }
 
         it "triggers it" do
@@ -773,7 +779,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
       context "when the usage goes down in the same window" do
         let(:previous_value) { 2_500_000 }
-        let(:previous_windows) { {opus_card.id => window("2026-11-01", 2_500_000)} }
+        let(:previous_windows) { {opus_slice => window("2026-11-01", 2_500_000)} }
         let(:rate_card_usages) { [card_usage(opus_card, "2026-11-01", 1_500_000)] }
         let(:high) { alert.thresholds.find_by(value: 2_000_000) }
 
@@ -792,13 +798,13 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           )
           expect(resolved.crossed_thresholds).to eq([{"code" => high.code, "value" => "2000000.0", "recurring" => false}])
           expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
-          expect(alert.reload.previous_windows).to eq(opus_card.id => window("2026-11-01", 1_500_000))
+          expect(alert.reload.previous_windows).to eq(opus_slice => window("2026-11-01", 1_500_000))
         end
       end
 
       context "when the usage goes back under a threshold not opted in to resolutions" do
         let(:previous_value) { 1_200_000 }
-        let(:previous_windows) { {opus_card.id => window("2026-11-01", 1_200_000)} }
+        let(:previous_windows) { {opus_slice => window("2026-11-01", 1_200_000)} }
         let(:rate_card_usages) { [card_usage(opus_card, "2026-11-01", 900_000)] }
 
         before { record_alarm(warn.code, 1_000_000) }
@@ -809,14 +815,14 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(SendWebhookJob).not_to have_been_enqueued
           expect(alert.reload).to have_attributes(
             previous_value: 900_000,
-            previous_windows: {opus_card.id => window("2026-11-01", 900_000)}
+            previous_windows: {opus_slice => window("2026-11-01", 900_000)}
           )
         end
       end
 
       context "when no card prices the scope" do
         let(:previous_value) { 1_200_000 }
-        let(:previous_windows) { {opus_card.id => window("2026-11-01", 1_200_000)} }
+        let(:previous_windows) { {opus_slice => window("2026-11-01", 1_200_000)} }
         let(:rate_card_usages) { [card_usage(sonnet_card, "2026-11-02", 500_000)] }
 
         it "skips the evaluation and keeps the stored baseline" do
@@ -826,7 +832,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(SendWebhookJob).not_to have_been_enqueued
           expect(alert.reload).to have_attributes(
             previous_value: 1_200_000,
-            previous_windows: {opus_card.id => window("2026-11-01", 1_200_000)},
+            previous_windows: {opus_slice => window("2026-11-01", 1_200_000)},
             last_processed_at: Time.current
           )
         end
@@ -858,15 +864,15 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(triggered.crossed_thresholds).to eq([{"code" => "warn15000", "value" => "15000.0", "recurring" => false}])
           expect(SendWebhookJob).to have_been_enqueued.once.with("alert.triggered", triggered)
           expect(alert.reload.previous_windows).to eq(
-            opus_card.id => window("2026-11-01", 80_00),
-            video_minutes_card.id => window("2026-11-01", 75_00)
+            opus_slice => window("2026-11-01", 80_00),
+            video_minutes.id => window("2026-11-01", 75_00)
           )
         end
       end
 
       context "when the card starts a new window" do
         let(:previous_value) { 1_200_000 }
-        let(:previous_windows) { {opus_card.id => window("2026-11-01", 1_200_000)} }
+        let(:previous_windows) { {opus_slice => window("2026-11-01", 1_200_000)} }
         let(:rate_card_usages) { [card_usage(opus_card, "2026-12-01", 50_000)] }
 
         before do
@@ -880,7 +886,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(SendWebhookJob).not_to have_been_enqueued
           expect(alert.reload).to have_attributes(
             previous_value: 50_000,
-            previous_windows: {opus_card.id => window("2026-12-01", 50_000)}
+            previous_windows: {opus_slice => window("2026-12-01", 50_000)}
           )
         end
 
@@ -900,7 +906,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       context "when the scope covers cards renewing on different cadences" do
         let(:alert) do
           create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id,
-            product: llm_tokens, thresholds: [1_000_000])
+            product: llm_tokens, with_product_filters: true, thresholds: [1_000_000])
         end
 
         before { warn.update!(notify_on: %w[triggered resolved]) }
@@ -916,7 +922,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(alert.all_triggered_alerts.count).to eq(1)
           expect(alert.reload).to have_attributes(
             previous_value: 905_000,
-            previous_windows: {opus_card.id => window("2026-11-01", 905_000)}
+            previous_windows: {opus_slice => window("2026-11-01", 905_000)}
           )
 
           # Nov 11
@@ -933,7 +939,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       context "when usage arrives between a card's renewal and the next evaluation" do
         let(:alert) do
           create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id,
-            product: llm_tokens, thresholds: [2_000_000])
+            product: llm_tokens, with_product_filters: true, thresholds: [2_000_000])
         end
 
         it "reports the crossing reached since the renewal" do
@@ -951,9 +957,109 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         end
       end
 
+      context "when a card renews while another stays in its window" do
+        let(:alert) do
+          create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id,
+            product: llm_tokens, with_product_filters: true, thresholds:, previous_value:, previous_windows:)
+        end
+        let(:high) { alert.thresholds.find_by(value: 2_000_000) }
+        let(:previous_value) { 1_500_000 + 600_000 }
+        let(:previous_windows) do
+          {opus_slice => window("2026-11-01", 1_500_000), sonnet_slice => window("2026-11-02", 600_000)}
+        end
+
+        before do
+          [warn, high].each { it.update!(notify_on: %w[triggered resolved]) }
+          record_alarm(warn.code, 1_000_000)
+          record_alarm(high.code, 2_000_000)
+        end
+
+        context "when the renewal alone takes the usage back under a threshold" do
+          let(:rate_card_usages) { [card_usage(opus_card, "2026-11-01", 1_510_000), card_usage(sonnet_card, "2026-11-09", 0)] }
+
+          it "resolves nothing, as a renewal is not a recovery" do
+            expect { result }.not_to change { alert.all_triggered_alerts.count }
+
+            expect(SendWebhookJob).not_to have_been_enqueued
+            expect(alert.reload).to have_attributes(
+              previous_value: 1_510_000,
+              previous_windows: {opus_slice => window("2026-11-01", 1_510_000)}
+            )
+          end
+        end
+
+        context "when the card still in its window goes down too" do
+          let(:rate_card_usages) { [card_usage(opus_card, "2026-11-01", 800_000), card_usage(sonnet_card, "2026-11-09", 0)] }
+
+          it "resolves the thresholds that card went back under" do
+            expect(result).to be_success
+
+            # Measured from Opus's 1.5M, the only card still in its window: 2M left the alarm with Sonnet's renewal
+            resolved = alert.all_triggered_alerts.find_by!(kind: :resolved)
+            expect(resolved).to have_attributes(
+              resolution_reason: "recovered", previous_value: 1_500_000, current_value: 800_000,
+              in_alarm_thresholds: [], fully_resolved: true
+            )
+            expect(resolved.crossed_thresholds).to eq([{"code" => warn.code, "value" => "1000000.0", "recurring" => false}])
+            expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
+          end
+        end
+      end
+
+      context "when an older usage reaches the alert after a newer one" do
+        let(:alert) do
+          create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id,
+            product: llm_tokens, with_product_filters: true, thresholds: [1_000_000], previous_value: 990_000 + 700_000,
+            previous_windows: {opus_slice => window("2026-11-01", 990_000), sonnet_slice => window("2026-11-02", 700_000)})
+        end
+        let(:renewed_at) { Time.zone.parse("2026-11-09T00:00:01Z") }
+
+        before { record_alarm(warn.code, 1_000_000) }
+
+        it "skips the older usage, which would cross the threshold again" do
+          expect do
+            # Measured just after Sonnet renewed, and processed first
+            evaluate(card_usage(opus_card, "2026-11-01", 990_000), card_usage(sonnet_card, "2026-11-09", 0), measured_at: renewed_at)
+            # Measured just before, still in Sonnet's old window, and processed last
+            evaluate(
+              card_usage(opus_card, "2026-11-01", 990_000), card_usage(sonnet_card, "2026-11-02", 700_000),
+              measured_at: renewed_at - 2.seconds
+            )
+          end.not_to change { alert.all_triggered_alerts.count }
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+          expect(alert.reload).to have_attributes(
+            previous_value: 990_000,
+            previous_windows: {opus_slice => window("2026-11-01", 990_000)},
+            last_processed_at: renewed_at
+          )
+        end
+      end
+
+      context "when the customer moves to another timezone" do
+        let(:contract) { create(:contract, organization:, customer: create(:customer, organization:, timezone: "Asia/Tokyo")) }
+        let(:previous_value) { 1_200_000 }
+        # Stored while the customer was on UTC
+        let(:previous_windows) { {opus_slice => window("2026-11-01", 1_200_000)} }
+        # Nov 1 at midnight in Tokyo
+        let(:rate_card_usages) { [card_usage(opus_card, "2026-10-31T15:00:00Z", 1_250_000)] }
+
+        before { record_alarm(warn.code, 1_000_000) }
+
+        it "keeps measuring the same window, without crossing the thresholds again" do
+          expect { result }.not_to change { alert.all_triggered_alerts.count }
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+          expect(alert.reload).to have_attributes(
+            previous_value: 1_250_000,
+            previous_windows: {opus_slice => window("2026-11-01", 1_250_000)}
+          )
+        end
+      end
+
       context "when a new version of the card takes over" do
         let(:previous_value) { 1_200_000 }
-        let(:previous_windows) { {opus_card.id => window("2026-11-01", 1_200_000)} }
+        let(:previous_windows) { {opus_slice => window("2026-11-01", 1_200_000)} }
         let(:opus_next_version) { card_of(llm_tokens, opus) }
         let(:rate_card_usages) { [card_usage(opus_next_version, "2026-11-15", 200_000)] }
 
@@ -968,19 +1074,16 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(SendWebhookJob).not_to have_been_enqueued
           expect(alert.reload).to have_attributes(
             previous_value: 200_000,
-            previous_windows: {opus_next_version.id => window("2026-11-15", 200_000)}
+            previous_windows: {opus_slice => window("2026-11-15", 200_000)}
           )
         end
       end
 
       context "when a replacement contract takes the external id" do
-        let_it_be(:terminated_contract) do
-          create(:contract, :terminated, organization:, external_id: contract.external_id)
-        end
-
-        let(:terminated_opus_card) { card_of(llm_tokens, opus, on: terminated_contract) }
         let(:previous_value) { 1_200_000 }
-        let(:previous_windows) { {terminated_opus_card.id => window("2026-11-01", 1_200_000)} }
+        # Stored by the Opus card of the contract it replaces, in that contract's window
+        let(:previous_windows) { {opus_slice => window("2026-11-01", 1_200_000)} }
+        # The replacement's card opens its window with the contract
         let(:rate_card_usages) { [card_usage(opus_card, "2026-11-20", 1_050_000)] }
 
         it "evaluates the new contract from 0" do
@@ -988,7 +1091,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
           triggered = alert.all_triggered_alerts.sole
           expect(triggered).to have_attributes(contract:, previous_value: 0, current_value: 1_050_000)
-          expect(alert.reload.previous_windows).to eq(opus_card.id => window("2026-11-20", 1_050_000))
+          expect(alert.reload.previous_windows).to eq(opus_slice => window("2026-11-20", 1_050_000))
         end
       end
 
@@ -1000,7 +1103,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         let(:seats_card) { card_of(seats) }
         let(:alert) do
           create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id,
-            product: seats, thresholds: [100], previous_value: 120, previous_windows: {seats_card.id => window(nil, 120)})
+            product: seats, thresholds: [100], previous_value: 120, previous_windows: {seats.id => window(nil, 120)})
         end
         let(:high) { alert.thresholds.sole }
         let(:rate_card_usages) { [card_usage(seats_card, "2026-12-01", 80)] }
@@ -1019,7 +1122,19 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
             in_alarm_thresholds: [], fully_resolved: true
           )
           expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
-          expect(alert.reload.previous_windows).to eq(seats_card.id => window(nil, 80))
+          expect(alert.reload.previous_windows).to eq(seats.id => window(nil, 80))
+        end
+
+        context "when another card takes over the product" do
+          # A new version, or the card of a replacement contract: either way the usage carries over
+          let(:rate_card_usages) { [card_usage(card_of(seats), "2026-11-15", 125)] }
+
+          it "keeps the baseline, without crossing the threshold again" do
+            expect { result }.not_to change { alert.all_triggered_alerts.count }
+
+            expect(SendWebhookJob).not_to have_been_enqueued
+            expect(alert.reload).to have_attributes(previous_value: 125, previous_windows: {seats.id => window(nil, 125)})
+          end
         end
       end
     end

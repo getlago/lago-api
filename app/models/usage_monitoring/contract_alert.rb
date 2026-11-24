@@ -55,8 +55,10 @@ module UsageMonitoring
 
         if product_id.nil?
           rate_card.product.metered?
+        elsif product_filter_id.nil?
+          rate_card.product_id == product_id && (with_product_filters || rate_card.product_filter_id.nil?)
         else
-          rate_card.product_id == product_id && (product_filter_id.nil? || rate_card.product_filter_id == product_filter_id)
+          rate_card.product_id == product_id && rate_card.product_filter_id == product_filter_id
         end
       end
     end
@@ -66,18 +68,28 @@ module UsageMonitoring
       cards.sum(BigDecimal(0)) { card_value(it) } if cards.any?
     end
 
-    # Each card in scope, keyed by its id, with the start of the window it measures and its value, in the shape
-    # previous_windows stores them. A recurring metric carries its usage over renewals, so its card has no window.
+    # Each card in scope, with the start of the window it measures and its value, in the shape previous_windows
+    # stores them. Keyed by product and filter, as a new version of a card or the card of a replacement contract
+    # reads the same events. The start is in the customer's local time, which a change of timezone keeps, and a
+    # recurring metric carries its usage over renewals, so its card has no window.
     def windows_in_scope(usage)
+      timezone = usage.contract.customer.applicable_timezone
+
       cards_in_scope(usage).to_h do |card_usage|
-        started_at = card_usage.billing_segment.started_at.utc.iso8601(6) unless recurring_card?(card_usage)
-        [card_usage.contract_rate_card.id, {"started_at" => started_at, "value" => card_value(card_usage).to_s("F")}]
+        rate_card = card_usage.contract_rate_card.rate_card
+        unless recurring_card?(card_usage)
+          started_at = card_usage.billing_segment.started_at.in_time_zone(timezone).strftime("%Y-%m-%dT%H:%M:%S.%6N")
+        end
+
+        [
+          [rate_card.product_id, rate_card.product_filter_id].compact.join("/"),
+          {"started_at" => started_at, "value" => card_value(card_usage).to_s("F")}
+        ]
       end
     end
 
-    def same_window?(contract_rate_card_id, window)
-      previous_windows.key?(contract_rate_card_id) && !window.nil? &&
-        previous_windows[contract_rate_card_id]["started_at"] == window["started_at"]
+    def same_window?(slice, window)
+      previous_windows.key?(slice) && !window.nil? && previous_windows[slice]["started_at"] == window["started_at"]
     end
 
     def card_value(_card_usage)

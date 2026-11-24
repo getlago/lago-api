@@ -20,6 +20,8 @@ RSpec.describe UsageMonitoring::ContractAlert do
   let(:llm_tokens_card) { card_of(llm_tokens) }
   let(:video_minutes_card) { card_of(video_minutes) }
   let(:platform_card) { card_of(platform) }
+  let(:opus_slice) { "#{llm_tokens.id}/#{opus.id}" }
+  let(:sonnet_slice) { "#{llm_tokens.id}/#{sonnet.id}" }
 
   let(:usage) do
     contract_usage(
@@ -45,8 +47,11 @@ RSpec.describe UsageMonitoring::ContractAlert do
     )
   end
 
-  def contract_usage(*rate_card_usages)
-    Contracts::CurrentUsageService::Result.new.tap { it.rate_card_usages = rate_card_usages }
+  def contract_usage(*rate_card_usages, on: contract)
+    Contracts::CurrentUsageService::Result.new.tap do
+      it.contract = on
+      it.rate_card_usages = rate_card_usages
+    end
   end
 
   describe "enums" do
@@ -203,8 +208,18 @@ RSpec.describe UsageMonitoring::ContractAlert do
     context "with a product" do
       let(:alert) { build(:contract_usage_units_alert, contract_external_id: contract.external_id, product: llm_tokens) }
 
-      it "keeps its default card and its filter cards" do
-        expect(cards).to eq([opus_card, sonnet_card, llm_tokens_card])
+      it "keeps its default card only" do
+        expect(cards).to eq([llm_tokens_card])
+      end
+
+      context "with its filters" do
+        let(:alert) do
+          build(:contract_usage_units_alert, contract_external_id: contract.external_id, product: llm_tokens, with_product_filters: true)
+        end
+
+        it "keeps its filter cards and its default card" do
+          expect(cards).to eq([opus_card, sonnet_card, llm_tokens_card])
+        end
       end
     end
 
@@ -230,9 +245,32 @@ RSpec.describe UsageMonitoring::ContractAlert do
     context "with units of a product" do
       let(:alert) { build(:contract_usage_units_alert, contract_external_id: contract.external_id, product: llm_tokens) }
 
-      it "sums the units of its filter cards and of its default card" do
-        # opus + sonnet + the events no filter matches
-        expect(value).to eq(600_000 + 500_000 + 10_000)
+      it "returns the units of its default card, the events no filter matches" do
+        expect(value).to eq(10_000)
+      end
+
+      context "with its filters" do
+        let(:alert) do
+          build(:contract_usage_units_alert, contract_external_id: contract.external_id, product: llm_tokens, with_product_filters: true)
+        end
+
+        it "sums the units of its filter cards and of its default card" do
+          # opus + sonnet + the events no filter matches
+          expect(value).to eq(600_000 + 500_000 + 10_000)
+        end
+      end
+
+      context "when the contract prices the product through its filters only" do
+        let(:usage) do
+          contract_usage(
+            card_usage(opus_card, "2026-11-01", units: 600_000, amount_cents: 300_00),
+            card_usage(sonnet_card, "2026-11-02", units: 500_000, amount_cents: 200_00)
+          )
+        end
+
+        it "returns nil, so the alert is skipped" do
+          expect(value).to be_nil
+        end
       end
     end
 
@@ -259,7 +297,9 @@ RSpec.describe UsageMonitoring::ContractAlert do
   describe "#windows_in_scope" do
     subject(:windows) { alert.windows_in_scope(usage) }
 
-    let(:alert) { build(:contract_usage_units_alert, contract_external_id: contract.external_id, product: llm_tokens) }
+    let(:alert) do
+      build(:contract_usage_units_alert, contract_external_id: contract.external_id, product: llm_tokens, with_product_filters: true)
+    end
     let(:usage) do
       contract_usage(
         card_usage(opus_card, "2026-11-01", units: 600_000, amount_cents: 300_00),
@@ -268,11 +308,33 @@ RSpec.describe UsageMonitoring::ContractAlert do
       )
     end
 
-    it "keys each card in scope by its id, with the start of its window and its value, cards without usage included" do
+    it "keys each card in scope by its product and filter, with the start of its window and its value, cards without usage included" do
       expect(windows).to eq(
-        opus_card.id => {"started_at" => "2026-11-01T00:00:00.000000Z", "value" => "600000.0"},
-        sonnet_card.id => {"started_at" => "2026-11-09T00:00:00.000000Z", "value" => "0.0"}
+        opus_slice => {"started_at" => "2026-11-01T00:00:00.000000", "value" => "600000.0"},
+        sonnet_slice => {"started_at" => "2026-11-09T00:00:00.000000", "value" => "0.0"}
       )
+    end
+
+    context "with a default card" do
+      let(:usage) { contract_usage(card_usage(llm_tokens_card, "2026-11-01", units: 10_000, amount_cents: 50_00)) }
+
+      it "keys it by its product" do
+        expect(windows).to eq(llm_tokens.id => {"started_at" => "2026-11-01T00:00:00.000000", "value" => "10000.0"})
+      end
+    end
+
+    context "when the customer has a timezone" do
+      let(:usage) do
+        customer = build_stubbed(:customer, timezone: "Asia/Tokyo")
+        contract_usage(
+          card_usage(opus_card, "2026-10-31T15:00:00Z", units: 600_000, amount_cents: 300_00),
+          on: build_stubbed(:contract, customer:)
+        )
+      end
+
+      it "gives the start of the window in the customer's local time" do
+        expect(windows).to eq(opus_slice => {"started_at" => "2026-11-01T00:00:00.000000", "value" => "600000.0"})
+      end
     end
 
     context "when a card meters a recurring metric" do
@@ -282,8 +344,8 @@ RSpec.describe UsageMonitoring::ContractAlert do
 
       it "gives it no window start, as its usage carries over renewals" do
         expect(windows).to eq(
-          opus_card.id => {"started_at" => nil, "value" => "600000.0"},
-          sonnet_card.id => {"started_at" => nil, "value" => "0.0"}
+          opus_slice => {"started_at" => nil, "value" => "600000.0"},
+          sonnet_slice => {"started_at" => nil, "value" => "0.0"}
         )
       end
     end
@@ -295,30 +357,30 @@ RSpec.describe UsageMonitoring::ContractAlert do
         :contract_alert,
         contract_external_id: contract.external_id,
         previous_windows: {
-          opus_card.id => {"started_at" => "2026-11-01T00:00:00.000000Z", "value" => "900000.0"},
-          sonnet_card.id => {"started_at" => nil, "value" => "120.0"}
+          opus_slice => {"started_at" => "2026-11-01T00:00:00.000000", "value" => "900000.0"},
+          sonnet_slice => {"started_at" => nil, "value" => "120.0"}
         }
       )
     end
 
     it "is true while the card measures the window stored for it" do
-      expect(alert.same_window?(opus_card.id, {"started_at" => "2026-11-01T00:00:00.000000Z", "value" => "950000.0"})).to be(true)
+      expect(alert.same_window?(opus_slice, {"started_at" => "2026-11-01T00:00:00.000000", "value" => "950000.0"})).to be(true)
     end
 
     it "is false once the card started a new window" do
-      expect(alert.same_window?(opus_card.id, {"started_at" => "2026-12-01T00:00:00.000000Z", "value" => "5000.0"})).to be(false)
+      expect(alert.same_window?(opus_slice, {"started_at" => "2026-12-01T00:00:00.000000", "value" => "5000.0"})).to be(false)
     end
 
-    it "is false once the card left the scope" do
-      expect(alert.same_window?(opus_card.id, nil)).to be(false)
+    it "is false once no card of the slice is in scope" do
+      expect(alert.same_window?(opus_slice, nil)).to be(false)
     end
 
     it "is true for a card on a recurring metric, which has no window" do
-      expect(alert.same_window?(sonnet_card.id, {"started_at" => nil, "value" => "80.0"})).to be(true)
+      expect(alert.same_window?(sonnet_slice, {"started_at" => nil, "value" => "80.0"})).to be(true)
     end
 
     it "is false for a card stored by no evaluation" do
-      expect(alert.same_window?(llm_tokens_card.id, {"started_at" => nil, "value" => "80.0"})).to be(false)
+      expect(alert.same_window?(llm_tokens.id, {"started_at" => nil, "value" => "80.0"})).to be(false)
     end
   end
 end
