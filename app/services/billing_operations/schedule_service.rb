@@ -21,8 +21,9 @@ module BillingOperations
             .where(organization_id: customer.organization_id, contracts: {organization_id: customer.organization_id, customer_id: customer.id})
             .preload(rate_card: [:rates, {product: :billable_metric}], rate_phases: :rate_override, contract: :customer)
             .preload(:latest_completed_periodic_operation, :earliest_pending_periodic_operation)
-            .find_each do |contract_rate_card|
-              scheduled_operations.concat(schedule_card(contract_rate_card))
+            .find_in_batches do |cards|
+              previous = BillingOperation.latest_periodic_by_card(cards, organization_id: customer.organization_id, through: timestamp)
+              cards.each { |card| scheduled_operations.concat(schedule_card(card, previous[card.id])) }
           end
         end
       end
@@ -38,11 +39,11 @@ module BillingOperations
 
     attr_reader :customer, :timestamp
 
-    def schedule_card(contract_rate_card)
+    def schedule_card(contract_rate_card, previous_operation)
       schedule = ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp:).schedule
       return [] unless schedule
 
-      Schedule::DueOperationsService.call!(contract_rate_card:, schedule:, timestamp:).billing_operations
+      Schedule::DueOperationsService.call!(contract_rate_card:, schedule:, timestamp:, previous_operation:).billing_operations
     end
   end
 end

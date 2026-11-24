@@ -3,7 +3,14 @@
 require "rails_helper"
 
 RSpec.describe BillingOperations::Schedule::DueOperationsService do
-  subject(:result) { described_class.call(contract_rate_card:, schedule:, timestamp:) }
+  subject(:result) { schedule_due }
+
+  def schedule_due
+    previous_operation = if contract_rate_card
+      BillingOperation.latest_periodic_by_card([contract_rate_card], organization_id: organization.id, through: timestamp)[contract_rate_card.id]
+    end
+    described_class.call(contract_rate_card:, schedule:, timestamp:, previous_operation:)
+  end
 
   let(:organization) { create(:organization) }
   let(:timezone) { "UTC" }
@@ -96,7 +103,7 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
       expect(result.billing_operations.sole).to have_attributes(
         billing_at: boundary, coverage_started_at: boundary, coverage_ended_at: boundary + 1.day
       )
-      expect(described_class.call!(contract_rate_card:, schedule:, timestamp:).billing_operations).to be_empty
+      expect(schedule_due.raise_if_error!.billing_operations).to be_empty
       expect(contract_rate_card.billing_operations.where(id: pending_operations.map(&:id)).count).to eq(2)
     end
   end
@@ -117,12 +124,6 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
 
     it "starts with the first natural obligation" do
       expect(result.billing_operations.map(&:billing_at)).to eq((1..19).map { Time.utc(2026, 11, it) })
-    end
-
-    it "looks up the previous operation only once when none exists" do
-      queries = capture_sql { result }
-
-      expect(queries.grep(/SELECT .*FROM "billing_operations"/).size).to eq(1)
     end
   end
 
@@ -252,7 +253,7 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
   context "when the same batch is requested twice" do
     it "is idempotent" do
       expect(result.billing_operations.size).to eq(18)
-      expect(described_class.call!(contract_rate_card:, schedule:, timestamp:).billing_operations).to be_empty
+      expect(schedule_due.raise_if_error!.billing_operations).to be_empty
     end
   end
 
@@ -302,7 +303,7 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
           expect(earlier).to have_attributes(
             action_type: anchor_action, coverage_started_at: started_at, coverage_ended_at: anchor_at
           )
-          expect(described_class.call!(contract_rate_card:, schedule:, timestamp:).billing_operations).to be_empty
+          expect(schedule_due.raise_if_error!.billing_operations).to be_empty
           expect(contract_rate_card.billing_operations.pluck(:id)).to match_array([anchor.id, earlier.id])
         end
       end
@@ -357,7 +358,7 @@ RSpec.describe BillingOperations::Schedule::DueOperationsService do
             action_type: anchor_action, billing_at: boundary,
             coverage_started_at: boundary, coverage_ended_at: Time.utc(2027, 1, 1)
           )
-          expect(described_class.call!(contract_rate_card:, schedule:, timestamp:).billing_operations).to be_empty
+          expect(schedule_due.raise_if_error!.billing_operations).to be_empty
           expect(contract_rate_card.billing_operations.reload.map(&:id)).to match_array(
             [anchor.id, reconciliation.id, result.billing_operations.sole.id]
           )

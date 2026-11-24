@@ -274,14 +274,38 @@ RSpec.describe BillingOperations::ScheduleService do
 
       before do
         create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: anchor_action,
+          billing_at: anchor_at, target_cycle_started_at: anchor_cycle, coverage_ended_at: anchor_at)
+        create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: anchor_action,
           billing_at: Time.utc(2026, 11, 10), target_cycle_started_at: Time.utc(2026, 11, 9),
           coverage_ended_at: Time.utc(2026, 11, 10))
       end
 
-      it "uses each card's own latest checkpoint" do
+      it "loads the continuation checkpoints once for both cards and resumes from the latest eligible operation" do
+        queries = capture_sql { expect(result).to be_success }
+        expect(queries.grep(/SELECT .*FROM "billing_operations"/).size).to eq(3) # pending wake, completed coverage, latest through cutoff
         operations = result.billing_operations.group_by(&:contract_rate_card_id)
         expect(operations.fetch(contract_rate_card.id).map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
         expect(operations.fetch(other_card.id).map(&:billing_at)).to eq((11..19).map { Time.utc(2026, 11, it) })
+      end
+
+      context "when the second card bills in advance" do
+        let(:advance_card) { create(:rate_card, :advance, organization:, product:) }
+        let(:other_card) do
+          create(:contract_rate_card, organization:, contract: other_contract, rate_card: advance_card, next_billing_at: cursor,
+            effective_date:, billing_anchor_date: effective_date)
+        end
+
+        before do
+          create(:rate_card_rate, organization:, rate_card: advance_card, effective_from: started_at, billing_interval_unit: "day")
+          create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: "renew_fixed_advance",
+            billing_at: anchor_at, target_cycle_started_at: anchor_cycle, coverage_started_at: anchor_at, coverage_ended_at: anchor_at + 1.day)
+        end
+
+        it "ignores the second card's later checkpoint for the wrong action" do
+          operations = result.billing_operations.group_by(&:contract_rate_card_id)
+          expect(operations.fetch(contract_rate_card.id).map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
+          expect(operations.fetch(other_card.id).map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
+        end
       end
     end
 

@@ -44,8 +44,9 @@ class BillingOperation < ApplicationRecord
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
   scope :completed, -> { where.not(processed_at: nil) }
   scope :periodic, -> { where(action_type: PERIODIC_ACTIONS.keys).where.not(reason: :late_payment) }
-  scope :periodic_history, ->(organization_id:, action_type:) {
+  scope :latest_periodic_per_card, ->(organization_id:, action_type:) {
     periodic.where(organization_id:, action_type:, cancelled_at: nil)
+      .select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
       .order(:contract_rate_card_id, billing_at: :desc, created_at: :desc, id: :desc)
   }
   scope :due_for_processing, ->(timestamp) { pending.where(billing_at: ..timestamp) }
@@ -53,6 +54,15 @@ class BillingOperation < ApplicationRecord
     select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
       .reorder(:contract_rate_card_id, :billing_at, :created_at, :id)
   }
+
+  def self.latest_periodic_by_card(cards, organization_id:, through:)
+    history = cards.group_by(&:periodic_billing_action).filter_map do |action_type, group|
+      latest_periodic_per_card(organization_id:, action_type:).where(contract_rate_card_id: group.map(&:id)) if action_type
+    end
+    return {} if history.empty?
+
+    history.reduce(:or).where(billing_at: ..through).index_by(&:contract_rate_card_id)
+  end
 
   def due_for_processing?(timestamp:)
     processed_at.nil? && cancelled_at.nil? && billing_at <= timestamp
@@ -112,8 +122,8 @@ end
 #  billing_at              :datetime         not null
 #  cancellation_reason     :enum
 #  cancelled_at            :datetime
-#  coverage_ended_at       :datetime         not null
-#  coverage_started_at     :datetime         not null
+#  coverage_ended_at       :datetime
+#  coverage_started_at     :datetime
 #  processed_at            :datetime
 #  reason                  :enum             not null
 #  target_cycle_started_at :datetime         not null

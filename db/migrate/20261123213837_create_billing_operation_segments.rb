@@ -11,6 +11,7 @@ class CreateBillingOperationSegments < ActiveRecord::Migration[8.1]
       t.datetime :started_at, null: false
       t.datetime :ended_at, null: false
       t.timestamps
+      t.decimal :proration_ratio, precision: 30, scale: 10, null: false
 
       t.index [:billing_operation_id, :position], unique: true
       t.check_constraint "ended_at > started_at", name: "billing_operation_segments_positive_coverage"

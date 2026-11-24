@@ -6,10 +6,11 @@ module BillingOperations
     class DueOperationsService < BaseService
       Result = BaseResult[:billing_operations]
 
-      def initialize(contract_rate_card:, schedule:, timestamp:)
+      def initialize(contract_rate_card:, schedule:, timestamp:, previous_operation:)
         @contract_rate_card = contract_rate_card
         @schedule = schedule
         @timestamp = timestamp
+        @previous_operation = previous_operation
         super
       end
 
@@ -29,18 +30,15 @@ module BillingOperations
 
       private
 
-      attr_reader :contract_rate_card, :schedule, :timestamp
+      attr_reader :contract_rate_card, :schedule, :timestamp, :previous_operation
 
       def action_type
         @action_type ||= contract_rate_card.periodic_billing_action
       end
 
       def create_due_operations
-        previous = contract_rate_card.billing_operations
-          .periodic_history(organization_id: contract_rate_card.organization_id, action_type:)
-          .where(billing_at: ..timestamp).first
-        from = previous&.coverage_ended_at || contract_rate_card.effective_date_in_customer_timezone
-        schedule.obligations_due_by(timestamp, from:, after: previous&.billing_at).map do |obligation, billing_at|
+        from = previous_operation&.coverage_ended_at || contract_rate_card.effective_date_in_customer_timezone
+        schedule.obligations_due_by(timestamp, from:, after: previous_operation&.billing_at).map do |obligation, billing_at|
           BillingOperations::CreateService.call!(
             contract_rate_card:, action_type:, reason: "periodic_continuation",
             planned_operation: PlannedOperation.new(obligation:, billing_at:)
