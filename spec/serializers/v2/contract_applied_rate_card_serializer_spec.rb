@@ -57,8 +57,8 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
       )
     end
 
-    it "serializes the first effective units row" do
-      expect(payload).to eq(flat_payload.merge(units: BigDecimal("3.25")))
+    it "serializes the current effective units row" do
+      expect(payload).to eq(flat_payload)
     end
   end
 

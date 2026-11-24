@@ -165,7 +165,10 @@ module Contracts
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
-        [BillingOperations::Fees::ComputeService.call!(billing_segment:).fee]
+        schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: billing_segment.contract_rate_card).schedule
+        cycle = schedule.cycle_at(timestamp)
+        resolved = BillingOperations::ResolveFixedUnitsService.call!(segments: [billing_segment], cycle:).segments
+        resolved.map { BillingOperations::Fees::ComputeService.call!(billing_segment: it).fee }
       end
     end
 

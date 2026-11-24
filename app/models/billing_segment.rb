@@ -11,11 +11,12 @@ class BillingSegment
     organization_id customer_id contract_id contract_rate_card_id rate_card_rate_id
     rate_override_id pricing_unit_id
     rate_properties currency started_at ended_at cycle_started_at billing_at proration_ratio billable_metric_code
+    units prepaid_units units_intervals
   ].freeze
 
   attr_accessor :organization, :customer, :contract, :contract_rate_card, :rate_card_rate,
     :rate_override, :pricing_unit, :rate_properties, :currency, :started_at, :ended_at,
-    :cycle_started_at, :billing_at, :billable_metric_code
+    :cycle_started_at, :billing_at, :billable_metric_code, :units, :prepaid_units, :units_intervals
 
   attr_reader :proration_ratio
 
@@ -23,18 +24,32 @@ class BillingSegment
 
   def self.exclusive_end(instant) = instant + MICROSECOND
 
-  def self.from_attributes(attributes)
+  def self.from_attributes(attributes, associations: {})
     attributes = attributes.to_h.symbolize_keys
-    organization = Organization.find(attributes.fetch(:organization_id))
+    load = lambda do |name, &fetch|
+      record = associations[name]
+      (record && record.id == attributes.fetch(:"#{name}_id")) ? record : fetch.call
+    end
+    %i[started_at ended_at cycle_started_at billing_at].each do |name|
+      attributes[name] = Time.iso8601(attributes[name]) if attributes[name].is_a?(String)
+    end
+    organization = load.call(:organization) { Organization.find(attributes.fetch(:organization_id)) }
     attributes[:organization] = organization
-    attributes[:customer] = organization.customers.with_discarded.find(attributes.fetch(:customer_id))
-    attributes[:contract] = organization.contracts.find(attributes.fetch(:contract_id))
-    attributes[:contract_rate_card] = ContractRateCard.with_discarded.where(organization:)
-      .find(attributes.fetch(:contract_rate_card_id))
+    attributes[:customer] = load.call(:customer) { organization.customers.with_discarded.find(attributes.fetch(:customer_id)) }
+    attributes[:contract] = load.call(:contract) { organization.contracts.find(attributes.fetch(:contract_id)) }
+    attributes[:contract_rate_card] = load.call(:contract_rate_card) do
+      ContractRateCard.with_discarded.where(organization:).find(attributes.fetch(:contract_rate_card_id))
+    end
     attributes[:billable_metric_code] ||= attributes[:contract_rate_card].rate_card.product.billable_metric&.code
-    attributes[:rate_card_rate] = organization.rate_card_rates.with_discarded.find(attributes[:rate_card_rate_id]) if attributes[:rate_card_rate_id]
-    attributes[:rate_override] = RateOverride.with_discarded.where(organization:).find(attributes[:rate_override_id]) if attributes[:rate_override_id]
-    attributes[:pricing_unit] = organization.pricing_units.find(attributes[:pricing_unit_id]) if attributes[:pricing_unit_id]
+    if attributes[:rate_card_rate_id]
+      attributes[:rate_card_rate] = load.call(:rate_card_rate) { organization.rate_card_rates.with_discarded.find(attributes[:rate_card_rate_id]) }
+    end
+    if attributes[:rate_override_id]
+      attributes[:rate_override] = load.call(:rate_override) { RateOverride.with_discarded.where(organization:).find(attributes[:rate_override_id]) }
+    end
+    if attributes[:pricing_unit_id]
+      attributes[:pricing_unit] = load.call(:pricing_unit) { organization.pricing_units.find(attributes[:pricing_unit_id]) }
+    end
 
     new(attributes)
   end
@@ -49,7 +64,8 @@ class BillingSegment
       instance_variable_set("@#{name}", values[name.to_sym]) if name.end_with?("_id")
     end
     %i[organization customer contract contract_rate_card rate_card_rate rate_override pricing_unit
-      rate_properties currency started_at ended_at cycle_started_at billing_at proration_ratio billable_metric_code].each do |attribute|
+      rate_properties currency started_at ended_at cycle_started_at billing_at proration_ratio billable_metric_code
+      units prepaid_units units_intervals].each do |attribute|
       public_send("#{attribute}=", values[attribute]) if values.key?(attribute)
     end
   end

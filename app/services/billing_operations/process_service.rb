@@ -4,25 +4,22 @@ module BillingOperations
   class ProcessService < BaseService
     Result = BaseResult[:invoices]
     EmptyInvoice = Class.new(StandardError)
+
     def initialize(customer:, timestamp:)
       @customer = customer
       @timestamp = timestamp
+      @attempted_operation_ids = Set.new
       super
     end
 
     def call
       result.invoices = []
       Customers::LockService.call!(customer:, scope: :billing_schedule, transaction: false) do
-        due_operations.group_by { [invoice_kind(it), invoice_group_key(it)] }.each_value do |batch|
-          invoice = process_invoice_batch(batch)
-          result.invoices << invoice if invoice
-        rescue BaseService::FailedResult => error
-          @first_error ||= error
-        end
+        process_due_operations
         finalize_generating_invoices
         result.invoices.each(&:reload)
       end
-      raise @first_error if @first_error
+      raise @processing_error if @processing_error
 
       result
     rescue BaseService::FailedResult => error
@@ -31,12 +28,55 @@ module BillingOperations
 
     private
 
-    attr_reader :customer, :timestamp
+    attr_reader :customer, :timestamp, :attempted_operation_ids
+
+    def process_due_operations
+      schedule_renewals_before_adjustments
+      process_invoice_groups(due_operations)
+      process_remaining_units_adjustments unless @processing_error
+    end
+
+    # One periodic obligation per card is processed per run. Units adjustments can follow
+    # that renewal in the same run, since they need its completed prepaid coverage.
+    def process_remaining_units_adjustments
+      loop do
+        schedule_renewals_before_adjustments
+        adjustments = due_operations.select do |operation|
+          units_adjustment?(operation) && attempted_operation_ids.exclude?(operation.id)
+        end
+        break if adjustments.empty?
+
+        process_invoice_groups(adjustments)
+        break if @processing_error
+      end
+    end
+
+    def process_invoice_groups(operations)
+      attempted_operation_ids.merge(operations.map(&:id))
+      operations.group_by { |operation| [invoice_kind(operation), invoice_group_key(operation)] }.each_value do |invoice_operations|
+        invoice = process_invoice_batch(invoice_operations)
+        result.invoices << invoice if invoice
+      rescue BaseService::FailedResult => error
+        @processing_error ||= error
+      end
+    end
+
+    def units_adjustment?(operation)
+      operation.action_type == "adjust_fixed_advance"
+    end
+
+    def schedule_renewals_before_adjustments
+      # A units adjustment can arrive before the periodic clock tick. Persist the owed
+      # renewal first, so the adjustment sees its prepaid coverage rather than buying it twice.
+      if customer.billing_operations.pending.where(action_type: "adjust_fixed_advance", billing_at: ..timestamp).exists?
+        ScheduleService.call!(customer:, timestamp:)
+      end
+    end
 
     def due_operations
       customer_contracts = customer.contracts.where(organization_id: customer.organization_id)
       operations = customer.billing_operations.due_for_processing(timestamp)
-        .where(organization_id: customer.organization_id, action_type: BillingOperation::PERIODIC_ACTIONS.keys)
+        .where(organization_id: customer.organization_id, action_type: BillingOperation::PERIODIC_ACTIONS.keys + ["adjust_fixed_advance"])
         .joins(:contract_rate_card)
         .merge(ContractRateCard.kept.where(
           organization_id: customer.organization_id,
@@ -85,29 +125,36 @@ module BillingOperations
     def process_invoice_batch(operations)
       invoice = nil
       ActiveRecord::Base.transaction(requires_new: true) do
-        operations.select! do |operation|
-          billing_at = operation.billing_at
-          operation.reload(lock: true)
-          operation.contract_rate_card.lock!
-          next false unless operation.billing_at == billing_at
-
-          operation.due_for_processing?(timestamp:)
-        end
+        operations = lock_due_operations(operations)
         next if operations.empty?
 
         preload_schedule_inputs(operations)
-        operation_segments = operations.index_with { |operation| resolve_operation(operation) }
-        segments = operation_segments.values.flat_map(&:segments)
-        invoice = if segments.any?
-          if regroup_batch?(operations)
-            regroup_paid_fees(operations, segments, operation_segments)
-          else
-            create_contract_invoice(segments, operation_segments)
-          end
-        end
-        complete_operations(operation_segments)
+        resolutions = operations.index_with { |operation| resolve_operation(operation) }
+        invoice = build_invoice(operations, resolutions)
+        complete_operations(resolutions)
       end
       invoice
+    end
+
+    def lock_due_operations(operations)
+      operations.select do |operation|
+        expected_billing_at = operation.billing_at
+        operation.reload(lock: true)
+        operation.contract_rate_card.lock!
+
+        operation.billing_at == expected_billing_at && operation.due_for_processing?(timestamp:)
+      end
+    end
+
+    def build_invoice(operations, resolutions)
+      segments = resolutions.values.flat_map(&:segments)
+      return if segments.empty?
+
+      if regroup_batch?(operations)
+        regroup_paid_fees(operations, segments, resolutions)
+      else
+        create_contract_invoice(segments, resolutions)
+      end
     end
 
     # Locking reloads each operation and its card, which drops what was preloaded with them.
@@ -117,6 +164,7 @@ module BillingOperations
         records: operations.map(&:contract_rate_card),
         associations: [
           :organization,
+          :terms,
           {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override},
@@ -143,7 +191,7 @@ module BillingOperations
       ended_at && ended_at <= operation.target_cycle_started_at
     end
 
-    def create_contract_invoice(segments, operation_segments)
+    def create_contract_invoice(segments, resolutions)
       contract = segments.first.contract
       invoice = nil
       outputs = {}
@@ -176,7 +224,7 @@ module BillingOperations
       else
         outputs.filter_map { |segment, fees| segment if fees.any? }
       end
-      operations_with_billed_segments(billed_segments, operation_segments).each { |operation| operation.invoice = invoice }
+      link_invoice(invoice, billed_segments, resolutions)
       invoice
     rescue EmptyInvoice
       nil
@@ -186,7 +234,7 @@ module BillingOperations
       operations.all? { |operation| operation.action_type == "regroup_paid_fees" }
     end
 
-    def regroup_paid_fees(operations, segments, operation_segments)
+    def regroup_paid_fees(operations, segments, resolutions)
       contract = segments.first.contract
       invoice = nil
       ActiveRecord::Base.transaction(requires_new: true) do
@@ -212,7 +260,7 @@ module BillingOperations
           end
         )
         invoice.update!(payment_status: :succeeded)
-        operations_with_billed_segments(invoiced_segments, operation_segments).each { |operation| operation.invoice = invoice }
+        link_invoice(invoice, invoiced_segments, resolutions)
       end
       invoice
     rescue EmptyInvoice
@@ -220,18 +268,27 @@ module BillingOperations
     end
 
     # Operations with no billed segments must not inherit another operation's invoice in a consolidated batch.
-    def operations_with_billed_segments(segments, operation_segments)
-      operation_segments.filter_map do |operation, resolution|
-        operation if (resolution.segments & segments).any?
+    def link_invoice(invoice, billed_segments, resolutions)
+      resolutions.each do |operation, resolution|
+        operation.invoice = invoice if (resolution.segments & billed_segments).any?
       end
     end
 
     # The clock moves to the obligation after this one, in the same transaction as the billing.
-    def complete_operations(operation_segments)
-      operation_segments.each do |operation, resolution|
-        operation.update!(processed_at: timestamp)
-        operation.contract_rate_card.update!(next_billing_at: next_planned_operation(operation, resolution)&.billing_at)
+    def complete_operations(resolutions)
+      resolutions.each do |operation, resolution|
+        attributes = {processed_at: timestamp}
+        if operation.contract_rate_card.product.fixed?
+          attributes[:pricing_segments] = resolution.segments.map(&:attributes)
+        end
+        operation.update!(attributes)
+        advance_periodic_cursor(operation, resolution) unless units_adjustment?(operation)
       end
+    end
+
+    def advance_periodic_cursor(operation, resolution)
+      next_operation = next_planned_operation(operation, resolution)
+      operation.contract_rate_card.update!(next_billing_at: next_operation&.billing_at)
     end
 
     # Nothing follows an operation whose cycle the schedule no longer has.

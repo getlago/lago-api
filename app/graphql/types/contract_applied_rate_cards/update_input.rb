@@ -8,6 +8,8 @@ module Types
 
       argument :id, ID, required: true
 
+      argument :apply_units, Types::ContractAppliedRateCards::ApplyUnitsEnum, required: false
+
       argument :billing_anchor_date, GraphQL::Types::ISO8601Date, required: false
       argument :units, GraphQL::Types::Float, required: false
     end

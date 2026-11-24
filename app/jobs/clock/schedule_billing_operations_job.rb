@@ -12,8 +12,16 @@ module Clock
     private
 
     def due_customer_ids
-      ContractRateCard.due_for_billing(Time.current).distinct
+      periodic_customer_ids = ContractRateCard.due_for_billing(Time.current).distinct
         .order("contracts.customer_id").pluck("contracts.customer_id")
+      adjustment_customer_ids = BillingOperation.pending
+        .where("billing_operations.action_type = 'adjust_fixed_advance'")
+        .where(billing_at: ..Time.current)
+        .joins(:customer, :contract_rate_card)
+        .where(customers: {deleted_at: nil}, contract_rate_cards: {deleted_at: nil})
+        .distinct.pluck(:customer_id)
+
+      (periodic_customer_ids + adjustment_customer_ids).uniq.sort
     end
   end
 end

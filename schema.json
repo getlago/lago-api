@@ -12492,6 +12492,29 @@
           "possibleTypes": null
         },
         {
+          "kind": "ENUM",
+          "name": "ContractAppliedRateCardApplyUnitsEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "now",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "next_billing_period",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
           "kind": "OBJECT",
           "name": "ContractAppliedRateCardCollection",
           "description": "ContractAppliedRateCardCollection type",
@@ -54391,7 +54414,7 @@
             },
             {
               "name": "updateContractAppliedRateCard",
-              "description": "Updates a rate card attached to a pending contract",
+              "description": "Updates a pending contract rate card or changes units on an active contract",
               "args": [
                 {
                   "name": "input",
@@ -91770,6 +91793,18 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "applyUnits",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "ContractAppliedRateCardApplyUnitsEnum",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,

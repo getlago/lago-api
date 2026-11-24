@@ -111,7 +111,7 @@ module Api
       end
 
       def update_params
-        params.require(:applied_rate_card).permit(:units, :billing_anchor_date)
+        params.require(:applied_rate_card).permit(:units, :billing_anchor_date, :apply_units)
       end
 
       def resource_name

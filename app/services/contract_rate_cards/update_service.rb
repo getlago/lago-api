@@ -21,6 +21,9 @@ module ContractRateCards
 
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless contract_rate_card
+      if params.key?(:apply_units)
+        return ChangeUnitsService.call(contract_rate_card:, params:)
+      end
 
       if params.key?(:billing_anchor_date) && !Utils::Datetime.valid_format?(params[:billing_anchor_date].to_s)
         return result.single_validation_failure!(field: :billing_anchor_date, error_code: "value_is_invalid")

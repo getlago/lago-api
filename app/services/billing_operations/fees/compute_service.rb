@@ -41,7 +41,7 @@ module BillingOperations
           units:,
           taxes_amount_cents: 0,
           precise_amount_cents: amount.precise_amount_cents,
-          amount_details: charge_model_result.amount_details,
+          amount_details: amount_details,
           pricing_unit_usage: amount.pricing_unit_usage,
           pay_in_advance: rate_card.advance?,
           properties: boundaries.to_contract_fee_properties
@@ -93,13 +93,37 @@ module BillingOperations
       end
 
       def units
-        @units ||= contract_rate_card.terms.first&.units || BigDecimal(0)
+        @units ||= full_units - billing_segment.prepaid_units.to_d
+      end
+
+      def full_units
+        @full_units ||= billing_segment.units&.to_d ||
+          ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp: billing_segment.started_at).units || 0.to_d
+      end
+
+      def amount_details
+        details = charge_model_result.amount_details
+        if billing_segment.units_intervals&.size.to_i > 1
+          details = details.merge(units_intervals: billing_segment.units_intervals)
+        end
+        details
       end
 
       def charge_model_result
-        @charge_model_result ||= ChargeModels::Factory.new_instance(
+        @charge_model_result ||= begin
+          priced = price(full_units)
+          if billing_segment.prepaid_units
+            priced.amount = [priced.amount - price(billing_segment.prepaid_units.to_d).amount, 0.to_d].max
+            priced.unit_amount = units.zero? ? 0.to_d : priced.amount / units
+          end
+          priced
+        end
+      end
+
+      def price(quantity)
+        ChargeModels::Factory.new_instance(
           pricing_structure: ChargeModels::PricingStructure.from_billing_segment(billing_segment),
-          aggregation_result:,
+          aggregation_result: aggregation_result(quantity),
           period_ratio: billing_segment.elapsed_period_ratio,
           calculate_projected_usage: false
         ).apply
@@ -116,12 +140,12 @@ module BillingOperations
         )
       end
 
-      def aggregation_result
-        prorated_units = units * billing_segment.proration_ratio
+      def aggregation_result(quantity)
+        prorated_units = quantity * billing_segment.proration_ratio
         BillableMetrics::Aggregations::BaseService::Result.new.tap do |aggregation_result|
           aggregation_result.aggregation = prorated_units
           aggregation_result.current_usage_units = prorated_units
-          aggregation_result.full_units_number = units
+          aggregation_result.full_units_number = quantity
           aggregation_result.count = 1
           aggregation_result.precise_total_amount_cents = 0
           aggregation_result.options = {running_total: []}

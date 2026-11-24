@@ -85,4 +85,26 @@ RSpec.describe ContractRateCardTerm do
       end
     end
   end
+
+  describe "timestamped units" do
+    let(:card) { create(:contract_rate_card, units: 8) }
+    let(:effective_at) { Time.current.floor(6) }
+    let(:term) { build(:contract_rate_card_term, organization: card.organization, contract_rate_card: card, effective_date: nil, effective_at:) }
+
+    it "accepts a timestamp without a legacy date" do
+      expect(term).to be_valid
+      expect(term.starts_at).to eq(effective_at)
+    end
+
+    context "when the exact timestamp is already used" do
+      before do
+        create(:contract_rate_card_term, organization: card.organization, contract_rate_card: card, effective_date: nil, effective_at:)
+      end
+
+      it "rejects the duplicate instant" do
+        expect(term).not_to be_valid
+        expect(term.errors[:effective_at]).to be_present
+      end
+    end
+  end
 end

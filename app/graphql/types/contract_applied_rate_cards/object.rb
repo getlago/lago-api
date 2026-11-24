@@ -26,7 +26,11 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       def units
-        dataloader.with(Sources::ActiveRecordAssociation, :terms).load(object).first&.units
+        dataloader.with(Sources::ActiveRecordAssociation, :terms).load(object)
+        contract = dataloader.with(Sources::ActiveRecordAssociation, :contract).load(object)
+        dataloader.with(Sources::ActiveRecordAssociation, :customer).load(contract)
+        timestamp = object.contract.pending? ? object.effective_date.in_time_zone(object.contract.customer.applicable_timezone) : Time.current
+        ::ContractRateCards::UnitsAtService.call!(contract_rate_card: object, timestamp:).units
       end
 
       def rate_phases_count

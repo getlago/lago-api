@@ -119,10 +119,10 @@ RSpec.describe BillingOperations::Fees::ComputeService do
           )
         end
 
-        it "uses the first effective units row" do
+        it "uses the units effective during the billed period" do
           expect(result).to be_success
-          expect(result.fee.units).to eq(7)
-          expect(result.fee.amount_cents).to eq(21_000)
+          expect(result.fee.units).to eq(15)
+          expect(result.fee.amount_cents).to eq(45_000)
         end
       end
 

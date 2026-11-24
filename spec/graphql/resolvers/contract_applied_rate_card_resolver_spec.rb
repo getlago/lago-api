@@ -96,8 +96,8 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
         )
       end
 
-      it "returns the first effective units row" do
-        expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(7.0)
+      it "returns the current effective units row" do
+        expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(3.0)
       end
     end
   end
@@ -130,8 +130,8 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
       )
     end
 
-    it "returns the first effective units row" do
-      expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(7.0)
+    it "returns the current effective units row" do
+      expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(3.0)
     end
   end
 

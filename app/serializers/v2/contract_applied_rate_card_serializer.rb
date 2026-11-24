@@ -9,7 +9,7 @@ module V2
         lago_id: model.id,
         external_contract_id: model.contract.external_id,
         rate_card_code: model.rate_card.code,
-        units: model.terms.first&.units,
+        units: ContractRateCards::UnitsAtService.call!(contract_rate_card: model, timestamp: units_timestamp).units,
         effective_date: format_date(model.effective_date),
         billing_anchor_date: format_date(model.billing_anchor_date),
         **(include?(:rate_phases) ? {rate_phases: rate_phases} : {})
@@ -17,6 +17,10 @@ module V2
     end
 
     private
+
+    def units_timestamp
+      model.contract.pending? ? model.effective_date.in_time_zone(model.contract.customer.applicable_timezone) : Time.current
+    end
 
     def rate_phases
       model.rate_phases.order(:position).map do |phase|

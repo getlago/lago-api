@@ -31,4 +31,36 @@ describe Clock::ScheduleBillingOperationsJob, job: true do
     expect { perform_job }.to have_enqueued_job(BillingOperations::ScheduleJob).with(customer.id).exactly(1).times
     expect(BillingOperations::ScheduleJob).not_to have_been_enqueued.with(future_customer.id)
   end
+
+  context "when a units adjustment is pending before the next periodic billing" do
+    let(:processed_at) { nil }
+    let(:action_type) { "adjust_fixed_advance" }
+
+    before do
+      create(:billing_operation, organization:, customer: future_customer, contract_rate_card: future_rate_card,
+        action_type:, reason: "contract_units_change", billing_at: 1.minute.ago, processed_at:)
+    end
+
+    it "recovers the adjustment without waiting for the periodic cursor" do
+      expect { perform_job }.to have_enqueued_job(BillingOperations::ScheduleJob).with(future_customer.id).exactly(1).times
+    end
+
+    context "when the adjustment is already complete" do
+      let(:processed_at) { 30.seconds.ago }
+
+      it "does not dispatch completed work" do
+        perform_job
+        expect(BillingOperations::ScheduleJob).not_to have_been_enqueued.with(future_customer.id)
+      end
+    end
+
+    context "when the operation is deferred rate-change reconciliation" do
+      let(:action_type) { "reconcile_advance_coverage" }
+
+      it "does not dispatch unsupported reconciliation" do
+        perform_job
+        expect(BillingOperations::ScheduleJob).not_to have_been_enqueued.with(future_customer.id)
+      end
+    end
+  end
 end

@@ -106,6 +106,27 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
     end
   end
 
+  context "when changing an active contract's units explicitly" do
+    let(:contract) { create(:contract, organization:, started_at: Time.utc(2026, 9, 1)) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, units: 5,
+        effective_date: Date.new(2026, 9, 1), billing_anchor_date: Date.new(2026, 9, 1))
+    end
+    let(:input) { {id: contract_rate_card.id, units: 8, applyUnits: "now"} }
+
+    before { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 1)) }
+
+    it "records the change without replacing the original units" do
+      freeze_time do
+        expect(execution.dig("data", "updateContractAppliedRateCard", "units")).to eq(8.0)
+        expect(contract_rate_card.reload.terms.find_by(effective_at: Time.current)).to have_attributes(units: 8)
+        expect(contract_rate_card.terms.first.units).to eq(5)
+      end
+    end
+  end
+
   context "when the contract is terminated" do
     let(:contract) { create(:contract, :terminated, organization:) }
 
