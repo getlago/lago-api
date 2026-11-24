@@ -62,10 +62,8 @@ class ContractRateCard < ApplicationRecord
   scope :due_for_billing, ->(timestamp) {
     priced
       .starting_before_contract_end
-      .joins(contract: {customer: :billing_entity})
       .where(next_billing_at: ..timestamp)
-      # Terminated contracts can still owe coverage until their final operation is processed.
-      .where(contracts: {status: %w[active terminated], started_at: ..timestamp})
+      .merge(Contract.eligible_for_billing(timestamp))
       .where(customers: {deleted_at: nil})
   }
 

@@ -139,6 +139,23 @@ RSpec.describe Contracts::ActivateService do
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
     end
 
+    context "with a second priced card" do
+      let(:other_rate) { create(:rate_card_rate, organization:, rate_card: create(:rate_card, organization:, product:, billing_timing: "arrears"), effective_from: started_at) }
+      let(:other_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card: other_rate.rate_card,
+          effective_date: started_at.to_date, billing_anchor_date: started_at.to_date)
+      end
+
+      before { other_card }
+
+      it "plans both cards with one pending and one completed history lookup" do
+        queries = capture_sql { expect(result).to be_success }.grep(/SELECT DISTINCT ON .*FROM "billing_operations"/)
+        expect(queries.grep(/"processed_at" IS NULL/).size).to eq(1)
+        expect(queries.grep(/"processed_at" IS NOT NULL/).size).to eq(1)
+        expect([contract_rate_card, other_card].map { it.reload.next_billing_at }).to eq([started_at + 1.month] * 2)
+      end
+    end
+
     context "when a rate card has no rates" do
       let(:failed_product) { create(:product, :fixed, organization:) }
       let(:failed_rate_card) { create(:rate_card, organization:, product: failed_product, billing_timing: "advance") }

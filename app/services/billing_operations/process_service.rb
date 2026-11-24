@@ -34,8 +34,7 @@ module BillingOperations
     attr_reader :customer, :timestamp
 
     def due_operations
-      customer_contracts = customer.contracts.where(organization_id: customer.organization_id,
-        status: %w[active terminated], started_at: ..timestamp)
+      customer_contracts = customer.contracts.where(organization_id: customer.organization_id).eligible_for_billing(timestamp)
       operations = customer.billing_operations.due_for_processing(timestamp)
         .where(organization_id: customer.organization_id, action_type: BillingOperation::PERIODIC_ACTIONS.keys)
         .joins(:customer, :contract_rate_card).where(customers: {deleted_at: nil, organization_id: customer.organization_id})

@@ -31,4 +31,17 @@ describe Clock::ScheduleBillingOperationsJob, job: true do
     expect { perform_job }.to have_enqueued_job(BillingOperations::ScheduleJob).with(customer.id).exactly(1).times
     expect(BillingOperations::ScheduleJob).not_to have_been_enqueued.with(future_customer.id)
   end
+
+  context "when due cards and saved work overlap" do
+    before do
+      create(:billing_operation, organization:, customer:, contract_rate_card: due_rate_cards.first, billing_at: 1.minute.ago)
+      create(:billing_operation, organization:, customer: future_customer, contract_rate_card: future_rate_card,
+        action_type: "reconcile_advance_coverage", billing_at: 1.minute.ago)
+    end
+
+    it "dispatches the customer once and skips reconciliation-only work" do
+      expect { perform_job }.to have_enqueued_job(BillingOperations::ScheduleJob).with(customer.id).once
+      expect(BillingOperations::ScheduleJob).not_to have_been_enqueued.with(future_customer.id)
+    end
+  end
 end
