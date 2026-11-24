@@ -17,11 +17,15 @@ module Api
     def serve_reads_from_shadow_organization
       migration = BillingEngineMigrations::Lookup.for_source(current_organization.id)
       return unless migration
-      return forbidden_error(code: "organization_migration_read_only") unless request.get?
+      return forbidden_error(code: "organization_migration_read_only") unless read_request?
       return unless migration.serves_v2_reads?(BillingEngineMigration.v2_endpoint(controller_path))
 
       @current_organization = Organization.find(migration.shadow_organization_id)
       response.set_header(SERVED_FROM_HEADER, "shadow_organization")
+    end
+
+    def read_request?
+      request.get? || request.head?
     end
   end
 end

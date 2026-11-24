@@ -71,6 +71,17 @@ RSpec.describe Api::ShadowOrganizationReads, type: :request do
     end
   end
 
+  context "with a HEAD on an endpoint the migration opens" do
+    it "answers it from the shadow organization like the GET" do
+      headers = {}
+      set_headers(organization, headers)
+      head("/api/v2/contracts/subscription-1", headers:)
+
+      expect(response).to have_http_status(:success)
+      expect(served_from).to eq("shadow_organization")
+    end
+  end
+
   context "with a GET on an endpoint the migration opens when the shadow organization is not on the product catalog" do
     let(:shadow_organization) { create(:shadow_organization, feature_flags: []) }
 
