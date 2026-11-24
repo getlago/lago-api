@@ -77,7 +77,7 @@ module Fees
         end
 
         def boundaries
-          # Each rate segment starts a fresh aggregation window, even within the same cycle.
+          # Fee coverage and billable usage stay segment-local, including when tiers use earlier usage.
           BillingPeriodBoundaries.new(
             from_datetime: billing_segment.started_at,
             to_datetime: billing_segment.ended_at,

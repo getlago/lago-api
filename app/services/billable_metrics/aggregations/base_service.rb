@@ -7,6 +7,7 @@ module BillableMetrics
         :aggregator, # Aggregator instance, used in some charge models
         :aggregations, # Array of aggregation result when in a grouped by scenario
         :aggregation, # Aggregation result computed using the event store
+        :carryover_units, # Earlier segments' units after metric rounding, used only to price this group's tiers
         :breakdowns, # Array of breakdowns when presentation_by is used
         :grouped_by, # Pricing group keys applied to this aggregation result
         :current_usage_units, # Number of aggregated units when computing the current usage
@@ -82,22 +83,22 @@ module BillableMetrics
         result.pay_in_advance_event = event if event
       end
 
-      def aggregate(options: {})
+      def aggregate(options: {}, segment_usage_carryover: Fees::ChargeService::MeteredItem::SegmentUsageCarryover.empty)
         if grouped_by.present?
           compute_grouped_by_aggregation(options:)
           if metered_item.dynamic?
             compute_grouped_by_precise_total_amount_cents(options:)
           end
-
-          result.aggregations.each { apply_rounding(it) }
         else
           compute_aggregation(options:)
           if metered_item.dynamic?
             compute_precise_total_amount_cents(options:)
           end
-
-          apply_rounding(result)
         end
+
+        groups = result.aggregations || [result]
+        groups.each { apply_rounding(it) }
+        apply_carryover_units(segment_usage_carryover, groups)
         result
       end
 
@@ -250,6 +251,13 @@ module BillableMetrics
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter
 
         query.first
+      end
+
+      def apply_carryover_units(usage, groups)
+        return if usage.empty? || result.failure?
+
+        groups = [] if should_bypass_aggregation?
+        usage.accumulate(metered_item:, groups:) { |group, units| group.carryover_units = units }
       end
 
       def apply_rounding(result)

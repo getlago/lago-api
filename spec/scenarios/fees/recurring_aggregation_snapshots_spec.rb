@@ -244,6 +244,24 @@ describe "Recurring aggregation snapshots", transaction: false do
   describe "with an in-arrears recurring sum" do
     it_behaves_like "an in-arrears recurring sum"
 
+    context "with floor rounding and snapshot reads" do
+      let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+      let(:billable_metric) do
+        create(:sum_billable_metric, :recurring, organization:, field_name: "amount", rounding_function: :floor, rounding_precision: 0)
+      end
+
+      it "floors the billed units but carries the fraction into the next month's invoice" do
+        start_subscription
+        send_event("1.9", at: Time.utc(2026, 3, 5))
+        expect(bill_at(march_billed_at)).to eq([{amount_cents: 100, units: 1, events_count: 1}])
+        expect(written_snapshots.sole.fetch(:units)).to eq(BigDecimal("1.9"))
+
+        send_event("0.2", at: Time.utc(2026, 4, 5))
+        expect(bill_at(Time.utc(2026, 5, 1, 1))).to eq([{amount_cents: 200, units: 2, events_count: 2}]) # floor(1.9 + 0.2)
+        expect(read_periods[:invoice]).to eq([nil, march_snapshot])
+      end
+    end
+
     context "with the ClickHouse store", clickhouse: true do
       let(:clickhouse_events_store) { true }
 

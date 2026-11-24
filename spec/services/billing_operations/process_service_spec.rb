@@ -685,8 +685,8 @@ RSpec.describe BillingOperations::ProcessService do
 
   context "when billing produces no fees" do
     before do
-      allow(BillingOperations::ComputeInvoiceService).to receive(:call!) do |billing_segments:, **|
-        double(outputs: billing_segments.index_with { [] })
+      allow(BillingOperations::ComputeInvoiceService).to receive(:call!) do |segments_by_operation:, **|
+        double(outputs: segments_by_operation.values.flatten(1).index_with { [] })
       end
     end
 

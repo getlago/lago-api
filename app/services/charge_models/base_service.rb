@@ -66,6 +66,12 @@ module ChargeModels
       pricing_structure.properties
     end
 
+    def carryover_units
+      return 0 unless pricing_structure.product_catalog
+
+      aggregation_result.carryover_units || 0
+    end
+
     def projected_units
       return BigDecimal(0) if units.nil? || units.zero?
 

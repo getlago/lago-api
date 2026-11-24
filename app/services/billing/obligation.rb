@@ -14,8 +14,12 @@ module Billing
       end
     end
 
+    # Coverage starts when a rate first applies within this obligation. If the cycle starts
+    # on January 1 but the first rate takes effect on January 5, coverage starts on January 5.
+    def coverage_started_at = segments.first.started_at
+
     def starts_on_or_after?(timestamp)
-      segments.first.started_at >= timestamp
+      coverage_started_at >= timestamp
     end
 
     def pricing_inputs_for(segment)

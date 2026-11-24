@@ -11,13 +11,9 @@ module ChargeModels
     end
 
     def amount_details
-      {
-        graduated_ranges: ranges.each_with_object([]) do |range, amounts|
-          amounts << ChargeModels::AmountDetails::RangeGraduatedService.call(
-            range:, total_units: tier_units, adjacent_model: adjacent_ranges?, proration_ratio: tier_proration_ratio
-          )
-
-          break amounts if range[:to_value].nil? || range[:to_value] >= tier_units
+      @amount_details ||= {
+        graduated_ranges: priced_ranges(tier_units) do |range, range_units|
+          ChargeModels::AmountDetails::RangeGraduatedService.call(range:, units: range_units * tier_proration_ratio)
         end
       }
     end

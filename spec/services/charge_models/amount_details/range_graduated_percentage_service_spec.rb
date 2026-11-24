@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe ChargeModels::AmountDetails::RangeGraduatedPercentageService do
-  subject(:service) { described_class.new(range:, total_units:) }
+  subject(:details) { described_class.call(range:, units:) }
 
-  let(:total_units) { 15 }
+  let(:units) { 4 }
   let(:range) do
     {
       from_value: 7,
@@ -16,7 +16,7 @@ RSpec.describe ChargeModels::AmountDetails::RangeGraduatedPercentageService do
   end
 
   it "returns expected amount details" do
-    expect(service.call).to eq(
+    expect(details).to eq(
       {
         from_value: 7,
         to_value: 10,
@@ -29,8 +29,8 @@ RSpec.describe ChargeModels::AmountDetails::RangeGraduatedPercentageService do
     )
   end
 
-  context "when total units is 0" do
-    let(:total_units) { 0 }
+  context "with zero units" do
+    let(:units) { 0 }
     let(:range) do
       {
         from_value: 0,
@@ -41,7 +41,7 @@ RSpec.describe ChargeModels::AmountDetails::RangeGraduatedPercentageService do
     end
 
     it "applies the flat amount from the range" do
-      expect(service.call).to eq(
+      expect(details).to eq(
         {
           from_value: 0,
           to_value: 10,
@@ -55,7 +55,8 @@ RSpec.describe ChargeModels::AmountDetails::RangeGraduatedPercentageService do
     end
   end
 
-  context "when total units <= range to_value" do
+  context "with a partially filled tier" do
+    let(:units) { 5 }
     let(:range) do
       {
         from_value: 11,
@@ -66,7 +67,7 @@ RSpec.describe ChargeModels::AmountDetails::RangeGraduatedPercentageService do
     end
 
     it "returns expected amount details" do
-      expect(service.call).to eq(
+      expect(details).to eq(
         {
           from_value: 11,
           to_value: 20,

@@ -46,6 +46,18 @@ RSpec.describe ChargeModels::GraduatedService do
     )
   end
 
+  context "with fractional carryover and catalog tiers stored one unit apart" do
+    let(:pricing_structure) { super().with(product_catalog: true) }
+    let(:aggregation) { 10 }
+
+    before { aggregation_result.carryover_units = BigDecimal("10.4") }
+
+    it "charges only the new units in each touched tier" do
+      expect(apply_graduated_service.amount_details.fetch(:graduated_ranges).pluck(:units)).to eq(%w[9.6 0.4])
+      expect(apply_graduated_service.amount).to eq(10 * 5 + 3 + 3) # Both touched tiers have a $3 flat fee.
+    end
+  end
+
   context "when aggregation is 0" do
     let(:aggregation) { 0 }
 

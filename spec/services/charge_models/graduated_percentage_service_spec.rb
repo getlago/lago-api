@@ -47,6 +47,19 @@ RSpec.describe ChargeModels::GraduatedPercentageService, :premium do
     )
   end
 
+  context "with fractional carryover and catalog tiers stored one unit apart" do
+    let(:pricing_structure) { super().with(product_catalog: true) }
+    let(:aggregation) { 10 }
+    let(:aggregation_count) { 1 }
+
+    before { aggregation_result.carryover_units = BigDecimal("10.4") }
+
+    it "applies each percentage only to the new units in its tier" do
+      expect(apply_graduated_percentage_service.amount_details.fetch(:graduated_percentage_ranges).pluck(:units)).to eq(%w[9.6 0.4])
+      expect(apply_graduated_percentage_service.amount).to eq(BigDecimal("700.204")) # 9.6 × 2% + $300 + 0.4 × 3% + $400.
+    end
+  end
+
   context "with adjacent tiers" do
     let(:aggregation) { 15 }
     let(:aggregation_count) { 1 }

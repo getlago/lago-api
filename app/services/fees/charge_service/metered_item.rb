@@ -77,6 +77,13 @@ module Fees
         charge_model == "graduated_percentage"
       end
 
+      def accumulate?
+        return false unless billing_segment
+
+        !pay_in_advance? && !prorated? && !billable_metric.recurring? &&
+          (billable_metric.count_agg? || billable_metric.sum_agg?)
+      end
+
       def filter_id
         selected_filter&.id
       end

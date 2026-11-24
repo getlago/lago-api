@@ -3,11 +3,10 @@
 module ChargeModels
   module AmountDetails
     class RangeGraduatedPercentageService < ::BaseService
-      def initialize(range:, total_units:, adjacent_model: false)
+      def initialize(range:, units:)
         super
         @range = range
-        @total_units = total_units
-        @adjacent_model = adjacent_model
+        @units = units
       end
 
       def call
@@ -22,9 +21,9 @@ module ChargeModels
         }
       end
 
-      protected
+      private
 
-      attr_reader :range, :total_units
+      attr_reader :range, :units
 
       def from_value
         @from_value ||= range[:from_value]
@@ -48,29 +47,6 @@ module ChargeModels
 
       def total_with_flat_amount
         @total_with_flat_amount ||= per_unit_total_amount + flat_unit_amount
-      end
-
-      # NOTE: compute how many units to bill in the range
-      def units
-        return half_open_units if @adjacent_model
-
-        # NOTE: total_units is higher than the to_value of the range
-        if to_value && total_units >= to_value
-          return to_value - (from_value.zero? ? 1 : from_value) + 1
-        end
-
-        return total_units if from_value.zero?
-
-        # NOTE: total_units is in the range
-        total_units - from_value + 1
-      end
-
-      # Catalog bounds can be decimals stored as floats: subtract them as
-      # decimals, or 0.3 - 0.2 bills 0.09999999999999998 units.
-      def half_open_units
-        lower = BigDecimal(from_value.to_s)
-        upper = (to_value && total_units >= to_value) ? BigDecimal(to_value.to_s) : BigDecimal(total_units.to_s)
-        upper - lower
       end
     end
   end

@@ -2,7 +2,7 @@
 
 # One rate card's obligation, priced segment by segment.
 RateCardUsage = Data.define(:contract_rate_card, :obligation, :rate_phase, :segments) do
-  def started_at = obligation.segments.first.started_at
+  def started_at = obligation.coverage_started_at
   def ended_at = BillingSegment.inclusive_end(obligation.segments.last.ended_at)
 
   def fees = segments.flat_map(&:fees)

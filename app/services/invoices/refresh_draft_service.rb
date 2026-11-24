@@ -92,12 +92,12 @@ module Invoices
     end
 
     def refresh_product_catalog_fees!
-      segments = billing_segments
+      segments_by_operation = resolve_segments_by_operation
       reset_product_catalog_invoice_values!
 
       BillingOperations::ComputeInvoiceService.call!(
         invoice:,
-        billing_segments: segments,
+        segments_by_operation:,
         context: billing_segment_context
       )
     end
@@ -145,7 +145,7 @@ module Invoices
       end
     end
 
-    def billing_segments
+    def resolve_segments_by_operation
       operations = invoice.billing_operations
         .order(:target_cycle_started_at, :billing_at, :id)
         .includes(segments: [:rate_card_rate, :rate_override], contract_rate_card: [
@@ -159,7 +159,7 @@ module Invoices
       result.not_allowed_failure!(code: "missing_billing_operations").raise_if_error! if operations.empty?
 
       pricing_units = pricing_units_by_code(operations.map(&:contract_rate_card))
-      operations.flat_map do |operation|
+      operations.index_with do |operation|
         BillingOperations::ResolveSegmentsService.call!(operation:, pricing_units_by_code: pricing_units).billing_segments
       end
     end

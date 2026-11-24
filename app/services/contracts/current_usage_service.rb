@@ -158,11 +158,16 @@ module Contracts
     end
 
     def rate_card_usage(card, obligation)
-      segments = obligation.segments.map do |segment|
-        billing_segment = BillingSegments::BuildService.call!(
+      billing_segments = obligation.segments.map do |segment|
+        BillingSegments::BuildService.call!(
           contract_rate_card: card, **obligation.pricing_inputs_for(segment), pricing_units_by_code: @pricing_units_by_code
         ).billing_segment
-        RateCardUsageSegment.new(billing_segment:, fees: compute_fees(billing_segment))
+      end
+      segment_usage_carryover = Fees::ChargeService::MeteredItem::SegmentUsageCarryover.for(
+        segments: billing_segments, coverage_started_at: obligation.coverage_started_at
+      )
+      segments = billing_segments.map do |billing_segment|
+        RateCardUsageSegment.new(billing_segment:, fees: compute_fees(billing_segment, segment_usage_carryover))
       end
       RateCardUsage.new(
         contract_rate_card: card,
@@ -177,12 +182,13 @@ module Contracts
       [usage.started_at, usage.ended_at, usage.contract_rate_card.rate_card.code]
     end
 
-    def compute_fees(billing_segment)
+    def compute_fees(billing_segment, segment_usage_carryover)
       if billing_segment.contract_rate_card.rate_card.product.metered?
         return [] if billing_segment.started_at > timestamp
 
         Fees::ChargeService.call!(
           invoice: nil,
+          segment_usage_carryover:,
           metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(
             billing_segment:, max_timestamp: [timestamp, billing_segment.ended_at].min
           ),
