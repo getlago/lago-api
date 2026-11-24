@@ -40,8 +40,9 @@ module Integrations
       end
 
       # Across organizations: a connection id is global in Nango, so another integration may still use it.
+      # The id is encrypted, so the rows are compared in Ruby, loading only the columns the check needs.
       def connection_shared?
-        Integrations::QuickbooksIntegration.where.not(id: integration.id).find_each.any? do |other|
+        Integrations::QuickbooksIntegration.where.not(id: integration.id).select(:id, :type, :secrets).find_each.any? do |other|
           other.connection_id == integration.connection_id
         end
       end
