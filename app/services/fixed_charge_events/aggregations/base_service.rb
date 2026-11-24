@@ -3,7 +3,10 @@
 module FixedChargeEvents
   module Aggregations
     class BaseService < BaseService
-      Result = BaseResult[:count, :aggregation, :current_usage_units, :full_units_number, :total_aggregated_units, :aggregator, :grouped_by]
+      class Result < BaseResult[:count, :aggregation, :current_usage_units, :full_units_number, :total_aggregated_units, :aggregator, :grouped_by]
+        alias_method :billable_units, :aggregation
+      end
+
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
       def initialize(fixed_charge:, subscription:, boundaries:)

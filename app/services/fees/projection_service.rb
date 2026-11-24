@@ -12,7 +12,9 @@ module Fees
       :grouped_by, :aggregator, :aggregations, :aggregation, :total_aggregated_units,
       :current_usage_units, :full_units_number, :count, :options,
       keyword_init: true
-    )
+    ) do
+      alias_method :billable_units, :aggregation
+    end
 
     def initialize(fee:, metered_item:, timezone:)
       @fee = fee

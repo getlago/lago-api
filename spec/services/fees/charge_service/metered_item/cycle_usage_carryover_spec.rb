@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::ChargeService::MeteredItem::SegmentUsageCarryover do
+RSpec.describe Fees::ChargeService::MeteredItem::CycleUsageCarryover do
   subject(:usage) { described_class.for(segments:, coverage_started_at:) }
 
   let(:organization) { build(:organization, feature_flags: ["product_catalog"]) }
@@ -24,8 +24,8 @@ RSpec.describe Fees::ChargeService::MeteredItem::SegmentUsageCarryover do
   end
 
   it "carries the previous segment's units into a different model" do
-    expect { |b| usage.accumulate(metered_item: first_item, groups: [local_usage], &b) }.not_to yield_control
-    expect { |b| usage.accumulate(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10)
+    expect { |b| usage.each_opening_balance(metered_item: first_item, groups: [local_usage], &b) }.not_to yield_control
+    expect { |b| usage.each_opening_balance(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10)
   end
 
   context "when a standard rate follows the last tiered switch" do
@@ -38,31 +38,29 @@ RSpec.describe Fees::ChargeService::MeteredItem::SegmentUsageCarryover do
     let(:unread_groups) { Enumerator.new { raise "unexpected group traversal" } }
 
     it "delivers the final opening balance and skips subsequent groups" do
-      usage.accumulate(metered_item: first_item, groups: [local_usage])
-      expect { |b| usage.accumulate(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10)
+      expect(usage.apply_closing_values?).to be(false)
+      expect(usage.apply_carry_over?).to be(true)
+      usage.each_opening_balance(metered_item: first_item, groups: [local_usage])
+      expect { |b| usage.each_opening_balance(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10)
       expect(usage).to be_empty
-      usage.accumulate(metered_item: third_item, groups: unread_groups)
-    end
-  end
-
-  describe ".empty" do
-    subject(:usage) { described_class.empty }
-
-    it "does not yield an opening balance" do
-      expect(usage).to be_empty
-      expect { |b| usage.accumulate(metered_item: first_item, groups: [local_usage], &b) }.not_to yield_control
+      expect(usage.apply_carry_over?).to be(false)
+      usage.each_opening_balance(metered_item: third_item, groups: unread_groups)
     end
   end
 
   it "advances past a bypassed segment without carrying any of its units" do
-    usage.accumulate(metered_item: first_item, groups: [])
-    expect { |b| usage.accumulate(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 0)
+    usage.each_opening_balance(metered_item: first_item, groups: [])
+    expect { |b| usage.each_opening_balance(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 0)
   end
 
   context "with a single segment" do
     let(:segments) { [first] }
 
-    it { is_expected.to be_empty }
+    it "has no closing values or carryover to apply" do
+      expect(usage).to be_empty
+      expect(usage.apply_closing_values?(groups: [local_usage])).to be(false)
+      expect(usage.apply_carry_over?).to be(false)
+    end
   end
 
   context "when the new price is standard" do
@@ -90,11 +88,11 @@ RSpec.describe Fees::ChargeService::MeteredItem::SegmentUsageCarryover do
     let(:segments) { [prior, grouped, first, second] }
 
     it "only carries units accumulated since the last grouping change" do
-      usage.accumulate(metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: prior), groups: [local_usage])
-      usage.accumulate(metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: grouped), groups: [])
-      usage.accumulate(metered_item: first_item, groups: [local_usage])
+      usage.each_opening_balance(metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: prior), groups: [local_usage])
+      usage.each_opening_balance(metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: grouped), groups: [])
+      usage.each_opening_balance(metered_item: first_item, groups: [local_usage])
 
-      expect { |b| usage.accumulate(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10)
+      expect { |b| usage.each_opening_balance(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10)
     end
   end
 
@@ -108,9 +106,9 @@ RSpec.describe Fees::ChargeService::MeteredItem::SegmentUsageCarryover do
     let(:earlier_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: earlier) }
 
     it "carries units from both preceding segments" do
-      usage.accumulate(metered_item: earlier_item, groups: [local_usage])
-      usage.accumulate(metered_item: first_item, groups: [local_usage])
-      expect { |b| usage.accumulate(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10 + 10)
+      usage.each_opening_balance(metered_item: earlier_item, groups: [local_usage])
+      usage.each_opening_balance(metered_item: first_item, groups: [local_usage])
+      expect { |b| usage.each_opening_balance(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10 + 10)
     end
   end
 
@@ -118,8 +116,8 @@ RSpec.describe Fees::ChargeService::MeteredItem::SegmentUsageCarryover do
     let(:coverage_started_at) { start - 1.day }
 
     it "does not use an incomplete opening balance" do
-      usage.accumulate(metered_item: first_item, groups: [local_usage])
-      expect { |b| usage.accumulate(metered_item: second_item, groups: [local_usage], &b) }.not_to yield_control
+      usage.each_opening_balance(metered_item: first_item, groups: [local_usage])
+      expect { |b| usage.each_opening_balance(metered_item: second_item, groups: [local_usage], &b) }.not_to yield_control
     end
   end
 end

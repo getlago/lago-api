@@ -34,7 +34,7 @@ module ChargeModels
     end
 
     def apply
-      result.units = aggregation_result.aggregation
+      result.units = aggregation_result.billable_units
       result.current_usage_units = aggregation_result.current_usage_units
       result.full_units_number = aggregation_result.full_units_number
       result.count = aggregation_result.count

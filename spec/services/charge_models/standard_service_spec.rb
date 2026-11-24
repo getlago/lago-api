@@ -38,6 +38,15 @@ RSpec.describe ChargeModels::StandardService do
     expect(apply_standard_service.unit_amount).to eq(5.12345)
   end
 
+  context "when the closing value is zero" do
+    before { aggregation_result.closing_units = 0 }
+
+    it "bills zero rather than falling back to local units" do
+      expect(apply_standard_service.units).to eq(0)
+      expect(apply_standard_service.amount).to eq(0)
+    end
+  end
+
   context "when aggregation result contains total_aggregated_units" do
     let(:total_aggregated_units) { 10 }
 

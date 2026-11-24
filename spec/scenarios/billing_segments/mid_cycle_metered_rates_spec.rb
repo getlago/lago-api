@@ -164,7 +164,10 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
       event(start, 10)
       add_rate
       event(switch, 3)
-      expect(segment_fees(bill)).to eq([["old", 10, 1000], ["new", 10, 2000]])
+      expect(usage_cents(switch + 1.day)).to eq([1000, 2000])
+      invoice = bill
+      expect(segment_fees(invoice)).to eq([["old", 10, 1000], ["new", 10, 2000]])
+      expect(invoice.fees.order(Arel.sql("properties->>'from_datetime'")).pluck(:events_count)).to eq([1, 1])
     end
   end
 
@@ -200,7 +203,10 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
       event(start + 2.days, 7)
       add_rate
       event(start, 10, received_at: switch + 1.day)
-      expect(segment_fees(bill)).to eq([["old", 7, 700], ["new", 7, 1400]])
+      expect(usage_cents(switch + 2.days)).to eq([700, 1400])
+      invoice = bill
+      expect(segment_fees(invoice)).to eq([["old", 7, 700], ["new", 7, 1400]])
+      expect(invoice.fees.order(Arel.sql("properties->>'from_datetime'")).pluck(:events_count)).to eq([2, 0])
     end
 
     it "uses the later segment's own latest value even if an older event arrives last" do
@@ -209,6 +215,41 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
       event(switch + 1.day, 5)
       event(switch, 9, received_at: switch + 2.days)
       expect(segment_fees(bill)).to eq([["old", 7, 700], ["new", 5, 1000]])
+    end
+
+    context "with regional pricing" do
+      let(:old_price) { super().merge(pricing_group_keys: ["region"]) }
+      let(:new_price) { super().merge(pricing_group_keys: ["region"]) }
+
+      it "bills only the carried region when the new segment has no events" do
+        event(start, 7, region: "EU")
+        add_rate
+        expect(usage_cents(switch + 1.day)).to eq([700, 1400])
+        expect(bill.fees.where(rate_card_rate: card.rates.find_by!(code: "new")).pluck(:grouped_by, :units, :events_count))
+          .to eq([[{"region" => "EU"}, 7, 0]])
+      end
+
+      it "keeps the eventless region's value and honors an explicit zero in the other" do
+        event(start, 7, region: "EU")
+        event(start, 9, region: "US")
+        add_rate
+        event(switch, 0, region: "US")
+        expect(usage_cents(switch + 1.day)).to eq([1600, 1400])
+        invoice = bill
+        expect(invoice.fees.where(rate_card_rate: card.rates.find_by!(code: "new")).pluck(:grouped_by, :units, :events_count))
+          .to match_array([[{"region" => "EU"}, 7, 0], [{"region" => "US"}, 0, 1]])
+      end
+
+      context "when the new rate groups by another property" do
+        let(:new_price) { super().merge(pricing_group_keys: ["zone"]) }
+
+        it "does not import groups observed under the previous rate" do
+          event(start, 7, region: "EU", zone: "north")
+          add_rate
+          event(switch, 2, region: "US", zone: "south")
+          expect(segment_fees(bill)).to eq([["old", 7, 700], ["new", 2, 400]])
+        end
+      end
     end
   end
 

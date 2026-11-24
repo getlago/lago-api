@@ -97,6 +97,46 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
     expect(result.count).to eq(5)
   end
 
+  context "when the event store fails and the metric uses rounding" do
+    let(:events) { [] }
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: :max_agg, field_name: "total_count", rounding_function: "floor", rounding_precision: 0)
+    end
+
+    before { allow(event_store).to receive(:max).and_raise(ActiveRecord::StatementInvalid, "store unavailable") }
+
+    it "returns the aggregation failure" do
+      result = max_service.aggregate
+
+      expect(result).to be_failure
+      expect(result.error.code).to eq("aggregation_failure")
+    end
+  end
+
+  context "when an earlier segment has a higher peak" do
+    let(:cycle_usage_tracker) { instance_double(Fees::ChargeService::MeteredItem::CycleClosingUnits, apply_closing_values?: true, apply_carry_over?: false) }
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: :max_agg, field_name: "total_count", rounding_function: "floor", rounding_precision: 0)
+    end
+    let(:events) do
+      [create(:event, organization_id: organization.id, subscription:, code: billable_metric.code,
+        timestamp: to_datetime - 1.day, properties: {total_count: 3})]
+    end
+
+    before do
+      allow(cycle_usage_tracker).to receive(:each_closing_value) do |groups:, **, &block|
+        block.call(groups.sole, BigDecimal("10.9"), nil)
+      end
+    end
+
+    it "keeps the local maximum and event count while pricing the rounded closing units" do
+      result = max_service.aggregate(cycle_usage_tracker:)
+      expect(result).to have_attributes(aggregation: 3, count: 1, closing_units: 10)
+      price = ChargeModels::StandardService.apply(pricing_structure: metered_item.pricing_structure, aggregation_result: result)
+      expect(price.units).to eq(10)
+    end
+  end
+
   context "when events are out of bounds" do
     let(:to_datetime) { Time.zone.now - 3.days }
 

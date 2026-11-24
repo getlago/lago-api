@@ -21,14 +21,6 @@ RSpec.describe Fees::ChargeService::MeteredItem do
   end
 
   describe ".from_charge" do
-    context "when the organization uses the product catalog" do
-      let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
-
-      it "does not accumulate usage for a subscription charge" do
-        expect(metered_item.accumulate?).to be(false)
-      end
-    end
-
     it "builds a metered item backed by a charge source" do
       expect(metered_item.charge).to eq(charge)
       expect(metered_item.boundaries).to eq(boundaries)

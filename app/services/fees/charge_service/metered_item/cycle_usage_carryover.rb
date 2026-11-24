@@ -4,7 +4,7 @@ module Fees
   class ChargeService
     class MeteredItem
       # Closing units per pricing group, kept until the last segment that uses them.
-      class SegmentUsageCarryover
+      class CycleUsageCarryover
         ACTIONS = {
           reset: :reset, # Grouping changed: discard prior balances and start with this segment's units.
           carry: :carry, # Price this segment's tiers using each group's opening balance.
@@ -12,35 +12,6 @@ module Fees
         }.freeze
         private_constant :ACTIONS
 
-        class ClosingBalance
-          def initialize(coverage_end:)
-            @coverage_end = coverage_end
-            @units_by_group = {}
-          end
-
-          def continues_at?(started_at:)
-            @coverage_end == started_at
-          end
-
-          def advance_past(segment)
-            @coverage_end = BillingSegment.exclusive_end(segment.ended_at)
-          end
-
-          def reset!
-            @units_by_group.clear
-          end
-
-          def opening_for(group)
-            @units_by_group.fetch(group.grouped_by, 0)
-          end
-
-          def record_and_return_opening(group)
-            opening = opening_for(group)
-            @units_by_group[group.grouped_by] = opening + group.aggregation
-            opening
-          end
-        end
-        private_constant :ClosingBalance
         private_class_method :new
 
         delegate :empty?, to: :action_by_segment
@@ -48,23 +19,12 @@ module Fees
         def initialize(action_by_segment:, coverage_started_at:, last_carryover_segment:)
           @action_by_segment = action_by_segment
           @last_carryover_segment = last_carryover_segment
-          @closing_balance = ClosingBalance.new(coverage_end: coverage_started_at)
-        end
-
-        EMPTY = new(action_by_segment: {}.freeze, coverage_started_at: nil, last_carryover_segment: nil).freeze
-        private_constant :EMPTY
-
-        def self.empty
-          EMPTY
+          @coverage_end = coverage_started_at
+          @units_by_group = Hash.new(0)
         end
 
         def self.for(segments:, coverage_started_at:)
-          return empty if segments.size < 2
-
-          first = segments.first
-          return empty unless first.organization.product_catalog_enabled? && first.contract_rate_card.rate_card.product.metered?
-
-          action_by_segment = {first => ACTIONS.fetch(:track)}
+          action_by_segment = {segments.first => ACTIONS.fetch(:track)}
           last_carryover_segment = nil
           segments.each_cons(2) do |previous, segment|
             action = action_for(previous:, segment:)
@@ -75,7 +35,7 @@ module Fees
           if last_carryover_segment
             new(action_by_segment:, coverage_started_at:, last_carryover_segment:)
           else
-            empty
+            BillingSegments::EMPTY_CYCLE_USAGE_TRACKER
           end
         end
 
@@ -94,30 +54,35 @@ module Fees
         end
         private_class_method :action_for
 
-        def accumulate(metered_item:, groups:, &block)
+        def apply_closing_values?(groups: []) = false
+
+        def apply_carry_over? = !empty?
+
+        def each_opening_balance(metered_item:, groups:, &block)
           segment = metered_item.billing_segment
           action = action_by_segment.fetch(segment) { return }
-          return unless metered_item.accumulate?
-          return unless closing_balance.continues_at?(started_at: segment.started_at)
+          return unless @coverage_end == segment.started_at
 
           return finish!(groups, &block) if segment == last_carryover_segment
 
-          closing_balance.reset! if action == ACTIONS.fetch(:reset)
+          @units_by_group.clear if action == ACTIONS.fetch(:reset)
           groups.each do |group|
-            opening = closing_balance.record_and_return_opening(group)
+            key = group.grouped_by
+            opening = @units_by_group[key]
+            @units_by_group[key] = opening + group.aggregation
             yield group, opening if action == ACTIONS.fetch(:carry)
           end
-          closing_balance.advance_past(segment)
+          @coverage_end = BillingSegment.exclusive_end(segment.ended_at)
         end
 
         private
 
-        attr_reader :action_by_segment, :closing_balance, :last_carryover_segment
+        attr_reader :action_by_segment, :last_carryover_segment
 
         def finish!(groups)
-          groups.each { |group| yield group, closing_balance.opening_for(group) }
+          groups.each { |group| yield group, @units_by_group[group.grouped_by] }
           action_by_segment.clear
-          @closing_balance = nil
+          @units_by_group.clear
         end
       end
     end

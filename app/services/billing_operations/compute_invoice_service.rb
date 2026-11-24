@@ -52,9 +52,9 @@ module BillingOperations
     end
 
     def attach_metered_fees(segments, filtered_aggregations, coverage_started_at:)
-      segment_usage_carryover = ::Fees::ChargeService::MeteredItem::SegmentUsageCarryover.for(segments:, coverage_started_at:)
+      cycle_usage_tracker = BillingSegments::BuildCycleUsageTrackerService.call!(segments:, coverage_started_at:).cycle_usage_tracker
       segments.each do |segment|
-        fees = compute_metered_fees(segment, filtered_aggregations, segment_usage_carryover)
+        fees = compute_metered_fees(segment, filtered_aggregations, cycle_usage_tracker)
         outputs[segment] = fees
       end
     end
@@ -64,10 +64,10 @@ module BillingOperations
       [fee_result.fee, fee_result.true_up_fee].compact
     end
 
-    def compute_metered_fees(segment, filtered_aggregations, segment_usage_carryover)
+    def compute_metered_fees(segment, filtered_aggregations, cycle_usage_tracker)
       fees_result = ::Fees::ChargeService.call!(
         invoice:,
-        segment_usage_carryover:,
+        cycle_usage_tracker:,
         metered_item: build_metered_item(segment),
         billing_context: Billing::Context.from(contract: segment.contract),
         options: ::Fees::ChargeService::Options.new(
