@@ -13,10 +13,20 @@ class CatalogWallet < ApplicationRecord
   has_many :alerts, class_name: "UsageMonitoring::CatalogWalletAlert", dependent: :delete_all, inverse_of: :catalog_wallet
 
   validates :code, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
+  validate :currency_matches_contract, if: -> { currency_changed? || contract_id_changed? }
 
   # Its alerts seed the lines already in alarm only once it holds money: at 0 every balance line is in alarm
   def funded?
     balance_cents.positive?
+  end
+
+  private
+
+  # A contract is invoiced in one currency, so a wallet in another one could never pay.
+  def currency_matches_contract
+    if contract && self.class.currency_list.include?(currency) && currency != contract.currency
+      errors.add(:currency, :currency_does_not_match)
+    end
   end
 end
 
@@ -47,6 +57,7 @@ end
 #
 # Indexes
 #
+#  index_catalog_wallets_by_cursor                (contract_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_catalog_wallets_on_contract_id_and_code  (contract_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #  index_catalog_wallets_on_customer_id           (customer_id)
 #  index_catalog_wallets_on_organization_id       (organization_id)

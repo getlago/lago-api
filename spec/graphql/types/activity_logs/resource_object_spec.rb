@@ -38,6 +38,14 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
     )
   end
 
+  it "resolves every resource type an activity log can name, unless it is listed as having no GraphQL type" do
+    resource_types = Clickhouse::ActivityLog::RESOURCE_TYPES.values - Types::ActivityLogs::Object::RESOURCE_TYPES_WITHOUT_OBJECT
+
+    resource_types.each do |resource_type|
+      expect(subject.possible_types).to include(subject.resolve_type(resource_type.constantize.new, nil)), resource_type
+    end
+  end
+
   describe ".resolve_type" do
     let(:billable_metric) { create(:billable_metric) }
     let(:plan) { create(:plan) }

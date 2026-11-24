@@ -4,12 +4,11 @@ module Api
   module V2
     class PlanWalletsController < Api::V2::BaseController
       include Api::RequiresCatalogWallets
+      include Api::CatalogWalletParams
 
       cursor_paginated_index(PlanWallet)
       date_range_filtered_index(:created_at)
       serializable_with ::V2::PlanWalletSerializer
-
-      UNFILTERED_PARAMS = %i[tax_codes applies_to metadata].freeze
 
       def create
         result = ::PlanWallets::CreateService.call(catalog_plan: find_catalog_plan, params: plan_wallet_params)
@@ -82,36 +81,7 @@ module Api
       end
 
       def plan_wallet_params
-        plan_wallet = params.require(:plan_wallet)
-        permitted = plan_wallet.permit(
-          :code,
-          :name,
-          :invoice_display_name,
-          :currency,
-          :tax_application,
-          :priority,
-          :top_up_min_amount_cents,
-          :top_up_max_amount_cents,
-          tax_codes: [],
-          applies_to: {},
-          metadata: {}
-        ).to_h
-
-        # Strong params drop a null and a value of another shape. The services need both: a null
-        # metadata clears it, and another shape is refused instead of ignored.
-        UNFILTERED_PARAMS.each do |key|
-          permitted[key] = unfiltered(plan_wallet[key]) if plan_wallet.key?(key) && !permitted.key?(key)
-        end
-
-        permitted
-      end
-
-      def unfiltered(value)
-        case value
-        when ActionController::Parameters then value.to_unsafe_h
-        when Array then value.map { unfiltered(it) }
-        else value
-        end
+        catalog_wallet_params(:plan_wallet)
       end
 
       def resource_name
