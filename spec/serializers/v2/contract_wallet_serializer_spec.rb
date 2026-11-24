@@ -6,7 +6,7 @@ describe V2::ContractWalletSerializer do
   subject(:payload) { described_class.new(contract_wallet, options).serialize }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:, external_id: "acme") }
+  let_it_be(:customer) { create(:customer, organization:, external_id: "acme", currency: "USD") }
   let_it_be(:contract) { create(:contract, organization:, customer:, external_id: "acme-pro", code: "acme-pro-2026") }
 
   let(:contract_wallet) do

@@ -7,6 +7,6 @@ FactoryBot.define do
     contract { association(:contract, organization:, customer:) }
     sequence(:code) { |n| "wallet-#{n}" }
     name { "Prepaid credits" }
-    currency { "EUR" }
+    currency { contract.currency }
   end
 end
