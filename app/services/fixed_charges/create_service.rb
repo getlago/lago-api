@@ -51,6 +51,8 @@ module FixedCharges
           timestamp:
         )
 
+        Plans::AgentStorefrontGuardService.call(plan:).raise_if_error!
+
         result.fixed_charge = fixed_charge
       end
 

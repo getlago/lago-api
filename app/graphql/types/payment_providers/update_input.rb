@@ -9,6 +9,7 @@ module Types
       argument :flow_id, String, required: false
       argument :id, ID, required: true
       argument :name, String, required: false
+      argument :seller_profile, String, required: false
       argument :success_redirect_url, String, required: false
 
       argument :require_terms_of_service_consent, Boolean, required: false

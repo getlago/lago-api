@@ -9,7 +9,7 @@ RSpec.describe Api::V2::ContractsController do
   # A contract is never deleted, so it renders no deleted_at.
   let(:flat_keys) do
     %i[
-      lago_id external_id code lago_customer_id external_customer_id name plan_code status billing_time
+      lago_id external_id code lago_customer_id external_customer_id name plan_code status
       consolidate_invoice purchase_order_number billing_anchor_date effective_billing_anchor_date started_at
       ended_at terminated_at canceled_at skip_invoice_custom_sections created_at updated_at
     ]
@@ -28,6 +28,17 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     include_examples "requires API permission", "contract", "write"
+
+    context "with the removed billing_time parameter" do
+      let(:create_params) { super().merge(billing_time: "weekly") }
+
+      it "ignores it and creates a contract without billing_time in the response" do
+        expect { subject }.to change(Contract, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract].keys).to match_array(flat_keys)
+      end
+    end
 
     context "when the billing schedule is locked" do
       before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
@@ -130,6 +141,64 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:details]).to eq([{code: "value_already_exists", field: "external_id", meta: {}}])
+      end
+    end
+
+    context "with the draft status" do
+      let(:create_params) { super().merge(status: "draft", started_at: "2026-10-01T00:00:00Z") }
+
+      it "creates a draft, which the list filtered on draft returns" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:contract]).to include(lago_id: Contract.sole.id, status: "draft", started_at: "2026-10-01T00:00:00.000000Z")
+
+        get_with_token(organization, "/api/v2/contracts", {status: "draft"})
+        expect(json[:contracts].map { it[:lago_id] }).to eq([Contract.sole.id])
+      end
+    end
+
+    context "with another status" do
+      let(:create_params) { super().merge(status: "active") }
+
+      it "returns a validation error without creating a contract" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "status", meta: {}}])
+      end
+    end
+
+    context "with a non-scalar status" do
+      let(:create_params) { super().merge(status: ["draft"], started_at: "2026-10-01T00:00:00Z") }
+
+      it "refuses it rather than creating a contract that bills" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "status", meta: {}}])
+      end
+    end
+
+    context "with a null status" do
+      let(:create_params) { super().merge(status: nil) }
+
+      it "creates the contract as when the status is omitted" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:contract][:status]).to eq("active")
+      end
+    end
+
+    context "with a draft status and no start date" do
+      let(:create_params) { super().merge(status: "draft") }
+
+      it "returns a validation error without creating a contract" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "started_at", meta: {}}])
       end
     end
 
@@ -308,7 +377,6 @@ RSpec.describe Api::V2::ContractsController do
           name: nil,
           plan_code: catalog_plan.code,
           status: "active",
-          billing_time: "calendar",
           consolidate_invoice: true,
           purchase_order_number: nil,
           billing_anchor_date: nil,
@@ -674,6 +742,30 @@ RSpec.describe Api::V2::ContractsController do
 
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
     let(:update_params) { {name: "Renamed"} }
+
+    context "with the removed billing_time parameter" do
+      let(:update_params) { super().merge(billing_time: "anniversary") }
+
+      it "ignores it and updates the contract" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract.reload.name).to eq("Renamed")
+        expect(json[:contract].keys).to match_array(flat_keys)
+      end
+
+      context "when the contract is active" do
+        let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+        it "does not treat it as a change to a locked field" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(contract.reload.name).to eq("Renamed")
+          expect(json[:contract].keys).to match_array(flat_keys)
+        end
+      end
+    end
 
     context "when the billing schedule is locked" do
       before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
