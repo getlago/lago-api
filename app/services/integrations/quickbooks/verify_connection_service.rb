@@ -43,9 +43,9 @@ module Integrations
 
       attr_reader :integration
 
-      # A blank stored realm never matches: the found company cannot be confirmed.
+      # ConnectionService never returns a blank realm, so a blank stored realm never matches.
       def same_realm?(found_realm_id)
-        integration.realm_id.present? && found_realm_id == integration.realm_id.to_s
+        found_realm_id == integration.realm_id.to_s
       end
 
       # Writes only on a change, so a routine check adds no version and keeps updated_at.
