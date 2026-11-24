@@ -74,6 +74,141 @@ RSpec.describe Customers::TerminateRelationsService do
     end
   end
 
+  context "with draft invoices and a pending contract on the shadow organization of a paused migration" do
+    let(:contract) { create(:contract, :pending, customer:) }
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization, status: "paused")
+      contract
+      invoices
+    end
+
+    it "cancels the contract and deletes the drafts instead of finalizing them" do
+      expect { terminate_service.call }.not_to have_enqueued_job(Invoices::FinalizeJob)
+
+      expect(contract.reload).to be_canceled
+      expect(invoices.map(&:reload)).to all(be_deleted)
+    end
+  end
+
+  context "with contracts on the shadow organization of a shadowing migration" do
+    let(:active_contract) { create(:contract, customer:) }
+    let(:terminated_contract) { create(:contract, :terminated, customer:, terminated_at: 2.days.ago) }
+    let(:canceled_contract) { create(:contract, :canceled, customer:, canceled_at: 3.days.ago) }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization, status: "shadowing")
+      active_contract
+      terminated_contract
+      canceled_contract
+    end
+
+    it "terminates the active contract and leaves ended contracts alone" do
+      freeze_time do
+        expect { terminate_service.call }
+          .to change { active_contract.reload.status }.from("active").to("terminated")
+          .and change(active_contract, :terminated_at).from(nil).to(Time.current)
+          .and not_change { terminated_contract.reload.attributes.slice("status", "terminated_at", "canceled_at") }
+          .and not_change { canceled_contract.reload.attributes.slice("status", "terminated_at", "canceled_at") }
+      end
+    end
+  end
+
+  context "with a live contract and draft invoices on the shadow organization of a migration" do
+    let(:contract) { create(:contract, :pending, customer:) }
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+    let(:calls) { [] }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization)
+      contract
+      invoices
+
+      allow(Contracts::TerminateService).to receive(:call).and_wrap_original do |original, **kwargs|
+        calls << [:contract, kwargs[:contract].id]
+        original.call(**kwargs)
+      end
+      allow(Invoices::DeleteService).to receive(:call).and_wrap_original do |original, **kwargs|
+        calls << [:invoice, kwargs[:invoice].id]
+        original.call(**kwargs)
+      end
+    end
+
+    it "terminates the contract before deleting the first draft" do
+      terminate_service.call
+
+      expect(calls.map(&:first)).to eq([:contract, :invoice, :invoice])
+      expect(calls.first).to eq([:contract, contract.id])
+      expect(calls.drop(1).map(&:last)).to match_array(invoices.map(&:id))
+    end
+  end
+
+  context "with a draft invoice the deletion refuses on the shadow organization of a migration" do
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+    let(:refused_invoice) { invoices.first }
+    let(:deleted_invoice) { invoices.last }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization)
+
+      allow(Invoices::DeleteService).to receive(:call).and_call_original
+      allow(Invoices::DeleteService).to receive(:call).with(invoice: refused_invoice).and_return(
+        Invoices::DeleteService::Result.new.not_allowed_failure!(code: "invoice_synced_to_external_system")
+      )
+      allow(Rails.logger).to receive(:warn).and_call_original
+    end
+
+    it "logs the refused draft and deletes the others without finalizing any" do
+      result = nil
+
+      expect { result = terminate_service.call }.not_to have_enqueued_job(Invoices::FinalizeJob)
+
+      expect(result).to be_success
+      expect(refused_invoice.reload).to be_draft
+      expect(deleted_invoice.reload).to be_deleted
+      expect(Rails.logger).to have_received(:warn).with(include(refused_invoice.id, "invoice_synced_to_external_system"))
+    end
+  end
+
+  shared_examples "finalizing drafts and leaving contracts untouched" do
+    let(:contract) { create(:contract, :pending, customer:) }
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+
+    before do
+      contract
+      invoices
+    end
+
+    it "enqueues finalize jobs 5 minutes later and leaves the contract and drafts as they are" do
+      freeze_time do
+        expect { terminate_service.call }
+          .to have_enqueued_job(Invoices::FinalizeJob).at(5.minutes.from_now).exactly(:twice)
+      end
+
+      expect(contract.reload).to be_pending
+      expect(invoices.map(&:reload)).to all(be_draft)
+    end
+  end
+
+  context "with draft invoices and a pending contract on an organization without a migration" do
+    it_behaves_like "finalizing drafts and leaving contracts untouched"
+  end
+
+  context "with draft invoices and a pending contract on the shadow organization of an aborted migration" do
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization, status: "aborted")
+    end
+
+    it_behaves_like "finalizing drafts and leaving contracts untouched"
+  end
+
+  context "with draft invoices and a pending contract on the source organization of a migration" do
+    before { create(:billing_engine_migration, organization: customer.organization) }
+
+    it_behaves_like "finalizing drafts and leaving contracts untouched"
+  end
+
   context "with an applied coupon" do
     let(:applied_coupon) { create(:applied_coupon, customer:) }
 
