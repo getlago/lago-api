@@ -112,8 +112,13 @@ class KarafkaApp < Karafka::App
         topic ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"] do
           consumer SubscriptionUsageAlertsConsumer
 
+          # Triggers older than the group belong to the sweep: replaying them would buy no latency.
+          initial_offset "latest"
           # Alert latency: don't sit on a sparse batch (the default is 1000ms).
           max_wait_time 100
+          # Caught-up buckets skip the stale check, so a backlog is only cleared by collapsing it to
+          # one evaluation per subscription: same reasoning as the wallet refresh group.
+          max_messages 10_000
         end
       end
     end

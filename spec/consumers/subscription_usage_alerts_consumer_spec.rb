@@ -78,12 +78,18 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     )
   end
 
-  it "counts the evaluation and measures it" do
-    consumer.consume
+  context "when the evaluation ends 3 seconds after the trigger watermark" do
+    let(:watermark_ms) { 1_795_000_000_000 }
 
-    expect(outcomes).to have_received(:increment).with({outcome: "evaluated", reason: "none"}, by: 1)
-    expect(latency).to have_received(:measure).with({}, be_within(60).of(0))
-    expect(evaluation_duration).to have_received(:measure).with({}, be_within(60).of(0))
+    around { |example| travel_to(Time.zone.at(1_795_000_003)) { example.run } }
+
+    it "counts the evaluation and measures it" do
+      consumer.consume
+
+      expect(outcomes).to have_received(:increment).with({outcome: "evaluated", reason: "none"}, by: 1)
+      expect(latency).to have_received(:measure).with({}, 3.0)
+      expect(evaluation_duration).to have_received(:measure).with({}, 0.0)
+    end
   end
 
   context "with several triggers for the same subscription" do
@@ -236,6 +242,21 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
 
       expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "no_watermark"}, by: 1)
+    end
+  end
+
+  context "when the bucket wait raises" do
+    before do
+      allow(RealtimeUsage::BucketWatermark).to receive(:wait).and_raise(Errno::ECONNREFUSED)
+      allow(Rails.logger).to receive(:error)
+      allow(Sentry).to receive(:capture_exception)
+    end
+
+    it "leaves the subscription to the sweep without raising the batch" do
+      expect { consumer.consume }.not_to raise_error
+
+      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(outcomes).to have_received(:increment).with({outcome: "failed", reason: "evaluation_raised"}, by: 1)
     end
   end
 

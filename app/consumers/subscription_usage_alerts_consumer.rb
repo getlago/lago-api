@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 # Evaluates current usage alerts seconds after their buckets land, instead of at the next clock tick. The sweep
-# still runs on the same alerts: ProcessAlertService drops whichever usage was measured first. The topic is keyed by
-# (organization_id, customer_id), so the consumer never evaluates one subscription twice at once.
+# still runs on the same alerts, so the lane relies on ProcessAlertService skipping a usage measured before the
+# alert's last evaluation. The topic is keyed by (organization_id, customer_id), so the consumer never evaluates
+# one subscription twice at once.
 class SubscriptionUsageAlertsConsumer < ApplicationConsumer
   # A batch outliving max.poll.interval.ms gets the member evicted and the batch replayed by its
   # next owner, forever. What the deadline cuts stays with the sweep.
