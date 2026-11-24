@@ -11,6 +11,7 @@ module Plans
 
     def call
       return result.not_found_failure!(resource: "plan") unless plan
+      return result.forbidden_failure!(code: "plan_sold_by_agent_storefront") if plan.sold_by_agent_storefront?
 
       ActiveRecord::Base.transaction do
         plan.update!(pending_deletion: true)

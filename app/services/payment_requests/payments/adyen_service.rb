@@ -86,7 +86,7 @@ module PaymentRequests
         prms = {
           reference: "Overdue invoices",
           amount: {
-            value: payable.total_amount_cents,
+            value: ::PaymentProviders::AdyenProvider.to_adyen_amount(payable.total_amount_cents, payable.currency),
             currency: payable.currency.upcase
           },
           merchantAccount: adyen_payment_provider.merchant_account,
