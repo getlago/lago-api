@@ -52,6 +52,27 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService do
         end
       end
 
+      context "when several subscriptions are pending" do
+        let(:subscriptions) do
+          [
+            create(:subscription, :pending, organization:, customer:, subscription_at: 2.days.from_now),
+            create(:subscription, :pending, organization:, customer:, subscription_at: 3.days.from_now)
+          ]
+        end
+
+        it "returns an unsaved active duplicate of each subscription" do
+          expect(result).to be_success
+          expect(subscriptions_result.map(&:external_id)).to eq(subscriptions.map(&:external_id))
+          expect(subscriptions_result).to all(be_new_record.and(have_attributes(status: "active")))
+          expect(subscriptions_result.map(&:started_at)).to eq(subscriptions.map(&:subscription_at))
+          expect(subscriptions_result.map(&:created_at)).to eq(subscriptions.map(&:subscription_at))
+        end
+
+        it "does not change the original subscriptions" do
+          expect { subject }.not_to change { subscriptions.map { |s| s.reload.attributes } }
+        end
+      end
+
       context "when subscription has a next subscription" do
         let(:current_plan) { create(:plan, organization:, pay_in_advance: true) }
         let(:next_plan) { create(:plan, organization:, pay_in_advance:, amount_cents:) }

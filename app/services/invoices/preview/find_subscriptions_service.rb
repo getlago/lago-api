@@ -21,7 +21,7 @@ module Invoices
               sub,
               (sub.next_subscription if sub.next_subscription.plan.pay_in_advance?)
             ].compact
-          elsif subscriptions.size == 1 && subscription.pending?
+          elsif subscription.pending?
             # We need to activate subscription at future billing time. We are also making
             # duplicate of subscription in order to re-use calculation for non-existing
             # future subscription, since we already have this flow covered and invoice

@@ -2099,6 +2099,321 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with several subscriptions including pending ones starting in the future" do
+      let(:customer) { create(:customer, organization:) }
+      let(:active_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 10_000) }
+      let(:pending_plan) do
+        create(:plan, organization:, interval: "monthly", pay_in_advance: pending_pay_in_advance, amount_cents: 300_000)
+      end
+      let(:pending_pay_in_advance) { true }
+      let(:active_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan: active_plan,
+          billing_time: "calendar",
+          started_at: Time.zone.parse("2026-10-01"),
+          subscription_at: Time.zone.parse("2026-10-01"),
+          created_at: Time.zone.parse("2026-10-01")
+        )
+      end
+      let(:pending_subscription) do
+        create(
+          :subscription,
+          :pending,
+          customer:,
+          plan: pending_plan,
+          billing_time: "calendar",
+          subscription_at: Time.zone.parse("2026-12-01")
+        )
+      end
+      let(:preview_params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {external_ids:}
+        }
+      end
+
+      around { |example| travel_to(Time.zone.parse("2026-11-24T10:00:00Z")) { example.run } }
+
+      def subscription_fees
+        json[:invoice][:fees]
+          .select { |fee| fee[:item][:type] == "subscription" }
+          .map { |fee| [fee[:external_subscription_id], fee[:amount_cents], fee[:from_date], fee[:to_date]] }
+      end
+
+      context "with an active and a pending subscription" do
+        let(:external_ids) { [pending_subscription.external_id, active_subscription.external_id] }
+
+        it "previews the fees of both subscriptions" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(subscription_fees).to match_array(
+            [
+              [active_subscription.external_id, 10_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"],
+              [pending_subscription.external_id, 300_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]
+            ]
+          )
+          expect(json[:invoice]).to include(
+            fees_amount_cents: 310_000, # 10_000 (active) + 300_000 (pending)
+            issuing_date: "2026-12-01"
+          )
+        end
+      end
+
+      context "with two pending subscriptions" do
+        let(:other_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 5_000) }
+        let(:other_pending_subscription) do
+          create(
+            :subscription,
+            :pending,
+            customer:,
+            plan: other_plan,
+            billing_time: "calendar",
+            subscription_at: Time.zone.parse("2026-12-01")
+          )
+        end
+        let(:external_ids) { [pending_subscription.external_id, other_pending_subscription.external_id] }
+
+        it "previews the fees of both subscriptions and keeps them pending" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(subscription_fees).to match_array(
+            [
+              [pending_subscription.external_id, 300_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"],
+              [other_pending_subscription.external_id, 5_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]
+            ]
+          )
+          expect(json[:invoice]).to include(
+            fees_amount_cents: 305_000, # 300_000 + 5_000
+            issuing_date: "2026-12-01"
+          )
+          expect([pending_subscription.reload, other_pending_subscription.reload])
+            .to all(have_attributes(status: "pending", started_at: nil))
+        end
+      end
+
+      context "with two pay in arrears pending subscriptions" do
+        let(:arrears_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 5_000) }
+        let(:first_arrears_subscription) do
+          create(
+            :subscription,
+            :pending,
+            customer:,
+            plan: arrears_plan,
+            billing_time: "calendar",
+            subscription_at: Time.zone.parse("2026-12-01")
+          )
+        end
+        let(:second_arrears_subscription) do
+          create(
+            :subscription,
+            :pending,
+            customer:,
+            plan: arrears_plan,
+            billing_time: "calendar",
+            subscription_at: Time.zone.parse("2026-12-01")
+          )
+        end
+        let(:external_ids) { [first_arrears_subscription.external_id, second_arrears_subscription.external_id] }
+
+        it "bills each of them for December on 2027-01-01" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(subscription_fees).to match_array(
+            [
+              [first_arrears_subscription.external_id, 5_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"],
+              [second_arrears_subscription.external_id, 5_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]
+            ]
+          )
+          expect(json[:invoice]).to include(
+            fees_amount_cents: 10_000, # 5_000 + 5_000
+            issuing_date: "2027-01-01" # end of the first period (2026-12-31) + 1 day
+          )
+        end
+      end
+
+      context "with a pay in advance and a pay in arrears pending subscription starting on the same day" do
+        let(:arrears_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 5_000) }
+        let(:advance_created_at) { Time.zone.parse("2026-11-24T09:00:00Z") }
+        let(:arrears_created_at) { Time.zone.parse("2026-11-24T09:01:00Z") }
+        let(:pending_subscription) do
+          create(
+            :subscription,
+            :pending,
+            customer:,
+            plan: pending_plan,
+            billing_time: "calendar",
+            subscription_at: Time.zone.parse("2026-12-01"),
+            created_at: advance_created_at
+          )
+        end
+        let(:arrears_subscription) do
+          create(
+            :subscription,
+            :pending,
+            customer:,
+            plan: arrears_plan,
+            billing_time: "calendar",
+            subscription_at: Time.zone.parse("2026-12-01"),
+            created_at: arrears_created_at
+          )
+        end
+        let(:external_ids) { [pending_subscription.external_id, arrears_subscription.external_id] }
+
+        shared_examples "a preview of the pay in advance subscription only" do
+          it "bills the pay in advance subscription on its start date and leaves the other out" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(subscription_fees).to eq(
+              [[pending_subscription.external_id, 300_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]]
+            )
+            expect(json[:invoice]).to include(fees_amount_cents: 300_000, issuing_date: "2026-12-01")
+            expect(json[:invoice][:subscriptions].map { |s| s[:external_id] }).to eq([pending_subscription.external_id])
+          end
+        end
+
+        context "when the pay in advance subscription comes first" do
+          it_behaves_like "a preview of the pay in advance subscription only"
+        end
+
+        context "when the pay in arrears subscription comes first" do
+          let(:advance_created_at) { Time.zone.parse("2026-11-24T09:01:00Z") }
+          let(:arrears_created_at) { Time.zone.parse("2026-11-24T09:00:00Z") }
+
+          it_behaves_like "a preview of the pay in advance subscription only"
+        end
+      end
+
+      context "with an active subscription and a pay in arrears pending one starting on its billing date" do
+        let(:pending_pay_in_advance) { false }
+        let(:external_ids) { [active_subscription.external_id, pending_subscription.external_id] }
+
+        it "previews only the fee of the active subscription" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(subscription_fees).to eq(
+            [[active_subscription.external_id, 10_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]]
+          )
+          expect(json[:invoice]).to include(fees_amount_cents: 10_000, issuing_date: "2026-12-01")
+          expect(json[:invoice][:subscriptions].map { |s| s[:external_id] }).to eq([active_subscription.external_id])
+        end
+      end
+
+      context "with two pay in advance pending subscriptions starting on different dates" do
+        let(:later_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 5_000) }
+        let(:earlier_created_at) { Time.zone.parse("2026-11-24T09:00:00Z") }
+        let(:later_created_at) { Time.zone.parse("2026-11-24T09:01:00Z") }
+        let(:pending_subscription) do
+          create(
+            :subscription,
+            :pending,
+            customer:,
+            plan: pending_plan,
+            billing_time: "calendar",
+            subscription_at: Time.zone.parse("2026-12-01"),
+            created_at: earlier_created_at
+          )
+        end
+        let(:later_subscription) do
+          create(
+            :subscription,
+            :pending,
+            customer:,
+            plan: later_plan,
+            billing_time: "calendar",
+            subscription_at: Time.zone.parse("2027-01-15"),
+            created_at: later_created_at
+          )
+        end
+        let(:external_ids) { [pending_subscription.external_id, later_subscription.external_id] }
+
+        shared_examples "a preview of the earliest subscription only" do
+          it "bills the earliest subscription on its start date and leaves the later one out" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(subscription_fees).to eq(
+              [[pending_subscription.external_id, 300_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]]
+            )
+            expect(json[:invoice]).to include(fees_amount_cents: 300_000, issuing_date: "2026-12-01")
+            expect(json[:invoice][:subscriptions].map { |s| s[:external_id] }).to eq([pending_subscription.external_id])
+          end
+        end
+
+        context "when the earliest subscription comes first" do
+          it_behaves_like "a preview of the earliest subscription only"
+        end
+
+        context "when the later subscription comes first" do
+          let(:earlier_created_at) { Time.zone.parse("2026-11-24T09:01:00Z") }
+          let(:later_created_at) { Time.zone.parse("2026-11-24T09:00:00Z") }
+
+          it_behaves_like "a preview of the earliest subscription only"
+        end
+      end
+
+      context "with an active subscription that has a scheduled downgrade" do
+        let(:downgrade_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 5_000) }
+        let(:downgrade_subscription) do
+          create(
+            :subscription,
+            :pending,
+            customer:,
+            plan: downgrade_plan,
+            billing_time: "calendar",
+            external_id: active_subscription.external_id,
+            previous_subscription: active_subscription,
+            subscription_at: Time.zone.parse("2026-12-01")
+          )
+        end
+        let(:external_ids) { [active_subscription.external_id, pending_subscription.external_id] }
+
+        before { downgrade_subscription }
+
+        shared_examples "a preview of the downgrade only" do
+          it "previews only the downgrade lines" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(subscription_fees).to eq(
+              [[active_subscription.external_id, 5_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]]
+            )
+            expect(json[:invoice]).to include(fees_amount_cents: 5_000, issuing_date: "2026-12-01")
+            expect(json[:invoice][:subscriptions].map { |s| [s[:external_id], s[:plan_code]] }).to match_array(
+              [[active_subscription.external_id, active_plan.code], [active_subscription.external_id, downgrade_plan.code]]
+            )
+          end
+        end
+
+        context "with a pay in advance pending subscription starting after the downgrade date" do
+          let(:pending_subscription) do
+            create(
+              :subscription,
+              :pending,
+              customer:,
+              plan: pending_plan,
+              billing_time: "calendar",
+              subscription_at: Time.zone.parse("2027-01-15")
+            )
+          end
+
+          it_behaves_like "a preview of the downgrade only"
+        end
+
+        context "with a pay in arrears pending subscription starting on the downgrade date" do
+          let(:pending_pay_in_advance) { false }
+
+          it_behaves_like "a preview of the downgrade only"
+        end
+      end
+    end
+
     context "with a scheduled downgrade (projection)" do
       let(:customer) { create(:customer, organization:, external_id: "downgrade_customer") }
       let(:current_plan) do

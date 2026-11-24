@@ -1282,6 +1282,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 created_at: timestamp
               )
             end
+            # Same unsaved next subscription as Invoices::Preview::SubscriptionPlanChangeService builds
             let(:upgrade_subscription) do
               build(
                 :subscription,
@@ -1289,6 +1290,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 plan: plan_new,
                 billing_time:,
                 status: "active",
+                previous_subscription: terminated_subscription,
                 subscription_at: timestamp + 15.hours,
                 started_at: timestamp + 15.hours,
                 created_at: timestamp + 15.hours
@@ -1362,6 +1364,25 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 expect(result.invoice.taxes_amount_cents).to eq(18)
                 expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(53)
                 expect(result.invoice.total_amount_cents).to eq(53)
+              end
+            end
+
+            context "when the unsaved next subscription comes before the terminated one" do
+              let(:subscriptions) { [upgrade_subscription, terminated_subscription] }
+
+              it "previews the same billing time and fees as in the original order", transaction: false do
+                travel_to(terminated_subscription.terminated_at) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+                  expect(result.subscriptions).to eq([upgrade_subscription, terminated_subscription])
+                  expect(result.invoice.fees.length).to eq(2)
+                  expect(result.invoice.fees.map { Time.zone.parse(it.properties["timestamp"].to_s) }.uniq)
+                    .to eq([terminated_subscription.terminated_at])
+                  expect(result.invoice.issuing_date.to_s).to eq("2024-03-29")
+                  expect(result.invoice.fees_amount_cents).to eq(35) # 3.23 + 32.26 (charge) = 35
+                  expect(result.invoice.total_amount_cents).to eq(53)
+                end
               end
             end
 
@@ -2400,6 +2421,422 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
               expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(1500)
               expect(result.invoice.total_amount_cents).to eq(1500)
             end
+          end
+        end
+      end
+
+      context "with several subscriptions including pending ones starting in the future" do
+        let(:timestamp) { Time.zone.parse("2026-11-24") }
+        let(:first_of_december) { Time.zone.parse("2026-12-01") }
+        let(:customer) { create(:customer, organization:, billing_entity:) }
+        let(:plan_a) { create(:plan, organization:, interval: "monthly", amount_cents: 10_000, pay_in_advance: true) }
+        let(:plan_b) { create(:plan, organization:, interval: "monthly", amount_cents: 300_000, pay_in_advance: true) }
+        let(:plan_c) { create(:plan, organization:, interval: "monthly", amount_cents: 5_000, pay_in_advance: true) }
+        let(:plan_d) { create(:plan, organization:, interval: "monthly", amount_cents: 5_000, pay_in_advance: false) }
+        let(:plan_e) { create(:plan, organization:, interval: "monthly", amount_cents: 5_000, pay_in_advance: false) }
+        let(:active_subscription) do
+          create(
+            :subscription,
+            customer:,
+            plan: plan_a,
+            billing_time: "calendar",
+            subscription_at: Time.zone.parse("2026-10-01"),
+            started_at: Time.zone.parse("2026-10-01"),
+            created_at: Time.zone.parse("2026-10-01")
+          )
+        end
+        let(:pending_b) { create_pending(plan_b) }
+        let(:pending_c) { create_pending(plan_c) }
+        let(:pending_d) { create_pending(plan_d) }
+        let(:pending_e) { create_pending(plan_e) }
+        let(:duplicate_b) { activated_duplicate(pending_b) }
+        let(:duplicate_c) { activated_duplicate(pending_c) }
+        let(:duplicate_d) { activated_duplicate(pending_d) }
+        let(:duplicate_e) { activated_duplicate(pending_e) }
+
+        def create_pending(plan, subscription_at: first_of_december)
+          create(:subscription, :pending, customer:, plan:, billing_time: "calendar", subscription_at:)
+        end
+
+        # Same unsaved active duplicate as Invoices::Preview::FindSubscriptionsService builds
+        def activated_duplicate(pending)
+          pending.dup.tap do |duplicate|
+            duplicate.assign_attributes(status: :active, started_at: pending.subscription_at, created_at: pending.subscription_at)
+          end
+        end
+
+        def subscription_fee_of(result, subscription)
+          result.invoice.fees.find { |fee| fee.fee_type == "subscription" && fee.subscription.equal?(subscription) }
+        end
+
+        def fee_period(fee)
+          [fee.properties["from_datetime"].to_date.to_s, fee.properties["to_datetime"].to_date.to_s]
+        end
+
+        before do
+          organization.update!(premium_integrations: ["preview"])
+          travel_to(timestamp)
+        end
+
+        context "with an active and a pending pay in advance subscription billed on the same date" do
+          let(:subscriptions) { [active_subscription, duplicate_b] }
+
+          it "previews both subscription fees for December" do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions).to eq([active_subscription, duplicate_b])
+            expect(result.subscriptions).to eq([active_subscription, duplicate_b])
+            expect(result.invoice.fees.map(&:fee_type)).to eq(%w[subscription subscription])
+            expect(subscription_fee_of(result, active_subscription).amount_cents).to eq(10_000)
+            expect(fee_period(subscription_fee_of(result, active_subscription))).to eq(%w[2026-12-01 2026-12-31])
+            expect(subscription_fee_of(result, duplicate_b).amount_cents).to eq(300_000)
+            expect(fee_period(subscription_fee_of(result, duplicate_b))).to eq(%w[2026-12-01 2026-12-31])
+            expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+            expect(result.invoice.fees_amount_cents).to eq(10_000 + 300_000)
+            expect(result.invoice.taxes_amount_cents).to eq(155_000) # 50% tax of 310_000
+            expect(result.invoice.total_amount_cents).to eq(465_000) # 310_000 + 155_000
+          end
+
+          context "when the pending subscription comes first" do
+            let(:subscriptions) { [duplicate_b, active_subscription] }
+
+            it "previews the same fees and dates" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions).to eq([duplicate_b, active_subscription])
+              expect(subscription_fee_of(result, active_subscription).amount_cents).to eq(10_000)
+              expect(fee_period(subscription_fee_of(result, active_subscription))).to eq(%w[2026-12-01 2026-12-31])
+              expect(subscription_fee_of(result, duplicate_b).amount_cents).to eq(300_000)
+              expect(fee_period(subscription_fee_of(result, duplicate_b))).to eq(%w[2026-12-01 2026-12-31])
+              expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+              expect(result.invoice.fees_amount_cents).to eq(10_000 + 300_000)
+            end
+          end
+
+          context "with a grace period on the customer" do
+            # keep_anchor makes the recurring rule (0 days) differ from the grace period (3 days)
+            let(:customer) do
+              create(
+                :customer,
+                organization:,
+                billing_entity:,
+                invoice_grace_period: 3,
+                subscription_invoice_issuing_date_anchor: "next_period_start",
+                subscription_invoice_issuing_date_adjustment: "keep_anchor"
+              )
+            end
+
+            it "uses the recurring rule of the active subscription" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+            end
+
+            context "when the pending subscription comes first" do
+              let(:subscriptions) { [duplicate_b, active_subscription] }
+
+              it "uses the recurring rule of the active subscription" do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+              end
+            end
+          end
+        end
+
+        context "with two pending pay in advance subscriptions" do
+          let(:subscriptions) { [duplicate_b, duplicate_c] }
+
+          it "previews each subscription fee" do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions).to eq([duplicate_b, duplicate_c])
+            expect(subscription_fee_of(result, duplicate_b).amount_cents).to eq(300_000)
+            expect(fee_period(subscription_fee_of(result, duplicate_b))).to eq(%w[2026-12-01 2026-12-31])
+            expect(subscription_fee_of(result, duplicate_c).amount_cents).to eq(5_000)
+            expect(fee_period(subscription_fee_of(result, duplicate_c))).to eq(%w[2026-12-01 2026-12-31])
+            expect(result.invoice.fees_amount_cents).to eq(300_000 + 5_000)
+            expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+            expect(pending_b.reload).to be_pending
+            expect(pending_c.reload).to be_pending
+          end
+        end
+
+        context "with two pending pay in arrears subscriptions" do
+          let(:subscriptions) { [duplicate_d, duplicate_e] }
+
+          it "bills each one for December on January 1st" do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions).to eq([duplicate_d, duplicate_e])
+            expect(subscription_fee_of(result, duplicate_d).amount_cents).to eq(5_000)
+            expect(fee_period(subscription_fee_of(result, duplicate_d))).to eq(%w[2026-12-01 2026-12-31])
+            expect(subscription_fee_of(result, duplicate_e).amount_cents).to eq(5_000)
+            expect(fee_period(subscription_fee_of(result, duplicate_e))).to eq(%w[2026-12-01 2026-12-31])
+            expect(result.invoice.fees.map { it.properties["timestamp"].to_date.to_s }.uniq).to eq(["2027-01-01"])
+            expect(result.invoice.fees_amount_cents).to eq(5_000 + 5_000)
+            expect(result.invoice.issuing_date.to_s).to eq("2027-01-01")
+          end
+
+          context "with a grace period on the customer" do
+            # keep_anchor makes the recurring rule (0 days) differ from the grace period (3 days)
+            let(:customer) do
+              create(
+                :customer,
+                organization:,
+                billing_entity:,
+                invoice_grace_period: 3,
+                subscription_invoice_issuing_date_anchor: "next_period_start",
+                subscription_invoice_issuing_date_adjustment: "keep_anchor"
+              )
+            end
+
+            it "uses the recurring rule, as for a single pay in arrears pending subscription" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.issuing_date.to_s).to eq("2027-01-01")
+            end
+          end
+
+          context "when each plan has a minimum commitment" do
+            before do
+              create(:commitment, :minimum_commitment, plan: plan_d, amount_cents: 20_000)
+              create(:commitment, :minimum_commitment, plan: plan_e, amount_cents: 12_000)
+            end
+
+            it "computes each true-up from the subscription's own fees" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              commitment_fees = result.invoice.fees.select { it.fee_type == "commitment" }
+              expect(commitment_fees.map { [it.subscription, it.amount_cents] }).to eq(
+                [
+                  [duplicate_d, 20_000 - 5_000], # D's commitment minus D's subscription fee
+                  [duplicate_e, 12_000 - 5_000] # E's commitment minus E's subscription fee
+                ]
+              )
+              expect(result.invoice.fees_amount_cents).to eq(5_000 + 5_000 + 15_000 + 7_000)
+            end
+          end
+        end
+
+        context "with a pending pay in arrears subscription next to an active one" do
+          let(:subscriptions) { [duplicate_d, active_subscription] }
+
+          it "leaves the pending subscription out of the preview" do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions).to eq([active_subscription])
+            expect(result.subscriptions).to eq([active_subscription])
+            expect(result.invoice.fees.map { [it.subscription, it.amount_cents] }).to eq([[active_subscription, 10_000]])
+            expect(result.invoice.fees_amount_cents).to eq(10_000)
+            expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+          end
+        end
+
+        context "with a pending pay in advance subscription starting after the billing date" do
+          let(:pending_b) { create_pending(plan_b, subscription_at: Time.zone.parse("2027-01-15")) }
+          let(:subscriptions) { [duplicate_b, active_subscription] }
+
+          it "leaves the pending subscription out of the preview" do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions).to eq([active_subscription])
+            expect(result.subscriptions).to eq([active_subscription])
+            expect(result.invoice.fees.map { [it.subscription, it.amount_cents] }).to eq([[active_subscription, 10_000]])
+            expect(result.invoice.fees_amount_cents).to eq(10_000)
+            expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+          end
+        end
+
+        context "with two pending pay in advance subscriptions starting on different dates" do
+          let(:pending_c) { create_pending(plan_c, subscription_at: Time.zone.parse("2027-01-15")) }
+          let(:subscriptions) { [duplicate_b, duplicate_c] }
+
+          it "previews the earliest one on its start date and leaves the later one out" do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions).to eq([duplicate_b])
+            expect(result.subscriptions).to eq([duplicate_b])
+            expect(result.invoice.fees.map { [it.subscription, it.amount_cents] }).to eq([[duplicate_b, 300_000]])
+            expect(result.invoice.fees_amount_cents).to eq(300_000)
+            expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+          end
+
+          context "when the later one comes first" do
+            let(:subscriptions) { [duplicate_c, duplicate_b] }
+
+            it "previews the earliest one on its start date and leaves the later one out" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions).to eq([duplicate_b])
+              expect(result.invoice.fees.map { [it.subscription, it.amount_cents] }).to eq([[duplicate_b, 300_000]])
+              expect(result.invoice.fees_amount_cents).to eq(300_000)
+              expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+            end
+          end
+        end
+
+        context "with an active subscription that has a scheduled downgrade" do
+          # A (10_000) downgrades to C (5_000, pay in advance) on 2026-12-01
+          let(:downgrade_subscription) do
+            create(
+              :subscription,
+              :pending,
+              customer:,
+              plan: plan_c,
+              billing_time: "calendar",
+              external_id: active_subscription.external_id,
+              previous_subscription: active_subscription,
+              subscription_at: first_of_december
+            )
+          end
+          let(:subscriptions) do
+            downgrade_subscription
+            Invoices::Preview::FindSubscriptionsService.call!(subscriptions: [active_subscription, pending]).subscriptions
+          end
+
+          shared_examples "a preview of the downgrade only" do
+            it "leaves the pending subscription out of the preview" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions.map(&:id)).to eq([active_subscription.id, downgrade_subscription.id])
+              expect(result.invoice.fees.map { [it.subscription.id, it.fee_type, it.amount_cents] })
+                .to eq([[downgrade_subscription.id, "subscription", 5_000]])
+              expect(result.invoice.fees_amount_cents).to eq(5_000)
+              expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+            end
+          end
+
+          context "with a pending pay in advance subscription starting after the downgrade date" do
+            let(:pending) { create_pending(plan_b, subscription_at: Time.zone.parse("2027-01-15")) }
+
+            it_behaves_like "a preview of the downgrade only"
+          end
+
+          context "with a pending pay in arrears subscription starting on the downgrade date" do
+            let(:pending) { pending_d }
+
+            it_behaves_like "a preview of the downgrade only"
+          end
+        end
+
+        context "with a customer in a timezone behind UTC" do
+          # The active subscription is billed on 2026-12-01 in New York (UTC-5)
+          let(:customer) { create(:customer, organization:, billing_entity:, timezone: "America/New_York") }
+          let(:subscriptions) { [active_subscription, duplicate_b] }
+
+          context "when the pending subscription starts on the billing date in the customer timezone" do
+            # 2026-12-02 04:30 UTC is 2026-12-01 23:30 in New York
+            let(:pending_b) { create_pending(plan_b, subscription_at: Time.zone.parse("2026-12-02 04:30")) }
+
+            it "keeps the pending subscription" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions).to eq([active_subscription, duplicate_b])
+              expect(subscription_fee_of(result, duplicate_b)).to be_present
+            end
+          end
+
+          context "when the pending subscription starts the day after the billing date in the customer timezone" do
+            # 2026-12-02 06:00 UTC is 2026-12-02 01:00 in New York
+            let(:pending_b) { create_pending(plan_b, subscription_at: Time.zone.parse("2026-12-02 06:00")) }
+
+            it "leaves the pending subscription out of the preview" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions).to eq([active_subscription])
+              expect(result.invoice.fees.map { [it.subscription, it.amount_cents] }).to eq([[active_subscription, 10_000]])
+            end
+          end
+        end
+
+        context "with only pending subscriptions paid in advance and in arrears" do
+          let(:subscriptions) { [duplicate_b, duplicate_d] }
+
+          it "previews the pay in advance one on its start date" do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions).to eq([duplicate_b])
+            expect(result.subscriptions).to eq([duplicate_b])
+            expect(result.invoice.fees.map { [it.subscription, it.amount_cents] }).to eq([[duplicate_b, 300_000]])
+            expect(result.invoice.fees_amount_cents).to eq(300_000)
+            expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+          end
+
+          context "when the pay in arrears one comes first" do
+            let(:subscriptions) { [duplicate_d, duplicate_b] }
+
+            it "previews the pay in advance one on its start date" do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions).to eq([duplicate_b])
+              expect(result.invoice.fees.map { [it.subscription, it.amount_cents] }).to eq([[duplicate_b, 300_000]])
+              expect(result.invoice.fees_amount_cents).to eq(300_000)
+              expect(result.invoice.issuing_date.to_s).to eq("2026-12-01")
+            end
+          end
+        end
+
+        context "when the persisted subscriptions have different billing dates" do
+          let(:anniversary_subscription) do
+            create(
+              :subscription,
+              customer:,
+              plan: plan_c,
+              billing_time: "anniversary",
+              subscription_at: Time.zone.parse("2026-10-10"),
+              started_at: Time.zone.parse("2026-10-10"),
+              created_at: Time.zone.parse("2026-10-10")
+            )
+          end
+          let(:subscriptions) { [duplicate_b, active_subscription, anniversary_subscription] }
+
+          it "returns an error" do
+            result = preview_service.call
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:base]).to eq(["billing_periods_does_not_match"])
+          end
+        end
+
+        context "when a persisted subscription is first billed after the billing date" do
+          # A recent yearly pay in arrears subscription is first billed on 2027-01-01, after A's 2026-12-01
+          let(:yearly_plan) { create(:plan, organization:, interval: "yearly", amount_cents: 5_000, pay_in_advance: false) }
+          let(:yearly_subscription) do
+            create(
+              :subscription,
+              customer:,
+              plan: yearly_plan,
+              billing_time: "calendar",
+              subscription_at: Time.zone.parse("2026-11-01"),
+              started_at: Time.zone.parse("2026-11-01"),
+              created_at: Time.zone.parse("2026-11-01")
+            )
+          end
+          let(:subscriptions) { [active_subscription, yearly_subscription] }
+
+          it "keeps it and returns an error" do
+            result = preview_service.call
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:base]).to eq(["billing_periods_does_not_match"])
           end
         end
       end

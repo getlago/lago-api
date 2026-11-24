@@ -321,6 +321,123 @@ RSpec.describe Invoices::Preview::SubscriptionsService do
             end
           end
         end
+
+        context "when several subscriptions including pending ones are passed" do
+          let(:active_subscription) { create(:subscription, customer:, created_at: 2.days.ago) }
+          let(:pending_subscription) do
+            create(:subscription, :pending, customer:, subscription_at: Time.current + 2.days, created_at: 1.day.ago)
+          end
+          let(:other_pending_subscription) do
+            create(:subscription, :pending, customer:, subscription_at: Time.current + 2.days)
+          end
+          let(:params) { {subscriptions: {external_ids:}} }
+
+          context "with an active and a pending subscription" do
+            let(:external_ids) { [pending_subscription.external_id, active_subscription.external_id] }
+
+            it "returns the active subscription and an unsaved active duplicate of the pending one" do
+              expect(result).to be_success
+              expect(subject.map(&:external_id)).to eq([active_subscription.external_id, pending_subscription.external_id])
+              expect(subject.first).to eq(active_subscription)
+              expect(subject.second).to be_new_record.and have_attributes(
+                status: "active",
+                plan_id: pending_subscription.plan_id,
+                started_at: pending_subscription.subscription_at,
+                created_at: pending_subscription.subscription_at
+              )
+              expect(pending_subscription.reload).to have_attributes(status: "pending", started_at: nil)
+            end
+          end
+
+          context "with two pending subscriptions" do
+            let(:external_ids) { [other_pending_subscription.external_id, pending_subscription.external_id] }
+
+            it "returns an unsaved active duplicate of each pending subscription" do
+              expect(result).to be_success
+              expect(subject.map(&:external_id))
+                .to eq([pending_subscription.external_id, other_pending_subscription.external_id])
+              expect(subject).to all(be_new_record.and(have_attributes(status: "active")))
+              expect(subject.map(&:plan_id)).to eq([pending_subscription.plan_id, other_pending_subscription.plan_id])
+            end
+          end
+
+          context "with a pending subscription that does not start in the future" do
+            let(:pending_subscription) { create(:subscription, :pending, customer:, subscription_at: 1.day.ago) }
+            let(:external_ids) { [active_subscription.external_id, pending_subscription.external_id] }
+
+            it "returns only the active subscription" do
+              expect(result).to be_success
+              expect(subject).to eq([active_subscription])
+            end
+          end
+
+          context "with an external_id that has several standalone pending subscriptions" do
+            let(:external_id) { SecureRandom.uuid }
+            let(:external_ids) { [active_subscription.external_id, external_id] }
+
+            before do
+              create(:subscription, :pending, customer:, external_id:, subscription_at: Time.current + 2.days)
+              create(:subscription, :pending, customer:, external_id:, subscription_at: Time.current + 3.days)
+            end
+
+            it "returns only the active subscription" do
+              expect(result).to be_success
+              expect(subject).to eq([active_subscription])
+            end
+          end
+
+          context "with an active subscription that has a pending next subscription" do
+            let(:next_plan) { create(:plan, organization:, amount_cents: active_subscription.plan.amount_cents + 100) }
+            let(:external_ids) { [active_subscription.external_id, pending_subscription.external_id] }
+
+            before do
+              create(
+                :subscription,
+                :pending,
+                customer:,
+                plan: next_plan,
+                external_id: active_subscription.external_id,
+                previous_subscription: active_subscription,
+                subscription_at: Time.current + 2.days
+              )
+            end
+
+            it "returns the active subscription without duplicating its next subscription" do
+              expect(result).to be_success
+              expect(subject.size).to eq(2)
+              expect(subject.first).to eq(active_subscription)
+              expect(subject.second).to be_new_record.and have_attributes(plan_id: pending_subscription.plan_id)
+            end
+          end
+
+          context "when terminated at is provided" do
+            let(:terminated_at) { generate(:future_date) }
+            let(:external_ids) { [active_subscription.external_id, pending_subscription.external_id] }
+            let(:params) { {subscriptions: {external_ids:, terminated_at: terminated_at.to_s}} }
+
+            it "terminates only the active subscription" do
+              expect(result).to be_success
+              expect(subject).to eq([active_subscription])
+              expect(subject.first).to have_attributes(status: "terminated", terminated_at: terminated_at.change(usec: 0))
+            end
+          end
+
+          context "when plan code is provided" do
+            let(:target_plan) { create(:plan, organization:, pay_in_advance: true) }
+            let(:external_ids) { [active_subscription.external_id, pending_subscription.external_id] }
+            let(:params) { {subscriptions: {external_ids:, plan_code: target_plan.code}} }
+
+            before { freeze_time }
+
+            it "changes the plan of the active subscription only" do
+              expect(result).to be_success
+              expect(subject.size).to eq(2)
+              expect(subject.first).to eq(active_subscription)
+              expect(subject.first).to have_attributes(status: "terminated")
+              expect(subject.second).to be_new_record.and have_attributes(plan_id: target_plan.id)
+            end
+          end
+        end
       end
 
       context "when external_ids are not provided" do

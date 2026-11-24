@@ -8,8 +8,6 @@ module Invoices
       @customer = customer
       @subscriptions = subscriptions
       @applied_coupons = applied_coupons
-      @first_subscription = subscriptions.first
-      @persisted_subscriptions = subscriptions.any?(&:persisted?)
       @subscription_context = fetch_context
 
       super
@@ -19,6 +17,11 @@ module Invoices
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "subscription") if subscriptions.empty?
+
+      @subscriptions = previewable_subscriptions
+      @first_subscription = subscriptions.first
+      @persisted_subscriptions = subscriptions.any?(&:persisted?)
+
       return result.not_allowed_failure!(code: "premium_integration_missing") if persisted_subscriptions && !organization.preview_enabled?
       return result unless currencies_aligned?
       return result unless billing_times_aligned?
@@ -128,11 +131,11 @@ module Invoices
     end
 
     def end_of_periods
-      @end_of_periods ||= subscriptions.map do |subscription|
-        Subscriptions::DatesService
-          .new_instance(subscription, Time.current, current_usage: true)
-          .end_of_period
-      end
+      @end_of_periods ||= subscriptions.map { end_of_period(it) }
+    end
+
+    def end_of_period(subscription)
+      Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true).end_of_period
     end
 
     def boundaries(subscription)
@@ -160,15 +163,36 @@ module Invoices
     def billing_time
       return @billing_time if defined? @billing_time
 
+      persisted_subscription = subscriptions.find(&:persisted?)
+
       @billing_time = if subscription_context == :terminated
-        first_subscription.terminated_at
-      elsif persisted_subscriptions
-        end_of_periods.first + 1.day
-      elsif first_subscription.plan.pay_in_advance?
-        first_subscription.subscription_at
+        subscriptions.find(&:terminated?).terminated_at
+      elsif persisted_subscription
+        end_of_period(persisted_subscription) + 1.day
       else
-        ds = Subscriptions::DatesService.new_instance(first_subscription, first_subscription.subscription_at, current_usage: true)
+        subscriptions.map { first_billing_time(it) }.min
+      end
+    end
+
+    # Activated duplicates of pending subscriptions, see Invoices::Preview::FindSubscriptionsService
+    def first_billing_time(subscription)
+      if subscription.plan.pay_in_advance?
+        subscription.subscription_at
+      else
+        ds = Subscriptions::DatesService.new_instance(subscription, subscription.subscription_at, current_usage: true)
         ds.end_of_period + 1.day
+      end
+    end
+
+    # Real billing on the billing date would not invoice a pending subscription billed for the first time later.
+    # The unsaved next subscription of a plan change has a previous subscription and is always kept.
+    def previewable_subscriptions
+      billing_date = billing_time.in_time_zone(customer.applicable_timezone).to_date
+
+      subscriptions.reject do |subscription|
+        subscription.new_record? &&
+          subscription.previous_subscription_id.nil? &&
+          first_billing_time(subscription).in_time_zone(customer.applicable_timezone).to_date > billing_date
       end
     end
 
@@ -176,7 +200,7 @@ module Invoices
       return @issuing_date if defined?(@issuing_date)
 
       terminated = subscription_context == :terminated
-      recurring = !terminated && (first_subscription.persisted? || !first_subscription.plan.pay_in_advance?)
+      recurring = !terminated && (persisted_subscriptions || subscriptions.none? { it.plan.pay_in_advance? })
 
       date = billing_time.in_time_zone(customer.applicable_timezone).to_date
       issuing_date_service = Invoices::IssuingDateService.new(customer_settings: customer, recurring:)
@@ -296,7 +320,8 @@ module Invoices
 
       preview_fee_totals = invoice.fees
         .each_with_object({amount_cents: 0, precise_amount_cents: 0}) do |fee, totals|
-          next unless fee.subscription_id == subscription.id
+          # Activated duplicates of pending subscriptions have no id
+          next unless subscription.persisted? ? fee.subscription_id == subscription.id : fee.subscription.equal?(subscription)
 
           totals[:amount_cents] += fee.amount_cents
           totals[:precise_amount_cents] += fee.precise_amount_cents
