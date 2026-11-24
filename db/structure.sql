@@ -1542,11 +1542,7 @@ DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules_invoice_custom_sections;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.recurring_aggregation_snapshots;
-DROP TABLE IF EXISTS public.rate_phases;
-DROP TABLE IF EXISTS public.rate_overrides;
 DROP TABLE IF EXISTS public.rate_cards_taxes;
-DROP TABLE IF EXISTS public.rate_cards;
-DROP TABLE IF EXISTS public.rate_card_rates;
 DROP TABLE IF EXISTS public.quotes;
 DROP TABLE IF EXISTS public.quote_versions;
 DROP SEQUENCE IF EXISTS public.quote_owners_id_seq;
@@ -1602,6 +1598,14 @@ DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
 DROP VIEW IF EXISTS public.exports_record_deletions;
 DROP TABLE IF EXISTS public.record_deletions;
+DROP VIEW IF EXISTS public.exports_rate_phases;
+DROP TABLE IF EXISTS public.rate_phases;
+DROP VIEW IF EXISTS public.exports_rate_overrides;
+DROP TABLE IF EXISTS public.rate_overrides;
+DROP VIEW IF EXISTS public.exports_rate_cards;
+DROP TABLE IF EXISTS public.rate_cards;
+DROP VIEW IF EXISTS public.exports_rate_card_rates;
+DROP TABLE IF EXISTS public.rate_card_rates;
 DROP VIEW IF EXISTS public.exports_products;
 DROP TABLE IF EXISTS public.products;
 DROP VIEW IF EXISTS public.exports_product_filters;
@@ -5720,6 +5724,178 @@ CREATE VIEW public.exports_products AS
 
 
 --
+-- Name: rate_card_rates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_card_rates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_card_id uuid NOT NULL,
+    code character varying NOT NULL,
+    effective_from timestamp(6) without time zone NOT NULL,
+    rate_model public.rate_card_rate_model NOT NULL,
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    min_amount_cents bigint DEFAULT 0 NOT NULL,
+    billing_interval_count integer DEFAULT 1 NOT NULL,
+    billing_interval_unit public.rate_card_rate_billing_interval_unit NOT NULL,
+    applied_pricing_unit_conversion_rate numeric(30,10),
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT rate_card_rates_billing_interval_count_positive CHECK ((billing_interval_count >= 1))
+);
+
+
+--
+-- Name: exports_rate_card_rates; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_card_rates AS
+ SELECT rcr.organization_id,
+    rcr.id AS lago_id,
+    rcr.rate_card_id AS lago_rate_card_id,
+    rcr.code,
+    rcr.effective_from,
+    (rcr.rate_model)::text AS rate_model,
+    rcr.rate_properties,
+    rcr.min_amount_cents,
+    rcr.billing_interval_count,
+    (rcr.billing_interval_unit)::text AS billing_interval_unit,
+    rcr.applied_pricing_unit_conversion_rate,
+    rcr.created_at,
+    rcr.updated_at,
+    rcr.deleted_at
+   FROM public.rate_card_rates rcr;
+
+
+--
+-- Name: rate_cards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_cards (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    product_filter_id uuid,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    description character varying,
+    currency character varying NOT NULL,
+    billing_timing public.rate_card_billing_timing DEFAULT 'arrears'::public.rate_card_billing_timing NOT NULL,
+    proration boolean DEFAULT false NOT NULL,
+    display_on_invoice boolean DEFAULT true NOT NULL,
+    regroup_paid_fees public.rate_card_regroup_paid_fees,
+    applied_pricing_unit_code character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_rate_cards; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_cards AS
+ SELECT rc.organization_id,
+    rc.id AS lago_id,
+    rc.product_id AS lago_product_id,
+    rc.product_filter_id AS lago_product_filter_id,
+    rc.code,
+    rc.name,
+    rc.description,
+    rc.currency,
+    (rc.billing_timing)::text AS billing_timing,
+    rc.proration,
+    rc.display_on_invoice,
+    (rc.regroup_paid_fees)::text AS regroup_paid_fees,
+    rc.applied_pricing_unit_code,
+    rc.created_at,
+    rc.updated_at,
+    rc.deleted_at
+   FROM public.rate_cards rc;
+
+
+--
+-- Name: rate_overrides; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_overrides (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_model public.rate_card_rate_model NOT NULL,
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    min_amount_cents bigint DEFAULT 0 NOT NULL,
+    billing_interval_count integer,
+    billing_interval_unit public.rate_card_rate_billing_interval_unit,
+    pricing_unit_conversion_rate numeric(30,10),
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_rate_overrides; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_overrides AS
+ SELECT ro.organization_id,
+    ro.id AS lago_id,
+    (ro.rate_model)::text AS rate_model,
+    ro.rate_properties,
+    ro.min_amount_cents,
+    ro.billing_interval_count,
+    (ro.billing_interval_unit)::text AS billing_interval_unit,
+    ro.pricing_unit_conversion_rate,
+    ro.created_at,
+    ro.updated_at,
+    ro.deleted_at
+   FROM public.rate_overrides ro;
+
+
+--
+-- Name: rate_phases; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_phases (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_rate_card_id uuid,
+    contract_rate_card_id uuid,
+    code character varying NOT NULL,
+    "position" integer NOT NULL,
+    billing_interval_cycle_count integer,
+    rate_override_id uuid,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    name character varying,
+    CONSTRAINT rate_phases_exactly_one_parent CHECK (((plan_rate_card_id IS NULL) <> (contract_rate_card_id IS NULL)))
+);
+
+
+--
+-- Name: exports_rate_phases; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_phases AS
+ SELECT rp.organization_id,
+    rp.id AS lago_id,
+    rp.plan_rate_card_id AS lago_plan_rate_card_id,
+    rp.contract_rate_card_id AS lago_contract_rate_card_id,
+    rp.rate_override_id AS lago_rate_override_id,
+    rp.code,
+    rp.name,
+    rp."position",
+    rp.billing_interval_cycle_count,
+    rp.created_at,
+    rp.updated_at,
+    rp.deleted_at
+   FROM public.rate_phases rp;
+
+
+--
 -- Name: record_deletions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6845,53 +7021,6 @@ CREATE TABLE public.quotes (
 
 
 --
--- Name: rate_card_rates; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_card_rates (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    rate_card_id uuid NOT NULL,
-    code character varying NOT NULL,
-    effective_from timestamp(6) without time zone NOT NULL,
-    rate_model public.rate_card_rate_model NOT NULL,
-    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    min_amount_cents bigint DEFAULT 0 NOT NULL,
-    billing_interval_count integer DEFAULT 1 NOT NULL,
-    billing_interval_unit public.rate_card_rate_billing_interval_unit NOT NULL,
-    applied_pricing_unit_conversion_rate numeric(30,10),
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT rate_card_rates_billing_interval_count_positive CHECK ((billing_interval_count >= 1))
-);
-
-
---
--- Name: rate_cards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_cards (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_id uuid NOT NULL,
-    product_filter_id uuid,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    description character varying,
-    currency character varying NOT NULL,
-    billing_timing public.rate_card_billing_timing DEFAULT 'arrears'::public.rate_card_billing_timing NOT NULL,
-    proration boolean DEFAULT false NOT NULL,
-    display_on_invoice boolean DEFAULT true NOT NULL,
-    regroup_paid_fees public.rate_card_regroup_paid_fees,
-    applied_pricing_unit_code character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
 -- Name: rate_cards_taxes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6902,46 +7031,6 @@ CREATE TABLE public.rate_cards_taxes (
     organization_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: rate_overrides; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_overrides (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    rate_model public.rate_card_rate_model NOT NULL,
-    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    min_amount_cents bigint DEFAULT 0 NOT NULL,
-    billing_interval_count integer,
-    billing_interval_unit public.rate_card_rate_billing_interval_unit,
-    pricing_unit_conversion_rate numeric(30,10),
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: rate_phases; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_phases (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    plan_rate_card_id uuid,
-    contract_rate_card_id uuid,
-    code character varying NOT NULL,
-    "position" integer NOT NULL,
-    billing_interval_cycle_count integer,
-    rate_override_id uuid,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    name character varying,
-    CONSTRAINT rate_phases_exactly_one_parent CHECK (((plan_rate_card_id IS NULL) <> (contract_rate_card_id IS NULL)))
 );
 
 
@@ -18781,6 +18870,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261123142220'),
 ('20261123142148'),
 ('20261123142145'),
 ('20261123142142'),
