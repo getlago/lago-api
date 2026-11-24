@@ -79,9 +79,11 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
 
     it "copies it once when it runs twice" do
       described_class.call(migration:, subscription:)
+      allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
 
       expect { result }.not_to change { shadow_organization.contract_alerts.count }
       expect(result).to be_success
+      expect(UsageMonitoring::ContractAlerts::CreateService).not_to have_received(:call)
       expect(contract.contract_alerts.pluck(:code)).to eq(["spend"])
     end
   end
