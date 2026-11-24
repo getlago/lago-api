@@ -296,6 +296,22 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "deadline"}, by: 1)
       expect(Rails.logger).to have_received(:warn).with(/hit its deadline/)
     end
+
+    context "with a subscription of an organization the lane is off for" do
+      let(:other_organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"]) }
+
+      before do
+        other_subscription = create(:subscription, organization: other_organization)
+        karafka.produce(trigger.merge(organization_id: other_organization.id, subscription_id: other_subscription.id).to_json)
+      end
+
+      it "counts it as not enabled rather than cut by the deadline" do
+        consumer.consume
+
+        expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "not_enabled"}, by: 1)
+        expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "deadline"}, by: 1)
+      end
+    end
   end
 
   context "when an evaluation raises" do

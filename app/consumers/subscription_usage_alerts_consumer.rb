@@ -18,18 +18,16 @@ class SubscriptionUsageAlertsConsumer < ApplicationConsumer
     organization_ids = enabled_organization_ids(payloads)
     deadline = Time.current + CONSUME_DEADLINE
 
-    subscription_batches = payloads.group_by { [it["organization_id"], it["subscription_id"]] }
+    subscription_batches, disabled_batches = payloads
+      .group_by { [it["organization_id"], it["subscription_id"]] }
+      .partition { |(organization_id, _), _| organization_ids.include?(organization_id) }
+    report(:skipped, :not_enabled, by: disabled_batches.size) if disabled_batches.any?
 
     subscription_batches.each_with_index do |((organization_id, subscription_id), subscription_payloads), index|
       if Time.current > deadline
         report(:skipped, :deadline, by: subscription_batches.size - index)
         Rails.logger.warn("[alerts] usage alerts batch hit its deadline, remaining subscriptions left to the sweep")
         break
-      end
-
-      unless organization_ids.include?(organization_id)
-        report(:skipped, :not_enabled)
-        next
       end
 
       process(organization_id, subscription_id, subscription_payloads)
