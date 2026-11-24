@@ -25,6 +25,61 @@ RSpec.describe IntegrationCustomers::CreateService do
 
     let(:subsidiary_id) { "1" }
 
+    context "with quickbooks integration" do
+      let(:integration) { create(:quickbooks_integration, organization:) }
+      let(:integration_type) { "quickbooks" }
+      let(:integration_code) { integration.code }
+
+      before { allow(Integrations::Aggregator::Contacts::CreateService).to receive(:call) }
+
+      context "when customer external id is present" do
+        let(:external_customer_id) { "58" }
+        let(:sync_with_provider) { false }
+
+        it "links the customer to the quickbooks customer" do
+          expect { service_call }.to change(IntegrationCustomers::QuickbooksCustomer, :count).by(1)
+
+          expect(service_call).to be_success
+          expect(customer.reload.quickbooks_customer).to have_attributes(
+            external_customer_id: "58",
+            category: "accounting",
+            is_default: true,
+            code: integration.code,
+            sync_with_provider: false
+          )
+          expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
+        end
+
+        context "when the customer already has a default accounting connection" do
+          before do
+            create(:xero_customer, customer:, organization:, category: :accounting, is_default: true)
+          end
+
+          it "does not mark the quickbooks connection as default" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.integration_customer).to be_a(IntegrationCustomers::QuickbooksCustomer)
+            expect(result.integration_customer.is_default).to be(false)
+          end
+        end
+      end
+
+      context "when sync with provider is true and customer external id is not present" do
+        let(:external_customer_id) { nil }
+        let(:sync_with_provider) { true }
+
+        it "succeeds without creating integration customer" do
+          result = nil
+          expect { result = service_call }.not_to change(IntegrationCustomers::BaseCustomer, :count)
+
+          expect(result).to be_success
+          expect(result.integration_customer).to be_nil
+          expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
+        end
+      end
+    end
+
     context "with netsuite premium integration present", :premium do
       let(:integration_code) { integration.code }
       let(:external_customer_id) { nil }

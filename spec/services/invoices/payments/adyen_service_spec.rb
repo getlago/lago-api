@@ -25,14 +25,16 @@ RSpec.describe Invoices::Payments::AdyenService do
       :invoice,
       organization:,
       customer:,
-      total_amount_cents: 1000,
+      total_amount_cents:,
       total_paid_amount_cents:,
-      currency: "USD",
+      currency:,
       ready_for_payment_processing: true
     )
   end
 
+  let(:total_amount_cents) { 1000 }
   let(:total_paid_amount_cents) { 0 }
+  let(:currency) { "USD" }
 
   describe ".call(:update_payment_status)" do
     let(:payment) do
@@ -335,6 +337,41 @@ RSpec.describe Invoices::Payments::AdyenService do
       described_class.call(:generate_payment_url, invoice, payment_intent)
 
       expect(payment_links_api).to have_received(:payment_links)
+    end
+
+    context "with an HUF invoice" do
+      let(:currency) { "HUF" }
+      let(:total_amount_cents) { 50_000 }
+
+      it "sends the amount in Adyen minor units" do
+        described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(payment_links_api).to have_received(:payment_links)
+          .with(hash_including(amount: {value: 5_000_000, currency: "HUF"}), anything) # 50_000 * 100
+      end
+    end
+
+    context "with an IDR invoice" do
+      let(:currency) { "IDR" }
+      let(:total_amount_cents) { 1_234_500 }
+
+      it "sends the amount in Adyen minor units" do
+        described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(payment_links_api).to have_received(:payment_links)
+          .with(hash_including(amount: {value: 12_345, currency: "IDR"}), anything) # 1_234_500 / 100
+      end
+    end
+
+    context "with an EUR invoice" do
+      let(:currency) { "EUR" }
+
+      it "sends the amount unchanged" do
+        described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(payment_links_api).to have_received(:payment_links)
+          .with(hash_including(amount: {value: 1000, currency: "EUR"}), anything)
+      end
     end
 
     context "with an error on Adyen" do
