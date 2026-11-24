@@ -256,8 +256,9 @@ RSpec.describe Events::CreateService do
 
     context "when the organization copies its events to a shadow organization" do
       let(:organization) { create(:organization, clickhouse_events_store: true) }
+      let(:migration) { create(:billing_engine_migration, organization:, plan_mapping: {"legacy" => "catalog"}) }
 
-      before { create(:billing_engine_migration, organization:) }
+      before { migration }
 
       it "enqueues the copy of the event" do
         expect { create_service.call }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
@@ -274,6 +275,51 @@ RSpec.describe Events::CreateService do
 
           expect(result).to be_success
           expect(result.event.transaction_id).to eq(transaction_id)
+        end
+      end
+
+      context "when the copy is produced", :capture_kafka_messages do
+        let(:timestamp) { "#{Time.current.to_i}.1234567" }
+        let(:precise_total_amount_cents) { "1234.56789" }
+        let(:copied_keys) { %w[external_customer_id transaction_id code timestamp precise_total_amount_cents properties] }
+
+        before do
+          stub_const(
+            "ENV",
+            ENV.to_h.merge(
+              "LAGO_KAFKA_BOOTSTRAP_SERVERS" => "kafka",
+              "LAGO_KAFKA_RAW_EVENTS_TOPIC" => "raw_events",
+              "LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC" => "product_events_raw"
+            )
+          )
+          customer = create(:customer, organization:)
+          create(:subscription, customer:, plan: create(:plan, organization:, code: "legacy"), external_id: external_subscription_id)
+        end
+
+        def produced_payloads
+          perform_enqueued_jobs(only: BillingEngineMigrations::CopyApiEventsJob) { create_service.call }
+          kafka_messages.to_h { [it[:topic], JSON.parse(it[:payload])] }.values_at("raw_events", "product_events_raw")
+        end
+
+        it "carries the values of the V1 event to the shadow contract" do
+          v1_payload, copy_payload = produced_payloads
+
+          expect(copy_payload.slice(*copied_keys)).to eq(v1_payload.slice(*copied_keys))
+          expect(copy_payload).to include(
+            "organization_id" => migration.shadow_organization_id,
+            "external_contract_id" => external_subscription_id,
+            "precise_total_amount_cents" => "1234.56789"
+          )
+        end
+
+        context "without a precise total amount" do
+          let(:precise_total_amount_cents) { nil }
+
+          it "copies the same default amount" do
+            v1_payload, copy_payload = produced_payloads
+
+            expect([v1_payload["precise_total_amount_cents"], copy_payload["precise_total_amount_cents"]]).to eq(%w[0.0 0.0])
+          end
         end
       end
     end

@@ -107,6 +107,16 @@ RSpec.describe Api::V1::EventsController do
       end
     end
 
+    context "when another organization copies its events to a shadow organization" do
+      before { create(:billing_engine_migration) }
+
+      it "does not enqueue a copy" do
+        expect { subject }.not_to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
+
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
     context "with a transaction id longer than the v2 limit" do
       let(:create_params) { super().merge(transaction_id: "a" * 1_001) }
 

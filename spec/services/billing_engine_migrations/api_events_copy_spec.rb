@@ -93,12 +93,19 @@ RSpec.describe BillingEngineMigrations::ApiEventsCopy do
     context "when the organization is not migrated" do
       before { create(:billing_engine_migration) }
 
-      it "enqueues nothing without a query once the migrations are loaded" do
+      it "reaches neither the database, the cache nor the job queue once the migrations are loaded" do
         BillingEngineMigrations::Lookup.for_source(organization.id)
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
 
         statements = nil
-        expect { statements = capture_sql { enqueue } }.not_to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
+        cache_calls = []
+        ActiveSupport::Notifications.subscribed(->(name, *) { cache_calls << name }, /\Acache_/) do
+          statements = capture_sql { enqueue }
+        end
+
         expect(statements).to be_empty
+        expect(cache_calls).to be_empty
+        expect(ActiveJob::Base.queue_adapter).not_to have_received(:enqueue)
       end
     end
 
