@@ -26,6 +26,20 @@ RSpec.describe Invoices::Payments::RetryService do
       end
     end
 
+    context "when the payment method chosen is a shared payment token row" do
+      subject(:retry_service) { described_class.new(invoice:, payment_method_params: {payment_method_type: "provider", payment_method_id: token_row.id}) }
+
+      let(:token_row) { create(:payment_method, customer:, provider_method_type: "shared_payment_token", provider_method_id: "spt_used") }
+
+      it "returns an error without enqueuing a payment" do
+        result = nil
+
+        expect { result = retry_service.call }.not_to have_enqueued_job(Invoices::Payments::CreateJob)
+        expect(result).not_to be_success
+        expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+      end
+    end
+
     context "when invoice does not exist" do
       let(:invoice) { nil }
 

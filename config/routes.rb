@@ -147,6 +147,8 @@ Rails.application.routes.draw do
       # Credit-note paths are native v2 only when explicitly routed above. Do not
       # let unsupported actions fall through to their v1 beta equivalents.
       match "credit_notes(/*path)", to: "/application#not_found", via: :all
+      match "agent_storefronts(/*path)", to: "/application#not_found", via: :all
+      match "agents(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do
@@ -174,6 +176,25 @@ Rails.application.routes.draw do
     to: "admin/organization_activations#create",
     as: :admin_organization_activation,
     constraints: ->(_request) { Lago::SelfServe.enabled? && Lago::SelfServe.billing_accounts_key.present? }
+
+  scope "agents/v1/:storefront_id", module: :agents, as: :agents do
+    get "AUTH.md", to: "documents#auth", format: false
+    post "auth/challenges", to: "auth#challenge"
+    post "signup", to: "auth#signup"
+    post "auth/token", to: "auth#token"
+    post "auth/revoke", to: "auth#revoke"
+    get "me", to: "auth#me"
+    get "BILLING.md", to: "documents#billing", format: false
+    post "billing/enroll", to: "billing#enroll"
+    get "billing", to: "billing#show"
+    post "billing/payments", to: "billing#pay"
+    get "billing/payments/:id", to: "billing#payment"
+    post "billing/free_credits", to: "billing#free_credits"
+    post "claims/codes", to: "claims#create_code"
+    get "claims", to: "claims#show"
+    post "claims/start", to: "claims#start"
+    post "claims/verify", to: "claims#verify"
+  end
 
   if Rails.env.local?
     namespace :admin do

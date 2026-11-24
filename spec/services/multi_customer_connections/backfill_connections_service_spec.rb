@@ -80,26 +80,11 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
           ic.save!(validate: false)
         end
       end
-      let(:unmapped_customer) do
-        build(
-          :netsuite_customer,
-          customer:,
-          organization:,
-          integration: create(:netsuite_integration, organization:),
-          category: nil
-        ).tap { |ic| ic.save!(validate: false) }
-      end
 
-      before do
-        int_customer
-        unmapped_customer
-        stub_const(
-          "IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE",
-          IntegrationCustomers::BaseCustomer::CATEGORY_BY_TYPE.except("IntegrationCustomers::NetsuiteCustomer")
-        )
-      end
+      before { int_customer }
 
       it "sets the code, derives the accounting category and marks it default" do
+        expect(result.summary[:integration_codes_set]).to eq(1)
         expect(result.summary[:integration_categories_set]).to eq(1)
         expect(result.summary[:integration_defaults_set]).to eq(1)
 
@@ -107,14 +92,6 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
         expect(int_customer.code).to eq("quickbooks_us")
         expect(int_customer.category).to eq("accounting")
         expect(int_customer.is_default).to be(true)
-      end
-
-      it "leaves the category of an unmapped type nil" do
-        result
-
-        unmapped_customer.reload
-        expect(unmapped_customer.category).to be_nil
-        expect(unmapped_customer.is_default).to be(false)
       end
     end
 

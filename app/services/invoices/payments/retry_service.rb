@@ -17,6 +17,7 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: "invoice") if invoice.blank?
+        return result.single_validation_failure!(field: :payment_method, error_code: "invalid_payment_method") if shared_payment_token_chosen?
         return result if validate_payment_method && !valid_payment_method?
 
         if invoice.draft? || invoice.voided? || invoice.payment_succeeded?
@@ -40,6 +41,11 @@ module Invoices
       attr_reader :invoice, :payment_method_params, :validate_payment_method
 
       delegate :customer, to: :invoice
+
+      def shared_payment_token_chosen?
+        payment_method_id = payment_method_params&.dig(:payment_method_id)
+        payment_method_id.present? && customer.payment_methods.find_by(id: payment_method_id)&.shared_payment_token?
+      end
 
       def valid_payment_method?
         if payment_method_params.present? && payment_method_params[:payment_method_id].present?

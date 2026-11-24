@@ -89,6 +89,10 @@ class Plan < ApplicationRecord
     subscriptions.exists?
   end
 
+  def sold_by_agent_storefront?
+    parent_id.nil? && organization.agent_storefront_integrations.with_plan_code(code).exists?
+  end
+
   def has_trial?
     trial_period.present? && trial_period.positive?
   end

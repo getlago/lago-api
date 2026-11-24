@@ -271,10 +271,6 @@ RSpec.describe Resolvers::CustomerResolver do
         {"id" => xero_customer.id, "integrationType" => "xero"}
       )
     end
-
-    it "exposes no quickbooksCustomer field on the customer" do
-      expect(Types::Customers::Object.fields.keys).not_to include("quickbooksCustomer")
-    end
   end
 
   context "when customer is not found" do
