@@ -4,10 +4,21 @@ require "rails_helper"
 
 RSpec.describe "exports_rate_phases view" do # rubocop:disable RSpec/DescribeClass
   let(:organization) { create(:organization) }
+  let(:created_at) { Time.zone.parse("2026-01-01 10:00:00") }
+  let(:updated_at) { Time.zone.parse("2026-01-02 10:00:00") }
   let(:rate_override) { create(:rate_override, organization:) }
 
   let(:plan_rate_phase) do
-    create(:rate_phase, organization:, name: "Intro", position: 1, billing_interval_cycle_count: 3, rate_override:)
+    create(
+      :rate_phase,
+      organization:,
+      name: "Intro",
+      position: 1,
+      billing_interval_cycle_count: 3,
+      rate_override:,
+      created_at:,
+      updated_at:
+    )
   end
 
   let(:contract_rate_phase) { create(:rate_phase, :contract_level, organization:, position: 2) }
@@ -56,6 +67,8 @@ RSpec.describe "exports_rate_phases view" do # rubocop:disable RSpec/DescribeCla
       "name" => "Intro",
       "position" => 1,
       "billing_interval_cycle_count" => 3,
+      "created_at" => created_at,
+      "updated_at" => updated_at,
       "deleted_at" => nil
     )
   end

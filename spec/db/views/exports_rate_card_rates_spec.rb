@@ -4,6 +4,8 @@ require "rails_helper"
 
 RSpec.describe "exports_rate_card_rates view" do # rubocop:disable RSpec/DescribeClass
   let(:organization) { create(:organization) }
+  let(:created_at) { Time.zone.parse("2026-01-01 10:00:00") }
+  let(:updated_at) { Time.zone.parse("2026-01-02 10:00:00") }
 
   let(:rate_card_rate) do
     create(
@@ -13,7 +15,9 @@ RSpec.describe "exports_rate_card_rates view" do # rubocop:disable RSpec/Describ
       rate_properties: {"amount" => "100", "free_units" => 0, "package_size" => 10},
       min_amount_cents: 500,
       billing_interval_count: 3,
-      billing_interval_unit: "week"
+      billing_interval_unit: "week",
+      created_at:,
+      updated_at:
     )
   end
 
@@ -75,6 +79,8 @@ RSpec.describe "exports_rate_card_rates view" do # rubocop:disable RSpec/Describ
       "billing_interval_count" => 3,
       "billing_interval_unit" => "week",
       "applied_pricing_unit_conversion_rate" => nil,
+      "created_at" => created_at,
+      "updated_at" => updated_at,
       "deleted_at" => nil
     )
     expect(row["effective_from"]).to eq(rate_card_rate.effective_from)

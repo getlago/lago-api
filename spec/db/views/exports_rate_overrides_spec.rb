@@ -4,6 +4,8 @@ require "rails_helper"
 
 RSpec.describe "exports_rate_overrides view" do # rubocop:disable RSpec/DescribeClass
   let(:organization) { create(:organization) }
+  let(:created_at) { Time.zone.parse("2026-01-01 10:00:00") }
+  let(:updated_at) { Time.zone.parse("2026-01-02 10:00:00") }
 
   let(:rate_override) do
     create(
@@ -14,7 +16,9 @@ RSpec.describe "exports_rate_overrides view" do # rubocop:disable RSpec/Describe
       min_amount_cents: 1000,
       billing_interval_count: 2,
       billing_interval_unit: "month",
-      pricing_unit_conversion_rate: "1.5"
+      pricing_unit_conversion_rate: "1.5",
+      created_at:,
+      updated_at:
     )
   end
 
@@ -63,6 +67,8 @@ RSpec.describe "exports_rate_overrides view" do # rubocop:disable RSpec/Describe
       "billing_interval_count" => 2,
       "billing_interval_unit" => "month",
       "pricing_unit_conversion_rate" => BigDecimal("1.5"),
+      "created_at" => created_at,
+      "updated_at" => updated_at,
       "deleted_at" => nil
     )
     expect(JSON.parse(row["rate_properties"])).to eq("rate" => "2.5")

@@ -4,6 +4,8 @@ require "rails_helper"
 
 RSpec.describe "exports_rate_cards view" do # rubocop:disable RSpec/DescribeClass
   let(:organization) { create(:organization) }
+  let(:created_at) { Time.zone.parse("2026-01-01 10:00:00") }
+  let(:updated_at) { Time.zone.parse("2026-01-02 10:00:00") }
 
   let(:rate_card) do
     create(
@@ -12,7 +14,9 @@ RSpec.describe "exports_rate_cards view" do # rubocop:disable RSpec/DescribeClas
       organization:,
       description: "Card description",
       currency: "USD",
-      applied_pricing_unit_code: "credits"
+      applied_pricing_unit_code: "credits",
+      created_at:,
+      updated_at:
     )
   end
 
@@ -73,6 +77,8 @@ RSpec.describe "exports_rate_cards view" do # rubocop:disable RSpec/DescribeClas
       "display_on_invoice" => true,
       "regroup_paid_fees" => nil,
       "applied_pricing_unit_code" => "credits",
+      "created_at" => created_at,
+      "updated_at" => updated_at,
       "deleted_at" => nil
     )
   end
