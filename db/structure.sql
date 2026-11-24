@@ -1102,7 +1102,6 @@ DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_organization_id
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_grant_occurrence;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_credit_allocation_id;
-DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_catalog_wallet_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_in_spending_order;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_by_cursor;
 DROP INDEX IF EXISTS public.index_catalog_wallet_selectors_on_plan_wallet_and_target;
@@ -10685,13 +10684,6 @@ CREATE INDEX index_catalog_wallet_transactions_in_spending_order ON public.catal
 
 
 --
--- Name: index_catalog_wallet_transactions_on_catalog_wallet_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_catalog_wallet_transactions_on_catalog_wallet_id ON public.catalog_wallet_transactions USING btree (catalog_wallet_id);
-
-
---
 -- Name: index_catalog_wallet_transactions_on_credit_allocation_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -18789,6 +18781,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261124100203'),
 ('20261123221111'),
 ('20261123142148'),
 ('20261123142145'),

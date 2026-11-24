@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe V2::ContractWalletTransactionSerializer do
-  subject(:payload) { described_class.new(wallet_transaction, options).serialize }
+  subject(:payload) { described_class.new(loaded_wallet_transaction, options).serialize }
 
   let_it_be(:organization) { create(:organization) }
   let_it_be(:customer) { create(:customer, organization:, currency: "USD") }
@@ -15,6 +15,7 @@ describe V2::ContractWalletTransactionSerializer do
       credit_amount_cents: 10_000, remaining_credit_amount_cents: 7500, priority: 10,
       settled_at: Time.zone.parse("2026-09-30 08:30:00"))
   end
+  let(:loaded_wallet_transaction) { CatalogWalletTransaction.preload(described_class::PRELOADS).find(wallet_transaction.id) }
   let(:options) { {} }
   let(:top_up_payload) do
     {
