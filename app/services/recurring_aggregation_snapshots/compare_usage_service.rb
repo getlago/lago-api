@@ -145,17 +145,21 @@ module RecurringAggregationSnapshots
     # A bucket without usage at the period has no snapshot, yet starts from the period.
     def snapshot_read?(bucket)
       period = RecurringAggregationSnapshots::FetchService.call!(
-        subscription:,
-        charge: bucket.charge,
-        charge_filter: bucket.charge_filter,
+        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge: bucket.charge),
+        filter: bucket.charge_filter,
         grouped_by_keys: bucket.pricing_group_keys.presence,
         from_datetime: date_service.charges_from_datetime
       ).period
       return false unless period
 
-      # BillableMetrics::Aggregations::WeightedSumService#latest_snapshots, SumService#delta_period
+      # Sum reads any period (SumService#delta_period), weighted sum WeightedSumService#latest_snapshots' rule
       from_datetime = date_service.charges_from_datetime
-      !bucket.billable_metric.weighted_sum_agg? || period.to_datetime.between?(from_datetime - 1.second, from_datetime)
+      !bucket.billable_metric.weighted_sum_agg? ||
+        period.weighted_sum_start?(from_datetime) { billing_context.last_billed_charges_to_datetime(before: from_datetime) }
+    end
+
+    def billing_context
+      @billing_context ||= Billing::Context.from(subscription:)
     end
 
     def compared_charges

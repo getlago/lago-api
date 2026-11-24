@@ -17,6 +17,7 @@ module Types
     field :admin_cs_admins, resolver: Resolvers::Admin::CsAdminsResolver
     field :admin_organization, resolver: Resolvers::Admin::OrganizationResolver
     field :admin_organizations, resolver: Resolvers::Admin::OrganizationsResolver
+    field :agent_claim_page, resolver: Resolvers::AgentClaimPageResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
     field :ai_conversations, resolver: Resolvers::AiConversationsResolver
     field :alert, resolver: Resolvers::Subscriptions::AlertResolver
@@ -35,8 +36,12 @@ module Types
     field :catalog_plan, resolver: Resolvers::CatalogPlanResolver
     field :catalog_plans, resolver: Resolvers::CatalogPlansResolver
     field :contract, resolver: Resolvers::ContractResolver
+    field :contract_alert, resolver: Resolvers::Contracts::AlertResolver
+    field :contract_alerts, resolver: Resolvers::Contracts::AlertsResolver
     field :contract_applied_rate_card, resolver: Resolvers::ContractAppliedRateCardResolver
     field :contract_applied_rate_cards, resolver: Resolvers::ContractAppliedRateCardsResolver
+    field :contract_current_usage_total, resolver: Resolvers::ContractCurrentUsageTotalResolver
+    field :contract_usages, resolver: Resolvers::ContractUsagesResolver
     field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
@@ -82,6 +87,7 @@ module Types
     field :invoice_credit_notes, resolver: Resolvers::InvoiceCreditNotesResolver
     field :invoice_custom_section, resolver: Resolvers::InvoiceCustomSectionResolver
     field :invoice_custom_sections, resolver: Resolvers::InvoiceCustomSectionsResolver
+    field :invoice_product_fees, resolver: Resolvers::InvoiceProductFeesResolver
     field :invoiced_usages, resolver: Resolvers::Analytics::InvoicedUsagesResolver
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
@@ -129,6 +135,9 @@ module Types
     field :security_logs, resolver: Resolvers::SecurityLogsResolver
     field :selectable_billable_metrics, resolver: Resolvers::SelectableBillableMetricsResolver
     field :selectable_plans, resolver: Resolvers::SelectablePlansResolver
+    field :signup_email_check, resolver: Resolvers::Signups::EmailCheckResolver
+    field :signup_status, resolver: Resolvers::Signups::StatusResolver
+    field :signup_verification, resolver: Resolvers::Signups::VerificationResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscription_alert, resolver: Resolvers::Subscriptions::AlertResolver
     field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver

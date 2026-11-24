@@ -25,7 +25,9 @@ module Events
             deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
           )
 
-          scope = ::Clickhouse::EventsEnriched.from("(#{deduplicated_subquery}) AS events_enriched")
+          scope = events_model.from("(#{deduplicated_subquery}) AS events_enriched")
+          # The product model selects its own table name, which the alias hides.
+          scope = scope.select("events_enriched.*") if product_events?
           scope = scope.order(timestamp: :asc) if ordered
           scope = apply_grouped_by_values(scope) if grouped_by_values?
           filters_scope(scope)
@@ -69,11 +71,11 @@ module Events
           columns << "properties"
         end
 
-        selected_columns = (DEDUP_KEY_COLUMNS + columns).uniq.join(", ")
+        selected_columns = (dedup_key_columns + columns).uniq.join(", ")
 
         <<~SQL.squish
           SELECT #{selected_columns}
-          FROM events_enriched FINAL
+          FROM #{events_table} FINAL
           WHERE #{deduplicated_events_where_sql(from_datetime:, to_datetime:, before:)}
         SQL
       end
@@ -82,7 +84,7 @@ module Events
         conditions = [
           sanitize_clickhouse_sql(
             [
-              "organization_id = ? AND code = ? AND external_subscription_id = ?",
+              "organization_id = ? AND code = ? AND #{scope_column} = ?",
               billing_context.organization_id,
               code,
               billing_context.external_id
@@ -111,7 +113,8 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.with_retry do
           scope = ::Clickhouse::EventsEnriched
-            .where(external_subscription_id: billing_context.external_id)
+            .from("#{events_table} AS events_enriched")
+            .where(scope_column => billing_context.external_id)
             .where(organization_id: billing_context.organization_id)
             .where(code: codes)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
@@ -216,7 +219,7 @@ module Events
 
         <<~SQL.squish
           SELECT count()
-          FROM events_enriched FINAL
+          FROM #{events_table} FINAL
           WHERE #{deduplicated_events_where_sql(from_datetime: events_from, to_datetime: applicable_to_datetime)}
         SQL
       end
@@ -511,7 +514,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           sql = with_ctes(events_cte_queries(deduplicated_columns: %w[decimal_value]), <<-SQL)
             SELECT
-              sum(events.decimal_value) as value,
+              sum(#{wide_decimal_sql("events.decimal_value")}) as value,
               #{with_count ? "count()" : "null"} as events_count
             FROM events
           SQL
@@ -532,7 +535,7 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               #{column_names},
-              sum(events.property),
+              sum(#{wide_decimal_sql("events.property")}),
               #{with_count ? "count()" : "null"}
             FROM events
             GROUP BY #{column_names}
@@ -557,6 +560,47 @@ module Events
 
           build_recurring_aggregation_result(connection.select_one(sql))
         end
+      end
+
+      def late_ingestion?(period)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          query = arel_table
+          query = apply_arel_grouped_by_values(query) if grouped_by_values?
+          query = arel_filters_scope(query)
+
+          sql = with_ctes(
+            {"events_enriched" => late_events_sql(period, deduplicated_columns: [])},
+            "#{query.project(Arel.sql("1")).to_sql(::Clickhouse::EventsEnriched)} LIMIT 1"
+          )
+
+          connection.select_value(sql).present?
+        end
+      end
+
+      # The first copy is read from events_raw, which keeps every insert: events_enriched can have merged it away.
+      # A single insert ingested by the watermark but enriched after it is a late event, not a re-send.
+      # The late copies are not filtered: a re-send can move an event out of the bucket whose snapshot holds it.
+      def resent_after_watermark?(period)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          connection.select_value(resent_after_watermark_sql(period)).present?
+        end
+      end
+
+      # One row when a late copy re-sends an event, none otherwise.
+      # `events_raw.ingested_at` is a `DateTime` on some deployments: it rejects a watermark string with milliseconds,
+      # which `toDateTime64` parses before the comparison.
+      def resent_after_watermark_sql(period)
+        <<~SQL
+          SELECT 1
+          FROM #{raw_events_table}
+          WHERE #{deduplicated_events_where_sql(from_datetime: nil, to_datetime: period.to_datetime)}
+            AND (transaction_id, timestamp) IN (
+              SELECT transaction_id, timestamp FROM (#{late_events_sql(period, deduplicated_columns: [])})
+            )
+          GROUP BY transaction_id, timestamp
+          HAVING count() > 1 AND #{sql_condition("countIf(ingested_at <= toDateTime64(?, 3, 'UTC')) > 0", period.watermark)}
+          LIMIT 1
+        SQL
       end
 
       def grouped_recurring_sum(watermark:, period: nil)
@@ -592,11 +636,7 @@ module Events
           ctes_sql = events_cte_queries(
             select: [
               arel_table[:decimal_value],
-              Arel::Nodes::InfixOperation.new(
-                "*",
-                arel_table[:decimal_value],
-                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
-              ).as("prorated_value")
+              prorated_decimal_value(ratio).as("prorated_value")
             ],
             deduplicated_columns: %w[decimal_value]
           )
@@ -604,7 +644,7 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               sum(events.prorated_value) as prorated_value,
-              sum(events.decimal_value) as value,
+              sum(#{wide_decimal_sql("events.decimal_value")}) as value,
               count() as events_count
             FROM events
           SQL
@@ -626,11 +666,7 @@ module Events
           ctes_sql = events_cte_queries(
             select: groups + [
               arel_table[:decimal_value],
-              Arel::Nodes::InfixOperation.new(
-                "*",
-                arel_table[:decimal_value],
-                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
-              ).as("prorated_value")
+              prorated_decimal_value(ratio).as("prorated_value")
             ],
             deduplicated_columns: %w[decimal_value]
           )
@@ -639,7 +675,7 @@ module Events
             SELECT
               #{group_names},
               sum(events.prorated_value) as prorated_value,
-              sum(events.decimal_value) as value,
+              sum(#{wide_decimal_sql("events.decimal_value")}) as value,
               count() as events_count
             FROM events
             GROUP BY #{group_names}
@@ -667,7 +703,7 @@ module Events
           sql = with_ctes(ctes_sql, <<-SQL)
             SELECT
               events.day,
-              sum(events.property) AS day_sum
+              sum(#{wide_decimal_sql("events.property")}) AS day_sum
             FROM events
             GROUP BY events.day
             ORDER BY events.day asc
@@ -689,7 +725,6 @@ module Events
               {
                 from_datetime:,
                 to_datetime: to_datetime.ceil,
-                decimal_scale: DECIMAL_SCALE,
                 initial_value: decimal_literal(initial_value || 0)
               }
             ]
@@ -729,8 +764,7 @@ module Events
               sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
               {
                 from_datetime:,
-                to_datetime: to_datetime.ceil,
-                decimal_scale: DECIMAL_SCALE
+                to_datetime: to_datetime.ceil
               }
             ]
           )
@@ -751,7 +785,6 @@ module Events
                 {
                   from_datetime:,
                   to_datetime: to_datetime.ceil,
-                  decimal_scale: DECIMAL_SCALE,
                   initial_value: decimal_literal(initial_value || 0)
                 }
               ]
@@ -788,20 +821,41 @@ module Events
       # The events dated after the period and the late ones are read in two branches rather than
       # one OR, so that the first is pruned by the primary key and the second by the enriched_at index.
       # The branches cannot share a deduplication key, as the timestamp is part of it.
+      #
+      # Under FINAL, the exact mode reads back every granule of the key range that the enriched_at
+      # index pruned. The late branch turns it off: the latest copy of an event is ingested last,
+      # so its granule passes the index and FINAL still picks it over the older ones.
       def snapshot_delta_events_sql(period, deduplicated_columns:)
-        columns = (DEDUP_KEY_COLUMNS + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
-        where_sql = deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)
-
         [
-          sql_condition("timestamp > ?", period.to_datetime),
-          sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)
-        ].map { "SELECT #{columns} FROM events_enriched FINAL WHERE #{where_sql} AND #{it}" }.join(" UNION ALL ")
+          "#{snapshot_delta_select_sql(deduplicated_columns)} AND #{sql_condition("timestamp > ?", period.to_datetime)}",
+          late_events_sql(period, deduplicated_columns:)
+        ].join(" UNION ALL ")
+      end
+
+      def late_events_sql(period, deduplicated_columns:)
+        "#{snapshot_delta_select_sql(deduplicated_columns)} " \
+          "AND #{sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)}" \
+          "#{inexact_final_skip_indexes_sql}"
+      end
+
+      def snapshot_delta_select_sql(deduplicated_columns)
+        columns = (dedup_key_columns + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
+
+        "SELECT #{columns} FROM #{events_table} FINAL " \
+          "WHERE #{deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)}"
+      end
+
+      # ClickHouse knows the setting from 25.5: an older server needs it turned off.
+      def inexact_final_skip_indexes_sql
+        return "" if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_CLICKHOUSE_INEXACT_FINAL"])
+
+        " SETTINGS use_skip_indexes_if_final_exact_mode = 0"
       end
 
       def recurring_sum_sql(watermark)
         <<~SQL.squish
-          sum(events.property) AS value,
-          #{sql_condition("sumIf(events.property, events.enriched_at <= ?)", watermark)} AS snapshot_value,
+          sum(#{wide_decimal_sql("events.property")}) AS value,
+          #{sql_condition("sumIf(#{wide_decimal_sql("events.property")}, events.enriched_at <= ?)", watermark)} AS snapshot_value,
           count() AS events_count,
           #{sql_condition("countIf(events.enriched_at <= ?)", watermark)} AS snapshot_events_count
         SQL
@@ -961,8 +1015,54 @@ module Events
         end
       end
 
+      # The organizations on the product events pipeline write their events to
+      # product_events_enriched, keyed by contract (Events::KafkaProducerService). The queries
+      # keep the events_enriched alias that every filter and aggregation reads.
+      # Only the current pipeline is read: an organization that switches leaves its earlier
+      # events in events_enriched, so it should switch with no ClickHouse history.
+      def product_events?
+        return @product_events if defined?(@product_events)
+
+        @product_events = billing_context.organization.product_events_pipeline?
+      end
+
+      def events_table
+        product_events? ? "product_events_enriched" : "events_enriched"
+      end
+
+      def raw_events_table
+        product_events? ? "product_events_raw" : "events_raw"
+      end
+
+      def scope_column
+        product_events? ? "external_contract_id" : "external_subscription_id"
+      end
+
+      def events_model
+        product_events? ? ::Clickhouse::ProductEventsEnriched : ::Clickhouse::EventsEnriched
+      end
+
+      def dedup_key_columns
+        return DEDUP_KEY_COLUMNS unless product_events?
+
+        DEDUP_KEY_COLUMNS.map { (it == "external_subscription_id") ? scope_column : it }
+      end
+
       def arel_table
         @arel_table ||= ::Clickhouse::EventsEnriched.arel_table
+      end
+
+      def wide_decimal_value
+        Arel::Nodes::SqlLiteral.new(wide_decimal_sql("#{arel_table.name}.decimal_value"))
+      end
+
+      # ClickHouse rewrites sum(x * ratio) into sum(x) * ratio, so the value is widened before the product.
+      def prorated_decimal_value(ratio)
+        Arel::Nodes::InfixOperation.new(
+          "*",
+          wide_decimal_value,
+          Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+        )
       end
 
       def grouped_arel_columns(columns = grouped_by)

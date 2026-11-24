@@ -3,6 +3,8 @@
 module Api
   module V1
     class CustomersController < Api::V1::BaseController
+      include RawPaymentTermParams
+
       def create
         result = ::Customers::UpsertFromApiService.call(
           organization: current_organization,
@@ -69,7 +71,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.customers.includes(:taxes, :integration_customers),
+              result.customers.preload(*::V1::CustomerSerializer::PRELOADS, :taxes, integration_customers: :integration),
               ::V1::CustomerSerializer,
               collection_name: "customers",
               meta: pagination_metadata(result.customers),
@@ -121,7 +123,7 @@ module Api
       private
 
       def create_params
-        params.expect(customer: [
+        permitted = params.expect(customer: [
           :account_type,
           :external_id,
           :name,
@@ -191,6 +193,8 @@ module Api
           tax_codes: [],
           invoice_custom_section_codes: []
         ])
+
+        with_raw_payment_term(permitted, params[:customer])
       end
 
       def render_customer(customer)

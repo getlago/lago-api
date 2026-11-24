@@ -20,7 +20,8 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     expect { result }.to change(ContractRateCard, :count).by(1)
 
     card = contract.reload.applied_rate_cards.sole
-    expect(card).to have_attributes(rate_card:, units: 5)
+    expect(card).to have_attributes(rate_card:)
+    expect(card.terms.sole).to have_attributes(units: 5, effective_date: card.effective_date)
     expect(card.effective_date).to eq(Date.new(2026, 10, 1))
     expect(card.billing_anchor_date).to eq(Date.new(2026, 10, 1))
     expect(card.next_billing_at).to eq(contract.started_at)
@@ -137,8 +138,8 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     end
 
     it "does not persist a segment for event-time pricing" do
-      expect { result }.not_to change(BillingSegment, :count)
-      expect(result.contract_rate_cards.sole.billing_segments).to be_empty
+      expect { result }.not_to change(LegacyBillingSegment, :count)
+      expect(LegacyBillingSegment.where(contract_rate_card_id: result.contract_rate_cards.sole.id)).to be_empty
     end
   end
 
@@ -161,8 +162,9 @@ RSpec.describe Contracts::MaterializeRateCardsService do
       expect(next_billing_at).to eq(Time.utc(2026, 2, 1))
     end
 
-    context "when the rate card bills in advance" do
-      let(:rate_card) { create(:rate_card, :advance, organization:) }
+    context "when a fixed rate card bills in advance" do
+      let(:product) { create(:product, :fixed, organization:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
 
       # Billable as soon as the cycle opens, and the cycle opens at the start of the
       # signing day rather than at 14:30.
@@ -171,14 +173,13 @@ RSpec.describe Contracts::MaterializeRateCardsService do
       end
     end
 
-    # The contract is backdated by nearly three months. Those periods are not billed:
-    # the card joins the calendar at the period it lands in today.
+    # Backdated contracts keep their first outstanding obligation rather than skipping to today.
     context "when the contract is backdated" do
       let(:started_at) { Time.utc(2025, 12, 15) }
       let(:now) { Time.utc(2026, 3, 10, 12, 0) }
 
-      it "starts from the current period rather than back-billing the gap" do
-        expect(next_billing_at).to eq(Time.utc(2026, 4, 1))
+      it "starts from the first unpaid period" do
+        expect(next_billing_at).to eq(Time.utc(2026, 1, 1))
       end
     end
 

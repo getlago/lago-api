@@ -6,6 +6,14 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   subject(:result) { described_class.call(contract_rate_card:) }
 
   let(:organization) { create(:organization) }
+  let(:contract_rate_card) do
+    create(
+      :contract_rate_card,
+      organization:, contract:, rate_card:,
+      billing_anchor_date: Date.new(2026, 1, 1),
+      effective_date: Date.new(2026, 1, 15)
+    )
+  end
   let(:customer) { create(:customer, organization:, timezone:) }
   let(:timezone) { "UTC" }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
@@ -16,14 +24,14 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   let(:ended_at) { nil }
   let(:terminated_at) { nil }
 
-  let(:contract_rate_card) do
-    create(
-      :contract_rate_card,
-      organization:, contract:, rate_card:,
-      billing_anchor_date: Date.new(2026, 1, 1),
-      effective_date: Date.new(2026, 1, 15),
-      next_billing_at: Time.utc(2026, 2, 1)
-    )
+  def due_segments(schedule, by:)
+    cycle = schedule.cycle_at(contract_rate_card.effective_date.in_time_zone(timezone))
+    segments = []
+    while cycle && cycle.started_at <= by
+      segments.concat(schedule.segments_due_in_cycle(cycle.started_at, by:))
+      cycle = schedule.cycle_at(cycle.ended_at)
+    end
+    segments
   end
 
   before do
@@ -42,118 +50,97 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   end
 
   it "carries the card's anchor, timing and end onto the schedule" do
-    segment = result.schedule.segments_due_by(Time.utc(2026, 3, 1)).first
+    segment = due_segments(result.schedule, by: Time.utc(2026, 3, 1)).first
 
     expect(result).to be_success
     expect(segment.started_at...segment.ended_at).to eq(Time.utc(2026, 1, 15)...Time.utc(2026, 2, 1))
     expect(segment.billing_at).to eq(Time.utc(2026, 2, 1))
   end
 
-  # The service is what knows a card has been billed before, so the walk it hands back starts at
-  # the last billed cycle rather than replaying the card.
-  context "when the card has already been billed for some cycles" do
-    # The card's own first three cycles: anchored Jan 1 and attached Jan 15, the first is a stub
-    # running to the anchor's next boundary rather than a whole month.
+  # Completed operations record prior billing without changing the card's schedule origin.
+  context "when billing operations have already been completed for some cycles" do
+    let(:successor) do
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: Date.new(2026, 7, 1), billing_anchor_date: Date.new(2026, 1, 1))
+    end
+
     before do
       [[Time.utc(2026, 1, 15), Time.utc(2026, 2, 1)],
         [Time.utc(2026, 2, 1), Time.utc(2026, 3, 1)],
         [Time.utc(2026, 3, 1), Time.utc(2026, 4, 1)]].each do |opens_at, closes_at|
-        create(
-          :billing_segment,
-          organization:, contract:, customer:, contract_rate_card:,
-          rate_card_rate: rate_card.rates.sole,
-          cycle_started_at: opens_at, started_at: opens_at, billing_at: closes_at,
-          ended_at: BillingSegment.inclusive_end(closes_at)
-        )
+        create(:billing_operation, organization:, customer:, contract_rate_card:,
+          action_type: "close_fixed_arrears", billing_at: closes_at,
+          target_cycle_started_at: opens_at, processed_at: closes_at)
       end
     end
 
-    it "resumes at the last billed cycle instead of walking from the card's start" do
-      cycles = result.schedule.segments_due_by(Time.utc(2026, 6, 1))
+    it "replays every cycle from the card's start" do
+      cycles = due_segments(result.schedule, by: Time.utc(2026, 6, 1))
 
-      expect(cycles.map(&:cycle_index)).to eq([2, 3, 4])
-      expect(cycles.first.started_at).to eq(Time.utc(2026, 3, 1))
-    end
-
-    it "can build a schedule without reading the stored cycle cursor" do
-      schedule = described_class.call!(contract_rate_card:, resume_from_billing_segments: false).schedule
-
-      expect(schedule.segments_due_by(Time.utc(2026, 6, 1)).first.cycle_index).to eq(0)
-    end
-
-    it "answers the same cycles the full walk would have" do
-      resumed = result.schedule.segments_due_by(Time.utc(2026, 6, 1))
-      contract_rate_card.billing_segments.destroy_all
-      full = described_class.call(contract_rate_card:).schedule.segments_due_by(Time.utc(2026, 6, 1))
-
-      expect(full.size).to be > resumed.size
-      expect(full.map { [it.cycle_index, it.started_at, it.ended_at] })
-        .to end_with(*resumed.map { [it.cycle_index, it.started_at, it.ended_at] })
+      expect(cycles.map { [it.cycle_index, it.started_at, it.ended_at] }).to eq(
+        [[0, Time.utc(2026, 1, 15), Time.utc(2026, 2, 1)],
+          [1, Time.utc(2026, 2, 1), Time.utc(2026, 3, 1)],
+          [2, Time.utc(2026, 3, 1), Time.utc(2026, 4, 1)],
+          [3, Time.utc(2026, 4, 1), Time.utc(2026, 5, 1)],
+          [4, Time.utc(2026, 5, 1), Time.utc(2026, 6, 1)]]
+      )
     end
 
     it "does not carry billing history into a separate attachment of the same rate card" do
       contract_rate_card.discard!
-      successor = create(:contract_rate_card, organization:, contract:, rate_card:,
-        effective_date: Date.new(2026, 7, 1), billing_anchor_date: Date.new(2026, 1, 1))
       schedule = described_class.call!(contract_rate_card: successor).schedule
 
-      expect(schedule.segments_due_by(Time.utc(2026, 8, 1)).map(&:cycle_index)).to eq([0])
+      expect(schedule.segments_due_in_cycle(Time.utc(2026, 7, 1), by: Time.utc(2026, 8, 1)).map(&:cycle_index)).to eq([0])
     end
   end
 
-  context "when resuming the first cycle of an attachment" do
+  context "when a completed operation exists for the first cycle" do
     before do
-      create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
-        rate_card_rate: rate_card.rates.sole,
-        cycle_started_at: Time.utc(2026, 1, 15), started_at: Time.utc(2026, 1, 15),
-        ended_at: BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), billing_at: Time.utc(2026, 2, 1))
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 2, 1),
+        target_cycle_started_at: Time.utc(2026, 1, 15), processed_at: Time.utc(2026, 2, 1))
     end
 
-    it "resumes at midnight of the card's effective date" do
+    it "still replays from the start of the card's effective date" do
       expect(result).to be_success
-      expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).sole.cycle_started_at)
+      expect(result.schedule.segments_due_in_cycle(Time.utc(2026, 1, 15), by: Time.utc(2026, 2, 1)).sole.cycle_started_at)
         .to eq(Time.utc(2026, 1, 15))
     end
   end
 
-  context "with persisted advance segments" do
+  context "with a completed operation for the last advance slice" do
     let(:product) { create(:product, :fixed, organization:) }
-    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance", proration: true) }
-    let(:billed_segment) do
-      create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
-        rate_card_rate: rate_card.rates.sole, status: :done,
-        cycle_started_at: Time.utc(2026, 1, 15), started_at: Time.utc(2026, 1, 15),
-        ended_at: BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), billing_at: Time.utc(2026, 1, 15))
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, proration: true) }
+    let(:later_rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 20))
+    end
+    let(:billing_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "renew_fixed_advance", billing_at: Time.utc(2026, 1, 20),
+        target_cycle_started_at: Time.utc(2026, 1, 15), processed_at: Time.utc(2026, 1, 20))
     end
 
-    it "resumes from the cycle start when the persisted segment is only its last slice" do
-      create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "intro", billing_interval_cycle_count: 1)
-      new_rate = create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 20))
-      create(:billing_segment, organization:, contract:, customer:, contract_rate_card:,
-        rate_card_rate: new_rate, cycle_started_at: Time.utc(2026, 1, 15), started_at: Time.utc(2026, 1, 20),
-        ended_at: BillingSegment.inclusive_end(Time.utc(2026, 2, 1)), billing_at: Time.utc(2026, 1, 20))
+    before do
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "intro",
+        billing_interval_cycle_count: 1)
+      later_rate
+      billing_operation
+    end
 
-      segments = result.schedule.segments_due_by(Time.utc(2026, 2, 1))
+    it "replays the whole cycle when only its last slice was billed" do
+      segments = due_segments(result.schedule, by: Time.utc(2026, 2, 1))
 
+      expect(later_rate).to be_persisted
       expect(segments.map { |segment| [segment.cycle_index, segment.cycle_started_at, segment.rate_phase_code] })
-        .to eq([[0, Time.utc(2026, 1, 15), "intro"], [0, Time.utc(2026, 1, 15), "intro"], [1, Time.utc(2026, 2, 1), nil]])
+        .to eq([[0, Time.utc(2026, 1, 15), "intro"],
+          [0, Time.utc(2026, 1, 15), "intro"], [1, Time.utc(2026, 2, 1), nil]])
     end
 
-    it "measures consumption against the saved segment after the card terminates" do
-      persisted = billed_segment
+    it "has no further obligation after the card terminates" do
       contract.update!(ended_at: Time.utc(2026, 1, 20, 12))
-      segment = Billing::Segments::Segment.new(
-        started_at: persisted.started_at, ended_at: BillingSegment.exclusive_end(persisted.ended_at),
-        rate: persisted.rate_card_rate
-      )
       schedule = described_class.call!(contract_rate_card:).schedule
 
-      consumed = [Time.utc(2026, 1, 20), Time.utc(2026, 1, 20, 12), Time.utc(2026, 2, 1)]
-        .map { |at| schedule.consumed_ratio(segment:, at:) }
-
-      # The original segment covers 17 days, even though the card has now ended inside it.
-      expect(consumed).to eq([5.fdiv(17), 6.fdiv(17), 1.0])
-      expect(schedule.next_billing_at(after: contract.ended_at)).to be_nil
+      expect(schedule.next_obligation(after: contract.ended_at)&.billing_at).to be_nil
     end
   end
 
@@ -162,7 +149,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     let(:timezone) { "Europe/Paris" }
 
     it "opens the first cycle at the start of the signing day there" do
-      cycle = result.schedule.segments_due_by(Time.utc(2026, 3, 1)).first
+      cycle = due_segments(result.schedule, by: Time.utc(2026, 3, 1)).first
 
       expect(cycle.started_at).to eq(Time.utc(2026, 1, 14, 23))
     end
@@ -177,8 +164,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
         :contract_rate_card,
         organization:, contract:, rate_card:,
         billing_anchor_date: contract.effective_billing_anchor_date,
-        effective_date: contract.started_at.in_time_zone(timezone).to_date,
-        next_billing_at: Time.utc(2026, 2, 15)
+        effective_date: contract.started_at.in_time_zone(timezone).to_date
       )
     end
 
@@ -191,7 +177,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "opens a single first cycle, not a one-day stub before the anchor" do
-      first = result.schedule.segments_due_by(Time.utc(2026, 4, 1)).first
+      first = due_segments(result.schedule, by: Time.utc(2026, 4, 1)).first
 
       expect(first.cycle_index).to eq(0)
       expect(first.started_at).to eq(Time.utc(2026, 1, 14, 5))
@@ -211,7 +197,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
     let(:ended_at) { Time.utc(2026, 1, 20, 14, 30) }
 
-    def final_slice = result.schedule.segments_due_by(Time.utc(2026, 6, 1)).last
+    def final_slice = due_segments(result.schedule, by: Time.utc(2026, 6, 1)).last
 
     # The card opened Jan 15 and closed part-way through the 20th: six days begun, out of the
     # 31 in the January interval the slice sits in.
@@ -254,7 +240,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     let(:ended_at) { Time.utc(2026, 3, 1) }
     let(:terminated_at) { Time.utc(2026, 1, 20, 14, 30) }
 
-    def final_slice = result.schedule.segments_due_by(Time.utc(2026, 6, 1)).last
+    def final_slice = due_segments(result.schedule, by: Time.utc(2026, 6, 1)).last
 
     it "closes where the termination stopped service" do
       expect(final_slice.ended_at).to eq(terminated_at)
@@ -276,14 +262,14 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
 
     it "builds a schedule from the card's rates" do
       expect(result).to be_success
-      expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).sole.rate).to eq(rate_card.rates.sole)
+      expect(due_segments(result.schedule, by: Time.utc(2026, 2, 1)).sole.rate).to eq(rate_card.rates.sole)
     end
   end
 
   describe "phases" do
     # No phases at all: the card bills on its own cadence forever, which is one open phase.
     it "gives a card without phases a single open phase" do
-      cycles = result.schedule.segments_due_by(Time.utc(2026, 3, 1))
+      cycles = due_segments(result.schedule, by: Time.utc(2026, 3, 1))
 
       expect(cycles.map(&:rate_override)).to eq([nil, nil])
       expect(cycles.map { |cycle| cycle.rate_phase_code }).to eq([nil, nil])
@@ -310,7 +296,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       # Two weekly cycles, then the card's own monthly cadence takes over: the default phase
       # is appended because every configured phase is bounded.
       it "uses the override cadence and then falls back to the card's" do
-        cycles = result.schedule.segments_due_by(Time.utc(2026, 4, 1))
+        cycles = due_segments(result.schedule, by: Time.utc(2026, 4, 1))
 
         expect(cycles.first(2).map { |cycle| [cycle.started_at.to_date.to_s, cycle.rate_phase_code] }).to eq(
           [["2026-01-15", "weekly_intro"], ["2026-01-22", "weekly_intro"]]
@@ -320,7 +306,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       end
 
       it "carries the override so the caller can price the cycle with it" do
-        expect(result.schedule.segments_due_by(Time.utc(2026, 2, 1)).first.rate_override).to eq(rate_override)
+        expect(due_segments(result.schedule, by: Time.utc(2026, 2, 1)).first.rate_override).to eq(rate_override)
       end
     end
   end
@@ -344,7 +330,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "takes the cadence from the rate in force when the window opens" do
-      segments = result.schedule.segments_due_by(Time.utc(2026, 3, 1))
+      segments = due_segments(result.schedule, by: Time.utc(2026, 3, 1))
         .select { |segment| segment.cycle_started_at == Time.utc(2026, 1, 15) }
 
       expect(segments.first.started_at...segments.last.ended_at)
@@ -353,7 +339,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
 
     # The later rate is not ignored — it cuts the cycle into two priced windows instead.
     it "bills the change as a segment rather than as a new cadence" do
-      segments = result.schedule.segments_due_by(Time.utc(2026, 3, 1))
+      segments = due_segments(result.schedule, by: Time.utc(2026, 3, 1))
         .select { it.cycle_started_at == Time.utc(2026, 1, 15) }
 
       expect(segments.map { |segment| [segment.started_at, segment.ended_at] }).to eq(
@@ -375,7 +361,7 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "still schedules the card, on the cadence the coming rate asks for" do
-      segments = result.schedule.segments_due_by(Time.utc(2026, 5, 1))
+      segments = due_segments(result.schedule, by: Time.utc(2026, 5, 1))
 
       expect(result).to be_success
       expect(segments.map(&:cycle_index)).to eq([2, 3])
@@ -383,8 +369,8 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
     end
 
     it "bills nothing until the rate lands, then bills normally" do
-      expect(result.schedule.segments_due_by(Time.utc(2026, 3, 1))).to be_empty
-      segments = result.schedule.segments_due_by(Time.utc(2026, 5, 1))
+      expect(due_segments(result.schedule, by: Time.utc(2026, 3, 1))).to be_empty
+      segments = due_segments(result.schedule, by: Time.utc(2026, 5, 1))
 
       expect(segments.map { |segment| [segment.cycle_index, segment.started_at.to_date.to_s] })
         .to eq([[2, "2026-03-01"], [3, "2026-04-01"]])

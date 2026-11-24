@@ -15,7 +15,7 @@ RSpec.describe Resolvers::ProductCategoriesResolver do
     )
   end
 
-  let(:required_permission) { "product_categories:view" }
+  let(:required_permission) { "products:view" }
   let(:organization) { membership.organization }
   let(:variables) { {} }
   let(:query) do
@@ -34,7 +34,7 @@ RSpec.describe Resolvers::ProductCategoriesResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_categories:view"
+  it_behaves_like "requires permission", "products:view"
 
   it "returns a list of product_categories" do
     response = execution["data"]["productCategories"]

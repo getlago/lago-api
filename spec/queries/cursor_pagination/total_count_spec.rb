@@ -86,4 +86,22 @@ RSpec.describe CursorPagination::TotalCount do
       expect(total_count.outcome).to eq(:timed_out)
     end
   end
+
+  context "with ClickHouse", clickhouse: true do
+    let(:relation) { Clickhouse::ProductEventsRaw.where(organization_id: organization.id).order(ingested_at: :desc) }
+
+    before { create_list(:clickhouse_product_events_raw, 2, organization:) }
+
+    it "counts a bounded subquery without PostgreSQL settings" do
+      expect(total_count).to eq(described_class::Result.new(value: 2, outcome: :exact))
+    end
+
+    context "when the count is capped" do
+      before { stub_const("#{described_class}::MAX_COUNTED_RECORDS", 1) }
+
+      it "returns the cap plus one as a lower bound" do
+        expect(total_count).to eq(described_class::Result.new(value: 2, outcome: :capped))
+      end
+    end
+  end
 end

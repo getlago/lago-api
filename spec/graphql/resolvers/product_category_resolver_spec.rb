@@ -13,7 +13,7 @@ RSpec.describe Resolvers::ProductCategoryResolver do
     )
   end
 
-  let(:required_permission) { "product_categories:view" }
+  let(:required_permission) { "products:view" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:product_category) { create(:product_category, organization:) }
@@ -30,7 +30,7 @@ RSpec.describe Resolvers::ProductCategoryResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_categories:view"
+  it_behaves_like "requires permission", "products:view"
 
   it "returns a single product_category" do
     response = execution["data"]["productCategory"]

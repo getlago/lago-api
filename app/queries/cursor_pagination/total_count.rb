@@ -37,6 +37,8 @@ module CursorPagination
     attr_reader :relation
 
     def count
+      return clickhouse_count if relation.klass < Clickhouse::BaseRecord
+
       counted = capped_count
 
       if counted <= MAX_COUNTED_RECORDS
@@ -46,6 +48,14 @@ module CursorPagination
       end
     rescue ActiveRecord::QueryCanceled
       Result.new(value: planner_estimate, outcome: :timed_out)
+    end
+
+    # ClickHouse has neither PostgreSQL transactions nor its planner estimates.
+    def clickhouse_count
+      query = relation.limit(MAX_COUNTED_RECORDS + 1).to_sql
+      counted = relation.connection.select_value("SELECT count() FROM (#{query})").to_i
+      outcome = (counted > MAX_COUNTED_RECORDS) ? :capped : :exact
+      Result.new(value: counted, outcome:)
     end
 
     # Counts one past the cap, so that a list landing exactly on it is reported exactly.

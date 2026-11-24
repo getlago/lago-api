@@ -13,7 +13,7 @@ RSpec.describe Mutations::ProductCategories::Create do
     )
   end
 
-  let(:required_permission) { "product_categories:create" }
+  let(:required_permission) { "products:create" }
   let(:organization) { membership.organization }
   let(:input) do
     {
@@ -38,7 +38,7 @@ RSpec.describe Mutations::ProductCategories::Create do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_categories:create"
+  it_behaves_like "requires permission", "products:create"
 
   it "creates a product_category" do
     result_data = execution["data"]["createProductCategory"]

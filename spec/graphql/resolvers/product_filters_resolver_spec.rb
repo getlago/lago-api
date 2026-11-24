@@ -13,7 +13,7 @@ RSpec.describe Resolvers::ProductFiltersResolver do
     )
   end
 
-  let(:required_permission) { "product_filters:view" }
+  let(:required_permission) { "products:view" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:variables) { {} }
@@ -35,7 +35,7 @@ RSpec.describe Resolvers::ProductFiltersResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_filters:view"
+  it_behaves_like "requires permission", "products:view"
 
   it "returns the filters of the organization" do
     response = execution["data"]["productFilters"]

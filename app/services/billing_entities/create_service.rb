@@ -19,6 +19,10 @@ module BillingEntities
     def call
       return result.forbidden_failure! unless organization.can_create_billing_entity?
 
+      unless PaymentTerms::ValidateService.new(result, **params.slice(:payment_term, :net_payment_term)).valid?
+        return result
+      end
+
       ActiveRecord::Base.transaction do
         billing_entity.assign_attributes(create_attributes)
         billing_entity.id = params[:id] if params[:id]
@@ -85,7 +89,6 @@ module BillingEntities
           legal_name
           legal_number
           name
-          net_payment_term
           phone
           state
           tax_identification_number
@@ -146,7 +149,8 @@ module BillingEntities
     end
 
     def track_billing_entity_created
-      SegmentTrackJob.perform_later(
+      # After commit: a caller's transaction may still roll the billing entity back.
+      SegmentTrackJob.perform_after_commit(
         membership_id: CurrentContext.membership,
         event: "billing_entity_created",
         properties: {

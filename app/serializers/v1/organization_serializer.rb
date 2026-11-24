@@ -9,7 +9,7 @@ module V1
         slug: model.slug,
         default_currency: model.default_currency,
         created_at: model.created_at.iso8601,
-        webhook_url: webhook_urls.first.to_s,
+        webhook_url: model.default_webhook_endpoint&.webhook_url || "",
         webhook_urls:,
         country: model.country,
         address_line1: model.address_line1,
@@ -21,7 +21,8 @@ module V1
         legal_name: model.legal_name,
         legal_number: model.legal_number,
         timezone: model.timezone,
-        net_payment_term: model.net_payment_term,
+        net_payment_term:,
+        payment_term: model.default_billing_entity&.payment_term,
         email_settings: model.email_settings,
         customer_portal_locked_fields: model.customer_portal_locked_fields,
         document_numbering: model.document_numbering,
@@ -48,6 +49,13 @@ module V1
       }
     end
 
+    # The organization column is no longer written when the default billing entity's term changes.
+    def net_payment_term
+      return model.net_payment_term unless model.default_billing_entity
+
+      model.default_billing_entity.net_payment_term
+    end
+
     def taxes
       ::CollectionSerializer.new(
         model.taxes.applied_to_organization,
@@ -56,8 +64,9 @@ module V1
       ).serialize
     end
 
+    # Id order, as `Organization#default_webhook_endpoint`, so the first url is `webhook_url`.
     def webhook_urls
-      model.webhook_endpoints.map(&:webhook_url)
+      model.webhook_endpoints.sort_by(&:id).map(&:webhook_url)
     end
   end
 end

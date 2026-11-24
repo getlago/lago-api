@@ -96,7 +96,7 @@ class BillingEntity < ApplicationRecord
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, allow_nil: true, on: :create
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
-  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
+  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   # Rows stored above 365 before the cap stay valid until net_payment_term changes
   validates :net_payment_term, numericality: {less_than_or_equal_to: 365}, allow_nil: true, if: :will_save_change_to_net_payment_term?
   validates :logo,
@@ -163,7 +163,9 @@ class BillingEntity < ApplicationRecord
   private
 
   def generate_document_number_prefix
-    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}") if document_number_prefix.nil?
+    return unless document_number_prefix.nil?
+
+    update!(document_number_prefix: Organization.document_number_prefix_for(name, id))
   end
 
   def validate_email_settings
@@ -211,7 +213,7 @@ end
 #  legal_number                                 :string
 #  logo                                         :string
 #  name                                         :string           not null
-#  net_payment_term                             :integer          default(0), not null
+#  net_payment_term                             :integer          default(0)
 #  payment_term                                 :jsonb
 #  phone                                        :string
 #  state                                        :string

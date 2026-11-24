@@ -70,6 +70,7 @@ class Customer < ApplicationRecord
   has_many :contracts
   has_many :events
   has_many :invoices
+  has_many :billing_operations
   has_many :applied_coupons
   has_many :metadata, class_name: "Metadata::CustomerMetadata", dependent: :destroy
   has_many :coupons, through: :applied_coupons
@@ -82,6 +83,7 @@ class Customer < ApplicationRecord
   has_many :orders
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
+  has_many :catalog_wallets
   has_many :payment_provider_customers,
     class_name: "PaymentProviderCustomers::BaseCustomer",
     dependent: :destroy
@@ -125,6 +127,7 @@ class Customer < ApplicationRecord
   has_one :anrok_customer, class_name: "IntegrationCustomers::AnrokCustomer"
   has_one :avalara_customer, class_name: "IntegrationCustomers::AvalaraCustomer"
   has_one :xero_customer, class_name: "IntegrationCustomers::XeroCustomer"
+  has_one :quickbooks_customer, class_name: "IntegrationCustomers::QuickbooksCustomer"
   has_one :hubspot_customer, class_name: "IntegrationCustomers::HubspotCustomer"
   has_one :salesforce_customer, class_name: "IntegrationCustomers::SalesforceCustomer"
   has_one :moneyhash_customer, class_name: "PaymentProviderCustomers::MoneyhashCustomer"

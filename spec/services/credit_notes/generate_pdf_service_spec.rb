@@ -27,6 +27,17 @@ RSpec.describe CreditNotes::GeneratePdfService do
       expect(result.credit_note.file).to be_present
     end
 
+    context "when the PDF generator returns a PDF" do
+      before { stub_pdf_generation(pdf: File.binread(Rails.root.join("spec/fixtures/blank.pdf"))) }
+
+      it "attaches the PDF named after the credit note number" do
+        result = credit_note_generate_service.call
+
+        expect(result.credit_note.file.filename.to_s).to eq("#{credit_note.number}.pdf")
+        expect(result.credit_note.file.content_type).to eq("application/pdf")
+      end
+    end
+
     it "uses credit_note template" do
       credit_note_generate_service.call
 
@@ -172,6 +183,17 @@ RSpec.describe CreditNotes::GeneratePdfService do
           expect(result.credit_note.file).to be_present
         end
 
+        context "when the PDF generator returns a PDF" do
+          before { stub_pdf_generation(pdf: File.binread(Rails.root.join("spec/fixtures/blank.pdf"))) }
+
+          it "attaches the PDF named after the credit note number" do
+            result = described_class.call(credit_note:, context:)
+
+            expect(result.credit_note.file.filename.to_s).to eq("#{credit_note.number}.pdf")
+            expect(result.credit_note.file.content_type).to eq("application/pdf")
+          end
+        end
+
         context "with a partially credited contract product fee" do
           let(:attachment_calls) { [] }
           let(:product) { create(:product, organization:, name: "Billed contract product") }
@@ -274,6 +296,13 @@ RSpec.describe CreditNotes::GeneratePdfService do
         credit_note_generate_service.call
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
+      end
+    end
+
+    context "when the worker stops during the storage upload" do
+      it_behaves_like "an attachment uploaded before it is attached", :file, webhook: "credit_note.generated" do
+        let(:record) { credit_note }
+        let(:generate_document) { -> { described_class.call(credit_note:, context:) } }
       end
     end
 

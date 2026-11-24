@@ -491,6 +491,18 @@ RSpec.describe Customers::UpdateService do
       end
     end
 
+    context "with a provider customer id but no payment provider" do
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:update_args) { {name: "Foo Bar", provider_customer: {provider_customer_id: "cus_12345"}} }
+
+      it "updates the customer without a provider customer" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(result.customer).to have_attributes(name: "Foo Bar", payment_provider: nil, provider_customer: nil)
+      end
+    end
+
     context "when removing payment provider" do
       let(:stripe_provider) { create(:stripe_provider, organization:, code: payment_provider_code) }
       let(:customer) do
@@ -610,15 +622,71 @@ RSpec.describe Customers::UpdateService do
         end
       end
 
-      it "updates the net payment term of all draft invoices" do
-        create(:invoice, :draft, customer:, net_payment_term: 30)
-        create(:invoice, customer:, net_payment_term: 30)
-        create(:invoice, :draft, customer:, net_payment_term: 30)
+      it "does not rewrite open draft invoices (snapshot-freeze)" do
+        draft = create(:invoice, :draft, customer:, payment_term: {term_type: "net", days: 30}, net_payment_term: 30, issuing_date: Time.current.to_date, payment_due_date: Time.current.to_date + 30.days)
 
         result = customers_service.call
 
         expect(result).to be_success
-        expect(result.customer.invoices.draft.pluck(:net_payment_term)).to eq([8, 8])
+        expect(draft.reload).to have_attributes(
+          payment_term: {"term_type" => "net", "days" => 30},
+          net_payment_term: 30,
+          payment_due_date: Time.current.to_date + 30.days
+        )
+      end
+    end
+
+    context "when updating payment_term" do
+      before do
+        customer.update!(net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
+      end
+
+      context "with a structured term" do
+        let(:update_args) { {id: customer.id, payment_term: {term_type: "net_end_of_month", days: 10}} }
+
+        it "writes the term and mirrors a null alias" do
+          result = customers_service.call
+
+          expect(result.customer).to have_attributes(
+            payment_term: {"term_type" => "net_end_of_month", "days" => 10},
+            net_payment_term: nil
+          )
+        end
+      end
+
+      context "with null" do
+        let(:update_args) { {id: customer.id, payment_term: nil} }
+
+        it "clears both columns" do
+          result = customers_service.call
+
+          expect(result.customer).to have_attributes(payment_term: nil, net_payment_term: nil)
+        end
+      end
+
+      context "with both fields sent" do
+        let(:update_args) { {id: customer.id, net_payment_term: 45, payment_term: {term_type: "end_of_month"}} }
+
+        it "lets payment_term win" do
+          result = customers_service.call
+
+          expect(result.customer).to have_attributes(
+            payment_term: {"term_type" => "end_of_month"},
+            net_payment_term: nil
+          )
+        end
+      end
+
+      context "with an invalid shape" do
+        let(:update_args) { {id: customer.id, payment_term: {term_type: "end_of_month", days: 3}} }
+
+        it "returns a validation failure and changes nothing" do
+          result = customers_service.call
+
+          expect(result).to be_failure
+          expect(result.error.messages[:payment_term]).to eq(["unexpected_fields"])
+          expect(customer.reload.payment_term).to eq("term_type" => "net", "days" => 30)
+        end
       end
     end
 
@@ -964,7 +1032,7 @@ RSpec.describe Customers::UpdateService do
           last_dunning_campaign_attempt_at: 2.days.ago
         )
       end
-      let(:dunning_campaign) { create(:dunning_campaign) }
+      let(:dunning_campaign) { create(:dunning_campaign, organization:) }
 
       let(:update_args) do
         {
@@ -1011,6 +1079,22 @@ RSpec.describe Customers::UpdateService do
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
           expect(customers_service.call).to be_success
+        end
+
+        context "when the dunning campaign belongs to another organization" do
+          let(:dunning_campaign) { create(:dunning_campaign, organization: create(:organization)) }
+
+          it "returns a not found failure and does not apply the campaign" do
+            result = nil
+
+            expect { result = customers_service.call }
+              .to not_change { customer.reload.applied_dunning_campaign_id }
+              .and not_change { customer.reload.exclude_from_dunning_campaign }
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq("dunning_campaign_not_found")
+          end
         end
 
         context "with exclude from dunning campaign" do

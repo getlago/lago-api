@@ -37,6 +37,10 @@ module Customers
       integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: args[:integration_customers])
       return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
 
+      unless PaymentTerms::ValidateService.new(result, **args.slice(:payment_term, :net_payment_term)).valid?
+        return result
+      end
+
       customer = billing_entity.customers.new(
         organization_id: organization.id,
         external_id: args[:external_id],
@@ -59,7 +63,6 @@ module Customers
         logo_url: args[:logo_url],
         legal_name: args[:legal_name],
         legal_number: args[:legal_number],
-        net_payment_term: args[:net_payment_term],
         external_salesforce_id: args[:external_salesforce_id],
         payment_provider: args[:payment_provider],
         payment_provider_code: args[:payment_provider_code],
@@ -191,7 +194,8 @@ module Customers
     end
 
     def create_billing_configuration(customer, billing_configuration = {})
-      return if billing_configuration.blank? || (api_context? && billing_configuration[:payment_provider].nil?)
+      # Without a payment provider there is no provider customer to create, from any source.
+      return if billing_configuration.blank? || billing_configuration[:payment_provider].nil?
 
       create_provider_customer = billing_configuration[:sync_with_provider]
       create_provider_customer ||= billing_configuration[:provider_customer_id]

@@ -98,6 +98,8 @@ RSpec.describe BillingEntity do
       expect(billing_entity).to be_valid
     end
 
+    it { is_expected.to allow_value(nil).for(:net_payment_term) }
+
     it { is_expected.to validate_length_of(:document_number_prefix).is_at_least(1).is_at_most(10).on(:update) }
 
     it { is_expected.to allow_value(nil).for(:document_number_prefix).on(:create) }
@@ -278,7 +280,27 @@ RSpec.describe BillingEntity do
         subject
 
         expect(billing_entity.document_number_prefix)
-          .to eq "#{billing_entity.name.first(3).upcase}-#{billing_entity.id.last(4).upcase}"
+          .to eq "#{billing_entity.name.first(3).delete(" ").upcase}-#{billing_entity.id.last(4).upcase}"
+      end
+
+      context "with a name that upcasing lengthens" do
+        let(:billing_entity) { build(:billing_entity, name: "\u00DF\u00DF\u00DF Corp") }
+
+        it "keeps the prefix within its limit" do
+          subject
+
+          expect(billing_entity.document_number_prefix).to eq("SSS-#{billing_entity.id.last(4).upcase}")
+        end
+      end
+
+      context "with a name of two characters before a space" do
+        let(:billing_entity) { build(:billing_entity, name: "ab Sandbox") }
+
+        it "leaves the space out of the prefix" do
+          subject
+
+          expect(billing_entity.document_number_prefix).to eq("AB-#{billing_entity.id.last(4).upcase}")
+        end
       end
 
       context "when document number prefix is already set" do

@@ -22,7 +22,7 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
     expect(subject).to have_field(:address_line2).of_type("String")
     expect(subject).to have_field(:city).of_type("String")
     expect(subject).to have_field(:country).of_type("CountryCode")
-    expect(subject).to have_field(:net_payment_term).of_type("Int!")
+    expect(subject).to have_field(:net_payment_term).of_type("Int")
     expect(subject).to have_field(:state).of_type("String")
     expect(subject).to have_field(:zipcode).of_type("String")
 
@@ -57,5 +57,12 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
 
     expect(subject).to have_field(:feature_flags).of_type("[FeatureFlagEnum!]!")
     expect(subject).to have_field(:realtime_usage_enabled).of_type("Boolean!")
+    expect(subject).to have_field(:wallet_refresh_enabled).of_type("Boolean!")
+
+    expect(subject).to have_field(:activation_status).of_type("OrganizationActivationStatusEnum!")
+    expect(subject).to have_field(:environment).of_type("OrganizationEnvironmentEnum!")
+    expect(subject).to have_field(:production_organization).of_type("LinkedOrganization")
+    expect(subject).to have_field(:sandbox_organization).of_type("LinkedOrganization")
+    expect(subject).to have_field(:self_serve).of_type("Boolean!")
   end
 end

@@ -15,7 +15,7 @@ RSpec.describe Resolvers::ProductFilterResolver do
 
   let_it_be(:membership, refind: true) { create_default(:membership) }
   let(:organization) { membership.organization }
-  let(:required_permission) { "product_filters:view" }
+  let(:required_permission) { "products:view" }
   let(:product_filter) { create(:product_filter, :with_values, organization:) }
   let(:query) do
     <<~GQL
@@ -30,7 +30,7 @@ RSpec.describe Resolvers::ProductFilterResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "product_filters:view"
+  it_behaves_like "requires permission", "products:view"
 
   it "returns a single product filter" do
     response = execution["data"]["productFilter"]

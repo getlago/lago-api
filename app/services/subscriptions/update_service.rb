@@ -47,6 +47,10 @@ module Subscriptions
         return result
       end
 
+      unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
+        return result
+      end
+
       # TODO: Remove check we stop supporting `plan_overrides.usage_thresholds`
       if params[:usage_thresholds].present? && params.dig(:plan_overrides, :usage_thresholds).present?
         return result.validation_failure!(errors: {
@@ -69,6 +73,12 @@ module Subscriptions
         subscription.progressive_billing_disabled = params[:progressive_billing_disabled] if params.key?(:progressive_billing_disabled)
         if params.key?(:consolidate_invoice)
           subscription.consolidate_invoice = ActiveModel::Type::Boolean.new.cast(params[:consolidate_invoice])
+        end
+
+        if params.key?(:payment_term)
+          previous_payment_term = subscription.payment_term
+          subscription.payment_term = params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h
+          propagate_payment_term_to_pending_successor(previous_payment_term)
         end
 
         if pay_in_advance? && params.key?(:on_termination_credit_note)
@@ -151,6 +161,16 @@ module Subscriptions
       params.key?(:purchase_order_number) &&
         Subscription.normalize_value_for(:purchase_order_number, params[:purchase_order_number]) !=
           subscription.purchase_order_number
+    end
+
+    # A scheduled downgrade copied the term onto its pending successor (PlanDowngradeService);
+    # that copy follows the change unless the downgrade set a term of its own.
+    def propagate_payment_term_to_pending_successor(previous_payment_term)
+      successor = subscription.next_subscription
+      return unless successor&.pending?
+      return unless successor.payment_term == previous_payment_term
+
+      successor.update!(payment_term: subscription.payment_term)
     end
 
     def subscription_at_changing_to_past?

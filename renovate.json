@@ -59,6 +59,11 @@
       "enabled": false
     },
     {
+      "description": "email_data releases data only, often; one PR a week is enough for the self-serve signup domain lists",
+      "matchPackageNames": ["email_data"],
+      "schedule": ["before 5am on monday"]
+    },
+    {
       "description": "Commit prefixes by update type (mirrors lago-front conventions)",
       "matchUpdateTypes": ["major"],
       "commitMessagePrefix": "chore(deps-major)"

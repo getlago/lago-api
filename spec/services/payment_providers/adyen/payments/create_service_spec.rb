@@ -148,6 +148,138 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
       end
     end
 
+    context "when Adyen uses fewer decimals than Money for the currency" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 1_234_500,
+          currency: "IDR",
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the amount in Adyen minor units" do
+        create_service.call
+
+        # Money stores IDR with 2 decimals, Adyen with 0: 1_234_500 / 100
+        expect(payments_api).to have_received(:payments)
+          .with(hash_including(amount: {currency: "IDR", value: 12_345}), anything)
+      end
+
+      it "keeps the Lago amount on the payment" do
+        result = create_service.call
+
+        expect(result.payment.reload.amount_cents).to eq(1_234_500)
+      end
+
+      context "when the amount has a sub-unit part" do
+        let(:invoice) do
+          create(
+            :invoice,
+            organization:,
+            customer:,
+            total_amount_cents: 12_350,
+            currency: "IDR",
+            ready_for_payment_processing: true
+          )
+        end
+
+        it "rounds the Adyen amount half up and keeps the Lago amount on the payment" do
+          result = create_service.call
+
+          # 12_350 / 100 = 123.5, rounded half up
+          expect(payments_api).to have_received(:payments)
+            .with(hash_including(amount: {currency: "IDR", value: 124}), anything)
+          expect(result.payment.reload.amount_cents).to eq(12_350)
+        end
+      end
+    end
+
+    context "when Adyen uses more decimals than Money for the currency" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 50_000,
+          currency: "HUF",
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the amount in Adyen minor units" do
+        create_service.call
+
+        # Money stores HUF with 0 decimals, Adyen with 2: 50_000 * 100
+        expect(payments_api).to have_received(:payments)
+          .with(hash_including(amount: {currency: "HUF", value: 5_000_000}), anything)
+      end
+    end
+
+    context "when the payable is a payment request in a currency Adyen gives fewer decimals" do
+      let(:payment_request) do
+        create(
+          :payment_request,
+          organization:,
+          customer:,
+          amount_cents: 1_234_500,
+          amount_currency: "IDR"
+        )
+      end
+      let(:reference) { "organization.name - Overdue invoices" }
+      let(:metadata) do
+        {
+          lago_customer_id: customer.id,
+          lago_payable_id: payment_request.id,
+          lago_payable_type: payment_request.class.name
+        }
+      end
+
+      let(:payment) do
+        create(
+          :payment,
+          payable: payment_request,
+          status: "pending",
+          payment_provider: adyen_payment_provider,
+          payment_provider_customer: adyen_customer,
+          amount_cents: payment_request.amount_cents,
+          amount_currency: payment_request.amount_currency
+        )
+      end
+
+      it "sends the amount in Adyen minor units and keeps the Lago amount on the payment" do
+        result = create_service.call
+
+        # Money stores IDR with 2 decimals, Adyen with 0: 1_234_500 / 100
+        expect(payments_api).to have_received(:payments)
+          .with(hash_including(amount: {currency: "IDR", value: 12_345}), anything)
+        expect(result.payment.reload.amount_cents).to eq(1_234_500)
+        expect(result.payment.payable).to eq(payment_request)
+      end
+    end
+
+    context "when Adyen and Money use the same decimals for the currency" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 1000,
+          currency: "EUR",
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the amount unchanged" do
+        create_service.call
+
+        expect(payments_api).to have_received(:payments)
+          .with(hash_including(amount: {currency: "EUR", value: 1000}), anything)
+      end
+    end
+
     context "with error response from adyen" do
       let(:payments_error_response) { generate(:adyen_payments_error_response) }
 
@@ -257,6 +389,8 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
 
         expect(result.error_message).to eq("error")
         expect(result.error_code).to eq("code")
+        expect(result.reraise).to be(true)
+        expect(result.should_retry).to be_nil
         expect(result.payment.payable_payment_status).to eq("failed")
       end
     end

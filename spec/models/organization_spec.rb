@@ -12,8 +12,21 @@ RSpec.describe Organization do
     )
   end
 
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:environment).backed_by_column_of_type(:enum).validating
+        .with_values(production: "production", sandbox: "sandbox")
+      expect(subject).to define_enum_for(:activation_status).backed_by_column_of_type(:enum).validating.with_prefix
+        .with_values(pending_payment_method: "pending_payment_method", active: "active")
+    end
+  end
+
   describe "associations" do
     it do
+      expect(subject).to belong_to(:production_organization).class_name("Organization").optional
+        .inverse_of(:sandbox_organization)
+      expect(subject).to have_one(:sandbox_organization).class_name("Organization")
+        .with_foreign_key(:production_organization_id).inverse_of(:production_organization).dependent(:restrict_with_error)
       expect(subject).to have_many(:stripe_payment_providers)
       expect(subject).to have_many(:gocardless_payment_providers)
       expect(subject).to have_many(:adyen_payment_providers)
@@ -33,6 +46,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:contracts)
       expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
       expect(subject).to have_many(:credit_notes)
+      expect(subject).to have_many(:billing_operations)
       expect(subject).to have_many(:invoices)
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:applied_coupons)
@@ -43,10 +57,13 @@ RSpec.describe Organization do
       expect(subject).to have_many(:streaming_destinations).class_name("StreamingDestinations::BaseDestination")
       expect(subject).to have_many(:webhooks)
       expect(subject).to have_many(:recurring_aggregation_snapshots)
+      expect(subject).to have_many(:contract_recurring_aggregation_snapshots)
       expect(subject).to have_many(:hubspot_integrations)
       expect(subject).to have_many(:netsuite_integrations)
       expect(subject).to have_many(:xero_integrations)
+      expect(subject).to have_many(:quickbooks_integrations)
       expect(subject).to have_one(:salesforce_integration)
+      expect(subject).to have_many(:agent_storefront_integrations)
       expect(subject).to have_many(:data_exports)
       expect(subject).to have_many(:dunning_campaigns)
       expect(subject).to have_many(:daily_usages)
@@ -74,6 +91,8 @@ RSpec.describe Organization do
       expect(subject).to have_many(:orders)
       expect(subject).to have_many(:triggered_alerts).class_name("UsageMonitoring::TriggeredAlert")
         .conditions(kind: "triggered")
+      expect(subject).to have_many(:contract_alerts).class_name("UsageMonitoring::ContractAlert")
+      expect(subject).to have_many(:contract_activities).class_name("UsageMonitoring::ContractActivity")
     end
   end
 
@@ -280,6 +299,181 @@ RSpec.describe Organization do
       end
     end
 
+    describe "of the defaults" do
+      subject(:organization) { create(:organization) }
+
+      it "is an active production organization, not self-serve and unlinked" do
+        expect(organization.reload).to have_attributes(self_serve: false, environment: "production",
+          production_organization_id: nil, activation_status: "active")
+      end
+    end
+
+    describe "of activation_status" do
+      let(:self_serve_production) { create(:organization, :self_serve) }
+      let(:regular) { create(:organization) }
+      let(:sandbox) { create(:organization, :self_serve, :sandbox, production_organization: self_serve_production) }
+
+      context "with a self-serve production organization waiting for a payment method" do
+        subject(:organization) { build(:organization, :self_serve, activation_status: "pending_payment_method") }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "with a regular organization waiting for a payment method" do
+        subject(:organization) { build(:organization, activation_status: "pending_payment_method") }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      context "with a self-serve sandbox waiting for a payment method" do
+        subject(:organization) do
+          build(:organization, :self_serve, :sandbox, production_organization: self_serve_production,
+            activation_status: "pending_payment_method")
+        end
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      context "with an unknown value" do
+        before { organization.activation_status = "suspended" }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(activation_status: ["value_is_invalid"])
+        end
+      end
+
+      it "refuses a waiting regular organization in the database, for writes that skip validations" do
+        expect { regular.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
+      end
+
+      it "refuses a waiting sandbox in the database, for writes that skip validations" do
+        expect { sandbox.update_columns(activation_status: "pending_payment_method") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_activation_status/)
+      end
+    end
+
+    describe "of self_serve" do
+      it "is invalid without a value" do
+        organization.self_serve = nil
+
+        expect(organization).not_to be_valid
+        expect(organization.errors.to_hash).to eq(self_serve: ["value_is_invalid"])
+      end
+    end
+
+    describe "of the sandbox link" do
+      let(:production) { create(:organization) }
+
+      context "with a sandbox linked to a production organization" do
+        subject(:organization) { build(:organization, :sandbox, production_organization: production) }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "with a sandbox without a production organization" do
+        subject(:organization) { build(:organization, environment: "sandbox") }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_is_mandatory"])
+        end
+      end
+
+      context "with a production organization with a link" do
+        subject(:organization) { build(:organization, production_organization: production) }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_must_be_blank"])
+        end
+      end
+
+      context "with a sandbox linked to another sandbox" do
+        subject(:organization) { build(:organization, :sandbox, production_organization: other_sandbox) }
+
+        let(:other_sandbox) { create(:organization, :sandbox, production_organization: production) }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_is_invalid"])
+        end
+      end
+
+      context "with a sandbox linked to an organization that does not exist" do
+        subject(:organization) { build(:organization, environment: "sandbox", production_organization_id: SecureRandom.uuid) }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_is_invalid"])
+        end
+      end
+
+      context "with a sandbox linked to itself" do
+        subject(:organization) { create(:organization, :sandbox, production_organization: production) }
+
+        before { organization.production_organization_id = organization.id }
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_is_invalid"])
+        end
+      end
+
+      context "with an organization that owns a sandbox turned into a sandbox" do
+        subject(:organization) { production }
+
+        before do
+          create(:organization, :sandbox, production_organization: production)
+          production.assign_attributes(environment: "sandbox", production_organization: create(:organization))
+        end
+
+        it "is invalid" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(environment: ["value_is_invalid"])
+        end
+      end
+
+      context "with a second sandbox of the same production organization" do
+        subject(:organization) { build(:organization, :sandbox, production_organization: production) }
+
+        before { create(:organization, :sandbox, production_organization: production) }
+
+        it "is invalid, and refused by the unique index" do
+          expect(organization).not_to be_valid
+          expect(organization.errors.to_hash).to eq(production_organization_id: ["value_already_exist"])
+          expect { organization.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+      end
+
+      context "when destroying a production organization that owns a sandbox" do
+        before { create(:organization, :sandbox, production_organization: production) }
+
+        it "refuses with an error and keeps both organizations" do
+          expect(production.destroy).to be(false)
+          expect(production.errors.details[:base]).to eq([{error: :"restrict_dependent_destroy.has_one", record: "sandbox organization"}])
+          expect(described_class.where(id: production.id)).to exist
+        end
+      end
+
+      it "refuses a sandbox without a link in the database, for writes that skip validations" do
+        expect { production.update_columns(environment: "sandbox") } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_environment_link/)
+      end
+
+      it "refuses a self link in the database, for writes that skip validations" do
+        expect { production.update_columns(environment: "sandbox", production_organization_id: production.id) } # rubocop:disable Rails/SkipsModelValidations
+          .to raise_error(ActiveRecord::StatementInvalid, /check_organizations_on_production_organization_not_self/)
+      end
+    end
+
     describe "of premium_integrations inclusion" do
       context "when it includes an invalid integration" do
         subject(:organization) { build(:organization, premium_integrations: ["invalid_integration"]) }
@@ -292,6 +486,12 @@ RSpec.describe Organization do
 
       context "when it includes a valid integration" do
         subject(:organization) { build(:organization, :premium) }
+
+        it { is_expected.to be_valid }
+      end
+
+      context "when it includes quickbooks" do
+        subject(:organization) { build(:organization, premium_integrations: ["quickbooks"]) }
 
         it { is_expected.to be_valid }
       end
@@ -314,11 +514,31 @@ RSpec.describe Organization do
         subject
 
         expect(organization.document_number_prefix)
-          .to eq "#{organization.name.first(3).upcase}-#{organization.id.last(4).upcase}"
+          .to eq "#{organization.name.first(3).delete(" ").upcase}-#{organization.id.last(4).upcase}"
       end
 
       it "sets unique hmac key" do
         expect { subject }.to change(organization, :hmac_key).to unique_hmac_key
+      end
+
+      context "with a name that upcasing lengthens" do
+        let(:organization) { build(:organization, name: "\u00DF\u00DF\u00DF Corp") }
+
+        it "keeps the prefix within its limit" do
+          subject
+
+          expect(organization.document_number_prefix).to eq("SSS-#{organization.id.last(4).upcase}")
+        end
+      end
+
+      context "with a name of two characters before a space" do
+        let(:organization) { build(:organization, name: "ab Sandbox") }
+
+        it "leaves the space out of the prefix" do
+          subject
+
+          expect(organization.document_number_prefix).to eq("AB-#{organization.id.last(4).upcase}")
+        end
       end
 
       it "auto-generates slug from name when not provided" do
@@ -379,7 +599,7 @@ RSpec.describe Organization do
   end
 
   describe "#premium_integrations_enabled?" do
-    described_class::PREMIUM_INTEGRATIONS.each do |integration|
+    (described_class::PREMIUM_INTEGRATIONS - %w[agent_storefront]).each do |integration|
       it_behaves_like "organization premium feature", integration
     end
   end
@@ -522,6 +742,27 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#default_webhook_endpoint" do
+    # Reloaded: creating an endpoint leaves the association of this instance loaded without it.
+    subject(:default_webhook_endpoint) { organization.reload.default_webhook_endpoint }
+
+    let(:organization) { create(:organization, webhook_url: nil) }
+
+    context "when the organization has no webhook endpoint" do
+      it { is_expected.to be_nil }
+    end
+
+    context "when the organization has several webhook endpoints" do
+      let(:endpoints) { create_list(:webhook_endpoint, 3, organization:) }
+
+      before { endpoints }
+
+      it "returns the endpoint with the lowest id" do
+        expect(default_webhook_endpoint).to eq(WebhookEndpoint.where(organization:).order(:id).first)
+      end
+    end
+  end
+
   describe "#failed_tax_invoices_count" do
     subject(:failed_tax_invoices_count) { organization.failed_tax_invoices_count }
 
@@ -625,6 +866,43 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#product_events_pipeline?" do
+    subject { organization.product_events_pipeline? }
+
+    let(:organization) { build_stubbed(:organization, feature_flags: ["product_catalog"]) }
+
+    before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+    after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+    it { is_expected.to be(true) }
+
+    context "without the product events topic" do
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "without the product catalog" do
+      let(:organization) { build_stubbed(:organization) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#catalog_wallets_enabled?" do
+    subject { organization.catalog_wallets_enabled? }
+
+    let(:organization) { build_stubbed(:organization, feature_flags: ["product_catalog", "catalog_wallets"]) }
+
+    it { is_expected.to be(true) }
+
+    context "without the catalog_wallets flag" do
+      let(:organization) { build_stubbed(:organization, feature_flags: ["product_catalog"]) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "#organization" do
     it "returns the organization" do
       expect(organization.organization).to eq(organization)
@@ -674,6 +952,62 @@ RSpec.describe Organization do
     end
   end
 
+  describe "#effective_activation_status" do
+    subject(:organization) { build(:organization, :self_serve, activation_status:) }
+
+    include_context "with self-serve enabled"
+
+    let(:activation_status) { "pending_payment_method" }
+
+    it "is the stored status" do
+      expect(organization.effective_activation_status).to eq("pending_payment_method")
+    end
+
+    context "with an active organization" do
+      let(:activation_status) { "active" }
+
+      it "is active" do
+        expect(organization.effective_activation_status).to eq("active")
+      end
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "is active whatever the stored status" do
+        expect(organization.effective_activation_status).to eq("active")
+      end
+    end
+  end
+
+  describe "#awaiting_payment_method?" do
+    subject(:organization) { build(:organization, :self_serve, activation_status:) }
+
+    include_context "with self-serve enabled"
+
+    let(:activation_status) { "pending_payment_method" }
+
+    it "is true for a pending organization" do
+      expect(organization.awaiting_payment_method?).to be(true)
+    end
+
+    context "with an active organization" do
+      let(:activation_status) { "active" }
+
+      it "is false" do
+        expect(organization.awaiting_payment_method?).to be(false)
+      end
+    end
+
+    context "with self-serve disabled" do
+      let(:self_serve_env) { super().merge("LAGO_SELF_SERVE_ENABLED" => "false") }
+
+      it "is false for a pending organization" do
+        expect(organization.awaiting_payment_method?).to be(false)
+      end
+    end
+  end
+
   describe "#x402_payments_enabled?" do
     subject(:organization) { build(:organization, feature_flags:) }
 
@@ -691,6 +1025,33 @@ RSpec.describe Organization do
 
     context "without a premium license" do
       it { expect(organization.x402_payments_enabled?).to be(false) }
+    end
+  end
+
+  describe "#agent_storefront_enabled?" do
+    subject(:organization) { build(:organization, premium_integrations:, feature_flags:) }
+
+    let(:premium_integrations) { ["agent_storefront"] }
+    let(:feature_flags) { ["agent_storefront"] }
+
+    context "with a premium license", :premium do
+      it { expect(organization.agent_storefront_enabled?).to be(true) }
+
+      context "without the agent_storefront flag" do
+        let(:feature_flags) { [] }
+
+        it { expect(organization.agent_storefront_enabled?).to be(false) }
+      end
+
+      context "without the agent_storefront premium integration" do
+        let(:premium_integrations) { [] }
+
+        it { expect(organization.agent_storefront_enabled?).to be(false) }
+      end
+    end
+
+    context "without a premium license" do
+      it { expect(organization.agent_storefront_enabled?).to be(false) }
     end
   end
 end

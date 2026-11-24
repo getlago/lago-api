@@ -47,6 +47,39 @@ RSpec.describe Resolvers::InviteResolver do
     expect(result["data"]["invite"]["token"]).to be_nil
   end
 
+  context "when the organization has a sandbox" do
+    include_context "with self-serve enabled"
+
+    let(:query) do
+      <<~GQL
+        query($token: String!) {
+          invite(token: $token) {
+            organization { selfServe environment activationStatus sandboxOrganization { id } }
+          }
+        }
+      GQL
+    end
+
+    let(:organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+    let(:non_member) { create(:user) }
+
+    before { create(:organization, :self_serve, :sandbox, production_organization: organization) }
+
+    it "shows the environment but neither the activation status nor the sandbox to an anonymous caller" do
+      result = execute_graphql(query:, variables: {token: invite.token})
+
+      expect(result["data"]["invite"]["organization"]).to eq(
+        "selfServe" => true, "environment" => "production", "activationStatus" => nil, "sandboxOrganization" => nil
+      )
+    end
+
+    it "hides the activation status from a logged-in user who is not a member" do
+      result = execute_graphql(current_user: non_member, query:, variables: {token: invite.token})
+
+      expect(result["data"]["invite"]["organization"]["activationStatus"]).to be_nil
+    end
+  end
+
   context "when the invited email belongs to an existing user" do
     before { create(:user, email: invite.email) }
 

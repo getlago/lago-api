@@ -6,10 +6,9 @@ require_relative "shared_examples/an_event_store"
 
 RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true} do
   def create_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil, event_charge: nil, created_at: nil)
-    Clickhouse::EventsEnriched.create!(
+    attributes = {
       transaction_id: transaction_id,
       organization_id: organization.id,
-      external_subscription_id: subscription.external_id,
       code:,
       timestamp: timestamp,
       properties: properties.merge(billable_metric.field_name => value).compact,
@@ -17,7 +16,33 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       decimal_value: value&.to_i&.to_d,
       precise_total_amount_cents: value,
       enriched_at: created_at || enriched_at || Time.current
-    )
+    }
+
+    if organization.product_events_pipeline?
+      Clickhouse::ProductEventsEnriched.create!(**attributes, external_contract_id: subscription.external_id)
+    else
+      Clickhouse::EventsEnriched.create!(**attributes, external_subscription_id: subscription.external_id)
+    end
+  end
+
+  # One insert for many events, so a large total is built without one request per event.
+  def insert_events(count, timestamp:, value:, properties: {})
+    rows = Array.new(count) do
+      {
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: properties.merge(billable_metric.field_name => value.to_s),
+        value: value.to_s,
+        decimal_value: value.to_d,
+        precise_total_amount_cents: value.to_d,
+        enriched_at: Time.current
+      }
+    end
+
+    Clickhouse::EventsEnriched.insert_all(rows) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def format_timestamp(timestamp, precision: 3)
@@ -25,6 +50,84 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
   end
 
   it_behaves_like "an event store"
+
+  context "with an organization on the product events pipeline" do
+    it_behaves_like "an event store", product_events: true
+  end
+
+  describe "events table" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context:,
+        boundaries: {from_datetime: started_at, to_datetime: started_at.end_of_month, charges_duration: 31},
+        filters: {}
+      )
+    end
+
+    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+    let(:customer) { create(:customer, organization:) }
+    let(:started_at) { Time.zone.parse("2026-10-01") }
+    let(:contract) { create(:contract, customer:, started_at:) }
+    let(:billing_context) { Billing::Context.from(contract:) }
+
+    let(:product_event) do
+      create(
+        :clickhouse_product_events_enriched,
+        organization:,
+        external_contract_id: contract.external_id,
+        code: billable_metric.code,
+        timestamp: started_at + 1.day,
+        properties: {"value" => "3"},
+        value: "3",
+        decimal_value: 3
+      )
+    end
+
+    let(:subscription_event) do
+      Clickhouse::EventsEnriched.create!(
+        transaction_id: SecureRandom.uuid,
+        organization_id: organization.id,
+        external_subscription_id: contract.external_id,
+        code: billable_metric.code,
+        timestamp: started_at + 2.days,
+        properties: {"value" => "5"},
+        value: "5",
+        decimal_value: 5,
+        enriched_at: Time.current
+      )
+    end
+
+    before do
+      product_event
+      subscription_event
+    end
+
+    context "with an organization on the product events pipeline" do
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
+      after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "reads the contract's events from the product events table" do
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+        expect(event_store.sum(with_count: false).value).to eq(3)
+        expect(event_store.events.map(&:transaction_id)).to eq([product_event.transaction_id])
+      end
+
+      it "returns the property combinations of the product events" do
+        combinations = event_store.distinct_codes_and_property_combinations(codes: [billable_metric.code], filter_keys: ["value"])
+
+        expect(combinations.map { it.first(2) }).to eq([[billable_metric.code, {"value" => "3"}]])
+      end
+    end
+
+    context "without the product events topic" do
+      it "reads the events_enriched table" do
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+        expect(event_store.sum(with_count: false).value).to eq(5)
+      end
+    end
+  end
 
   # Regression test for https://github.com/getlago/lago-api/pull/5359
   #
@@ -109,6 +212,217 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       it "counts the deduplicated event exactly once" do
         expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
       end
+    end
+  end
+
+  describe "a late event read from a snapshot delta" do
+    subject(:result) { event_store.recurring_sum(watermark: Time.current + 1.hour, period:) }
+
+    let(:event_store) do
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries:, filters: {})
+    end
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", recurring: true) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {from_datetime: subscription.started_at.beginning_of_day, to_datetime: subscription.started_at.end_of_month.end_of_day, charges_duration: 31}
+    end
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: subscription.started_at + 3.days, watermark: Time.current - 1.hour)
+    end
+    let(:transaction_id) { SecureRandom.uuid }
+
+    def create_copy(value:, enriched_at:)
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: subscription.started_at + 1.day,
+        properties: {"value" => value},
+        value:,
+        decimal_value: value.to_d,
+        precise_total_amount_cents: value,
+        enriched_at:
+      )
+    end
+
+    before do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+      event_store.use_from_boundary = false
+    end
+
+    def executed_sql
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
+      queries.join("\n")
+    end
+
+    it "turns the exact mode off for the late events" do
+      expect(executed_sql).to include("enriched_at > ").and include("SETTINGS use_skip_indexes_if_final_exact_mode = 0")
+    end
+
+    context "when the inexact mode is disabled" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_DISABLE_CLICKHOUSE_INEXACT_FINAL" => "true")) }
+
+      it "keeps the exact mode" do
+        expect(executed_sql).to include("enriched_at > ")
+        expect(executed_sql).not_to include("use_skip_indexes_if_final_exact_mode")
+      end
+    end
+
+    context "when the event is re-sent after the watermark" do
+      before do
+        create_copy(value: 10, enriched_at: Time.current - 30.minutes)
+        create_copy(value: 15, enriched_at: Time.current - 10.minutes)
+      end
+
+      it "counts the latest copy once" do
+        expect(result).to have_attributes(value: 15, events_count: 1)
+      end
+    end
+
+    context "when the event was read by the snapshot and re-sent after the watermark" do
+      before do
+        create_copy(value: 10, enriched_at: Time.current - 2.hours)
+        create_copy(value: 15, enriched_at: Time.current - 10.minutes)
+      end
+
+      it "counts the latest copy once" do
+        expect(result).to have_attributes(value: 15, events_count: 1)
+      end
+    end
+  end
+
+  describe "#resent_after_watermark?" do
+    subject(:resent) { event_store.resent_after_watermark?(period) }
+
+    let(:event_store) do
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries:, filters:)
+    end
+    let(:filters) { {} }
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", recurring: true) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {from_datetime: subscription.started_at.beginning_of_day, to_datetime: subscription.started_at.end_of_month.end_of_day, charges_duration: 31}
+    end
+    let(:period) do
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: subscription.started_at + 3.days, watermark: (Time.current - 1.hour).floor(3))
+    end
+    let(:transaction_id) { SecureRandom.uuid }
+    let(:timestamp) { subscription.started_at + 1.day }
+
+    # events_raw keeps each insert, while FINAL reads the latest one from events_enriched
+    def ingest(ingested_at:, region: "eu", enriched_at: ingested_at)
+      Clickhouse::EventsRaw.create!(
+        organization_id: organization.id,
+        external_customer_id: customer.external_id,
+        external_subscription_id: subscription.external_id,
+        transaction_id:,
+        timestamp:,
+        code: billable_metric.code,
+        properties: {"value" => "1", "region" => region},
+        ingested_at:
+      )
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: {"value" => "1", "region" => region},
+        value: "1",
+        decimal_value: 1,
+        enriched_at:
+      )
+    end
+
+    before do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+      event_store.use_from_boundary = false
+    end
+
+    it { is_expected.to be(false) }
+
+    it "parses the watermark before comparing it to ingested_at, which can be a DateTime without milliseconds" do
+      expect(event_store.resent_after_watermark_sql(period)).to include("ingested_at <= toDateTime64('")
+    end
+
+    context "with an event ingested by the watermark and re-sent after it" do
+      before do
+        ingest(ingested_at: period.watermark)
+        ingest(ingested_at: period.watermark + 10.minutes)
+      end
+
+      it { is_expected.to be(true) }
+
+      context "when the filters leave both copies out" do
+        let(:filters) { {matching_filters: {"region" => ["us"]}} }
+
+        it { is_expected.to be(true) }
+      end
+
+      context "when the event is dated after the period" do
+        let(:timestamp) { period.to_datetime + 1.second }
+
+        it { is_expected.to be(false) }
+      end
+    end
+
+    context "with an event re-sent after the watermark out of the filter of its first copy" do
+      let(:filters) { {matching_filters: {"region" => ["eu"]}} }
+
+      before do
+        ingest(ingested_at: period.watermark, region: "eu")
+        ingest(ingested_at: period.watermark + 10.minutes, region: "us")
+      end
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with an event ingested once by the watermark and enriched after it" do
+      before { ingest(ingested_at: period.watermark, enriched_at: period.watermark + 1.second) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with an event first ingested after the watermark" do
+      before { ingest(ingested_at: period.watermark + 10.minutes) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with an event ingested twice by the watermark" do
+      before do
+        ingest(ingested_at: period.watermark - 10.minutes)
+        ingest(ingested_at: period.watermark)
+      end
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a copy ingested by the watermark for another subscription" do
+      before do
+        Clickhouse::EventsRaw.create!(
+          organization_id: organization.id,
+          external_customer_id: customer.external_id,
+          external_subscription_id: "other-subscription",
+          transaction_id:,
+          timestamp:,
+          code: billable_metric.code,
+          properties: {"value" => "1"},
+          ingested_at: period.watermark
+        )
+        ingest(ingested_at: period.watermark + 10.minutes)
+      end
+
+      it { is_expected.to be(false) }
     end
   end
 
@@ -497,6 +811,183 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
 
     it "aggregates instead of failing to parse" do
       expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+    end
+  end
+
+  # decimal_value is a Decimal(38, 26), so a sum held in that type wraps above 2^127 / 10^26 (~1.70e12).
+  describe "#sum above the Decimal128 limit" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        filters: {}
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      250.times { create_event(timestamp: subscription.started_at + 1.day, value: 8_000_000_000) }
+    end
+
+    it "returns the exact total" do
+      result = event_store.sum
+
+      expect(result.value).to eq(BigDecimal("2000000000000")) # 250 events x 8e9
+      expect(result.events_count).to eq(250)
+    end
+  end
+
+  describe "other sums above the Decimal128 limit" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        filters: {grouped_by:}
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+    let(:grouped_by) { nil }
+    let(:events_count) { 250 }
+    let(:event_value) { 8_000_000_000 }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      insert_events(events_count, timestamp: subscription.started_at + 1.day, value: event_value, properties: {"region" => "europe"})
+    end
+
+    describe "#sum" do
+      let(:events_count) { 570 }
+
+      it "returns the exact total past twice the limit" do
+        result = event_store.sum
+
+        expect(result.value).to eq(BigDecimal("4560000000000")) # 570 events x 8e9
+        expect(result.events_count).to eq(570)
+      end
+    end
+
+    describe "#grouped_sum" do
+      let(:grouped_by) { %w[region] }
+
+      it "returns the exact total of the group" do
+        expect(event_store.grouped_sum).to eq([
+          Events::Stores::BaseStore::GroupedAggregationResult.new(
+            groups: {"region" => "europe"},
+            value: BigDecimal("2000000000000"), # 250 events x 8e9
+            events_count: 250
+          )
+        ])
+      end
+    end
+
+    describe "#recurring_sum" do
+      it "returns the exact total and snapshot total" do
+        expect(event_store.recurring_sum(watermark: Time.current + 1.hour)).to eq(
+          Events::Stores::BaseStore::RecurringAggregationResult.new(
+            value: BigDecimal("2000000000000"), # 250 events x 8e9
+            snapshot_value: BigDecimal("2000000000000"), # all 250 events enriched before the watermark
+            events_count: 250,
+            snapshot_events_count: 250
+          )
+        )
+      end
+    end
+
+    describe "#grouped_recurring_sum" do
+      let(:grouped_by) { %w[region] }
+
+      it "returns the exact total and snapshot total of the group" do
+        expect(event_store.grouped_recurring_sum(watermark: Time.current + 1.hour)).to eq([
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(
+            groups: {"region" => "europe"},
+            value: BigDecimal("2000000000000"), # 250 events x 8e9
+            snapshot_value: BigDecimal("2000000000000"), # all 250 events enriched before the watermark
+            events_count: 250,
+            snapshot_events_count: 250
+          )
+        ])
+      end
+    end
+
+    describe "#sum_date_breakdown" do
+      it "returns the exact total of the day" do
+        expect(event_store.sum_date_breakdown).to eq([
+          {date: Date.new(2023, 3, 16), value: BigDecimal("2000000000000")} # 250 events x 8e9
+        ])
+      end
+    end
+
+    describe "#prorated_sum" do
+      let(:events_count) { 500 }
+
+      it "returns the exact total and prorated total" do
+        result = event_store.prorated_sum(period_duration: 30, persisted_duration: 15)
+
+        expect(result.value).to eq(BigDecimal("4000000000000")) # 500 events x 8e9
+        expect(result.prorated_value).to be_within(0.01).of(2_000_000_000_000) # 4e12 x 15 / 30, Float64 ratio product
+        expect(result.events_count).to eq(500)
+      end
+
+      it "returns the exact total and prorates each event over its remaining days" do
+        result = event_store.prorated_sum(period_duration: 31)
+
+        expect(result.value).to eq(BigDecimal("4000000000000")) # 500 events x 8e9
+        expect(result.prorated_value).to be_within(0.01).of(4_000_000_000_000 * 16.fdiv(31)) # 16 to 31 March, 16 of 31 days
+      end
+
+      context "with a ratio whose decimal text rounds up" do
+        let(:events_count) { 1 }
+        let(:event_value) { 31 }
+
+        it "keeps the prorated value at or below the exact product" do
+          result = event_store.prorated_sum(period_duration: 31, persisted_duration: 15)
+
+          expect(result.prorated_value.ceil(5)).to eq(15) # 31 x 15 / 31
+        end
+      end
+    end
+
+    describe "#grouped_prorated_sum" do
+      let(:events_count) { 500 }
+      let(:grouped_by) { %w[region] }
+
+      it "returns the exact total and prorated total of the group" do
+        result = event_store.grouped_prorated_sum(period_duration: 30, persisted_duration: 15)
+
+        expect(result.map(&:groups)).to eq([{"region" => "europe"}])
+        expect(result.first.value).to eq(BigDecimal("4000000000000")) # 500 events x 8e9
+        expect(result.first.prorated_value).to be_within(0.01).of(2_000_000_000_000) # 4e12 x 15 / 30, Float64 ratio product
+        expect(result.first.events_count).to eq(500)
+      end
     end
   end
 

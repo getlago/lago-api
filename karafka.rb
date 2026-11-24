@@ -69,6 +69,28 @@ class KarafkaApp < Karafka::App
     end
   end
 
+  if ENV["LAGO_KAFKA_PRODUCT_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
+    routes.draw do
+      consumer_group :lago_product_events_charged_in_advance_consumer do
+        topic ENV["LAGO_KAFKA_PRODUCT_EVENTS_CHARGED_IN_ADVANCE_TOPIC"] do
+          consumer ProductEventsChargedInAdvanceConsumer
+
+          dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+        end
+      end
+    end
+  end
+
+  if ENV["LAGO_KAFKA_USAGE_ATTRIBUTION_VALUES_TOPIC"].present?
+    routes.draw do
+      consumer_group :lago_usage_attribution_values_consumer do
+        topic ENV["LAGO_KAFKA_USAGE_ATTRIBUTION_VALUES_TOPIC"] do
+          consumer UsageAttributionValuesConsumer
+        end
+      end
+    end
+  end
+
   if ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"].present?
     routes.draw do
       consumer_group :lago_wallet_refresh_triggers_consumer do
@@ -82,6 +104,24 @@ class KarafkaApp < Karafka::App
           # lag at a sustained 500 ev/s with 500). The distinct-customer count is what costs time,
           # and the consumer bounds it with its own deadline (WalletRefreshTriggersConsumer).
           max_messages 10_000
+        end
+      end
+
+      # Its own group, so an alerts evaluation never holds back a wallet refresh. Drawn only where the lane is on:
+      # a process without the switch would commit its partitions' triggers as not_enabled.
+      if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"])
+        consumer_group :lago_usage_alerts_consumer do
+          topic ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"] do
+            consumer SubscriptionUsageAlertsConsumer
+
+            # Triggers older than the group belong to the sweep: replaying them would buy no latency.
+            initial_offset "latest"
+            # Alert latency: don't sit on a sparse batch (the default is 1000ms).
+            max_wait_time 100
+            # Caught-up buckets skip the stale check, so a backlog is only cleared by collapsing it to
+            # one evaluation per subscription: same reasoning as the wallet refresh group.
+            max_messages 10_000
+          end
         end
       end
     end

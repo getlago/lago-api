@@ -14,7 +14,12 @@ RSpec.describe "ClickHouse enriched_at index", clickhouse: true do # rubocop:dis
     SQL
   end
 
-  it "defines a minmax index on enriched_at for enriched events" do
-    expect(indexes).to eq(%w[events_enriched.idx_enriched_at])
+  it "defines a minmax index on enriched_at for legacy and product enriched events" do
+    expect(indexes).to match_array(
+      %w[
+        events_enriched.idx_enriched_at
+        product_events_enriched.idx_product_events_enriched_enriched_at
+      ]
+    )
   end
 end

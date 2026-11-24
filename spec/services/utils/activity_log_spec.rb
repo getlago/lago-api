@@ -190,6 +190,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         let(:rate_card_rate) { create(:rate_card_rate, organization:) }
         let(:plan_rate_card) { create(:plan_rate_card, organization:) }
         let(:contract_rate_card) { create(:contract_rate_card, organization:) }
+        let(:plan_wallet) { create(:plan_wallet, organization:) }
+        let(:contract_wallet) { create(:catalog_wallet, organization:) }
 
         it "serializes a rate without assuming a customer association" do
           activity_log.produce(rate_card_rate, "rate_card_rate.created")
@@ -228,6 +230,16 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           end
         end
 
+        it "serializes a plan wallet template with its taxes and metadata, without a customer association" do
+          activity_log.produce(plan_wallet, "plan_wallet.created")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "PlanWallet", "external_customer_id" => nil)
+            expect(payload.fetch("activity_object")).to include("lago_id" => plan_wallet.id, "taxes" => [], "metadata" => nil)
+          end
+        end
+
         it "uses the applied contract card serializer and its customer" do
           activity_log.produce(contract_rate_card, "contract_rate_card.created")
 
@@ -235,6 +247,16 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             payload = JSON.parse(args[:payload])
             expect(payload).to include("resource_type" => "ContractRateCard", "external_customer_id" => contract_rate_card.contract.customer.external_id)
             expect(payload.fetch("activity_object")).to include("lago_id" => contract_rate_card.id)
+          end
+        end
+
+        it "serializes a contract wallet with its taxes and metadata, and its customer" do
+          activity_log.produce(contract_wallet, "contract_wallet.created")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "CatalogWallet", "external_customer_id" => contract_wallet.customer.external_id)
+            expect(payload.fetch("activity_object")).to include("lago_id" => contract_wallet.id, "balance_cents" => 0, "taxes" => [], "metadata" => nil)
           end
         end
       end
@@ -598,6 +620,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               organization:,
               customer:,
               external_id: "acme-2023",
+              code: "default",
               name: "Acme 2023",
               purchase_order_number: "PO-42",
               started_at: Time.current
@@ -612,12 +635,12 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             expect(produced_payload[:activity_object]).to eq(
               lago_id: contract.id,
               external_id: "acme-2023",
+              code: "default",
               lago_customer_id: customer.id,
               external_customer_id: "acme",
               name: "Acme 2023",
               plan_code: nil,
               status: "active",
-              billing_time: "calendar",
               consolidate_invoice: true,
               purchase_order_number: "PO-42",
               billing_anchor_date: nil,

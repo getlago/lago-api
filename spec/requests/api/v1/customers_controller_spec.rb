@@ -34,6 +34,157 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "with a structured payment_term" do
+      before { create_params[:payment_term] = {term_type: "day_of_month", day_of_month: 15, month_offset: 2} }
+
+      it "writes the term and returns it with a null alias" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to eq(term_type: "day_of_month", day_of_month: 15, month_offset: 2)
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
+    context "with a payment_term conflicting with the net_payment_term sent alongside" do
+      before { create_params.merge!(payment_term: {term_type: "net", days: 30}, net_payment_term: 60) }
+
+      it "lets payment_term win" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to eq(term_type: "net", days: 30)
+        expect(json[:customer][:net_payment_term]).to eq(30)
+      end
+    end
+
+    context "with a payment_term carrying an unexpected field" do
+      before { create_params[:payment_term] = {term_type: "end_of_month", days: 3} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["unexpected_fields"])
+      end
+    end
+
+    context "with a payment_term whose days exceed 365" do
+      before { create_params[:payment_term] = {term_type: "net_end_of_month", days: 10**12} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_days"])
+      end
+    end
+
+    context "with a payment_term sent as an array of objects" do
+      before { create_params[:payment_term] = [{term_type: "net", days: 30}] }
+
+      it "returns a validation error instead of raising" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "with a non-hash payment_term" do
+      before { create_params[:payment_term] = "net 30" }
+
+      it "returns a validation error instead of silently dropping the value" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+      end
+    end
+
+    context "with a null payment_term" do
+      let(:customer) do
+        create(:customer, organization:, payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, payment_term: nil) }
+
+      it "clears the term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to be_nil
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
+    context "with a null payment_term alongside a net_payment_term (alias matrix row 9)" do
+      let(:customer) do
+        create(:customer, organization:, payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, net_payment_term: 20, payment_term: nil) }
+
+      it "lets the null payment_term win and clears both" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to be_nil
+        expect(json[:customer][:net_payment_term]).to be_nil
+      end
+    end
+
+    context "with a net_payment_term as a digit string" do
+      before { create_params.merge!(net_payment_term: "45") }
+
+      it "casts it to an integer" do
+        subject
+
+        expect(response).to be_successful
+        expect(json[:customer][:net_payment_term]).to eq(45)
+        expect(json[:customer][:payment_term]).to eq(term_type: "net", days: 45)
+      end
+    end
+
+    context "with a decimal net_payment_term" do
+      before { create_params.merge!(net_payment_term: 30.5) }
+
+      it "truncates it to an integer" do
+        subject
+
+        expect(response).to be_successful
+        expect(json[:customer][:net_payment_term]).to eq(30)
+        expect(json[:customer][:payment_term]).to eq(term_type: "net", days: 30)
+      end
+    end
+
+    context "with a negative net_payment_term" do
+      before { create_params.merge!(net_payment_term: -1) }
+
+      it "fails with the legacy value_is_out_of_range code" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:net_payment_term]).to eq(["value_is_out_of_range"])
+      end
+    end
+
+    context "with an object net_payment_term for an existing customer" do
+      let(:customer) do
+        create(:customer, organization:, currency: "EUR", net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, net_payment_term: {days: 60}) }
+
+      it "ignores it and keeps the term" do
+        subject
+
+        expect(response).to be_successful
+        expect(customer.reload.net_payment_term).to eq(30)
+        expect(customer.payment_term).to eq("term_type" => "net", "days" => 30)
+      end
+    end
+
     context "when firstname and lastname contain null bytes" do
       let(:create_params) do
         {
@@ -163,6 +314,15 @@ RSpec.describe Api::V1::CustomersController do
           .and_return({"url" => "https://example.com"})
 
         subject
+      end
+
+      context "when provider payment methods are shared_payment_token" do
+        let(:provider_payment_methods) { %w[shared_payment_token] }
+
+        it "returns an unprocessable entity error" do
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({provider_payment_methods: ["value_is_invalid"]})
+        end
       end
 
       context "when provider payment methods are not present" do
@@ -395,6 +555,147 @@ RSpec.describe Api::V1::CustomersController do
               expect(customer.integration_customers).to eq([integration_customer])
             end
           end
+        end
+      end
+
+      context "with a QuickBooks integration" do
+        let(:nango_requests) { a_request(:any, %r{\Ahttps://api\.nango\.dev/}) }
+        let(:quickbooks_integration) { create(:quickbooks_integration, organization:) }
+        let(:quickbooks_params) do
+          {
+            integration_type: "quickbooks",
+            integration_code: quickbooks_integration.code,
+            external_customer_id: "58",
+            sync_with_provider: false
+          }
+        end
+        let(:create_params) do
+          {external_id: SecureRandom.uuid, name: "Foo Bar", integration_customers: [quickbooks_params]}
+        end
+
+        it "links the customer to the QuickBooks customer and returns it as type quickbooks" do
+          expect { subject }.to have_enqueued_job(IntegrationCustomers::CreateJob).with(
+            integration_customer_params: quickbooks_params,
+            integration: quickbooks_integration,
+            customer: a_kind_of(Customer)
+          )
+          expect(response).to have_http_status(:success)
+
+          perform_enqueued_jobs(only: IntegrationCustomers::CreateJob)
+
+          customer = organization.customers.find_by!(external_id: create_params[:external_id])
+          link = customer.integration_customers.sole
+          expect(link).to be_a(IntegrationCustomers::QuickbooksCustomer)
+          expect(link).to have_attributes(
+            integration: quickbooks_integration,
+            external_customer_id: "58",
+            category: "accounting",
+            is_default: true,
+            code: quickbooks_integration.code,
+            sync_with_provider: false
+          )
+          expect(nango_requests).not_to have_been_made
+
+          get_with_token(organization, "/api/v1/customers/#{customer.external_id}")
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:customer][:integration_customers].sole).to include(
+            lago_id: link.id,
+            external_customer_id: "58",
+            type: "quickbooks",
+            integration_code: quickbooks_integration.code,
+            category: "accounting",
+            is_default: true
+          )
+        end
+
+        context "when syncing with the provider without an external customer id" do
+          let(:quickbooks_params) do
+            {integration_type: "quickbooks", integration_code: quickbooks_integration.code, sync_with_provider: true}
+          end
+
+          it "runs the creation job without storing a link or calling QuickBooks" do
+            expect { subject }.to have_enqueued_job(IntegrationCustomers::CreateJob).with(
+              integration_customer_params: quickbooks_params,
+              integration: quickbooks_integration,
+              customer: a_kind_of(Customer)
+            )
+            expect(response).to have_http_status(:success)
+
+            perform_enqueued_jobs(only: IntegrationCustomers::CreateJob)
+
+            customer = organization.customers.find_by!(external_id: create_params[:external_id])
+            expect(customer.integration_customers).to be_empty
+            expect(nango_requests).not_to have_been_made
+          end
+        end
+
+        context "when the customer already has a QuickBooks link" do
+          let(:customer) { create(:customer, organization:) }
+          let!(:quickbooks_customer) do
+            create(:quickbooks_customer, customer:, integration: quickbooks_integration, external_customer_id: "58")
+          end
+          let(:quickbooks_params) do
+            {
+              id: quickbooks_customer.id,
+              integration_type: "quickbooks",
+              integration_code: quickbooks_integration.code,
+              external_customer_id: "59"
+            }
+          end
+          let(:create_params) do
+            {external_id: customer.external_id, name: "Foo Bar", integration_customers: [quickbooks_params]}
+          end
+
+          it "stores the new QuickBooks customer id without calling QuickBooks" do
+            expect { subject }.to have_enqueued_job(IntegrationCustomers::UpdateJob).with(
+              integration_customer_params: quickbooks_params,
+              integration: quickbooks_integration,
+              integration_customer: quickbooks_customer
+            )
+            expect(response).to have_http_status(:success)
+
+            perform_enqueued_jobs(only: IntegrationCustomers::UpdateJob)
+
+            expect(customer.integration_customers.reload).to eq([quickbooks_customer])
+            expect(quickbooks_customer.reload.external_customer_id).to eq("59")
+            expect(nango_requests).not_to have_been_made
+          end
+        end
+      end
+
+      context "when no QuickBooks integration of the organization matches the integration code" do
+        let(:netsuite_params) do
+          {integration_type: "netsuite", integration_code: "netsuite", external_customer_id: "ns-1", sync_with_provider: false}
+        end
+        let(:create_params) do
+          {
+            external_id: SecureRandom.uuid,
+            name: "Foo Bar",
+            integration_customers: [
+              {integration_type: "quickbooks", integration_code: "quickbooks", external_customer_id: "58", sync_with_provider: false},
+              netsuite_params
+            ]
+          }
+        end
+
+        before { create(:quickbooks_integration, organization: create(:organization), code: "quickbooks") }
+
+        it "links the matched integration only and skips the QuickBooks entry" do
+          expect { subject }.to have_enqueued_job(IntegrationCustomers::CreateJob).exactly(:once)
+          expect(IntegrationCustomers::CreateJob).to have_been_enqueued.with(
+            integration_customer_params: netsuite_params,
+            integration:,
+            customer: a_kind_of(Customer)
+          )
+          expect(response).to have_http_status(:success)
+
+          perform_enqueued_jobs(only: IntegrationCustomers::CreateJob)
+
+          customer = organization.customers.find_by!(external_id: create_params[:external_id])
+          expect(customer.integration_customers.sole).to be_a(IntegrationCustomers::NetsuiteCustomer)
+          expect(IntegrationCustomers::QuickbooksCustomer.count).to eq(0)
+          expect(a_request(:any, %r{\Ahttps://api\.nango\.dev/})).not_to have_been_made
         end
       end
     end
@@ -662,6 +963,111 @@ RSpec.describe Api::V1::CustomersController do
       expect(response).to have_http_status(:ok)
       expect(json[:meta][:total_count]).to eq(2)
       expect(json[:customers][0][:taxes]).not_to be_nil
+    end
+
+    context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:params) { {per_page: 10} }
+      let(:tax) { create(:tax, organization:) }
+      let(:integration) { create(:netsuite_integration, organization:) }
+      let(:other_integration) { create(:netsuite_integration, organization:) }
+
+      # Created after the outer pair and dated in the future, so the newest customers come first.
+      let(:stripe_customer) do
+        create(:customer, organization:, payment_provider: "stripe", created_at: 4.minutes.from_now)
+      end
+      let(:integrated_customer) do
+        create(:customer, organization:, payment_provider: "gocardless", created_at: 3.minutes.from_now)
+      end
+      let(:other_stripe_customer) do
+        create(:customer, organization:, payment_provider: "stripe", created_at: 2.minutes.from_now)
+      end
+      let(:plain_customer) { create(:customer, organization:, created_at: 1.minute.from_now) }
+      let(:cashfree_customer) { create(:customer, organization:, payment_provider: "cashfree") }
+      let(:adyen_customer) { create(:customer, organization:, payment_provider: "adyen") }
+      let(:moneyhash_customer) { create(:customer, organization:, payment_provider: "moneyhash") }
+
+      let(:metadata_by_customer_id) do
+        [stripe_customer, integrated_customer, other_stripe_customer].to_h do |customer|
+          [
+            customer.id,
+            [
+              create(:customer_metadata, customer:, key: "lead_name", value: customer.external_id),
+              create(:customer_metadata, customer:, key: "region", value: "eu")
+            ]
+          ]
+        end
+      end
+
+      def sql_query_count(per_page:)
+        capture_sql { get_with_token(organization, "/api/v1/customers", {per_page:}) }.count
+      end
+
+      before do
+        create(:stripe_customer, customer: stripe_customer)
+        create(:stripe_customer, customer: other_stripe_customer)
+        create(:gocardless_customer, customer: integrated_customer)
+        create(:cashfree_customer, customer: cashfree_customer)
+        create(:adyen_customer, customer: adyen_customer)
+        create(:moneyhash_customer, customer: moneyhash_customer)
+        create(:netsuite_customer, customer: integrated_customer, integration:)
+        create(:netsuite_customer, customer: other_stripe_customer, integration: other_integration)
+        create(:customer_applied_tax, customer: stripe_customer, tax:)
+        create(:customer_applied_tax, customer: other_stripe_customer, tax:)
+        plain_customer
+        metadata_by_customer_id
+      end
+
+      it "renders every customer of the page without N+1 queries" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customers].count).to eq(9)
+        json[:customers].each do |customer|
+          expected_metadata = metadata_by_customer_id.fetch(customer[:lago_id], []).map do |metadata|
+            {lago_id: metadata.id, key: metadata.key, value: metadata.value}
+          end
+          expect(customer[:metadata].map { it.slice(:lago_id, :key, :value) }).to match_array(expected_metadata)
+        end
+
+        rendered = json[:customers].index_by { it[:lago_id] }
+        expect(rendered[stripe_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(stripe_customer.stripe_customer.provider_customer_id)
+        expect(rendered[integrated_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(integrated_customer.gocardless_customer.provider_customer_id)
+        expect(rendered[cashfree_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(cashfree_customer.cashfree_customer.provider_customer_id)
+        expect(rendered[adyen_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(adyen_customer.adyen_customer.provider_customer_id)
+        expect(rendered[moneyhash_customer.id][:billing_configuration][:provider_customer_id])
+          .to eq(moneyhash_customer.moneyhash_customer.provider_customer_id)
+        expect(rendered[integrated_customer.id][:integration_customers].map { it[:integration_code] })
+          .to eq([integration.code])
+        expect(rendered[other_stripe_customer.id][:integration_customers].map { it[:integration_code] })
+          .to eq([other_integration.code])
+        expect(rendered[stripe_customer.id][:taxes].map { it[:code] }).to eq([tax.code])
+        expect(rendered[plain_customer.id][:billing_entity_code]).to eq(plain_customer.billing_entity.code)
+      end
+
+      it "loads the metadata of the page in one query" do
+        metadata_queries = capture_sql { subject }.grep(/FROM "customer_metadata"/)
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customers].count).to eq(9)
+        expect(metadata_queries.count).to eq(1)
+      end
+
+      context "when comparing pages of different sizes" do
+        it "runs the same number of queries for a page of 2 and a page of 4" do
+          small_page_count = sql_query_count(per_page: 2)
+          expect(json[:customers].pluck(:lago_id)).to eq([stripe_customer.id, integrated_customer.id])
+
+          large_page_count = sql_query_count(per_page: 4)
+          expect(json[:customers].pluck(:lago_id))
+            .to eq([stripe_customer.id, integrated_customer.id, other_stripe_customer.id, plain_customer.id])
+
+          expect(large_page_count).to eq(small_page_count)
+        end
+      end
     end
 
     context "with account_type filters" do

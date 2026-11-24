@@ -29,11 +29,67 @@ RSpec.describe Api::V1::EventsController do
 
     include_examples "requires API permission", "event", "write"
 
+    context "with an organization waiting for a payment method", cache: :memory do
+      include_context "with self-serve enabled"
+
+      let(:organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+
+      it "refuses the event" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(status: 403, error: "Forbidden", code: "organization_inactive")
+      end
+
+      context "when the organization is activated after its api key was cached" do
+        before do
+          ApiKeys::CacheService.call(organization.api_keys.first.value, with_cache: true)
+          Organizations::ActivateService.call!(organization:)
+        end
+
+        it "accepts the event, as activation clears the cache" do
+          subject
+
+          expect(response).to have_http_status(:success)
+        end
+      end
+    end
+
+    context "with an active organization whose api key is cached, then made to wait for a payment method", cache: :memory do
+      include_context "with self-serve enabled"
+
+      let(:organization) { create(:organization, :self_serve) }
+
+      before do
+        ApiKeys::CacheService.call(organization.api_keys.first.value, with_cache: true)
+        organization.update!(activation_status: "pending_payment_method")
+        ApiKeys::CacheService.expire_all_cache(organization)
+      end
+
+      it "refuses the event" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(status: 403, error: "Forbidden", code: "organization_inactive")
+      end
+    end
+
     it "returns a success" do
       expect { subject }.to change(Event, :count).by(1)
 
       expect(response).to have_http_status(:success)
       expect(json[:event][:external_subscription_id]).to eq(subscription.external_id)
+    end
+
+    context "with a transaction id longer than the v2 limit" do
+      let(:create_params) { super().merge(transaction_id: "a" * 1_001) }
+
+      it "keeps accepting the event without truncating its transaction id" do
+        expect { subject }.to change(Event, :count).by(1)
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:event][:transaction_id]).to eq(create_params[:transaction_id])
+      end
     end
 
     context "when a property key contains a null byte" do

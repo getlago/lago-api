@@ -527,4 +527,120 @@ RSpec.describe Resolvers::InvoiceResolver do
       expect(data.dig("fees", 0, "presentationBreakdowns")).to eq([])
     end
   end
+
+  context "with payment_term" do
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          invoice(id: $id) {
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    it "returns the frozen term rather than the current customer term" do
+      invoice.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+      customer.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+
+      response = execute_query(query:, variables: {id: invoice.id})
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "invoice", "paymentTerm")).to eq(
+        "termType" => "end_of_month", "days" => nil, "dayOfMonth" => nil, "monthOffset" => nil
+      )
+    end
+
+    it "derives the term from the invoice alias for historical invoices" do
+      invoice.update!(payment_term: nil, net_payment_term: 30)
+
+      response = execute_query(query:, variables: {id: invoice.id})
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "invoice", "paymentTerm")).to eq(
+        "termType" => "net", "days" => 30, "dayOfMonth" => nil, "monthOffset" => nil
+      )
+    end
+  end
+
+  context "with contract fees" do
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          invoice(id: $id) {
+            productCatalogContracts {
+              contract { id }
+              productCatalogSections {
+                productCategory { id }
+                products {
+                  product { id }
+                  amountCents
+                  feesCount
+                  filters {
+                    productFilter { id }
+                    amountCents
+                    feesCount
+                  }
+                }
+              }
+            }
+          }
+        }
+      GQL
+    end
+
+    let(:contract) { create(:contract, customer:, name: "Platform") }
+    let(:food) { create(:product_category, name: "Food") }
+    let(:salad) { create(:product, product_category: food, name: "Salad") }
+    let(:caesar) { create(:product_filter, product: salad, name: "Caesar") }
+    let(:wine) { create(:product, product_category: nil, name: "Wine") }
+
+    before do
+      product_fee(salad, amount_cents: 1_000)
+      product_fee(salad, amount_cents: 400, product_filter: caesar)
+      product_fee(wine, amount_cents: 700)
+    end
+
+    def product_fee(product, amount_cents:, product_filter: nil)
+      rate_card = create(:rate_card, product:, product_filter:)
+      contract_rate_card = create(:contract_rate_card, contract:, rate_card:)
+
+      create(:fee, invoice:, subscription: nil, fee_type: :product,
+        invoiceable: product, contract:, contract_rate_card:, product_filter:, amount_cents:,
+        rate_card_rate: create(:rate_card_rate, rate_card:))
+    end
+
+    it "groups the fees by contract, category, product and filter" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {id: invoice.id}
+      )
+
+      expect(result["data"]["invoice"]["productCatalogContracts"]).to eq([
+        {
+          "contract" => {"id" => contract.id},
+          "productCatalogSections" => [
+            {
+              "productCategory" => {"id" => food.id},
+              "products" => [
+                {
+                  "product" => {"id" => salad.id},
+                  "amountCents" => "1400", # 1_000 unfiltered + 400 under the filter
+                  "feesCount" => 2,
+                  "filters" => [{"productFilter" => {"id" => caesar.id}, "amountCents" => "400", "feesCount" => 1}]
+                }
+              ]
+            },
+            {
+              "productCategory" => nil,
+              "products" => [{"product" => {"id" => wine.id}, "amountCents" => "700", "feesCount" => 1, "filters" => []}]
+            }
+          ]
+        }
+      ])
+    end
+  end
 end

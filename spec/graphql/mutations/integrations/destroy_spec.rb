@@ -43,6 +43,18 @@ RSpec.describe Mutations::Integrations::Destroy do
     before { result }
   end
 
+  context "when agent storefront integration" do
+    let(:integration) { create(:agent_storefront_integration, organization:) }
+
+    it "deletes the integration" do
+      expect { result }.to change(::Integrations::BaseIntegration, :count).by(-1)
+    end
+
+    it_behaves_like "produces a security log", "integration.deleted" do
+      before { result }
+    end
+  end
+
   context "when okta integration", :premium do
     let(:required_permission) { %w[organization:integrations:delete authentication_methods:update] }
     let(:integration) { create(:okta_integration, organization:) }
@@ -78,6 +90,29 @@ RSpec.describe Mutations::Integrations::Destroy do
     it "does not delete the integration" do
       expect { result }.not_to change(::Integrations::BaseIntegration, :count)
       expect_forbidden_error(result)
+    end
+  end
+
+  context "with a QuickBooks integration" do
+    let(:integration) { create(:quickbooks_integration, organization:) }
+    let(:connection_url) { "https://api.nango.dev/connection/quickbooks-test-connection?provider_config_key=quickbooks" }
+
+    before { stub_request(:delete, connection_url).to_return(status: 204) }
+
+    it "deletes the QuickBooks integration and its Nango connection" do
+      expect { result }.to change(::Integrations::QuickbooksIntegration, :count).by(-1)
+      expect(result["data"]["destroyIntegration"]["id"]).to eq(integration.id)
+      expect(WebMock).to have_requested(:delete, connection_url).once
+    end
+
+    context "when the QuickBooks integration belongs to another organization" do
+      let(:integration) { create(:quickbooks_integration, organization: create(:organization)) }
+
+      it "does not delete the QuickBooks integration" do
+        expect { result }.not_to change(::Integrations::QuickbooksIntegration, :count)
+        expect_not_found(result)
+        expect(a_request(:delete, /api\.nango\.dev/)).not_to have_been_made
+      end
     end
   end
 end

@@ -1,0 +1,25 @@
+---
+en:
+  signup:
+    account_exists:
+      email_info: 'You''re receiving this email because someone tried to sign up for Lago with this address. Check out our '
+      fallback_text: 'Forgot your password? Reset it here: '
+      greetings: Hello,
+      intro: 'You already have a Lago account, log in here:'
+      lago_team: The Lago Team
+      main_cta_label: Log in to Lago
+      privacy_policy: Privacy policy
+      safety: Didn't try to sign up? You can ignore this email. Your account has not changed.
+      thanks: Thanks,
+    verification:
+      email_info: 'You''re receiving this email because you signed up for Lago. Check out our '
+      expiry: This link expires within 24 hours and can be used only once.
+      fallback_text: 'Button not working? Copy this link into your browser: '
+      greetings: Hello,
+      intro: Thanks for signing up for Lago. Please confirm that this is your email to create your organization.
+      lago_team: The Lago Team
+      main_cta_label: Verify my email
+      preview: One click and you're in.
+      privacy_policy: Privacy policy
+      safety: Didn't sign up for Lago? Ignore this email. Nothing is created until this link is clicked.
+      thanks: Thanks,

@@ -8,6 +8,7 @@ RSpec.describe "Graduated flat fees and filter buckets across a rate change" do
       api_call(perform_jobs: false) do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "flat-reset-contract", external_customer_id: customer.external_id,
+          code: "default",
           plan_code: "flat-reset-plan", started_at: cycle_started_at.iso8601
         }})
       end
@@ -20,15 +21,15 @@ RSpec.describe "Graduated flat fees and filter buckets across a rate change" do
 
     timeline.sort_by(&:first).each do |timestamp, properties|
       travel_to(timestamp) do
-        BillingSegments::ScheduleService.call!(customer:)
         if properties
           create_event({
             external_contract_id: contract.external_id, code: billable_metric.code,
             timestamp: timestamp.utc.strftime("%s.%6N"), properties:
           }, perform_jobs: false)
-          perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
+          perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
         else
-          BillingSegments::ProcessService.call!(customer:)
+          BillingOperations::ScheduleJob.perform_now(customer.id)
+          perform_all_enqueued_jobs(only: [BillingOperations::ProcessJob])
         end
       end
     end

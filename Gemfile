@@ -3,7 +3,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "~> 4.0.9"
+ruby "~> 4.0.10"
 
 # Core
 gem "aasm"
@@ -121,6 +121,10 @@ gem "valvat"
 
 # Data Export
 gem "csv", "~> 3.0"
+
+# Signup
+gem "email_data", require: false
+gem "public_suffix"
 
 gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "0b4fe83"
 

@@ -56,6 +56,7 @@ RSpec.describe ::V1::CustomerSerializer do
       "timezone" => customer.timezone,
       "applicable_timezone" => customer.applicable_timezone,
       "net_payment_term" => customer.net_payment_term,
+      "payment_term" => customer.payment_term,
       "finalize_zero_amount_invoice" => customer.finalize_zero_amount_invoice,
       "tax_identification_number" => customer.tax_identification_number,
       "taxes" => customer.taxes.map { hash_including("lago_id" => it.id) },
@@ -116,6 +117,44 @@ RSpec.describe ::V1::CustomerSerializer do
       it "serializes the address" do
         expect(result["customer"]["x402_agent_address"]).to eq("0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2")
       end
+    end
+  end
+
+  context "with a quickbooks link and a xero link" do
+    let(:customer) { create(:customer) }
+    let(:quickbooks_integration) { create(:quickbooks_integration, organization: customer.organization, code: "qb_main") }
+    let(:quickbooks_customer) do
+      create(
+        :quickbooks_customer,
+        customer:,
+        integration: quickbooks_integration,
+        external_customer_id: "58",
+        code: "qb_link",
+        is_default: true,
+        sync_with_provider: true
+      )
+    end
+    let(:xero_customer) { create(:xero_customer, customer:) }
+
+    before do
+      quickbooks_customer
+      xero_customer
+    end
+
+    it "nests each link with its own type" do
+      links = result["customer"]["integration_customers"]
+
+      expect(links.pluck("type")).to contain_exactly("quickbooks", "xero")
+      expect(links.find { |link| link["type"] == "quickbooks" }).to eq(
+        "lago_id" => quickbooks_customer.id,
+        "external_customer_id" => "58",
+        "type" => "quickbooks",
+        "integration_code" => "qb_main",
+        "code" => "qb_link",
+        "is_default" => true,
+        "category" => "accounting",
+        "sync_with_provider" => true
+      )
     end
   end
 

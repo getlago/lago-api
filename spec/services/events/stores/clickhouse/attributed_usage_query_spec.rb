@@ -234,6 +234,30 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       end
     end
 
+    context "when ordered by units" do
+      let(:order_by) { "units" }
+
+      # data has fewer events than eng, but more units.
+      before do
+        create_event(code: "tokens", value: 500, labels: {"team" => "data"})
+        create_event(code: "requests", value: 1, labels: {"team" => "eng"})
+      end
+
+      it "ranks the values by the units of every charge" do
+        expect(attributed_usage_query.rows.map { [it["node"], it["rank"].to_i] }).to eq([["data", 1], ["eng", 2], ["", 1]])
+      end
+
+      context "when the charge is split with unlisted filters" do
+        let(:split_filter_ids) { [opus_eu_filter_id] }
+
+        before { create_event(code: "tokens", value: 1_000, labels: {"team" => "eng"}, properties: {"model" => "opus"}) }
+
+        it "ranks the values with the units of the unlisted filters" do
+          expect(attributed_usage_query.rows.map { [it["node"], it["rank"].to_i] }).to eq([["eng", 1], ["data", 2], ["", 1]])
+        end
+      end
+    end
+
     context "with a page smaller than the level" do
       let(:limit) { 1 }
       let(:order_by) { "events_count" }

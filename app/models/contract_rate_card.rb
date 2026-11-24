@@ -1,12 +1,17 @@
 # frozen_string_literal: true
 
 class ContractRateCard < ApplicationRecord
+  TERMINATION_BILLING_ACTIONS = BillingOperation::ACTION_TYPES.values_at(
+    :close_fixed_arrears, :close_metered_arrears, :regroup_paid_fees
+  ).freeze
+
   include PaperTrailTraceable
   include Discard::Model
 
   self.discard_column = :deleted_at
   # The contract end date is the only end of a card; drop once released.
   self.ignored_columns += %w[ended_date]
+  self.ignored_columns += %w[units]
 
   belongs_to :organization
   belongs_to :contract
@@ -15,14 +20,15 @@ class ContractRateCard < ApplicationRecord
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
-  has_many :billing_segments
+  has_many :terms, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardTerm", inverse_of: :contract_rate_card
+  has_many :billing_operations
+  has_many :daily_usages
   has_many :fees
 
   validates :billing_anchor_date, presence: true
   # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
   validates :next_billing_at, presence: true, on: :create
   validates :effective_date, presence: true
-  validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 
   default_scope -> { kept }
@@ -46,7 +52,8 @@ class ContractRateCard < ApplicationRecord
       .starting_before_contract_end
       .joins(contract: {customer: :billing_entity})
       .where(next_billing_at: ..timestamp)
-      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
+      # Terminated contracts can still owe coverage until their final operation is processed.
+      .where(contracts: {status: %w[active terminated], started_at: ..timestamp})
       .where(customers: {deleted_at: nil})
   }
 
@@ -55,6 +62,42 @@ class ContractRateCard < ApplicationRecord
   # would have inherited follows the contract, any other was set on the card.
   def inherited_billing_anchor?(contract_billing_anchor_date)
     billing_anchor_date == (contract_billing_anchor_date || effective_date)
+  end
+
+  # NOTE: Metered advance billing has no periodic action unless it renews displayed recurring usage
+  # or regroups paid fees. Otherwise, usage events trigger billing and this returns nil.
+  def periodic_billing_action
+    rate = rate_card
+    product = rate.product
+    actions = BillingOperation::ACTION_TYPES
+
+    if product.fixed?
+      case rate.billing_timing
+      when "advance" then actions.fetch(:renew_fixed_advance)
+      when "arrears" then actions.fetch(:close_fixed_arrears)
+      end
+    elsif rate.advance? && rate.display_on_invoice? && product.metered? && product.billable_metric&.recurring?
+      actions.fetch(:renew_recurring_metered_advance)
+    elsif rate.advance? && rate.regroup_paid_fees_invoice?
+      actions.fetch(:regroup_paid_fees)
+    elsif product.metered? && rate.arrears?
+      actions.fetch(:close_metered_arrears)
+    end
+  end
+
+  # Paid fees are regrouped when their coverage ends, whatever the terms' timing.
+  def regroups_paid_fees?
+    periodic_billing_action == BillingOperation::ACTION_TYPES.fetch(:regroup_paid_fees)
+  end
+
+  def needs_reconciliation?
+    periodic_billing_action == BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance)
+  end
+
+  def requires_termination_billing?(timestamp:)
+    next_billing_at.present? && timestamp < next_billing_at &&
+      periodic_billing_action.in?(TERMINATION_BILLING_ACTIONS) &&
+      effective_date.in_time_zone(contract.customer.applicable_timezone) < [contract.billing_ends_at, timestamp].compact.min
   end
 
   def edit_error_code
@@ -72,7 +115,6 @@ end
 #  deleted_at          :datetime
 #  effective_date      :date             not null
 #  next_billing_at     :datetime
-#  units               :decimal(, )
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  contract_id         :uuid             not null

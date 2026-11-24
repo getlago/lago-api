@@ -630,6 +630,42 @@ RSpec.describe Payment do
           end
         end
       end
+
+      context "with a QuickBooks integration customer only" do
+        let(:integration) { create(:quickbooks_integration, organization:, sync_payments:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { create(:quickbooks_customer, integration:, customer:) }
+
+        context "when sync payments is true" do
+          let(:sync_payments) { true }
+
+          it "returns true" do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context "when sync payments is false" do
+          let(:sync_payments) { false }
+
+          it "returns false" do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+
+      context "with a non-accounting integration customer only" do
+        let(:customer) { create(:customer, organization:) }
+
+        before do
+          create(:quickbooks_integration, organization:, sync_payments: true)
+          create(:hubspot_customer, integration: create(:hubspot_integration, organization:), customer:)
+        end
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
     end
   end
 

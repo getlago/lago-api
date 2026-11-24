@@ -92,6 +92,20 @@ RSpec.describe Organizations::UpdateService do
       expect(default_billing_entity.document_locale).to eq("fr")
     end
 
+    context "when the self-serve and sandbox fields are sent" do
+      before do
+        params.merge!(self_serve: true, environment: "sandbox", production_organization_id: create(:organization).id)
+      end
+
+      it "ignores them" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.organization.reload).to have_attributes(legal_name: "Foobar", self_serve: false,
+          environment: "production", production_organization_id: nil)
+      end
+    end
+
     context "when document_number_prefix is sent" do
       before { params[:document_number_prefix] = "abc" }
 
@@ -277,19 +291,20 @@ RSpec.describe Organizations::UpdateService do
             net_payment_term: 30,
             payment_term: {"term_type" => "net", "days" => 30}
           )
-          allow(BillingEntities::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
         end
 
-        it "updates the corresponding draft invoices" do
+        it "persists the new term on the default billing entity without rewriting drafts" do
           current_date = DateTime.parse("22 Jun 2022")
 
           travel_to(current_date) do
-            result = update_service.call
-            expect(result).to be_success
+            result = nil
 
+            expect { result = update_service.call }
+              .not_to change { draft_invoice.reload.attributes.slice("payment_term", "net_payment_term", "payment_due_date") }
+
+            expect(result).to be_success
             expect(result.organization.net_payment_term).to eq(2)
             expect(result.organization.default_billing_entity.payment_term).to eq("term_type" => "net", "days" => 2)
-            expect(BillingEntities::UpdateInvoicePaymentDueDateService).to have_received(:call).with(billing_entity: organization.default_billing_entity, net_payment_term: 2)
           end
         end
       end
@@ -442,6 +457,53 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when authentication_methods change on an organization with a sandbox" do
+      let(:params) { {authentication_methods: ["email_password"]} }
+      let(:sandbox) { create(:organization, :sandbox, production_organization: organization) }
+
+      before { sandbox }
+
+      it "gives the sandbox the same login methods" do
+        expect(update_service.call).to be_success
+        expect(sandbox.reload.authentication_methods).to eq(["email_password"])
+      end
+    end
+
+    context "when the organization is a sandbox" do
+      let(:organization) { create(:organization, :sandbox, authentication_methods: %w[email_password google_oauth]) }
+
+      context "with other login methods" do
+        let(:params) { {authentication_methods: ["email_password"], legal_name: "Foobar"} }
+
+        it "refuses the update" do
+          expect(update_service.call.error.code).to eq("sandbox_managed_by_production")
+          expect(organization.reload).to have_attributes(authentication_methods: %w[email_password google_oauth],
+            legal_name: nil)
+        end
+      end
+
+      context "with the same login methods" do
+        let(:params) { {authentication_methods: %w[google_oauth email_password], legal_name: "Foobar"} }
+
+        it "updates the other fields" do
+          expect(update_service.call).to be_success
+          expect(organization.reload.legal_name).to eq("Foobar")
+        end
+      end
+    end
+
+    context "when authentication_methods is null" do
+      let(:params) { {authentication_methods: nil} }
+
+      it "returns a validation error and keeps the methods" do
+        result = update_service.call
+
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to eq([:authentication_methods])
+        expect(organization.reload.authentication_methods).to eq(%w[email_password google_oauth])
+      end
+    end
+
     context "when authentication_methods change but the update fails" do
       subject { described_class.new(organization:, params:, user:) }
 
@@ -468,6 +530,264 @@ RSpec.describe Organizations::UpdateService do
       it "does not produce an authentication methods security log" do
         update_service.call
 
+        expect(security_logger).not_to have_received(:produce)
+          .with(hash_including(log_event: "organization.authentication_methods_updated"))
+      end
+    end
+
+    context "with webhook_url" do
+      let(:new_webhook_url) { "https://hooks.example.com/new" }
+      let(:params) { {webhook_url: new_webhook_url} }
+      let(:webhook_endpoint_logs) { hash_including(log_type: "webhook_endpoint") }
+
+      context "when the organization has no webhook endpoint" do
+        let(:organization) { create(:organization, webhook_url: nil) }
+
+        it "creates the endpoint through the endpoint service" do
+          organization.webhook_endpoints.load
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(organization.webhook_endpoints.reload.map { it.slice(:webhook_url, :signature_algo, :name, :event_types) })
+            .to eq([{"webhook_url" => new_webhook_url, "signature_algo" => "jwt", "name" => nil, "event_types" => nil}])
+          expect(result.organization.webhook_endpoints.map(&:webhook_url)).to eq([new_webhook_url])
+          expect(security_logger).to have_received(:produce).with(
+            organization:,
+            log_type: "webhook_endpoint",
+            log_event: "webhook_endpoint.created",
+            resources: {webhook_url: new_webhook_url, signature_algo: "jwt"}
+          )
+        end
+
+        it "enqueues the Segment job after commit" do
+          expect { update_service.call }.to have_enqueued_job_after_commit(SegmentTrackJob)
+            .with(hash_including(event: "webhook_endpoint_created"))
+        end
+
+        it "produces the security log only after commit" do
+          ApplicationRecord.transaction do
+            update_service.call
+
+            expect(security_logger).not_to have_received(:produce).with(webhook_endpoint_logs)
+          end
+
+          expect(security_logger).to have_received(:produce).with(hash_including(log_event: "webhook_endpoint.created"))
+        end
+      end
+
+      context "when the lowest id endpoint signs with standard_webhooks" do
+        let(:organization) { create(:organization, webhook_url: nil) }
+        let(:target_webhook_endpoint) do
+          create(:webhook_endpoint, id: "00000000-0000-4000-8000-000000000001", organization:, signature_algo: :standard_webhooks)
+        end
+        let(:other_webhook_endpoint) do
+          create(:webhook_endpoint, id: "ffffffff-ffff-4fff-bfff-ffffffffffff", organization:, signature_algo: :standard_webhooks)
+        end
+        let(:signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint: target_webhook_endpoint) }
+        let(:other_signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint: other_webhook_endpoint) }
+
+        before do
+          signing_key
+          other_signing_key
+        end
+
+        it "changes only its url and keeps its algorithm and signing key" do
+          other_attributes = other_webhook_endpoint.reload.attributes
+
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(target_webhook_endpoint.reload).to have_attributes(webhook_url: new_webhook_url, signature_algo: "standard_webhooks")
+          expect(target_webhook_endpoint.signing_keys.pluck(:id)).to eq([signing_key.id])
+          expect(other_webhook_endpoint.reload.attributes).to eq(other_attributes)
+          expect(other_webhook_endpoint.signing_keys.pluck(:id)).to eq([other_signing_key.id])
+        end
+      end
+
+      context "when the organization has several webhook endpoints" do
+        let(:other_webhook_endpoint) { create(:webhook_endpoint, organization:) }
+        let(:target_webhook_endpoint) { organization.webhook_endpoints.order(:id).first }
+        let(:untouched_webhook_endpoint) { organization.webhook_endpoints.order(:id).last }
+        let(:previous_url) { target_webhook_endpoint.webhook_url }
+        let(:untouched_url) { untouched_webhook_endpoint.webhook_url }
+
+        before do
+          other_webhook_endpoint
+          previous_url
+          untouched_url
+        end
+
+        it "updates only the endpoint with the lowest id" do
+          organization.webhook_endpoints.load
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(organization.webhook_endpoints.count).to eq(2)
+          expect(target_webhook_endpoint.reload.webhook_url).to eq(new_webhook_url)
+          expect(untouched_webhook_endpoint.reload.webhook_url).to eq(untouched_url)
+          expect(result.organization.webhook_endpoints.map(&:webhook_url)).to match_array([new_webhook_url, untouched_url])
+          expect(security_logger).to have_received(:produce).with(
+            organization:,
+            log_type: "webhook_endpoint",
+            log_event: "webhook_endpoint.updated",
+            # The diff of the url replaces the plain url in the resources.
+            resources: {webhook_url: {deleted: previous_url, added: new_webhook_url}}
+          )
+        end
+
+        it "produces the security log only after commit" do
+          ApplicationRecord.transaction do
+            update_service.call
+
+            expect(security_logger).not_to have_received(:produce).with(webhook_endpoint_logs)
+          end
+
+          expect(security_logger).to have_received(:produce).with(hash_including(log_event: "webhook_endpoint.updated"))
+        end
+      end
+
+      context "when the url is already set on the lowest id endpoint" do
+        let(:new_webhook_url) { organization.webhook_endpoints.order(:id).first.webhook_url }
+
+        it "does not update the endpoint nor produce a webhook endpoint security log" do
+          webhook_endpoint = organization.webhook_endpoints.order(:id).first
+          updated_at_before = webhook_endpoint.updated_at
+          attributes_before = webhook_endpoint.attributes
+          result = nil
+
+          # Moves the clock so a write on the endpoint would change its updated_at.
+          travel_to(1.hour.from_now) do
+            expect { result = update_service.call }.not_to have_enqueued_job(SegmentTrackJob)
+          end
+
+          expect(result).to be_success
+          expect(webhook_endpoint.reload.updated_at).to eq(updated_at_before)
+          expect(webhook_endpoint.attributes).to eq(attributes_before)
+          expect(organization.webhook_endpoints.pluck(:webhook_url)).to eq([new_webhook_url])
+          expect(security_logger).not_to have_received(:produce).with(webhook_endpoint_logs)
+        end
+      end
+
+      context "when the url is refused" do
+        let(:params) { {webhook_url: new_webhook_url, name: "Renamed"} }
+
+        before do
+          stub_const("ENV", ENV.to_h.merge("LAGO_WEBHOOK_ALLOW_PRIVATE_URLS" => "false"))
+          allow(Addrinfo).to receive(:getaddrinfo).and_return([Addrinfo.tcp("93.184.215.14", 0)])
+        end
+
+        shared_examples "a refused webhook url" do |expected_messages|
+          it "returns the validation error and saves nothing" do
+            endpoints_before = organization.webhook_endpoints.order(:id).pluck(:id, :webhook_url)
+            name_before = organization.reload.name
+
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq({webhook_url: expected_messages})
+            expect(organization.reload.name).to eq(name_before)
+            expect(organization.webhook_endpoints.order(:id).pluck(:id, :webhook_url)).to eq(endpoints_before)
+            expect(security_logger).not_to have_received(:produce).with(webhook_endpoint_logs)
+          end
+        end
+
+        shared_examples "refused webhook urls" do
+          context "when the url is nil" do
+            let(:new_webhook_url) { nil }
+
+            it_behaves_like "a refused webhook url", %w[value_is_mandatory url_is_invalid]
+          end
+
+          context "when the url is blank" do
+            let(:new_webhook_url) { "" }
+
+            it_behaves_like "a refused webhook url", %w[value_is_mandatory url_is_invalid]
+          end
+
+          context "when the url is invalid" do
+            let(:new_webhook_url) { "foobar" }
+
+            it_behaves_like "a refused webhook url", %w[url_is_invalid]
+          end
+
+          context "when the url is a private address" do
+            let(:new_webhook_url) { "http://169.254.169.254/latest/meta-data" }
+
+            before { allow(Addrinfo).to receive(:getaddrinfo).and_call_original }
+
+            it_behaves_like "a refused webhook url", %w[url_is_invalid]
+          end
+        end
+
+        context "when the organization has no webhook endpoint" do
+          let(:organization) { create(:organization, webhook_url: nil) }
+
+          it_behaves_like "refused webhook urls"
+        end
+
+        context "when the organization has a webhook endpoint" do
+          it_behaves_like "refused webhook urls"
+        end
+
+        # Only reachable on the update path: the other endpoint makes the organization have one.
+        context "when the url belongs to another endpoint of the organization" do
+          let(:organization) { create(:organization) }
+          let(:new_webhook_url) { organization.webhook_endpoints.order(:id).last.webhook_url }
+
+          before { create(:webhook_endpoint, organization:) }
+
+          it_behaves_like "a refused webhook url", %w[value_already_exist]
+        end
+      end
+
+      context "when another part of the update fails" do
+        shared_examples "an update that fails elsewhere" do
+          [
+            ["an organization attribute is invalid", {email: "not-an-email"}],
+            ["the billing entity update fails", {document_url_expiration_days: 365}]
+          ].each do |description, failing_params|
+            context "when #{description}" do
+              let(:params) { {webhook_url: new_webhook_url, **failing_params} }
+
+              it "leaves the endpoint unchanged and sends nothing" do
+                endpoints_before = organization.webhook_endpoints.order(:id).pluck(:id, :webhook_url)
+                result = nil
+
+                expect { result = update_service.call }.not_to have_enqueued_job(SegmentTrackJob)
+
+                expect(result).not_to be_success
+                expect(organization.webhook_endpoints.order(:id).pluck(:id, :webhook_url)).to eq(endpoints_before)
+                expect(security_logger).not_to have_received(:produce).with(webhook_endpoint_logs)
+              end
+            end
+          end
+        end
+
+        context "when the organization has no webhook endpoint" do
+          let(:organization) { create(:organization, webhook_url: nil) }
+
+          it_behaves_like "an update that fails elsewhere"
+        end
+
+        context "when the organization has a webhook endpoint" do
+          it_behaves_like "an update that fails elsewhere"
+        end
+      end
+    end
+
+    context "when the same authentication_methods are resubmitted in another order" do
+      subject { described_class.new(organization:, params:, user:) }
+
+      let(:params) { {authentication_methods: %w[google_oauth email_password]} }
+      let(:user) { create(:user) }
+
+      before { create(:membership, organization:, roles: %i[admin], user:) }
+
+      it "does not produce a security log nor send an email" do
+        expect { subject.call }.not_to have_enqueued_mail(OrganizationMailer, :authentication_methods_updated)
+
+        expect(organization.reload.authentication_methods).to eq(%w[email_password google_oauth])
         expect(security_logger).not_to have_received(:produce)
           .with(hash_including(log_event: "organization.authentication_methods_updated"))
       end

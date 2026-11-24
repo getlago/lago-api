@@ -10,8 +10,10 @@ module CursorPagination
   module Token
     VERSION = 1
     MAX_LENGTH = 512
+    # Raw events have several user-supplied identifiers rather than one UUID.
+    MAX_COMPOUND_LENGTH = 8_192
     # Upper bound of a string tiebreak: a short business id fits well under it, and the whole
-    # token is already capped at `MAX_LENGTH`.
+    # token is already capped at MAX_LENGTH or MAX_COMPOUND_LENGTH.
     MAX_TIEBREAK_LENGTH = 256
     ENCODED_FORMAT = /\A[A-Za-z0-9_-]+\z/
     # PostgreSQL has no year 0, which Ruby parses: a key in that year is malformed rather than
@@ -39,7 +41,9 @@ module CursorPagination
 
       # A request parameter can also arrive as an array or a hash (`after[]=`, `after[k]=`).
       invalid.call("malformed") unless value.is_a?(String)
-      invalid.call("too_long") if value.bytesize > MAX_LENGTH
+      tiebreak_count = sort.keys.count { %i[uuid string].include?(CursorPagination.column_type(it)) }
+      max_length = (tiebreak_count > 1) ? MAX_COMPOUND_LENGTH : MAX_LENGTH
+      invalid.call("too_long") if value.bytesize > max_length
       invalid.call("malformed") unless value.match?(ENCODED_FORMAT)
 
       payload = parse(value)
@@ -67,7 +71,8 @@ module CursorPagination
     def self.key(values, sort)
       return unless values.is_a?(Array) && values.size == sort.size
 
-      key = sort.keys.zip(values).map { |column, value| read_value(column, value) }
+      compound = sort.keys.count { %i[uuid string].include?(CursorPagination.column_type(it)) } > 1
+      key = sort.keys.zip(values).map { |column, value| read_value(column, value, compound:) }
       key unless key.include?(nil)
     rescue ArgumentError
       # A well-shaped but impossible date or timestamp, like month 13.
@@ -87,14 +92,14 @@ module CursorPagination
     # Read back as the type the column compares with: a date stays a `Date`, so that a
     # timestamp is never resumed in its place. Nil when the value is not of that format. A
     # UUID is checked here, or Postgres would fail the comparison.
-    def self.read_value(column, value)
+    def self.read_value(column, value, compound: false)
       return unless value.is_a?(String)
 
       case CursorPagination.column_type(column)
       when :date then Date.iso8601(value) if value.match?(DATE_FORMAT)
       when :time then Time.iso8601(value) if value.match?(TIMESTAMP_FORMAT)
       when :uuid then value if value.match?(BaseQuery::UUID_REGEX)
-      when :string then value if !value.empty? && value.bytesize <= MAX_TIEBREAK_LENGTH
+      when :string then value if compound || (!value.empty? && value.bytesize <= MAX_TIEBREAK_LENGTH)
       end
     end
     private_class_method :read_value

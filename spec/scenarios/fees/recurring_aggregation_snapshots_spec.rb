@@ -133,7 +133,7 @@ describe "Recurring aggregation snapshots", transaction: false do
     april_invoice = bill_at(Time.utc(2026, 5, 1, 1))
 
     send_event(4, at: Time.utc(2026, 5, 10))
-    # May is not billed yet: the usage of June starts from the April snapshot
+    # May is not billed yet: the usage of June starts from the April snapshot, plus the events dated in May
     june_usage = usage_at(Time.utc(2026, 6, 1, 0, 30))
 
     {march_invoice:, april_usage:, april_invoice:, june_usage:, may_invoice: bill_at(Time.utc(2026, 6, 1, 1))}
@@ -251,6 +251,86 @@ describe "Recurring aggregation snapshots", transaction: false do
     end
   end
 
+  describe "with an event re-sent after the snapshot that holds it", clickhouse: true do
+    let(:clickhouse_events_store) { true }
+    let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+
+    # events_raw keeps each insert, events_enriched the latest one
+    def send_event(amount, at:, timestamp: at, transaction_id: SecureRandom.uuid)
+      travel_to(at) do
+        Clickhouse::EventsRaw.create!(
+          organization_id: organization.id,
+          external_customer_id: customer.external_id,
+          external_subscription_id: customer.external_id,
+          transaction_id:,
+          timestamp:,
+          code: billable_metric.code,
+          properties: {amount: amount.to_s},
+          ingested_at: Time.current
+        )
+        create_clickhouse_event(
+          code: billable_metric.code,
+          external_subscription_id: customer.external_id,
+          transaction_id:,
+          timestamp:,
+          properties: {amount:},
+          decimal_value: amount.to_d,
+          enriched_at: Time.current
+        )
+      end
+    end
+
+    def bill
+      start_subscription
+      send_event(10, at: Time.utc(2026, 3, 5), transaction_id: "resent")
+      send_event(3, at: Time.utc(2026, 3, 10))
+      march_invoice = bill_at(march_billed_at)
+
+      send_event(10, at: Time.utc(2026, 4, 2), timestamp: Time.utc(2026, 3, 5), transaction_id: "resent")
+      send_event(5, at: Time.utc(2026, 4, 15))
+      april_usage = usage_at(Time.utc(2026, 4, 20))
+      april_invoice = bill_at(Time.utc(2026, 5, 1, 1))
+
+      send_event(4, at: Time.utc(2026, 5, 10))
+      {march_invoice:, april_usage:, april_invoice:, may_invoice: bill_at(Time.utc(2026, 6, 1, 1))}
+    end
+
+    it "counts it once" do
+      expect(bill).to eq(
+        march_invoice: [{amount_cents: 1300, units: 13, events_count: 2}],
+        april_usage: {amount_cents: 1800, units: 18, events_count: 3},
+        april_invoice: [{amount_cents: 1800, units: 18, events_count: 3}],
+        may_invoice: [{amount_cents: 2200, units: 22, events_count: 4}]
+      )
+    end
+  end
+
+  describe "with more billed periods than kept snapshots" do
+    let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+    let(:may_snapshot) { Time.utc(2026, 5, 31).end_of_day.floor(6) }
+    let(:june_snapshot) { Time.utc(2026, 6, 30).end_of_day.floor(6) }
+
+    def bill
+      billed = super
+      send_event(6, at: Time.utc(2026, 6, 10))
+      billed[:june_invoice] = bill_at(Time.utc(2026, 7, 1, 1))
+      billed.merge(july_usage: usage_at(Time.utc(2026, 7, 20)))
+    end
+
+    it "keeps the latest periods and bills from them" do
+      # 32 units and 7 events up to May, plus the June event
+      expect(bill.slice(:june_invoice, :july_usage)).to eq(
+        june_invoice: [{amount_cents: 3800, units: 38, events_count: 8}],
+        july_usage: {amount_cents: 3800, units: 38, events_count: 8}
+      )
+      expect(written_snapshots.pluck(:to)).to match_array([Date.new(2026, 4, 30), Date.new(2026, 5, 31), Date.new(2026, 6, 30)])
+      expect(read_periods).to eq(
+        invoice: [nil, march_snapshot, april_snapshot, may_snapshot],
+        usage: [march_snapshot, april_snapshot, june_snapshot]
+      )
+    end
+  end
+
   shared_examples "a prorated recurring sum" do
     let(:charge) { create(:standard_charge, prorated: true, plan:, billable_metric:, properties: {amount: "1"}) }
     let(:billed) do
@@ -296,9 +376,10 @@ describe "Recurring aggregation snapshots", transaction: false do
         # A weighted sum ignores events dated in a billed period: (16 × 14 + 21 × 16) / 30 days
         april_usage: {amount_cents: 1867, units: BigDecimal("18.6666666667"), events_count: 1},
         april_invoice: [{amount_cents: 1867, units: BigDecimal("18.6666666667"), events_count: 1}],
+        # April's level plus the unbilled May event: 21 + 4
+        june_usage: {amount_cents: 2500, units: 25, events_count: 0},
         # (21 × 9 + 25 × 22) / 31 days
         may_invoice: [{amount_cents: 2384, units: BigDecimal("23.8387096774"), events_count: 1}]
-        # No June usage: after an unbilled period it misses that period's events with every flag
       }
     end
     let(:snapshots) do
@@ -519,13 +600,8 @@ describe "Recurring aggregation snapshots", transaction: false do
         termination_invoice: [{amount_cents: 3200, units: 32, events_count: 7}]
       }
     end
-    let(:snapshots) do
-      [
-        {to: Date.new(2026, 3, 31), units: 15, events_count: 3},
-        {to: Date.new(2026, 4, 30), units: 28, events_count: 6},
-        {to: Date.new(2026, 5, 15), units: 32, events_count: 7}
-      ]
-    end
+    # Nothing follows the subscription, so the termination invoice deletes its snapshots rather than writing one
+    let(:snapshots) { [] }
     let(:usage_reads) { [] }
 
     def bill

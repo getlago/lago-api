@@ -168,6 +168,21 @@ enum ActivityTypeEnum {
   contract_updated
 
   """
+  contract_wallet.created
+  """
+  contract_wallet_created
+
+  """
+  contract_wallet.deleted
+  """
+  contract_wallet_deleted
+
+  """
+  contract_wallet.updated
+  """
+  contract_wallet_updated
+
+  """
   coupon.created
   """
   coupon_created
@@ -381,6 +396,21 @@ enum ActivityTypeEnum {
   plan.updated
   """
   plan_updated
+
+  """
+  plan_wallet.created
+  """
+  plan_wallet_created
+
+  """
+  plan_wallet.deleted
+  """
+  plan_wallet_deleted
+
+  """
+  plan_wallet.updated
+  """
+  plan_wallet_updated
 
   """
   product_category.created
@@ -685,6 +715,7 @@ input AddStripePaymentProviderInput {
   name: String!
   requireTermsOfServiceConsent: Boolean
   secretKey: String
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -704,6 +735,11 @@ enum AdminActionEnum {
   Change was rolled back
   """
   rollback
+
+  """
+  Organization was linked as a sandbox
+  """
+  sandbox_linked
 
   """
   Feature was disabled
@@ -730,6 +766,12 @@ type AdminAuditLog {
   organizationName: String!
   reason: String!
   rollbackOfId: ID
+
+  """
+  False for a rollback, an entry already rolled back, an organization creation,
+  or an entry of a sandbox, whose settings follow its production
+  """
+  rollbackable: Boolean!
   rolledBack: Boolean!
 }
 
@@ -761,12 +803,18 @@ input AdminCreateOrganizationInput {
   ownerEmail: String!
   premiumIntegrations: [String!]
   reason: String!
+
+  """
+  Also create the organization's sandbox
+  """
+  selfServe: Boolean
   timezone: TimezoneEnum
 }
 
 type AdminCreateOrganizationPayload {
   inviteUrl: String!
   organization: AdminOrganization!
+  sandboxOrganization: AdminOrganization
 }
 
 enum AdminFeatureTypeEnum {
@@ -786,13 +834,36 @@ enum AdminFeatureTypeEnum {
   premium_integration
 }
 
+"""
+Link sandbox organization input arguments
+"""
+input AdminLinkSandboxOrganizationInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  productionOrganizationId: ID!
+  reason: String!
+  sandboxOrganizationId: ID!
+}
+
+type AdminLinkSandboxOrganizationPayload {
+  organization: AdminOrganization!
+  sandboxOrganization: AdminOrganization!
+}
+
 type AdminOrganization {
+  activationStatus: OrganizationActivationStatusEnum!
   createdAt: ISO8601DateTime!
   email: String
+  environment: OrganizationEnvironmentEnum!
   featureFlags: [String!]!
   id: ID!
   name: String!
   premiumIntegrations: [String!]!
+  productionOrganization: LinkedOrganization
+  sandboxOrganization: LinkedOrganization
+  selfServe: Boolean!
 }
 
 """
@@ -848,6 +919,50 @@ type AdyenProvider {
   merchantAccount: String
   name: String!
   successRedirectUrl: String
+}
+
+"""
+The names shown on the public claim page of an agent storefront
+"""
+type AgentClaimPage {
+  organizationName: String!
+  storefrontName: String!
+}
+
+type AgentStorefrontIntegration {
+  agentUrl: String!
+  authDocumentUrl: String!
+  billingDocumentUrl: String!
+  claimUrl: String!
+  code: String!
+  hasAgentsWithStripeCustomer: Boolean!
+  hasEnrolledAgents: Boolean!
+  id: ID!
+  name: String!
+  paymentProvider: StripeProvider
+  paymentProviderCode: String!
+  plans: [AgentStorefrontPlan!]!
+  resourceEndpoint: String
+  resourceInstructions: String
+  scope: String!
+}
+
+"""
+A plan sold to agents by an Agent Storefront
+"""
+type AgentStorefrontPlan {
+  freeCreditsCents: BigInt
+  maximumTopupCents: BigInt
+  minimumTopupCents: BigInt
+  plan: Plan
+  planCode: String!
+}
+
+input AgentStorefrontPlanInput {
+  freeCreditsCents: BigInt
+  maximumTopupCents: BigInt
+  minimumTopupCents: BigInt
+  planCode: String!
 }
 
 enum AggregationTypeEnum {
@@ -1261,6 +1376,10 @@ type AttributedUsageRow {
 }
 
 type AuthUrl {
+  """
+  Kept by the tab that starts the flow and sent back with the code. Set when self-serve is enabled
+  """
+  stateSecret: String
   url: String!
 }
 
@@ -1394,8 +1513,9 @@ type BillingEntity {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   organization: Organization!
+  paymentTerm: PaymentTerm
   phone: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
   state: String
@@ -1831,6 +1951,25 @@ enum CommitmentTypeEnum {
   minimum_commitment
 }
 
+"""
+Confirm a self-serve signup link
+"""
+input ConfirmSignupEmailInput {
+  captchaToken: String
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  The Step 1 password, when the signup secret of this link's attempt is not known
+  """
+  password: String
+  signupSecret: String
+  token: String!
+}
+
 enum ConnectionBehaviorEnum {
   inherit
   skip
@@ -1892,10 +2031,16 @@ type Contract {
   billingAnchorDate: ISO8601Date
   billingEntity: BillingEntity
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum!
   canceledAt: ISO8601DateTime
+  code: String
   consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
+
+  """
+  The currency fees bill in: the plan's when there is one, otherwise the
+  customer's, falling back to the organization default
+  """
+  currency: CurrencyEnum!
   customer: Customer!
 
   """
@@ -1916,6 +2061,56 @@ type Contract {
   status: ContractStatusEnum!
   terminatedAt: ISO8601DateTime
   updatedAt: ISO8601DateTime!
+}
+
+type ContractAlert {
+  alertType: ContractAlertTypeEnum!
+  code: String!
+  contractExternalId: String!
+  createdAt: ISO8601DateTime!
+  deletedAt: ISO8601DateTime
+  direction: DirectionEnum!
+  id: ID!
+
+  """
+  When the alert was last evaluated. Null means it never has been.
+  """
+  lastProcessedAt: ISO8601DateTime
+  name: String
+
+  """
+  Last observed value, judged against the threshold values and carrying the same scale.
+  """
+  previousValue: String!
+  product: Product
+  productFilter: ProductFilter
+  thresholds: [AlertThreshold!]!
+  updatedAt: ISO8601DateTime!
+
+  """
+  On a product scope, whether the usage of the product's filters counts too. False counts the product's own fees only.
+  """
+  withProductFilters: Boolean!
+}
+
+"""
+ContractAlertCollection type
+"""
+type ContractAlertCollection {
+  """
+  A collection of paginated ContractAlertCollection
+  """
+  collection: [ContractAlert!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum ContractAlertTypeEnum {
+  usage_amount
+  usage_units
 }
 
 """
@@ -1951,11 +2146,6 @@ type ContractAppliedRateCardCollection {
   metadata: CollectionMetadata!
 }
 
-enum ContractBillingTimeEnum {
-  anniversary
-  calendar
-}
-
 """
 ContractCollection type
 """
@@ -1971,9 +2161,63 @@ type ContractCollection {
   metadata: CollectionMetadata!
 }
 
+"""
+The share of a contract's current usage total priced by one product category
+"""
+type ContractCurrentUsageCategoryTotal {
+  amountCents: BigInt!
+
+  """
+  Earliest billing window start across the category's rate cards
+  """
+  fromDatetime: ISO8601DateTime!
+
+  """
+  Null for the products that belong to no category
+  """
+  productCategory: ProductCategory
+  taxesAmountCents: BigInt!
+
+  """
+  Latest billing window end across the category's rate cards
+  """
+  toDatetime: ISO8601DateTime!
+  totalAmountCents: BigInt!
+}
+
+"""
+The contract's total computed usage for the current billing period, unfiltered
+"""
+type ContractCurrentUsageTotal {
+  amountCents: BigInt!
+
+  """
+  Earliest billing window start across the contract's rate cards, null with no usage
+  """
+  fromDatetime: ISO8601DateTime
+
+  """
+  The total split by product category, each one priced and taxed in the same pass as the total
+  """
+  productCategoryTotals: [ContractCurrentUsageCategoryTotal!]!
+  taxesAmountCents: BigInt!
+
+  """
+  True when the tax provider failed and amount/total above are the untaxed fallback
+  """
+  taxesUnavailable: Boolean!
+
+  """
+  Latest billing window end across the contract's rate cards, null with no usage
+  """
+  toDatetime: ISO8601DateTime
+  totalAmountCents: BigInt!
+}
+
 enum ContractStatusEnum {
   active
   canceled
+  draft
   pending
   terminated
 }
@@ -3338,6 +3582,22 @@ input CreateAdjustedFeeInput {
 }
 
 """
+Autogenerated input type of CreateAgentStorefrontIntegration
+"""
+input CreateAgentStorefrontIntegrationInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  name: String!
+  paymentProviderCode: String!
+  plans: [AgentStorefrontPlanInput!]
+  resourceEndpoint: String
+  resourceInstructions: String
+}
+
+"""
 Autogenerated input type of CreateAiConversation
 """
 input CreateAiConversationInput {
@@ -3461,6 +3721,7 @@ input CreateBillingEntityInput {
   logo: String
   name: String!
   netPaymentTerm: Int
+  paymentTerm: PaymentTermInput
   phone: String
   state: String
   taxIdentificationNumber: String
@@ -3485,6 +3746,25 @@ input CreateCatalogPlanInput {
 }
 
 """
+Autogenerated input type of CreateContractAlert
+"""
+input CreateContractAlertInput {
+  alertType: ContractAlertTypeEnum!
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  contractId: ID!
+  name: String
+  productFilterId: ID
+  productId: ID
+  thresholds: [ThresholdInput!]!
+  withProductFilters: Boolean
+}
+
+"""
 Attach rate card to contract input arguments
 """
 input CreateContractAppliedRateCardInput {
@@ -3494,11 +3774,7 @@ input CreateContractAppliedRateCardInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-
-  """
-  External id of the contract
-  """
-  externalId: String!
+  contractId: ID!
   rateCardCode: String!
   ratePhases: [PhaseInput!]
   units: Float
@@ -3510,12 +3786,12 @@ Create contract input arguments
 input CreateContractInput {
   billingAnchorDate: ISO8601Date
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum
 
   """
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  code: String!
   consolidateInvoice: Boolean
   endedAt: ISO8601DateTime
   externalCustomerId: String!
@@ -3622,6 +3898,7 @@ input CreateCustomerInput {
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   paymentProviderCustomers: [PaymentProviderCustomerInput!]
+  paymentTerm: PaymentTermInput
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -3689,6 +3966,7 @@ input CreateCustomerWalletInput {
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   priority: Int!
   purchaseOrderNumber: String
   rateAmount: String!
@@ -3924,6 +4202,7 @@ input CreateInvoiceInput {
   fees: [FeeInput!]!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   purchaseOrderNumber: String
   voidedInvoiceId: ID
 }
@@ -4139,6 +4418,23 @@ input CreateProductInput {
 }
 
 """
+Autogenerated input type of CreateQuickbooksIntegration
+"""
+input CreateQuickbooksIntegrationInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  connectionId: String!
+  name: String!
+  sandbox: Boolean
+  syncCreditNotes: Boolean
+  syncInvoices: Boolean
+  syncPayments: Boolean
+}
+
+"""
 Autogenerated input type of CreateQuote
 """
 input CreateQuoteInput {
@@ -4266,6 +4562,29 @@ input CreateSalesforceIntegrationInput {
 }
 
 """
+Signup Step 3 answers: the organization name, and the role and source sent to analytics only
+"""
+input CreateSelfServeOrganizationInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  name: String!
+  role: SignupRoleEnum!
+  source: SignupSourceEnum
+}
+
+type CreateSelfServeOrganizationPayload {
+  """
+  The organization to open after Step 3: the sandbox
+  """
+  landingOrganization: Organization!
+  productionOrganization: Organization!
+  sandboxOrganization: Organization!
+  user: User!
+}
+
+"""
 Autogenerated input type of CreateSubscriptionAlert
 """
 input CreateSubscriptionAlertInput {
@@ -4319,6 +4638,7 @@ input CreateSubscriptionInput {
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   planId: ID!
   planOverrides: PlanOverridesInput
   progressiveBillingDisabled: Boolean
@@ -5280,6 +5600,12 @@ Current Organization Type
 """
 type CurrentOrganization {
   accessibleByCurrentSession: Boolean!
+
+  """
+  Always active when reachable: an organization waiting for a payment method is
+  refused with organization_inactive. Clients read the waiting status from currentUser.
+  """
+  activationStatus: OrganizationActivationStatusEnum!
   addressLine1: String
   addressLine2: String
   adyenPaymentProviders: [AdyenProvider!]
@@ -5300,6 +5626,7 @@ type CurrentOrganization {
   documentUrlExpirationDays: Int!
   email: String
   emailSettings: [EmailSettingsEnum!]
+  environment: OrganizationEnvironmentEnum!
   euTaxManagement: Boolean!
   eventsStore: EventsStoreEnum!
   featureFlags: [FeatureFlagEnum!]!
@@ -5311,13 +5638,16 @@ type CurrentOrganization {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   premiumIntegrations: [PremiumIntegrationTypeEnum!]!
+  productionOrganization: LinkedOrganization
 
   """
   True when usage reports can be served from the real-time usage buckets
   """
   realtimeUsageEnabled: Boolean!
+  sandboxOrganization: LinkedOrganization
+  selfServe: Boolean!
   slug: String!
   state: String
   stripePaymentProviders: [StripeProvider!]
@@ -5329,6 +5659,11 @@ type CurrentOrganization {
   taxes(appliedToOrganization: Boolean, autoGenerated: Boolean, limit: Int, order: String, page: Int, searchTerm: String): [Tax!]
   timezone: TimezoneEnum
   updatedAt: ISO8601DateTime!
+
+  """
+  True when the deployment refreshes wallet balances in real time, a requirement of the Agent Storefront
+  """
+  walletRefreshEnabled: Boolean!
   webhookUrl: String
   zipcode: String
 }
@@ -5340,6 +5675,11 @@ type CurrentVersion {
 
 type Customer {
   accountType: CustomerAccountTypeEnum!
+
+  """
+  Number of active contracts per customer
+  """
+  activeContractsCount: Int!
 
   """
   Number of active subscriptions per customer
@@ -5448,6 +5788,7 @@ type Customer {
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   paymentProviderCustomers: [ProviderCustomer!]!
+  paymentTerm: PaymentTerm
   phone: String
   providerCustomer: ProviderCustomer @deprecated(reason: "Use paymentProviderCustomers instead")
   salesforceCustomer: SalesforceCustomer @deprecated(reason: "Use integrationCustomers instead")
@@ -5784,7 +6125,12 @@ type DataApiMrrPlan {
   planCode: String!
   planDeletedAt: ISO8601DateTime
   planId: ID!
-  planInterval: PlanInterval!
+
+  """
+  Interval of the plan. Null for product catalog plans and contracts without a
+  plan, whose rate cards each have their own interval
+  """
+  planInterval: PlanInterval
   planName: String!
 }
 
@@ -5878,7 +6224,12 @@ type DataApiRevenueStreamPlan {
   planCode: String!
   planDeletedAt: ISO8601DateTime
   planId: ID!
-  planInterval: PlanInterval!
+
+  """
+  Interval of the plan. Null for product catalog plans and contracts without a
+  plan, whose rate cards each have their own interval
+  """
+  planInterval: PlanInterval
   planName: String!
 }
 
@@ -6203,6 +6554,17 @@ type DestroyChargePayload {
   """
   clientMutationId: String
   id: ID
+}
+
+"""
+Autogenerated input type of DestroyContractAlert
+"""
+input DestroyContractAlertInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
 }
 
 """
@@ -7051,6 +7413,7 @@ type Event {
   matchCustomer: Boolean
   matchSubscription: Boolean
   payload: JSON!
+  preciseTotalAmountCents: String
   receivedAt: ISO8601DateTime
   timestamp: ISO8601DateTime
   timestampMs: BigInt
@@ -7223,6 +7586,17 @@ enum EventsStoreEnum {
 }
 
 """
+Autogenerated input type of ExchangeSignupSecret
+"""
+input ExchangeSignupSecretInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  signupSecret: String!
+}
+
+"""
 Execute Order input arguments
 """
 input ExecuteOrderInput {
@@ -7249,18 +7623,25 @@ Organization Feature Flag Values
 """
 enum FeatureFlagEnum {
   account_tree
+  agent_storefront
+  catalog_wallets
   charge_filters_single_scan
+  contract_alerts
   fixed_charge_usage_delta_migration
   incremental_charge_cache
+  invoice_usage_on_wallet_expiration
   multi_connection
   order_forms
   persisted_recurring_values
   postgres_enriched_events
   product_catalog
   realtime_usage
+  realtime_usage_alerts
+  realtime_usage_recurring_sum
   recurring_aggregation_snapshots
   skip_credit_invoice_auto_payment_delay
   sso_cross_organization_sessions
+  standard_webhooks_signature
   stripe_shared_payment_token
   usage_prefilter_incremental
   usage_prefilter_short_cache
@@ -7329,7 +7710,12 @@ type Fee implements InvoiceItem {
   preciseUnitAmount: Float!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
+  product: Product
+  productFilter: ProductFilter
   properties: FeeProperties
+  rateCardRate: RateCardRate
+  rateModel: RateCardRateModelEnum
+  rateOverride: RateOverride
   subTotalExcludingTaxesAmountCents: BigInt!
   subTotalExcludingTaxesPreciseAmountCents: Float!
   subscription: Subscription
@@ -7398,6 +7784,21 @@ type FeeAppliedTax implements AppliedTax {
 }
 
 """
+FeeCollection type
+"""
+type FeeCollection {
+  """
+  A collection of paginated FeeCollection
+  """
+  collection: [Fee!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
 Fee input for creating invoice
 """
 input FeeInput {
@@ -7442,6 +7843,7 @@ input FetchDraftInvoiceTaxesInput {
   fees: [FeeInput!]!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   purchaseOrderNumber: String
   voidedInvoiceId: ID
 }
@@ -7450,6 +7852,17 @@ input FetchDraftInvoiceTaxesInput {
 Autogenerated input type of FetchIntegrationAccounts
 """
 input FetchIntegrationAccountsInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  integrationId: ID!
+}
+
+"""
+Autogenerated input type of FetchIntegrationCustomers
+"""
+input FetchIntegrationCustomersInput {
   """
   A unique identifier for the client performing the mutation.
   """
@@ -7721,7 +8134,7 @@ type GocardlessProvider {
 }
 
 """
-Autogenerated input type of GoogleAcceptInvite
+Accept a membership invite with Google Oauth
 """
 input GoogleAcceptInviteInput {
   """
@@ -7730,10 +8143,20 @@ input GoogleAcceptInviteInput {
   clientMutationId: String
   code: String!
   inviteToken: String!
+
+  """
+  Required when self-serve is enabled
+  """
+  state: String
+
+  """
+  Required when self-serve is enabled
+  """
+  stateSecret: String
 }
 
 """
-Autogenerated input type of GoogleLoginUser
+Log in with Google Oauth
 """
 input GoogleLoginUserInput {
   """
@@ -7741,6 +8164,16 @@ input GoogleLoginUserInput {
   """
   clientMutationId: String
   code: String!
+
+  """
+  Required when self-serve is enabled
+  """
+  state: String
+
+  """
+  Required when self-serve is enabled
+  """
+  stateSecret: String
 }
 
 """
@@ -7753,6 +8186,25 @@ input GoogleRegisterUserInput {
   clientMutationId: String
   code: String!
   organizationName: String!
+}
+
+"""
+Sign up for self-serve Lago with a company Google account
+"""
+input GoogleSignUpInput {
+  captchaToken: String
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  state: String!
+
+  """
+  The secret googleAuthUrl returned to this tab
+  """
+  stateSecret: String!
 }
 
 type GraduatedPercentageRange {
@@ -7877,7 +8329,7 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime @specifiedBy(url: "https://tools.ietf.org/html/rfc3339")
 
-union Integration = AnrokIntegration | AvalaraIntegration | EntraIdIntegration | HubspotIntegration | NetsuiteIntegration | OktaIntegration | SalesforceIntegration | XeroIntegration
+union Integration = AgentStorefrontIntegration | AnrokIntegration | AvalaraIntegration | EntraIdIntegration | HubspotIntegration | NetsuiteIntegration | OktaIntegration | QuickbooksIntegration | SalesforceIntegration | XeroIntegration
 
 """
 IntegrationCollection type
@@ -7901,7 +8353,7 @@ enum IntegrationConnectionCategoryEnum {
   tax
 }
 
-union IntegrationCustomer = AnrokCustomer | AvalaraCustomer | HubspotCustomer | NetsuiteCustomer | SalesforceCustomer | XeroCustomer
+union IntegrationCustomer = AnrokCustomer | AvalaraCustomer | HubspotCustomer | NetsuiteCustomer | QuickbooksCustomer | SalesforceCustomer | XeroCustomer
 
 input IntegrationCustomerInput {
   code: String
@@ -7941,11 +8393,13 @@ type IntegrationItemCollection {
 
 enum IntegrationItemTypeEnum {
   account
+  customer
   standard
   tax
 }
 
 enum IntegrationTypeEnum {
+  agent_storefront
   analytics_dashboards
   anrok
   api_permissions
@@ -7970,6 +8424,7 @@ enum IntegrationTypeEnum {
   preview
   progressive_billing
   projected_usage
+  quickbooks
   remove_branding_watermark
   revenue_analytics
   revenue_recognition
@@ -8057,10 +8512,12 @@ type Invoice {
   paymentDueDate: ISO8601Date!
   paymentOverdue: Boolean!
   paymentStatus: InvoicePaymentStatusTypeEnum!
+  paymentTerm: PaymentTerm!
   payments: [Payment!]
   prepaidCreditAmountCents: BigInt!
   prepaidGrantedCreditAmountCents: BigInt
   prepaidPurchasedCreditAmountCents: BigInt
+  productCatalogContracts: [InvoiceProductCatalogContract!]
   progressiveBillingCreditAmountCents: BigInt!
   purchaseOrderNumber: String
   readyForPaymentProcessing: Boolean!
@@ -8241,6 +8698,29 @@ enum InvoicePaymentStatusTypeEnum {
   succeeded
 }
 
+type InvoiceProductCatalogContract {
+  contract: Contract!
+  productCatalogSections: [InvoiceProductCatalogSection!]!
+}
+
+type InvoiceProductCatalogFilterGroup {
+  amountCents: BigInt!
+  feesCount: Int!
+  productFilter: ProductFilter!
+}
+
+type InvoiceProductCatalogProductGroup {
+  amountCents: BigInt!
+  feesCount: Int!
+  filters: [InvoiceProductCatalogFilterGroup!]!
+  product: Product!
+}
+
+type InvoiceProductCatalogSection {
+  productCategory: ProductCategory
+  products: [InvoiceProductCatalogProductGroup!]!
+}
+
 enum InvoiceSettlementTypeEnum {
   credit_note
 }
@@ -8345,6 +8825,15 @@ input LimitationInput {
 }
 
 """
+Production organization of a sandbox, or sandbox of a production organization
+"""
+type LinkedOrganization {
+  id: ID!
+  name: String!
+  slug: String!
+}
+
+"""
 Security Log event
 """
 enum LogEventEnum {
@@ -8417,6 +8906,11 @@ enum LogEventEnum {
   role.updated
   """
   role_updated
+
+  """
+  user.added
+  """
+  user_added
 
   """
   user.deleted
@@ -8515,6 +9009,10 @@ enum LogTypeEnum {
 }
 
 type LoginUser {
+  """
+  True for a self-serve user who must create an organization (signup Step 3)
+  """
+  needsOrganization: Boolean!
   token: String!
   user: User!
 }
@@ -8774,6 +9272,16 @@ type Mutation {
   ): AdminCreateOrganizationPayload
 
   """
+  Turns an existing organization into the sandbox of a production organization
+  """
+  adminLinkSandboxOrganization(
+    """
+    Parameters for AdminLinkSandboxOrganization
+    """
+    input: AdminLinkSandboxOrganizationInput!
+  ): AdminLinkSandboxOrganizationPayload
+
+  """
   Rollback a single admin audit log entry
   """
   adminRollbackChange(
@@ -8846,6 +9354,16 @@ type Mutation {
   ): QuoteVersion
 
   """
+  Confirms a self-serve signup link, creates the user and opens a session
+  """
+  confirmSignupEmail(
+    """
+    Parameters for ConfirmSignupEmail
+    """
+    input: ConfirmSignupEmailInput!
+  ): LoginUser
+
+  """
   Creates a new add-on
   """
   createAddOn(
@@ -8864,6 +9382,16 @@ type Mutation {
     """
     input: CreateAdjustedFeeInput!
   ): Fee
+
+  """
+  Create Agent Storefront integration
+  """
+  createAgentStorefrontIntegration(
+    """
+    Parameters for CreateAgentStorefrontIntegration
+    """
+    input: CreateAgentStorefrontIntegrationInput!
+  ): AgentStorefrontIntegration
 
   """
   Creates an AI conversation and appends a message to it
@@ -8974,6 +9502,16 @@ type Mutation {
     """
     input: CreateContractInput!
   ): Contract
+
+  """
+  Creates an alert on a pending or active contract
+  """
+  createContractAlert(
+    """
+    Parameters for CreateContractAlert
+    """
+    input: CreateContractAlertInput!
+  ): ContractAlert
 
   """
   Attaches a rate card to a pending contract
@@ -9326,6 +9864,16 @@ type Mutation {
   ): ProductFilter
 
   """
+  Create QuickBooks integration
+  """
+  createQuickbooksIntegration(
+    """
+    Parameters for CreateQuickbooksIntegration
+    """
+    input: CreateQuickbooksIntegrationInput!
+  ): QuickbooksIntegration
+
+  """
   Create a new quote
   """
   createQuote(
@@ -9384,6 +9932,16 @@ type Mutation {
     """
     input: CreateSalesforceIntegrationInput!
   ): SalesforceIntegration
+
+  """
+  Signup Step 3: creates the production organization of a self-serve user, with its sandbox
+  """
+  createSelfServeOrganization(
+    """
+    Parameters for CreateSelfServeOrganization
+    """
+    input: CreateSelfServeOrganizationInput!
+  ): CreateSelfServeOrganizationPayload
 
   """
   Create a new Subscription
@@ -9564,6 +10122,16 @@ type Mutation {
     """
     input: DestroyChargeFilterInput!
   ): DestroyChargeFilterPayload
+
+  """
+  Deletes a contract alert
+  """
+  destroyContractAlert(
+    """
+    Parameters for DestroyContractAlert
+    """
+    input: DestroyContractAlertInput!
+  ): ContractAlert
 
   """
   Removes a rate card from a pending contract
@@ -9968,6 +10536,16 @@ type Mutation {
   ): LoginUser
 
   """
+  Opens a session in the tab that started a self-serve signup, once its email is confirmed
+  """
+  exchangeSignupSecret(
+    """
+    Parameters for ExchangeSignupSecret
+    """
+    input: ExchangeSignupSecretInput!
+  ): LoginUser
+
+  """
   Execute an order
   """
   executeOrder(
@@ -10005,6 +10583,16 @@ type Mutation {
     Parameters for FetchIntegrationAccounts
     """
     input: FetchIntegrationAccountsInput!
+  ): IntegrationItemCollection!
+
+  """
+  Fetch integration customers
+  """
+  fetchIntegrationCustomers(
+    """
+    Parameters for FetchIntegrationCustomers
+    """
+    input: FetchIntegrationCustomersInput!
   ): IntegrationItemCollection!
 
   """
@@ -10096,6 +10684,16 @@ type Mutation {
     """
     input: GoogleRegisterUserInput!
   ): RegisterUser
+
+  """
+  Signs up with a company Google account, or logs in when the account already has a user
+  """
+  googleSignUp(
+    """
+    Parameters for GoogleSignUp
+    """
+    input: GoogleSignUpInput!
+  ): LoginUser
 
   """
   Joins the organization of an Invite as the authenticated user
@@ -10240,6 +10838,16 @@ type Mutation {
   ): PaymentReceipt
 
   """
+  Sends a new self-serve signup link, which replaces the previous one of the same signup
+  """
+  resendSignupEmail(
+    """
+    Parameters for ResendSignupEmail
+    """
+    input: ResendSignupEmailInput!
+  ): ResendSignupEmailPayload
+
+  """
   Reset password for user and log in
   """
   resetPassword(
@@ -10380,6 +10988,26 @@ type Mutation {
   ): ProviderCustomer
 
   """
+  Starts a self-serve signup: emails a verification link and returns the secret that proves this browser started it
+  """
+  signUp(
+    """
+    Parameters for SignUp
+    """
+    input: SignUpInput!
+  ): SignUpPayload
+
+  """
+  Mails a verification code to the owner who typed an agent's claim code
+  """
+  startAgentClaim(
+    """
+    Parameters for StartAgentClaim
+    """
+    input: StartAgentClaimInput!
+  ): StartAgentClaimPayload
+
+  """
   Sync hubspot integration invoice
   """
   syncHubspotIntegrationInvoice(
@@ -10490,6 +11118,16 @@ type Mutation {
   ): AdyenProvider
 
   """
+  Update Agent Storefront integration
+  """
+  updateAgentStorefrontIntegration(
+    """
+    Parameters for UpdateAgentStorefrontIntegration
+    """
+    input: UpdateAgentStorefrontIntegrationInput!
+  ): AgentStorefrontIntegration
+
+  """
   Update Anrok integration
   """
   updateAnrokIntegration(
@@ -10584,6 +11222,16 @@ type Mutation {
     """
     input: UpdateContractInput!
   ): Contract
+
+  """
+  Updates the name and the thresholds of a contract alert
+  """
+  updateContractAlert(
+    """
+    Parameters for UpdateContractAlert
+    """
+    input: UpdateContractAlertInput!
+  ): ContractAlert
 
   """
   Updates a rate card attached to a pending contract
@@ -10932,6 +11580,16 @@ type Mutation {
   ): ProductFilter
 
   """
+  Update QuickBooks integration
+  """
+  updateQuickbooksIntegration(
+    """
+    Parameters for UpdateQuickbooksIntegration
+    """
+    input: UpdateQuickbooksIntegrationInput!
+  ): QuickbooksIntegration
+
+  """
   Update a quote
   """
   updateQuote(
@@ -11110,6 +11768,16 @@ type Mutation {
     """
     input: UpdateXeroIntegrationInput!
   ): XeroIntegration
+
+  """
+  Verifies the code mailed to the owner and claims the agent
+  """
+  verifyAgentClaim(
+    """
+    Parameters for VerifyAgentClaim
+    """
+    input: VerifyAgentClaimInput!
+  ): VerifyAgentClaimPayload
 
   """
   Voids a Credit Note
@@ -11374,14 +12042,34 @@ Safe Organization Type
 """
 type Organization {
   accessibleByCurrentSession: Boolean!
+  activationStatus: OrganizationActivationStatusEnum
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!
+  environment: OrganizationEnvironmentEnum!
   id: ID!
   logoUrl: String
   name: String!
+  productionOrganization: LinkedOrganization
+  sandboxOrganization: LinkedOrganization
+  selfServe: Boolean!
   slug: String!
   timezone: TimezoneEnum
+}
+
+"""
+Whether an organization is open, or a self-serve production organization waiting for a payment method
+"""
+enum OrganizationActivationStatusEnum {
+  """
+  Open
+  """
+  active
+
+  """
+  Waiting for a payment method before it opens
+  """
+  pending_payment_method
 }
 
 type OrganizationBillingConfiguration {
@@ -11395,6 +12083,21 @@ input OrganizationBillingConfigurationInput {
   documentLocale: String
   invoiceFooter: String
   invoiceGracePeriod: Int
+}
+
+"""
+Whether an organization is a production organization or the sandbox of one
+"""
+enum OrganizationEnvironmentEnum {
+  """
+  Production organization
+  """
+  production
+
+  """
+  Sandbox organization
+  """
+  sandbox
 }
 
 type OverdueBalance {
@@ -11601,6 +12304,38 @@ input PaymentRequestCreateInput {
   paymentMethod: PaymentMethodReferenceInput
 }
 
+"""
+Structured payment term
+"""
+type PaymentTerm {
+  dayOfMonth: Int
+  days: Int
+  monthOffset: Int
+  termType: PaymentTermTypeEnum!
+}
+
+"""
+Structured payment term input
+"""
+input PaymentTermInput {
+  dayOfMonth: Int
+  days: Int
+  monthOffset: Int
+  termType: PaymentTermTypeEnum!
+}
+
+"""
+Payment term type
+"""
+enum PaymentTermTypeEnum {
+  day_of_month
+  days_end_of_month
+  due_on_receipt
+  end_of_month
+  net
+  net_end_of_month
+}
+
 enum PaymentTypeEnum {
   manual
   provider
@@ -11712,14 +12447,6 @@ enum PermissionEnum {
   pricing_units_create
   pricing_units_update
   pricing_units_view
-  product_categories_create
-  product_categories_delete
-  product_categories_update
-  product_categories_view
-  product_filters_create
-  product_filters_delete
-  product_filters_update
-  product_filters_view
   products_create
   products_delete
   products_update
@@ -11857,14 +12584,14 @@ type Permissions {
   pricingUnitsCreate: Boolean!
   pricingUnitsUpdate: Boolean!
   pricingUnitsView: Boolean!
-  productCategoriesCreate: Boolean!
-  productCategoriesDelete: Boolean!
-  productCategoriesUpdate: Boolean!
-  productCategoriesView: Boolean!
-  productFiltersCreate: Boolean!
-  productFiltersDelete: Boolean!
-  productFiltersUpdate: Boolean!
-  productFiltersView: Boolean!
+  productCategoriesCreate: Boolean! @deprecated(reason: "Use productsCreate instead.")
+  productCategoriesDelete: Boolean! @deprecated(reason: "Use productsDelete instead.")
+  productCategoriesUpdate: Boolean! @deprecated(reason: "Use productsUpdate instead.")
+  productCategoriesView: Boolean! @deprecated(reason: "Use productsView instead.")
+  productFiltersCreate: Boolean! @deprecated(reason: "Use productsCreate instead.")
+  productFiltersDelete: Boolean! @deprecated(reason: "Use productsDelete instead.")
+  productFiltersUpdate: Boolean! @deprecated(reason: "Use productsUpdate instead.")
+  productFiltersView: Boolean! @deprecated(reason: "Use productsView instead.")
   productsCreate: Boolean!
   productsDelete: Boolean!
   productsUpdate: Boolean!
@@ -12045,6 +12772,7 @@ input PlanOverridesInput {
 }
 
 enum PremiumIntegrationTypeEnum {
+  agent_storefront
   analytics_dashboards
   api_permissions
   auto_dunning
@@ -12068,6 +12796,7 @@ enum PremiumIntegrationTypeEnum {
   preview
   progressive_billing
   projected_usage
+  quickbooks
   remove_branding_watermark
   revenue_analytics
   revenue_recognition
@@ -12428,6 +13157,7 @@ enum ProviderPaymentMethodsEnum {
   customer_balance
   link
   sepa_debit
+  shared_payment_token
   us_bank_account
 }
 
@@ -12490,6 +13220,11 @@ type Query {
   Search organizations (admin only)
   """
   adminOrganizations(limit: Int, page: Int, searchTerm: String): AdminOrganizationCollection!
+
+  """
+  Query the names shown on the public claim page of an agent storefront
+  """
+  agentClaimPage(storefrontId: ID!): AgentClaimPage
 
   """
   Query a single ai conversation of an organization
@@ -12668,6 +13403,28 @@ type Query {
   ): Contract
 
   """
+  Query a single contract alert
+  """
+  contractAlert(
+    """
+    Unique ID of the alert
+    """
+    id: ID!
+  ): ContractAlert
+
+  """
+  Query the alerts of a contract, which follow its external id
+  """
+  contractAlerts(
+    """
+    Unique ID of the contract, in any status
+    """
+    contractId: ID!
+    limit: Int
+    page: Int
+  ): ContractAlertCollection!
+
+  """
   Query a single rate card applied to a contract
   """
   contractAppliedRateCard(
@@ -12681,6 +13438,16 @@ type Query {
   Query rate cards applied to a contract
   """
   contractAppliedRateCards(contractId: ID, hasRateOverrides: Boolean, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): ContractAppliedRateCardCollection!
+
+  """
+  Query a contract's total computed usage for the current billing period, unfiltered
+  """
+  contractCurrentUsageTotal(contractId: ID!): ContractCurrentUsageTotal!
+
+  """
+  Query a contract's computed usage for the current billing period, paginated
+  """
+  contractUsages(contractId: ID!, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): RateCardUsageCollection!
 
   """
   Query contracts of an organization
@@ -13078,6 +13845,11 @@ type Query {
   invoiceCustomSections(limit: Int, page: Int): InvoiceCustomSectionCollection
 
   """
+  Query the product fees of an invoice, in the order of the invoice PDF
+  """
+  invoiceProductFees(contractId: ID, invoiceId: ID!, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): FeeCollection!
+
+  """
   Query invoiced usage of an organization
   """
   invoicedUsages(billingEntityCode: String, currency: CurrencyEnum): InvoicedUsageCollection!
@@ -13441,6 +14213,21 @@ type Query {
   selectablePlans(limit: Int, page: Int, searchTerm: String): SelectablePlanCollection!
 
   """
+  Checks the format and the company domain of a self-serve signup email
+  """
+  signupEmailCheck(email: String!): SignupEmailCheck!
+
+  """
+  Tells the tab that started a self-serve signup whether its email was confirmed
+  """
+  signupStatus(signupSecret: String!): SignupStatus!
+
+  """
+  Reads the state of a self-serve signup verification link without confirming it
+  """
+  signupVerification(signupSecret: String, token: String!): SignupVerification!
+
+  """
   Query a single subscription of an organization
   """
   subscription(
@@ -13681,6 +14468,31 @@ type Query {
   x402Connections(limit: Int, page: Int): X402ConnectionObjectCollection!
 }
 
+type QuickbooksCustomer {
+  category: IntegrationConnectionCategoryEnum
+  code: String
+  externalCustomerId: String
+  id: ID!
+  integrationCode: String
+  integrationId: ID
+  integrationType: IntegrationTypeEnum
+  isDefault: Boolean!
+  syncWithProvider: Boolean
+}
+
+type QuickbooksIntegration {
+  code: String!
+  connectionId: ID!
+  hasMappingsConfigured: Boolean
+  id: ID!
+  name: String!
+  realmId: String
+  sandbox: Boolean!
+  syncCreditNotes: Boolean
+  syncInvoices: Boolean
+  syncPayments: Boolean
+}
+
 type Quote {
   activityLogs: [ActivityLog!]
   createdAt: ISO8601DateTime!
@@ -13857,6 +14669,52 @@ enum RateCardRateStatusEnum {
 
 enum RateCardRegroupPaidFeesEnum {
   invoice
+}
+
+"""
+One rate card's computed usage on a contract's current billing window
+"""
+type RateCardUsage {
+  amountCents: BigInt!
+  billableMetricCode: String
+  billingTiming: RateCardBillingTimingEnum!
+  eventsCount: Int!
+  fromDatetime: ISO8601DateTime!
+  invoiceDisplayName: String!
+  productCategoryCode: String
+  productCategoryName: String
+  productCode: String!
+  productFilterCode: String
+  productFilterName: String
+  productName: String!
+  productType: ProductTypeEnum!
+  rateCardCode: String!
+  rateCardName: String!
+  ratePhaseCode: String
+  ratePhaseName: String
+  rateSource: RateCardUsageRateSourceEnum!
+  toDatetime: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+RateCardUsageCollection type
+"""
+type RateCardUsageCollection {
+  """
+  A collection of paginated RateCardUsageCollection
+  """
+  collection: [RateCardUsage!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+enum RateCardUsageRateSourceEnum {
+  phase_override
+  rate
 }
 
 """
@@ -14354,6 +15212,40 @@ input ResendPaymentReceiptEmailInput {
 }
 
 """
+Autogenerated input type of ResendSignupEmail
+"""
+input ResendSignupEmailInput {
+  captchaToken: String
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  signupSecret: String
+
+  """
+  A link of the signup, when its signup secret is not known
+  """
+  token: String
+}
+
+"""
+Autogenerated return type of ResendSignupEmail.
+"""
+type ResendSignupEmailPayload {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  Null when this signup cannot send more emails
+  """
+  resendAvailableInSeconds: Int
+  resendLimitReached: Boolean!
+}
+
+"""
 ResetPassword type
 """
 type ResetPassword {
@@ -14403,6 +15295,11 @@ enum ResourceTypeEnum {
   ContractRateCard
   """
   contract_rate_card
+
+  """
+  CatalogWallet
+  """
+  contract_wallet
 
   """
   Coupon
@@ -14458,6 +15355,11 @@ enum ResourceTypeEnum {
   PlanRateCard
   """
   plan_rate_card
+
+  """
+  PlanWallet
+  """
+  plan_wallet
 
   """
   Product
@@ -14787,6 +15689,138 @@ input SetPaymentProviderCustomerAsDefaultInput {
   id: ID!
 }
 
+"""
+Autogenerated input type of SignUp
+"""
+input SignUpInput {
+  captchaToken: String
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  email: String!
+  password: String!
+}
+
+"""
+Autogenerated return type of SignUp.
+"""
+type SignUpPayload {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  signupSecret: String!
+}
+
+"""
+Whether self-serve signup accepts an email address
+"""
+type SignupEmailCheck {
+  """
+  Why the address is refused: value_is_mandatory, invalid_email_format or email_domain_not_allowed
+  """
+  code: String
+  valid: Boolean!
+}
+
+"""
+The role a user gives at signup Step 3, sent to analytics only
+"""
+enum SignupRoleEnum {
+  data
+  engineering
+  finance
+  founder
+  leadership
+  other
+  product_management
+}
+
+"""
+Where a user heard about Lago, asked at signup Step 3 and sent to analytics only
+"""
+enum SignupSourceEnum {
+  ai_search
+  github
+  hacker_news
+  other
+  reference
+  search_engine
+  y_combinator
+}
+
+"""
+The state of a self-serve signup, for the tab that started it
+"""
+type SignupStatus {
+  """
+  Null when this signup cannot send more emails
+  """
+  resendAvailableInSeconds: Int
+  resendLimitReached: Boolean!
+  status: SignupStatusEnum!
+}
+
+enum SignupStatusEnum {
+  expired
+  invalid
+  pending
+  verified
+}
+
+"""
+The state of a self-serve signup verification link
+"""
+type SignupVerification {
+  """
+  Set only when the link is valid
+  """
+  email: String
+
+  """
+  True unless the signup secret of the attempt that sent this link is given
+  """
+  passwordRequired: Boolean!
+  status: SignupVerificationStatusEnum!
+}
+
+enum SignupVerificationStatusEnum {
+  already_verified
+  expired
+  invalid
+  locked
+  replaced
+  valid
+}
+
+"""
+Autogenerated input type of StartAgentClaim
+"""
+input StartAgentClaimInput {
+  claimCode: String!
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  email: String!
+  storefrontId: ID!
+}
+
+"""
+Autogenerated return type of StartAgentClaim.
+"""
+type StartAgentClaimPayload {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  expiresIn: Int!
+  status: String!
+}
+
 enum StatusEnum {
   approved
   draft
@@ -14807,6 +15841,7 @@ type StripeProvider {
   name: String!
   requireTermsOfServiceConsent: Boolean
   secretKey: ObfuscatedString
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -14843,6 +15878,7 @@ type Subscription {
   onTerminationInvoice: OnTerminationInvoiceEnum!
   paymentMethod: PaymentMethod
   paymentMethodType: PaymentMethodTypeEnum
+  paymentTerm: PaymentTerm
   periodEndDate: ISO8601Date
   plan: Plan!
   previousPlan: Plan
@@ -15178,11 +16214,7 @@ input TerminateContractInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-
-  """
-  External id of the contract to terminate
-  """
-  externalId: String!
+  id: ID!
 }
 
 """
@@ -15963,8 +16995,26 @@ input UpdateAdyenPaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
+}
+
+"""
+Autogenerated input type of UpdateAgentStorefrontIntegration
+"""
+input UpdateAgentStorefrontIntegrationInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  id: ID!
+  name: String
+  paymentProviderCode: String
+  plans: [AgentStorefrontPlanInput!]
+  resourceEndpoint: String
+  resourceInstructions: String
 }
 
 """
@@ -16065,6 +17115,7 @@ input UpdateBillingEntityInput {
   logo: String
   name: String
   netPaymentTerm: Int
+  paymentTerm: PaymentTermInput
   phone: String
   state: String
   taxIdentificationNumber: String
@@ -16085,6 +17136,7 @@ input UpdateCashfreePaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -16107,6 +17159,19 @@ input UpdateCatalogPlanInput {
 }
 
 """
+Autogenerated input type of UpdateContractAlert
+"""
+input UpdateContractAlertInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
+  name: String
+  thresholds: [ThresholdInput!]
+}
+
+"""
 Update contract applied rate card input arguments
 """
 input UpdateContractAppliedRateCardInput {
@@ -16126,7 +17191,6 @@ Update contract input arguments
 input UpdateContractInput {
   billingAnchorDate: ISO8601Date
   billingEntityId: ID
-  billingTime: ContractBillingTimeEnum
 
   """
   A unique identifier for the client performing the mutation.
@@ -16134,11 +17198,7 @@ input UpdateContractInput {
   clientMutationId: String
   consolidateInvoice: Boolean
   endedAt: ISO8601DateTime
-
-  """
-  External id of the contract to update
-  """
-  externalId: String!
+  id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
@@ -16242,6 +17302,7 @@ input UpdateCustomerInput {
   paymentProvider: ProviderTypeEnum
   paymentProviderCode: String
   paymentProviderCustomers: [PaymentProviderCustomerInput!]
+  paymentTerm: PaymentTermInput
   phone: String
   providerCustomer: ProviderCustomerInput
   shippingAddress: CustomerAddressInput
@@ -16330,6 +17391,7 @@ input UpdateCustomerWalletInput {
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   priority: Int!
   purchaseOrderNumber: String
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
@@ -16416,6 +17478,7 @@ input UpdateFlutterwavePaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -16433,6 +17496,7 @@ input UpdateGocardlessPaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -16573,6 +17637,7 @@ input UpdateMoneyhashPaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -16797,6 +17862,22 @@ input UpdateProductInput {
 }
 
 """
+Autogenerated input type of UpdateQuickbooksIntegration
+"""
+input UpdateQuickbooksIntegrationInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  id: ID!
+  name: String
+  syncCreditNotes: Boolean
+  syncInvoices: Boolean
+  syncPayments: Boolean
+}
+
+"""
 Autogenerated input type of UpdateQuote
 """
 input UpdateQuoteInput {
@@ -16947,6 +18028,7 @@ input UpdateStripePaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -17038,6 +18120,7 @@ input UpdateSubscriptionInput {
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   planOverrides: PlanOverridesInput
   progressiveBillingDisabled: Boolean
   purchaseOrderNumber: String
@@ -17160,9 +18243,41 @@ type User {
   email: String
   id: ID!
   memberships: [Membership!]!
+
+  """
+  True for a self-serve user who must create an organization (signup Step 3)
+  """
+  needsOrganization: Boolean!
   organizations: [Organization!]!
   premium: Boolean!
   updatedAt: ISO8601DateTime!
+}
+
+"""
+Autogenerated input type of VerifyAgentClaim
+"""
+input VerifyAgentClaimInput {
+  claimCode: String!
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  storefrontId: ID!
+  verificationCode: String!
+}
+
+"""
+Autogenerated return type of VerifyAgentClaim.
+"""
+type VerifyAgentClaimPayload {
+  claimedAt: ISO8601DateTime!
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  status: String!
 }
 
 """
@@ -17283,6 +18398,7 @@ type Wallet {
   paidTopUpMinCredits: BigInt
   paymentMethod: PaymentMethod
   paymentMethodType: PaymentMethodTypeEnum
+  paymentTerm: PaymentTerm
   priority: Int!
   purchaseOrderNumber: String
   rateAmount: Float!
@@ -17507,6 +18623,7 @@ type WebhookEndpoint {
   name: String
   organization: Organization
   signatureAlgo: WebhookEndpointSignatureAlgoEnum
+  signingKeys: [WebhookEndpointSigningKey!]
   updatedAt: ISO8601DateTime!
   webhookUrl: String!
 }
@@ -17543,6 +18660,13 @@ input WebhookEndpointCreateInput {
 enum WebhookEndpointSignatureAlgoEnum {
   hmac
   jwt
+  standard_webhooks
+}
+
+type WebhookEndpointSigningKey {
+  createdAt: ISO8601DateTime!
+  id: ID!
+  secretKey: String!
 }
 
 """

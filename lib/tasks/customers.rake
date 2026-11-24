@@ -1,11 +1,6 @@
 # frozen_string_literal: true
 
 namespace :customers do
-  desc "Generate Slug for Customers"
-  task generate_slug: :environment do
-    Customer.unscoped.order(:created_at).find_each(&:save)
-  end
-
   # WARNING! Potentially dangerous task
   desc "Migrate customer to a new billing entity. This version is actual on August 2025, please, check before running if anything needs to be updated"
   task :migrate_to_new_entity, [:organization_id, :customer_external_id, :billing_entity_code] => :environment do |_task, args|

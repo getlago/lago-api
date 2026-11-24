@@ -2,6 +2,8 @@
 
 module Entitlement
   class SubscriptionFeatureRemoveService < BaseService
+    include Concerns::OwnerLockConcern
+
     Result = BaseResult[:feature_code]
 
     def initialize(subscription:, feature_code:)
@@ -20,6 +22,7 @@ module Entitlement
       return result.not_found_failure!(resource: "feature") unless feature
 
       ActiveRecord::Base.transaction do
+        lock_subscription!(subscription)
         delete_subscription_entitlement_if_exists
         delete_privilege_removals_if_exists
         add_feature_removal_if_feature_is_in_plan

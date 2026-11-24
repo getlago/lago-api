@@ -92,9 +92,13 @@ RSpec.configure do |config|
   config.include LicenseHelper
   config.include PdfHelper
   config.include StripeHelper
+  config.include GocardlessHelper
+  config.include AdyenHelper
   config.include QueuesHelper
   config.include XMLHelper
   config.include AdvisoryLockHelper
+  config.include EmailLockHelper
+  config.include RecaptchaHelper
   config.include SqlCaptureHelper
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers

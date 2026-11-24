@@ -2,6 +2,7 @@
 
 module Mutations
   class RegisterUser < BaseMutation
+    include RequiresLegacySignup
     include ThrottlesAuthAttempts
 
     description "Registers a new user and creates related organization"

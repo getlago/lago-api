@@ -4,10 +4,14 @@ class UsersService < BaseService
   include TypedResults
 
   RESULTS = {
-    login: BaseResult[:user, :token],
+    login: BaseResult[:user, :token, :needs_organization],
     register: BaseResult[:user, :organization, :membership, :token],
     register_from_invite: BaseResult[:user, :organization, :membership, :token]
   }.freeze
+
+  # Compared when no user matches and self-serve is on, so an unknown email costs one bcrypt like a known one. Digested
+  # as user passwords are, so its cost follows theirs.
+  DUMMY_PASSWORD = Concurrent::Delay.new { PendingSignup.digest_password(SecureRandom.hex(32)) }
 
   private
 
@@ -17,24 +21,29 @@ class UsersService < BaseService
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
-    result.user = find_user_by_email(email)&.authenticate(password)
+    user = find_user_by_email(email)
+    DUMMY_PASSWORD.value.is_password?(password) if user.nil? && Lago::SelfServe.enabled?
+    result.user = user&.authenticate(password)
 
-    unless result.user.present? && result.user.memberships.active.any?
-      return result.single_validation_failure!(error_code: "incorrect_login_or_password")
-    end
+    # The account state is read only after a correct password, and every refusal gives the same answer.
+    needs_organization = result.user.present? && result.user.needs_organization?
+    can_log_in = result.user.present? && (needs_organization || result.user.memberships.active.any?)
+    return result.single_validation_failure!(error_code: "incorrect_login_or_password") unless can_log_in
 
-    unless result.user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+    # A user without an organization has no organization login policy yet.
+    unless needs_organization || result.user.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
       return result.single_validation_failure!(
         error_code: "login_method_not_authorized",
         field: Organizations::AuthenticationMethods::EMAIL_PASSWORD
       )
     end
 
-    result.token = generate_token if result.user
+    result.token = generate_token
+    result.needs_organization = needs_organization
 
-    # NOTE: We're tracking the first membership linked to the user.
-    membership = result.user.memberships.active.first
-    SegmentIdentifyJob.perform_later(membership_id: "membership/#{membership.id}")
+    # NOTE: We're tracking the oldest membership linked to the user. A user without one has no Segment identity yet.
+    membership = result.user.memberships.active.order(:created_at).first
+    SegmentIdentifyJob.perform_later(membership_id: "membership/#{membership.id}") if membership
 
     UserDevices::RegisterService.call!(user: result.user)
 
@@ -42,7 +51,7 @@ class UsersService < BaseService
   end
 
   def register(email, password, organization_name)
-    if ENV.fetch("LAGO_DISABLE_SIGNUP", "false") == "true"
+    if Lago::SelfServe.signup_disabled?
       return result.forbidden_failure!(code: "signup_disabled")
     end
 
@@ -52,27 +61,32 @@ class UsersService < BaseService
       return result
     end
 
-    ActiveRecord::Base.transaction do
-      result.user = User.create!(email:, password:)
+    # Rescued outside the block, so a failure rolls back the user it already created.
+    begin
+      ActiveRecord::Base.transaction do
+        result.user = User.create!(email:, password:)
 
-      result.organization = Organizations::CreateService
-        .call!(name: organization_name, document_numbering: "per_organization")
-        .organization
+        result.organization = Organizations::CreateService
+          .call!(name: organization_name, document_numbering: "per_organization")
+          .organization
 
-      result.membership = Membership.create!(
-        user: result.user,
-        organization: result.organization
-      )
+        result.membership = Membership.create!(
+          user: result.user,
+          organization: result.organization
+        )
 
-      MembershipRole.create!(
-        organization: result.organization,
-        membership: result.membership,
-        role: Role.admins.first!
-      )
+        MembershipRole.create!(
+          organization: result.organization,
+          membership: result.membership,
+          role: Role.admins.first!
+        )
 
-      result.token = generate_token
+        result.token = generate_token
+      end
     rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+      return result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      return result.fail_with_error!(e)
     end
 
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
@@ -88,6 +102,10 @@ class UsersService < BaseService
 
   def register_from_invite(invite, password, login_method:)
     ActiveRecord::Base.transaction do
+      # Held until this transaction ends: serializes with a self-serve signup confirming the same address, since
+      # users.email has no unique index.
+      Users::EmailLockService.call(email: invite.email) { nil }
+
       # NOTE: Same case insensitive lookup as Invite#existing_user, so an invitation never creates
       #       a second user for an email that only differs by case.
       user = invite.existing_user || User.new(email: invite.email)
@@ -103,6 +121,8 @@ class UsersService < BaseService
       if user.new_record?
         user.password = password
         user.save!
+        # The address now has a user: its open self-serve signup attempts stop and drop their password digests.
+        Signups::CloseAttemptsService.call!(normalized_email: PendingSignup.normalize_email(invite.email))
       end
 
       result.user = user
@@ -116,6 +136,11 @@ class UsersService < BaseService
     end
 
     result
+  rescue BaseLockService::FailedToAcquireLock
+    result.lock_acquisition_failure!(message: "email lock not acquired")
+  rescue BaseService::FailedResult => e
+    # Raised inside the transaction, so a refused acceptance creates no user.
+    result.fail_with_error!(e)
   end
 
   def generate_token
@@ -125,8 +150,7 @@ class UsersService < BaseService
   end
 
   def find_user_by_email(email)
-    User.find_by(email:) ||
-      User.where("LOWER(email) = ?", email.to_s.downcase).order(:created_at).first
+    User.lookup_by_email(email)
   end
 
   def track_organization_registered(organization, membership)
@@ -136,7 +160,10 @@ class UsersService < BaseService
       properties: {
         organization_name: organization.name,
         organization_id: organization.id,
-        email: membership.user.email
+        email: membership.user.email,
+        # Same shape as the self-serve signup event, so a report split by these keys counts every new organization.
+        self_serve: false,
+        region: Lago::SelfServe.region
       }
     )
   end

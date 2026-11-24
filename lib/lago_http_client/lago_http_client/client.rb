@@ -17,7 +17,9 @@ module LagoHttpClient
       Errno::ECONNRESET,
       Errno::ECONNREFUSED,
       Errno::ETIMEDOUT,
-      Errno::EHOSTUNREACH
+      Errno::EHOSTUNREACH,
+      # A failed DNS lookup (Socket::ResolutionError included): no byte was sent.
+      SocketError
     ].freeze
     RETRY_BACKOFF_RANGE = (0.25..0.5)
     # No byte was sent when connecting fails this way, so the next address cannot receive the request twice.
@@ -146,6 +148,17 @@ module LagoHttpClient
 
       response = request(req)
       JSON.parse(response.body.presence || "{}")
+    end
+
+    def delete(headers: {}, params: nil)
+      path = params ? "#{uri.path}?#{URI.encode_www_form(params)}" : uri.path
+      req = Net::HTTP::Delete.new(path)
+
+      headers.keys.each do |key|
+        req[key] = headers[key]
+      end
+
+      request(req)
     end
 
     private

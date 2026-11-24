@@ -31,8 +31,8 @@ class Invoice < ApplicationRecord
   has_many :credits
   has_many :wallet_transactions
   has_many :invoice_subscriptions
-  has_many :billing_segments
-  has_many :contracts, -> { distinct }, through: :billing_segments
+  has_many :billing_operations
+  has_many :contracts, -> { distinct }, through: :contract_fees
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
@@ -58,6 +58,7 @@ class Invoice < ApplicationRecord
   has_many :customer_payments, -> { where.not(customer_id: nil).order(updated_at: :desc) }, class_name: "Payment", as: :payable
 
   has_many :applied_usage_thresholds
+  has_one :applied_wallet_expiration
   has_many :usage_thresholds, through: :applied_usage_thresholds
   has_many :applied_invoice_custom_sections
   has_one :regenerated_invoice, class_name: "Invoice", foreign_key: :voided_invoice_id
@@ -106,6 +107,10 @@ class Invoice < ApplicationRecord
     succeeded: "succeeded",
     failed: "failed"
   }.freeze
+  PROGRESSIVE_BILLING_TRIGGERS = {
+    usage_threshold: "usage_threshold",
+    wallet_expiration: "wallet_expiration"
+  }.freeze
 
   VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
   INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6, deleted: 8}.freeze
@@ -119,6 +124,9 @@ class Invoice < ApplicationRecord
 
   attribute :tax_status, :string
   enum :tax_status, TAX_STATUSES, prefix: :tax
+
+  attribute :progressive_billing_trigger, :string
+  enum :progressive_billing_trigger, PROGRESSIVE_BILLING_TRIGGERS, prefix: :triggered_by, validate: {allow_nil: true}
 
   aasm column: "status", timestamps: true do
     state :generating
@@ -224,6 +232,20 @@ class Invoice < ApplicationRecord
 
   def payment_invoices
     Invoice.where(id: id)
+  end
+
+  # NOTE: Pre-feature invoices have no jsonb snapshot,
+  # so a net term is derived from their own integer alias
+  def snapshotted_payment_term
+    if payment_term.present?
+      PaymentTerm.from_h(payment_term)
+    else
+      PaymentTerm.from_net_payment_term(net_payment_term)
+    end
+  end
+
+  def payment_term_label
+    snapshotted_payment_term.label(issuing_date:)
   end
 
   def visible?
@@ -882,7 +904,7 @@ end
 #  finalized_at                            :datetime
 #  invoice_type                            :integer          default("subscription"), not null
 #  issuing_date                            :date
-#  net_payment_term                        :integer          default(0), not null
+#  net_payment_term                        :integer          default(0)
 #  number                                  :string           default(""), not null
 #  payment_attempts                        :integer          default(0), not null
 #  payment_dispute_lost_at                 :datetime
@@ -891,10 +913,13 @@ end
 #  payment_status                          :integer          default("pending"), not null
 #  payment_term                            :jsonb
 #  payment_term_source                     :string
+#  prepaid_credit_after_tax_amount_cents   :bigint           default(0), not null
 #  prepaid_credit_amount_cents             :bigint           default(0), not null
+#  prepaid_credit_before_tax_amount_cents  :bigint           default(0), not null
 #  prepaid_granted_credit_amount_cents     :bigint
 #  prepaid_purchased_credit_amount_cents   :bigint
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
+#  progressive_billing_trigger             :enum
 #  purchase_order_number                   :string
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null

@@ -4,7 +4,7 @@ module PaymentProviders
   module Adyen
     module Payments
       class CreateService < BaseService
-        Result = BaseResult[:payment, :error_message, :error_code, :reraise]
+        Result = BaseResult[:payment, :error_message, :error_code, :reraise, :should_retry]
 
         # Adyen rejects the whole payment when `reference` overflows this limit, so a
         # long billing entity name would turn a dunning retry into a hard failure.
@@ -98,7 +98,7 @@ module PaymentProviders
           prms = {
             amount: {
               currency: payment.amount_currency.upcase,
-              value: payment.amount_cents
+              value: ::PaymentProviders::AdyenProvider.to_adyen_amount(payment.amount_cents, payment.amount_currency)
             },
             reference: truncated_reference,
             paymentMethod: {

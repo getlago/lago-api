@@ -39,7 +39,7 @@ module Invoices
     attr_reader :params, :organization, :billing_entity
 
     def subscription_params
-      params.slice(:billing_time, :plan_code, :subscription_at, :subscriptions)
+      params.slice(:billing_time, :plan_code, :subscription_at, :subscriptions, :payment_term)
     end
 
     def new_customer_billing_entity
@@ -129,6 +129,8 @@ module Invoices
         "Integrations::AvalaraIntegration"
       when "xero"
         "Integrations::XeroIntegration"
+      when "quickbooks"
+        "Integrations::QuickbooksIntegration"
       when "hubspot"
         "Integrations::HubspotIntegration"
       when "salesforce"

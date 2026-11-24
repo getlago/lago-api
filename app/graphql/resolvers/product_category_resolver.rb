@@ -6,7 +6,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = "product_categories:view"
+    REQUIRED_PERMISSION = "products:view"
 
     description "Query a single product_category of an organization"
 

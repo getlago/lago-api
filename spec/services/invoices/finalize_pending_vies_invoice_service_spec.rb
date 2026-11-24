@@ -268,14 +268,38 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
     context "with payment_due_date" do
       before do
-        customer.update!(net_payment_term: 30)
+        invoice.update!(payment_term: {term_type: "net", days: 30}, net_payment_term: 30)
       end
 
-      it "sets payment_due_date based on issuing_date and net_payment_term" do
+      it "sets payment_due_date from the invoice's snapshotted payment term" do
         freeze_time do
           finalize_service.call
 
           expect(invoice.reload.payment_due_date).to eq(Time.current.to_date + 30.days)
+        end
+      end
+
+      it "ignores a customer term changed after the snapshot" do
+        customer.update!(payment_term: {term_type: "net", days: 5}, net_payment_term: 5)
+
+        freeze_time do
+          finalize_service.call
+
+          expect(invoice.reload.payment_due_date).to eq(Time.current.to_date + 30.days)
+        end
+      end
+
+      context "when the invoice is pre-feature (no jsonb snapshot)" do
+        before do
+          invoice.update!(payment_term: nil, net_payment_term: 30)
+        end
+
+        it "derives the due date from the invoice's integer alias" do
+          freeze_time do
+            finalize_service.call
+
+            expect(invoice.reload.payment_due_date).to eq(Time.current.to_date + 30.days)
+          end
         end
       end
     end

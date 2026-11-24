@@ -79,6 +79,27 @@ RSpec.describe Customers::CreateService do
     end
   end
 
+  context "when payment_term is provided" do
+    before { create_args[:payment_term] = {term_type: "end_of_month"} }
+
+    it "writes the structured term with a null alias" do
+      expect(result.customer.reload).to have_attributes(
+        net_payment_term: nil,
+        payment_term: {"term_type" => "end_of_month"}
+      )
+    end
+  end
+
+  context "when payment_term has an invalid shape" do
+    before { create_args[:payment_term] = {term_type: "net", days: -1} }
+
+    it "returns a validation failure" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages[:payment_term]).to eq(["invalid_days"])
+    end
+  end
+
   it "calls SendWebhookJob with customer.created" do
     result
 
@@ -365,6 +386,22 @@ RSpec.describe Customers::CreateService do
 
     it "return a failed result" do
       expect(result).to be_failure
+    end
+  end
+
+  context "with a provider customer id but no payment provider" do
+    let(:create_args) do
+      {
+        external_id: SecureRandom.uuid,
+        name: "Foo Bar",
+        organization_id: organization.id,
+        provider_customer: {provider_customer_id: "cus_12345"}
+      }
+    end
+
+    it "creates the customer without a provider customer" do
+      expect(result).to be_success
+      expect(result.customer).to have_attributes(payment_provider: nil, provider_customer: nil)
     end
   end
 

@@ -16,8 +16,8 @@ RSpec.describe V2::ContractSerializer do
       customer:,
       catalog_plan:,
       external_id: "contract-42",
+      code: "annual",
       name: "Annual deal",
-      billing_time: :anniversary,
       consolidate_invoice: false,
       purchase_order_number: "PO-42",
       started_at: Time.zone.parse("2026-01-10T08:00:00Z"),
@@ -33,12 +33,12 @@ RSpec.describe V2::ContractSerializer do
     {
       lago_id: contract.id,
       external_id: "contract-42",
+      code: "annual",
       lago_customer_id: customer.id,
       external_customer_id: customer.external_id,
       name: "Annual deal",
       plan_code: "enterprise",
       status: "terminated",
-      billing_time: "anniversary",
       consolidate_invoice: false,
       purchase_order_number: "PO-42",
       billing_anchor_date: nil,
@@ -96,6 +96,19 @@ RSpec.describe V2::ContractSerializer do
       expect(payload).to eq(
         flat_payload.merge(applied_rate_cards: expected.map { V2::ContractAppliedRateCardSerializer.new(it).serialize })
       )
+    end
+
+    it "reads stored cursors without querying operation history" do
+      statements = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_name, _start, _finish, _id, payload|
+        statements << payload[:sql] if payload[:sql].include?("billing_operations")
+      end
+
+      payload
+
+      expect(statements).to be_empty
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
     end
   end
 

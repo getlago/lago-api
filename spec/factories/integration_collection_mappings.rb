@@ -49,6 +49,21 @@ FactoryBot.define do
     end
   end
 
+  factory :quickbooks_collection_mapping, class: "IntegrationCollectionMappings::QuickbooksCollectionMapping" do
+    association :integration, factory: :quickbooks_integration
+    mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit account].sample }
+    organization { integration&.organization || association(:organization) }
+    billing_entity { nil }
+
+    settings do
+      {
+        external_id: "quickbooks-123",
+        external_account_code: "quickbooks-code-1",
+        external_name: "Credits and Discounts"
+      }
+    end
+  end
+
   factory :anrok_collection_mapping, class: "IntegrationCollectionMappings::AnrokCollectionMapping" do
     association :integration, factory: :anrok_integration
     mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit account].sample }

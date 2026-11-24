@@ -36,6 +36,7 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:legal_number).of_type("String")
     expect(subject).to have_field(:logo_url).of_type("String")
     expect(subject).to have_field(:net_payment_term).of_type("Int")
+    expect(subject).to have_field(:payment_term).of_type("PaymentTerm")
     expect(subject).to have_field(:payment_provider).of_type("ProviderTypeEnum")
     expect(subject).to have_field(:payment_provider_code).of_type("String")
     expect(subject).to have_field(:phone).of_type("String")
@@ -77,6 +78,7 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:deleted_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
 
+    expect(subject).to have_field(:active_contracts_count).of_type("Int!")
     expect(subject).to have_field(:active_subscriptions_count).of_type("Int!")
     expect(subject).to have_field(:credit_notes_balance_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:credit_notes_balances).of_type("[CustomerCreditNotesBalance!]!")

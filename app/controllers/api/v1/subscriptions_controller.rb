@@ -3,6 +3,7 @@
 module Api
   module V1
     class SubscriptionsController < Api::V1::BaseController
+      include RawPaymentTermParams
       include SubscriptionIndex
 
       def create
@@ -62,9 +63,7 @@ module Api
           )
 
           if result.success?
-            response[:authorization] = result.stripe_payment_intent.to_hash.slice(
-              :id, :object, :amount, :amount_capturable, :status
-            )
+            response[:authorization] = result.authorization
           else
             return render_error_response(result)
           end
@@ -157,7 +156,7 @@ module Api
       end
 
       def create_params
-        params.require(:subscription)
+        permitted = params.require(:subscription)
           .permit(
             :external_customer_id,
             :plan_code,
@@ -189,10 +188,12 @@ module Api
             usage_thresholds: usage_thresholds_params,
             plan_overrides:
           )
+
+        with_raw_payment_term(permitted, params[:subscription])
       end
 
       def update_params
-        params.require(:subscription).permit(
+        permitted = params.require(:subscription).permit(
           :name,
           :subscription_at,
           :ending_at,
@@ -221,6 +222,8 @@ module Api
           usage_thresholds: usage_thresholds_params,
           plan_overrides:
         )
+
+        with_raw_payment_term(permitted, params[:subscription])
       end
 
       def usage_thresholds_params

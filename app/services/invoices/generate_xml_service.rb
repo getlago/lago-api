@@ -46,8 +46,9 @@ module Invoices
     end
 
     def attach_xml_to_invoice(xml_file)
-      invoice.xml_file.attach(
-        io: File.open(xml_file.path),
+      Utils::DocumentAttachment.attach(
+        invoice.xml_file,
+        path: xml_file.path,
         filename: "#{invoice.number}.xml",
         content_type: "application/xml"
       )

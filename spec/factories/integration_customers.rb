@@ -49,6 +49,18 @@ FactoryBot.define do
     end
   end
 
+  factory :quickbooks_customer, class: "IntegrationCustomers::QuickbooksCustomer" do
+    association :integration, factory: :quickbooks_integration
+    customer
+    organization { customer&.organization || integration&.organization || association(:organization) }
+    type { "IntegrationCustomers::QuickbooksCustomer" }
+    external_customer_id { SecureRandom.uuid }
+
+    settings do
+      {sync_with_provider: true}
+    end
+  end
+
   factory :hubspot_customer, class: "IntegrationCustomers::HubspotCustomer" do
     association :integration, factory: :hubspot_integration
     customer

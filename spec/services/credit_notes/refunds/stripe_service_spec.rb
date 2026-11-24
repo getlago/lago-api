@@ -459,6 +459,211 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       end
     end
 
+    context "with a currency that stripe counts in hundredths" do
+      # NOTE: money has no subunit for HUF, Stripe still expects these amounts in hundredths.
+      let(:payment) do
+        create(
+          :payment,
+          payment_provider: stripe_payment_provider,
+          payment_provider_customer: stripe_customer,
+          amount_cents: 50_000,
+          amount_currency: "HUF",
+          payable_payment_status: "succeeded",
+          payable: credit_note.invoice
+        )
+      end
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer:,
+          invoice:,
+          total_amount_currency: "HUF",
+          credit_amount_currency: "HUF",
+          balance_amount_currency: "HUF",
+          refund_amount_cents: 50_000,
+          refund_amount_currency: "HUF",
+          refund_status: :pending
+        )
+      end
+      let(:stripe_charges) do
+        Stripe::ListObject.construct_from(
+          object: "list",
+          url: "/v1/charges",
+          has_more: false,
+          data: [
+            {
+              id: "ch_123456",
+              object: "charge",
+              status: "succeeded",
+              currency: "huf",
+              amount: 5_000_000,
+              amount_captured: 5_000_000,
+              amount_refunded: charge_amount_refunded
+            }
+          ]
+        )
+      end
+
+      before do
+        allow(Stripe::Refund).to receive(:create)
+          .and_return(
+            Stripe::Refund.construct_from(id: "re_123456", status: "succeeded", amount: 5_000_000, currency: "huf")
+          )
+      end
+
+      it "sends the amount in stripe units and stores it in lago units" do
+        result = stripe_service.create
+
+        expect(Stripe::Refund).to have_received(:create)
+          .with(hash_including(amount: 5_000_000), anything) # 50 000 HUF * 100
+        expect(result).to be_success
+        expect(result.refund.amount_cents).to eq(50_000)
+        expect(result.refund.amount_currency).to eq("HUF")
+      end
+
+      context "when a previous attempt already refunded at stripe" do
+        let(:charge_amount_refunded) { 5_000_000 }
+        let(:existing_stripe_refunds) do
+          [
+            {
+              id: "re_recovered",
+              object: "refund",
+              status: "succeeded",
+              amount: 5_000_000,
+              currency: "huf",
+              metadata: {lago_credit_note_id: credit_note.id}
+            }
+          ]
+        end
+
+        it "stores the adopted refund in lago units" do
+          result = stripe_service.create
+
+          expect(result).to be_success
+          expect(Stripe::Refund).not_to have_received(:create)
+          expect(result.refund.provider_refund_id).to eq("re_recovered")
+          expect(result.refund.amount_cents).to eq(50_000) # 5 000 000 hundredths / 100
+          expect(result.refund.amount_currency).to eq("HUF")
+        end
+      end
+
+      context "when the charge has less refundable amount than the credit note" do
+        let(:charge_amount_refunded) { 4_990_000 } # 49 900 HUF, 100 HUF left
+
+        it "does not refund and names both amounts in lago units" do
+          result = stripe_service.create
+
+          expect(result).to be_success
+          expect(result.refund).to be_nil
+          expect(credit_note.reload.refund_status).to eq("failed")
+          expect(Stripe::Refund).not_to have_received(:create)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with(
+              "credit_note.refund_failure",
+              credit_note,
+              provider_customer_id: stripe_customer.provider_customer_id,
+              provider_error: {
+                message: "The charge has only 100 cents left to refund, 50000 are required", # (5 000 000 - 4 990 000) / 100
+                error_code: described_class::INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR
+              }
+            )
+        end
+      end
+
+      context "when the charge has less left than the credit note in lago units only" do
+        # NOTE: 10 000 HUF left, read as 1 000 000 without conversion, which exceeds the 50 000 needed.
+        let(:charge_amount_refunded) { 4_000_000 }
+
+        it "does not refund" do
+          result = stripe_service.create
+
+          expect(result.refund).to be_nil
+          expect(credit_note.reload.refund_status).to eq("failed")
+          expect(Stripe::Refund).not_to have_received(:create)
+        end
+      end
+    end
+
+    context "with a currency that stripe counts like lago" do
+      let(:payment) do
+        create(
+          :payment,
+          payment_provider: stripe_payment_provider,
+          payment_provider_customer: stripe_customer,
+          amount_cents: 200,
+          amount_currency: "EUR",
+          payable_payment_status: "succeeded",
+          payable: credit_note.invoice
+        )
+      end
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer:,
+          invoice:,
+          total_amount_currency: "EUR",
+          refund_amount_cents: 134,
+          refund_amount_currency: "EUR",
+          refund_status: :pending
+        )
+      end
+
+      let(:stripe_charges) do
+        Stripe::ListObject.construct_from(
+          object: "list",
+          url: "/v1/charges",
+          has_more: false,
+          data: [
+            {
+              id: "ch_123456",
+              object: "charge",
+              status: "succeeded",
+              currency: "eur",
+              amount: 200,
+              amount_captured: 200,
+              amount_refunded: charge_amount_refunded
+            }
+          ]
+        )
+      end
+
+      before do
+        allow(Stripe::Refund).to receive(:create)
+          .and_return(Stripe::Refund.construct_from(id: "re_123456", status: "succeeded", amount: 134, currency: "eur"))
+      end
+
+      it "sends and stores the amount unchanged" do
+        result = stripe_service.create
+
+        expect(Stripe::Refund).to have_received(:create).with(hash_including(amount: 134), anything)
+        expect(result).to be_success
+        expect(result.refund.amount_cents).to eq(134)
+        expect(result.refund.amount_currency).to eq("EUR")
+      end
+
+      context "when the charge has less left than the credit note" do
+        let(:charge_amount_refunded) { 100 }
+
+        it "fails the refund with the charge amounts unchanged" do
+          result = stripe_service.create
+
+          expect(result.refund).to be_nil
+          expect(credit_note.reload.refund_status).to eq("failed")
+          expect(Stripe::Refund).not_to have_received(:create)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with(
+              "credit_note.refund_failure",
+              credit_note,
+              provider_customer_id: stripe_customer.provider_customer_id,
+              provider_error: {
+                message: "The charge has only 100 cents left to refund, 134 are required", # 200 captured - 100 refunded
+                error_code: described_class::INSUFFICIENT_REFUNDABLE_AMOUNT_ERROR
+              }
+            )
+        end
+      end
+    end
+
     context "when the charge cannot be retrieved from stripe" do
       before do
         allow(Stripe::Charge).to receive(:list).and_raise(::Stripe::APIConnectionError.new("boom"))

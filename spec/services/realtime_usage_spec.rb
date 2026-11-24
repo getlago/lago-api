@@ -94,6 +94,98 @@ RSpec.describe RealtimeUsage do
     end
   end
 
+  describe ".consistent_reads", clickhouse: true do
+    def sequential_consistency
+      Clickhouse::BaseRecord.connection.select_value("SELECT getSetting('select_sequential_consistency')").to_i
+    end
+
+    it "reads with sequential consistency inside the block only" do
+      inside = described_class.consistent_reads { sequential_consistency }
+
+      expect(inside).to eq(1)
+      expect(sequential_consistency).to eq(0)
+    end
+  end
+
+  describe ".alerts_enabled?" do
+    subject(:enabled) { described_class.alerts_enabled?(organization) }
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: %w[realtime_usage realtime_usage_alerts])
+    end
+    let(:alerts_enabled) { "true" }
+
+    include_context "with realtime usage availability"
+
+    before { ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"] = alerts_enabled }
+
+    after { ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"] = nil }
+
+    it { expect(enabled).to be(true) }
+
+    context "when the alerts kill switch is off" do
+      let(:alerts_enabled) { nil }
+
+      it { expect(enabled).to be(false) }
+    end
+
+    context "when the alerts kill switch is set to false" do
+      let(:alerts_enabled) { "false" }
+
+      it { expect(enabled).to be(false) }
+    end
+
+    context "when the organization flag is off" do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"]) }
+
+      it { expect(enabled).to be(false) }
+    end
+
+    context "when realtime usage is off for the organization" do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage_alerts"]) }
+
+      it "refuses, because the alerts would wait for buckets nothing reads" do
+        expect(enabled).to be(false)
+      end
+    end
+  end
+
+  describe ".recurring_sum_enabled?" do
+    subject(:enabled) { described_class.recurring_sum_enabled?(organization) }
+
+    let(:organization) { create(:organization, feature_flags: ["realtime_usage_recurring_sum"]) }
+
+    it { expect(enabled).to be(true) }
+
+    context "when the organization flag is off" do
+      let(:organization) { create(:organization) }
+
+      it { expect(enabled).to be(false) }
+
+      it "opens under a forced gate, as the parity task compares recurring charges too" do
+        described_class.with_forced_gate do
+          expect(described_class.recurring_sum_enabled?(organization)).to be(true)
+        end
+      end
+    end
+  end
+
+  describe ".recurring_charge?" do
+    let(:charge) { build(:standard_charge, billable_metric:) }
+
+    context "with a recurring metric" do
+      let(:billable_metric) { build(:sum_billable_metric, :recurring) }
+
+      it { expect(described_class.recurring_charge?(charge)).to be(true) }
+    end
+
+    context "with a metric that restarts every period" do
+      let(:billable_metric) { build(:sum_billable_metric) }
+
+      it { expect(described_class.recurring_charge?(charge)).to be(false) }
+    end
+  end
+
   describe ".with_forced_gate" do
     it "opens the gate for the duration of the block only" do
       described_class.with_forced_gate do
@@ -190,6 +282,32 @@ RSpec.describe RealtimeUsage do
       let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
 
       it { expect(supported).to be(false) }
+
+      context "when the recurring sum flag is on" do
+        let(:organization) { create(:organization, feature_flags: ["realtime_usage_recurring_sum"]) }
+
+        it { expect(supported).to be(true) }
+
+        context "when prorated" do
+          let(:charge) { build(:standard_charge, billable_metric:, prorated: true) }
+
+          it { expect(supported).to be(false) }
+        end
+
+        context "when pay_in_advance" do
+          let(:charge) { build(:standard_charge, billable_metric:, pay_in_advance: true) }
+
+          it { expect(supported).to be(false) }
+        end
+      end
+
+      context "with a forced gate" do
+        it "is supported, so the parity task compares it" do
+          described_class.with_forced_gate do
+            expect(described_class.supported_charge?(charge)).to be(true)
+          end
+        end
+      end
     end
 
     context "with an expression metric" do
@@ -203,8 +321,8 @@ RSpec.describe RealtimeUsage do
     context "with a charge accepting a target wallet" do
       let(:charge) { build(:standard_charge, billable_metric:, accepts_target_wallet: true) }
 
-      it "is not served, because the absent wallet code is not the nil rails emits" do
-        expect(supported).to be(false)
+      it "is supported" do
+        expect(supported).to be(true)
       end
     end
 
@@ -216,6 +334,29 @@ RSpec.describe RealtimeUsage do
       it "stays served, because count computes its running total in Ruby" do
         expect(supported).to be(true)
       end
+    end
+  end
+
+  describe ".wallet_charge_changed_since?" do
+    subject(:changed) { described_class.wallet_charge_changed_since?(charge, period_start) }
+
+    let(:period_start) { Time.zone.parse("2026-11-01") }
+    let(:accepts_target_wallet) { true }
+    let(:updated_at) { period_start + 1.second }
+    let(:charge) { build_stubbed(:standard_charge, accepts_target_wallet:, updated_at:) }
+
+    it { expect(changed).to be(true) }
+
+    context "when the charge was last edited before the date" do
+      let(:updated_at) { period_start - 1.second }
+
+      it { expect(changed).to be(false) }
+    end
+
+    context "when the charge does not accept a target wallet" do
+      let(:accepts_target_wallet) { false }
+
+      it { expect(changed).to be(false) }
     end
   end
 

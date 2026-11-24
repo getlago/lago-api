@@ -404,6 +404,125 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     end
   end
 
+  context "when the subscription moved to a plan override after the invoice" do
+    let(:parent_charge) { create(:standard_charge, plan: create(:plan, organization:), billable_metric:) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, parent: parent_charge) }
+
+    before do
+      Fee.delete_all
+      create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, total_aggregated_units: 5, events_count: 2)
+    end
+
+    it "compares the snapshot with the fee billed on the parent charge" do
+      expect(result.rows).to eq([row])
+      expect(result.differences).to be_empty
+    end
+
+    context "when the parent charge billed a group without a snapshot" do
+      before do
+        create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, grouped_by: {"zone" => "a"}, total_aggregated_units: 3, events_count: 1)
+      end
+
+      it "reports it on the override charge" do
+        expect(result.differences).to eq(
+          [row(grouped_by: {"zone" => "a"}, snapshot_units: 0, fee_units: 3, snapshot_events_count: 0, fee_events_count: 1)]
+        )
+      end
+    end
+
+    context "with a charge filter" do
+      let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:parent_filter) { create(:charge_filter, charge: parent_charge) }
+      let(:charge_filter) { create(:charge_filter, charge:) }
+      let(:parent_values) { %w[eu] }
+      let(:override_values) { %w[eu] }
+      let(:filter_snapshot) { true }
+
+      before do
+        create(:charge_filter_value, charge_filter: parent_filter, billable_metric_filter:, values: parent_values)
+        create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: override_values)
+        create_snapshot(charge_filter:, units: 2, events_count: 1) if filter_snapshot
+        create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, charge_filter: parent_filter, total_aggregated_units: 2, events_count: 1)
+      end
+
+      it "compares the bucket with the fee of the parent filter of the same values" do
+        expect(result.differences).to be_empty
+        expect(result.rows.map(&:charge_filter_id)).to match_array([nil, charge_filter.id])
+      end
+
+      context "when the override lists the values in another order" do
+        let(:parent_values) { %w[eu us] }
+        let(:override_values) { %w[us eu] }
+
+        it "matches the filters" do
+          expect(result.differences).to be_empty
+        end
+      end
+
+      context "when the override filter has no snapshot" do
+        let(:filter_snapshot) { false }
+
+        it "reports the fee on the override filter" do
+          expect(result.differences).to eq(
+            [row(charge_filter_id: charge_filter.id, snapshot_units: 0, fee_units: 2, snapshot_events_count: 0, fee_events_count: 1)]
+          )
+        end
+      end
+
+      context "when two parent filters have the same values" do
+        before do
+          twin_filter = create(:charge_filter, charge: parent_charge)
+          create(:charge_filter_value, charge_filter: twin_filter, billable_metric_filter:, values: %w[eu])
+          create(:charge_fee, organization:, invoice:, subscription:, charge: parent_charge, charge_filter: twin_filter, total_aggregated_units: 1, events_count: 1)
+        end
+
+        it "maps neither, so both fees are reported" do
+          expect(result.differences.map(&:fee_units)).to match_array([0, 2, 1])
+        end
+      end
+
+      context "with pricing groups" do
+        before do
+          create(
+            :charge_fee,
+            organization:, invoice:, subscription:, charge: parent_charge, charge_filter: parent_filter,
+            grouped_by: {"zone" => "a"}, total_aggregated_units: 3, events_count: 1
+          )
+        end
+
+        it "reports a group billed without a snapshot on the override charge" do
+          expect(result.differences).to eq(
+            [row(charge_filter_id: charge_filter.id, grouped_by: {"zone" => "a"}, snapshot_units: 0, fee_units: 3, snapshot_events_count: 0, fee_events_count: 1)]
+          )
+        end
+      end
+
+      context "when the parent filter was removed after the invoice" do
+        before do
+          ChargeFilterValue.where(charge_filter: parent_filter).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          parent_filter.discard!
+        end
+
+        it "reports both buckets" do
+          expect(result.differences.map(&:charge_filter_id)).to match_array([charge_filter.id, parent_filter.id])
+        end
+      end
+
+      context "when the parent filter has other values" do
+        let(:override_values) { %w[us] }
+
+        it "reports both buckets, each on its own charge" do
+          expect(result.differences).to match_array(
+            [
+              row(charge_filter_id: charge_filter.id, snapshot_units: 2, fee_units: 0, snapshot_events_count: 1, fee_events_count: 0),
+              row(charge_id: parent_charge.id, charge_filter_id: parent_filter.id, snapshot_units: 0, fee_units: 2, snapshot_events_count: 0, fee_events_count: 1)
+            ]
+          )
+        end
+      end
+    end
+  end
+
   context "without an invoice for the period" do
     before { InvoiceSubscription.delete_all }
 

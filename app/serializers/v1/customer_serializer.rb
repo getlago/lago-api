@@ -2,6 +2,18 @@
 
 module V1
   class CustomerSerializer < ModelSerializer
+    # Associations that `serialize` reads without includes, to preload when rendering a list.
+    PRELOADS = [
+      :billing_entity,
+      :organization,
+      :metadata,
+      :stripe_customer,
+      :gocardless_customer,
+      :cashfree_customer,
+      :adyen_customer,
+      :moneyhash_customer
+    ].freeze
+
     def serialize
       payload = {
         lago_id: model.id,
@@ -33,6 +45,7 @@ module V1
         timezone: model.timezone,
         applicable_timezone: model.applicable_timezone,
         net_payment_term: model.net_payment_term,
+        payment_term: model.payment_term,
         external_salesforce_id: model.external_salesforce_id,
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         billing_configuration:,

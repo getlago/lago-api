@@ -23,12 +23,27 @@ Rails.application.routes.draw do
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
       resources :security_logs, param: :log_id, only: %i[index show]
+      get :events_enriched, to: "events#index_enriched"
+      resources :events, only: %i[create show index], constraints: {id: /[^\/]+/} do
+        post :batch, on: :collection
+        post :estimate_fees, on: :collection
+        post :estimate_instant_fees, on: :collection
+        post :batch_estimate_instant_fees, on: :collection
+      end
+      # v1 only: the RSA public key verifies jwt webhooks, which native v2 endpoints do not use.
+      resources :webhooks, only: %i[] do
+        get :public_key, on: :collection
+        get :json_public_key, on: :collection
+      end
       draw(:shared_api)
     end
 
     # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
+      resources :events, only: %i[index create] do
+        post :batch, on: :collection
+      end
       resources :billable_metrics, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :billing_entities, param: :code, constraints: {code: /[^\/]+/}, only: %i[index show create update]
       resources :payments, only: %i[index show create]
@@ -52,6 +67,13 @@ Rails.application.routes.draw do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end
       resources :product_categories, param: :code, code: /.*/, only: %i[index show create update destroy]
+      # Every privilege action is native, nested here so the greedy feature code does not swallow it.
+      # The routes with a privilege code are drawn first, so a code that ends with `privileges` is not
+      # read as a feature code by the index.
+      resources :features, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        resources :privileges, only: %i[show update destroy], param: :code, controller: "features/privileges"
+        resources :privileges, only: %i[index create], controller: "features/privileges"
+      end
       resources :rate_cards, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
@@ -61,17 +83,27 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
+        # The route with an alert code is drawn first, so an alert coded `alerts` is not read as a
+        # wallet code by the index.
+        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets" do
+          scope module: :plan_wallets do
+            resources :alerts, param: :code, code: /.*/, only: %i[show update destroy]
+            resources :alerts, only: %i[index create]
+          end
+        end
         draw(:plan_nested_api)
       end
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
         get :current_usage, on: :member, to: "contracts/usage#current"
+        resources :alerts, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "contracts/alerts"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
+        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_wallets"
       end
       # A contract is never destroyed — DELETE ends its lifecycle, the same
       # idiom subscriptions follow.
@@ -116,6 +148,8 @@ Rails.application.routes.draw do
       # Credit-note paths are native v2 only when explicitly routed above. Do not
       # let unsupported actions fall through to their v1 beta equivalents.
       match "credit_notes(/*path)", to: "/application#not_found", via: :all
+      match "agent_storefronts(/*path)", to: "/application#not_found", via: :all
+      match "agents(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do
@@ -137,10 +171,38 @@ Rails.application.routes.draw do
     post "invoice_payments/:token", to: "invoice_payments#create"
   end
 
+  # The only admin route outside local environments, drawn when self-serve is on and its key is set; anything else
+  # falls through to the 404 below, so self-hosted installs never expose it.
+  post "admin/organizations/:id/activate",
+    to: "admin/organization_activations#create",
+    as: :admin_organization_activation,
+    constraints: ->(_request) { Lago::SelfServe.enabled? && Lago::SelfServe.billing_accounts_key.present? }
+
+  scope "agents/v1/:storefront_id", module: :agents, as: :agents do
+    get "AUTH.md", to: "documents#auth", format: false
+    post "auth/challenges", to: "auth#challenge"
+    post "signup", to: "auth#signup"
+    post "auth/token", to: "auth#token"
+    post "auth/revoke", to: "auth#revoke"
+    get "me", to: "auth#me"
+    get "BILLING.md", to: "documents#billing", format: false
+    post "billing/enroll", to: "billing#enroll"
+    get "billing", to: "billing#show"
+    post "billing/payments", to: "billing#pay"
+    get "billing/payments/:id", to: "billing#payment"
+    post "billing/free_credits", to: "billing#free_credits"
+    post "claims/codes", to: "claims#create_code"
+    get "claims", to: "claims#show"
+    post "claims/start", to: "claims#start"
+    post "claims/verify", to: "claims#verify"
+  end
+
   if Rails.env.local?
     namespace :admin do
       resources :memberships, only: %i[create]
-      resources :organizations, only: %i[update create]
+      resources :organizations, only: %i[update create] do
+        post :link_sandbox, on: :member
+      end
       resources :invoices do
         post :regenerate, on: :member
       end

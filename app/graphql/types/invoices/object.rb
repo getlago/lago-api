@@ -49,6 +49,7 @@ module Types
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_due_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_overdue, Boolean, null: false
+      field :payment_term, Types::PaymentTerms::Object, null: false, method: :snapshotted_payment_term
 
       field :all_charges_have_fees, Boolean, null: false, method: :all_charges_have_fees?
       field :all_fixed_charges_have_fees, Boolean, null: false, method: :all_fixed_charges_have_fees?
@@ -75,6 +76,7 @@ module Types
       field :error_details, [Types::ErrorDetails::Object], null: true
       field :fees, [Types::Fees::Object], null: true
       field :invoice_subscriptions, [Types::InvoiceSubscriptions::Object], method: :sorted_invoice_subscriptions
+      field :product_catalog_contracts, [Types::Invoices::ProductCatalog::Contract], null: true
       field :subscriptions, [Types::Subscriptions::Object], method: :sorted_subscriptions
 
       field :external_hubspot_integration_id, String, null: true
@@ -100,6 +102,10 @@ module Types
 
       def regenerated_invoice_id
         object.regenerated_invoice&.id
+      end
+
+      def product_catalog_contracts
+        ::Invoices::ProductCatalogTreeService.call!(invoice: object).contracts if object.product_catalog?
       end
 
       def applied_taxes

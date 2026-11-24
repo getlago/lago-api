@@ -191,6 +191,19 @@ RSpec.describe Admin::RollbackService do
       end
     end
 
+    context "when the audit log is a sandbox link" do
+      subject(:service) { described_class.new(actor:, audit_log: original_log, reason: "Trying to undo a sandbox link") }
+
+      let(:original_log) do
+        create(:cs_admin_audit_log, actor_user: actor, action: :sandbox_linked, organization:, feature_type: :organization,
+          feature_key: SecureRandom.uuid, before_value: false, after_value: true, reason: "Linking the test organization")
+      end
+
+      it "refuses it with its own code" do
+        expect(service.call.error.messages[:feature_type]).to eq(["cannot_rollback_sandbox_link"])
+      end
+    end
+
     context "when the audit log was already rolled back" do
       subject(:service) do
         described_class.new(

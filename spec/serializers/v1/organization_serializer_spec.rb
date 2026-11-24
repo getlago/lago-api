@@ -36,10 +36,24 @@ RSpec.describe ::V1::OrganizationSerializer do
     expect(result["organization"]["billing_configuration"]["document_locale"]).to eq(org.document_locale)
     expect(result["organization"]["tax_identification_number"]).to eq(org.tax_identification_number)
     expect(result["organization"]["timezone"]).to eq(org.timezone)
-    expect(result["organization"]["net_payment_term"]).to eq(org.net_payment_term)
+    expect(result["organization"]["net_payment_term"]).to eq(org.default_billing_entity.net_payment_term)
+    expect(result["organization"]["payment_term"]).to eq(org.default_billing_entity.payment_term)
     expect(result["organization"]["finalize_zero_amount_invoice"]).to eq(org.finalize_zero_amount_invoice)
     expect(result["organization"]["document_url_expiration_days"]).to eq(30)
     expect(result["organization"]["taxes"].count).to eq(1)
     expect(result["organization"]["events_store"]).to eq(org.events_store)
+  end
+
+  context "when the default billing entity has a term with no legacy alias" do
+    before do
+      org.default_billing_entity.update!(payment_term: {"term_type" => "days_end_of_month", "days" => 10}, net_payment_term: nil)
+    end
+
+    it "renders the default billing entity term" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["organization"]["net_payment_term"]).to be_nil
+      expect(result["organization"]["payment_term"]).to eq("term_type" => "days_end_of_month", "days" => 10)
+    end
   end
 end

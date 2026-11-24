@@ -4,7 +4,11 @@ module Api
   module V2
     module ContractRateCards
       class RatePhasesController < Api::V2::BaseController
+        include Api::V2::ContractLookup
+
         serializable_with ::V2::RatePhaseSerializer
+
+        before_action :reject_pagination!, only: :index
 
         def index
           return not_found_error(resource: "applied_rate_card") unless contract_rate_card
@@ -61,7 +65,7 @@ module Api
         def contract_rate_card
           return @contract_rate_card if defined?(@contract_rate_card)
 
-          contract = current_organization.contracts.live_by_external_id(params[:contract_external_id])
+          contract = find_contract(params[:contract_external_id])
           @contract_rate_card = contract&.applied_rate_cards&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
         end
 

@@ -13,6 +13,14 @@ module UsageAttributionTypes
       return result.not_found_failure!(resource: "usage_attribution_type") unless usage_attribution_type
 
       ActiveRecord::Base.transaction do
+        # Tracking keeps a stored parent, so child values would stay under the discarded values.
+        UsageAttributionValue.with_discarded
+          .where(
+            organization_id: usage_attribution_type.organization_id,
+            parent_id: usage_attribution_type.usage_attribution_values.with_discarded.select(:id)
+          )
+          .update_all(parent_id: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+
         usage_attribution_type.usage_attribution_values.discard_all!
         usage_attribution_type.discard!
       end

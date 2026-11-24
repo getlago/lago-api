@@ -8,6 +8,7 @@ module V1
         external_id: model.external_id,
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer.external_id,
+        billing_entity_code: model.billing_entity.code,
         name: model.name,
         plan_code: model.plan.code,
         plan_amount_cents: model.plan.amount_cents,
@@ -31,6 +32,7 @@ module V1
         progressive_billing_disabled: model.progressive_billing_disabled,
         consolidate_invoice: model.consolidate_invoice,
         purchase_order_number: model.purchase_order_number,
+        payment_term: model.payment_term,
         cancellation_reason: model.cancellation_reason,
         activated_at: model.activated_at&.iso8601
       }

@@ -1,0 +1,410 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe BillingOperation do
+  subject(:operation) { build(:billing_operation, organization:, customer:, contract_rate_card:) }
+
+  let(:organization) { create(:organization) }
+  let(:customer) { contract_customer }
+  let(:contract_customer) { create(:customer, organization:) }
+  let(:contract) { create(:contract, organization: card_organization, customer: contract_customer) }
+  let(:card_organization) { organization }
+  let(:contract_rate_card) { create(:contract_rate_card, organization: card_organization, contract:) }
+
+  describe "enums" do
+    it do
+      expect(operation).to define_enum_for(:reason)
+        .backed_by_column_of_type(:enum)
+        .validating
+        .with_values(described_class::REASONS)
+      expect(operation).to define_enum_for(:cancellation_reason)
+        .backed_by_column_of_type(:enum)
+        .validating(allowing_nil: true)
+        .with_values(described_class::CANCELLATION_REASONS)
+        .with_prefix
+    end
+  end
+
+  describe "associations" do
+    it do
+      expect(operation).to belong_to(:organization)
+      expect(operation).to belong_to(:customer)
+      expect(operation).to belong_to(:contract_rate_card)
+      expect(operation).to belong_to(:invoice).optional
+    end
+  end
+
+  describe "Scopes" do
+    describe ".pending" do
+      let(:pending_operation) { create(:billing_operation) }
+      let(:cancelled_operation) do
+        create(
+          :billing_operation,
+          cancelled_at: Time.current,
+          cancellation_reason: :contract_termination
+        )
+      end
+
+      before do
+        pending_operation
+        create(:billing_operation, processed_at: Time.current)
+        cancelled_operation
+      end
+
+      it "excludes processed and cancelled operations" do
+        expect(described_class.pending).to eq([pending_operation])
+      end
+
+      it "persists cancellation without marking the operation processed" do
+        expect(cancelled_operation.reload.cancellation_reason).to eq("contract_termination")
+        expect(cancelled_operation.processed_at).to be_nil
+      end
+    end
+
+    describe ".due_for_processing" do
+      let(:timestamp) { Time.utc(2026, 2, 1) }
+      let(:past_operation) { create(:billing_operation, billing_at: timestamp - 1.second) }
+      let(:due_operation) { create(:billing_operation, billing_at: timestamp) }
+      let(:future_operation) { create(:billing_operation, billing_at: timestamp + 1.second) }
+      let(:completed_operation) { create(:billing_operation, billing_at: timestamp - 2.seconds, processed_at: timestamp - 1.second) }
+      let(:cancelled_operation) do
+        create(:billing_operation, billing_at: timestamp - 3.seconds, cancelled_at: timestamp - 1.second,
+          cancellation_reason: :contract_termination)
+      end
+
+      before do
+        past_operation
+        due_operation
+        future_operation
+        completed_operation
+        cancelled_operation
+      end
+
+      it "keeps pending operations due inclusively and orders by billing date" do
+        expect(described_class.due_for_processing(timestamp).order(:billing_at, :id))
+          .to eq([past_operation, due_operation])
+      end
+    end
+
+    describe ".earliest_per_contract_rate_card" do
+      let(:other_contract) { create(:contract, organization:, customer:) }
+      let(:other_card) { create(:contract_rate_card, organization:, contract: other_contract) }
+      let(:first_created_at) { Time.utc(2026, 1, 1, 9) }
+      let(:billing_at) { Time.utc(2026, 2, 1) }
+      let(:same_day_winner) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at:, created_at: first_created_at,
+          action_type: "close_fixed_arrears", id: "00000000-0000-4000-8000-000000000001")
+      end
+      let(:same_day_loser) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at:, created_at: first_created_at,
+          action_type: "close_fixed_arrears", id: "00000000-0000-4000-8000-000000000002")
+      end
+      let(:later_operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at: billing_at + 1.day,
+          action_type: "close_fixed_arrears", created_at: first_created_at - 1.day)
+      end
+      let(:other_card_operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card: other_card,
+          action_type: "close_fixed_arrears", billing_at: billing_at - 1.day)
+      end
+
+      before do
+        same_day_winner
+        same_day_loser
+        later_operation
+        other_card_operation
+      end
+
+      it "selects the earliest pending row per card using billing, creation, and id order" do
+        selected = described_class.earliest_per_contract_rate_card.index_by(&:contract_rate_card_id)
+
+        expect(selected).to eq({
+          contract_rate_card.id => same_day_winner,
+          other_card.id => other_card_operation
+        })
+      end
+
+      context "when an earlier ineligible row exists" do
+        let(:earlier_reconciliation) do
+          create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
+            reason: "rate_change", billing_at: billing_at - 1.day)
+        end
+
+        before { earlier_reconciliation }
+
+        it "selects after caller filters have removed unsupported operations" do
+          selected = described_class.due_for_processing(Time.utc(2026, 3, 1)).where(action_type: "close_fixed_arrears")
+            .earliest_per_contract_rate_card.index_by(&:contract_rate_card_id)
+
+          expect(selected.fetch(contract_rate_card.id)).to eq(same_day_winner)
+        end
+      end
+    end
+  end
+
+  describe "validations" do
+    it do
+      expect(operation).to validate_inclusion_of(:action_type).in_array(described_class::ACTION_TYPES.values)
+      expect(operation).to validate_presence_of(:billing_at)
+      expect(operation).to validate_presence_of(:target_cycle_started_at)
+    end
+
+    describe "identity validation" do
+      before { operation.valid? }
+
+      it "accepts a customer and rate card from the same organization" do
+        expect(operation.errors).to be_empty
+      end
+
+      context "when the customer differs from the contract customer" do
+        let(:customer) { create(:customer, organization:) }
+
+        it { expect(operation.errors.where(:customer, :invalid)).to be_present }
+      end
+
+      context "when the rate card belongs to another organization" do
+        let(:card_organization) { create(:organization) }
+        let(:contract_customer) { create(:customer, organization: card_organization) }
+
+        it { expect(operation.errors.where(:organization, :invalid)).to be_present }
+      end
+
+      context "when the customer belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let(:customer) { create(:customer, organization: other_organization) }
+
+        it { expect(operation.errors.where(:organization, :invalid)).to be_present }
+      end
+
+      context "when an invoice is assigned" do
+        let(:invoice) { create(:invoice, organization:, customer:) }
+        let(:operation) { build(:billing_operation, organization:, customer:, contract_rate_card:, invoice:) }
+
+        it "accepts an invoice for the same organization and customer" do
+          expect(operation).to be_valid
+        end
+
+        context "when the invoice belongs to another customer in the same organization" do
+          let(:other_customer) { create(:customer, organization:) }
+          let(:invoice) { create(:invoice, organization:, customer: other_customer) }
+
+          it do
+            expect(operation).not_to be_valid
+            expect(operation.errors.where(:invoice, :invalid)).to be_present
+          end
+        end
+
+        context "when the invoice belongs to another organization" do
+          let(:other_organization) { create(:organization) }
+          let(:other_customer) { create(:customer, organization: other_organization) }
+          let(:invoice) { create(:invoice, organization: other_organization, customer: other_customer) }
+
+          it do
+            expect(operation).not_to be_valid
+            expect(operation.errors.where(:invoice, :invalid)).to be_present
+          end
+        end
+      end
+
+      context "when an assigned association id does not exist" do
+        let(:missing_id) { SecureRandom.uuid }
+
+        context "with a missing customer" do
+          let(:customer) { nil }
+          let(:operation) { build(:billing_operation, organization:, customer_id: missing_id, contract_rate_card:) }
+
+          it do
+            expect(operation).not_to be_valid
+            expect(operation.errors.where(:customer, :invalid)).to be_present
+          end
+        end
+
+        context "with a missing rate card" do
+          let(:operation) { build(:billing_operation, organization:, customer:, contract_rate_card_id: missing_id) }
+
+          it do
+            expect(operation).not_to be_valid
+            expect(operation.errors.where(:contract_rate_card, :invalid)).to be_present
+          end
+        end
+
+        context "with a missing invoice" do
+          let(:operation) { build(:billing_operation, organization:, customer:, contract_rate_card:, invoice_id: missing_id) }
+
+          it do
+            expect(operation).not_to be_valid
+            expect(operation.errors.where(:invoice, :invalid)).to be_present
+          end
+        end
+      end
+
+      context "when an unsaved invoice is assigned" do
+        let(:invoice) { build(:invoice, organization:, customer: other_customer) }
+        let(:other_customer) { create(:customer, organization:) }
+        let(:operation) { build(:billing_operation, organization:, customer:, contract_rate_card:, invoice:) }
+
+        it { expect(operation.errors.where(:invoice, :invalid)).to be_present }
+      end
+
+      context "when reassigning identity associations" do
+        let(:persisted_operation) { create(:billing_operation, organization:, customer:, contract_rate_card:).reload }
+        let(:other_organization) { create(:organization) }
+        let(:other_customer) { create(:customer, organization: other_organization) }
+        let(:other_contract) { create(:contract, organization: other_organization, customer: other_customer) }
+        let(:other_rate_card) { create(:contract_rate_card, organization: other_organization, contract: other_contract) }
+        let(:other_invoice) { create(:invoice, organization: other_organization, customer: other_customer) }
+        let(:unsaved_invoice) { build(:invoice, organization: other_organization, customer: other_customer) }
+
+        it "revalidates when the invoice changes" do
+          expect(persisted_operation.update(invoice: other_invoice)).to be(false)
+          expect(persisted_operation.errors.where(:invoice, :invalid)).to be_present
+        end
+
+        it "validates an unsaved invoice before linking it" do
+          expect(persisted_operation.update(invoice: unsaved_invoice)).to be(false)
+          expect(persisted_operation.errors.where(:invoice, :invalid)).to be_present
+        end
+
+        it "revalidates when the organization changes" do
+          expect(persisted_operation.update(organization: other_organization)).to be(false)
+          expect(persisted_operation.errors.where(:organization, :invalid)).to be_present
+        end
+
+        it "revalidates when the customer changes" do
+          expect(persisted_operation.update(customer: other_customer)).to be(false)
+          expect(persisted_operation.errors.where(:organization, :invalid)).to be_present
+        end
+
+        it "revalidates when the rate card changes" do
+          expect(persisted_operation.update(contract_rate_card: other_rate_card)).to be(false)
+          expect(persisted_operation.errors.where(:organization, :invalid)).to be_present
+        end
+      end
+
+      context "when updating state without changing identity" do
+        let(:persisted_operation) { create(:billing_operation).reload }
+        let(:queries) { [] }
+
+        it "does not load identity associations" do
+          persisted_operation
+
+          ActiveSupport::Notifications.subscribed(
+            ->(_name, _start, _finish, _id, payload) { queries << payload[:sql] if payload[:name] != "SCHEMA" },
+            "sql.active_record"
+          ) do
+            persisted_operation.update!(processed_at: Time.current)
+          end
+
+          expect(queries.grep(/SELECT.*(organizations|customers|contract_rate_cards|contracts|invoices)/i)).to be_empty
+        end
+      end
+
+      context "without a customer" do
+        let(:customer) { nil }
+
+        it { expect(operation.errors.where(:customer, :blank)).to be_present }
+      end
+
+      context "without a rate card" do
+        let(:contract_rate_card) { nil }
+
+        it { expect(operation.errors.where(:contract_rate_card, :blank)).to be_present }
+      end
+
+      context "without an organization" do
+        let(:organization) { nil }
+        let(:customer) { nil }
+        let(:contract_customer) { nil }
+        let(:contract_rate_card) { nil }
+
+        it { expect(operation.errors.where(:organization, :blank)).to be_present }
+      end
+    end
+
+    describe "cancellation state validation" do
+      context "with a pending operation" do
+        it { expect(operation).to be_valid }
+      end
+
+      context "with a completed operation" do
+        let(:operation) { build(:billing_operation, processed_at: Time.current) }
+
+        it { expect(operation).to be_valid }
+      end
+
+      context "with a cancelled operation" do
+        let(:operation) { build(:billing_operation, cancelled_at: Time.current, cancellation_reason: :contract_termination) }
+
+        it { expect(operation).to be_valid }
+      end
+
+      context "with a cancellation time but no cause" do
+        let(:operation) { build(:billing_operation, cancelled_at: Time.current) }
+
+        it do
+          expect(operation).not_to be_valid
+          expect(operation.errors.where(:cancelled_at, :invalid)).to be_present
+        end
+      end
+
+      context "with a cause but no cancellation time" do
+        let(:operation) { build(:billing_operation, cancellation_reason: :contract_termination) }
+
+        it do
+          expect(operation).not_to be_valid
+          expect(operation.errors.where(:cancelled_at, :invalid)).to be_present
+        end
+      end
+
+      context "with a cancelled and processed operation" do
+        let(:operation) do
+          build(:billing_operation, cancelled_at: Time.current, cancellation_reason: :contract_termination, processed_at: Time.current)
+        end
+
+        it do
+          expect(operation).not_to be_valid
+          expect(operation.errors.where(:processed_at, :invalid)).to be_present
+        end
+      end
+    end
+  end
+
+  describe "#due_for_processing?" do
+    subject(:due_for_processing) { operation.due_for_processing?(timestamp:) }
+
+    let(:timestamp) { Time.utc(2026, 2, 1) }
+    let(:billing_at) { timestamp }
+    let(:processed_at) { nil }
+    let(:cancelled_at) { nil }
+    let(:operation) { described_class.new(billing_at:, processed_at:, cancelled_at:) }
+
+    context "when billing is in the past" do
+      let(:billing_at) { timestamp - 1.second }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when billing is exactly due" do
+      it { is_expected.to be(true) }
+    end
+
+    context "when billing is in the future" do
+      let(:billing_at) { timestamp + 1.second }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when already processed" do
+      let(:processed_at) { timestamp }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when cancelled" do
+      let(:cancelled_at) { timestamp }
+
+      it { is_expected.to be(false) }
+    end
+  end
+end

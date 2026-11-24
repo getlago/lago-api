@@ -7,8 +7,8 @@ class ApiKey < ApplicationRecord
     activity_log add_on analytic api_log billable_metric coupon applied_coupon credit_note customer_usage
     customer event fee invoice organization order order_form payment payment_receipt payment_request payment_method plan subscription lifetime_usage
     tax wallet wallet_transaction webhook_endpoint webhook_jwt_public_key invoice_custom_section
-    billing_entity alert feature security_log quote product_category product rate_card plan_rate_card
-    contract contract_rate_card usage_attribution_type x402_connection x402 attributed_usage
+    billing_entity alert feature security_log quote product_category product rate_card plan_rate_card plan_wallet
+    contract contract_rate_card contract_wallet usage_attribution_type x402_connection x402 attributed_usage agent_storefront agent
   ].freeze
 
   MODES = %w[read write].freeze
@@ -16,6 +16,8 @@ class ApiKey < ApplicationRecord
   attribute :permissions, default: -> { default_permissions }
 
   belongs_to :organization
+  # Set on the short-lived keys minted for the AI agent, which act with the member's permissions.
+  belongs_to :membership, optional: true
 
   before_create :set_value
 
@@ -37,13 +39,18 @@ class ApiKey < ApplicationRecord
   end
 
   def permit?(resource, mode)
-    return true unless organization.api_permissions_enabled?
+    # A member key stands in for a member of the dashboard: its permissions apply whatever the plan.
+    return true unless member_key? || organization.api_permissions_enabled?
 
     Array(permissions[resource]).include?(mode)
   end
 
   def self.default_permissions
     RESOURCES.index_with { MODES.dup }
+  end
+
+  def member_key?
+    membership_id.present?
   end
 
   def expired?(time = Time.current)
@@ -93,14 +100,17 @@ end
 #  value           :string           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
+#  membership_id   :uuid
 #  organization_id :uuid             not null
 #
 # Indexes
 #
+#  index_api_keys_on_membership_id    (membership_id)
 #  index_api_keys_on_organization_id  (organization_id)
 #  index_api_keys_on_value            (value) UNIQUE
 #
 # Foreign Keys
 #
+#  fk_rails_...  (membership_id => memberships.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #

@@ -94,6 +94,39 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "with the payment term" do
+      it "inherits the voided invoice's snapshotted term instead of the live customer term" do
+        voided_invoice.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+        customer.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+
+        invoice = regenerate_result.invoice
+        expect(invoice.payment_term).to eq("term_type" => "net", "days" => 60)
+        expect(invoice.net_payment_term).to eq(60)
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date + 60.days)
+      end
+
+      it "calculates a non-net snapshot from the new issuing date" do
+        voided_invoice.update!(payment_term: {term_type: "end_of_month"}, net_payment_term: nil)
+        customer.update!(payment_term: {term_type: "net", days: 60}, net_payment_term: 60)
+
+        invoice = regenerate_result.invoice
+
+        expect(invoice.payment_term).to eq("term_type" => "end_of_month")
+        expect(invoice.net_payment_term).to be_nil
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date.end_of_month)
+      end
+
+      it "derives a net term from the integer alias of a pre-feature voided invoice" do
+        voided_invoice.update!(payment_term: nil, net_payment_term: 30, payment_term_source: nil)
+
+        invoice = regenerate_result.invoice
+        expect(invoice.payment_term).to eq("term_type" => "net", "days" => 30)
+        expect(invoice.payment_term_source).to be_nil
+        expect(invoice.net_payment_term).to eq(30)
+        expect(invoice.payment_due_date).to eq(invoice.issuing_date + 30.days)
+      end
+    end
+
     context "with the purchase order number" do
       before { voided_invoice.update!(purchase_order_number: "PO-ORIGINAL") }
 
@@ -240,6 +273,41 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           expect(regenerated_invoice.applied_usage_thresholds.pluck(:id))
             .not_to match_array(voided_invoice.applied_usage_thresholds.pluck(:id))
         end
+
+        it "keeps the progressive billing trigger" do
+          expect(regenerate_result.invoice.progressive_billing_trigger).to eq("usage_threshold")
+        end
+
+        context "when another progressive billing invoice of the subscription holds its lock" do
+          before { stub_const("Subscriptions::LockService::ACQUIRE_LOCK_TIMEOUT", 0) }
+
+          it "fails to acquire the lock and regenerates nothing" do
+            with_advisory_lock("subscription-#{subscription.id}", lock_released_after: 2.seconds) do
+              result = Invoices::RegenerateFromVoidedService.call(voided_invoice:, fees_params:)
+
+              expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+            end
+
+            expect(Invoice.where(voided_invoice_id: voided_invoice.id)).to be_empty
+          end
+        end
+
+        context "when the voided invoice was triggered by a wallet expiration" do
+          let(:wallet) { create(:wallet, customer:) }
+
+          before do
+            voided_invoice.update!(progressive_billing_trigger: "wallet_expiration")
+            create(:applied_wallet_expiration, invoice: voided_invoice, wallet:, organization:)
+          end
+
+          it "duplicates the applied wallet expiration to the regenerated invoice" do
+            regenerated_invoice = regenerate_result.invoice
+
+            expect(regenerated_invoice.progressive_billing_trigger).to eq("wallet_expiration")
+            expect(regenerated_invoice.applied_wallet_expiration.wallet).to eq(wallet)
+            expect(voided_invoice.reload.applied_wallet_expiration.wallet).to eq(wallet)
+          end
+        end
       end
 
       context "when voided invoice is one_off type" do
@@ -285,6 +353,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           :customer,
           organization:,
           invoice_grace_period: 30,
+          payment_term: {term_type: "net", days: 30},
           net_payment_term: 30,
           subscription_invoice_issuing_date_anchor:,
           subscription_invoice_issuing_date_adjustment:

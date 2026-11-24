@@ -8,7 +8,7 @@ module Api
           json: ::V1::OrganizationSerializer.new(
             current_organization,
             root_name: "organization",
-            include: %i[taxes]
+            includes: %i[taxes]
           )
         )
       end

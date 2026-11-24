@@ -39,7 +39,7 @@ RSpec.describe Contracts::CurrentUsageService do
     usage = result.rate_card_usages.sole
 
     expect(usage.contract_rate_card).to eq(contract_rate_card)
-    expect(usage.billing_segment).to be_new_record
+    expect(usage.billing_segment).not_to respond_to(:save!)
     expect(usage.billing_segment).to have_attributes(
       rate_card_rate: rate, started_at: Time.zone.parse("2027-02-01"),
       ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-03-01"))
@@ -50,7 +50,7 @@ RSpec.describe Contracts::CurrentUsageService do
   end
 
   it "persists nothing" do
-    expect { result }.not_to change { [Fee.count, BillingSegment.count] }
+    expect { result }.not_to change { [Fee.count, LegacyBillingSegment.count] }
   end
 
   context "with an earlier timestamp" do
@@ -64,10 +64,42 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  context "when the contract has ended" do
+    let(:contract) do
+      create(:contract, :terminated, organization:, customer:, started_at: Time.zone.parse("2027-01-01"),
+        ended_at: Time.zone.parse("2027-02-01"), terminated_at: Time.zone.parse("2027-02-01"))
+    end
+
+    it "returns no current usage" do
+      expect(result.rate_card_usages).to eq([])
+      expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
+    end
+
+    context "with a timestamp before termination" do
+      let(:timestamp) { Time.zone.parse("2027-01-20 12:00:00") }
+
+      it "still prices the window open at that timestamp" do
+        expect(result.rate_card_usages.sole.fees.sole).to have_attributes(units: 1, amount_cents: 200)
+      end
+    end
+  end
+
   context "when the card is not effective yet" do
     let(:effective_date) { Date.new(2027, 2, 15) }
 
     it "returns no window" do
+      expect(result.rate_card_usages).to eq([])
+      expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
+    end
+  end
+
+  context "when the contract was canceled after its start date" do
+    let(:contract) do
+      create(:contract, :canceled, organization:, customer:, started_at: Time.zone.parse("2027-01-01"),
+        canceled_at: Time.zone.parse("2027-02-01"))
+    end
+
+    it "returns no usage even though its cards and matching events exist" do
       expect(result.rate_card_usages).to eq([])
       expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
     end
@@ -176,6 +208,15 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  context "when the contract is a draft whose start has passed" do
+    let(:contract) { create(:contract, :draft, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
+
+    it "returns the contract with no window" do
+      expect(result.rate_card_usages).to eq([])
+      expect(result).to have_attributes(contract:, amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
+    end
+  end
+
   context "with a product type filter" do
     let(:filters) { {product_type: "fixed"} }
     let(:fixed_rate_card) do
@@ -225,6 +266,12 @@ RSpec.describe Contracts::CurrentUsageService do
 
       it "prices the cards of that product only" do
         expect(priced_cards.keys).to contain_exactly(rate_card, eu_rate_card)
+      end
+
+      it "does not load units for the selected metered cards" do
+        statements = capture_sql { result }
+
+        expect(statements.grep(/FROM "contract_rate_cards_terms"/i)).to be_empty
       end
     end
 
@@ -357,7 +404,7 @@ RSpec.describe Contracts::CurrentUsageService do
 
     it "takes the taxes from the provider instead of the local ones" do
       expect(result.rate_card_usages.sole.fees.sole).to have_attributes(taxes_amount_cents: 17)
-      expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 17, total_amount_cents: 217)
+      expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 17, total_amount_cents: 217, taxes_unavailable: false)
     end
 
     context "when the provider cannot resolve the taxes" do
@@ -425,6 +472,39 @@ RSpec.describe Contracts::CurrentUsageService do
       end
     end
 
+    context "when untaxed usage is accepted on a provider failure" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, untaxed_on_provider_failure: true, filters:) }
+
+      before { stub_request(:post, endpoint).to_raise(Net::ReadTimeout) }
+
+      it "returns the untaxed usage flagged as such" do
+        expect(result).to be_success
+        expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, total_amount_cents: 200, taxes_unavailable: true)
+        expect(WebMock).to have_requested(:post, endpoint).once
+      end
+
+      context "when the provider throttles the request" do
+        before do
+          allow(Throttling).to receive(:for).with(:anrok).and_return(instance_double(Throttling::Base, check: false))
+        end
+
+        it "returns the untaxed usage flagged as such" do
+          expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, taxes_unavailable: true)
+        end
+      end
+
+      context "when the provider cannot resolve the taxes" do
+        before do
+          stub_request(:post, endpoint)
+            .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
+        end
+
+        it "returns the untaxed usage flagged as such" do
+          expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, taxes_unavailable: true)
+        end
+      end
+    end
+
     context "when taxes are skipped" do
       let(:apply_taxes) { false }
 
@@ -447,6 +527,231 @@ RSpec.describe Contracts::CurrentUsageService do
       usage = result.rate_card_usages.sole
 
       expect(usage.fees.sole).to have_attributes(fee_type: "product", units: 3, amount_cents: 3000)
+    end
+
+    context "with multiple fixed cards" do
+      let(:second_product) { create(:product, :fixed, organization:) }
+      let(:second_rate_card) { create(:rate_card, organization:, product: second_product, currency: "EUR") }
+
+      before do
+        create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card,
+          units: 4, effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+        create(:rate_card_rate, organization:, rate_card: second_rate_card,
+          effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "10"})
+      end
+
+      it "loads all card units in one query" do
+        contract_rate_card
+        second_rate_card
+
+        statements = capture_sql { result }
+
+        expect(result.rate_card_usages.size).to eq(2)
+        expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
+      end
+    end
+  end
+
+  context "with a without_product_category filter" do
+    let(:filters) { {without_product_category: true} }
+    let(:categorized_product) { create(:product, organization:, billable_metric: create(:billable_metric, organization:)) }
+    let(:categorized_rate_card) { create(:rate_card, organization:, product: categorized_product, currency: "EUR") }
+    let(:product) { create(:product, :standalone, :metered, organization:, billable_metric:) }
+
+    before do
+      create(:contract_rate_card, organization:, contract:, rate_card: categorized_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+      create(:rate_card_rate, organization:, rate_card: categorized_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+    end
+
+    it "returns only the rate card with no product category" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+    end
+  end
+
+  context "with a product_category_ids filter" do
+    let(:filters) { {product_category_ids: [product.product_category.id]} }
+    let(:product) { create(:product, :metered, organization:, billable_metric:) }
+    let(:other_product) { create(:product, :metered, organization:, billable_metric: create(:billable_metric, organization:)) }
+    let(:other_rate_card) { create(:rate_card, organization:, product: other_product, currency: "EUR") }
+
+    before do
+      create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+      create(:rate_card_rate, organization:, rate_card: other_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+    end
+
+    it "returns only rate cards whose product matches that category" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+    end
+  end
+
+  context "with without_product_category and product_category_ids both set" do
+    let(:categorized_product) { create(:product, organization:, billable_metric: create(:billable_metric, organization:)) }
+    let(:categorized_rate_card) { create(:rate_card, organization:, product: categorized_product, currency: "EUR") }
+    let(:categorized_contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card: categorized_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+    end
+    let(:other_categorized_product) { create(:product, organization:, billable_metric: create(:billable_metric, organization:)) }
+    let(:other_categorized_rate_card) { create(:rate_card, organization:, product: other_categorized_product, currency: "EUR") }
+    let(:other_categorized_contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card: other_categorized_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+    end
+    let(:product) { create(:product, :standalone, :metered, organization:, billable_metric:) }
+    let(:filters) { {without_product_category: true, product_category_ids: [other_categorized_product.product_category.id]} }
+
+    before do
+      categorized_contract_rate_card
+      create(:rate_card_rate, organization:, rate_card: categorized_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+      other_categorized_contract_rate_card
+      create(:rate_card_rate, organization:, rate_card: other_categorized_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "7"})
+    end
+
+    it "ORs the two conditions - admits both the standalone card and the card whose category is in the list" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to contain_exactly(contract_rate_card, other_categorized_contract_rate_card)
+    end
+
+    it "does not admit a card whose category is neither in the list nor absent" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).not_to include(categorized_contract_rate_card)
+    end
+  end
+
+  context "with a product_ids filter" do
+    let(:filters) { {product_ids: [product.id]} }
+    let(:other_product) { create(:product, :metered, organization:, billable_metric: create(:billable_metric, organization:)) }
+    let(:other_rate_card) { create(:rate_card, organization:, product: other_product, currency: "EUR") }
+
+    before do
+      create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+      create(:rate_card_rate, organization:, rate_card: other_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+    end
+
+    it "returns only the rate card for that product" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+    end
+  end
+
+  context "with a without_product_filter filter" do
+    let(:filters) { {without_product_filter: true} }
+    let(:product_filter) { create(:product_filter, organization:, product:) }
+    let(:filtered_rate_card) { create(:rate_card, organization:, product:, product_filter:, currency: "EUR") }
+
+    before do
+      create(:contract_rate_card, organization:, contract:, rate_card: filtered_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+      create(:rate_card_rate, organization:, rate_card: filtered_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+    end
+
+    it "returns only the rate card with no product filter" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+    end
+  end
+
+  context "with a product_filter_ids filter" do
+    let(:product_filter) { create(:product_filter, organization:, product:) }
+    let(:filtered_rate_card) { create(:rate_card, organization:, product:, product_filter:, currency: "EUR") }
+    let(:filtered_contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card: filtered_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+    end
+    let(:filters) { {product_filter_ids: [product_filter.id]} }
+
+    before do
+      filtered_contract_rate_card
+      create(:rate_card_rate, organization:, rate_card: filtered_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+    end
+
+    it "returns only the rate card whose product_filter is in the list" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([filtered_contract_rate_card])
+    end
+  end
+
+  context "with without_product_filter and product_filter_ids both set" do
+    let(:other_product_filter) { create(:product_filter, organization:, product:) }
+    let(:other_filtered_rate_card) { create(:rate_card, organization:, product:, product_filter: other_product_filter, currency: "EUR") }
+    let(:other_filtered_contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card: other_filtered_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+    end
+    let(:unlisted_product_filter) { create(:product_filter, organization:, product:) }
+    let(:unlisted_filtered_rate_card) { create(:rate_card, organization:, product:, product_filter: unlisted_product_filter, currency: "EUR") }
+    let(:unlisted_filtered_contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card: unlisted_filtered_rate_card,
+        effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
+    end
+    let(:filters) { {without_product_filter: true, product_filter_ids: [other_product_filter.id]} }
+
+    before do
+      other_filtered_contract_rate_card
+      create(:rate_card_rate, organization:, rate_card: other_filtered_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+      unlisted_filtered_contract_rate_card
+      create(:rate_card_rate, organization:, rate_card: unlisted_filtered_rate_card,
+        effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "7"})
+    end
+
+    it "ORs the two conditions - admits the no-filter card and the card whose filter is in the list" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to contain_exactly(contract_rate_card, other_filtered_contract_rate_card)
+    end
+
+    it "does not admit a card whose filter is neither in the list nor absent" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).not_to include(unlisted_filtered_contract_rate_card)
+    end
+  end
+
+  context "with a search_term" do
+    subject(:result) { described_class.call!(contract:, timestamp:, apply_taxes:, filters:, search_term:) }
+
+    let(:search_term) { product.name.downcase.first(5) }
+
+    it "matches case-insensitively on product name" do
+      expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+    end
+
+    context "when the term matches only the rate card's own name" do
+      let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:, currency: "EUR", name: "Enterprise tier card") }
+      let(:search_term) { "enterprise tier" }
+
+      it "still matches, independent of the product name" do
+        expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+      end
+    end
+
+    context "when the term matches only the rate card's code" do
+      let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:, currency: "EUR", code: "ent-tier-42") }
+      let(:search_term) { "ent-tier" }
+
+      it "still matches, independent of the rate card's name" do
+        expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+      end
+    end
+
+    context "when the term matches only the product filter's invoice_display_name" do
+      let(:product_filter) { create(:product_filter, organization:, product:, invoice_display_name: "Premium support add-on") }
+      let(:rate_card) { create(:rate_card, organization:, product:, product_filter:, billing_timing:, currency: "EUR") }
+      let(:search_term) { "premium support" }
+
+      it "still matches, independent of the product and rate card names" do
+        expect(result.rate_card_usages.map { |u| u.contract_rate_card }).to eq([contract_rate_card])
+      end
+    end
+
+    context "when the term matches nothing" do
+      let(:search_term) { "zzz-no-match-zzz" }
+
+      it "returns no window" do
+        expect(result.rate_card_usages).to eq([])
+      end
     end
   end
 end

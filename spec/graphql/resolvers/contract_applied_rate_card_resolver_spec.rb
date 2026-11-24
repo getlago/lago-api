@@ -16,16 +16,17 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
   let(:required_permission) { "contracts:view" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:contract) { create(:contract, organization:, name: "Platform contract") }
+  let(:customer) { create(:customer, organization:) }
+  let(:contract) { create(:contract, organization:, customer:, name: "Platform contract") }
   let(:contract_rate_card) do
     create(
       :contract_rate_card,
       organization:,
       contract:,
       units: 3,
+      next_billing_at: Time.zone.parse("2026-10-15T00:00:00Z"),
       effective_date: Date.new(2026, 10, 1),
-      billing_anchor_date: Date.new(2026, 10, 15),
-      next_billing_at: Time.zone.parse("2026-10-15T00:00:00Z")
+      billing_anchor_date: Date.new(2026, 10, 15)
     )
   end
 
@@ -49,22 +50,89 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "contracts:view"
 
-  it "returns the applied rate card with its contract, dates and rate phases" do
-    rate_override = create(:rate_override, organization:)
-    rate_phase = create(:rate_phase, :contract_level, organization:, contract_rate_card:, rate_override:)
+  context "when the applied rate card has a billing cursor" do
+    it "returns the applied rate card with its contract, dates and rate phases" do
+      rate_override = create(:rate_override, organization:)
+      rate_phase = create(:rate_phase, :contract_level, organization:, contract_rate_card:, rate_override:)
 
-    expect(execution["data"]["contractAppliedRateCard"]).to eq(
-      "id" => contract_rate_card.id,
-      "units" => 3.0,
-      "effectiveDate" => "2026-10-01",
-      "billingAnchorDate" => "2026-10-15",
-      "nextBillingAt" => "2026-10-15T00:00:00Z",
-      "contract" => {"id" => contract.id, "name" => "Platform contract"},
-      "product" => {"id" => contract_rate_card.rate_card.product_id},
-      "rateCard" => {"id" => contract_rate_card.rate_card_id},
-      "ratePhases" => [{"id" => rate_phase.id, "rateOverride" => {"id" => rate_override.id}}],
-      "ratePhasesCount" => 1
-    )
+      expect(execution["data"]["contractAppliedRateCard"]).to eq(
+        "id" => contract_rate_card.id,
+        "units" => 3.0,
+        "effectiveDate" => "2026-10-01",
+        "billingAnchorDate" => "2026-10-15",
+        "nextBillingAt" => "2026-10-15T00:00:00Z",
+        "contract" => {"id" => contract.id, "name" => "Platform contract"},
+        "product" => {"id" => contract_rate_card.rate_card.product_id},
+        "rateCard" => {"id" => contract_rate_card.rate_card_id},
+        "ratePhases" => [{"id" => rate_phase.id, "rateOverride" => {"id" => rate_override.id}}],
+        "ratePhasesCount" => 1
+      )
+    end
+
+    context "when there are no units rows" do
+      let(:contract_rate_card) do
+        create(
+          :contract_rate_card,
+          organization:,
+          contract:,
+          effective_date: Date.new(2026, 10, 1),
+          billing_anchor_date: Date.new(2026, 10, 15)
+        )
+      end
+
+      it "returns null units" do
+        expect(execution.dig("data", "contractAppliedRateCard", "units")).to be_nil
+      end
+    end
+
+    context "when multiple units rows exist" do
+      before do
+        create(
+          :contract_rate_card_term,
+          organization:,
+          contract_rate_card:,
+          units: 7,
+          effective_date: Date.new(2026, 9, 1)
+        )
+      end
+
+      it "returns the first effective units row" do
+        expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(7.0)
+      end
+    end
+  end
+
+  context "when there are no units rows" do
+    let(:contract_rate_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        effective_date: Date.new(2026, 10, 1),
+        billing_anchor_date: Date.new(2026, 10, 15),
+        next_billing_at: Time.zone.parse("2026-10-15T00:00:00Z")
+      )
+    end
+
+    it "returns null units" do
+      expect(execution.dig("data", "contractAppliedRateCard", "units")).to be_nil
+    end
+  end
+
+  context "when multiple units rows exist" do
+    before do
+      create(
+        :contract_rate_card_term,
+        organization:,
+        contract_rate_card:,
+        units: 7,
+        effective_date: Date.new(2026, 9, 1)
+      )
+    end
+
+    it "returns the first effective units row" do
+      expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(7.0)
+    end
   end
 
   context "when the applied rate card belongs to another organization" do

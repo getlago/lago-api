@@ -4,6 +4,8 @@ module Mutations
   module Auth
     module Google
       class RegisterUser < BaseMutation
+        include RequiresLegacySignup
+
         graphql_name "GoogleRegisterUser"
         description "Register a new user with Google Oauth"
 

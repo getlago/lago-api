@@ -54,6 +54,21 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     end
   end
 
+  context "with V2::EventsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        V2::EventsQuery.call(
+          organization:,
+          pagination:,
+          filters: {code: "requests", external_contract_id: "contract", timestamp_from: 2.days.ago.iso8601,
+                    timestamp_to: Time.current.iso8601}
+        ).events
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "events"
+  end
+
   context "with BillableMetricsQuery" do
     let(:default_scope) { ->(pagination) { BillableMetricsQuery.call(organization:, pagination:).billable_metrics } }
     let(:filtered_scope) do
@@ -303,6 +318,32 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     end
 
     it_behaves_like "a keyset-paginated query", table: "plan_rate_cards", index: "index_plan_rate_cards_by_cursor"
+  end
+
+  context "with ContractWalletsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        ContractWalletsQuery.call(organization:, pagination:, filters: {contract_id: SecureRandom.uuid, created_at_from: "2026-01-01"}).contract_wallets
+      end
+    end
+    let(:default_scope) do
+      ->(pagination) { ContractWalletsQuery.call(organization:, pagination:, filters: {contract_id: SecureRandom.uuid}).contract_wallets }
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "catalog_wallets", index: "index_catalog_wallets_by_cursor"
+  end
+
+  context "with PlanWalletsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PlanWalletsQuery.call(organization:, pagination:, filters: {plan_id: SecureRandom.uuid, created_at_from: "2026-01-01"}).plan_wallets
+      end
+    end
+    let(:default_scope) do
+      ->(pagination) { PlanWalletsQuery.call(organization:, pagination:, filters: {plan_id: SecureRandom.uuid}).plan_wallets }
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "plan_wallets", index: "index_plan_wallets_by_cursor"
   end
 
   context "with ProductFeesQuery" do

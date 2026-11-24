@@ -38,6 +38,96 @@ RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodServ
       end
     end
 
+    context "when customer has no default and only non-card payment methods in Stripe" do
+      let(:provider_customer) do
+        create(
+          :stripe_customer,
+          customer:,
+          provider_customer_id:,
+          payment_provider: create(:stripe_provider, organization:),
+          payment_method_id: nil,
+          provider_payment_methods:
+        )
+      end
+
+      before do
+        stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
+          status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
+        )
+        stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
+          status: 200, body: get_stripe_fixtures("customer_list_payment_methods_response.json") do |res|
+            res["data"][0]["type"] = "link"
+            res["data"][1]["type"] = "sepa_debit"
+          end
+        )
+      end
+
+      context "when the types are allowed on the customer" do
+        let(:provider_payment_methods) { %w[card link sepa_debit] }
+
+        it "returns the latest one" do
+          result = subject.call
+          expect(result.payment_method_id).to eq "pm_1R2EmOQ8iJWBZFaMKJHOwcvP"
+        end
+      end
+
+      context "when only one of the types is allowed on the customer" do
+        let(:provider_payment_methods) { %w[sepa_debit] }
+
+        it "returns the latest allowed one" do
+          result = subject.call
+          expect(result.payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
+        end
+      end
+
+      context "when the caller restricts the types to cards" do
+        subject { described_class.new(provider_customer:, types: %w[card]) }
+
+        let(:provider_payment_methods) { %w[card link sepa_debit] }
+
+        it "returns no payment method" do
+          result = subject.call
+          expect(result.payment_method_id).to be_nil
+        end
+      end
+
+      context "when none of the types is allowed on the customer" do
+        let(:provider_payment_methods) { %w[card] }
+
+        it "returns no payment method" do
+          result = subject.call
+          expect(result.payment_method_id).to be_nil
+        end
+      end
+    end
+
+    context "when customer has no default, an older card and a newer non-card payment method in Stripe" do
+      let(:provider_customer) do
+        create(
+          :stripe_customer,
+          customer:,
+          provider_customer_id:,
+          payment_provider: create(:stripe_provider, organization:),
+          payment_method_id: nil,
+          provider_payment_methods: %w[card sepa_debit]
+        )
+      end
+
+      it "returns the card" do
+        stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
+          status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
+        )
+        stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
+          status: 200, body: get_stripe_fixtures("customer_list_payment_methods_response.json") do |res|
+            res["data"][0]["type"] = "sepa_debit" # created 1741883924, the newer one
+          end
+        )
+
+        result = subject.call
+        expect(result.payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
+      end
+    end
+
     context "when customer has no payment method in Stripe" do
       it do
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(

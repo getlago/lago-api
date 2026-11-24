@@ -86,6 +86,8 @@ module Charges
             charge.update!(params)
           end
         end
+
+        Plans::AgentStorefrontGuardService.call(plan:).raise_if_error!
       end
 
       trigger_cascade(old_filters_attrs, old_parent_attrs:, old_applied_pricing_unit_attrs:)

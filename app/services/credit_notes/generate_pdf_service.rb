@@ -62,8 +62,9 @@ module CreditNotes
     end
 
     def attach_pdf_to_credit_note(pdf_file)
-      credit_note.file.attach(
-        io: File.open(pdf_file.path),
+      Utils::DocumentAttachment.attach(
+        credit_note.file,
+        path: pdf_file.path,
         filename: "#{credit_note.number}.pdf",
         content_type: "application/pdf"
       )

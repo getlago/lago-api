@@ -32,6 +32,10 @@ module Customers
       integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: args[:integration_customers])
       return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
 
+      unless PaymentTerms::ValidateService.new(result, **args.slice(:payment_term, :net_payment_term)).valid?
+        return result
+      end
+
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
       old_payment_provider_id = resolved_payment_provider_id(customer) if api_context? && old_provider_customer
@@ -101,10 +105,8 @@ module Customers
 
         Customers::UpdateInvoiceIssuingDateSettingsService.call(customer:, params: args)
 
-        if args.key?(:net_payment_term)
-          Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
-        end
-
+        # NOTE: A term change never rewrites open drafts (snapshot-freeze):
+        #       it applies to future drafts only.
         PaymentTerms::AssignService.call(record: customer, params: args)
 
         # NOTE: Some fields are not editable if customer is attached to subscriptions:
@@ -207,7 +209,8 @@ module Customers
           create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
         end
 
-        if args.dig(:provider_customer, :provider_customer_id)
+        # Without a payment provider there is no provider customer to update, as on create.
+        if args.dig(:provider_customer, :provider_customer_id) && customer.provider_customer
           update_result = PaymentProviderCustomers::UpdateService.call(customer)
           update_result.raise_if_error!
         end
@@ -310,7 +313,7 @@ module Customers
       return customer.applied_dunning_campaign unless args.key?(:applied_dunning_campaign_id)
       return unless args[:applied_dunning_campaign_id]
 
-      DunningCampaign.find(args[:applied_dunning_campaign_id])
+      organization.dunning_campaigns.find(args[:applied_dunning_campaign_id])
     end
   end
 end

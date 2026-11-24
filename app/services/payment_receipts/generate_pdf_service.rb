@@ -67,8 +67,9 @@ module PaymentReceipts
     end
 
     def attach_pdf_to_payment_receipt(pdf_file)
-      payment_receipt.file.attach(
-        io: File.open(pdf_file.path),
+      Utils::DocumentAttachment.attach(
+        payment_receipt.file,
+        path: pdf_file.path,
         filename: "#{payment_receipt.number}.pdf",
         content_type: "application/pdf"
       )

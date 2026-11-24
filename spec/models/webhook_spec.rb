@@ -163,6 +163,68 @@ RSpec.describe Webhook do
         )
       end
     end
+
+    context "when signature algorithm is Standard Webhooks" do
+      let(:signature_algo) { :standard_webhooks }
+      let(:webhook) do
+        create(
+          :webhook,
+          webhook_endpoint:,
+          id: "8b2f6a1e-3c4d-4e5f-9a6b-7c8d9e0f1a2b",
+          payload: {"webhook_type" => "invoice.created", "amount_cents" => 100}
+        )
+      end
+
+      before do
+        # Secret: whsec_ + base64 of the 32 bytes 0x00..0x1f.
+        create(:webhook_endpoint_signing_key, webhook_endpoint:, secret: "whsec_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")
+      end
+
+      around { |example| travel_to(Time.zone.at(1_762_300_800)) { example.run } }
+
+      it "returns only the Standard Webhooks headers" do
+        # printf '%s' '8b2f6a1e-3c4d-4e5f-9a6b-7c8d9e0f1a2b.1762300800.{"webhook_type":"invoice.created","amount_cents":100}' \
+        #   | openssl dgst -sha256 -mac HMAC -macopt hexkey:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f -binary | base64
+        expect(subject).to eq(
+          "webhook-id" => "8b2f6a1e-3c4d-4e5f-9a6b-7c8d9e0f1a2b",
+          "webhook-timestamp" => "1762300800",
+          "webhook-signature" => "v1,Kb+qawXvtjgaYfg4mZ5Nwx56fhXVFDUa+V+BmUirSEY="
+        )
+      end
+
+      it "uses the time of each call as timestamp" do
+        first_headers = webhook.generate_headers
+        travel_to(Time.zone.at(1_762_304_400))
+
+        # Same derivation as above with the timestamp 1762304400.
+        expect(webhook.generate_headers).to eq(
+          "webhook-id" => first_headers["webhook-id"],
+          "webhook-timestamp" => "1762304400",
+          "webhook-signature" => "v1,mUzwJIALxpDnPZ/2ZjpQp3aqBCSK3/sKsse6S6wfoEM="
+        )
+      end
+    end
+  end
+
+  describe "#signing_key" do
+    subject { webhook.signing_key }
+
+    let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
+    let(:webhook) { create(:webhook, webhook_endpoint:) }
+
+    context "when the endpoint has no signing key" do
+      it { is_expected.to be_nil }
+    end
+
+    context "when the endpoint has a signing key" do
+      let(:signing_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+      before { signing_key }
+
+      it "returns the current key of the endpoint" do
+        expect(subject).to eq(signing_key)
+      end
+    end
   end
 
   describe "#jwt_signature" do

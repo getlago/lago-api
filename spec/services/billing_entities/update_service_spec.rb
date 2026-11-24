@@ -182,19 +182,57 @@ RSpec.describe BillingEntities::UpdateService do
 
         before do
           billing_entity.update!(net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
-          allow(BillingEntities::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
         end
 
-        it "updates the corresponding draft invoices" do
-          current_date = DateTime.parse("22 Jun 2022")
+        it "persists the new term on both columns" do
+          result = update_service.call
 
-          travel_to(current_date) do
+          expect(result).to be_success
+          expect(result.billing_entity.net_payment_term).to eq(2)
+          expect(result.billing_entity.payment_term).to eq("term_type" => "net", "days" => 2)
+        end
+
+        it "does not rewrite open draft invoices (snapshot-freeze)" do
+          draft = create(:invoice, :draft, customer:, billing_entity:, payment_term: {term_type: "net", days: 30}, net_payment_term: 30, issuing_date: Time.current.to_date, payment_due_date: Time.current.to_date + 30.days)
+
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(draft.reload).to have_attributes(
+            payment_term: {"term_type" => "net", "days" => 30},
+            net_payment_term: 30,
+            payment_due_date: Time.current.to_date + 30.days
+          )
+        end
+      end
+
+      context "when updating payment_term" do
+        before do
+          billing_entity.update!(net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
+        end
+
+        context "with a structured term" do
+          let(:params) { {payment_term: {term_type: "days_end_of_month", days: 10}} }
+
+          it "writes the term and mirrors a null alias" do
             result = update_service.call
-            expect(result).to be_success
 
-            expect(result.billing_entity.net_payment_term).to eq(2)
-            expect(result.billing_entity.payment_term).to eq("term_type" => "net", "days" => 2)
-            expect(BillingEntities::UpdateInvoicePaymentDueDateService).to have_received(:call).with(billing_entity:, net_payment_term: 2)
+            expect(result.billing_entity).to have_attributes(
+              payment_term: {"term_type" => "days_end_of_month", "days" => 10},
+              net_payment_term: nil
+            )
+          end
+        end
+
+        context "with an invalid shape" do
+          let(:params) { {payment_term: {term_type: "day_of_month", day_of_month: 32}} }
+
+          it "returns a validation failure and changes nothing" do
+            result = update_service.call
+
+            expect(result).to be_failure
+            expect(result.error.messages[:payment_term]).to eq(["invalid_day_of_month"])
+            expect(billing_entity.reload.payment_term).to eq("term_type" => "net", "days" => 30)
           end
         end
       end

@@ -40,6 +40,7 @@ RSpec.describe V2::CustomerSerializer do
       tax_identification_number: "FR12345678901",
       timezone: nil,
       net_payment_term: 30,
+      payment_term: {"term_type" => "net", "days" => 30},
       external_salesforce_id: "sf_001",
       finalize_zero_amount_invoice: "skip",
       skip_invoice_custom_sections: true,
@@ -102,7 +103,7 @@ RSpec.describe V2::CustomerSerializer do
   end
 
   it "keeps the other scalar fields of V1" do
-    excluded = %i[billing_configuration shipping_address metadata net_payment_term]
+    excluded = %i[billing_configuration shipping_address metadata net_payment_term payment_term]
     v1_payload = V1::CustomerSerializer.new(customer).serialize.except(*excluded)
 
     expect(payload.slice(*v1_payload.keys)).to eq(v1_payload)
@@ -179,6 +180,46 @@ RSpec.describe V2::CustomerSerializer do
         deleted_at: nil
       }])
       expect(payload[:integration_customers]).to eq([])
+    end
+  end
+
+  context "with a quickbooks link and a xero link" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:includes) { %i[integration_customers] }
+    let(:quickbooks_integration) { create(:quickbooks_integration, organization:, code: "qb_main") }
+    let(:quickbooks_customer) do
+      create(
+        :quickbooks_customer,
+        customer:,
+        integration: quickbooks_integration,
+        external_customer_id: "58",
+        code: "qb_link",
+        is_default: true,
+        sync_with_provider: true
+      )
+    end
+    let(:xero_customer) { create(:xero_customer, customer:) }
+
+    before do
+      quickbooks_customer
+      xero_customer
+    end
+
+    it "expands each link with its own type" do
+      links = payload[:integration_customers]
+
+      expect(links.pluck(:type)).to contain_exactly("quickbooks", "xero")
+      expect(links.find { |link| link[:type] == "quickbooks" }.stringify_keys).to eq(
+        "lago_id" => quickbooks_customer.id,
+        "external_customer_id" => "58",
+        "type" => "quickbooks",
+        "integration_code" => "qb_main",
+        "code" => "qb_link",
+        "is_default" => true,
+        "category" => "accounting",
+        "sync_with_provider" => true
+      )
     end
   end
 

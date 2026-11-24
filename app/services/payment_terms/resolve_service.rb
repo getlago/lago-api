@@ -4,17 +4,22 @@ module PaymentTerms
   class ResolveService < BaseService
     Result = BaseResult[:payment_term, :source]
 
-    def initialize(customer:)
+    def initialize(customer:, subscription: nil, billing_entity: nil)
       @customer = customer
+      @subscription = subscription
+      @billing_entity = billing_entity
       super
     end
 
     def call
-      if customer.payment_term.present?
+      if subscription&.payment_term.present?
+        result.payment_term = PaymentTerm.from_h(subscription.payment_term)
+        result.source = "subscription"
+      elsif customer.payment_term.present?
         result.payment_term = PaymentTerm.from_h(customer.payment_term)
         result.source = "customer"
-      elsif customer.billing_entity.payment_term.present?
-        result.payment_term = PaymentTerm.from_h(customer.billing_entity.payment_term)
+      elsif issuing_billing_entity.payment_term.present?
+        result.payment_term = PaymentTerm.from_h(issuing_billing_entity.payment_term)
         result.source = "billing_entity"
       else
         result.payment_term = PaymentTerm.new(term_type: "due_on_receipt")
@@ -26,6 +31,10 @@ module PaymentTerms
 
     private
 
-    attr_reader :customer
+    attr_reader :customer, :subscription, :billing_entity
+
+    def issuing_billing_entity
+      billing_entity || subscription&.billing_entity || customer.billing_entity
+    end
   end
 end

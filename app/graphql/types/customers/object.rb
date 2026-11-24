@@ -34,6 +34,7 @@ module Types
       field :net_payment_term, Integer, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
       field :payment_provider_code, String, null: true
+      field :payment_term, Types::PaymentTerms::Object, null: true
       field :phone, String, null: true
       field :state, String, null: true
       field :tax_identification_number, String, null: true
@@ -93,6 +94,10 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :active_contracts_count,
+        Integer,
+        null: false,
+        description: "Number of active contracts per customer"
       field :active_subscriptions_count,
         Integer,
         null: false,
@@ -161,6 +166,10 @@ module Types
         end
       end
 
+      def active_contracts_count
+        dataloader.with(Sources::CustomerActiveContractsCount).load(object.id)
+      end
+
       def active_subscriptions_count
         object.active_subscriptions.count
       end
@@ -212,6 +221,12 @@ module Types
 
       def has_overwritten_invoice_custom_sections_selection
         !object.skip_invoice_custom_sections && object.manual_selected_invoice_custom_sections.any?
+      end
+
+      def payment_term
+        if object.payment_term.present?
+          PaymentTerm.from_h(object.payment_term)
+        end
       end
     end
   end

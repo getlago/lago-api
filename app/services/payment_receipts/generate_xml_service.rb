@@ -45,8 +45,9 @@ module PaymentReceipts
     end
 
     def attach_xml_to_payment_receipt(xml_file)
-      payment_receipt.xml_file.attach(
-        io: File.open(xml_file.path),
+      Utils::DocumentAttachment.attach(
+        payment_receipt.xml_file,
+        path: xml_file.path,
         filename: "#{payment_receipt.number}.xml",
         content_type: "application/xml"
       )

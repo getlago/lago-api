@@ -19,12 +19,24 @@ RSpec.describe Resolvers::ContractResolver do
   let(:customer) { create(:customer, organization:) }
   let(:catalog_plan) { create(:catalog_plan, organization:, code: "premium", currency: "EUR") }
   let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+  let(:first_card) { create(:contract_rate_card, organization:, contract:, next_billing_at: first_billing_at) }
+  let(:second_card) { create(:contract_rate_card, organization:, contract:, effective_date: 2.days.ago.to_date, next_billing_at: second_billing_at) }
+  let(:first_billing_at) { Time.zone.parse("2026-11-10 12:00:00") }
+  let(:second_billing_at) { Time.zone.parse("2026-11-11 12:00:00") }
+  let(:priced_cards) do
+    Array.new(3) do |index|
+      rate_card = create(:rate_card, organization:)
+      create(:rate_card_rate, organization:, rate_card:)
+      create(:contract_rate_card, organization:, contract:, rate_card:,
+        effective_date: (index + 1).months.ago.to_date, next_billing_at: first_billing_at)
+    end
+  end
 
   let(:query) do
     <<~GQL
       query($contractId: ID!) {
         contract(id: $contractId) {
-          id externalId status billingTime
+          id externalId status
           customer { id }
           plan { id code name currency }
           appliedRateCards { id rateCard { id } effectiveDate nextBillingAt }
@@ -55,9 +67,39 @@ RSpec.describe Resolvers::ContractResolver do
     expect(response["appliedRateCardsCount"]).to eq(1)
   end
 
-  # A finished schedule has no next instant, so the field is nullable and must answer null
-  # rather than fail the whole query.
-  it "answers null for a card whose schedule has run out" do
+  it "reads billing cursors without querying operations" do
+    first_card
+    second_card
+    queries = []
+    subscriber = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('FROM "billing_operations"') }
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { execution }
+
+    expect(queries).to be_empty
+    expect(execution["data"]["contract"]["appliedRateCards"].map { it["nextBillingAt"] }).to eq(
+      [second_billing_at.iso8601, first_billing_at.iso8601]
+    )
+  end
+
+  it "renders stored cursors without loading each card's schedule" do
+    priced_cards
+    queries = Hash.new { |hash, key| hash[key] = [] }
+    tables = %w[customers billing_entities rate_cards rate_card_rates rate_phases products billable_metrics]
+    subscriber = lambda do |*, payload|
+      sql = payload[:sql]
+      tables.each { |table| queries[table] << sql if sql.include?(%(FROM "#{table}")) }
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { execution }
+
+    clocks = execution["data"]["contract"]["appliedRateCards"].to_h { [it["id"], it["nextBillingAt"]] }
+    expect(clocks.slice(*priced_cards.map(&:id)).values).to all(be_present)
+    expect(queries.values.flatten).not_to be_empty
+    expect(queries.fetch("customers", []).size).to be <= 2 # The contract resolver also loads its customer.
+    expect(queries.except("customers").values.map(&:size)).to all(be <= 1)
+  end
+
+  it "answers null for a card whose stored cursor has been cleared" do
     create(:contract_rate_card, organization:, contract:).update!(next_billing_at: nil)
 
     expect(execution["data"]["contract"]["appliedRateCards"].sole["nextBillingAt"]).to be_nil
@@ -84,6 +126,36 @@ RSpec.describe Resolvers::ContractResolver do
 
       it "answers the anchor" do
         expect(execution["data"]["contract"]).to eq("billingAnchorDate" => "2026-10-15", "effectiveBillingAnchorDate" => "2026-10-15")
+      end
+    end
+  end
+
+  describe "currency" do
+    let(:query) do
+      <<~GQL
+        query($contractId: ID!) {
+          contract(id: $contractId) { currency }
+        }
+      GQL
+    end
+
+    it "follows the plan's currency when there is one" do
+      expect(execution["data"]["contract"]["currency"]).to eq("EUR")
+    end
+
+    context "with no catalog plan" do
+      let(:contract) { create(:contract, organization:, customer:) }
+
+      it "falls back to the customer's currency" do
+        expect(execution["data"]["contract"]["currency"]).to eq(customer.currency)
+      end
+
+      context "when the customer has no currency set" do
+        let(:customer) { create(:customer, organization:, currency: nil) }
+
+        it "falls back to the organization's default currency" do
+          expect(execution["data"]["contract"]["currency"]).to eq(organization.default_currency)
+        end
       end
     end
   end

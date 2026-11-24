@@ -24,6 +24,7 @@ RSpec.describe Mutations::Contracts::Create do
     {
       externalCustomerId: customer.external_id,
       externalId: "contract-1",
+      code: "initial",
       planCode: catalog_plan.code
     }
   end
@@ -32,7 +33,7 @@ RSpec.describe Mutations::Contracts::Create do
     <<-GQL
       mutation($input: CreateContractInput!) {
         createContract(input: $input) {
-          id externalId status billingTime
+          id externalId code status
           selectedInvoiceCustomSections { id }
           skipInvoiceCustomSections
           plan { id }
@@ -54,10 +55,19 @@ RSpec.describe Mutations::Contracts::Create do
 
     expect(result_data["id"]).to be_present
     expect(result_data["externalId"]).to eq("contract-1")
+    expect(result_data["code"]).to eq("initial")
     expect(result_data["status"]).to eq("active")
-    expect(result_data["billingTime"]).to eq("calendar")
     expect(result_data["plan"]["id"]).to eq(catalog_plan.id)
     expect(result_data["appliedRateCardsCount"]).to eq(1)
+  end
+
+  context "when the billing schedule is locked" do
+    before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+    it "returns the existing concurrency error" do
+      expect(execution["errors"].sole["extensions"]["code"]).to eq("lock_acquisition_failed")
+      expect(organization.contracts).to be_empty
+    end
   end
 
   context "with invoice custom sections" do
@@ -73,7 +83,7 @@ RSpec.describe Mutations::Contracts::Create do
   end
 
   context "without a plan" do
-    let(:input) { {externalCustomerId: customer.external_id, externalId: "contract-1"} }
+    let(:input) { super().except(:planCode) }
 
     it "creates a plan-less contract" do
       result_data = execution["data"]["createContract"]

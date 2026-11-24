@@ -9,6 +9,7 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
   let(:contract) { create(:contract, external_id: "contract_001") }
   let(:rate_card) { create(:rate_card, organization:, code: "seats") }
   let(:deleted_at) { nil }
+  let(:next_billing_at) { Time.zone.parse("2026-10-15T00:00:00Z") }
   let(:contract_rate_card) do
     create(
       :contract_rate_card,
@@ -16,15 +17,16 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
       contract:,
       rate_card:,
       # Too precise for a Float, so rendering units as a Float fails the comparison.
-      units: BigDecimal("12.3456789012345678901"),
+      units:,
       effective_date: Date.new(2026, 10, 1),
       billing_anchor_date: Date.new(2026, 10, 15),
-      next_billing_at: Time.zone.parse("2026-10-15T00:00:00Z"),
+      next_billing_at:,
       created_at: Time.zone.parse("2026-09-30T08:00:00Z"),
       updated_at: Time.zone.parse("2026-10-01T09:30:00Z"),
       deleted_at:
     )
   end
+  let(:units) { BigDecimal("12.3456789012345678901") }
   let(:flat_payload) do
     {
       lago_id: contract_rate_card.id,
@@ -42,6 +44,30 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
 
   it "serializes the applied rate card, with a null deletion timestamp" do
     expect(payload).to eq(flat_payload)
+  end
+
+  context "when multiple units rows exist" do
+    before do
+      create(
+        :contract_rate_card_term,
+        organization:,
+        contract_rate_card:,
+        units: BigDecimal("3.25"),
+        effective_date: Date.new(2026, 9, 1)
+      )
+    end
+
+    it "serializes the first effective units row" do
+      expect(payload).to eq(flat_payload.merge(units: BigDecimal("3.25")))
+    end
+  end
+
+  context "when there are no units rows" do
+    let(:units) { nil }
+
+    it "serializes null units" do
+      expect(payload).to eq(flat_payload.merge(units: nil))
+    end
   end
 
   context "when the applied rate card is deleted" do
@@ -64,14 +90,15 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
     end
   end
 
-  # A finished schedule has no next instant: the card is created with one, then its clock is cleared.
+  # An exhausted chain must not fall back to computing a new cycle.
   context "when the billing schedule has run out" do
     before do
-      travel_to(Time.zone.parse("2026-10-20T16:45:00Z")) { contract_rate_card.update!(next_billing_at: nil) }
+      contract_rate_card
+      travel_to(Time.zone.parse("2026-10-01T09:30:00Z")) { contract_rate_card.update!(next_billing_at: nil) }
     end
 
     it "renders a null next billing time" do
-      expect(payload).to eq(flat_payload.merge(next_billing_at: nil, updated_at: "2026-10-20T16:45:00Z"))
+      expect(payload).to eq(flat_payload.merge(next_billing_at: nil))
     end
   end
 end

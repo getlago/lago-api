@@ -15,12 +15,21 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
   end
 
   describe "#expire_cache" do
-    it "deletes the cached value" do
-      allow(Rails.cache).to receive(:delete).with(cache_service.cache_key)
+    it "replaces the cached value with the invalidated marker" do
+      Rails.cache.write(cache_service.cache_key, "cached")
 
       cache_service.expire_cache
 
-      expect(Rails.cache).to have_received(:delete).with(cache_service.cache_key)
+      expect(Rails.cache.read(cache_service.cache_key)).to eq(described_class::INVALIDATED_MARKER)
+    end
+  end
+
+  describe "INVALIDATED_MARKER" do
+    it "reads as an expired cached key for the previous cache reader" do
+      cache_json = JSON.parse(described_class::INVALIDATED_MARKER)
+      api_key = ApiKey.instantiate(cache_json["api_key"].slice(*ApiKey.column_names))
+
+      expect(api_key).to be_expired
     end
   end
 
@@ -28,12 +37,24 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
     let(:organization) { create(:organization, api_keys:) }
     let(:api_keys) { create_list(:api_key, 3) }
 
-    it "deletes all cached values" do
-      allow(Rails.cache).to receive(:delete)
+    it "invalidates all cached values" do
+      allow(Rails.cache).to receive(:write)
 
       described_class.expire_all_cache(organization)
 
-      expect(Rails.cache).to have_received(:delete).exactly(3).times
+      expect(Rails.cache).to have_received(:write)
+        .with(anything, described_class::INVALIDATED_MARKER, expires_in: described_class::INVALIDATED_MARKER_TTL)
+        .exactly(3).times
+    end
+
+    it "also invalidates the keys minted for the AI agent" do
+      member_key = ApiKeys::CreateMemberKeyService.call!(membership: create(:membership, organization:)).api_key
+      allow(Rails.cache).to receive(:write)
+
+      described_class.expire_all_cache(organization)
+
+      expect(Rails.cache).to have_received(:write)
+        .with("api_key/#{described_class::CACHE_KEY_VERSION}/#{member_key.value}", described_class::INVALIDATED_MARKER, anything)
     end
   end
 
@@ -67,6 +88,100 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
         end
       end
 
+      context "when the cache holds the invalidated marker" do
+        before { cache_service.expire_cache }
+
+        it "returns the api_key and the organization from the database without caching them" do
+          expect(cache_service.call).to eq([api_key, organization])
+
+          expect(Rails.cache.read(cache_service.cache_key)).to eq(described_class::INVALIDATED_MARKER)
+        end
+      end
+
+      context "when the api key is revoked while a request is reading it" do
+        include_context "with mocked security logger"
+
+        let(:api_key) { create(:api_key) }
+        let(:in_flight_request) { described_class.new(auth_token, with_cache: true) }
+
+        before do
+          create(:api_key)
+
+          # Revoke the key after the in-flight request read it from the database, before it writes the cache.
+          allow(in_flight_request).to receive(:fetch_from_database).and_wrap_original do |original|
+            original.call.tap { revoke }
+          end
+        end
+
+        context "with a destroyed api key" do
+          let(:revoke) { ApiKeys::DestroyService.call(api_key) }
+
+          it "does not cache the revoked api key" do
+            expect(in_flight_request.call.first).to eq(api_key)
+
+            expect(described_class.call(auth_token, with_cache: true)).to eq([nil, nil])
+          end
+        end
+
+        context "with a rotated api key" do
+          let(:revoke) { ApiKeys::RotateService.call(api_key:, params: {}) }
+
+          it "does not cache the revoked api key" do
+            expect(in_flight_request.call.first).to eq(api_key)
+
+            expect(described_class.call(auth_token, with_cache: true)).to eq([nil, nil])
+          end
+        end
+      end
+
+      context "with an entry written before a column was added" do
+        before do
+          stale_organization = organization.attributes
+            .except("self_serve", "environment", "production_organization_id", "activation_status")
+          Rails.cache.write(cache_service.cache_key, {api_key: api_key.attributes, organization: stale_organization}.to_json)
+        end
+
+        it "reads the api_key and the organization from the database" do
+          result = cache_service.call
+
+          expect(result).to eq([api_key, organization])
+          expect(result.last.environment).to eq("production")
+          expect(result.last.activation_status).to eq("active")
+          # The database answered: the entry is written again with the new columns.
+          expect(JSON.parse(Rails.cache.read(cache_service.cache_key))["organization"])
+            .to include("activation_status" => "active")
+        end
+      end
+
+      context "with an entry whose organization is null" do
+        before do
+          Rails.cache.write(cache_service.cache_key, {api_key: api_key.attributes, organization: nil}.to_json)
+        end
+
+        it "reads the api_key and the organization from the database" do
+          expect(cache_service.call).to eq([api_key, organization])
+        end
+      end
+
+      context "when an instance running the previous code revokes the cached api key" do
+        include_context "with mocked security logger"
+
+        let(:api_key) { create(:api_key) }
+
+        before do
+          create(:api_key)
+          cache_service.call
+
+          # What `expire_cache` of the previous release writes during a rolling deploy.
+          api_key.touch(:expires_at) # rubocop:disable Rails/SkipsModelValidations
+          Rails.cache.write("api_key/1/#{auth_token}", described_class::INVALIDATED_MARKER)
+        end
+
+        it "does not authenticate the revoked api key" do
+          expect(described_class.call(auth_token, with_cache: true)).to eq([nil, nil])
+        end
+      end
+
       context "when cached value is expired" do
         let(:api_key) { create(:api_key, expires_at: Time.current - 10.minutes) }
 
@@ -79,6 +194,28 @@ RSpec.describe ApiKeys::CacheService, cache: :redis do
 
         it "does not return the cache key and organization" do
           expect(cache_service.call).to eq([nil, nil])
+        end
+      end
+
+      context "when the cached value was written by a release without member keys" do
+        let(:membership) { create(:membership, organization:) }
+        let(:api_key) { ApiKeys::CreateMemberKeyService.call!(membership:).api_key }
+
+        before do
+          Rails.cache.write(cache_service.cache_key, {
+            api_key: api_key.attributes.except("membership_id"),
+            organization: organization.attributes
+          }.to_json)
+        end
+
+        it "reads the key from the database, with its membership" do
+          expect(cache_service.call.first.membership_id).to eq(membership.id)
+        end
+
+        it "caches it again with its membership" do
+          cache_service.call
+
+          expect(JSON.parse(Rails.cache.read(cache_service.cache_key))["api_key"]["membership_id"]).to eq(membership.id)
         end
       end
     end

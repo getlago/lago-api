@@ -42,9 +42,14 @@ charges:
   delete:
 contracts:
   view:
+    - finance
+    - manager
   create:
+    - manager
   update:
+    - manager
   terminate:
+    - manager
 coupons:
   view:
     - finance
@@ -228,23 +233,17 @@ pricing_units:
     - finance
   create:
   update:
-product_filters:
-  view:
-  create:
-  update:
-  delete:
 products:
   view:
-  create:
-  update:
-  delete:
-product_categories:
-  view:
+    - finance
+    - manager
   create:
   update:
   delete:
 rate_cards:
   view:
+    - finance
+    - manager
   create:
   update:
   delete:

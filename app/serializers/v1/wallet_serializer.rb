@@ -13,6 +13,7 @@ module V1
         name: model.name,
         code: model.code,
         purchase_order_number: model.purchase_order_number,
+        payment_term: model.payment_term,
         rate_amount: model.rate_amount,
         credits_balance: model.credits_balance,
         credits_ongoing_balance: model.credits_ongoing_balance,
@@ -33,6 +34,7 @@ module V1
       }
 
       payload[:x402_enabled] = model.x402_enabled if model.organization.x402_payments_enabled?
+      payload[:invoice_usage_on_expiration] = true if model.invoice_usage_on_expiration?
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
       payload.merge!(limitations) if include?(:limitations)
       payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)

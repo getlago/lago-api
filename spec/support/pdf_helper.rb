@@ -2,7 +2,8 @@
 
 module PdfHelper
   # This helper stubs the PDF generation request to return the input HTML as response so that it can be used in the tests.
-  def stub_pdf_generation
+  # Pass `pdf` to return those bytes instead, for specs that need a real PDF.
+  def stub_pdf_generation(pdf: nil)
     stub_request(:post, "#{ENV["LAGO_PDF_URL"]}/forms/chromium/convert/html")
       .to_return do |request|
         env = {
@@ -12,7 +13,7 @@ module PdfHelper
         }
         params = Rack::Multipart.parse_multipart(env)
         html = params["file1"][:tempfile].read
-        {body: html, status: 200}
+        {body: pdf || html, status: 200}
       end
   end
 end

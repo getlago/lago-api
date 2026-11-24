@@ -391,6 +391,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:clean_pending_signups" do
+    let(:job) { "schedule:clean_pending_signups" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("2 Apr 2022 00:00:00") }
+
+    it "enqueues a clean pending signups job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.minute
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::PendingSignupsCleanupJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:retry_pending_vies_checks" do
     let(:job) { "schedule:retry_pending_vies_checks" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:05:00") }
@@ -658,12 +679,12 @@ describe Clockwork do
     end
   end
 
-  describe "schedule:process_billing_segments" do
-    let(:job) { "schedule:process_billing_segments" }
+  describe "schedule:process_billing_operations" do
+    let(:job) { "schedule:process_billing_operations" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:00:00") }
     let(:end_time) { Time.zone.parse("1 Apr 2022 01:00:00") }
 
-    it "enqueues a process billing segments job once an hour" do
+    it "enqueues a billing operations scheduling job once an hour" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,
@@ -675,7 +696,7 @@ describe Clockwork do
       expect(Clockwork::Test.times_run(job)).to eq(1)
 
       Clockwork::Test.block_for(job).call
-      expect(Clock::ProcessBillingSegmentsJob).to have_been_enqueued
+      expect(Clock::ScheduleBillingOperationsJob).to have_been_enqueued
     end
   end
 end

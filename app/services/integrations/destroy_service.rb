@@ -13,10 +13,25 @@ module Integrations
     def call
       return result.not_found_failure!(resource: "integration") unless integration
 
-      integration.destroy!
+      ActiveRecord::Base.transaction do
+        if integration.is_a?(Integrations::AgentStorefrontIntegration)
+          # Waits for the enrollments in progress, which lock the storefront for share.
+          integration.lock!
+          if integration.enrolled_agents?
+            result.forbidden_failure!(code: "agent_storefront_has_enrolled_agents").raise_if_error!
+          end
+        end
+
+        integration.destroy!
+      end
 
       result.integration = integration
-      register_security_log(integration)
+      # Sent once committed: Okta and Entra ID destroy inside a transaction that can still roll back.
+      after_commit { register_security_log(integration) }
+      # Separate hook so a Nango problem can never skip the security log.
+      after_commit { delete_nango_connection(integration) }
+      result
+    rescue BaseService::FailedResult
       result
     end
 
@@ -31,6 +46,12 @@ module Integrations
         log_event: "integration.deleted",
         resources: {integration_name: integration.name, integration_type: integration.provider_key}
       )
+    end
+
+    def delete_nango_connection(integration)
+      if integration.is_a?(Integrations::QuickbooksIntegration)
+        Integrations::Aggregator::DeleteConnectionService.call(integration:)
+      end
     end
   end
 end

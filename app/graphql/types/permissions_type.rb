@@ -11,5 +11,13 @@ module Types
     Permission.permissions_hash.keys.each do |permissions|
       field permissions.tr(":", "_"), Boolean, null: false
     end
+
+    %i[product_categories product_filters].each do |resource|
+      %i[view create update delete].each do |action|
+        field "#{resource}_#{action}", Boolean, null: false,
+          hash_key: "products_#{action}",
+          deprecation_reason: "Use products#{action.to_s.camelize} instead."
+      end
+    end
   end
 end

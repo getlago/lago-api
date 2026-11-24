@@ -700,11 +700,102 @@ RSpec.describe Subscriptions::ActivateService do
             .with([subscription], anything, invoicing_reason: :upgrading)
         end
 
-        it "splits BillNonInvoiceableFeesJob per purchase order number" do
+        it "keeps a single BillNonInvoiceableFeesJob for the rotation" do
           result
 
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([previous_subscription], anything)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription], anything)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.exactly(:once)
+            .with([previous_subscription, subscription], anything)
+        end
+      end
+
+      context "when the previous and new subscriptions belong to different billing entities" do
+        let(:billing_entity) { create(:billing_entity, organization:) }
+
+        before do
+          previous_subscription.update!(billing_entity:)
+        end
+
+        it "splits the upgrade bill into one job per billing entity" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([previous_subscription], anything, invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], anything, invoicing_reason: :upgrading)
+        end
+
+        it "keeps a single BillNonInvoiceableFeesJob for the rotation" do
+          result
+
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.exactly(:once)
+            .with([previous_subscription, subscription], anything)
+        end
+
+        context "when the new subscription is explicitly bound to the same entity" do
+          before { subscription.update!(billing_entity:) }
+
+          it "keeps both subscriptions on the same invoice" do
+            result
+
+            expect(BillSubscriptionJob).to have_been_enqueued
+              .with([previous_subscription, subscription], anything, invoicing_reason: :upgrading)
+          end
+        end
+      end
+
+      context "when the previous and new subscriptions resolve to different payment methods" do
+        before { previous_subscription.update!(payment_method_type: :manual) }
+
+        it "splits the upgrade bill into one job per payment method" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([previous_subscription], anything, invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], anything, invoicing_reason: :upgrading)
+        end
+      end
+
+      context "when the new subscription opted out of invoice consolidation" do
+        before { subscription.update!(consolidate_invoice: false) }
+
+        it "bills the opted-out subscription on its own invoice" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], anything, invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([previous_subscription], anything, invoicing_reason: :upgrading)
+        end
+      end
+
+      context "when both subscriptions opted out of invoice consolidation" do
+        before do
+          previous_subscription.update!(consolidate_invoice: false)
+          subscription.update!(consolidate_invoice: false, external_id: previous_subscription.external_id)
+        end
+
+        it "keeps the rotation on a single invoice" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued.exactly(:once)
+            .with([previous_subscription, subscription], anything, invoicing_reason: :upgrading)
+        end
+      end
+
+      context "when the previous and new subscriptions carry different payment terms" do
+        before do
+          previous_subscription.update!(payment_term: {"term_type" => "net", "days" => 30})
+          subscription.update!(payment_term: {"term_type" => "end_of_month"})
+        end
+
+        it "splits the upgrade bill into one job per payment term" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([previous_subscription], anything, invoicing_reason: :upgrading)
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with([subscription], anything, invoicing_reason: :upgrading)
         end
       end
     end

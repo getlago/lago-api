@@ -77,6 +77,44 @@ RSpec.describe UsageAttributionValue do
     end
   end
 
+  describe ".remaining_capacity", cache: :memory do
+    subject(:remaining_capacity) { described_class.remaining_capacity(customer_id: customer.id, usage_attribution_type_id: usage_attribution_type.id) }
+
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:usage_attribution_type) { create(:usage_attribution_type, organization:) }
+
+    before do
+      stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 2)
+      create(:usage_attribution_value, organization:, customer:, usage_attribution_type:)
+      create(:usage_attribution_value, organization:, customer: create(:customer, organization:), usage_attribution_type:)
+      create(:usage_attribution_value, organization:, customer:, usage_attribution_type: create(:usage_attribution_type, organization:))
+    end
+
+    it "counts the values of the customer and type only" do
+      expect(remaining_capacity).to eq(1)
+      expect(described_class.limit_reached?(customer_id: customer.id, usage_attribution_type_id: usage_attribution_type.id)).to be(false)
+    end
+
+    context "when the customer holds the maximum of values for the type" do
+      before { create(:usage_attribution_value, organization:, customer:, usage_attribution_type:) }
+
+      it "has no capacity left and caches the reached limit" do
+        expect(remaining_capacity).to eq(0)
+
+        described_class.where(customer:, usage_attribution_type:).first.discard!
+
+        expect(described_class.limit_reached?(customer_id: customer.id, usage_attribution_type_id: usage_attribution_type.id)).to be(true)
+      end
+
+      context "when one of them is discarded" do
+        before { described_class.where(customer:, usage_attribution_type:).first.discard! }
+
+        it { is_expected.to eq(1) }
+      end
+    end
+  end
+
   describe "soft deletion" do
     it "hides discarded records behind the default scope" do
       usage_attribution_value.save!

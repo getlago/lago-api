@@ -30,7 +30,7 @@ module Events
 
         SCALE = 12
         CHECK_MAX_EXECUTION_TIME = 2
-        ORDERS = {"amount" => "amount", "events_count" => "events"}.freeze
+        ORDERS = {"amount" => "amount", "units" => "units", "events_count" => "events"}.freeze
 
         def initialize(organization_id:, external_subscription_id:, from_datetime:, to_datetime:, group_key:, label_filters:,
           charge_columns:, order_by:, search:, limit:, offset:, deduplicate:, max_groups:, max_execution_time:)
@@ -103,6 +103,7 @@ module Events
                     node,
                     #{cells_sql.join(", ")},
                     #{amount_sql} AS amount,
+                    #{charge_units_sql} AS units,
                     #{split_units_sql}
                     count() AS events
                   FROM (
@@ -212,6 +213,11 @@ module Events
 
         def units_sql(column)
           column.count ? "toDecimal128(1, #{SCALE})" : "event_units"
+        end
+
+        # The units of every charge, listed filters or not, which rank the values on the units basis.
+        def charge_units_sql
+          charge_columns.map { "sumIf(#{units_sql(it)}, #{code_condition(it)})" }.join(" + ")
         end
 
         def level_windows_sql

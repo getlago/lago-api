@@ -476,4 +476,15 @@ RSpec.describe Billing::RateCards::CycleWalker do
       expect(walker.resume(Time.utc(2026, 2, 1)).index).to eq(0)
     end
   end
+
+  describe "#cycle_after" do
+    it "looks ahead without moving the walker's current cycle" do
+      current = walker.start
+      lookahead = walker.cycle_after(current)
+
+      expect([lookahead.index, lookahead.started_at, lookahead.ended_at])
+        .to eq([1, Time.utc(2026, 2, 28), Time.utc(2026, 3, 31)])
+      expect(walker.current_cycle).to eq(current)
+    end
+  end
 end

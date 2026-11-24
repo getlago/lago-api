@@ -6,5 +6,6 @@ HttpLog.configure do |config|
   config.enabled = true
   config.color = :yellow
 
-  config.url_denylist_pattern = /clickhouse:8123/
+  # The reCAPTCHA siteverify body carries the secret.
+  config.url_denylist_pattern = %r{clickhouse:8123|recaptcha/api/siteverify}
 end

@@ -53,6 +53,19 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     }.compact
   end
 
+  # Terms giving the same due date for every issuing date share a key, so they bill on one invoice.
+  def grouping_key
+    # Day 31 of the issuing month is clamped to its last day, never earlier than the issuing date
+    return {"term_type" => "end_of_month"} if term_type == "day_of_month" && day_of_month == 31 && month_offset.zero?
+    return to_h unless days&.zero?
+
+    case term_type
+    when "net" then {"term_type" => "due_on_receipt"}
+    when "net_end_of_month", "days_end_of_month" then {"term_type" => "end_of_month"}
+    else to_h
+    end
+  end
+
   # The legacy integer can only represent net and due_on_receipt.
   def net_payment_term_alias
     case term_type
@@ -60,6 +73,19 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     when "due_on_receipt" then 0
     when "end_of_month", "net_end_of_month", "days_end_of_month", "day_of_month" then nil
     else raise ArgumentError, "unknown term_type: #{term_type}"
+    end
+  end
+
+  # Localized sentence for the term in the current I18n locale. Given an issuing date, a
+  # day_of_month term names the day and month its due date really falls on: an offset-0 day
+  # already past on that date rolls into the following month, and day 31 clamps to short months.
+  def label(issuing_date: nil)
+    if term_type == "day_of_month"
+      day_of_month_label(issuing_date&.to_date)
+    elsif days&.zero?
+      I18n.t("invoice.payment_terms.#{grouping_key["term_type"]}")
+    else
+      I18n.t("invoice.payment_terms.#{term_type}", count: days, days:)
     end
   end
 
@@ -85,6 +111,27 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     return integer if integer && range.cover?(integer)
 
     raise ArgumentError, "invalid #{field} for #{term_type}: #{value.inspect}"
+  end
+
+  def month_offset_variant(months)
+    case months
+    when 0 then "same_month"
+    when 1 then "following_month"
+    else "months_after"
+    end
+  end
+
+  def day_of_month_label(issuing_date)
+    if issuing_date
+      due_date = day_of_month_due_date(issuing_date)
+      day = due_date.day
+      months = (due_date.year * 12 + due_date.month) - (issuing_date.year * 12 + issuing_date.month)
+    else
+      day = day_of_month
+      months = month_offset
+    end
+
+    I18n.t("invoice.payment_terms.day_of_month.#{month_offset_variant(months)}", day:, months:)
   end
 
   # month_offset → clamp → roll forward (only reachable with offset 0) → re-clamp
