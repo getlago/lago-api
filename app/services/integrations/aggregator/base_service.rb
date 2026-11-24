@@ -39,12 +39,8 @@ module Integrations
       end
 
       # A QuickBooks integration whose connection now points at another company never reaches Nango.
-      def call_with_middlewares(&)
-        if realm_id_mismatch_blocked?
-          realm_id_changed_failure
-        else
-          super
-        end
+      def call_with_middlewares(&block)
+        with_middlewares { realm_id_mismatch_blocked? ? realm_id_changed_failure : call(&block) }
       end
 
       private

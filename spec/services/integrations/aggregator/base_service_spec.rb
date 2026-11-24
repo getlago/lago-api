@@ -442,7 +442,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
     end
   end
 
-  describe "realm id mismatch guard" do
+  describe "#call_with_middlewares" do
     subject(:result) { service_class.call(integration:) }
 
     let(:service_class) do
@@ -496,6 +496,13 @@ RSpec.describe Integrations::Aggregator::BaseService do
         expect(log_output.string).not_to include(connection_id)
         expect(log_output.string).not_to include("Bearer")
         expect(log_output.string).not_to include("nango-secret-placeholder")
+      end
+
+      it "runs the blocked call inside the tracer span" do
+        allow(LagoTracer).to receive(:in_span).and_call_original
+
+        expect(result.error.code).to eq("realm_id_changed")
+        expect(LagoTracer).to have_received(:in_span).with(a_string_ending_with("#call")).once
       end
 
       it "raises a method not allowed failure through call!" do
