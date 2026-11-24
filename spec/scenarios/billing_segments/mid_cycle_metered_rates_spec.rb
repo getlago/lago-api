@@ -17,7 +17,8 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
   end
   let(:proration) { false }
   let(:card) { create(:rate_card, organization:, product: create(:product, organization:, billable_metric: metric), currency: "USD", proration:) }
-  let(:model) { :standard }
+  let(:old_model) { :standard }
+  let(:new_model) { old_model }
   let(:old_price) { {amount: "1"} }
   let(:new_price) { {amount: "2"} }
 
@@ -30,7 +31,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
 
   before do
     stub_pdf_generation
-    create(:rate_card_rate, organization:, rate_card: card, code: "old", effective_from: start, rate_model: model, rate_properties: old_price)
+    create(:rate_card_rate, organization:, rate_card: card, code: "old", effective_from: start, rate_model: old_model, rate_properties: old_price)
     create(:contract_rate_card, organization:, contract:, rate_card: card, billing_scope: "cycle",
       effective_date: start.to_date, billing_anchor_date: start.to_date, next_billing_at: close)
   end
@@ -39,7 +40,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
     travel_to(at) do
       api_call do
         post_with_token(organization, "/api/v2/rate_cards/#{card.code}/rates", {rate: {
-          code: "new", effective_from: switch.iso8601, billing_interval_unit: "month", rate_model: model, rate_properties: new_price
+          code: "new", effective_from: switch.iso8601, billing_interval_unit: "month", rate_model: new_model, rate_properties: new_price
         }})
       end
     end
@@ -73,7 +74,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
   end
 
   context "when both rates are graduated" do
-    let(:model) { :graduated }
+    let(:old_model) { :graduated }
     let(:old_price) do
       {graduated_ranges: [{from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
         {from_value: 100, to_value: nil, per_unit_amount: "1", flat_amount: "0"}]}
@@ -100,7 +101,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
 
   context "with counted events and two volume rates" do
     let(:aggregation_type) { :count_agg }
-    let(:model) { :volume }
+    let(:old_model) { :volume }
     let(:old_price) { {volume_ranges: [{from_value: 0, to_value: nil, per_unit_amount: "1", flat_amount: "2"}]} }
     let(:new_price) do
       {volume_ranges: [{to_value: "1", per_unit_amount: "5", flat_amount: "0"}, {to_value: nil, per_unit_amount: "3", flat_amount: "4"}]}
@@ -114,8 +115,63 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
     end
   end
 
+  context "when Count switches from standard to volume" do
+    let(:aggregation_type) { :count_agg }
+    let(:new_model) { :volume }
+    let(:new_price) do
+      {volume_ranges: [{to_value: "2", per_unit_amount: "5", flat_amount: "0"}, {to_value: nil, per_unit_amount: "3", flat_amount: "4"}]}
+    end
+
+    it "selects the tier with three events but charges only the third event at the new price" do
+      event(start, 10)
+      event(start + 1.day, 20)
+      add_rate
+      event(switch, 30)
+
+      invoice = bill
+      expect(segment_fees(invoice)).to eq([["old", 2, 2 * 100], ["new", 1, (3 + 4) * 100]])
+      expect(invoice.fees.find_by!(rate_card_rate: card.rates.find_by!(code: "new")).events_count).to eq(1)
+    end
+  end
+
+  context "when Sum switches from package to graduated" do
+    let(:old_model) { :package }
+    let(:old_price) { {free_units: 2, package_size: 5, amount: "1"} }
+    let(:new_model) { :graduated }
+    let(:new_price) do
+      {graduated_ranges: [{to_value: "10", per_unit_amount: "3", flat_amount: "0"}, {to_value: nil, per_unit_amount: "2", flat_amount: "0"}]}
+    end
+
+    it "carries all eight units, including free units, into the new tiers" do
+      event(start, 8)
+      add_rate
+      event(switch, 7)
+
+      # Six paid units require two packages. The next seven units span two tiers.
+      expect(segment_fees(bill)).to eq([["old", 8, 2 * 100], ["new", 7, (2 * 3 + 5 * 2) * 100]])
+    end
+  end
+
+  context "when Sum switches from graduated to package" do
+    let(:old_model) { :graduated }
+    let(:old_price) do
+      {graduated_ranges: [{from_value: 0, to_value: 5, per_unit_amount: "3", flat_amount: "0"},
+        {from_value: 5, to_value: nil, per_unit_amount: "2", flat_amount: "0"}]}
+    end
+    let(:new_model) { :package }
+    let(:new_price) { {free_units: 2, package_size: 5, amount: "1"} }
+
+    it "starts a fresh allowance and bills one package for the five paid units" do
+      event(start, 8)
+      add_rate
+      event(switch, 7)
+
+      expect(segment_fees(bill)).to eq([["old", 8, (5 * 3 + 3 * 2) * 100], ["new", 7, 100]])
+    end
+  end
+
   context "with two graduated percentage rates", :premium do
-    let(:model) { :graduated_percentage }
+    let(:old_model) { :graduated_percentage }
     let(:old_price) { {graduated_percentage_ranges: [{from_value: 0, to_value: nil, rate: "5", flat_amount: "0"}]} }
     let(:new_price) do
       {graduated_percentage_ranges: [{to_value: "100", rate: "5", flat_amount: "8"}, {to_value: nil, rate: "10", flat_amount: "2"}]}
@@ -130,7 +186,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
   end
 
   context "with free units and packages" do
-    let(:model) { :package }
+    let(:old_model) { :package }
     let(:old_price) { {free_units: 2, package_size: 5, amount: "1"} }
     let(:new_price) { {free_units: 2, package_size: 5, amount: "3"} }
 
@@ -143,7 +199,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
   end
 
   context "with percentage pricing and one free event per segment" do
-    let(:model) { :percentage }
+    let(:old_model) { :percentage }
     let(:old_price) { {rate: "10", fixed_amount: "1", free_units_per_events: 1, free_units_per_total_aggregation: "0"} }
     let(:new_price) { old_price.merge(rate: "20") }
 
@@ -172,7 +228,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
   end
 
   context "with dynamic pricing of a non-prorated sum", :premium do
-    let(:model) { :dynamic }
+    let(:old_model) { :dynamic }
     let(:old_price) { {} }
     let(:new_price) { {} }
 
@@ -188,11 +244,36 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
     let(:recurring) { true }
     let(:proration) { true }
 
-    it "weights the accumulated units for the days served at each price" do
+    before do
       event(start, 31)
       add_rate
       event(switch, 31)
+    end
+
+    it "weights the accumulated units for the days served at each price" do
       expect(segment_fees(bill).map(&:last)).to eq([15 * 100, 32 * 200]) # 31 × 15/31, then 62 × 16/31.
+    end
+
+    context "when the new rate is graduated" do
+      let(:new_model) { :graduated }
+      let(:new_price) do
+        {graduated_ranges: [{to_value: "40", per_unit_amount: "31", flat_amount: "0"}, {to_value: nil, per_unit_amount: "62", flat_amount: "0"}]}
+      end
+
+      it "splits the 62 full units across tiers before weighting both by 16/31" do
+        expect(segment_fees(bill)).to eq([["old", 31, 15 * 100], ["new", 62, (40 * 100 + 22 * 200) * 16]])
+      end
+    end
+
+    context "when the new rate is volume" do
+      let(:new_model) { :volume }
+      let(:new_price) do
+        {volume_ranges: [{to_value: "40", per_unit_amount: "31", flat_amount: "0"}, {to_value: nil, per_unit_amount: "62", flat_amount: "0"}]}
+      end
+
+      it "selects the upper tier with 62 full units and charges for 32 weighted units" do
+        expect(segment_fees(bill)).to eq([["old", 31, 15 * 100], ["new", 62, 32 * 6200]])
+      end
     end
   end
 
@@ -276,6 +357,32 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
 
       it "includes the removal day and divides both segments by the full 31 days" do
         expect(segment_fees(bill).map(&:last)).to eq([2 * 15 * 100, (2 * 16 + 5) * 200])
+      end
+
+      context "when the new rate is graduated" do
+        let(:new_model) { :graduated }
+        let(:new_price) do
+          {graduated_ranges: [{to_value: "2", per_unit_amount: "31", flat_amount: "0"}, {to_value: nil, per_unit_amount: "62", flat_amount: "0"}]}
+        end
+
+        it "prices the carried identifiers in the lower tier and the new identifier in the upper tier" do
+          # A and B occupy the first tier for five and sixteen days; C occupies the second for sixteen.
+          expect(segment_fees(bill)).to eq([["old", 2, 2 * 15 * 100], ["new", 2, (5 + 16) * 100 + 16 * 200]])
+        end
+      end
+
+      context "when the new rate is volume" do
+        let(:new_model) { :volume }
+        let(:new_price) do
+          {volume_ranges: [{to_value: "2", per_unit_amount: "31", flat_amount: "0"}, {to_value: nil, per_unit_amount: "62", flat_amount: "0"}]}
+        end
+
+        it "uses three closing identifiers to select the tier and bills each active day, including removal day" do
+          event(switch + 1.day, "d", operation_type: "add")
+
+          # A: five days, B and C: sixteen each, D: fifteen; three remain at close.
+          expect(segment_fees(bill)).to eq([["old", 2, 2 * 15 * 100], ["new", 3, (5 + 2 * 16 + 15) * 200]])
+        end
       end
     end
   end
