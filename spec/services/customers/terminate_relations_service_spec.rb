@@ -56,6 +56,24 @@ RSpec.describe Customers::TerminateRelationsService do
     end
   end
 
+  context "with draft invoices and a live contract on the shadow organization of a migration" do
+    let(:contract) { create(:contract, :pending, customer:) }
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization)
+      contract
+      invoices
+    end
+
+    it "cancels the contract and deletes the drafts instead of finalizing them" do
+      expect { terminate_service.call }.not_to have_enqueued_job(Invoices::FinalizeJob)
+
+      expect(contract.reload).to be_canceled
+      expect(invoices.map(&:reload)).to all(be_deleted)
+    end
+  end
+
   context "with an applied coupon" do
     let(:applied_coupon) { create(:applied_coupon, customer:) }
 
