@@ -123,14 +123,16 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
-    it "reads billing cursors without querying operations" do
+    it "reads stored cursors and loads only units history in one query" do
       second_card
       queries = []
       subscriber = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('FROM "billing_operations"') }
 
       ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { subject }
 
-      expect(queries).to be_empty
+      expect(queries.size).to eq(1)
+      expect(queries.sole).to include('"billing_operations"."action_type" =')
+      expect(queries.sole).not_to include('"billing_operations"."pricing_segments"')
       expect(json[:applied_rate_cards].to_h { [it[:lago_id], it[:next_billing_at]] }).to eq(
         contract_rate_card.id => first_billing_at.iso8601(6),
         second_card.id => second_billing_at.iso8601(6)

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Clock
-  # Fans out one scheduling job per customer with a due contract rate card.
+  # Schedules customers with periodic billing or pending units reconciliation.
   class ScheduleBillingOperationsJob < ClockJob
     unique :until_executed, on_conflict: :log, lock_ttl: 30.minutes
 
@@ -14,14 +14,14 @@ module Clock
     def due_customer_ids
       periodic_customer_ids = ContractRateCard.due_for_billing(Time.current).distinct
         .order("contracts.customer_id").pluck("contracts.customer_id")
-      adjustment_customer_ids = BillingOperation.pending
-        .where("billing_operations.action_type = 'adjust_fixed_advance'")
+      reconciliation_customer_ids = BillingOperation.pending
+        .where("billing_operations.action_type = 'reconcile_units'")
         .where(billing_at: ..Time.current)
         .joins(:customer, :contract_rate_card)
         .where(customers: {deleted_at: nil}, contract_rate_cards: {deleted_at: nil})
         .distinct.pluck(:customer_id)
 
-      (periodic_customer_ids + adjustment_customer_ids).uniq.sort
+      (periodic_customer_ids + reconciliation_customer_ids).uniq.sort
     end
   end
 end

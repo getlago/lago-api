@@ -13,14 +13,12 @@ class ContractRateCardTerm < ApplicationRecord
   belongs_to :organization
   belongs_to :contract_rate_card, -> { with_discarded }, inverse_of: :terms
 
-  validates :effective_date, presence: true, unless: :effective_at?
-  validates :effective_date, uniqueness: {scope: :contract_rate_card_id}, allow_nil: true
-  validates :effective_at, uniqueness: {scope: :contract_rate_card_id}, allow_nil: true
+  validates :effective_date, presence: true, uniqueness: {scope: :contract_rate_card_id}
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validate :organization_matches_contract_rate_card
 
   def starts_at
-    effective_at || effective_date.in_time_zone(contract_rate_card.contract.customer.applicable_timezone)
+    effective_date.in_time_zone(contract_rate_card.contract.customer.applicable_timezone)
   end
 
   private
@@ -39,8 +37,7 @@ end
 #
 #  id                    :uuid             not null, primary key
 #  application_timing    :enum             default("current_billing_cycle"), not null
-#  effective_at          :datetime
-#  effective_date        :date
+#  effective_date        :date             not null
 #  units                 :decimal(, )      not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
@@ -49,7 +46,6 @@ end
 #
 # Indexes
 #
-#  index_contract_rate_card_terms_on_card_and_instant          (contract_rate_card_id,effective_at) UNIQUE
 #  index_contract_rate_cards_terms_on_card_and_effective_date  (contract_rate_card_id,effective_date) UNIQUE
 #  index_contract_rate_cards_terms_on_organization_id          (organization_id)
 #

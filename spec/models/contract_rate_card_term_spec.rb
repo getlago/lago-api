@@ -86,25 +86,14 @@ RSpec.describe ContractRateCardTerm do
     end
   end
 
-  describe "timestamped units" do
-    let(:card) { create(:contract_rate_card, units: 8) }
-    let(:effective_at) { Time.current.floor(6) }
-    let(:term) { build(:contract_rate_card_term, organization: card.organization, contract_rate_card: card, effective_date: nil, effective_at:) }
+  describe "#starts_at" do
+    let(:customer) { build(:customer, timezone: "America/New_York") }
+    let(:contract) { build(:contract, customer:) }
+    let(:card) { build(:contract_rate_card, contract:) }
+    let(:term) { build(:contract_rate_card_term, contract_rate_card: card, effective_date: Date.new(2026, 9, 1)) }
 
-    it "accepts a timestamp without a legacy date" do
-      expect(term).to be_valid
-      expect(term.starts_at).to eq(effective_at)
-    end
-
-    context "when the exact timestamp is already used" do
-      before do
-        create(:contract_rate_card_term, organization: card.organization, contract_rate_card: card, effective_date: nil, effective_at:)
-      end
-
-      it "rejects the duplicate instant" do
-        expect(term).not_to be_valid
-        expect(term.errors[:effective_at]).to be_present
-      end
+    it "starts at midnight in the customer timezone" do
+      expect(term.starts_at).to eq(Time.utc(2026, 9, 1, 4))
     end
   end
 end

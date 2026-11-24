@@ -49,11 +49,10 @@ module Types
 
       def units_state
         @units_state ||= begin
-          dataloader.with(Sources::ActiveRecordAssociation, :terms).load(object)
-          contract = dataloader.with(Sources::ActiveRecordAssociation, :contract).load(object)
-          dataloader.with(Sources::ActiveRecordAssociation, :customer).load(contract)
+          history = dataloader.with(Sources::ContractRateCardUnitsHistory).load(object)
+          contract = object.contract
           timestamp = contract.editable? ? object.effective_date.in_time_zone(contract.customer.applicable_timezone) : Time.current
-          ::ContractRateCards::UnitsAtService.call!(contract_rate_card: object, timestamp:)
+          ::ContractRateCards::UnitsAtService.call!(contract_rate_card: object, timestamp:, history:)
         end
       end
     end

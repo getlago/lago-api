@@ -66,8 +66,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
     around { |example| travel_to(timestamp) { example.run } }
 
     before do
-      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 5, effective_date: nil,
-        effective_at: Time.utc(2026, 12, 1), application_timing: :next_billing_cycle)
+      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 5, effective_date: Date.new(2026, 12, 1), application_timing: :next_billing_cycle)
     end
 
     it "returns current units and the scheduled quantity and time" do

@@ -109,7 +109,8 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
   end
 
   context "when changing an active contract's units explicitly" do
-    let(:contract) { create(:contract, organization:, started_at: Time.utc(2026, 9, 1)) }
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 9, 1)) }
     let(:product) { create(:product, :fixed, organization:) }
     let(:rate_card) { create(:rate_card, organization:, product:) }
     let(:contract_rate_card) do
@@ -122,8 +123,9 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
 
     it "records the change without replacing the original units" do
       freeze_time do
+        expect(execution["errors"]).to be_nil
         expect(execution.dig("data", "updateContractAppliedRateCard", "units")).to eq(8.0)
-        expect(contract_rate_card.reload.terms.find_by(effective_at: Time.current)).to have_attributes(units: 8)
+        expect(contract_rate_card.reload.units_changes.find_by(billing_at: Time.current)).to have_attributes(units_before: 5, units_after: 8)
         expect(contract_rate_card.terms.first.units).to eq(5)
       end
     end

@@ -3,7 +3,7 @@
 module ContractRateCards
   class ChangeUnitsService < BaseService
     Result = BaseResult[:contract_rate_card]
-    APPLICATION_TIMINGS = {"now" => "current_billing_cycle", "next_billing_period" => "next_billing_cycle"}.freeze
+    APPLICATION_TIMINGS = %w[now next_billing_period].freeze
 
     def initialize(contract_rate_card:, params:)
       @contract_rate_card = contract_rate_card
@@ -26,9 +26,11 @@ module ContractRateCards
     rescue ActiveRecord::RecordInvalid => error
       result.record_validation_failure!(record: error.record)
     rescue ActiveRecord::RecordNotUnique => error
-      unique_index_failure!(error, "index_contract_rate_card_terms_on_card_and_instant" => :effective_at)
+      unique_index_failure!(error,
+        "index_units_reconciliation_history" => :units,
+        "index_contract_rate_cards_terms_on_card_and_effective_date" => :units)
     rescue BaseService::FailedResult => error
-      result.fail_with_error!(error)
+      result.fail_with_error!(error.result.error)
     rescue BaseLockService::FailedToAcquireLock => error
       result.lock_acquisition_failure!(message: error.message, error:)
     end
@@ -38,7 +40,7 @@ module ContractRateCards
     attr_reader :contract_rate_card, :params, :timestamp
 
     def validate_request
-      if !APPLICATION_TIMINGS.key?(params[:apply_units])
+      if !APPLICATION_TIMINGS.include?(params[:apply_units])
         result.single_validation_failure!(field: :apply_units, error_code: "value_is_invalid")
       elsif params.keys.any? { !it.in?(%w[units apply_units]) }
         result.single_validation_failure!(field: :contract, error_code: "contract_locked")
@@ -66,39 +68,46 @@ module ContractRateCards
       cycle = schedule.cycle_at(timestamp)
       return result.single_validation_failure!(field: :contract, error_code: "contract_locked") unless cycle
 
-      effective_at = (params[:apply_units] == "now") ? timestamp : cycle.ended_at
-      term = contract_rate_card.terms.find_or_initialize_by(effective_at:)
-      if term.persisted? && contract_rate_card.billing_operations.completed.where(billing_at: effective_at).exists?
-        return result.single_validation_failure!(field: :units, error_code: "units_already_billed")
+      if params[:apply_units] == "now"
+        record_units_change(cycle)
+      else
+        schedule_units_change(cycle, schedule)
       end
+      return result if result.failure?
 
-      save_units_term(term)
-      schedule_advance_adjustment(cycle:, effective_at:)
+      contract_rate_card.touch # rubocop:disable Rails/SkipsModelValidations
       SendWebhookJob.perform_after_commit("contract_rate_card.updated", contract_rate_card)
     end
 
-    def save_units_term(term)
-      term.assign_attributes(organization: contract_rate_card.organization, units: params[:units],
-        application_timing: APPLICATION_TIMINGS.fetch(params[:apply_units]))
-      term.save!
-      contract_rate_card.touch # rubocop:disable Rails/SkipsModelValidations
-    end
-
-    def schedule_advance_adjustment(cycle:, effective_at:)
-      return unless contract_rate_card.rate_card.advance? && effective_at == timestamp
-
-      unless contract_rate_card.billing_operations.pending.exists?(action_type: "adjust_fixed_advance", billing_at: timestamp)
-        create_advance_adjustment(cycle)
+    def record_units_change(cycle)
+      existing = contract_rate_card.units_changes.find_by(billing_at: timestamp)
+      if existing
+        code = existing.processed_at ? "units_already_billed" : "value_already_exist"
+        return result.single_validation_failure!(field: :units, error_code: code)
       end
-      BillingOperations::ProcessJob.perform_after_commit(contract_rate_card.contract.customer_id)
-    end
 
-    def create_advance_adjustment(cycle)
+      units_before = UnitsAtService.call!(contract_rate_card:, timestamp:).units || 0.to_d
       planned_operation = BillingOperations::Schedule::BuildPlannedOperation::PlannedOperation.new(
         cycle_started_at: cycle.started_at, billing_at: timestamp
       )
-      BillingOperations::CreateService.call!(contract_rate_card:, action_type: "adjust_fixed_advance",
-        reason: "contract_units_change", planned_operation:)
+      creation = BillingOperations::CreateService.call(contract_rate_card:, action_type: "reconcile_units",
+        reason: "contract_units_change", planned_operation:, units_before:, units_after: params[:units])
+      if creation.failure?
+        error = creation.error
+        error = error.remap(result) { |field| (field == :units_after) ? :units : field } if error.is_a?(BaseService::ValidationFailure)
+        return result.fail_with_error!(error)
+      end
+      contract_rate_card.units_changes.reset
+    end
+
+    def schedule_units_change(cycle, schedule)
+      return result.single_validation_failure!(field: :contract, error_code: "contract_locked") unless schedule.cycle_at(cycle.ended_at)
+
+      effective_date = cycle.ended_at.in_time_zone(contract_rate_card.contract.customer.applicable_timezone).to_date
+      term = contract_rate_card.terms.find_or_initialize_by(effective_date:)
+      term.assign_attributes(organization: contract_rate_card.organization, units: params[:units], application_timing: :next_billing_cycle)
+      term.save!
+      contract_rate_card.terms.reset
     end
   end
 end

@@ -79,6 +79,28 @@ RSpec.describe BillingOperations::ProcessService do
     end
   end
 
+  context "with multiple pending units changes" do
+    before do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+        reason: "contract_units_change", billing_at: Time.utc(2026, 1, 10), target_cycle_started_at:,
+        units_before: 1, units_after: 2)
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+        reason: "contract_units_change", billing_at: Time.utc(2026, 1, 20), target_cycle_started_at:,
+        units_before: 2, units_after: 1)
+    end
+
+    it "reuses history across batches and bills the time spent at each quantity" do
+      queries = capture_sql { result }
+      history_queries = queries.grep(/SELECT "billing_operations"\."contract_rate_card_id", "billing_operations"\."billing_at", "billing_operations"\."units_after"/)
+
+      expect(result).to be_success
+      expect(history_queries.size).to eq(1)
+      expect(result.invoices.sole.total_amount_cents).to eq(3100 + 10 * 100) # one unit all month, plus one unit for ten days
+      expect(contract_rate_card.billing_operations.pending).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+    end
+  end
+
   context "with a late payment operation" do
     let(:operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:,
@@ -242,6 +264,21 @@ RSpec.describe BillingOperations::ProcessService do
       expect(operation.reload.processed_at).to eq(timestamp)
       expect(later_operation.reload.processed_at).to be_nil
       expect(contract_rate_card.billing_operations.count).to eq(2)
+    end
+
+    context "with an earlier units change" do
+      before do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+          reason: "contract_units_change", billing_at: Time.utc(2026, 1, 15), target_cycle_started_at:,
+          units_before: 1, units_after: 2)
+      end
+
+      it "completes reconciliation and only the earliest periodic operation" do
+        expect(result.invoices.sole.total_amount_cents).to eq(3100 + 17 * 100) # one unit all month, plus one unit from 15 January
+        expect(operation.reload.processed_at).to eq(timestamp)
+        expect(later_operation.reload.processed_at).to be_nil
+        expect(contract_rate_card.units_changes.sole.processed_at).to eq(timestamp)
+      end
     end
 
     context "with invoice consolidation" do

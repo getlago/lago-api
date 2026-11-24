@@ -6,6 +6,11 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
   subject(:result) { described_class.call(segments: [segment], cycle:, operation:) }
 
   let(:operation) { nil }
+  let(:units_change) do
+    create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+      reason: "contract_units_change", billing_at: change_time, target_cycle_started_at: cycle.started_at,
+      units_before: 8, units_after: changed_units)
+  end
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
   let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 3, 1, 5)) }
@@ -31,7 +36,7 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
 
   before do
     rate
-    create(:contract_rate_card_term, organization:, contract_rate_card:, units: changed_units, effective_date: nil, effective_at: change_time)
+    units_change
   end
 
   it "uses elapsed seconds across a daylight-saving transition" do
@@ -63,10 +68,7 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
   context "when adjusting existing advance coverage" do
     let(:rate_card) { create(:rate_card, :advance, organization:, product:, proration: true) }
     let(:changed_units) { 10 }
-    let(:operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "adjust_fixed_advance",
-        reason: "contract_units_change", billing_at: change_time, target_cycle_started_at: cycle.started_at)
-    end
+    let(:operation) { units_change }
     let(:previous_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
     let(:pricing_segments) { nil }
     let(:previous_operation) do

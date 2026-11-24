@@ -7,10 +7,11 @@ module BillingOperations
     UnitsInterval = Data.define(:started_at, :ended_at, :units)
     private_constant :UnitsInterval
 
-    def initialize(segments:, cycle:, operation: nil)
+    def initialize(segments:, cycle:, operation: nil, units_histories: {})
       @segments = segments
       @cycle = cycle
       @operation = operation
+      @units_histories = units_histories
       super
     end
 
@@ -18,7 +19,7 @@ module BillingOperations
       result.segments = segments.filter_map do |segment|
         next segment unless segment.contract_rate_card.product.fixed?
 
-        if operation&.action_type == "adjust_fixed_advance"
+        if operation&.units_change?
           resolve_adjustment(segment)
         elsif segment.contract_rate_card.rate_card.advance?
           segment.units = units_at(segment, segment.started_at)
@@ -32,10 +33,16 @@ module BillingOperations
 
     private
 
-    attr_reader :segments, :cycle, :operation
+    attr_reader :segments, :cycle, :operation, :units_histories
 
     def units_at(segment, timestamp)
-      ContractRateCards::UnitsAtService.call!(contract_rate_card: segment.contract_rate_card, timestamp:).units || 0.to_d
+      history_for(segment).units_at(timestamp) || 0.to_d
+    end
+
+    def history_for(segment)
+      card = segment.contract_rate_card
+      units_histories[card.id] ||= ContractRateCardUnitsHistoryQuery.call!(organization: card.organization,
+        contract_rate_cards: [card]).histories.fetch(card.id)
     end
 
     def resolve_arrears(segment)
@@ -51,11 +58,14 @@ module BillingOperations
     def units_intervals(segment)
       from = segment.started_at
       to = BillingSegment.exclusive_end(segment.ended_at)
-      changes = segment.contract_rate_card.terms.map(&:starts_at).select { it > from && it < to }.uniq.sort
+      history = history_for(segment)
+      changes = history.units_by_timestamp.keys.select { it > from && it < to }
       boundaries = [from, *changes, to]
+      units = history.units_at(from) || 0.to_d
 
       boundaries.each_cons(2).map do |start, finish|
-        UnitsInterval.new(started_at: start, ended_at: finish, units: units_at(segment, start))
+        units = history.units_by_timestamp.fetch(start, units)
+        UnitsInterval.new(started_at: start, ended_at: finish, units:)
       end
     end
 
@@ -111,7 +121,7 @@ module BillingOperations
     def completed_advance_operations
       operation.contract_rate_card.billing_operations.completed
         .where(organization_id: operation.organization_id, target_cycle_started_at: operation.target_cycle_started_at,
-          cancelled_at: nil, action_type: %w[renew_fixed_advance adjust_fixed_advance])
+          cancelled_at: nil, action_type: %w[renew_fixed_advance reconcile_units])
     end
 
     def prepaid_units_from_snapshot(snapshot, timestamp)

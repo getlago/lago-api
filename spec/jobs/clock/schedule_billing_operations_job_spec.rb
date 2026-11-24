@@ -34,7 +34,7 @@ describe Clock::ScheduleBillingOperationsJob, job: true do
 
   context "when a units adjustment is pending before the next periodic billing" do
     let(:processed_at) { nil }
-    let(:action_type) { "adjust_fixed_advance" }
+    let(:action_type) { "reconcile_units" }
 
     before do
       create(:billing_operation, organization:, customer: future_customer, contract_rate_card: future_rate_card,

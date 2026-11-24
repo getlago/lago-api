@@ -4,11 +4,13 @@ module BillingOperations
   class CreateService < BaseService
     Result = BaseResult[:operation]
 
-    def initialize(contract_rate_card:, action_type:, reason:, planned_operation:)
+    def initialize(contract_rate_card:, action_type:, reason:, planned_operation:, units_before: nil, units_after: nil)
       @contract_rate_card = contract_rate_card
       @action_type = action_type
       @reason = reason
       @planned_operation = planned_operation
+      @units_before = units_before
+      @units_after = units_after
       super
     end
 
@@ -24,7 +26,9 @@ module BillingOperations
         billing_at: planned_operation.billing_at,
         target_cycle_started_at: planned_operation.cycle_started_at,
         coverage_started_at: segment.started_at,
-        coverage_ended_at: segment.ended_at
+        coverage_ended_at: segment.ended_at,
+        units_before:,
+        units_after:
       ) do |operation|
         operation.segments.build(
           organization: contract_rate_card.organization, position: 0,
@@ -39,6 +43,6 @@ module BillingOperations
 
     private
 
-    attr_reader :contract_rate_card, :action_type, :reason, :planned_operation
+    attr_reader :contract_rate_card, :action_type, :reason, :planned_operation, :units_before, :units_after
   end
 end

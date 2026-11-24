@@ -38,8 +38,13 @@ class CollectionSerializer
   end
 
   def serialize_models
+    serializer_options = if model_serializer.respond_to?(:collection_options)
+      model_serializer.collection_options(collection, options)
+    else
+      options
+    end
     collection.map do |model|
-      model_serializer.new(model, options).serialize
+      model_serializer.new(model, serializer_options).serialize
     end
   end
 end

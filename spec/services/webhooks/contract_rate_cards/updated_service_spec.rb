@@ -32,8 +32,7 @@ RSpec.describe Webhooks::ContractRateCards::UpdatedService do
       next_billing_at: Time.zone.parse("2026-03-06T07:08:09Z"),
       billing_anchor_date: Date.new(2026, 2, 5)
     )
-    create(:contract_rate_card_term, organization:, contract_rate_card:, units: 7, effective_date: nil,
-      effective_at: scheduled_at, application_timing: :next_billing_cycle)
+    create(:contract_rate_card_term, organization:, contract_rate_card:, units: 7, effective_date: scheduled_at.to_date, application_timing: :next_billing_cycle)
   end
 
   describe ".call" do

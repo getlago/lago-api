@@ -9,6 +9,8 @@ module BillingOperations
       @customer = customer
       @timestamp = timestamp
       @attempted_operation_ids = Set.new
+      @attempted_periodic_card_ids = Set.new
+      @units_histories = {}
       super
     end
 
@@ -28,30 +30,34 @@ module BillingOperations
 
     private
 
-    attr_reader :customer, :timestamp, :attempted_operation_ids
+    attr_reader :customer, :timestamp, :attempted_operation_ids, :attempted_periodic_card_ids, :units_histories
 
     def process_due_operations
-      adjustments_pending = schedule_renewals_before_adjustments
-      process_invoice_groups(due_operations)
-      process_remaining_units_adjustments if adjustments_pending && !@processing_error
+      process_reconciliations = units_reconciliations_pending?
+      ScheduleService.call!(customer:, timestamp:) if process_reconciliations
+      loop do
+        operations = eligible_operations
+        break if operations.empty?
+
+        process_invoice_groups(operations)
+        break if @processing_error || !process_reconciliations
+
+        ScheduleService.call!(customer:, timestamp:) if units_reconciliations_pending?
+      end
     end
 
-    # One periodic obligation per card is processed per run. Units adjustments can follow
-    # that renewal in the same run, since they need its completed prepaid coverage.
-    def process_remaining_units_adjustments
-      while schedule_renewals_before_adjustments
-        adjustments = due_operations.select do |operation|
-          units_adjustment?(operation) && attempted_operation_ids.exclude?(operation.id)
-        end
-        break if adjustments.empty?
-
-        process_invoice_groups(adjustments)
-        break if @processing_error
+    # Units changes can precede or follow a renewal. Each card still gets at most
+    # one periodic obligation per run, including when it has overdue periods.
+    def eligible_operations
+      due_operations.reject do |operation|
+        attempted_operation_ids.include?(operation.id) ||
+          (!operation.units_change? && attempted_periodic_card_ids.include?(operation.contract_rate_card_id))
       end
     end
 
     def process_invoice_groups(operations)
       attempted_operation_ids.merge(operations.map(&:id))
+      attempted_periodic_card_ids.merge(operations.reject(&:units_change?).map(&:contract_rate_card_id))
       operations.group_by { |operation| [invoice_kind(operation), invoice_group_key(operation)] }.each_value do |invoice_operations|
         invoice = process_invoice_batch(invoice_operations)
         result.invoices << invoice if invoice
@@ -60,25 +66,14 @@ module BillingOperations
       end
     end
 
-    def units_adjustment?(operation)
-      operation.action_type == "adjust_fixed_advance"
-    end
-
-    def schedule_renewals_before_adjustments
-      # A units adjustment can arrive before the periodic clock tick. Persist the owed
-      # renewal first, so the adjustment sees its prepaid coverage rather than buying it twice.
-      if customer.billing_operations.pending.where(action_type: "adjust_fixed_advance", billing_at: ..timestamp).exists?
-        ScheduleService.call!(customer:, timestamp:)
-        true
-      else
-        false
-      end
+    def units_reconciliations_pending?
+      customer.billing_operations.pending.where(action_type: "reconcile_units", billing_at: ..timestamp).exists?
     end
 
     def due_operations
       customer_contracts = customer.contracts.where(organization_id: customer.organization_id)
       operations = customer.billing_operations.due_for_processing(timestamp)
-        .where(organization_id: customer.organization_id, action_type: BillingOperation::PERIODIC_ACTIONS.keys + ["adjust_fixed_advance"])
+        .where(organization_id: customer.organization_id, action_type: BillingOperation::PERIODIC_ACTIONS.keys + ["reconcile_units"])
         .joins(:contract_rate_card)
         .merge(ContractRateCard.kept.where(
           organization_id: customer.organization_id,
@@ -87,7 +82,7 @@ module BillingOperations
         .earliest_per_contract_rate_card
 
       BillingOperation.from(operations, :billing_operations)
-        .includes(contract_rate_card: [:terms, {contract: :customer}, {rate_card: {product: :billable_metric}}])
+        .includes(contract_rate_card: [{contract: :customer}, {rate_card: {product: :billable_metric}}])
         .order(:billing_at, :contract_rate_card_id, :created_at, :id)
     end
 
@@ -166,13 +161,16 @@ module BillingOperations
         records: operations.map(&:contract_rate_card),
         associations: [
           :organization,
-          :terms,
           {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override},
           {contract: :customer}
         ]
       ).call
+      cards = operations.map(&:contract_rate_card).select { it.product.fixed? && !units_histories.key?(it.id) }
+      if cards.any?
+        units_histories.merge!(ContractRateCardUnitsHistoryQuery.call!(organization: customer.organization, contract_rate_cards: cards).histories)
+      end
       codes = operations.filter_map { it.contract_rate_card.rate_card.applied_pricing_unit_code }.uniq
       @pricing_units_by_code = codes.any? ? customer.organization.pricing_units.where(code: codes).index_by(&:code) : {}
     end
@@ -182,7 +180,7 @@ module BillingOperations
       if obsolete_terminal_renewal?(operation)
         ResolveSegmentsService::Result.new.tap { it.segments = [] }
       else
-        ResolveSegmentsService.call!(operation:, pricing_units_by_code: @pricing_units_by_code)
+        ResolveSegmentsService.call!(operation:, pricing_units_by_code: @pricing_units_by_code, units_histories:)
       end
     end
 
@@ -284,7 +282,7 @@ module BillingOperations
           attributes[:pricing_segments] = resolution.segments.map(&:as_json)
         end
         operation.update!(attributes)
-        advance_periodic_cursor(operation, resolution) unless units_adjustment?(operation)
+        advance_periodic_cursor(operation, resolution) unless operation.units_change?
       end
     end
 

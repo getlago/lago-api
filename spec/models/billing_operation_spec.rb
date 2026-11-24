@@ -151,6 +151,43 @@ RSpec.describe BillingOperation do
       expect(operation).to validate_presence_of(:target_cycle_started_at)
     end
 
+    describe "units change validation" do
+      let(:operation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+          units_before: 8, units_after: 5)
+      end
+      let(:duplicate) do
+        build(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+          billing_at: operation.billing_at)
+      end
+
+      it "requires both quantities to be nonnegative numbers" do
+        operation.units_before = nil
+        operation.units_after = -1
+
+        expect(operation).not_to be_valid
+        expect(operation.errors.attribute_names).to include(:units_before, :units_after)
+      end
+
+      it "preserves the quantities and exact timestamp after the operation is saved" do
+        timestamp = operation.billing_at
+
+        expect(operation.update(units_before: 9, units_after: 6, billing_at: timestamp + 1.second,
+          action_type: "close_fixed_arrears", reason: "periodic_continuation")).to be(false)
+        expect(operation.errors.attribute_names).to include(:units_before, :units_after, :billing_at, :action_type, :reason)
+        expect(operation.reload).to have_attributes(units_before: 8, units_after: 5, billing_at: timestamp)
+      end
+
+      it "retains quantity history when billing completes without an invoice" do
+        expect(operation.update(processed_at: Time.current, pricing_segments: [])).to be(true)
+        expect(operation.reload).to have_attributes(units_before: 8, units_after: 5, pricing_segments: [], invoice_id: nil)
+      end
+
+      it "rejects another change for the same card and exact instant" do
+        expect { duplicate.save! }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
+
     describe "identity validation" do
       before { operation.valid? }
 

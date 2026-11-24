@@ -9,7 +9,7 @@ class BillingOperation < ApplicationRecord
     "regroup_paid_fees" => "Group paid advance fees onto an invoice when their service coverage ends"
   }.freeze
 
-  ACTION_TYPES = (PERIODIC_ACTIONS.keys + %w[reconcile_advance_coverage adjust_fixed_advance]).index_by(&:to_sym).freeze
+  ACTION_TYPES = (PERIODIC_ACTIONS.keys + %w[reconcile_advance_coverage reconcile_units]).index_by(&:to_sym).freeze
 
   REASONS = {
     contract_activation: "contract_activation",
@@ -37,8 +37,10 @@ class BillingOperation < ApplicationRecord
 
   validates :action_type, inclusion: {in: ACTION_TYPES.values}
   validates :billing_at, :target_cycle_started_at, presence: true
+  validates :units_before, :units_after, numericality: {greater_than_or_equal_to: 0}, if: :units_change?
   validate :validate_identity, if: :identity_changed?
   validate :validate_state
+  validate :validate_units_change_immutability
 
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
   scope :completed, -> { where.not(processed_at: nil) }
@@ -47,14 +49,26 @@ class BillingOperation < ApplicationRecord
   scope :earliest_per_contract_rate_card, -> {
     select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
       .reorder(:contract_rate_card_id, :billing_at,
-        Arel.sql("CASE WHEN billing_operations.action_type = 'adjust_fixed_advance' THEN 1 ELSE 0 END"), :created_at, :id)
+        Arel.sql("CASE WHEN billing_operations.action_type = 'reconcile_units' THEN 1 ELSE 0 END"), :created_at, :id)
   }
 
   def due_for_processing?(timestamp:)
     processed_at.nil? && cancelled_at.nil? && billing_at <= timestamp
   end
 
+  def units_change?
+    action_type == "reconcile_units"
+  end
+
   private
+
+  def validate_units_change_immutability
+    return unless persisted? && action_type_in_database == "reconcile_units"
+
+    %w[units_before units_after billing_at target_cycle_started_at contract_rate_card_id customer_id organization_id action_type reason].each do |attribute|
+      errors.add(attribute, :readonly) if will_save_change_to_attribute?(attribute)
+    end
+  end
 
   def validate_identity
     return if contract_rate_card_id.blank? || customer_id.blank? || organization_id.blank?
@@ -113,6 +127,8 @@ end
 #  processed_at            :datetime
 #  reason                  :enum             not null
 #  target_cycle_started_at :datetime         not null
+#  units_after             :decimal(, )
+#  units_before            :decimal(, )
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
 #  contract_rate_card_id   :uuid             not null
@@ -129,7 +145,8 @@ end
 #  index_pending_billing_operations_on_card_and_date      (contract_rate_card_id,billing_at) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #  index_pending_billing_operations_on_org_and_date       (organization_id,billing_at,id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #  index_pending_billing_operations_on_org_customer_date  (organization_id,customer_id,billing_at,id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
-#  index_pending_fixed_advance_adjustments                (billing_at,customer_id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL) AND ((action_type)::text = 'adjust_fixed_advance'::text))
+#  index_pending_units_reconciliations                    (billing_at,customer_id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL) AND ((action_type)::text = 'reconcile_units'::text))
+#  index_units_reconciliation_history                     (contract_rate_card_id,billing_at) UNIQUE WHERE ((action_type)::text = 'reconcile_units'::text)
 #
 # Foreign Keys
 #

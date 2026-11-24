@@ -29,7 +29,7 @@ describe "Billing timestamped contract units changes" do
     end
   end
 
-  def change_units(units, at:, mode: "now")
+  def change_units(units, at:, mode: "now", process: true)
     travel_to(at, with_usec: true) do
       perform_enqueued_jobs do
         put_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}",
@@ -37,6 +37,7 @@ describe "Billing timestamped contract units changes" do
         expect(response).to have_http_status(:success)
       end
     end
+    bill_at(at + 1.minute) if process
   end
 
   def bill_at(timestamp)
@@ -57,7 +58,25 @@ describe "Billing timestamped contract units changes" do
     bill_at(Time.utc(2026, 10, 1))
 
     expect(customer.invoices.sole.total_amount_cents).to eq(23_850) # (8 × 29.5/30 + 5 × 0.5/30) × 3000.
-    expect(contract_rate_card.reload.terms.count).to eq(3)
+    expect(contract_rate_card.reload.units_changes.size).to eq(2)
+    expect(contract_rate_card.terms.count).to eq(1)
+  end
+
+  it "retains exact arrears history when the clock processes several changes together" do
+    first_change = Time.utc(2026, 9, 16, 6, 0, 0, 123456)
+    second_change = Time.utc(2026, 9, 16, 18, 0, 0, 123456)
+    change_units(5, at: first_change, process: false)
+    change_units(8, at: second_change, process: false)
+
+    expect(customer.invoices).to be_empty
+    expect(contract_rate_card.billing_operations.pending.where(action_type: "reconcile_units").count).to eq(2)
+    bill_at(Time.utc(2026, 10, 1))
+
+    expect(customer.invoices.sole.total_amount_cents).to eq(23_850) # 8 × 3000 minus 3 × 3000 × 0.5/30.
+    expect(contract_rate_card.reload.units_changes.map { [it.billing_at, it.units_before, it.units_after] })
+      .to eq([[first_change, 8, 5], [second_change, 5, 8]])
+    expect(contract_rate_card.billing_operations.pending).to be_empty
+    expect(contract_rate_card.next_billing_at).to eq(Time.utc(2026, 11, 1))
   end
 
   it "replaces an unbilled next-period change and leaves the current period untouched" do
@@ -71,14 +90,14 @@ describe "Billing timestamped contract units changes" do
   end
 
   it "preserves a scheduled change when units change immediately" do
-    change_units(5, at: Time.utc(2026, 9, 10), mode: "next_billing_period")
-    change_units(10, at: Time.utc(2026, 9, 20))
+    change_units(5, at: Time.utc(2026, 9, 10), mode: "next_billing_period", process: false)
+    change_units(10, at: Time.utc(2026, 9, 20), process: false)
     bill_at(Time.utc(2026, 10, 1))
     bill_at(Time.utc(2026, 11, 1))
 
     expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([26_200, 15_000])
     # September: (8 × 19/30 + 10 × 11/30) × 3000; October: scheduled 5 × 3000.
-    expect(contract_rate_card.reload.terms.find_by!(effective_at: Time.utc(2026, 10, 1)).units).to eq(5)
+    expect(contract_rate_card.reload.terms.find_by!(effective_date: Date.new(2026, 10, 1)).units).to eq(5)
   end
 
   context "with graduated pricing" do
@@ -101,6 +120,22 @@ describe "Billing timestamped contract units changes" do
   context "when paid in advance" do
     let(:timing) { "advance" }
 
+    it "defers reconciliation to the clock and retains prepaid coverage across queued changes" do
+      change_units(10, at: Time.utc(2026, 9, 10, 0, 0, 0, 123456), process: false)
+      change_units(5, at: Time.utc(2026, 9, 20), process: false)
+      change_units(10, at: Time.utc(2026, 9, 25), process: false)
+
+      expect(customer.invoices.pluck(:total_amount_cents)).to eq([24_000])
+      expect(contract_rate_card.billing_operations.pending.where(action_type: "reconcile_units").count).to eq(3)
+      bill_at(Time.utc(2026, 10, 1))
+      bill_at(Time.utc(2026, 10, 1, 1))
+
+      expect(customer.invoices.pluck(:total_amount_cents)).to match_array([24_000, 4_200, 30_000])
+      # September increase: 2 × 3000 × (21 days minus 0.123456 seconds)/30 days; October: 10 × 3000.
+      expect(customer.credit_notes).to be_empty
+      expect(contract_rate_card.reload.units_changes.pluck(:units_after)).to eq([10, 5, 10])
+    end
+
     context "with a rate change inside the period" do
       let(:future_rate) do
         create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 20),
@@ -116,7 +151,7 @@ describe "Billing timestamped contract units changes" do
 
         expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([15_200, 2_000, 22_000])
         # First coverage: 8 × 3000 × 19/30; increase: 2 × 3000 × 10/30; later coverage: 10 × 6000 × 11/30.
-        expect(contract_rate_card.billing_operations.find_by!(action_type: "adjust_fixed_advance")
+        expect(contract_rate_card.billing_operations.find_by!(action_type: "reconcile_units")
           .pricing_segments.sole.fetch("ended_at")).to eq("2026-09-19T23:59:59.999999Z")
       end
     end
@@ -129,7 +164,7 @@ describe "Billing timestamped contract units changes" do
       expect(customer.invoices.pluck(:total_amount_cents)).to eq([24_000])
       expect(customer.credit_notes).to be_empty
       expect(contract_rate_card.reload.next_billing_at).to eq(original_cursor)
-      expect(contract_rate_card.billing_operations.where(action_type: "adjust_fixed_advance").pending).to be_empty
+      expect(contract_rate_card.billing_operations.where(action_type: "reconcile_units").pending).to be_empty
     end
 
     it "keeps additional coverage after a later decrease" do
@@ -166,11 +201,11 @@ describe "Billing timestamped contract units changes" do
     end
 
     it "keeps scheduled units after an immediate increase" do
-      change_units(5, at: Time.utc(2026, 9, 10), mode: "next_billing_period")
-      change_units(10, at: Time.utc(2026, 9, 20))
+      change_units(5, at: Time.utc(2026, 9, 10), mode: "next_billing_period", process: false)
+      change_units(10, at: Time.utc(2026, 9, 20), process: false)
       bill_at(Time.utc(2026, 10, 1))
 
-      expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([24_000, 2_200, 15_000])
+      expect(customer.invoices.pluck(:total_amount_cents)).to match_array([24_000, 2_200, 15_000])
       # September: 8 × 3000 plus 2 × 3000 × 11/30; October: scheduled 5 × 3000.
     end
 
@@ -197,7 +232,7 @@ describe "Billing timestamped contract units changes" do
 
       it "retains exact adjustment boundaries when a draft is refreshed" do
         change_units(10, at: Time.utc(2026, 9, 16, 12, 0, 0, 123456))
-        invoice = contract_rate_card.billing_operations.find_by!(action_type: "adjust_fixed_advance").invoice
+        invoice = contract_rate_card.billing_operations.find_by!(action_type: "reconcile_units").invoice
         properties = invoice.fees.sole.properties
 
         expect(properties.slice("from_datetime", "to_datetime")).to eq(

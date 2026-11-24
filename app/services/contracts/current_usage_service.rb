@@ -39,7 +39,11 @@ module Contracts
         end
         segments = cards.filter_map { |card| billing_segment_for(card) }
         fixed_cards = segments.filter_map { |card, _, _| card unless card.rate_card.product.metered? }
-        ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
+        @units_histories = if fixed_cards.any?
+          ContractRateCardUnitsHistoryQuery.call!(organization: customer.organization, contract_rate_cards: fixed_cards).histories
+        else
+          {}
+        end
 
         segments
           .map { |card, billable_segment, billing_segment, cycle| rate_card_usage(card, billable_segment, billing_segment, cycle) }
@@ -60,7 +64,7 @@ module Contracts
 
     private
 
-    attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term
+    attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term, :units_histories
 
     delegate :customer, to: :contract
 
@@ -166,7 +170,7 @@ module Contracts
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
-        resolved = BillingOperations::ResolveFixedUnitsService.call!(segments: [billing_segment], cycle:).segments
+        resolved = BillingOperations::ResolveFixedUnitsService.call!(segments: [billing_segment], cycle:, units_histories:).segments
         resolved.map { BillingOperations::Fees::ComputeService.call!(billing_segment: it).fee }
       end
     end

@@ -341,6 +341,28 @@ RSpec.describe ModelSerializer do
         )
       end
 
+      context "with shared collection options" do
+        let(:options) { {includes: %i[first usec_timestamps]} }
+        let(:embedded_serializer) do
+          Class.new(described_class) do
+            def self.collection_options(records, options)
+              options.merge(codes: records.map(&:code))
+            end
+
+            def serialize = {code: model.code, options:}
+          end
+        end
+
+        it "prepares the list together and preserves the timestamp option" do
+          shared_options = {includes: %i[usec_timestamps], codes: %w[first second]}
+
+          expect(payload).to eq(
+            code: "parent",
+            first: [{code: "first", options: shared_options}, {code: "second", options: shared_options}]
+          )
+        end
+      end
+
       context "with the usec_timestamps include" do
         let(:options) { {includes: %i[first second third usec_timestamps]} }
         let(:nested) { {includes: %i[usec_timestamps]} }
