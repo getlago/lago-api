@@ -26,6 +26,11 @@ class ContractRateCard < ApplicationRecord
   has_many :rate_phases, -> { order(:position) }
   has_many :terms, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardTerm", inverse_of: :contract_rate_card
   has_many :billing_operations
+  has_one :latest_completed_periodic_operation, ->(card) {
+    periodic.completed.where(organization_id: card.organization_id, action_type: card.periodic_billing_action, cancelled_at: nil)
+      .select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
+      .order(:contract_rate_card_id, billing_at: :desc, created_at: :desc, id: :desc)
+  }, class_name: "BillingOperation"
   has_many :daily_usages
   has_many :fees
 

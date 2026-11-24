@@ -51,30 +51,31 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   context "with fixed advance" do
     let(:billing_timing) { "advance" }
 
-    it "records the scheduled segment even when nothing has been billed" do
-      expect { result }.to change(BillingOperation, :count).by(1)
+    it "replans without reconciling when nothing has been billed" do
+      expect { result }.not_to change(BillingOperation, :count)
       expect(result).to be_success
-      reconciliation = card.billing_operations.sole
-      expect(reconciliation).to have_attributes(action_type: "reconcile_advance_coverage", reason: "rate_change", processed_at: nil)
-      expect(reconciliation.segments.pluck(:started_at, :ended_at, :rate_card_rate_id)).to eq([[effective_from, clock, rate.id]])
       expect(card.reload.next_billing_at).to eq(Time.utc(2026, 11, 1))
       expect(BillingOperations::ProcessJob).not_to have_been_enqueued
     end
 
-    context "with two rate changes in the same cycle" do
-      let(:billing_scope) { "cycle" }
-      let(:later_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 20)) }
+    def record_coverage(card, ended_at:, processed_at:)
+      operation = create(:billing_operation, organization:, customer:, contract_rate_card: card, action_type: "renew_fixed_advance",
+        billing_at: contract.started_at, target_cycle_started_at: contract.started_at,
+        coverage_started_at: contract.started_at, coverage_ended_at: ended_at, processed_at:)
+      operation.segments.create!(organization:, position: 0, rate_card_rate: old_rate, started_at: contract.started_at,
+        ended_at:, proration_ratio: 1)
+    end
 
-      it "saves a separate schedule snapshot for each change" do
+    context "when the latest completed operation has no saved segments" do
+      before do
+        record_coverage(card, ended_at: clock, processed_at: contract.started_at)
+        create(:billing_operation, organization:, customer:, contract_rate_card: card, billing_at: Time.current,
+          processed_at: Time.current, coverage_started_at: Time.current, coverage_ended_at: clock)
+      end
+
+      it "does not fall back to older coverage or infer a purchase from the schedule" do
+        expect { result }.not_to change(BillingOperation, :count)
         expect(result).to be_success
-        first = card.billing_operations.sole
-        described_class.call!(customer:, rate_card_rate_id: later_rate.id)
-        second = card.billing_operations.where.not(id: first.id).sole
-
-        expect(second).to have_attributes(action_type: first.action_type, coverage_started_at: first.coverage_started_at,
-          coverage_ended_at: first.coverage_ended_at)
-        expect(first.segments.pluck(:rate_card_rate_id)).to eq([old_rate.id, rate.id])
-        expect(second.segments.pluck(:rate_card_rate_id)).to eq([old_rate.id, rate.id, later_rate.id])
       end
     end
 
@@ -82,12 +83,37 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       let(:reconciliations) { card.billing_operations.pending.where(action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage)) }
       let(:processed_at) { Time.utc(2026, 11, 1) }
 
-      before do
-        create(:billing_operation, organization:, customer:, contract_rate_card: card,
-          action_type: BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance), reason: "contract_activation",
-          billing_at: Time.utc(2026, 11, 1), target_cycle_started_at: Time.utc(2026, 11, 1),
-          coverage_started_at: Time.utc(2026, 11, 1), coverage_ended_at: Time.utc(2026, 12, 1),
-          processed_at:)
+      before { record_coverage(card, ended_at: Time.utc(2026, 12, 1), processed_at:) }
+
+      context "with two rate changes in the same cycle" do
+        let(:billing_scope) { "cycle" }
+        let(:later_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 20)) }
+
+        it "saves a separate schedule snapshot for each change" do
+          expect(result).to be_success
+          first = reconciliations.sole
+          described_class.call!(customer:, rate_card_rate_id: later_rate.id)
+          second = reconciliations.where.not(id: first.id).sole
+          expect(first.segments.pluck(:rate_card_rate_id)).to eq([old_rate.id, rate.id])
+          expect(second.segments.pluck(:rate_card_rate_id)).to eq([old_rate.id, rate.id, later_rate.id])
+        end
+      end
+
+      context "with multiple affected cards" do
+        let(:other_contract) { create(:contract, organization:, customer:, started_at: contract.started_at) }
+        let(:other_card) {
+          create(:contract_rate_card, organization:, contract: other_contract, rate_card:, billing_scope:,
+            effective_date: card.effective_date, billing_anchor_date: card.billing_anchor_date, next_billing_at: clock)
+        }
+
+        before { record_coverage(other_card, ended_at: clock, processed_at:) }
+
+        it "loads completed operations and their segments once for the batch" do
+          queries = capture_sql { expect(result).to be_success }
+          expect(queries.grep(/SELECT DISTINCT ON .*FROM "billing_operations"/).size).to eq(1)
+          expect(queries.grep(/SELECT .*FROM "billing_operation_segments"/).size).to eq(1)
+          expect(customer.billing_operations.pending.pluck(:contract_rate_card_id)).to contain_exactly(card.id, other_card.id)
+        end
       end
 
       it "queues the changed segment once without moving the renewal or starting processing" do
@@ -116,18 +142,27 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       context "when the change starts at the coverage end" do
         let(:effective_from) { Time.utc(2026, 12, 1) }
 
-        it "records the next period selected by the schedule" do
+        it "leaves the unpurchased next period to periodic scheduling" do
           expect(result).to be_success
-          expect(reconciliations.sole.segments.pluck(:started_at, :ended_at, :rate_card_rate_id))
-            .to eq([[effective_from, Time.utc(2027, 1, 1), rate.id]])
+          expect(reconciliations).to be_empty
+        end
+
+        context "when the revised schedule no longer covers the purchased start" do
+          before { old_rate.discard! }
+
+          it "does not substitute a future obligation" do
+            expect(result).to be_success
+            expect(reconciliations).to be_empty
+            expect(card.reload.next_billing_at).to eq(effective_from)
+          end
         end
       end
 
       context "when the renewal is still pending" do
         let(:processed_at) { nil }
 
-        it "records the same scheduled reconciliation while the renewal is pending" do
-          expect { result }.to change(reconciliations, :count).by(1)
+        it "replans without reconciling the pending renewal" do
+          expect { result }.not_to change(reconciliations, :count)
           expect(card.reload.next_billing_at).to eq(Time.utc(2026, 11, 1))
         end
       end
@@ -150,16 +185,14 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
 
         before do
           create(:rate_card_rate, organization:, rate_card:, effective_from: intervening_start)
-          create(:billing_operation, organization:, customer:, contract_rate_card: card, action_type: "renew_fixed_advance",
-            billing_at: contract.started_at, target_cycle_started_at: contract.started_at,
-            coverage_started_at: contract.started_at, coverage_ended_at: clock, processed_at: contract.started_at)
+          record_coverage(card, ended_at: clock, processed_at: contract.started_at)
         end
 
-        it "schedules the intervening renewal and reconciles the changed rate from November 20" do
+        it "schedules the intervening renewal and only reconciles an extension of completed coverage" do
           expect(result).to be_success
           expect(card.reload.next_billing_at).to eq(intervening_start)
-          expect(card.billing_operations.pending.sole.segments.pluck(:started_at, :ended_at, :rate_card_rate_id))
-            .to eq([[effective_from, Time.utc(2026, 12, 1), rate.id]])
+          expected = (intervening_start == clock) ? [] : [[contract.started_at, intervening_start, old_rate.id]]
+          expect(card.billing_operations.pending.flat_map { it.segments.pluck(:started_at, :ended_at, :rate_card_rate_id) }).to eq(expected)
         end
       end
     end

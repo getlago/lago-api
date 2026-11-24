@@ -41,10 +41,7 @@ module ContractRateCards
     end
 
     def planning
-      previous = contract_rate_card.billing_operations.periodic.completed
-        .where(organization_id: contract_rate_card.organization_id, action_type:, cancelled_at: nil)
-        .order(billing_at: :desc, created_at: :desc, id: :desc)
-        .first
+      previous = contract_rate_card.latest_completed_periodic_operation
       previous ? {after_operation: previous} : {at: contract_rate_card.effective_date_in_customer_timezone}
     end
   end

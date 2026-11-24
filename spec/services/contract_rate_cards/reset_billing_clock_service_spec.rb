@@ -127,6 +127,17 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
         expect(result.planned_operation.billing_at).to eq(Time.zone.parse("2026-10-14"))
       end
     end
+
+    context "when a different action completed later" do
+      before do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
+          billing_at: Time.zone.parse("2026-10-14"), processed_at: Time.zone.parse("2026-10-14"))
+      end
+
+      it "continues from the completed operation for the current periodic action" do
+        expect(result.planned_operation.billing_at).to eq(Time.zone.parse("2026-10-14"))
+      end
+    end
   end
 
   context "when a fixed advance rate changes after coverage was completed" do
