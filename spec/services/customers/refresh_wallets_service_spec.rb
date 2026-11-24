@@ -293,7 +293,8 @@ RSpec.describe Customers::RefreshWalletsService do
             customer:,
             subscription:,
             usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
-            use_usage_buckets: true
+            use_usage_buckets: true,
+            reuse_tax_rates: true
           )
         end
       end
@@ -436,6 +437,25 @@ RSpec.describe Customers::RefreshWalletsService do
       it "returns all active wallets in the result" do
         expect(result).to be_success
         expect(result.wallets).to match_array(customer.wallets.active)
+      end
+
+      context "when a wallet is reserved for its expiration invoices" do
+        before do
+          first_wallet.update!(expiration_at: 1.hour.ago)
+          create(:applied_wallet_expiration, wallet: first_wallet)
+        end
+
+        it "allocates no ongoing usage to it" do
+          allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_call_original
+          allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_call_original
+
+          subject
+
+          expect(Wallets::Balance::AllocateOngoingUsageByWalletsService)
+            .to have_received(:call!).with(hash_including(wallets: satisfy { |wallets| wallets.exclude?(first_wallet) }))
+          expect(Wallets::Balance::RefreshOngoingUsageService)
+            .to have_received(:call!).with(hash_including(wallet: first_wallet, ongoing_usage_amount_cents: 0))
+        end
       end
     end
 
@@ -754,6 +774,16 @@ RSpec.describe Customers::RefreshWalletsService do
           result
 
           expect(Rails.cache.read(key, raw: true)).to eq("7")
+        end
+      end
+
+      context "with the wallet of an agent storefront" do
+        let(:wallet) { create(:wallet, customer:, code: Agents::Registration::WALLET_CODE, x402_enabled: false) }
+
+        it "releases the captured amount" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("0")
         end
       end
 

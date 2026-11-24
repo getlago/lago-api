@@ -39,14 +39,17 @@ module Types
 
     field :create_charge, mutation: Mutations::Charges::Create
     field :create_contract, mutation: Mutations::Contracts::Create
+    field :create_contract_alert, mutation: Mutations::Contracts::Alerts::Create
     field :create_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Create
     field :create_contract_rate_phase, mutation: Mutations::ContractRatePhases::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
+    field :destroy_contract_alert, mutation: Mutations::Contracts::Alerts::Destroy
     field :destroy_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Destroy
     field :destroy_contract_rate_phase, mutation: Mutations::ContractRatePhases::Destroy
     field :terminate_contract, mutation: Mutations::Contracts::Terminate
     field :update_charge, mutation: Mutations::Charges::Update
     field :update_contract, mutation: Mutations::Contracts::Update
+    field :update_contract_alert, mutation: Mutations::Contracts::Alerts::Update
     field :update_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Update
     field :update_contract_rate_phase, mutation: Mutations::ContractRatePhases::Update
 
@@ -138,6 +141,7 @@ module Types
     field :destroy_integration_mapping, mutation: Mutations::IntegrationMappings::Destroy
 
     field :fetch_integration_accounts, mutation: Mutations::IntegrationItems::FetchAccounts
+    field :fetch_integration_customers, mutation: Mutations::IntegrationItems::FetchCustomers
     field :fetch_integration_items, mutation: Mutations::IntegrationItems::FetchItems
 
     field :sync_hubspot_integration_invoice, mutation: Mutations::Integrations::Hubspot::SyncInvoice
@@ -243,6 +247,12 @@ module Types
     field :create_entra_id_integration, mutation: Mutations::Integrations::EntraId::Create
     field :update_entra_id_integration, mutation: Mutations::Integrations::EntraId::Update
 
+    field :create_agent_storefront_integration, mutation: Mutations::Integrations::AgentStorefront::Create
+    field :update_agent_storefront_integration, mutation: Mutations::Integrations::AgentStorefront::Update
+
+    field :start_agent_claim, mutation: Mutations::AgentClaims::Start
+    field :verify_agent_claim, mutation: Mutations::AgentClaims::Verify
+
     field :create_anrok_integration, mutation: Mutations::Integrations::Anrok::Create
     field :update_anrok_integration, mutation: Mutations::Integrations::Anrok::Update
 
@@ -253,6 +263,9 @@ module Types
 
     field :create_xero_integration, mutation: Mutations::Integrations::Xero::Create
     field :update_xero_integration, mutation: Mutations::Integrations::Xero::Update
+
+    field :create_quickbooks_integration, mutation: Mutations::Integrations::Quickbooks::Create
+    field :update_quickbooks_integration, mutation: Mutations::Integrations::Quickbooks::Update
 
     field :create_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Create
     field :update_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Update

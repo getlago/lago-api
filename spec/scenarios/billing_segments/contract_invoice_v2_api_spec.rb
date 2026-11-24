@@ -58,7 +58,7 @@ describe "Operate a contract invoice through API v2" do
     travel_to(january + 5.minutes) do
       api_call do
         post_with_token(organization, "/api/v2/contracts", {contract: {
-          external_id:, external_customer_id: "v2-customer", plan_code:, started_at: january.iso8601
+          external_id:, code: "default", external_customer_id: "v2-customer", plan_code:, started_at: january.iso8601
         }})
       end
     end
@@ -72,7 +72,7 @@ describe "Operate a contract invoice through API v2" do
 
   def tick(at)
     travel_to(at) do
-      Clock::CreateBillingSegmentsJob.perform_now
+      Clock::ProcessBillingOperationsJob.perform_now
       perform_all_enqueued_jobs
     end
   end

@@ -2,14 +2,12 @@
 
 module Contracts
   # Ends a live contract's lifecycle. An active contract that already ran is
-  # terminated; a pending one that never started is canceled instead — two
+  # terminated; a draft or pending one that never started is canceled instead — two
   # names for the same "no longer live" outcome, so history keeps whether the
   # agreement ever took effect. Both transitions are terminal: a terminated or
   # canceled contract is history and cannot be terminated again.
   #
-  # Terminating also closes billing: every card stops at the termination
-  # instant, and the period still open is written as segments and invoiced.
-  # The clock only bills active contracts, so nothing else would bill it.
+  # Terminating keeps billing cursors alive until all coverage through the end is processed.
   class TerminateService < BaseService
     Result = BaseResult[:contract]
 
@@ -22,14 +20,14 @@ module Contracts
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
-      # The clock's lock first, then the row: writing a segment takes a key-share lock on the
+      # The clock's lock first, then the row: writing billing output takes a key-share lock on the
       # contract row, so the reverse order deadlocks with a running clock.
       Customers::LockService.call(customer: contract.customer, scope: :billing_schedule) do
         # Re-read under lock: a pending contract the clock just activated has
         # taken effect, so it is terminated rather than canceled.
         contract.lock!
 
-        unless contract.pending? || contract.active?
+        unless Contract::LIVE_STATUSES.include?(contract.status)
           return result.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
         end
 
@@ -39,6 +37,7 @@ module Contracts
         else
           contract.update!(status: :canceled, canceled_at: timestamp)
         end
+        delete_wallet_alerts
 
         SendWebhookJob.perform_after_commit(event_type, contract)
         Utils::ActivityLog.produce_after_commit(contract, event_type)
@@ -61,8 +60,17 @@ module Contracts
     def terminate
       contract.update!(status: :terminated, terminated_at: timestamp)
 
-      closing = BillingSegments::ScheduleFinalSegmentsService.call!(contract:, timestamp: contract.terminated_at)
-      BillingSegments::ProcessJob.perform_after_commit(contract.customer_id) if closing.billing_segments.any?
+      termination_result = BillingOperations::TerminateService.call!(
+        contract:, timestamp: contract.terminated_at
+      )
+      if termination_result.billing_operations.any? { it.due_for_processing?(timestamp: Time.current) }
+        BillingOperations::ProcessJob.perform_after_commit(contract.customer_id)
+      end
+    end
+
+    # A contract wallet's alerts end with the contract, with their thresholds; their history stays
+    def delete_wallet_alerts
+      UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: contract.wallets.select(:id)).delete_all
     end
   end
 end

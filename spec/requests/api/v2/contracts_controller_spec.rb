@@ -9,7 +9,7 @@ RSpec.describe Api::V2::ContractsController do
   # A contract is never deleted, so it renders no deleted_at.
   let(:flat_keys) do
     %i[
-      lago_id external_id lago_customer_id external_customer_id name plan_code status billing_time
+      lago_id external_id code lago_customer_id external_customer_id name plan_code status
       consolidate_invoice purchase_order_number billing_anchor_date effective_billing_anchor_date started_at
       ended_at terminated_at canceled_at skip_invoice_custom_sections created_at updated_at
     ]
@@ -22,11 +22,33 @@ RSpec.describe Api::V2::ContractsController do
       {
         external_customer_id: customer.external_id,
         external_id: "contract-1",
+        code: "initial",
         plan_code: catalog_plan.code
       }
     end
 
     include_examples "requires API permission", "contract", "write"
+
+    context "with the removed billing_time parameter" do
+      let(:create_params) { super().merge(billing_time: "weekly") }
+
+      it "ignores it and creates a contract without billing_time in the response" do
+        expect { subject }.to change(Contract, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract].keys).to match_array(flat_keys)
+      end
+    end
+
+    context "when the billing schedule is locked" do
+      before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+      it "returns a concurrency error without creating a contract", v2_timestamps: false do
+        expect { subject }.not_to change(Contract, :count)
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "concurrency_conflict", field: "base", meta: {}}])
+      end
+    end
 
     context "with a rate card on the plan" do
       let(:rate_card) { create(:rate_card, organization:) }
@@ -37,7 +59,7 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:contract]).to include(external_id: "contract-1", plan_code: catalog_plan.code, status: "active")
+        expect(json[:contract]).to include(external_id: "contract-1", code: "initial", plan_code: catalog_plan.code, status: "active")
         expect(json[:contract].keys).to match_array(flat_keys)
 
         get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[applied_rate_cards]})
@@ -90,7 +112,7 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     context "without a plan" do
-      let(:create_params) { {external_customer_id: customer.external_id, external_id: "contract-1"} }
+      let(:create_params) { super().except(:plan_code) }
 
       it "creates a plan-less contract, without rate cards" do
         subject
@@ -119,6 +141,86 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:details]).to eq([{code: "value_already_exists", field: "external_id", meta: {}}])
+      end
+    end
+
+    context "with the draft status" do
+      let(:create_params) { super().merge(status: "draft", started_at: "2026-10-01T00:00:00Z") }
+
+      it "creates a draft, which the list filtered on draft returns" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:contract]).to include(lago_id: Contract.sole.id, status: "draft", started_at: "2026-10-01T00:00:00.000000Z")
+
+        get_with_token(organization, "/api/v2/contracts", {status: "draft"})
+        expect(json[:contracts].map { it[:lago_id] }).to eq([Contract.sole.id])
+      end
+    end
+
+    context "with another status" do
+      let(:create_params) { super().merge(status: "active") }
+
+      it "returns a validation error without creating a contract" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "status", meta: {}}])
+      end
+    end
+
+    context "with a non-scalar status" do
+      let(:create_params) { super().merge(status: ["draft"], started_at: "2026-10-01T00:00:00Z") }
+
+      it "refuses it rather than creating a contract that bills" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "status", meta: {}}])
+      end
+    end
+
+    context "with a null status" do
+      let(:create_params) { super().merge(status: nil) }
+
+      it "creates the contract as when the status is omitted" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:contract][:status]).to eq("active")
+      end
+    end
+
+    context "with a draft status and no start date" do
+      let(:create_params) { super().merge(status: "draft") }
+
+      it "returns a validation error without creating a contract" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "started_at", meta: {}}])
+      end
+    end
+
+    context "without a code" do
+      let(:create_params) { super().except(:code) }
+
+      it "returns a validation error without creating a contract" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "code", meta: {}}])
+      end
+    end
+
+    context "when a historical contract uses the same external id and code" do
+      before { create(:contract, :terminated, organization:, customer:, external_id: "contract-1", code: "initial") }
+
+      it "does not reuse its code" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "value_already_exist", field: "code", meta: {}}])
       end
     end
   end
@@ -165,10 +267,10 @@ RSpec.describe Api::V2::ContractsController do
     context "with a pending contract" do
       let!(:pending_contract) { create(:contract, :pending, organization:, customer:) }
 
-      it "lists only active contracts by default" do
+      it "lists contracts of every status by default" do
         subject
 
-        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([contract.id])
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([pending_contract.id, contract.id])
       end
 
       it "lists pending contracts when the status filter asks for them" do
@@ -184,6 +286,23 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with a draft contract" do
+      let!(:draft_contract) { create(:contract, :draft, organization:, customer:) }
+
+      it "lists it with the contracts of every other status by default" do
+        subject
+
+        expect(json[:contracts].map { |c| c.slice(:lago_id, :status) })
+          .to eq([{lago_id: draft_contract.id, status: "draft"}, {lago_id: contract.id, status: "active"}])
+      end
+
+      it "lists draft contracts when the status filter asks for them" do
+        get_with_token(organization, "/api/v2/contracts?status[]=draft")
+
+        expect(json[:contracts].map { |c| c.slice(:lago_id, :status) }).to eq([{lago_id: draft_contract.id, status: "draft"}])
+      end
+    end
+
     context "with a billing entity filter" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let!(:matching) { create(:contract, organization:, billing_entity:) }
@@ -192,6 +311,20 @@ RSpec.describe Api::V2::ContractsController do
         get_with_token(organization, "/api/v2/contracts?billing_entity_ids[]=#{billing_entity.id}")
 
         expect(json[:contracts].map { |c| c[:lago_id] }).to eq([matching.id])
+      end
+    end
+
+    context "with an external id shared by contracts of different statuses" do
+      let!(:terminated) { create(:contract, :terminated, organization:, customer:, external_id: contract.external_id) }
+      let!(:canceled) { create(:contract, :canceled, organization:, customer:, external_id: contract.external_id) }
+
+      it "returns all matching contracts and their codes" do
+        get_with_token(organization, "/api/v2/contracts", {external_id: contract.external_id})
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contracts].pluck(:lago_id, :code)).to eq([
+          [canceled.id, canceled.code], [terminated.id, terminated.code], [contract.id, contract.code]
+        ])
       end
     end
 
@@ -238,12 +371,12 @@ RSpec.describe Api::V2::ContractsController do
         expect(json[:contract]).to eq(
           lago_id: contract.id,
           external_id: contract.external_id,
+          code: contract.code,
           lago_customer_id: customer.id,
           external_customer_id: customer.external_id,
           name: nil,
           plan_code: catalog_plan.code,
           status: "active",
-          billing_time: "calendar",
           consolidate_invoice: true,
           purchase_order_number: nil,
           billing_anchor_date: nil,
@@ -288,7 +421,7 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     context "with expands[]=applied_rate_cards" do
-      let(:params) { {expands: %w[applied_rate_cards]} }
+      let(:params) { {contract_code: contract.code, expands: %w[applied_rate_cards]} }
       let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
 
       # Ties to the microsecond, created out of order, next to cards that neither list may show.
@@ -305,7 +438,7 @@ RSpec.describe Api::V2::ContractsController do
         page_params = {limit: 2}
 
         while page_params
-          get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards", page_params)
+          get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards", page_params.merge(contract_code: contract.code))
           cards.concat(json[:applied_rate_cards])
           page_params = json[:meta][:next_cursor]&.then { {limit: 2, after: it} }
         end
@@ -482,9 +615,8 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
-    # /applied_rate_cards lists the cards of the live contract, while a status picks the contract to expand.
-    context "with a status and expands[]=applied_rate_cards" do
-      let(:params) { {status: "terminated", expands: %w[applied_rate_cards]} }
+    context "with contract_code and expands[]=applied_rate_cards" do
+      let(:params) { {contract_code: contract.code, expands: %w[applied_rate_cards]} }
       let(:contract) { create(:contract, :terminated, organization:, customer:, started_at: 2.months.ago) }
       let(:live_contract) { create(:contract, organization:, customer:, external_id: contract.external_id) }
       let(:terminated_card) { create(:contract_rate_card, organization:, contract:) }
@@ -498,11 +630,11 @@ RSpec.describe Api::V2::ContractsController do
       it "embeds the cards of the terminated contract, not those of the live one" do
         subject
         expanded = json[:contract]
-        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards")
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards", {contract_code: contract.code})
 
         expect(expanded).to include(lago_id: contract.id, status: "terminated")
         expect(expanded[:applied_rate_cards].pluck(:lago_id)).to eq([terminated_card.id])
-        expect(json[:applied_rate_cards].pluck(:lago_id)).to eq([live_card.id])
+        expect(json[:applied_rate_cards].pluck(:lago_id)).to eq([terminated_card.id])
       end
     end
 
@@ -564,7 +696,7 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     context "with an unknown status filter value" do
-      it "falls back to the active contract instead of raising on the enum cast" do
+      it "ignores status on a single-contract route" do
         get_with_token(organization, "/api/v2/contracts/#{contract.external_id}?status=bogus")
 
         expect(response).to have_http_status(:success)
@@ -584,14 +716,11 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
-    context "when reading a terminated contract by status" do
+    context "when reading a terminated contract" do
       let!(:contract) { create(:contract, :terminated, organization:, customer:) }
 
-      it "returns it only with an explicit status filter" do
+      it "returns it without a status filter" do
         subject
-        expect(response).to be_v2_not_found_error("contract")
-
-        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}?status=terminated")
         expect(response).to have_http_status(:success)
         expect(json[:contract][:lago_id]).to eq(contract.id)
       end
@@ -613,6 +742,53 @@ RSpec.describe Api::V2::ContractsController do
 
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
     let(:update_params) { {name: "Renamed"} }
+
+    context "with the removed billing_time parameter" do
+      let(:update_params) { super().merge(billing_time: "anniversary") }
+
+      it "ignores it and updates the contract" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract.reload.name).to eq("Renamed")
+        expect(json[:contract].keys).to match_array(flat_keys)
+      end
+
+      context "when the contract is active" do
+        let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+        it "does not treat it as a change to a locked field" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(contract.reload.name).to eq("Renamed")
+          expect(json[:contract].keys).to match_array(flat_keys)
+        end
+      end
+    end
+
+    context "when the billing schedule is locked" do
+      before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+      it "returns a concurrency error without updating the contract", v2_timestamps: false do
+        expect { subject }.not_to change { contract.reload.attributes }
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "concurrency_conflict", field: "base", meta: {}}])
+      end
+    end
+
+    context "when attempting to change the code" do
+      let(:update_params) { super().merge(code: "replacement") }
+
+      it "leaves the code unchanged" do
+        original_code = contract.code
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:code]).to eq(original_code)
+        expect(contract.reload.code).to eq(original_code)
+      end
+    end
 
     include_examples "requires API permission", "contract", "write"
 
@@ -745,14 +921,34 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
-    context "when a pending replacement coexists with the active contract" do
-      it "terminates the active contract and leaves the replacement live" do
-        replacement = create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: contract.external_id)
+    context "when the contract is a draft" do
+      let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.ago) }
 
+      it "cancels it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(external_id: contract.external_id, status: "canceled")
+        expect(contract.reload.fees).to be_empty
+      end
+    end
+
+    context "when a pending replacement coexists with the active contract" do
+      subject { delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}?contract_code=#{contract.code}") }
+
+      let!(:replacement) { create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: contract.external_id) }
+
+      it "keeps targeting the same contract when the request is retried" do
         subject
 
         expect(response).to have_http_status(:success)
         expect(json[:contract][:status]).to eq("terminated")
+        expect(replacement.reload.status).to eq("pending")
+
+        delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}?contract_code=#{contract.code}")
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:details]).to eq([{code: "cannot_terminate", field: "contract", meta: {}}])
         expect(replacement.reload.status).to eq("pending")
       end
     end

@@ -7,6 +7,9 @@ module Types
 
       description "Current Organization Type"
 
+      field :activation_status, Types::Organizations::ActivationStatusEnum, null: false, method: :effective_activation_status,
+        description: "Always active when reachable: an organization waiting for a payment method is refused with " \
+          "organization_inactive. Clients read the waiting status from currentUser."
       field :id, ID, null: false
       field :logo_url, String
       field :name, String, null: false
@@ -48,6 +51,7 @@ module Types
 
       field :feature_flags, [Types::Organizations::FeatureFlagEnum], null: false
       field :realtime_usage_enabled, Boolean, null: false, description: "True when usage reports can be served from the real-time usage buckets"
+      field :wallet_refresh_enabled, Boolean, null: false, description: "True when the deployment refreshes wallet balances in real time, a requirement of the Agent Storefront"
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, permission: "organization:invoices:view"
       field :customer_portal_locked_fields, [Types::Organizations::CustomerPortalFieldEnum], null: false
@@ -74,6 +78,10 @@ module Types
 
       def realtime_usage_enabled
         ::RealtimeUsage.enabled?(object)
+      end
+
+      def wallet_refresh_enabled
+        Agents::WalletRefresh.available?
       end
 
       # The organization column is no longer written when the default billing entity's term changes.

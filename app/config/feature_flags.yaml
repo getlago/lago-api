@@ -34,6 +34,10 @@ realtime_usage_recurring_sum:
   description: "Serve the current usage of recurring sum charges from the latest snapshot plus the current-period usage buckets, on top of realtime_usage"
   owners: ["@vincent-pochet"]
 
+realtime_usage_alerts:
+  description: "Evaluate current usage alerts from the realtime usage triggers topic as soon as the usage buckets land, on top of realtime_usage"
+  owners: ["@vincent-pochet"]
+
 charge_filters_single_scan:
   description: "Aggregate every filter of a count or sum charge in one ClickHouse read instead of one read per filter"
   owners: ["@jdenquin"]
@@ -89,3 +93,15 @@ catalog_wallets:
 standard_webhooks_signature:
   description: "Allow webhook endpoints to sign deliveries with Standard Webhooks on v1 REST, GraphQL and the app"
   owners: ["@groyoh"]
+
+invoice_usage_on_wallet_expiration:
+  description: "When a wallet with invoice_usage_on_expiration expires, invoice the usage until its expiration so its remaining credits pay for it"
+  owners: ["@annvelents"]
+
+contract_alerts:
+  description: "Enable usage alerts on contracts (alerts v2) on the v2 API and GraphQL, on top of product_catalog"
+  owners: ["@lovrocolic"]
+
+agent_storefront:
+  description: "Enable the Agent Storefront: storefront connections, agent signup, enrollment, gate checks, funding and claims"
+  owners: ["@anassg-lago"]

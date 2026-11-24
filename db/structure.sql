@@ -28,11 +28,14 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_triggered_alerts DRO
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_f485cf0ace;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_f435d13904;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_f375d320ad;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_f32b205d44;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_f18cd04d51;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_f06aa08fff;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS fk_rails_f03eebb28a;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_efe167855e;
 ALTER TABLE IF EXISTS ONLY public.plan_wallet_credit_allocations DROP CONSTRAINT IF EXISTS fk_rails_ef919214e8;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_eeb6a32be1;
@@ -97,6 +100,7 @@ ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS fk_rails_c9ca4c1b68;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_c92e315584;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_c9183c59d9;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c8606f586b;
@@ -106,6 +110,7 @@ ALTER TABLE IF EXISTS ONLY public.catalog_wallet_transactions DROP CONSTRAINT IF
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c60c12efbd;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_c4dcd99ad0;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_c4c81e73af;
 ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS fk_rails_c47aa068a0;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_consumptions DROP CONSTRAINT IF EXISTS fk_rails_c3f8964ecc;
@@ -141,6 +146,7 @@ ALTER TABLE IF EXISTS ONLY public.catalog_wallet_selectors DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
 ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS fk_rails_aef6cd8dda;
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS fk_rails_aed4cbd20b;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_plan_wallet_alerts DROP CONSTRAINT IF EXISTS fk_rails_aea662bcdf;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_aea6422e6a;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_ac146c9541;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_consumptions DROP CONSTRAINT IF EXISTS fk_rails_abf26f44cd;
@@ -151,6 +157,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a9ba49506f;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_a958b8f5a7;
+ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS fk_rails_a88ad8b389;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_a808f6f3b4;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
@@ -177,6 +184,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_9c704027e2;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_9c08b43701;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_consumptions DROP CONSTRAINT IF EXISTS fk_rails_9a9022cd96;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alerts DROP CONSTRAINT IF EXISTS fk_rails_9a4f36ff57;
 ALTER TABLE IF EXISTS ONLY public.active_storage_variant_records DROP CONSTRAINT IF EXISTS fk_rails_993965df05;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_99326fb65d;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_98980b326b;
@@ -187,6 +195,7 @@ ALTER TABLE IF EXISTS ONLY public.catalog_wallet_applied_taxes DROP CONSTRAINT I
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_9457f0d2da;
+ALTER TABLE IF EXISTS ONLY public.agent_claims DROP CONSTRAINT IF EXISTS fk_rails_931d804c32;
 ALTER TABLE IF EXISTS ONLY public.usage_attribution_values DROP CONSTRAINT IF EXISTS fk_rails_92e94c6810;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_91802dc891;
@@ -200,9 +209,11 @@ ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_8da4c18005;
 ALTER TABLE IF EXISTS ONLY public.plan_wallet_credit_allocations DROP CONSTRAINT IF EXISTS fk_rails_8c78db9def;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS fk_rails_8c4afe61a8;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_8c09ee2428;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
+ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS fk_rails_8a65cfc992;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_89e1020aca;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_8887954ec7;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_885dc100ef;
@@ -222,6 +233,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS f
 ALTER TABLE IF EXISTS ONLY public.recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_7ee22e9ea2;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_7eb0484711;
 ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS fk_rails_7e8a2f26e5;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_plan_wallet_alerts DROP CONSTRAINT IF EXISTS fk_rails_7e881717de;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_7da558cadc;
 ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_7d0e61668f;
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_7c63dd13f0;
@@ -279,12 +291,14 @@ ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.order_forms DROP CONSTRAINT IF EXISTS fk_rails_6298debfc7;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_620bcfa5cc;
 ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS fk_rails_602bbeefa1;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_5efea6fe31;
 ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_5eaad62ac0;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_5e06da3c18;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_credit_allocations DROP CONSTRAINT IF EXISTS fk_rails_5de53b35a8;
+ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS fk_rails_5cee1f6b23;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
@@ -294,6 +308,8 @@ ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS fk_rails_5a4b906a16;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_rails_59357d1f82;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS fk_rails_58899a476f;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_58625fdc6a;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_57c1288849;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
@@ -351,8 +367,11 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_3acf9e789c;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3ab959bfc4;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alerts DROP CONSTRAINT IF EXISTS fk_rails_3a142d9ca0;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
+ALTER TABLE IF EXISTS ONLY public.agent_registrations DROP CONSTRAINT IF EXISTS fk_rails_384b08e18d;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_37c75ac37a;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_37996f8882;
 ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXISTS fk_rails_36e9122b3e;
 ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_rails_36cda06530;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_selectors DROP CONSTRAINT IF EXISTS fk_rails_364d5e8b54;
@@ -410,6 +429,7 @@ ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1d112bf8a0;
 ALTER TABLE IF EXISTS ONLY public.recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_1c2315fb03;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_1c069c1c44;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1b40486fac;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_19c47827ba;
 ALTER TABLE IF EXISTS ONLY public.catalog_plans DROP CONSTRAINT IF EXISTS fk_rails_19759667f5;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
@@ -428,6 +448,7 @@ ALTER TABLE IF EXISTS ONLY public.catalog_wallet_selectors DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.plan_wallets DROP CONSTRAINT IF EXISTS fk_rails_1301d727ff;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_123667657c;
+ALTER TABLE IF EXISTS ONLY public.agent_claims DROP CONSTRAINT IF EXISTS fk_rails_112acc402f;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_1124f79783;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_10ee148d0d;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
@@ -443,6 +464,7 @@ ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_0c9773c34d;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_0bb6dcc01f;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0baa7bd751;
+ALTER TABLE IF EXISTS ONLY public.agent_registrations DROP CONSTRAINT IF EXISTS fk_rails_0b8cfe0c26;
 ALTER TABLE IF EXISTS ONLY public.billing_operations DROP CONSTRAINT IF EXISTS fk_rails_0b0ce044e7;
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_selectors DROP CONSTRAINT IF EXISTS fk_rails_09beb391a2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_0934890b24;
@@ -458,11 +480,13 @@ ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_019e2289e5;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_fees_contract_rate_card_contract;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_daily_usages_contract_rate_card_contract;
 DROP TRIGGER IF EXISTS record_deletions_on_invoices_taxes ON public.invoices_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_invoice_subscriptions ON public.invoice_subscriptions;
 DROP TRIGGER IF EXISTS record_deletions_on_fees_taxes ON public.fees_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_fees ON public.fees;
 DROP TRIGGER IF EXISTS record_deletions_on_credit_notes_taxes ON public.credit_notes_taxes;
+DROP TRIGGER IF EXISTS record_deletions_on_contract_rate_cards_terms ON public.contract_rate_cards_terms;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
@@ -489,8 +513,9 @@ DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_credit_purchase_payer;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_payment_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_payment_digest;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_network_and_hash;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id;
-DROP INDEX IF EXISTS public.index_x402_settlements_on_network_and_transaction_hash;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_lago_network_and_hash;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_customer_id;
 DROP INDEX IF EXISTS public.index_x402_enabled_wallets_on_customer_id;
@@ -698,6 +723,7 @@ DROP INDEX IF EXISTS public.index_plans_on_created_at;
 DROP INDEX IF EXISTS public.index_plans_on_bill_fixed_charges_monthly;
 DROP INDEX IF EXISTS public.index_plan_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_plan_wallets_on_catalog_plan_id_and_code;
+DROP INDEX IF EXISTS public.index_plan_wallets_by_cursor;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_one_ongoing_balance;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_on_wallet_and_code;
 DROP INDEX IF EXISTS public.index_plan_wallet_credit_allocations_on_organization_id;
@@ -721,6 +747,7 @@ DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_live_pending_signup_i
 DROP INDEX IF EXISTS public.index_pending_signup_tokens_on_expires_at;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_customer_date;
 DROP INDEX IF EXISTS public.index_pending_billing_operations_on_org_and_date;
+DROP INDEX IF EXISTS public.index_pending_billing_operations_on_card_and_date;
 DROP INDEX IF EXISTS public.index_pending_active_subscriptions_on_plan_id_and_status;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
@@ -836,6 +863,7 @@ DROP INDEX IF EXISTS public.index_invoice_connections_on_integration_customer_id
 DROP INDEX IF EXISTS public.index_invites_on_token;
 DROP INDEX IF EXISTS public.index_invites_on_organization_id;
 DROP INDEX IF EXISTS public.index_invites_on_membership_id;
+DROP INDEX IF EXISTS public.index_integrations_on_organization_id_and_quickbooks_realm_id;
 DROP INDEX IF EXISTS public.index_integrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_integrations_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_syncable;
@@ -950,8 +978,11 @@ DROP INDEX IF EXISTS public.index_data_export_parts_on_data_export_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_usage_date;
 DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id_and_usage_date;
 DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id;
+DROP INDEX IF EXISTS public.index_daily_usages_on_organization_id_and_external_contract_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_customer_id;
+DROP INDEX IF EXISTS public.index_daily_usages_on_contract_rate_card_id_and_usage_date;
+DROP INDEX IF EXISTS public.index_daily_usages_on_contract_id_and_usage_date;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id_and_tax_id;
@@ -1012,6 +1043,7 @@ DROP INDEX IF EXISTS public.index_contracts_on_started_at_pending;
 DROP INDEX IF EXISTS public.index_contracts_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_name_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_contracts_on_organization_id_external_id_code;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id_and_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
@@ -1065,6 +1097,7 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_catalog_wallets_on_contract_id_and_code;
+DROP INDEX IF EXISTS public.index_catalog_wallets_by_cursor;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_one_pending_ongoing_balance;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_wallet_and_idempotency_key;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_organization_id;
@@ -1126,6 +1159,9 @@ DROP INDEX IF EXISTS public.index_billable_metrics_by_cursor;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_applied_wallet_expirations_on_wallet_id;
+DROP INDEX IF EXISTS public.index_applied_wallet_expirations_on_organization_id;
+DROP INDEX IF EXISTS public.index_applied_wallet_expirations_on_invoice_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_usage_threshold_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_invoice_id;
@@ -1145,6 +1181,15 @@ DROP INDEX IF EXISTS public.index_api_keys_on_organization_id;
 DROP INDEX IF EXISTS public.index_api_keys_on_membership_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_membership_id;
+DROP INDEX IF EXISTS public.index_agent_registrations_on_organization_id;
+DROP INDEX IF EXISTS public.index_agent_registrations_on_integration_id_and_key_id;
+DROP INDEX IF EXISTS public.index_agent_free_credit_grants_on_wallet_transaction_id;
+DROP INDEX IF EXISTS public.index_agent_free_credit_grants_on_registration_id;
+DROP INDEX IF EXISTS public.index_agent_free_credit_grants_on_organization_id;
+DROP INDEX IF EXISTS public.index_agent_free_credit_grants_on_integration_and_email_hash;
+DROP INDEX IF EXISTS public.index_agent_claims_on_registration_id;
+DROP INDEX IF EXISTS public.index_agent_claims_on_organization_id;
+DROP INDEX IF EXISTS public.index_agent_claims_on_code_hash;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_invoice_id;
@@ -1182,6 +1227,9 @@ DROP INDEX IF EXISTS public.idx_unique_feature_per_catalog_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
 DROP INDEX IF EXISTS public.idx_recurring_aggregation_snapshots_unique;
 DROP INDEX IF EXISTS public.idx_privileges_code_unique_per_feature;
+DROP INDEX IF EXISTS public.idx_plan_wallet_alerts_organization_id;
+DROP INDEX IF EXISTS public.idx_plan_wallet_alerts_code_unique;
+DROP INDEX IF EXISTS public.idx_plan_wallet_alerts_alert_type_unique;
 DROP INDEX IF EXISTS public.idx_pif_values_on_filter_metric_filter_and_value;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_product_card_event;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge_filter;
@@ -1253,10 +1301,20 @@ DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_product_filter_i
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_organization_id;
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_on_billable_metric_id;
 DROP INDEX IF EXISTS public.idx_contract_recurring_snapshots_by_period;
-DROP INDEX IF EXISTS public.idx_contract_alerts_scope_unique;
+DROP INDEX IF EXISTS public.idx_contract_alerts_scope_with_filters_unique;
 DROP INDEX IF EXISTS public.idx_contract_alerts_code_unique;
 DROP INDEX IF EXISTS public.idx_contract_activity_unique;
 DROP INDEX IF EXISTS public.idx_contract_activities_enqueued_per_org;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_triggered_alerts_organization_id;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_triggered_alerts_catalog_wallet_alert_id;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_alerts_organization_id;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_alerts_code_unique;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_alerts_alert_type_unique;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_alert_thresholds_plan_wallet_alert_id;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_alert_thresholds_plan_recurring_unique;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_alert_thresholds_organization_id;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_alert_thresholds_catalog_wallet_alert_id;
+DROP INDEX IF EXISTS public.idx_catalog_wallet_alert_thresholds_catalog_recurring_unique;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_contract_lookup;
 DROP INDEX IF EXISTS public.idx_billable_metrics_id_agg_type;
@@ -1288,10 +1346,14 @@ ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS user_de
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_triggered_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS usage_monitoring_subscription_activities_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_plan_wallet_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_plan_wallet_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_triggered_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_contract_triggered_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_contract_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_alert_thresholds DROP CONSTRAINT IF EXISTS usage_monitoring_contract_alert_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_contract_activities DROP CONSTRAINT IF EXISTS usage_monitoring_contract_activities_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_triggered_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_catalog_wallet_triggered_alerts_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_catalog_wallet_alerts_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_catalog_wallet_alert_thresholds DROP CONSTRAINT IF EXISTS usage_monitoring_catalog_wallet_alert_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS usage_monitoring_alerts_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS usage_monitoring_alert_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_attribution_values DROP CONSTRAINT IF EXISTS usage_attribution_values_pkey;
@@ -1424,6 +1486,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP 
 ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS billable_metrics_pkey;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS billable_metric_filters_pkey;
 ALTER TABLE IF EXISTS ONLY public.ar_internal_metadata DROP CONSTRAINT IF EXISTS ar_internal_metadata_pkey;
+ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS applied_wallet_expirations_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS applied_usage_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS applied_pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS applied_invoice_custom_sections_pkey;
@@ -1431,6 +1494,9 @@ ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS appl
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS applied_add_ons_pkey;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS api_keys_pkey;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS ai_conversations_pkey;
+ALTER TABLE IF EXISTS ONLY public.agent_registrations DROP CONSTRAINT IF EXISTS agent_registrations_pkey;
+ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EXISTS agent_free_credit_grants_pkey;
+ALTER TABLE IF EXISTS ONLY public.agent_claims DROP CONSTRAINT IF EXISTS agent_claims_pkey;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS adjusted_fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS add_ons_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS add_ons_pkey;
@@ -1456,11 +1522,15 @@ DROP TABLE IF EXISTS public.users;
 DROP TABLE IF EXISTS public.user_devices;
 DROP SEQUENCE IF EXISTS public.usage_monitoring_subscription_activities_id_seq;
 DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
+DROP TABLE IF EXISTS public.usage_monitoring_plan_wallet_alerts;
 DROP TABLE IF EXISTS public.usage_monitoring_contract_triggered_alerts;
 DROP TABLE IF EXISTS public.usage_monitoring_contract_alerts;
 DROP TABLE IF EXISTS public.usage_monitoring_contract_alert_thresholds;
 DROP SEQUENCE IF EXISTS public.usage_monitoring_contract_activities_id_seq;
 DROP TABLE IF EXISTS public.usage_monitoring_contract_activities;
+DROP TABLE IF EXISTS public.usage_monitoring_catalog_wallet_triggered_alerts;
+DROP TABLE IF EXISTS public.usage_monitoring_catalog_wallet_alerts;
+DROP TABLE IF EXISTS public.usage_monitoring_catalog_wallet_alert_thresholds;
 DROP TABLE IF EXISTS public.usage_monitoring_alerts;
 DROP TABLE IF EXISTS public.usage_attribution_values;
 DROP TABLE IF EXISTS public.usage_attribution_types;
@@ -1474,26 +1544,16 @@ DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules_invoice_custom_sections;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.recurring_aggregation_snapshots;
-DROP TABLE IF EXISTS public.rate_phases;
-DROP TABLE IF EXISTS public.rate_overrides;
 DROP TABLE IF EXISTS public.rate_cards_taxes;
-DROP TABLE IF EXISTS public.rate_cards;
-DROP TABLE IF EXISTS public.rate_card_rates;
 DROP TABLE IF EXISTS public.quotes;
 DROP TABLE IF EXISTS public.quote_versions;
 DROP SEQUENCE IF EXISTS public.quote_owners_id_seq;
 DROP TABLE IF EXISTS public.quote_owners;
 DROP TABLE IF EXISTS public.quantified_events;
-DROP TABLE IF EXISTS public.products;
-DROP TABLE IF EXISTS public.product_filters;
-DROP TABLE IF EXISTS public.product_filter_values;
-DROP TABLE IF EXISTS public.product_categories;
-DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.presentation_breakdowns;
 DROP TABLE IF EXISTS public.plan_wallets;
 DROP TABLE IF EXISTS public.plan_wallet_credit_allocations;
-DROP TABLE IF EXISTS public.plan_rate_cards;
 DROP TABLE IF EXISTS public.pending_vies_checks;
 DROP TABLE IF EXISTS public.pending_signups;
 DROP TABLE IF EXISTS public.pending_signup_tokens;
@@ -1539,8 +1599,24 @@ DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
 DROP VIEW IF EXISTS public.exports_record_deletions;
 DROP TABLE IF EXISTS public.record_deletions;
+DROP VIEW IF EXISTS public.exports_rate_phases;
+DROP TABLE IF EXISTS public.rate_phases;
+DROP VIEW IF EXISTS public.exports_rate_overrides;
+DROP TABLE IF EXISTS public.rate_overrides;
+DROP VIEW IF EXISTS public.exports_rate_cards;
+DROP VIEW IF EXISTS public.exports_rate_card_rates;
+DROP VIEW IF EXISTS public.exports_products;
+DROP VIEW IF EXISTS public.exports_product_filters;
+DROP TABLE IF EXISTS public.product_filters;
+DROP TABLE IF EXISTS public.product_filter_values;
+DROP VIEW IF EXISTS public.exports_product_categories;
+DROP TABLE IF EXISTS public.product_categories;
+DROP VIEW IF EXISTS public.exports_pricing_units;
+DROP TABLE IF EXISTS public.pricing_units;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
+DROP VIEW IF EXISTS public.exports_plan_rate_cards;
+DROP TABLE IF EXISTS public.plan_rate_cards;
 DROP VIEW IF EXISTS public.exports_payments;
 DROP VIEW IF EXISTS public.exports_payment_requests;
 DROP TABLE IF EXISTS public.payments;
@@ -1561,6 +1637,9 @@ DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
+DROP TABLE IF EXISTS public.rate_cards;
+DROP TABLE IF EXISTS public.rate_card_rates;
+DROP TABLE IF EXISTS public.products;
 DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.fixed_charges;
@@ -1576,7 +1655,11 @@ DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
 DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_coupons;
+DROP VIEW IF EXISTS public.exports_contracts;
+DROP VIEW IF EXISTS public.exports_contract_rate_cards_terms;
+DROP VIEW IF EXISTS public.exports_contract_rate_cards;
 DROP VIEW IF EXISTS public.exports_charges;
+DROP VIEW IF EXISTS public.exports_catalog_plans;
 DROP VIEW IF EXISTS public.exports_billing_entities;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
@@ -1634,6 +1717,7 @@ DROP VIEW IF EXISTS public.billable_metrics_grouped_charges;
 DROP TABLE IF EXISTS public.billable_metrics;
 DROP TABLE IF EXISTS public.billable_metric_filters;
 DROP TABLE IF EXISTS public.ar_internal_metadata;
+DROP TABLE IF EXISTS public.applied_wallet_expirations;
 DROP TABLE IF EXISTS public.applied_usage_thresholds;
 DROP TABLE IF EXISTS public.applied_pricing_units;
 DROP TABLE IF EXISTS public.applied_invoice_custom_sections;
@@ -1641,6 +1725,9 @@ DROP TABLE IF EXISTS public.applied_coupons;
 DROP TABLE IF EXISTS public.applied_add_ons;
 DROP TABLE IF EXISTS public.api_keys;
 DROP TABLE IF EXISTS public.ai_conversations;
+DROP TABLE IF EXISTS public.agent_registrations;
+DROP TABLE IF EXISTS public.agent_free_credit_grants;
+DROP TABLE IF EXISTS public.agent_claims;
 DROP TABLE IF EXISTS public.adjusted_fees;
 DROP TABLE IF EXISTS public.add_ons_taxes;
 DROP TABLE IF EXISTS public.add_ons;
@@ -1658,7 +1745,9 @@ DROP TYPE IF EXISTS public.x402_facilitator;
 DROP TYPE IF EXISTS public.x402_asset;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_resolution_reasons;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
+DROP TYPE IF EXISTS public.usage_monitoring_plan_wallet_alert_alert_type;
 DROP TYPE IF EXISTS public.usage_monitoring_contract_alert_alert_type;
+DROP TYPE IF EXISTS public.usage_monitoring_catalog_wallet_alert_alert_type;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
 DROP TYPE IF EXISTS public.usage_attribution_type_role;
@@ -1687,11 +1776,13 @@ DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.payment_method_types;
 DROP TYPE IF EXISTS public.organization_environment;
+DROP TYPE IF EXISTS public.organization_activation_status;
 DROP TYPE IF EXISTS public.order_status;
 DROP TYPE IF EXISTS public.order_form_void_reason;
 DROP TYPE IF EXISTS public.order_form_status;
 DROP TYPE IF EXISTS public.order_execution_mode;
 DROP TYPE IF EXISTS public.invoice_settlement_settlement_type;
+DROP TYPE IF EXISTS public.invoice_progressive_billing_trigger;
 DROP TYPE IF EXISTS public.invoice_custom_section_type;
 DROP TYPE IF EXISTS public.inbound_webhook_status;
 DROP TYPE IF EXISTS public.fixed_charge_charge_model;
@@ -1718,6 +1809,8 @@ DROP TYPE IF EXISTS public.billing_operation_cancellation_reason;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
+DROP TYPE IF EXISTS public.agent_registration_status;
+DROP TYPE IF EXISTS public.agent_claim_status;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
 DROP EXTENSION IF EXISTS pg_trgm;
@@ -1775,6 +1868,27 @@ CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
 
 
 --
+-- Name: agent_claim_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.agent_claim_status AS ENUM (
+    'issued',
+    'started',
+    'verified'
+);
+
+
+--
+-- Name: agent_registration_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.agent_registration_status AS ENUM (
+    'active',
+    'revoked'
+);
+
+
+--
 -- Name: billable_metric_rounding_function; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1809,7 +1923,8 @@ CREATE TYPE public.billing_object_connection_behavior AS ENUM (
 --
 
 CREATE TYPE public.billing_operation_cancellation_reason AS ENUM (
-    'contract_termination'
+    'contract_termination',
+    'rate_change'
 );
 
 
@@ -1973,6 +2088,7 @@ CREATE TYPE public.contract_rate_cards_terms_application_timing AS ENUM (
 --
 
 CREATE TYPE public.contract_status AS ENUM (
+    'draft',
     'pending',
     'active',
     'terminated',
@@ -2056,6 +2172,16 @@ CREATE TYPE public.invoice_custom_section_type AS ENUM (
 
 
 --
+-- Name: invoice_progressive_billing_trigger; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.invoice_progressive_billing_trigger AS ENUM (
+    'usage_threshold',
+    'wallet_expiration'
+);
+
+
+--
 -- Name: invoice_settlement_settlement_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -2106,6 +2232,16 @@ CREATE TYPE public.order_status AS ENUM (
     'created',
     'executed',
     'failed'
+);
+
+
+--
+-- Name: organization_activation_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.organization_activation_status AS ENUM (
+    'pending_payment_method',
+    'active'
 );
 
 
@@ -2425,12 +2561,32 @@ CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
 
 
 --
+-- Name: usage_monitoring_catalog_wallet_alert_alert_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_catalog_wallet_alert_alert_type AS ENUM (
+    'balance',
+    'ongoing_balance'
+);
+
+
+--
 -- Name: usage_monitoring_contract_alert_alert_type; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.usage_monitoring_contract_alert_alert_type AS ENUM (
     'usage_amount',
     'usage_units'
+);
+
+
+--
+-- Name: usage_monitoring_plan_wallet_alert_alert_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_plan_wallet_alert_alert_type AS ENUM (
+    'balance',
+    'ongoing_balance'
 );
 
 
@@ -2707,6 +2863,62 @@ CREATE TABLE public.adjusted_fees (
 
 
 --
+-- Name: agent_claims; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.agent_claims (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    registration_id uuid NOT NULL,
+    status public.agent_claim_status DEFAULT 'issued'::public.agent_claim_status NOT NULL,
+    code_hash character varying NOT NULL,
+    email character varying,
+    verification_code_hash character varying,
+    verification_expires_at timestamp(6) without time zone,
+    verified_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    email_hash character varying,
+    CONSTRAINT check_agent_claims_verified_at CHECK (((status <> 'verified'::public.agent_claim_status) OR (verified_at IS NOT NULL)))
+);
+
+
+--
+-- Name: agent_free_credit_grants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.agent_free_credit_grants (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    integration_id uuid NOT NULL,
+    registration_id uuid NOT NULL,
+    wallet_transaction_id uuid,
+    email_hash character varying NOT NULL,
+    amount_cents bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: agent_registrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.agent_registrations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    integration_id uuid NOT NULL,
+    key_id character varying NOT NULL,
+    public_key character varying NOT NULL,
+    status public.agent_registration_status DEFAULT 'active'::public.agent_registration_status NOT NULL,
+    last_authenticated_at timestamp(6) without time zone,
+    revoked_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: ai_conversations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2821,6 +3033,20 @@ CREATE TABLE public.applied_usage_thresholds (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: applied_wallet_expirations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.applied_wallet_expirations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    invoice_id uuid NOT NULL,
+    wallet_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -3441,7 +3667,8 @@ CREATE TABLE public.contracts (
     purchase_order_number character varying,
     consolidate_invoice boolean DEFAULT true NOT NULL,
     payment_method_type public.contract_payment_method_type DEFAULT 'provider'::public.contract_payment_method_type NOT NULL,
-    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
+    code character varying
 );
 
 
@@ -3744,8 +3971,8 @@ CREATE TABLE public.daily_usages (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     customer_id uuid NOT NULL,
-    subscription_id uuid NOT NULL,
-    external_subscription_id character varying NOT NULL,
+    subscription_id uuid,
+    external_subscription_id character varying,
     from_datetime timestamp(6) without time zone NOT NULL,
     to_datetime timestamp(6) without time zone NOT NULL,
     usage jsonb DEFAULT '"{}"'::jsonb NOT NULL,
@@ -3753,7 +3980,11 @@ CREATE TABLE public.daily_usages (
     updated_at timestamp(6) without time zone NOT NULL,
     refreshed_at timestamp(6) without time zone NOT NULL,
     usage_diff jsonb DEFAULT '"{}"'::jsonb NOT NULL,
-    usage_date date
+    usage_date date,
+    contract_id uuid,
+    contract_rate_card_id uuid,
+    external_contract_id character varying,
+    CONSTRAINT daily_usages_subscription_or_contract CHECK ((((subscription_id IS NOT NULL) AND (external_subscription_id IS NOT NULL) AND (contract_id IS NULL) AND (contract_rate_card_id IS NULL) AND (external_contract_id IS NULL)) OR ((subscription_id IS NULL) AND (external_subscription_id IS NULL) AND (contract_id IS NOT NULL) AND (contract_rate_card_id IS NOT NULL) AND (external_contract_id IS NOT NULL))))
 );
 
 
@@ -4118,6 +4349,24 @@ CREATE VIEW public.exports_billing_entities AS
 
 
 --
+-- Name: exports_catalog_plans; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_catalog_plans AS
+ SELECT cp.organization_id,
+    cp.id AS lago_id,
+    cp.code,
+    cp.name,
+    cp.invoice_display_name,
+    cp.description,
+    cp.currency,
+    cp.created_at,
+    cp.updated_at,
+    cp.deleted_at
+   FROM public.catalog_plans cp;
+
+
+--
 -- Name: exports_charges; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4156,6 +4405,69 @@ CREATE VIEW public.exports_charges AS
            FROM public.charge_filters cf
           WHERE (cf.charge_id = c.id)) AS charge_filters
    FROM public.charges c;
+
+
+--
+-- Name: exports_contract_rate_cards; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_contract_rate_cards AS
+ SELECT crc.organization_id,
+    crc.id AS lago_id,
+    crc.contract_id AS lago_contract_id,
+    crc.rate_card_id AS lago_rate_card_id,
+    crc.billing_anchor_date,
+    crc.next_billing_at,
+    crc.effective_date,
+    crc.created_at,
+    crc.updated_at,
+    crc.deleted_at
+   FROM public.contract_rate_cards crc;
+
+
+--
+-- Name: exports_contract_rate_cards_terms; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_contract_rate_cards_terms AS
+ SELECT crct.organization_id,
+    crct.id AS lago_id,
+    crct.contract_rate_card_id AS lago_contract_rate_card_id,
+    crct.units,
+    crct.effective_date,
+    (crct.application_timing)::text AS application_timing,
+    crct.created_at,
+    crct.updated_at
+   FROM public.contract_rate_cards_terms crct;
+
+
+--
+-- Name: exports_contracts; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_contracts AS
+ SELECT c.organization_id,
+    c.id AS lago_id,
+    c.customer_id AS lago_customer_id,
+    c.external_id,
+    c.code,
+    c.name,
+    (c.status)::text AS status,
+    c.billing_anchor_date,
+    c.started_at,
+    c.ended_at,
+    c.terminated_at,
+    c.canceled_at,
+    c.catalog_plan_id AS lago_catalog_plan_id,
+    c.billing_entity_id AS lago_billing_entity_id,
+    c.payment_method_id AS lago_payment_method_id,
+    (c.payment_method_type)::text AS payment_method_type,
+    c.purchase_order_number,
+    c.consolidate_invoice,
+    c.skip_invoice_custom_sections,
+    c.created_at,
+    c.updated_at
+   FROM public.contracts c;
 
 
 --
@@ -4353,6 +4665,8 @@ CREATE TABLE public.organizations (
     self_serve boolean DEFAULT false NOT NULL,
     environment public.organization_environment DEFAULT 'production'::public.organization_environment NOT NULL,
     production_organization_id uuid,
+    activation_status public.organization_activation_status DEFAULT 'active'::public.organization_activation_status NOT NULL,
+    CONSTRAINT check_organizations_on_activation_status CHECK (((activation_status = 'active'::public.organization_activation_status) OR (self_serve AND (environment = 'production'::public.organization_environment)))),
     CONSTRAINT check_organizations_on_environment_link CHECK ((((environment = 'production'::public.organization_environment) AND (production_organization_id IS NULL)) OR ((environment = 'sandbox'::public.organization_environment) AND (production_organization_id IS NOT NULL)))),
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0)),
@@ -4455,7 +4769,10 @@ CREATE VIEW public.exports_daily_usages AS
     du.updated_at,
     du.customer_id AS lago_customer_id,
     du.subscription_id AS lago_subscription_id,
-    du.external_subscription_id
+    du.external_subscription_id,
+    du.contract_id AS lago_contract_id,
+    du.external_contract_id,
+    du.contract_rate_card_id AS lago_contract_rate_card_id
    FROM public.daily_usages du;
 
 
@@ -4653,6 +4970,7 @@ CREATE TABLE public.invoices (
     search_terms text,
     x402_payment_token character varying,
     x402_connection_id uuid,
+    progressive_billing_trigger public.invoice_progressive_billing_trigger,
     prepaid_credit_before_tax_amount_cents bigint DEFAULT 0 NOT NULL,
     prepaid_credit_after_tax_amount_cents bigint DEFAULT 0 NOT NULL,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
@@ -4682,6 +5000,75 @@ CREATE TABLE public.plans (
     pending_deletion boolean DEFAULT false NOT NULL,
     invoice_display_name character varying,
     bill_fixed_charges_monthly boolean DEFAULT false
+);
+
+
+--
+-- Name: products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.products (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_category_id uuid,
+    billable_metric_id uuid,
+    add_on_id uuid,
+    charge_id uuid,
+    product_type public.product_type NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    invoice_display_name character varying,
+    description text,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: rate_card_rates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_card_rates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_card_id uuid NOT NULL,
+    code character varying NOT NULL,
+    effective_from timestamp(6) without time zone NOT NULL,
+    rate_model public.rate_card_rate_model NOT NULL,
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    min_amount_cents bigint DEFAULT 0 NOT NULL,
+    billing_interval_count integer DEFAULT 1 NOT NULL,
+    billing_interval_unit public.rate_card_rate_billing_interval_unit NOT NULL,
+    applied_pricing_unit_conversion_rate numeric(30,10),
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT rate_card_rates_billing_interval_count_positive CHECK ((billing_interval_count >= 1))
+);
+
+
+--
+-- Name: rate_cards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_cards (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    product_filter_id uuid,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    description character varying,
+    currency character varying NOT NULL,
+    billing_timing public.rate_card_billing_timing DEFAULT 'arrears'::public.rate_card_billing_timing NOT NULL,
+    proration boolean DEFAULT false NOT NULL,
+    display_on_invoice boolean DEFAULT true NOT NULL,
+    regroup_paid_fees public.rate_card_regroup_paid_fees,
+    applied_pricing_unit_code character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -4739,7 +5126,7 @@ CREATE VIEW public.exports_fees AS
     f.charge_filter_id AS lago_charge_filter_id,
     f.invoice_id AS lago_invoice_id,
     f.subscription_id AS lago_subscription_id,
-    c.id AS lago_customer_id,
+    COALESCE(c.id, ct.customer_id) AS lago_customer_id,
     json_build_object('type',
         CASE f.fee_type
             WHEN 0 THEN 'charge'::text
@@ -4748,6 +5135,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN 'credit'::text
             WHEN 4 THEN 'commitment'::text
             WHEN 5 THEN 'fixed_charge'::text
+            WHEN 6 THEN 'product'::text
             ELSE 'unknown'::text
         END, 'code',
         CASE f.fee_type
@@ -4755,6 +5143,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN ao.code
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.code
+            WHEN 6 THEN pr.code
             ELSE p.code
         END, 'name',
         CASE f.fee_type
@@ -4762,6 +5151,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN ao.name
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.name
+            WHEN 6 THEN pr.name
             ELSE p.name
         END, 'description',
         CASE f.fee_type
@@ -4769,6 +5159,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN ao.description
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.description
+            WHEN 6 THEN (pr.description)::character varying
             ELSE p.description
         END, 'invoice_display_name', COALESCE(f.invoice_display_name,
         CASE f.fee_type
@@ -4776,6 +5167,11 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN COALESCE(ao.invoice_display_name, ao.name)
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN COALESCE(fc.invoice_display_name, fao.invoice_display_name, fao.name)
+            WHEN 6 THEN COALESCE(
+            CASE
+                WHEN ((pr.invoice_display_name)::text !~ '^[[:space:]]*$'::text) THEN pr.invoice_display_name
+                ELSE NULL::character varying
+            END, pr.name)
             ELSE p.invoice_display_name
         END), 'filters', ( SELECT json_agg(json_build_object('id', cf.id, 'charge_id', cf.charge_id, 'properties', cf.properties, 'invoice_display_name', cf.invoice_display_name)) AS json_agg
            FROM public.charge_filters cf
@@ -4785,6 +5181,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN ao.id
             WHEN 3 THEN f.invoiceable_id
             WHEN 5 THEN fao.id
+            WHEN 6 THEN pr.id
             ELSE f.subscription_id
         END, 'item_type',
         CASE f.fee_type
@@ -4792,11 +5189,15 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN 'add_on'::text
             WHEN 3 THEN 'wallet_transaction'::text
             WHEN 5 THEN 'add_on'::text
+            WHEN 6 THEN 'product'::text
             ELSE 'subscription'::text
         END, 'grouped_by', f.grouped_by) AS item,
     f.pay_in_advance,
     f.amount_cents,
-    ch.invoiceable,
+        CASE f.fee_type
+            WHEN 6 THEN rc.display_on_invoice
+            ELSE ch.invoiceable
+        END AS invoiceable,
     f.taxes_amount_cents,
     f.taxes_precise_amount_cents,
     f.taxes_rate,
@@ -4832,8 +5233,14 @@ CREATE VIEW public.exports_fees AS
             WHEN 0 THEN (((f.properties ->> 'charges_to_datetime'::text))::timestamp with time zone)::text
             WHEN 5 THEN (((f.properties ->> 'fixed_charges_to_datetime'::text))::timestamp with time zone)::text
             ELSE (((f.properties ->> 'to_datetime'::text))::timestamp with time zone)::text
-        END AS to_date
-   FROM (((((((((public.fees f
+        END AS to_date,
+    f.contract_id AS lago_contract_id,
+    f.contract_rate_card_id AS lago_contract_rate_card_id,
+    f.rate_card_rate_id AS lago_rate_card_rate_id,
+    f.product_filter_id AS lago_product_filter_id,
+    rc.product_id AS lago_product_id,
+    f.rate_override_id AS lago_rate_override_id
+   FROM (((((((((((((public.fees f
      LEFT JOIN public.subscriptions s ON ((f.subscription_id = s.id)))
      LEFT JOIN public.customers c ON ((s.customer_id = c.id)))
      LEFT JOIN public.charges ch ON ((f.charge_id = ch.id)))
@@ -4842,6 +5249,10 @@ CREATE VIEW public.exports_fees AS
      LEFT JOIN public.fixed_charges fc ON ((f.fixed_charge_id = fc.id)))
      LEFT JOIN public.add_ons fao ON ((fc.add_on_id = fao.id)))
      LEFT JOIN public.plans p ON ((s.plan_id = p.id)))
+     LEFT JOIN public.contracts ct ON ((f.contract_id = ct.id)))
+     LEFT JOIN public.rate_card_rates rcr ON ((f.rate_card_rate_id = rcr.id)))
+     LEFT JOIN public.rate_cards rc ON ((rcr.rate_card_id = rc.id)))
+     LEFT JOIN public.products pr ON ((rc.product_id = pr.id)))
      LEFT JOIN public.invoices i ON ((i.id = f.invoice_id)))
   WHERE (i.status IS DISTINCT FROM 8);
 
@@ -5277,6 +5688,38 @@ CREATE VIEW public.exports_payments AS
 
 
 --
+-- Name: plan_rate_cards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plan_rate_cards (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_card_id uuid NOT NULL,
+    units numeric,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    catalog_plan_id uuid
+);
+
+
+--
+-- Name: exports_plan_rate_cards; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_plan_rate_cards AS
+ SELECT prc.organization_id,
+    prc.id AS lago_id,
+    prc.catalog_plan_id AS lago_catalog_plan_id,
+    prc.rate_card_id AS lago_rate_card_id,
+    prc.units,
+    prc.created_at,
+    prc.updated_at,
+    prc.deleted_at
+   FROM public.plan_rate_cards prc;
+
+
+--
 -- Name: plans_taxes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5323,6 +5766,277 @@ CREATE VIEW public.exports_plans AS
           WHERE (pt.plan_id = p.id))) AS lago_taxes_ids
    FROM public.plans p
   WHERE (p.deleted_at IS NULL);
+
+
+--
+-- Name: pricing_units; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pricing_units (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying NOT NULL,
+    code character varying NOT NULL,
+    short_name character varying NOT NULL,
+    description text,
+    organization_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_pricing_units; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_pricing_units AS
+ SELECT pu.organization_id,
+    pu.id AS lago_id,
+    pu.code,
+    pu.name,
+    pu.short_name,
+    pu.description,
+    pu.created_at,
+    pu.updated_at
+   FROM public.pricing_units pu;
+
+
+--
+-- Name: product_categories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_categories (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    description character varying,
+    invoice_display_name character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_product_categories; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_product_categories AS
+ SELECT pc.organization_id,
+    pc.id AS lago_id,
+    pc.code,
+    pc.name,
+    pc.description,
+    pc.invoice_display_name,
+    pc.created_at,
+    pc.updated_at,
+    pc.deleted_at
+   FROM public.product_categories pc;
+
+
+--
+-- Name: product_filter_values; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_filter_values (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_filter_id uuid NOT NULL,
+    billable_metric_filter_id uuid NOT NULL,
+    value character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: product_filters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_filters (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    name character varying NOT NULL,
+    code character varying NOT NULL,
+    description character varying,
+    invoice_display_name character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_product_filters; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_product_filters AS
+ SELECT pf.organization_id,
+    pf.id AS lago_id,
+    pf.product_id AS lago_product_id,
+    pf.code,
+    pf.name,
+    pf.description,
+    pf.invoice_display_name,
+    pf.created_at,
+    GREATEST(pf.updated_at, pfv_stats.updated_at) AS updated_at,
+    pf.deleted_at,
+    COALESCE(pfv_stats.kept_values, '[]'::json) AS "values"
+   FROM (public.product_filters pf
+     LEFT JOIN LATERAL ( SELECT max(pfv.updated_at) AS updated_at,
+            json_agg(json_build_object('key', bmf.key, 'value', pfv.value) ORDER BY pfv.created_at, pfv.id) FILTER (WHERE (pfv.deleted_at IS NULL)) AS kept_values
+           FROM (public.product_filter_values pfv
+             JOIN public.billable_metric_filters bmf ON ((bmf.id = pfv.billable_metric_filter_id)))
+          WHERE (pfv.product_filter_id = pf.id)) pfv_stats ON (true));
+
+
+--
+-- Name: exports_products; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_products AS
+ SELECT p.organization_id,
+    p.id AS lago_id,
+    p.product_category_id AS lago_product_category_id,
+    p.billable_metric_id AS lago_billable_metric_id,
+    p.add_on_id AS lago_add_on_id,
+    p.charge_id AS lago_charge_id,
+    (p.product_type)::text AS product_type,
+    p.code,
+    p.name,
+    p.invoice_display_name,
+    p.description,
+    p.created_at,
+    p.updated_at,
+    p.deleted_at
+   FROM public.products p;
+
+
+--
+-- Name: exports_rate_card_rates; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_card_rates AS
+ SELECT rcr.organization_id,
+    rcr.id AS lago_id,
+    rcr.rate_card_id AS lago_rate_card_id,
+    rcr.code,
+    rcr.effective_from,
+    (rcr.rate_model)::text AS rate_model,
+    rcr.rate_properties,
+    rcr.min_amount_cents,
+    rcr.billing_interval_count,
+    (rcr.billing_interval_unit)::text AS billing_interval_unit,
+    rcr.applied_pricing_unit_conversion_rate,
+    rcr.created_at,
+    rcr.updated_at,
+    rcr.deleted_at
+   FROM public.rate_card_rates rcr;
+
+
+--
+-- Name: exports_rate_cards; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_cards AS
+ SELECT rc.organization_id,
+    rc.id AS lago_id,
+    rc.product_id AS lago_product_id,
+    rc.product_filter_id AS lago_product_filter_id,
+    rc.code,
+    rc.name,
+    rc.description,
+    rc.currency,
+    (rc.billing_timing)::text AS billing_timing,
+    rc.proration,
+    rc.display_on_invoice,
+    (rc.regroup_paid_fees)::text AS regroup_paid_fees,
+    rc.applied_pricing_unit_code,
+    rc.created_at,
+    rc.updated_at,
+    rc.deleted_at
+   FROM public.rate_cards rc;
+
+
+--
+-- Name: rate_overrides; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_overrides (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_model public.rate_card_rate_model NOT NULL,
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    min_amount_cents bigint DEFAULT 0 NOT NULL,
+    billing_interval_count integer,
+    billing_interval_unit public.rate_card_rate_billing_interval_unit,
+    pricing_unit_conversion_rate numeric(30,10),
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_rate_overrides; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_overrides AS
+ SELECT ro.organization_id,
+    ro.id AS lago_id,
+    (ro.rate_model)::text AS rate_model,
+    ro.rate_properties,
+    ro.min_amount_cents,
+    ro.billing_interval_count,
+    (ro.billing_interval_unit)::text AS billing_interval_unit,
+    ro.pricing_unit_conversion_rate,
+    ro.created_at,
+    ro.updated_at,
+    ro.deleted_at
+   FROM public.rate_overrides ro;
+
+
+--
+-- Name: rate_phases; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_phases (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_rate_card_id uuid,
+    contract_rate_card_id uuid,
+    code character varying NOT NULL,
+    "position" integer NOT NULL,
+    billing_interval_cycle_count integer,
+    rate_override_id uuid,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    name character varying,
+    CONSTRAINT rate_phases_exactly_one_parent CHECK (((plan_rate_card_id IS NULL) <> (contract_rate_card_id IS NULL)))
+);
+
+
+--
+-- Name: exports_rate_phases; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_rate_phases AS
+ SELECT rp.organization_id,
+    rp.id AS lago_id,
+    rp.plan_rate_card_id AS lago_plan_rate_card_id,
+    rp.contract_rate_card_id AS lago_contract_rate_card_id,
+    rp.rate_override_id AS lago_rate_override_id,
+    rp.code,
+    rp.name,
+    rp."position",
+    rp.billing_interval_cycle_count,
+    rp.created_at,
+    rp.updated_at,
+    rp.deleted_at
+   FROM public.rate_phases rp;
 
 
 --
@@ -5699,7 +6413,8 @@ CREATE TABLE public.wallets (
     purchase_order_number character varying,
     payment_term jsonb,
     x402_enabled boolean DEFAULT false NOT NULL,
-    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
+    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    invoice_usage_on_expiration boolean DEFAULT false NOT NULL
 );
 
 
@@ -6244,22 +6959,6 @@ CREATE TABLE public.pending_vies_checks (
 
 
 --
--- Name: plan_rate_cards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.plan_rate_cards (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    rate_card_id uuid NOT NULL,
-    units numeric,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    catalog_plan_id uuid
-);
-
-
---
 -- Name: plan_wallet_credit_allocations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6346,95 +7045,6 @@ CREATE TABLE public.pricing_unit_usages (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     precise_unit_amount numeric(30,15) DEFAULT 0.0 NOT NULL
-);
-
-
---
--- Name: pricing_units; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.pricing_units (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    name character varying NOT NULL,
-    code character varying NOT NULL,
-    short_name character varying NOT NULL,
-    description text,
-    organization_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: product_categories; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.product_categories (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    description character varying,
-    invoice_display_name character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: product_filter_values; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.product_filter_values (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_filter_id uuid NOT NULL,
-    billable_metric_filter_id uuid NOT NULL,
-    value character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: product_filters; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.product_filters (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_id uuid NOT NULL,
-    name character varying NOT NULL,
-    code character varying NOT NULL,
-    description character varying,
-    invoice_display_name character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: products; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.products (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_category_id uuid,
-    billable_metric_id uuid,
-    add_on_id uuid,
-    charge_id uuid,
-    product_type public.product_type NOT NULL,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    invoice_display_name character varying,
-    description text,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -6539,53 +7149,6 @@ CREATE TABLE public.quotes (
 
 
 --
--- Name: rate_card_rates; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_card_rates (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    rate_card_id uuid NOT NULL,
-    code character varying NOT NULL,
-    effective_from timestamp(6) without time zone NOT NULL,
-    rate_model public.rate_card_rate_model NOT NULL,
-    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    min_amount_cents bigint DEFAULT 0 NOT NULL,
-    billing_interval_count integer DEFAULT 1 NOT NULL,
-    billing_interval_unit public.rate_card_rate_billing_interval_unit NOT NULL,
-    applied_pricing_unit_conversion_rate numeric(30,10),
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT rate_card_rates_billing_interval_count_positive CHECK ((billing_interval_count >= 1))
-);
-
-
---
--- Name: rate_cards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_cards (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_id uuid NOT NULL,
-    product_filter_id uuid,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    description character varying,
-    currency character varying NOT NULL,
-    billing_timing public.rate_card_billing_timing DEFAULT 'arrears'::public.rate_card_billing_timing NOT NULL,
-    proration boolean DEFAULT false NOT NULL,
-    display_on_invoice boolean DEFAULT true NOT NULL,
-    regroup_paid_fees public.rate_card_regroup_paid_fees,
-    applied_pricing_unit_code character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
 -- Name: rate_cards_taxes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6596,46 +7159,6 @@ CREATE TABLE public.rate_cards_taxes (
     organization_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: rate_overrides; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_overrides (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    rate_model public.rate_card_rate_model NOT NULL,
-    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    min_amount_cents bigint DEFAULT 0 NOT NULL,
-    billing_interval_count integer,
-    billing_interval_unit public.rate_card_rate_billing_interval_unit,
-    pricing_unit_conversion_rate numeric(30,10),
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: rate_phases; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_phases (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    plan_rate_card_id uuid,
-    contract_rate_card_id uuid,
-    code character varying NOT NULL,
-    "position" integer NOT NULL,
-    billing_interval_cycle_count integer,
-    rate_override_id uuid,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    name character varying,
-    CONSTRAINT rate_phases_exactly_one_parent CHECK (((plan_rate_card_id IS NULL) <> (contract_rate_card_id IS NULL)))
 );
 
 
@@ -6891,6 +7414,69 @@ CREATE TABLE public.usage_monitoring_alerts (
 
 
 --
+-- Name: usage_monitoring_catalog_wallet_alert_thresholds; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_catalog_wallet_alert_thresholds (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_wallet_alert_id uuid,
+    catalog_wallet_alert_id uuid,
+    value numeric(30,5) NOT NULL,
+    code character varying,
+    recurring boolean DEFAULT false NOT NULL,
+    notify_on character varying[] DEFAULT '{triggered}'::character varying[] NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT catalog_wallet_alert_thresholds_one_owner CHECK ((num_nonnulls(plan_wallet_alert_id, catalog_wallet_alert_id) = 1)),
+    CONSTRAINT catalog_wallet_alert_thresholds_recurring_step_positive CHECK (((NOT recurring) OR (value > (0)::numeric)))
+);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_catalog_wallet_alerts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    catalog_wallet_id uuid NOT NULL,
+    alert_type public.usage_monitoring_catalog_wallet_alert_alert_type NOT NULL,
+    code character varying NOT NULL,
+    name character varying,
+    previous_value numeric(30,5),
+    last_processed_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_triggered_alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_catalog_wallet_triggered_alerts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    catalog_wallet_alert_id uuid NOT NULL,
+    catalog_wallet_id uuid NOT NULL,
+    alert_code character varying NOT NULL,
+    alert_name character varying,
+    alert_type public.usage_monitoring_catalog_wallet_alert_alert_type NOT NULL,
+    kind public.usage_monitoring_triggered_alert_kinds DEFAULT 'triggered'::public.usage_monitoring_triggered_alert_kinds NOT NULL,
+    resolution_reason public.usage_monitoring_triggered_alert_resolution_reasons,
+    current_value numeric(30,5) NOT NULL,
+    previous_value numeric(30,5) NOT NULL,
+    crossed_thresholds jsonb NOT NULL,
+    in_alarm_thresholds jsonb,
+    fully_resolved boolean,
+    triggered_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: usage_monitoring_contract_activities; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6959,7 +7545,8 @@ CREATE TABLE public.usage_monitoring_contract_alerts (
     last_processed_at timestamp(6) without time zone,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    with_product_filters boolean DEFAULT false NOT NULL
 );
 
 
@@ -6980,6 +7567,22 @@ CREATE TABLE public.usage_monitoring_contract_triggered_alerts (
     in_alarm_thresholds jsonb,
     fully_resolved boolean,
     triggered_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: usage_monitoring_plan_wallet_alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_plan_wallet_alerts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_wallet_id uuid NOT NULL,
+    alert_type public.usage_monitoring_plan_wallet_alert_alert_type NOT NULL,
+    code character varying NOT NULL,
+    name character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -7347,6 +7950,30 @@ ALTER TABLE ONLY public.adjusted_fees
 
 
 --
+-- Name: agent_claims agent_claims_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_claims
+    ADD CONSTRAINT agent_claims_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: agent_free_credit_grants agent_free_credit_grants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT agent_free_credit_grants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: agent_registrations agent_registrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_registrations
+    ADD CONSTRAINT agent_registrations_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ai_conversations ai_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7400,6 +8027,14 @@ ALTER TABLE ONLY public.applied_pricing_units
 
 ALTER TABLE ONLY public.applied_usage_thresholds
     ADD CONSTRAINT applied_usage_thresholds_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: applied_wallet_expirations applied_wallet_expirations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_wallet_expirations
+    ADD CONSTRAINT applied_wallet_expirations_pkey PRIMARY KEY (id);
 
 
 --
@@ -8459,6 +9094,30 @@ ALTER TABLE ONLY public.usage_monitoring_alerts
 
 
 --
+-- Name: usage_monitoring_catalog_wallet_alert_thresholds usage_monitoring_catalog_wallet_alert_thresholds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_alert_thresholds
+    ADD CONSTRAINT usage_monitoring_catalog_wallet_alert_thresholds_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_alerts usage_monitoring_catalog_wallet_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_alerts
+    ADD CONSTRAINT usage_monitoring_catalog_wallet_alerts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_triggered_alerts usage_monitoring_catalog_wallet_triggered_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_triggered_alerts
+    ADD CONSTRAINT usage_monitoring_catalog_wallet_triggered_alerts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: usage_monitoring_contract_activities usage_monitoring_contract_activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8488,6 +9147,14 @@ ALTER TABLE ONLY public.usage_monitoring_contract_alerts
 
 ALTER TABLE ONLY public.usage_monitoring_contract_triggered_alerts
     ADD CONSTRAINT usage_monitoring_contract_triggered_alerts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: usage_monitoring_plan_wallet_alerts usage_monitoring_plan_wallet_alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_plan_wallet_alerts
+    ADD CONSTRAINT usage_monitoring_plan_wallet_alerts_pkey PRIMARY KEY (id);
 
 
 --
@@ -8754,6 +9421,76 @@ CREATE INDEX idx_cached_aggregation_filtered_lookup ON public.cached_aggregation
 
 
 --
+-- Name: idx_catalog_wallet_alert_thresholds_catalog_recurring_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_catalog_wallet_alert_thresholds_catalog_recurring_unique ON public.usage_monitoring_catalog_wallet_alert_thresholds USING btree (catalog_wallet_alert_id, recurring) WHERE (recurring IS TRUE);
+
+
+--
+-- Name: idx_catalog_wallet_alert_thresholds_catalog_wallet_alert_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_catalog_wallet_alert_thresholds_catalog_wallet_alert_id ON public.usage_monitoring_catalog_wallet_alert_thresholds USING btree (catalog_wallet_alert_id) WHERE (catalog_wallet_alert_id IS NOT NULL);
+
+
+--
+-- Name: idx_catalog_wallet_alert_thresholds_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_catalog_wallet_alert_thresholds_organization_id ON public.usage_monitoring_catalog_wallet_alert_thresholds USING btree (organization_id);
+
+
+--
+-- Name: idx_catalog_wallet_alert_thresholds_plan_recurring_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_catalog_wallet_alert_thresholds_plan_recurring_unique ON public.usage_monitoring_catalog_wallet_alert_thresholds USING btree (plan_wallet_alert_id, recurring) WHERE (recurring IS TRUE);
+
+
+--
+-- Name: idx_catalog_wallet_alert_thresholds_plan_wallet_alert_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_catalog_wallet_alert_thresholds_plan_wallet_alert_id ON public.usage_monitoring_catalog_wallet_alert_thresholds USING btree (plan_wallet_alert_id) WHERE (plan_wallet_alert_id IS NOT NULL);
+
+
+--
+-- Name: idx_catalog_wallet_alerts_alert_type_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_catalog_wallet_alerts_alert_type_unique ON public.usage_monitoring_catalog_wallet_alerts USING btree (catalog_wallet_id, alert_type);
+
+
+--
+-- Name: idx_catalog_wallet_alerts_code_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_catalog_wallet_alerts_code_unique ON public.usage_monitoring_catalog_wallet_alerts USING btree (catalog_wallet_id, code);
+
+
+--
+-- Name: idx_catalog_wallet_alerts_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_catalog_wallet_alerts_organization_id ON public.usage_monitoring_catalog_wallet_alerts USING btree (organization_id);
+
+
+--
+-- Name: idx_catalog_wallet_triggered_alerts_catalog_wallet_alert_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_catalog_wallet_triggered_alerts_catalog_wallet_alert_id ON public.usage_monitoring_catalog_wallet_triggered_alerts USING btree (catalog_wallet_alert_id);
+
+
+--
+-- Name: idx_catalog_wallet_triggered_alerts_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_catalog_wallet_triggered_alerts_organization_id ON public.usage_monitoring_catalog_wallet_triggered_alerts USING btree (organization_id);
+
+
+--
 -- Name: idx_contract_activities_enqueued_per_org; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8775,10 +9512,10 @@ CREATE UNIQUE INDEX idx_contract_alerts_code_unique ON public.usage_monitoring_c
 
 
 --
--- Name: idx_contract_alerts_scope_unique; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_contract_alerts_scope_with_filters_unique; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_contract_alerts_scope_unique ON public.usage_monitoring_contract_alerts USING btree (organization_id, contract_external_id, alert_type, product_id, product_filter_id) NULLS NOT DISTINCT WHERE (deleted_at IS NULL);
+CREATE UNIQUE INDEX idx_contract_alerts_scope_with_filters_unique ON public.usage_monitoring_contract_alerts USING btree (organization_id, contract_external_id, alert_type, product_id, product_filter_id, with_product_filters) NULLS NOT DISTINCT WHERE (deleted_at IS NULL);
 
 
 --
@@ -9279,6 +10016,27 @@ CREATE UNIQUE INDEX idx_pif_values_on_filter_metric_filter_and_value ON public.p
 
 
 --
+-- Name: idx_plan_wallet_alerts_alert_type_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_plan_wallet_alerts_alert_type_unique ON public.usage_monitoring_plan_wallet_alerts USING btree (plan_wallet_id, alert_type);
+
+
+--
+-- Name: idx_plan_wallet_alerts_code_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_plan_wallet_alerts_code_unique ON public.usage_monitoring_plan_wallet_alerts USING btree (plan_wallet_id, code);
+
+
+--
+-- Name: idx_plan_wallet_alerts_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_plan_wallet_alerts_organization_id ON public.usage_monitoring_plan_wallet_alerts USING btree (organization_id);
+
+
+--
 -- Name: idx_privileges_code_unique_per_feature; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9542,6 +10300,69 @@ CREATE INDEX index_adjusted_fees_on_subscription_id ON public.adjusted_fees USIN
 
 
 --
+-- Name: index_agent_claims_on_code_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_agent_claims_on_code_hash ON public.agent_claims USING btree (code_hash);
+
+
+--
+-- Name: index_agent_claims_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_claims_on_organization_id ON public.agent_claims USING btree (organization_id);
+
+
+--
+-- Name: index_agent_claims_on_registration_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_claims_on_registration_id ON public.agent_claims USING btree (registration_id);
+
+
+--
+-- Name: index_agent_free_credit_grants_on_integration_and_email_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_agent_free_credit_grants_on_integration_and_email_hash ON public.agent_free_credit_grants USING btree (integration_id, email_hash);
+
+
+--
+-- Name: index_agent_free_credit_grants_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_free_credit_grants_on_organization_id ON public.agent_free_credit_grants USING btree (organization_id);
+
+
+--
+-- Name: index_agent_free_credit_grants_on_registration_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_free_credit_grants_on_registration_id ON public.agent_free_credit_grants USING btree (registration_id);
+
+
+--
+-- Name: index_agent_free_credit_grants_on_wallet_transaction_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_free_credit_grants_on_wallet_transaction_id ON public.agent_free_credit_grants USING btree (wallet_transaction_id);
+
+
+--
+-- Name: index_agent_registrations_on_integration_id_and_key_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_agent_registrations_on_integration_id_and_key_id ON public.agent_registrations USING btree (integration_id, key_id);
+
+
+--
+-- Name: index_agent_registrations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agent_registrations_on_organization_id ON public.agent_registrations USING btree (organization_id);
+
+
+--
 -- Name: index_ai_conversations_on_membership_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9672,6 +10493,27 @@ CREATE INDEX index_applied_usage_thresholds_on_organization_id ON public.applied
 --
 
 CREATE INDEX index_applied_usage_thresholds_on_usage_threshold_id ON public.applied_usage_thresholds USING btree (usage_threshold_id);
+
+
+--
+-- Name: index_applied_wallet_expirations_on_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_applied_wallet_expirations_on_invoice_id ON public.applied_wallet_expirations USING btree (invoice_id);
+
+
+--
+-- Name: index_applied_wallet_expirations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_wallet_expirations_on_organization_id ON public.applied_wallet_expirations USING btree (organization_id);
+
+
+--
+-- Name: index_applied_wallet_expirations_on_wallet_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_wallet_expirations_on_wallet_id ON public.applied_wallet_expirations USING btree (wallet_id);
 
 
 --
@@ -10102,6 +10944,13 @@ CREATE UNIQUE INDEX index_catalog_wallet_transactions_one_pending_ongoing_balanc
 
 
 --
+-- Name: index_catalog_wallets_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_wallets_by_cursor ON public.catalog_wallets USING btree (contract_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_catalog_wallets_on_contract_id_and_code; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10455,7 +11304,7 @@ CREATE INDEX index_contracts_on_customer_id ON public.contracts USING btree (cus
 -- Name: index_contracts_on_live_external_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['pending'::public.contract_status, 'active'::public.contract_status]));
+CREATE UNIQUE INDEX index_contracts_on_live_external_id ON public.contracts USING btree (organization_id, external_id, status) WHERE (status = ANY (ARRAY['draft'::public.contract_status, 'pending'::public.contract_status, 'active'::public.contract_status]));
 
 
 --
@@ -10470,6 +11319,13 @@ CREATE INDEX index_contracts_on_organization_id ON public.contracts USING btree 
 --
 
 CREATE INDEX index_contracts_on_organization_id_and_external_id ON public.contracts USING btree (organization_id, external_id);
+
+
+--
+-- Name: index_contracts_on_organization_id_external_id_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contracts_on_organization_id_external_id_code ON public.contracts USING btree (organization_id, external_id, code);
 
 
 --
@@ -10893,6 +11749,20 @@ CREATE INDEX index_customers_taxes_on_tax_id ON public.customers_taxes USING btr
 
 
 --
+-- Name: index_daily_usages_on_contract_id_and_usage_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_daily_usages_on_contract_id_and_usage_date ON public.daily_usages USING btree (contract_id, usage_date) WHERE (contract_id IS NOT NULL);
+
+
+--
+-- Name: index_daily_usages_on_contract_rate_card_id_and_usage_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_daily_usages_on_contract_rate_card_id_and_usage_date ON public.daily_usages USING btree (contract_rate_card_id, usage_date) WHERE (contract_id IS NOT NULL);
+
+
+--
 -- Name: index_daily_usages_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10904,6 +11774,13 @@ CREATE INDEX index_daily_usages_on_customer_id ON public.daily_usages USING btre
 --
 
 CREATE INDEX index_daily_usages_on_organization_id ON public.daily_usages USING btree (organization_id);
+
+
+--
+-- Name: index_daily_usages_on_organization_id_and_external_contract_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_daily_usages_on_organization_id_and_external_contract_id ON public.daily_usages USING btree (organization_id, external_contract_id) WHERE (contract_id IS NOT NULL);
 
 
 --
@@ -11702,6 +12579,13 @@ CREATE UNIQUE INDEX index_integrations_on_code_and_organization_id ON public.int
 --
 
 CREATE INDEX index_integrations_on_organization_id ON public.integrations USING btree (organization_id);
+
+
+--
+-- Name: index_integrations_on_organization_id_and_quickbooks_realm_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_integrations_on_organization_id_and_quickbooks_realm_id ON public.integrations USING btree (organization_id, ((settings ->> 'realm_id'::text))) WHERE (((type)::text = 'Integrations::QuickbooksIntegration'::text) AND ((settings ->> 'realm_id'::text) IS NOT NULL));
 
 
 --
@@ -12510,6 +13394,13 @@ CREATE INDEX index_pending_active_subscriptions_on_plan_id_and_status ON public.
 
 
 --
+-- Name: index_pending_billing_operations_on_card_and_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_billing_operations_on_card_and_date ON public.billing_operations USING btree (contract_rate_card_id, billing_at) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL));
+
+
+--
 -- Name: index_pending_billing_operations_on_org_and_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12668,6 +13559,13 @@ CREATE UNIQUE INDEX index_plan_wallet_credit_allocations_on_wallet_and_code ON p
 --
 
 CREATE UNIQUE INDEX index_plan_wallet_credit_allocations_one_ongoing_balance ON public.plan_wallet_credit_allocations USING btree (plan_wallet_id) WHERE ((trigger = 'ongoing_balance'::public.plan_wallet_credit_allocation_trigger) AND (deleted_at IS NULL));
+
+
+--
+-- Name: index_plan_wallets_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_wallets_by_cursor ON public.plan_wallets USING btree (catalog_plan_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -14120,10 +15018,10 @@ CREATE INDEX index_x402_settlements_on_invoice_id ON public.x402_settlements USI
 
 
 --
--- Name: index_x402_settlements_on_network_and_transaction_hash; Type: INDEX; Schema: public; Owner: -
+-- Name: index_x402_settlements_on_lago_network_and_hash; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_x402_settlements_on_network_and_transaction_hash ON public.x402_settlements USING btree (network, transaction_hash) WHERE (transaction_hash IS NOT NULL);
+CREATE UNIQUE INDEX index_x402_settlements_on_lago_network_and_hash ON public.x402_settlements USING btree (network, transaction_hash) WHERE ((transaction_hash IS NOT NULL) AND (settled_by = 'lago'::public.x402_settlement_settled_by));
 
 
 --
@@ -14131,6 +15029,13 @@ CREATE UNIQUE INDEX index_x402_settlements_on_network_and_transaction_hash ON pu
 --
 
 CREATE INDEX index_x402_settlements_on_organization_id ON public.x402_settlements USING btree (organization_id);
+
+
+--
+-- Name: index_x402_settlements_on_organization_network_and_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_settlements_on_organization_network_and_hash ON public.x402_settlements USING btree (organization_id, network, transaction_hash) WHERE (transaction_hash IS NOT NULL);
 
 
 --
@@ -14284,6 +15189,13 @@ CREATE TRIGGER ensure_consistency BEFORE UPDATE ON public.roles FOR EACH ROW EXE
 
 
 --
+-- Name: contract_rate_cards_terms record_deletions_on_contract_rate_cards_terms; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER record_deletions_on_contract_rate_cards_terms AFTER DELETE ON public.contract_rate_cards_terms DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
+
+
+--
 -- Name: credit_notes_taxes record_deletions_on_credit_notes_taxes; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -14316,6 +15228,14 @@ CREATE CONSTRAINT TRIGGER record_deletions_on_invoice_subscriptions AFTER DELETE
 --
 
 CREATE CONSTRAINT TRIGGER record_deletions_on_invoices_taxes AFTER DELETE ON public.invoices_taxes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
+
+
+--
+-- Name: daily_usages fk_daily_usages_contract_rate_card_contract; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_usages
+    ADD CONSTRAINT fk_daily_usages_contract_rate_card_contract FOREIGN KEY (contract_rate_card_id, contract_id) REFERENCES public.contract_rate_cards(id, contract_id);
 
 
 --
@@ -14439,6 +15359,14 @@ ALTER TABLE ONLY public.billing_operations
 
 
 --
+-- Name: agent_registrations fk_rails_0b8cfe0c26; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_registrations
+    ADD CONSTRAINT fk_rails_0b8cfe0c26 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_monitoring_triggered_alerts fk_rails_0baa7bd751; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14556,6 +15484,14 @@ ALTER TABLE ONLY public.quote_versions
 
 ALTER TABLE ONLY public.x402_settlements
     ADD CONSTRAINT fk_rails_1124f79783 FOREIGN KEY (x402_connection_id) REFERENCES public.x402_connections(id);
+
+
+--
+-- Name: agent_claims fk_rails_112acc402f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_claims
+    ADD CONSTRAINT fk_rails_112acc402f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -14700,6 +15636,14 @@ ALTER TABLE ONLY public.catalog_plans
 
 ALTER TABLE ONLY public.billing_entities_invoice_custom_sections
     ADD CONSTRAINT fk_rails_19c47827ba FOREIGN KEY (invoice_custom_section_id) REFERENCES public.invoice_custom_sections(id);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_alert_thresholds fk_rails_1b40486fac; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_alert_thresholds
+    ADD CONSTRAINT fk_rails_1b40486fac FOREIGN KEY (plan_wallet_alert_id) REFERENCES public.usage_monitoring_plan_wallet_alerts(id) ON DELETE CASCADE;
 
 
 --
@@ -15159,6 +16103,14 @@ ALTER TABLE ONLY public.product_filter_values
 
 
 --
+-- Name: usage_monitoring_catalog_wallet_triggered_alerts fk_rails_37996f8882; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_triggered_alerts
+    ADD CONSTRAINT fk_rails_37996f8882 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: products fk_rails_37c75ac37a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15167,11 +16119,27 @@ ALTER TABLE ONLY public.products
 
 
 --
+-- Name: agent_registrations fk_rails_384b08e18d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_registrations
+    ADD CONSTRAINT fk_rails_384b08e18d FOREIGN KEY (integration_id) REFERENCES public.integrations(id);
+
+
+--
 -- Name: quantified_events fk_rails_3926855f12; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.quantified_events
     ADD CONSTRAINT fk_rails_3926855f12 FOREIGN KEY (group_id) REFERENCES public.groups(id);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_alerts fk_rails_3a142d9ca0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_alerts
+    ADD CONSTRAINT fk_rails_3a142d9ca0 FOREIGN KEY (catalog_wallet_id) REFERENCES public.catalog_wallets(id);
 
 
 --
@@ -15631,6 +16599,22 @@ ALTER TABLE ONLY public.customers
 
 
 --
+-- Name: usage_monitoring_catalog_wallet_alert_thresholds fk_rails_58625fdc6a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_alert_thresholds
+    ADD CONSTRAINT fk_rails_58625fdc6a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: agent_free_credit_grants fk_rails_58899a476f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT fk_rails_58899a476f FOREIGN KEY (wallet_transaction_id) REFERENCES public.wallet_transactions(id);
+
+
+--
 -- Name: billing_segments fk_rails_59357d1f82; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15703,6 +16687,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: applied_wallet_expirations fk_rails_5cee1f6b23; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_wallet_expirations
+    ADD CONSTRAINT fk_rails_5cee1f6b23 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
 -- Name: catalog_wallet_credit_allocations fk_rails_5de53b35a8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15748,6 +16740,14 @@ ALTER TABLE ONLY public.fees
 
 ALTER TABLE ONLY public.cs_admin_audit_logs
     ADD CONSTRAINT fk_rails_602bbeefa1 FOREIGN KEY (rollback_of_id) REFERENCES public.cs_admin_audit_logs(id);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_alert_thresholds fk_rails_620bcfa5cc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_alert_thresholds
+    ADD CONSTRAINT fk_rails_620bcfa5cc FOREIGN KEY (catalog_wallet_alert_id) REFERENCES public.usage_monitoring_catalog_wallet_alerts(id) ON DELETE CASCADE;
 
 
 --
@@ -16207,6 +17207,14 @@ ALTER TABLE ONLY public.charge_filter_values
 
 
 --
+-- Name: usage_monitoring_plan_wallet_alerts fk_rails_7e881717de; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_plan_wallet_alerts
+    ADD CONSTRAINT fk_rails_7e881717de FOREIGN KEY (plan_wallet_id) REFERENCES public.plan_wallets(id);
+
+
+--
 -- Name: billable_metrics fk_rails_7e8a2f26e5; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16359,6 +17367,14 @@ ALTER TABLE ONLY public.add_ons_taxes
 
 
 --
+-- Name: applied_wallet_expirations fk_rails_8a65cfc992; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_wallet_expirations
+    ADD CONSTRAINT fk_rails_8a65cfc992 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoice_metadata fk_rails_8bb5b094c4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16380,6 +17396,14 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 
 ALTER TABLE ONLY public.usage_monitoring_alerts
     ADD CONSTRAINT fk_rails_8c18828b53 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
+-- Name: agent_free_credit_grants fk_rails_8c4afe61a8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT fk_rails_8c4afe61a8 FOREIGN KEY (registration_id) REFERENCES public.agent_registrations(id) ON DELETE CASCADE;
 
 
 --
@@ -16487,6 +17511,14 @@ ALTER TABLE ONLY public.usage_attribution_values
 
 
 --
+-- Name: agent_claims fk_rails_931d804c32; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_claims
+    ADD CONSTRAINT fk_rails_931d804c32 FOREIGN KEY (registration_id) REFERENCES public.agent_registrations(id) ON DELETE CASCADE;
+
+
+--
 -- Name: rate_cards_taxes fk_rails_9457f0d2da; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16564,6 +17596,14 @@ ALTER TABLE ONLY public.memberships
 
 ALTER TABLE ONLY public.active_storage_variant_records
     ADD CONSTRAINT fk_rails_993965df05 FOREIGN KEY (blob_id) REFERENCES public.active_storage_blobs(id);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_alerts fk_rails_9a4f36ff57; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_alerts
+    ADD CONSTRAINT fk_rails_9a4f36ff57 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -16775,6 +17815,14 @@ ALTER TABLE ONLY public.cached_aggregations
 
 
 --
+-- Name: applied_wallet_expirations fk_rails_a88ad8b389; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_wallet_expirations
+    ADD CONSTRAINT fk_rails_a88ad8b389 FOREIGN KEY (wallet_id) REFERENCES public.wallets(id);
+
+
+--
 -- Name: invoices fk_rails_a958b8f5a7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16852,6 +17900,14 @@ ALTER TABLE ONLY public.charges_taxes
 
 ALTER TABLE ONLY public.pricing_unit_usages
     ADD CONSTRAINT fk_rails_aea6422e6a FOREIGN KEY (fee_id) REFERENCES public.fees(id);
+
+
+--
+-- Name: usage_monitoring_plan_wallet_alerts fk_rails_aea662bcdf; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_plan_wallet_alerts
+    ADD CONSTRAINT fk_rails_aea662bcdf FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -17135,6 +18191,14 @@ ALTER TABLE ONLY public.x402_settlements
 
 
 --
+-- Name: daily_usages fk_rails_c4dcd99ad0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_usages
+    ADD CONSTRAINT fk_rails_c4dcd99ad0 FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
+
+
+--
 -- Name: pricing_unit_usages fk_rails_c545103d57; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -17204,6 +18268,14 @@ ALTER TABLE ONLY public.entitlement_subscription_feature_removals
 
 ALTER TABLE ONLY public.contracts
     ADD CONSTRAINT fk_rails_c92e315584 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
+
+
+--
+-- Name: agent_free_credit_grants fk_rails_c9ca4c1b68; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT fk_rails_c9ca4c1b68 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -17719,6 +18791,22 @@ ALTER TABLE ONLY public.products
 
 
 --
+-- Name: agent_free_credit_grants fk_rails_f03eebb28a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agent_free_credit_grants
+    ADD CONSTRAINT fk_rails_f03eebb28a FOREIGN KEY (integration_id) REFERENCES public.integrations(id);
+
+
+--
+-- Name: usage_monitoring_catalog_wallet_triggered_alerts fk_rails_f06aa08fff; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_catalog_wallet_triggered_alerts
+    ADD CONSTRAINT fk_rails_f06aa08fff FOREIGN KEY (catalog_wallet_id) REFERENCES public.catalog_wallets(id);
+
+
+--
 -- Name: usage_monitoring_alert_thresholds fk_rails_f18cd04d51; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -17756,6 +18844,14 @@ ALTER TABLE ONLY public.fees
 
 ALTER TABLE ONLY public.invoice_subscriptions
     ADD CONSTRAINT fk_rails_f435d13904 FOREIGN KEY (regenerated_invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: daily_usages fk_rails_f485cf0ace; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_usages
+    ADD CONSTRAINT fk_rails_f485cf0ace FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --
@@ -17917,12 +19013,44 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261124113226'),
+('20261123224020'),
+('20261123224017'),
+('20261123222615'),
+('20261123222612'),
+('20261123222610'),
+('20261123222607'),
+('20261123185222'),
+('20261123142220'),
+('20261123142148'),
+('20261123142145'),
+('20261123142142'),
+('20261123142140'),
+('20261123132341'),
+('20261123112950'),
+('20261123112949'),
+('20261123100000'),
+('20261119191519'),
+('20261119191515'),
+('20261118162728'),
+('20261118162726'),
+('20261118155959'),
+('20261118155957'),
+('20261118151847'),
+('20261117160252'),
+('20261117160249'),
+('20261116175753'),
+('20261116175747'),
+('20261116175742'),
 ('20261116121445'),
 ('20261116121442'),
 ('20261116121439'),
 ('20261116121436'),
 ('20261113204932'),
+('20261113162250'),
+('20261112145548'),
 ('20261112092027'),
+('20261111173450'),
 ('20261111172228'),
 ('20261111172225'),
 ('20261111172221'),
@@ -17933,8 +19061,12 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261111171406'),
 ('20261111170930'),
 ('20261111170707'),
+('20261110122921'),
 ('20261109151633'),
+('20261109150927'),
+('20261109150926'),
 ('20261109122133'),
+('20261109115317'),
 ('20261109082523'),
 ('20261106220629'),
 ('20261106134032'),
@@ -17950,6 +19082,11 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261103084714'),
 ('20261103084708'),
 ('20261102160958'),
+('20261102101504'),
+('20261102101503'),
+('20261102101502'),
+('20261102101501'),
+('20261102101500'),
 ('20261101111004'),
 ('20261029112805'),
 ('20261029111437'),
@@ -17963,11 +19100,16 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261021200000'),
 ('20261020144205'),
 ('20261020074217'),
+('20261019185402'),
+('20261019185401'),
+('20261019185400'),
+('20261019174914'),
 ('20261019074555'),
 ('20261016163945'),
 ('20261016163943'),
 ('20261016153657'),
 ('20261016024339'),
+('20261015133853'),
 ('20261014180403'),
 ('20261014123350'),
 ('20261014123349'),

@@ -37,6 +37,14 @@ RSpec.describe IntegrationCustomers::Factory do
       end
     end
 
+    context "when the integration is QuickbooksIntegration" do
+      let(:integration) { create(:quickbooks_integration, organization:) }
+
+      it "returns an instance of IntegrationCustomers::QuickbooksService" do
+        expect(subject).to be_an_instance_of(IntegrationCustomers::QuickbooksService)
+      end
+    end
+
     context "when the integration is HubspotIntegration" do
       let(:integration) { create(:hubspot_integration, organization:) }
 

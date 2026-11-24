@@ -14,16 +14,18 @@ RSpec.describe Invoice do
 
   describe "associations" do
     it do
-      expect(invoice).to have_many(:billing_segments)
       expect(invoice).to have_many(:billing_operations)
-      expect(invoice).to have_many(:contracts).through(:billing_segments)
+      expect(invoice).to have_many(:contract_fees).class_name("Fee")
+      expect(invoice).to have_many(:contracts).through(:contract_fees)
       expect(invoice).to belong_to(:x402_connection).class_name("X402::Connection").optional
       expect(invoice).to have_many(:x402_settlements).class_name("X402::Settlement").inverse_of(:invoice)
     end
 
-    it "returns each contract once across multiple billing segments" do
+    it "returns contracts represented by contract fees" do
       contract = create(:contract, organization:, customer: invoice.customer)
-      create_list(:billing_segment, 2, contract:, invoice:, organization:, customer: invoice.customer)
+      contract_rate_card = create(:contract_rate_card, organization:, contract:)
+      rate = create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+      create(:product_fee, invoice:, contract:, contract_rate_card:, rate_card_rate: rate, organization:)
 
       expect(invoice.contracts).to eq([contract])
     end
@@ -565,6 +567,7 @@ RSpec.describe Invoice do
     let(:invoice_type) { :advance_charges }
     let(:contract) { create(:contract, organization:, customer:) }
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
     let(:contract_fee) do
       create(
         :fee,
@@ -574,7 +577,7 @@ RSpec.describe Invoice do
         invoiceable: contract_rate_card.rate_card.product,
         contract:,
         contract_rate_card:,
-        rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
+        rate_card_rate:,
         organization:
       )
     end
@@ -712,9 +715,15 @@ RSpec.describe Invoice do
       active_contract = create(:contract, organization:, customer:)
       pending_contract = create(:contract, :pending, organization:, customer:)
       terminated_contract = create(:contract, :terminated, organization:, customer:)
-      create(:billing_segment, organization:, customer:, contract: active_contract, invoice: active_invoice)
-      create(:billing_segment, organization:, customer:, contract: pending_contract, invoice: pending_invoice)
-      create(:billing_segment, organization:, customer:, contract: terminated_contract, invoice: terminated_invoice)
+      [
+        [active_contract, active_invoice],
+        [pending_contract, pending_invoice],
+        [terminated_contract, terminated_invoice]
+      ].each do |contract, invoice|
+        contract_rate_card = create(:contract_rate_card, organization:, contract:)
+        rate = create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+        create(:product_fee, invoice:, contract:, contract_rate_card:, rate_card_rate: rate, organization:)
+      end
     end
 
     it "returns invoices related to active contracts" do
@@ -824,6 +833,42 @@ RSpec.describe Invoice do
           it "returns false" do
             expect(method_call).to eq(false)
           end
+        end
+      end
+
+      context "with a QuickBooks integration customer only" do
+        let(:integration) { create(:quickbooks_integration, organization:, sync_invoices:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { create(:quickbooks_customer, integration:, customer:) }
+
+        context "when sync invoices is true" do
+          let(:sync_invoices) { true }
+
+          it "returns true" do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context "when sync invoices is false" do
+          let(:sync_invoices) { false }
+
+          it "returns false" do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+
+      context "with a non-accounting integration customer only" do
+        let(:customer) { create(:customer, organization:) }
+
+        before do
+          create(:quickbooks_integration, organization:, sync_invoices: true)
+          create(:hubspot_customer, integration: create(:hubspot_integration, organization:), customer:)
+        end
+
+        it "returns false" do
+          expect(method_call).to eq(false)
         end
       end
     end

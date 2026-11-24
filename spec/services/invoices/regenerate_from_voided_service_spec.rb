@@ -273,6 +273,41 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           expect(regenerated_invoice.applied_usage_thresholds.pluck(:id))
             .not_to match_array(voided_invoice.applied_usage_thresholds.pluck(:id))
         end
+
+        it "keeps the progressive billing trigger" do
+          expect(regenerate_result.invoice.progressive_billing_trigger).to eq("usage_threshold")
+        end
+
+        context "when another progressive billing invoice of the subscription holds its lock" do
+          before { stub_const("Subscriptions::LockService::ACQUIRE_LOCK_TIMEOUT", 0) }
+
+          it "fails to acquire the lock and regenerates nothing" do
+            with_advisory_lock("subscription-#{subscription.id}", lock_released_after: 2.seconds) do
+              result = Invoices::RegenerateFromVoidedService.call(voided_invoice:, fees_params:)
+
+              expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+            end
+
+            expect(Invoice.where(voided_invoice_id: voided_invoice.id)).to be_empty
+          end
+        end
+
+        context "when the voided invoice was triggered by a wallet expiration" do
+          let(:wallet) { create(:wallet, customer:) }
+
+          before do
+            voided_invoice.update!(progressive_billing_trigger: "wallet_expiration")
+            create(:applied_wallet_expiration, invoice: voided_invoice, wallet:, organization:)
+          end
+
+          it "duplicates the applied wallet expiration to the regenerated invoice" do
+            regenerated_invoice = regenerate_result.invoice
+
+            expect(regenerated_invoice.progressive_billing_trigger).to eq("wallet_expiration")
+            expect(regenerated_invoice.applied_wallet_expiration.wallet).to eq(wallet)
+            expect(voided_invoice.reload.applied_wallet_expiration.wallet).to eq(wallet)
+          end
+        end
       end
 
       context "when voided invoice is one_off type" do

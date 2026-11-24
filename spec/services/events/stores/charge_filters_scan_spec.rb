@@ -415,6 +415,25 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
     end
   end
 
+  describe "a sum above the limit of Decimal(38, 26)" do
+    let(:charge_properties) { {"amount" => "1", "pricing_group_keys" => ["user"]} }
+    let(:events) { Array.new(250) { [{"region" => "us", "user" => "u1"}, 8_000_000_000] } }
+    let(:item) { pricing_buckets.find { it.charge_filter.persisted? && it.charge_filter.to_h == {"region" => ["us"]} } }
+    let(:total) { BigDecimal("2000000000000") } # 250 x 8e9, above the 1.70e12 a Decimal(38, 26) sum holds
+
+    it "sums the events of the filter exactly" do
+      expect(scanned_store(item).sum.to_h).to eq(value: total, events_count: 250)
+      expect(scanned_store(item).grouped_sum.map(&:to_h)).to eq([{groups: {"user" => "u1"}, value: total, events_count: 250}])
+    end
+
+    it "keeps the exact sum in the value and the snapshot value of a recurring sum" do
+      store = scanned_store(item).tap { it.use_from_boundary = false }
+      watermark = (Time.current + 1.minute).floor(3)
+
+      expect(store.recurring_sum(watermark:).to_h).to eq(value: total, snapshot_value: total, events_count: 250, snapshot_events_count: 250)
+    end
+  end
+
   describe "the late events" do
     let(:watermark) { (Time.current + 1.minute).floor(3) }
     let(:period) do

@@ -22,11 +22,13 @@ module Invoices
       return result.not_allowed_failure!(code: "product_catalog_invoice_not_regenerable") if voided_invoice.product_catalog?
 
       ActiveRecord::Base.transaction do
+        lock_progressive_billing_subscriptions
         create_regenerated_invoice
         create_invoice_subscriptions
         process_fees
         adjust_fees
         assign_applied_usage_thresholds
+        assign_applied_wallet_expiration
         Invoices::ApplyInvoiceCustomSectionsService.call!(invoice: regenerated_invoice)
         regenerated_invoice.fees_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
         regenerated_invoice.sub_total_excluding_taxes_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
@@ -61,6 +63,8 @@ module Invoices
       call_invoice_finalization_jobs(regenerated_invoice)
 
       result
+    rescue BaseLockService::FailedToAcquireLock
+      result.lock_acquisition_failure!(message: "subscription lock not acquired")
     end
 
     private
@@ -193,6 +197,16 @@ module Invoices
       end
     end
 
+    # Held until this transaction ends, so the regenerated invoice and a new progressive billing
+    # invoice of the subscription cannot both credit the same previous progressive billing invoice.
+    def lock_progressive_billing_subscriptions
+      return unless voided_invoice.progressive_billing?
+
+      voided_invoice.subscriptions.order(:id).each do |subscription|
+        Subscriptions::LockService.call(subscription:) { nil }
+      end
+    end
+
     def assign_applied_usage_thresholds
       return unless voided_invoice.progressive_billing?
 
@@ -202,6 +216,10 @@ module Invoices
           duplicate.save!
         end
       end
+    end
+
+    def assign_applied_wallet_expiration
+      voided_invoice.applied_wallet_expiration&.dup&.update!(invoice: regenerated_invoice)
     end
 
     def voided_invoice_fees
@@ -284,7 +302,8 @@ module Invoices
         datetime: voided_invoice.created_at,
         billing_entity: voided_invoice.billing_entity,
         payment_term: voided_invoice.snapshotted_payment_term,
-        payment_term_source: voided_invoice.payment_term_source
+        payment_term_source: voided_invoice.payment_term_source,
+        progressive_billing_trigger: voided_invoice.progressive_billing_trigger
       ).invoice.tap do |invoice|
         invoice.update!(
           voided_invoice_id: voided_invoice.id,

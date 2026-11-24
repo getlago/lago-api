@@ -412,6 +412,15 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
 
       before { payment_method }
 
+      context "when the payment method is a shared payment token row" do
+        let(:payment_method) { create(:payment_method, organization: wallet.organization, customer: wallet.customer, is_default: false, provider_method_type: "shared_payment_token", provider_method_id: "spt_123", details: {}) }
+
+        it "refuses" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
       context "with valid payment method" do
         it "updates existing recurring transaction rule with new payment method" do
           rule = result.wallet.reload.recurring_transaction_rules.active.first

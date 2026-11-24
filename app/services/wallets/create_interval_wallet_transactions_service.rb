@@ -6,6 +6,8 @@ module Wallets
 
     def call
       recurring_transaction_rules.each do |rule|
+        next if rule.wallet.reserved_for_expiration_invoice?
+
         ongoing_balance = rule.wallet.credits_ongoing_balance
         paid_credits = rule.compute_paid_credits(ongoing_balance:)
         granted_credits = rule.compute_granted_credits

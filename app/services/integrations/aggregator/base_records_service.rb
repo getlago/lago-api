@@ -14,6 +14,13 @@ module Integrations
         raise NotImplementedError
       end
 
+      # QuickBooks deactivates items, accounts and customers instead of deleting them, so they must not reach the pickers.
+      def unavailable_record?(record)
+        return false unless integration.is_a?(Integrations::QuickbooksIntegration)
+
+        record["active"] == false || record.dig("_nango_metadata", "deleted_at").present?
+      end
+
       def fetch_records(limit: nil, cursor: nil)
         params = {model:, limit:, cursor:}.compact_blank
 

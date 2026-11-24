@@ -56,6 +56,8 @@ jobs:
       LAGO_KAFKA_API_LOGS_TOPIC: api_logs
       LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
       LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC: realtime_usage_triggers
+      # Draws the usage alerts consumer group, which only exists where the lane is on.
+      LAGO_REALTIME_USAGE_ALERTS_ENABLED: true
       LAGO_KAFKA_SECURITY_LOGS_TOPIC: security_logs
       KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC: ${{ secrets.KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC }}
       KNAPSACK_PRO_CI_NODE_TOTAL: ${{ matrix.ci_node_total }}
@@ -71,7 +73,7 @@ jobs:
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "4.0.9"
+          ruby-version: "4.0.10"
           bundler-cache: true
       - name: Start Clickhouse database
         run: |

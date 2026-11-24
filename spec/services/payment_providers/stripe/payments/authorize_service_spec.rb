@@ -86,6 +86,123 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
         expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_been_enqueued
       end
 
+      context "with a currency that Stripe reads in hundredths" do
+        let(:amount) { 50_000 }
+        let(:currency) { "HUF" }
+
+        it "sends the amount in hundredths" do
+          subject.call
+
+          expect(::Stripe::PaymentIntent).to have_received(:create).with(
+            hash_including(amount: 5_000_000, currency: "huf"), # 50,000 HUF * 100
+            anything
+          )
+        end
+
+        context "when Stripe answers with the held amounts" do
+          let(:payment_intent) do
+            Stripe::PaymentIntent.construct_from(
+              id: "pi_huf",
+              object: "payment_intent",
+              amount: 5_000_000,
+              amount_capturable: 5_000_000,
+              currency: "huf",
+              status: "requires_capture"
+            )
+          end
+
+          it "returns the authorization in the units of the request" do
+            result = subject.call
+
+            expect(result.authorization).to eq(
+              id: "pi_huf",
+              object: "payment_intent",
+              amount: 50_000, # 5,000,000 hundredths / 100
+              amount_capturable: 50_000,
+              status: "requires_capture"
+            )
+          end
+        end
+
+        context "when the amount is an integer string and the currency is lowercase" do
+          let(:amount) { "50000" }
+          let(:currency) { "huf" }
+
+          it "casts the amount and sends it in hundredths" do
+            subject.call
+
+            expect(::Stripe::PaymentIntent).to have_received(:create).with(
+              hash_including(amount: 5_000_000, currency: "huf"), # 50,000 HUF * 100
+              anything
+            )
+          end
+        end
+
+        context "when the amount is not an integer string" do
+          let(:amount) { "12.5" }
+
+          it "passes the amount unchanged so Stripe rejects it" do
+            subject.call
+
+            expect(::Stripe::PaymentIntent).to have_received(:create).with(
+              hash_including(amount: "12.5", currency: "huf"),
+              anything
+            )
+          end
+        end
+      end
+
+      context "with a currency that Stripe reads in its own subunit" do
+        let(:amount) { "50000" }
+        let(:currency) { "EUR" }
+
+        it "sends the amount unchanged" do
+          subject.call
+
+          expect(::Stripe::PaymentIntent).to have_received(:create).with(
+            hash_including(amount: 50_000, currency: "eur"),
+            anything
+          )
+        end
+      end
+
+      context "when the payment method is a bank debit, which cannot be held" do
+        let(:payment_method) do
+          create(:payment_method, payment_provider_customer: provider_customer, provider_method_id:, details: {type: "sepa_debit", last4: "3000"})
+        end
+
+        it "fails without calling Stripe" do
+          result = subject.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({payment_method_id: ["payment_method_not_supported_for_authorization"]})
+          expect(::Stripe::PaymentIntent).not_to have_received(:create)
+        end
+      end
+
+      context "when the payment method is Link, which can be held" do
+        let(:payment_method) do
+          create(:payment_method, payment_provider_customer: provider_customer, provider_method_id:, details: {type: "link"})
+        end
+
+        it "creates the stripe payment intent" do
+          expect(subject.call).to be_success
+          expect(::Stripe::PaymentIntent).to have_received(:create)
+        end
+      end
+
+      context "when the payment method type is unknown" do
+        let(:payment_method) do
+          create(:payment_method, payment_provider_customer: provider_customer, provider_method_id:, details: {})
+        end
+
+        it "lets Stripe decide, as before" do
+          expect(subject.call).to be_success
+          expect(::Stripe::PaymentIntent).to have_received(:create)
+        end
+      end
+
       context "when consent collection is enabled on the provider" do
         let(:provider_customer) do
           create(:stripe_customer, payment_provider: create(:stripe_provider, require_terms_of_service_consent: true), customer:, payment_method_id:)
@@ -125,8 +242,10 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
         let(:payment_method) { nil }
         let(:payment_method_id) { nil }
 
-        it "fetch stripe default payment method" do
+        it "fetch stripe default payment method, falling back to cards only" do
           expect(result).to eq("pm_from_stripe")
+          expect(PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService)
+            .to have_received(:call!).with(provider_customer:, types: %w[card])
         end
       end
     end

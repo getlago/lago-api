@@ -519,6 +519,108 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
     end
 
+    context "when usages measured at different times are processed out of order" do
+      subject(:result) { described_class.call(alert:, alertable: subscription, current_metrics:, measured_at:) }
+
+      let(:now) { Time.zone.parse("2026-11-15 12:00:00") }
+      let(:period_start) { now.beginning_of_month }
+      let(:alert) do
+        create(:usage_current_amount_alert, thresholds: [10, 20], previous_value: 5, last_processed_at: now - 10.seconds,
+          code: "order", organization:, subscription_external_id: subscription.external_id)
+      end
+      let(:current_metrics) do
+        instance_double(SubscriptionUsage, amount_cents: 25, from_datetime: period_start.iso8601, to_datetime: period_end)
+      end
+
+      before { travel_to(now) }
+
+      context "with a usage measured before the one last processed" do
+        let(:measured_at) { now - 20.seconds }
+
+        it "skips it, keeping the newer evaluation" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts).to be_empty
+          expect(alert.reload).to have_attributes(previous_value: 5, last_processed_at: now - 10.seconds)
+        end
+      end
+
+      context "with a usage measured after the one last processed" do
+        let(:measured_at) { now - 5.seconds }
+
+        it "evaluates it and dates it at its measurement, not its processing" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.sole.crossed_thresholds.map { it["value"] }).to eq(%w[10.0 20.0])
+          expect(alert.reload).to have_attributes(previous_value: 25, last_processed_at: now - 5.seconds)
+        end
+      end
+
+      context "with a usage measured at the time of the one last processed" do
+        let(:measured_at) { now - 10.seconds }
+
+        it "evaluates it" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.count).to eq(1)
+          expect(alert.reload).to have_attributes(previous_value: 25, last_processed_at: now - 10.seconds)
+        end
+      end
+    end
+
+    context "when usages measured around a renewal are processed out of order" do
+      let(:now) { Time.zone.parse("2026-11-15 12:00:00") }
+      let(:period_start) { now.beginning_of_month }
+      let(:alert) do
+        create(:usage_current_amount_alert, thresholds: [10, 20], previous_value: 0, code: "renewal",
+          organization:, subscription_external_id: subscription.external_id)
+      end
+      let(:old_period_usage) do
+        instance_double(SubscriptionUsage, amount_cents: 90, from_datetime: (period_start - 1.month).iso8601,
+          to_datetime: (period_start - 1.second).iso8601)
+      end
+      let(:new_period_usage) do
+        instance_double(SubscriptionUsage, amount_cents: 15, from_datetime: period_start.iso8601, to_datetime: period_end)
+      end
+
+      before { travel_to(now) }
+
+      it "skips the old period usage measured before the new period one" do
+        described_class.call(alert:, alertable: subscription, current_metrics: new_period_usage, measured_at: period_start + 1.day)
+        described_class.call(alert:, alertable: subscription, current_metrics: old_period_usage, measured_at: period_start - 5.seconds)
+
+        expect(alert.all_triggered_alerts.sole.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+        expect(alert.reload).to have_attributes(previous_value: 15, last_processed_at: period_start + 1.day)
+      end
+
+      it "treats the new period usage processed after the old one as the start of a new period" do
+        described_class.call(alert:, alertable: subscription, current_metrics: old_period_usage, measured_at: period_start - 5.seconds)
+        recorded_before = alert.all_triggered_alerts.pluck(:id)
+        described_class.call(alert:, alertable: subscription, current_metrics: new_period_usage, measured_at: period_start + 1.day)
+
+        expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+        expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+        expect(triggered.previous_value).to eq(0)
+      end
+
+      it "dates a new period usage measured just before the renewal at the period start" do
+        described_class.call(alert:, alertable: subscription, current_metrics: new_period_usage, measured_at: period_start - 1.second)
+        next_usage = instance_double(SubscriptionUsage, amount_cents: 16, from_datetime: period_start.iso8601, to_datetime: period_end)
+        described_class.call(alert:, alertable: subscription, current_metrics: next_usage, measured_at: period_start + 30.seconds)
+
+        expect(alert.all_triggered_alerts.sole.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+        expect(alert.reload).to have_attributes(previous_value: 16, last_processed_at: period_start + 30.seconds)
+      end
+
+      # Accepted gap: last_processed_at is capped to the old period's end, so it cannot order usages measured after it.
+      it "evaluates two old period usages measured after the renewal in either order" do
+        later_usage = instance_double(SubscriptionUsage, amount_cents: 30, from_datetime: (period_start - 1.month).iso8601,
+          to_datetime: (period_start - 1.second).iso8601)
+        described_class.call(alert:, alertable: subscription, current_metrics: later_usage, measured_at: period_start + 2.seconds)
+        described_class.call(alert:, alertable: subscription, current_metrics: old_period_usage, measured_at: period_start + 1.second)
+
+        expect(alert.reload).to have_attributes(previous_value: 90, last_processed_at: period_start - 1.second)
+      end
+    end
+
     context "when billable metric is not part of the plan charges" do
       let(:alert) do
         create(

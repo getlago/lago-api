@@ -18,12 +18,12 @@ module V2
       {
         lago_id: model.id,
         external_id: model.external_id,
+        code: model.code,
         lago_customer_id: model.customer_id,
         external_customer_id: model.customer.external_id,
         name: model.name,
         plan_code: model.catalog_plan&.code,
         status: model.status,
-        billing_time: model.billing_time,
         consolidate_invoice: model.consolidate_invoice,
         purchase_order_number: model.purchase_order_number,
         billing_anchor_date: format_date(model.billing_anchor_date),
@@ -36,7 +36,7 @@ module V2
 
     # As /applied_rate_cards lists them, with what each card renders.
     def applied_rate_cards
-      model.applied_rate_cards.preload(:rate_card, :contract, :terms).order(::CursorPagination::DEFAULT_SORT)
+      model.applied_rate_cards.preload(:contract, :terms, :rate_card).order(::CursorPagination::DEFAULT_SORT)
     end
 
     # Read with_discarded, so that a deleted plan expands with its deleted_at.

@@ -6,6 +6,6 @@ FactoryBot.define do
     catalog_plan { association(:catalog_plan, organization:) }
     sequence(:code) { |n| "plan-wallet-#{n}" }
     name { "Prepaid credits" }
-    currency { "EUR" }
+    currency { catalog_plan.currency }
   end
 end
