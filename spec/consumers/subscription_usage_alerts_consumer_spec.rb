@@ -12,152 +12,66 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
   end
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
-  let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
-  let(:watermark_ms) { (Time.current.to_f * 1000).to_i }
+  let(:watermark_ms) { 1_795_000_000_000 }
   let(:alerts_enabled) { "true" }
-  let(:wait_reason) { nil }
+  let(:evaluation_reason) { nil }
 
   let(:trigger) do
     {
       organization_id: organization.id,
       customer_id: customer.id,
       subscription_id: subscription.id,
-      code: billable_metric.code,
+      code: "api_calls",
       last_ingested_at: watermark_ms,
       target_wallet_code: ""
     }
   end
 
-  let(:plan_alert) do
-    create(:usage_current_amount_alert, organization:, subscription_external_id: subscription.external_id)
-  end
-  let(:metric_alert) do
-    create(:billable_metric_current_usage_units_alert, organization:, billable_metric:, subscription_external_id: subscription.external_id)
-  end
-
   let(:outcomes) { Yabeda.usage_monitoring.usage_alerts_outcomes_total }
   let(:latency) { Yabeda.usage_monitoring.usage_alerts_latency }
-  let(:evaluation_duration) { Yabeda.usage_monitoring.usage_alerts_evaluation_duration }
 
   before do
     ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"] = alerts_enabled
-    plan_alert
-    metric_alert
 
-    allow(RealtimeUsage).to receive(:consistent_reads).and_yield
-    allow(RealtimeUsage::WaitForBucketsService).to receive(:call)
-      .and_return(RealtimeUsage::WaitForBucketsService::Result.new.tap { it.reason = wait_reason })
-    allow(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to receive(:call!)
+    allow(UsageMonitoring::EvaluateRealtimeUsageAlertsService).to receive(:call!)
+      .and_return(UsageMonitoring::EvaluateRealtimeUsageAlertsService::Result.new.tap { it.reason = evaluation_reason })
     allow(outcomes).to receive(:increment)
     allow(latency).to receive(:measure)
-    allow(evaluation_duration).to receive(:measure)
 
     karafka.produce(trigger.to_json)
   end
 
   after { ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"] = nil }
 
-  it "evaluates the plan total alert and the alerts of the trigger's metric" do
-    other_metric_alert = create(:billable_metric_current_usage_units_alert, organization:, subscription_external_id: subscription.external_id)
-    lifetime_alert = create(:billable_metric_lifetime_usage_units_alert, organization:, billable_metric:, subscription_external_id: subscription.external_id)
-
+  it "evaluates the subscription's alerts for the triggered metric at the trigger watermark" do
     consumer.consume
 
-    expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to have_received(:call!)
-      .with(subscription:, alerts: contain_exactly(plan_alert, metric_alert))
-    expect([plan_alert, metric_alert]).not_to include(other_metric_alert, lifetime_alert)
-  end
-
-  it "waits for the buckets to reach the trigger watermark, with consistent reads" do
-    consumer.consume
-
-    expect(RealtimeUsage).to have_received(:consistent_reads)
-    expect(RealtimeUsage::WaitForBucketsService).to have_received(:call).with(
-      organization_id: organization.id,
-      pending: {subscription.id => watermark_ms},
-      lane: :usage_alerts,
-      log_context: {subscription_id: subscription.id}
-    )
+    expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).to have_received(:call!)
+      .with(subscription:, codes: ["api_calls"], watermark_ms:)
   end
 
   context "when the evaluation ends 3 seconds after the trigger watermark" do
-    let(:watermark_ms) { 1_795_000_000_000 }
-
     around { |example| travel_to(Time.zone.at(1_795_000_003)) { example.run } }
 
-    it "counts the evaluation and measures it" do
+    it "counts the evaluation and measures its latency" do
       consumer.consume
 
       expect(outcomes).to have_received(:increment).with({outcome: "evaluated", reason: "none"}, by: 1)
       expect(latency).to have_received(:measure).with({}, 3.0)
-      expect(evaluation_duration).to have_received(:measure).with({}, 0.0)
     end
   end
 
   context "with several triggers for the same subscription" do
-    let(:other_metric) { create(:billable_metric, organization:, code: "storage") }
-    let(:other_metric_alert) do
-      create(:billable_metric_current_usage_amount_alert, organization:, billable_metric: other_metric, subscription_external_id: subscription.external_id)
-    end
-
     before do
-      other_metric_alert
-      karafka.produce(trigger.merge(code: other_metric.code, last_ingested_at: watermark_ms + 1000).to_json)
+      karafka.produce(trigger.merge(code: "storage", last_ingested_at: watermark_ms + 1000).to_json)
+      karafka.produce(trigger.merge(last_ingested_at: watermark_ms + 500).to_json)
     end
 
-    it "evaluates once, at the latest watermark, the alerts of every metric of the batch" do
+    it "evaluates once, at the latest watermark, for every metric of the batch" do
       consumer.consume
 
-      expect(RealtimeUsage::WaitForBucketsService).to have_received(:call).with(
-        organization_id: organization.id,
-        pending: {subscription.id => watermark_ms + 1000},
-        lane: :usage_alerts,
-        log_context: {subscription_id: subscription.id}
-      ).once
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to have_received(:call!)
-        .with(subscription:, alerts: contain_exactly(plan_alert, metric_alert, other_metric_alert)).once
-    end
-  end
-
-  context "with only per-metric alerts on other metrics" do
-    let(:plan_alert) { nil }
-    let(:metric_alert) do
-      create(:billable_metric_current_usage_units_alert, organization:, subscription_external_id: subscription.external_id)
-    end
-
-    it "does not wait or evaluate" do
-      consumer.consume
-
-      expect(RealtimeUsage::WaitForBucketsService).not_to have_received(:call)
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
-      expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "no_alert"}, by: 1)
-    end
-  end
-
-  context "with an alert on a deleted metric of the trigger's code" do
-    let(:plan_alert) { nil }
-    let(:billable_metric) { create(:billable_metric, organization:, code: "api_calls", deleted_at: 1.day.ago) }
-
-    it "does not evaluate it" do
-      consumer.consume
-
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
-      expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "no_alert"}, by: 1)
-    end
-  end
-
-  context "with alerts of another organization on the same subscription external id" do
-    let(:plan_alert) { nil }
-    let(:metric_alert) do
-      other_organization = create(:organization)
-      other_metric = create(:billable_metric, organization: other_organization, code: billable_metric.code)
-      create(:billable_metric_current_usage_units_alert, organization: other_organization, billable_metric: other_metric, subscription_external_id: subscription.external_id)
-    end
-
-    it "does not evaluate them" do
-      consumer.consume
-
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).to have_received(:call!)
+        .with(subscription:, codes: %w[api_calls storage], watermark_ms: watermark_ms + 1000).once
     end
   end
 
@@ -167,7 +81,18 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "evaluates the trigger only" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to have_received(:call!).once
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).to have_received(:call!).once
+    end
+  end
+
+  context "when the evaluation leaves the subscription to the sweep" do
+    let(:evaluation_reason) { :bucket_wait_timeout }
+
+    it "counts the reason and measures no latency" do
+      consumer.consume
+
+      expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "bucket_wait_timeout"}, by: 1)
+      expect(latency).not_to have_received(:measure)
     end
   end
 
@@ -177,7 +102,7 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "leaves the subscription to the sweep" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "not_enabled"}, by: 1)
     end
   end
@@ -188,7 +113,7 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "leaves the subscription to the sweep" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "not_enabled"}, by: 1)
     end
   end
@@ -199,7 +124,7 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "leaves the subscription to the sweep" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "not_enabled"}, by: 1)
     end
   end
@@ -210,7 +135,7 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "does not evaluate" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "subscription_not_found"}, by: 1)
     end
   end
@@ -221,7 +146,7 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "does not evaluate" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "subscription_not_found"}, by: 1)
     end
   end
@@ -232,7 +157,7 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "does not evaluate" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "subscription_not_found"}, by: 1)
     end
   end
@@ -243,46 +168,8 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "does not evaluate on buckets it cannot wait for" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "no_watermark"}, by: 1)
-    end
-  end
-
-  context "when the bucket wait raises" do
-    before do
-      allow(RealtimeUsage::WaitForBucketsService).to receive(:call).and_raise(Errno::ECONNREFUSED)
-      allow(Rails.logger).to receive(:error)
-      allow(Sentry).to receive(:capture_exception)
-    end
-
-    it "leaves the subscription to the sweep without raising the batch" do
-      expect { consumer.consume }.not_to raise_error
-
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
-      expect(outcomes).to have_received(:increment).with({outcome: "failed", reason: "evaluation_raised"}, by: 1)
-    end
-  end
-
-  context "when the buckets do not reach the watermark in time" do
-    let(:wait_reason) { :bucket_wait_timeout }
-
-    it "leaves the subscription to the sweep" do
-      consumer.consume
-
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
-      expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "bucket_wait_timeout"}, by: 1)
-      expect(latency).not_to have_received(:measure)
-    end
-  end
-
-  context "when the watermark is stale" do
-    let(:wait_reason) { :stale_watermark }
-
-    it "leaves the subscription to the sweep" do
-      consumer.consume
-
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
-      expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "stale_watermark"}, by: 1)
     end
   end
 
@@ -295,16 +182,16 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "leaves every remaining subscription to the sweep" do
       consumer.consume
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).not_to have_received(:call!)
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).not_to have_received(:call!)
       expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "deadline"}, by: 1)
       expect(Rails.logger).to have_received(:warn).with(/hit its deadline/)
     end
 
     context "with a subscription of an organization the lane is off for" do
       let(:other_organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"]) }
+      let(:other_subscription) { create(:subscription, organization: other_organization) }
 
       before do
-        other_subscription = create(:subscription, organization: other_organization)
         karafka.produce(trigger.merge(organization_id: other_organization.id, subscription_id: other_subscription.id).to_json)
       end
 
@@ -319,15 +206,11 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
 
   context "when an evaluation raises" do
     let(:other_subscription) { create(:subscription, organization:, customer:) }
-    let(:other_alert) do
-      create(:usage_current_amount_alert, organization:, subscription_external_id: other_subscription.external_id)
-    end
 
     before do
-      other_alert
       karafka.produce(trigger.merge(subscription_id: other_subscription.id).to_json)
 
-      allow(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to receive(:call!)
+      allow(UsageMonitoring::EvaluateRealtimeUsageAlertsService).to receive(:call!)
         .with(hash_including(subscription:))
         .and_raise(ActiveRecord::StaleObjectError.new(nil, "update"))
       allow(Rails.logger).to receive(:error)
@@ -337,8 +220,8 @@ RSpec.describe SubscriptionUsageAlertsConsumer do
     it "keeps consuming the batch" do
       expect { consumer.consume }.not_to raise_error
 
-      expect(UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to have_received(:call!)
-        .with(subscription: other_subscription, alerts: [other_alert])
+      expect(UsageMonitoring::EvaluateRealtimeUsageAlertsService).to have_received(:call!)
+        .with(subscription: other_subscription, codes: ["api_calls"], watermark_ms:)
     end
 
     it "reports and counts the failure" do
