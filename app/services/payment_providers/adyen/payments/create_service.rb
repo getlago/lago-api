@@ -98,7 +98,7 @@ module PaymentProviders
           prms = {
             amount: {
               currency: payment.amount_currency.upcase,
-              value: payment.amount_cents
+              value: ::PaymentProviders::AdyenProvider.to_adyen_amount(payment.amount_cents, payment.amount_currency)
             },
             reference: truncated_reference,
             paymentMethod: {

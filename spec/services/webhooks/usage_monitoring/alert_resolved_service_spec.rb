@@ -13,7 +13,7 @@ RSpec.describe Webhooks::UsageMonitoring::AlertResolvedService do
     it_behaves_like "creates webhook", "alert.resolved", "resolved_alert"
 
     context "with a catalog wallet alert's history row" do
-      let(:customer) { create(:customer, external_id: "acme") }
+      let(:customer) { create(:customer, external_id: "acme", currency: "USD") }
       let(:catalog_wallet) { create(:catalog_wallet, organization: customer.organization, customer:, contract: create(:contract, customer:, external_id: "ctr_123"), code: "prepaid", currency: "USD") }
       let(:alert) { create(:catalog_wallet_alert, organization: customer.organization, catalog_wallet:, alert_type: "balance", code: "low_balance", name: "Low balance") }
       let(:resolved_alert) do

@@ -176,6 +176,29 @@ RSpec.describe Invoices::PreviewContextService do
         end
       end
 
+      context "when integration type is quickbooks and the integration exists" do
+        let(:params) do
+          super().deep_merge(
+            customer: {
+              integration_customers: [
+                {
+                  integration_type: "quickbooks",
+                  integration_code: "code"
+                }
+              ]
+            }
+          )
+        end
+
+        before { create(:quickbooks_integration, organization:, code: "code") }
+
+        it "builds an unsaved QuickBooks link on the new customer" do
+          expect(subject).to be_new_record
+          expect(subject.integration_customers.map(&:class)).to eq([IntegrationCustomers::QuickbooksCustomer])
+          expect(subject.integration_customers.first).to be_new_record
+        end
+      end
+
       context "when integration type is quickbooks and no integration matches params" do
         let(:params) do
           super().deep_merge(

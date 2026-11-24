@@ -240,6 +240,63 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
+    context "with a QuickBooks link by external customer id" do
+      let(:quickbooks_integration) { create(:quickbooks_integration, organization:) }
+      let(:attributes) do
+        super().merge(
+          integration_customers: [
+            {integration_type: "quickbooks", integration_code: quickbooks_integration.code, external_customer_id: "58", sync_with_provider: false}
+          ]
+        )
+      end
+
+      it "links the customer and returns the link as type quickbooks" do
+        request
+
+        expect(response).to have_http_status(:ok)
+
+        perform_enqueued_jobs(only: IntegrationCustomers::CreateJob)
+
+        customer = organization.customers.find_by!(external_id: attributes[:external_id])
+        link = customer.integration_customers.sole
+        expect(link).to be_a(IntegrationCustomers::QuickbooksCustomer)
+        expect(link).to have_attributes(integration: quickbooks_integration, external_customer_id: "58", category: "accounting", is_default: true)
+        expect(a_request(:any, %r{\Ahttps://api\.nango\.dev/})).not_to have_been_made
+
+        get_with_token(organization, "/api/v2/customers/#{customer.external_id}", {expands: ["integration_customers"]})
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customer][:integration_customers].sole).to include(
+          lago_id: link.id,
+          external_customer_id: "58",
+          type: "quickbooks",
+          integration_code: quickbooks_integration.code,
+          category: "accounting",
+          is_default: true
+        )
+      end
+    end
+
+    context "when no QuickBooks integration of the organization matches the integration code" do
+      let(:attributes) do
+        super().merge(
+          integration_customers: [
+            {integration_type: "quickbooks", integration_code: "quickbooks", external_customer_id: "58", sync_with_provider: false}
+          ]
+        )
+      end
+
+      before { create(:quickbooks_integration, organization: create(:organization), code: "quickbooks") }
+
+      it "stores no link and returns the customer" do
+        expect { request }.not_to have_enqueued_job(IntegrationCustomers::CreateJob)
+
+        expect(response).to have_http_status(:ok)
+        expect(IntegrationCustomers::QuickbooksCustomer.count).to eq(0)
+        expect(a_request(:any, %r{\Ahttps://api\.nango\.dev/})).not_to have_been_made
+      end
+    end
+
     context "without the customer wrapper" do
       subject(:request) { post_with_token(organization, "/api/v2/customers", attributes) }
 
@@ -489,6 +546,30 @@ RSpec.describe Api::V2::CustomersController do
         expect(json[:customer]).not_to have_key(:billing_configuration)
         expect(json[:customer]).not_to have_key(:net_payment_term)
         expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", customer)
+      end
+
+      context "with a QuickBooks link" do
+        let(:quickbooks_integration) { create(:quickbooks_integration, organization:) }
+        let!(:link) { create(:quickbooks_customer, customer:, integration: quickbooks_integration, external_customer_id: "58") }
+        let(:quickbooks_params) do
+          {id: link.id, integration_type: "quickbooks", integration_code: quickbooks_integration.code, external_customer_id: "59"}
+        end
+        let(:attributes) { {integration_customers: [quickbooks_params]} }
+
+        it "stores the new QuickBooks customer id without calling QuickBooks" do
+          expect { request }.to have_enqueued_job(IntegrationCustomers::UpdateJob).with(
+            integration_customer_params: quickbooks_params,
+            integration: quickbooks_integration,
+            integration_customer: link
+          )
+          expect(response).to have_http_status(:ok)
+
+          perform_enqueued_jobs(only: IntegrationCustomers::UpdateJob)
+
+          expect(link.reload.external_customer_id).to eq("59")
+          expect(customer.integration_customers.reload).to eq([link])
+          expect(a_request(:any, %r{\Ahttps://api\.nango\.dev/})).not_to have_been_made
+        end
       end
 
       context "with a foreign tax and other changes", :premium do

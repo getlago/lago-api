@@ -26,13 +26,15 @@ RSpec.describe PaymentProviders::StripeService do
           name:,
           success_redirect_url:,
           supports_3ds: true,
-          require_terms_of_service_consent: true
+          require_terms_of_service_consent: true,
+          seller_profile: "profile_test_123"
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
           .with(result.stripe_provider)
         expect(result.stripe_provider.supports_3ds).to be(true)
         expect(result.stripe_provider.require_terms_of_service_consent).to be(true)
+        expect(result.stripe_provider.seller_profile).to eq("profile_test_123")
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
     end
 
@@ -78,6 +80,35 @@ RSpec.describe PaymentProviders::StripeService do
         expect(result).to be_success
         expect(result.stripe_provider.customers.first.payment_provider_code).to eq(new_code)
       end
+
+      it "updates the payment provider code of the agent storefronts using it" do
+        storefront = create(:agent_storefront_integration, organization:, stripe_provider: payment_provider)
+
+        result = stripe_service.create_or_update(
+          id: payment_provider.id,
+          organization_id: organization.id,
+          code: new_code,
+          name:
+        )
+
+        expect(result).to be_success
+        expect(storefront.reload.payment_provider_code).to eq(new_code)
+      end
+
+      it "updates an agent storefront that would fail its own validations" do
+        storefront = build(:agent_storefront_integration, organization:, stripe_provider: payment_provider, resource_endpoint: "http://api.acme.example")
+        storefront.save!(validate: false)
+
+        result = stripe_service.create_or_update(
+          id: payment_provider.id,
+          organization_id: organization.id,
+          code: new_code,
+          name:
+        )
+
+        expect(result).to be_success
+        expect(storefront.reload.payment_provider_code).to eq(new_code)
+      end
     end
 
     context "when organization already have a stripe provider" do
@@ -102,7 +133,8 @@ RSpec.describe PaymentProviders::StripeService do
           secret_key: "new_key",
           code:,
           name:,
-          success_redirect_url:
+          success_redirect_url:,
+          seller_profile: "profile_test_123"
         )
 
         expect(result).to be_success
@@ -112,8 +144,18 @@ RSpec.describe PaymentProviders::StripeService do
         expect(result.stripe_provider.code).to eq(code)
         expect(result.stripe_provider.name).to eq(name)
         expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
+        expect(result.stripe_provider.seller_profile).to eq("profile_test_123")
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).not_to have_been_enqueued
+      end
+
+      it "clears a blank seller profile" do
+        stripe_provider.update!(seller_profile: "profile_test_123")
+
+        result = stripe_service.create_or_update(organization_id: organization.id, code:, name:, seller_profile: "")
+
+        expect(result).to be_success
+        expect(result.stripe_provider.seller_profile).to be_nil
       end
 
       it_behaves_like "produces a security log", "integration.updated" do
