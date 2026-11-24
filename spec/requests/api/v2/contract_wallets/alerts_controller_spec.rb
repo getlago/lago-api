@@ -270,17 +270,28 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
     end
 
     context "when another contract has a wallet and an alert with the same codes" do
-      before do
-        other_contract = create(:contract, organization:, customer:, external_id: "acme-other")
-        other_wallet = create(:catalog_wallet, organization:, customer:, contract: other_contract, code: "prepaid")
-        create(:catalog_wallet_alert, organization:, catalog_wallet: other_wallet, code: "low_balance")
-      end
+      let(:other_contract) { create(:contract, organization:, customer:, external_id: "acme-other") }
+      let(:other_wallet) { create(:catalog_wallet, organization:, customer:, contract: other_contract, code: "prepaid") }
+      let(:other_alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: other_wallet, code: "low_balance") }
+
+      before { other_alert }
 
       it "returns the alert of this contract's wallet" do
         subject
 
         expect(response).to have_http_status(:success)
         expect(json[:alert][:lago_id]).to eq(alert.id)
+      end
+
+      context "when the other contract is asked for" do
+        let(:external_id) { other_contract.external_id }
+
+        it "returns the alert of the other contract's wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:alert][:lago_id]).to eq(other_alert.id)
+        end
       end
     end
 
@@ -298,6 +309,7 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
   describe "POST /api/v2/contracts/:external_id/wallets/:wallet_code/alerts" do
     subject { post_with_token(organization, path, {alert: create_params}) }
 
+    let(:contract_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid", balance_cents: 1_500) }
     let(:create_params) do
       {
         code: "low_balance",
@@ -316,7 +328,7 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
     include_examples "requires API permission", "alert", "write"
     include_examples "requires the catalog_wallets flag"
 
-    it "creates the alert on a pending contract without a previous value, and sends nothing" do
+    it "creates the alert on a pending contract without a previous value, though the wallet holds 1500, and sends nothing" do
       subject
 
       expect(response).to have_http_status(:ok)
@@ -330,17 +342,16 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
     context "when the contract is a draft" do
       let(:contract) { create(:contract, :draft, organization:, customer:, external_id: "acme-pro") }
 
-      it "creates the alert without a previous value" do
+      it "creates the alert without a previous value, though the wallet holds 1500" do
         subject
 
         expect(response).to have_http_status(:ok)
-        expect(contract_wallet.alerts.sole).to have_attributes(code: "low_balance", previous_value: nil)
+        expect(contract_wallet.alerts.sole).to have_attributes(code: "low_balance", previous_value: nil, last_processed_at: nil)
       end
     end
 
     context "when the contract is active and the wallet holds 1500" do
       let(:contract) { create(:contract, organization:, customer:, external_id: "acme-pro") }
-      let(:contract_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid", balance_cents: 1_500) }
 
       it "watches from the balance, seeding the opted-in line already past and sending nothing" do
         freeze_time do
@@ -462,6 +473,18 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
       end
     end
 
+    context "when the contract has ended" do
+      let(:contract) { create(:contract, :terminated, organization:, customer:, external_id: "acme-pro") }
+
+      it "returns a forbidden error and changes nothing" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "contract_not_live", details: [])
+        expect(alert.reload.name).to eq("Low balance")
+      end
+    end
+
     context "when it does not exist" do
       let(:code) { "unknown" }
 
@@ -516,6 +539,18 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
 
         expect(response).to have_http_status(:forbidden)
         expect(json).to eq(code: "contract_not_live", details: [])
+        expect(UsageMonitoring::CatalogWalletAlert.where(id: alert.id)).to exist
+      end
+    end
+
+    context "when the wallet has ended" do
+      let(:contract_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid", terminated_at: Time.current) }
+
+      it "returns a forbidden error and deletes nothing" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "wallet_alerts_read_only", details: [])
         expect(UsageMonitoring::CatalogWalletAlert.where(id: alert.id)).to exist
       end
     end
