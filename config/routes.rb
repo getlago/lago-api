@@ -103,7 +103,7 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
-        resources :wallets, param: :code, code: /.*/, only: %i[index show], controller: "contract_wallets"
+        resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_wallets"
       end
       # A contract is never destroyed — DELETE ends its lifecycle, the same
       # idiom subscriptions follow.
