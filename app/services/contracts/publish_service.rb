@@ -4,7 +4,8 @@ module Contracts
   # Releases a draft for billing, the only way out of draft. A draft whose start
   # is still ahead becomes pending and the clock starts it; one whose start has
   # passed is activated now, which catches up the periods elapsed since the start.
-  # Publishing a pending or active contract changes nothing, so a retry is safe.
+  # Publishing again sends nothing, so a retry is safe; a retry once the start
+  # has passed activates the contract, as the first publication would have.
   class PublishService < BaseService
     Result = BaseResult[:contract]
 
@@ -23,6 +24,8 @@ module Contracts
           contract.lock!
 
           if contract.pending? || contract.active?
+            # ActivateService does nothing unless the contract is pending and its start has passed.
+            Contracts::ActivateService.call!(contract:) if contract.pending?
             result.contract = contract
             next
           end
@@ -52,14 +55,16 @@ module Contracts
             result.single_validation_failure!(field: :external_id, error_code:).raise_if_error!
           end
 
-          # Its own event, as every other lifecycle step has: contract.updated with a pending
-          # status could not be told apart from an edit of a pending contract. Both are sent
-          # before contract.started when the publication activates.
+          # Its own event, as every other lifecycle step has: contract.updated could not tell a
+          # publication from an edit. Like contract.created, it renders the contract after commit,
+          # so a publication that activates sends it active, before contract.started.
           contract.update!(status: :pending)
           SendWebhookJob.perform_after_commit("contract.published", contract)
           Utils::ActivityLog.produce_after_commit(contract, "contract.published")
 
           # Inside the transaction, so an activation that fails rolls back the move to pending.
+          # As on create, a contract without cards or with unpriced cards goes active:
+          # ActivateService skips a card it cannot schedule.
           Contracts::ActivateService.call!(contract:) if contract.started_at <= Time.current
 
           result.contract = contract
@@ -68,6 +73,7 @@ module Contracts
 
       result
     rescue ActiveRecord::RecordNotUnique => e
+      # Not unique_index_failure!, whose value_already_exist differs from what create answers for this index.
       raise unless violated_unique_index(e) == "index_contracts_on_live_external_id"
 
       result.single_validation_failure!(field: :external_id, error_code: "value_already_exists")

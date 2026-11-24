@@ -123,6 +123,17 @@ RSpec.describe Contracts::PublishService do
     end
   end
 
+  context "when a pending contract's start has passed since it was published" do
+    let(:contract) { create(:contract, :pending, organization:, customer:, started_at: 1.day.ago) }
+
+    it "activates it, as the first publication would have, without publishing it again" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.started", contract)
+
+      expect(contract.reload).to be_active
+      expect(SendWebhookJob).not_to have_been_enqueued.with("contract.published", anything)
+    end
+  end
+
   %i[terminated canceled].each do |status|
     context "when the contract is #{status}" do
       let(:contract) { create(:contract, status, organization:, customer:, started_at:) }
@@ -228,18 +239,20 @@ RSpec.describe Contracts::PublishService do
       expect(result.error.messages).to eq(external_id: ["value_already_exists"])
       expect(contract.reload).to be_draft
     end
+  end
 
-    context "when only the unique index catches it" do
-      before do
-        allow(described_class).to receive(:new).and_wrap_original do |original, **kwargs|
-          original.call(**kwargs).tap { |service| allow(service).to receive(:live_sibling_status).and_return(nil) }
-        end
+  context "when a pending contract commits after the sibling check" do
+    before do
+      # Inserted right before the move to pending, so only the unique index catches it.
+      allow(contract).to receive(:update!).and_wrap_original do |original, *args, **kwargs|
+        create(:contract, :pending, organization:, customer:, external_id: contract.external_id)
+        original.call(*args, **kwargs)
       end
+    end
 
-      it "returns the same validation error instead of raising" do
-        expect(result.error.messages).to eq(external_id: ["value_already_exists"])
-        expect(contract.reload).to be_draft
-      end
+    it "returns the same validation error instead of raising" do
+      expect(result.error.messages).to eq(external_id: ["value_already_exists"])
+      expect(contract.reload).to be_draft
     end
   end
 
