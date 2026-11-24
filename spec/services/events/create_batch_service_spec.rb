@@ -403,12 +403,12 @@ RSpec.describe Events::CreateBatchService do
 
       it "enqueues one copy of the whole batch" do
         expect { create_batch_service.call }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob).exactly(:once)
-          .with(organization.id, %w[txn_0 txn_1 txn_2].map { hash_including(transaction_id: it, external_subscription_id:) })
+          .with(organization.id, satisfy { JSON.parse(it).pluck("transaction_id") == %w[txn_0 txn_1 txn_2] })
       end
 
       context "when the copy cannot be enqueued" do
         before do
-          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(RedisClient::CannotConnectError.new("no connection"))
+          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(ConnectionPool::TimeoutError.new("Waited 1 sec"))
         end
 
         it "accepts the events" do

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe BillingEngineMigrations::CopyApiEventsService, :capture_kafka_messages do
-  subject(:result) { described_class.call(organization_id: organization.id, events_attributes:) }
+  subject(:result) { described_class.call(organization_id: organization.id, events_json: events_attributes.to_json) }
 
   let_it_be(:organization) { create(:organization) }
   let_it_be(:shadow_organization) { create(:shadow_organization, clickhouse_events_store: true) }
@@ -26,7 +26,7 @@ RSpec.describe BillingEngineMigrations::CopyApiEventsService, :capture_kafka_mes
       external_customer_id: customer.external_id,
       code: "api_calls",
       timestamp: 1_763_900_000.123,
-      precise_total_amount_cents: BigDecimal("12.5"),
+      precise_total_amount_cents: "12.5",
       properties: {"region" => "eu"},
       **overrides
     }
@@ -92,8 +92,8 @@ RSpec.describe BillingEngineMigrations::CopyApiEventsService, :capture_kafka_mes
     end
   end
 
-  context "when the shadow organization reads its usage from PostgreSQL" do
-    let(:shadow_organization) { create(:shadow_organization, clickhouse_events_store: false) }
+  context "when the shadow organization left the ClickHouse store" do
+    before { Organization.find(shadow_organization.id).update!(clickhouse_events_store: false) }
 
     it "fails" do
       expect { result }.to raise_error(BaseService::ServiceFailure) { expect(it.code).to eq("shadow_organization_not_on_clickhouse_events_store") }

@@ -27,20 +27,30 @@ RSpec.describe BillingEngineMigrations::ApiEventsCopy do
       before { create(:billing_engine_migration, organization:) }
 
       it "enqueues one copy of the events that name a subscription" do
-        expect { enqueue }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob).with(
-          organization.id,
-          [
-            {
-              external_customer_id: "cust-1",
-              external_subscription_id: "sub-1",
-              transaction_id: "tr-1",
-              code: "api_calls",
-              timestamp: events.first.timestamp.to_f,
-              precise_total_amount_cents: BigDecimal("12.5"),
-              properties: {"region" => "eu"}
-            }
-          ]
-        )
+        expected_copies = [
+          {
+            "external_customer_id" => "cust-1",
+            "external_subscription_id" => "sub-1",
+            "transaction_id" => "tr-1",
+            "code" => "api_calls",
+            "timestamp" => events.first.timestamp.to_f,
+            "precise_total_amount_cents" => "12.5",
+            "properties" => {"region" => "eu"}
+          }
+        ]
+
+        expect { enqueue }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
+          .with(organization.id, satisfy { JSON.parse(it) == expected_copies })
+      end
+
+      context "when a property uses a key reserved by ActiveJob" do
+        let(:properties) { {"nested" => {"_aj_globalid" => "gid://app/Customer/1"}} }
+        let(:events) { [build_event(properties:)] }
+
+        it "enqueues the copy with the property as sent" do
+          expect { enqueue }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
+            .with(organization.id, satisfy { JSON.parse(it).sole["properties"] == properties })
+        end
       end
 
       context "when no event names a subscription" do
@@ -49,15 +59,21 @@ RSpec.describe BillingEngineMigrations::ApiEventsCopy do
         it { expect { enqueue }.not_to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob) }
       end
 
-      context "when the copy cannot be enqueued" do
-        before do
-          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(RedisClient::CannotConnectError.new("no connection"))
-          allow(Rails.logger).to receive(:error)
-        end
+      [
+        RedisClient::CannotConnectError.new("no connection"),
+        ConnectionPool::TimeoutError.new("Waited 1 sec"),
+        ConnectionPool::PoolShuttingDownError.new
+      ].each do |error|
+        context "when the copy cannot be enqueued because of #{error.class}" do
+          before do
+            allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(error)
+            allow(Rails.logger).to receive(:error)
+          end
 
-        it "logs the failure without raising" do
-          expect { enqueue }.not_to raise_error
-          expect(Rails.logger).to have_received(:error).with(/api events copy not enqueued organization_id=#{organization.id}: RedisClient::CannotConnectError/)
+          it "logs the failure without raising" do
+            expect { enqueue }.not_to raise_error
+            expect(Rails.logger).to have_received(:error).with(/api events copy not enqueued organization_id=#{organization.id}: #{error.class}/)
+          end
         end
       end
     end

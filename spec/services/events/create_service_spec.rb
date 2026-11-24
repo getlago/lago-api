@@ -261,12 +261,12 @@ RSpec.describe Events::CreateService do
 
       it "enqueues the copy of the event" do
         expect { create_service.call }.to have_enqueued_job(BillingEngineMigrations::CopyApiEventsJob)
-          .with(organization.id, [hash_including(transaction_id:, external_subscription_id:, code:)])
+          .with(organization.id, satisfy { JSON.parse(it).sole["transaction_id"] == transaction_id })
       end
 
       context "when the copy cannot be enqueued" do
         before do
-          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(RedisClient::CannotConnectError.new("no connection"))
+          allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(ConnectionPool::TimeoutError.new("Waited 1 sec"))
         end
 
         it "accepts the event" do
