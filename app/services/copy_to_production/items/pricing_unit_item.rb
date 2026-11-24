@@ -12,6 +12,11 @@ module CopyToProduction
         production.pricing_units.find_by(code: source.code)
       end
 
+      # As PricingUnits::CreateService, which needs a premium license.
+      def refusal(_source)
+        "feature_unavailable" unless License.premium?
+      end
+
       def copy!(source, _resolved)
         PricingUnits::CreateService.call!(
           organization: production,

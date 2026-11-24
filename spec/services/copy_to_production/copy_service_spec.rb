@@ -602,6 +602,18 @@ RSpec.describe CopyToProduction::CopyService do
       end
     end
 
+    context "when a rate card is priced in a pricing unit without a premium license" do
+      before { seat_card.update!(applied_pricing_unit_code: create(:pricing_unit, organization: sandbox, code: "credits").code) }
+
+      it "refuses the copy" do
+        expect { result }.not_to change { [Product.count, PricingUnit.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
+      end
+    end
+
     context "when a rate card is priced in a pricing unit", :premium do
       let(:pricing_unit) { create(:pricing_unit, organization: sandbox, code: "credits", name: "Credits", short_name: "CR") }
 
@@ -669,6 +681,29 @@ RSpec.describe CopyToProduction::CopyService do
         expect(live_product.rate_cards.sole.rates.count).to eq(1)
       end
 
+      context "with a tiered rate" do
+        # Stored as the create service saves it: each tier with the lower bound it starts at.
+        let(:graduated_ranges) do
+          [
+            {"from_value" => 0, "to_value" => 10, "flat_amount" => "0", "per_unit_amount" => "1"},
+            {"from_value" => 10, "to_value" => nil, "flat_amount" => "0", "per_unit_amount" => "0.5"}
+          ]
+        end
+
+        before do
+          create(:rate_card_rate, organization: sandbox, rate_model: "graduated",
+            rate_properties: {"graduated_ranges" => graduated_ranges},
+            rate_card: create(:rate_card, organization: sandbox, product:, code: "api_tiers"))
+        end
+
+        it "copies its tiers" do
+          expect(result).to be_success
+
+          live_rate = production.rate_cards.find_by!(code: "api_tiers").rates.sole
+          expect(live_rate.rate_properties["graduated_ranges"]).to eq(graduated_ranges)
+        end
+      end
+
       context "with filters whose codes do not follow their creation order" do
         before do
           {"zone_b" => "us", "zone_a" => "eu"}.each do |code, value|
@@ -696,6 +731,22 @@ RSpec.describe CopyToProduction::CopyService do
       let(:live_category) { create(:product_category, organization: production, code: "compute") }
 
       before { live_category }
+
+      context "when production bills its metric with an aggregation an advance card cannot price" do
+        before do
+          create(:billable_metric, organization: production, code: "api_calls", aggregation_type: "max_agg", field_name: "amount")
+          create(:rate_card_rate, organization: sandbox,
+            rate_card: create(:rate_card, :advance, organization: sandbox, product:, code: "api_advance"))
+        end
+
+        it "refuses the copy" do
+          expect { result }.not_to change { [Product.count, RateCard.count] }
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("copy_to_production_rate_mismatch")
+        end
+      end
 
       context "when its metric uses a custom aggregation" do
         let(:metric) do

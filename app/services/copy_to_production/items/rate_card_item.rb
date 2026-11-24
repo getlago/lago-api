@@ -27,8 +27,9 @@ module CopyToProduction
       # A prorated card needs a recurring metric that is not a weighted sum, which a reused live metric may not be.
       def refusal(source)
         return "copy_to_production_code_conflict" if production.rate_cards.exists?(code: source.code)
+        return "copy_to_production_metric_mismatch" if source.proration? && prorating_metric_mismatch?(source.product)
 
-        "copy_to_production_metric_mismatch" if source.proration? && prorating_metric_mismatch?(source.product)
+        "copy_to_production_rate_mismatch" if rate_mismatch?(source)
       end
 
       def dependencies(source)
@@ -84,7 +85,26 @@ module CopyToProduction
         active = rates.select { it.effective_from <= now }.last
         pending = rates.select { it.effective_from > now }
 
-        [*([active.slice(*RATE_ATTRIBUTES).merge(effective_from: now)] if active), *pending.map { it.slice(*RATE_ATTRIBUTES) }]
+        [*([rate_params(active).merge(effective_from: now)] if active), *pending.map { rate_params(it) }]
+      end
+
+      # Storage adds each tier's lower bound, which the create service refuses: it takes tiers as the API shows them.
+      def rate_params(rate)
+        rate.slice(*RATE_ATTRIBUTES).merge(rate_properties: RateProperties.present(rate.rate_properties))
+      end
+
+      # As RateCardRate#validate_rate_model_compatibility reads each rate on the product the card is created in: the
+      # live product with its code, or the copy of the sandbox one, which bills the live metric with its code.
+      def rate_mismatch?(source)
+        product = production.products.includes(:billable_metric).find_by(code: source.product.code) ||
+          Product.new(product_type: source.product.product_type, billable_metric: live_metric(source.product.billable_metric))
+        card = RateCard.new(billing_timing: source.billing_timing, proration: source.proration, product:)
+
+        rates_params(source).any? { RateCardRates::ModelCompatibility.error_code(rate_model: it[:rate_model], rate_card: card) }
+      end
+
+      def live_metric(metric)
+        metric && (production.billable_metrics.find_by(code: metric.code) || metric)
       end
     end
   end

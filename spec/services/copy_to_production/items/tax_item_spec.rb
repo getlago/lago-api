@@ -41,5 +41,13 @@ RSpec.describe CopyToProduction::Items::TaxItem do
       expect(copy).to have_attributes(organization: production, code: "vat", name: "VAT", rate: 20)
       expect(production.default_billing_entity.taxes).to be_empty
     end
+
+    context "when production has a deleted tax with the same code" do
+      before { create(:tax, organization: production, code: "vat").discard! }
+
+      it "creates the tax" do
+        expect(item.copy!(tax, {})).to have_attributes(organization: production, code: "vat", deleted_at: nil)
+      end
+    end
   end
 end

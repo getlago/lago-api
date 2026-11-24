@@ -41,6 +41,35 @@ RSpec.describe CopyToProduction::Items::RateCardItem do
       end
     end
 
+    context "with an advance card" do
+      let(:metric) { create(:billable_metric, organization: sandbox, code: "calls", aggregation_type: "sum_agg", field_name: "calls") }
+      let(:product) { create(:product, organization: sandbox, billable_metric: metric, code: "api") }
+      let(:rate_card) { create(:rate_card, :advance, organization: sandbox, product:, code: "api_eur") }
+      let(:live_rate_card) { nil }
+
+      before { create(:rate_card_rate, organization: sandbox, rate_card:) }
+
+      it "answers nil when production has no metric with the code of its product's" do
+        expect(item.refusal(rate_card)).to be_nil
+      end
+
+      context "when production has a metric with that code that cannot be paid in advance" do
+        before { create(:billable_metric, organization: production, code: "calls", aggregation_type: "max_agg", field_name: "calls") }
+
+        it "answers copy_to_production_rate_mismatch" do
+          expect(item.refusal(rate_card)).to eq("copy_to_production_rate_mismatch")
+        end
+      end
+
+      context "when production has a metric with that code that can be paid in advance" do
+        before { create(:billable_metric, organization: production, code: "calls", aggregation_type: "count_agg") }
+
+        it "answers nil" do
+          expect(item.refusal(rate_card)).to be_nil
+        end
+      end
+    end
+
     context "with a prorated card" do
       let(:metric) { create(:billable_metric, :recurring, organization: sandbox, code: "seats", aggregation_type: "sum_agg", field_name: "seats") }
       let(:product) { create(:product, organization: sandbox, billable_metric: metric, code: "api") }
