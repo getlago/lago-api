@@ -37,7 +37,9 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
       wallet_code: "prepaid",
       currency: "USD",
       plan_code: nil,
+      lago_contract_id: contract.id,
       external_contract_id: "acme-pro",
+      contract_code: contract.code,
       external_customer_id: "acme",
       code: alert.code,
       name: alert.name,
@@ -149,6 +151,27 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
       end
     end
 
+    context "when the wallet was removed from the contract" do
+      let(:wallet_code) { create(:catalog_wallet, organization:, customer:, contract:, code: "old", deleted_at: Time.current).code }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("contract_wallet")
+      end
+    end
+
+    context "when the wallet has ended" do
+      let(:contract_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid", terminated_at: Time.current) }
+
+      it "still returns its alerts" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:alerts].map { it[:code] }).to eq(%w[low_ongoing low_balance])
+      end
+    end
+
     context "when the contract does not exist" do
       let(:external_id) { "unknown" }
 
@@ -234,6 +257,42 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
         expect(response).to be_v2_not_found_error("alert")
       end
     end
+
+    context "when its code contains a dot" do
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: contract_wallet, code: "low.balance") }
+
+      it "returns the alert" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:alert][:code]).to eq("low.balance")
+      end
+    end
+
+    context "when another contract has a wallet and an alert with the same codes" do
+      before do
+        other_contract = create(:contract, organization:, customer:, external_id: "acme-other")
+        other_wallet = create(:catalog_wallet, organization:, customer:, contract: other_contract, code: "prepaid")
+        create(:catalog_wallet_alert, organization:, catalog_wallet: other_wallet, code: "low_balance")
+      end
+
+      it "returns the alert of this contract's wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:alert][:lago_id]).to eq(alert.id)
+      end
+    end
+
+    context "when the wallet does not exist" do
+      let(:wallet_code) { "unknown" }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("contract_wallet")
+      end
+    end
   end
 
   describe "POST /api/v2/contracts/:external_id/wallets/:wallet_code/alerts" do
@@ -268,6 +327,17 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
       expect(SendWebhookJob).not_to have_been_enqueued
     end
 
+    context "when the contract is a draft" do
+      let(:contract) { create(:contract, :draft, organization:, customer:, external_id: "acme-pro") }
+
+      it "creates the alert without a previous value" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(contract_wallet.alerts.sole).to have_attributes(code: "low_balance", previous_value: nil)
+      end
+    end
+
     context "when the contract is active and the wallet holds 1500" do
       let(:contract) { create(:contract, organization:, customer:, external_id: "acme-pro") }
       let(:contract_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid", balance_cents: 1_500) }
@@ -280,7 +350,9 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
           created = contract_wallet.alerts.sole
           # 2000 is above the balance of 1500 and opted in to resolution; 0 is below it
           expect(json).to eq(alert: alert_json(created, thresholds: thresholds_json, previous_value: "1500.0", last_processed_at: Time.current.iso8601(6)))
-          expect(created.all_triggered_alerts.sole).to have_attributes(kind: "seeded", current_value: 1_500)
+          seeded = created.all_triggered_alerts.sole
+          expect(seeded).to have_attributes(kind: "seeded", current_value: 1_500)
+          expect(seeded.crossed_thresholds.map { it["code"] }).to eq(["low"])
           expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
@@ -288,11 +360,13 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
       context "when the wallet is empty" do
         let(:contract_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid") }
 
-        it "creates a balance alert that waits for money" do
+        it "creates a balance alert that waits for money, and sends nothing" do
           subject
 
           expect(response).to have_http_status(:ok)
           expect(json[:alert]).to include(previous_value: nil, last_processed_at: nil)
+          expect(contract_wallet.alerts.sole.all_triggered_alerts).to be_empty
+          expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
     end
@@ -341,6 +415,7 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
         subject
 
         expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("missing_parameter")
       end
     end
 
@@ -396,6 +471,17 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
         expect(response).to be_v2_not_found_error("alert")
       end
     end
+
+    context "when the wallet does not exist" do
+      let(:wallet_code) { "unknown" }
+
+      it "returns a not found error and changes nothing" do
+        subject
+
+        expect(response).to be_v2_not_found_error("contract_wallet")
+        expect(alert.reload.name).to eq("Low balance")
+      end
+    end
   end
 
   describe "DELETE /api/v2/contracts/:external_id/wallets/:wallet_code/alerts/:code" do
@@ -441,6 +527,17 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
         subject
 
         expect(response).to be_v2_not_found_error("alert")
+      end
+    end
+
+    context "when the wallet does not exist" do
+      let(:wallet_code) { "unknown" }
+
+      it "returns a not found error and deletes nothing" do
+        subject
+
+        expect(response).to be_v2_not_found_error("contract_wallet")
+        expect(UsageMonitoring::CatalogWalletAlert.where(id: alert.id)).to exist
       end
     end
   end

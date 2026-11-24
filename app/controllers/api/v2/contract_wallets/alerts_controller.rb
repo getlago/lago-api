@@ -10,7 +10,7 @@ module Api
 
         serializable_with ::V2::CatalogWalletAlertSerializer
 
-        # A wallet holds at most one alert per metric, so the list is returned whole.
+        # A wallet holds at most one alert per type, so the list is returned whole.
         before_action :reject_pagination!, only: :index
         before_action :ensure_contract_wallet
         before_action :find_alert, only: %i[show update destroy]

@@ -30,7 +30,9 @@ describe V2::CatalogWalletAlertSerializer do
         wallet_code: "prepaid",
         currency: "EUR",
         plan_code: "pro",
+        lago_contract_id: nil,
         external_contract_id: nil,
+        contract_code: nil,
         external_customer_id: nil,
         code: "low_ongoing",
         name: "Low ongoing balance",
@@ -50,7 +52,7 @@ describe V2::CatalogWalletAlertSerializer do
   end
 
   context "with a contract wallet's alert" do
-    let_it_be(:customer) { create(:customer, organization:, external_id: "cus_42") }
+    let_it_be(:customer) { create(:customer, organization:, external_id: "cus_42", currency: "EUR") }
     let_it_be(:contract) { create(:contract, customer:, external_id: "ctr_42") }
     let_it_be(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid") }
 
@@ -65,9 +67,11 @@ describe V2::CatalogWalletAlertSerializer do
         lago_id: alert.id,
         lago_wallet_id: catalog_wallet.id,
         wallet_code: "prepaid",
-        currency: catalog_wallet.currency,
+        currency: "EUR",
         plan_code: nil,
+        lago_contract_id: contract.id,
         external_contract_id: "ctr_42",
+        contract_code: contract.code,
         external_customer_id: "cus_42",
         code: "low_balance",
         name: "Low balance",
