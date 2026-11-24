@@ -135,7 +135,7 @@ RSpec.describe "Fixed advance rate change edge cases" do
     expect(card.billing_operations).to be_empty
   end
 
-  context "when a prepaid future price moves later" do
+  context "with a second rate scheduled for November 15" do
     let(:initial_rates) do
       [
         {code: "old", effective_from: start_at.iso8601, rate_model: "standard",
@@ -143,6 +143,37 @@ RSpec.describe "Fixed advance rate change edge cases" do
         {code: "new", effective_from: change_at.iso8601, rate_model: "standard",
          billing_interval_count: 1, billing_interval_unit: "month", rate_properties: {amount: "60"}}
       ]
+    end
+
+    it "reconciles an edit to a covered rate exactly once when all segment boundaries stay unchanged" do
+      operation = first_operation
+      expect(card.billing_operations.sole).to eq(operation)
+      expect(operation).to have_attributes(coverage_started_at: start_at, coverage_ended_at: december)
+      expect(operation.processed_at).to be_present
+      original = operation.attributes
+      original_segments = operation.segments.map(&:attributes)
+      fields = %i[started_at ended_at rate_card_rate_id]
+      rate = rate_card.rates.find_by!(code: "new")
+      segments = [[start_at, change_at, rate_card.rates.find_by!(code: "old").id], [change_at, december, rate.id]]
+      expect(operation.segments.pluck(*fields)).to eq(segments)
+
+      travel_to(Time.utc(2026, 11, 12)) do
+        api_call(perform_jobs: false) do
+          put_with_token(organization, "/api/v2/rate_cards/edge-card/rates/new", {rate: {rate_properties: {amount: "40"}}})
+        end
+        apply_rate_jobs(rate)
+        reconciliation = card.billing_operations.pending.sole
+        expect(reconciliation).to have_attributes(action_type: "reconcile_advance_coverage", reason: "rate_change",
+          coverage_started_at: start_at, coverage_ended_at: december)
+        expect(reconciliation.segments.pluck(*fields)).to eq(segments)
+
+        BillingOperations::ApplyRateChangeJob.perform_now(customer.id, rate.id)
+        expect(card.billing_operations.pending.pluck(:id)).to eq([reconciliation.id])
+        expect(card.billing_operations.pluck(:id)).to contain_exactly(operation.id, reconciliation.id)
+      end
+
+      expect(operation.reload.attributes).to eq(original)
+      expect(operation.segments.map(&:attributes)).to eq(original_segments)
     end
 
     context "with segment billing when the new rate moves from Nov 15 to Nov 20" do
