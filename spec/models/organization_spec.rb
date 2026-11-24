@@ -63,6 +63,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:xero_integrations)
       expect(subject).to have_many(:quickbooks_integrations)
       expect(subject).to have_one(:salesforce_integration)
+      expect(subject).to have_many(:agent_storefront_integrations)
       expect(subject).to have_many(:data_exports)
       expect(subject).to have_many(:dunning_campaigns)
       expect(subject).to have_many(:daily_usages)
@@ -598,7 +599,7 @@ RSpec.describe Organization do
   end
 
   describe "#premium_integrations_enabled?" do
-    described_class::PREMIUM_INTEGRATIONS.each do |integration|
+    (described_class::PREMIUM_INTEGRATIONS - %w[agent_storefront]).each do |integration|
       it_behaves_like "organization premium feature", integration
     end
   end
@@ -1024,6 +1025,33 @@ RSpec.describe Organization do
 
     context "without a premium license" do
       it { expect(organization.x402_payments_enabled?).to be(false) }
+    end
+  end
+
+  describe "#agent_storefront_enabled?" do
+    subject(:organization) { build(:organization, premium_integrations:, feature_flags:) }
+
+    let(:premium_integrations) { ["agent_storefront"] }
+    let(:feature_flags) { ["agent_storefront"] }
+
+    context "with a premium license", :premium do
+      it { expect(organization.agent_storefront_enabled?).to be(true) }
+
+      context "without the agent_storefront flag" do
+        let(:feature_flags) { [] }
+
+        it { expect(organization.agent_storefront_enabled?).to be(false) }
+      end
+
+      context "without the agent_storefront premium integration" do
+        let(:premium_integrations) { [] }
+
+        it { expect(organization.agent_storefront_enabled?).to be(false) }
+      end
+    end
+
+    context "without a premium license" do
+      it { expect(organization.agent_storefront_enabled?).to be(false) }
     end
   end
 end

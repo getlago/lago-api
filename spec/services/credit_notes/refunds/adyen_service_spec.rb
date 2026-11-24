@@ -111,6 +111,183 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       end
     end
 
+    context "with a currency whose Adyen minor units differ from Lago's" do
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer:,
+          invoice:,
+          total_amount_currency: "HUF",
+          credit_amount_currency: "HUF",
+          balance_amount_currency: "HUF",
+          refund_amount_cents: 50_000,
+          refund_amount_currency: "HUF",
+          refund_status: :pending
+        )
+      end
+      let(:refunds_response) do
+        Adyen::AdyenResult.new(
+          {
+            "pspReference" => SecureRandom.uuid,
+            "status" => "received",
+            "amount" => {"currency" => "HUF", "value" => 5_000_000}
+          }.to_json,
+          {},
+          200
+        )
+      end
+
+      it "sends the amount in Adyen minor units and stores it in Lago minor units" do
+        result = adyen_service.create
+
+        expect(result).to be_success
+        # Lago stores HUF with 0 decimals, Adyen expects 2: 50_000 * 10**2
+        expect(modifications_api).to have_received(:refund_captured_payment)
+          .with(hash_including(amount: {value: 5_000_000, currency: "HUF"}), payment.provider_payment_id)
+        # Adyen answers 5_000_000 in its minor units: 5_000_000 / 10**2
+        expect(result.refund.amount_cents).to eq(50_000)
+        expect(result.refund.amount_currency).to eq("HUF")
+      end
+    end
+
+    context "with a currency that has fewer Adyen minor units than Lago's" do
+      let(:payment) do
+        create(
+          :payment,
+          payment_provider: adyen_payment_provider,
+          payment_provider_customer: adyen_customer,
+          amount_cents: 2_000_000,
+          amount_currency: "IDR",
+          payable_payment_status: "succeeded",
+          payable: credit_note.invoice
+        )
+      end
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer:,
+          invoice:,
+          total_amount_currency: "IDR",
+          credit_amount_currency: "IDR",
+          balance_amount_currency: "IDR",
+          refund_amount_cents: 1_234_500,
+          refund_amount_currency: "IDR",
+          refund_status: :pending
+        )
+      end
+      let(:refunds_response) do
+        Adyen::AdyenResult.new(
+          {
+            "pspReference" => SecureRandom.uuid,
+            "status" => "received",
+            "amount" => {"currency" => "IDR", "value" => 12_345}
+          }.to_json,
+          {},
+          200
+        )
+      end
+
+      it "sends the amount in Adyen minor units and stores it in Lago minor units" do
+        result = adyen_service.create
+
+        expect(result).to be_success
+        # Lago stores IDR with 2 decimals, Adyen expects 0: 1_234_500 / 10**2
+        expect(modifications_api).to have_received(:refund_captured_payment)
+          .with(hash_including(amount: {value: 12_345, currency: "IDR"}), payment.provider_payment_id)
+        # Adyen answers 12_345 in its minor units: 12_345 * 10**2
+        expect(result.refund.amount_cents).to eq(1_234_500)
+        expect(result.refund.amount_currency).to eq("IDR")
+      end
+
+      context "with a fractional amount in Adyen minor units" do
+        let(:credit_note) do
+          create(
+            :credit_note,
+            customer:,
+            invoice:,
+            total_amount_currency: "IDR",
+            credit_amount_currency: "IDR",
+            balance_amount_currency: "IDR",
+            refund_amount_cents: 1_234_550,
+            refund_amount_currency: "IDR",
+            refund_status: :pending
+          )
+        end
+        let(:refunds_response) do
+          Adyen::AdyenResult.new(
+            {
+              "pspReference" => SecureRandom.uuid,
+              "status" => "received",
+              "amount" => {"currency" => "IDR", "value" => 12_346}
+            }.to_json,
+            {},
+            200
+          )
+        end
+
+        it "rounds the amount half-up" do
+          result = adyen_service.create
+
+          expect(result).to be_success
+          # 1_234_550 / 10**2 = 12_345.5, rounded half-up
+          expect(modifications_api).to have_received(:refund_captured_payment)
+            .with(hash_including(amount: {value: 12_346, currency: "IDR"}), payment.provider_payment_id)
+          # Adyen answers 12_346 in its minor units: 12_346 * 10**2
+          expect(result.refund.amount_cents).to eq(1_234_600)
+        end
+      end
+    end
+
+    context "with a currency whose Adyen minor units match Lago's" do
+      let(:payment) do
+        create(
+          :payment,
+          payment_provider: adyen_payment_provider,
+          payment_provider_customer: adyen_customer,
+          amount_cents: 20_000,
+          amount_currency: "EUR",
+          payable_payment_status: "succeeded",
+          payable: credit_note.invoice
+        )
+      end
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer:,
+          invoice:,
+          total_amount_currency: "EUR",
+          credit_amount_currency: "EUR",
+          balance_amount_currency: "EUR",
+          refund_amount_cents: 13_400,
+          refund_amount_currency: "EUR",
+          refund_status: :pending
+        )
+      end
+      let(:refunds_response) do
+        Adyen::AdyenResult.new(
+          {
+            "pspReference" => SecureRandom.uuid,
+            "status" => "received",
+            "amount" => {"currency" => "EUR", "value" => 13_400}
+          }.to_json,
+          {},
+          200
+        )
+      end
+
+      it "sends and stores the amount unchanged" do
+        result = adyen_service.create
+
+        expect(result).to be_success
+        # EUR has 2 decimals in both Lago and Adyen: 13_400 unchanged
+        expect(modifications_api).to have_received(:refund_captured_payment)
+          .with(hash_including(amount: {value: 13_400, currency: "EUR"}), payment.provider_payment_id)
+        # Adyen answers 13_400 in the same minor units: 13_400 unchanged
+        expect(result.refund.amount_cents).to eq(13_400)
+        expect(result.refund.amount_currency).to eq("EUR")
+      end
+    end
+
     context "with an error on adyen" do
       before do
         allow(modifications_api).to receive(:refund_captured_payment)

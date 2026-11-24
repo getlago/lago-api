@@ -10,7 +10,7 @@ RSpec.describe Contracts::UpdateService do
   let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
 
-  let(:params) { {name: "Renamed", billing_time: "anniversary"} }
+  let(:params) { {name: "Renamed", billing_anchor_date: "2026-03-01"} }
   let(:activity_log_results) { [] }
 
   before do
@@ -24,7 +24,7 @@ RSpec.describe Contracts::UpdateService do
 
   it "updates the editable authoring fields" do
     expect(result).to be_success
-    expect(contract.reload).to have_attributes(name: "Renamed", billing_time: "anniversary")
+    expect(contract.reload).to have_attributes(name: "Renamed", billing_anchor_date: Date.new(2026, 3, 1))
   end
 
   context "when the billing schedule is locked" do
@@ -98,7 +98,6 @@ RSpec.describe Contracts::UpdateService do
         {
           name: "Renamed",
           plan_code: catalog_plan.code,
-          billing_time: "calendar",
           started_at: "2026-09-01T03:30:00Z",
           billing_anchor_date: contract.effective_billing_anchor_date.iso8601
         }
@@ -210,7 +209,6 @@ RSpec.describe Contracts::UpdateService do
     end
 
     {
-      billing_time: "anniversary",
       billing_anchor_date: "2026-03-01",
       started_at: "2026-03-01T00:00:00Z"
     }.each do |field, value|
@@ -272,7 +270,7 @@ RSpec.describe Contracts::UpdateService do
   context "when an active contract sends sections with a locked field" do
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
     let(:section) { create(:invoice_custom_section, organization:) }
-    let(:params) { {billing_time: "anniversary", invoice_custom_section: {invoice_custom_section_ids: [section.id]}} }
+    let(:params) { {billing_anchor_date: "2026-03-01", invoice_custom_section: {invoice_custom_section_ids: [section.id]}} }
 
     it "rejects the edit and attaches nothing" do
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
@@ -680,12 +678,12 @@ RSpec.describe Contracts::UpdateService do
     end
 
     context "when moving the start into the past" do
-      let(:params) { {started_at: "2026-09-01T00:00:00", billing_time: "anniversary"} }
+      let(:params) { {started_at: "2026-09-01T00:00:00"} }
 
       it "applies the authoring fields and keeps it a draft" do
         expect(result).to be_success
         expect(contract.reload).to have_attributes(
-          status: "draft", billing_time: "anniversary", started_at: Time.zone.parse("2026-09-01")
+          status: "draft", started_at: Time.zone.parse("2026-09-01")
         )
       end
     end
