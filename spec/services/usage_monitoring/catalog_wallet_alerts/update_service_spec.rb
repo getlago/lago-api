@@ -264,8 +264,10 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
       end
 
       context "when a balance change is in flight", transaction: false do
-        # 5000 is in alarm at the 1500 the wallet holds before the change, not at the 8000 it leaves
-        let(:params) { {thresholds: [{code: "high", value: "5000", notify_on: %w[triggered resolved]}]} }
+        # 5000 is in alarm at the 1500 the wallet holds before the change, not at the 8000 it leaves; 10000 is at both
+        let(:params) do
+          {thresholds: [{code: "high", value: "5000", notify_on: %w[triggered resolved]}, {code: "top", value: "10000", notify_on: %w[triggered resolved]}]}
+        end
 
         it "waits for it and seeds from the balance it leaves" do
           locked = Queue.new
@@ -293,7 +295,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
           Timeout.timeout(10) { writer.join }
 
           expect(Timeout.timeout(10) { editor.value }).to be_success
-          expect(alert.all_triggered_alerts).to be_empty
+          expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["top"])
         end
       end
     end
@@ -443,11 +445,5 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
         expect(result.error.error_code).to eq("alert_not_found")
       end
     end
-  end
-
-  def lock_waits
-    ApplicationRecord.connection.select_value(
-      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
-    )
   end
 end

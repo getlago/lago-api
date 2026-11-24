@@ -5,8 +5,9 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
   subject(:result) { described_class.call(plan_wallet:, params:) }
 
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:plan_wallet, refind: true) { create(:plan_wallet, organization:) }
+  # Lets, not let_it_be: a before_all would make the threads of the race below share one connection
+  let(:organization) { create(:organization) }
+  let(:plan_wallet) { create(:plan_wallet, organization:) }
 
   let(:params) do
     {
@@ -283,6 +284,38 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
           # At the column's 0, the line at 0 would be seeded too
           expect(result.alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["warning"])
         end
+      end
+    end
+
+    # Each create raises its wallet lock to BaselineService's mode: two creates sharing the wallet would wait on each other
+    context "when two alerts are created on one wallet at once", transaction: false do
+      let(:contract) { create(:contract, customer:) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
+      let(:ongoing_params) { params.merge(alert_type: "ongoing_balance", code: "low_ongoing_balance") }
+
+      it "creates both, one after the other" do
+        wallet_id = catalog_wallet.id
+        arrived = Queue.new
+        release = Queue.new
+        allow(UsageMonitoring::CatalogWalletAlerts::BaselineService).to receive(:call!).and_wrap_original do |original, **kwargs|
+          arrived << true
+          release.pop
+          original.call(**kwargs)
+        end
+
+        create = ->(alert_params) { Thread.new { ApplicationRecord.connection_pool.with_connection { described_class.call(catalog_wallet: CatalogWallet.find(wallet_id), params: alert_params) } } }
+        first = create.call(params)
+        Timeout.timeout(10) { arrived.pop }
+        second = create.call(ongoing_params)
+        begin
+          # The second create either waits for the wallet or reaches its baseline sharing it with the first
+          Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? || arrived.size.positive? }
+        ensure
+          2.times { release << true }
+        end
+
+        expect([first, second].map { |thread| Timeout.timeout(10) { thread.value } }).to all(be_success)
+        expect(CatalogWallet.find(wallet_id).alerts.pluck(:alert_type)).to contain_exactly("balance", "ongoing_balance")
       end
     end
 

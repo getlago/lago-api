@@ -8,9 +8,8 @@ module UsageMonitoring
 
       private
 
-      # Template writes lock the plan wallet, so a contract copying its templates sees one version of them. Contract
-      # wallet writes share the lock that ending the contract or changing its plan takes, then hold off balance changes
-      # so an edit seeds from the balance it read, in BaselineService's mode: creates raising a weaker one would deadlock
+      # Templates lock the plan wallet, so a copy sees one version of them. Contract wallets share the contract lock with
+      # its end and plan change, then lock the wallet in BaselineService's mode, which a create raises it to.
       def lock_wallet(wallet)
         if wallet.is_a?(PlanWallet)
           wallet.lock!

@@ -135,10 +135,4 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::BaselineService do
       expect(alert.reload.previous_value).to eq(3_000)
     end
   end
-
-  def lock_waits
-    ApplicationRecord.connection.select_value(
-      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
-    )
-  end
 end
