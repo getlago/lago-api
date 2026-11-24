@@ -64,7 +64,10 @@ module PaymentProviders
             :update_payment_status,
             organization_id: organization.id,
             status:,
-            amount_cents: event.data.object.try(:amount),
+            amount_cents: ::PaymentProviders::StripeProvider.from_stripe_amount(
+              event.data.object.try(:amount),
+              event.data.object.try(:currency)
+            ),
             stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
               id: event.data.object.id,
               status: event.data.object.status,

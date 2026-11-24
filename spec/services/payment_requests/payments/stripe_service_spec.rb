@@ -167,6 +167,43 @@ RSpec.describe PaymentRequests::Payments::StripeService do
       end
     end
 
+    context "when the invoice currency is HUF, which Stripe reads in hundredths" do
+      let(:invoices) { [invoice_1] }
+
+      let(:invoice_1) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 50_000,
+          currency: "HUF",
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the unit amount in Stripe units" do
+        described_class.call(:generate_payment_url, payment_request)
+
+        expect(::Stripe::Checkout::Session)
+          .to have_received(:create)
+          .with(
+            hash_including(
+              line_items: [
+                {
+                  quantity: 1,
+                  price_data: {
+                    currency: "huf",
+                    unit_amount: 5_000_000, # 50_000 HUF * 100
+                    product_data: {name: invoice_1.number}
+                  }
+                }
+              ]
+            ),
+            hash_including({api_key: an_instance_of(String)})
+          )
+      end
+    end
+
     context "with an error on Stripe" do
       before do
         allow(::Stripe::Checkout::Session).to receive(:create)

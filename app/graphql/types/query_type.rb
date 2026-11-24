@@ -17,6 +17,7 @@ module Types
     field :admin_cs_admins, resolver: Resolvers::Admin::CsAdminsResolver
     field :admin_organization, resolver: Resolvers::Admin::OrganizationResolver
     field :admin_organizations, resolver: Resolvers::Admin::OrganizationsResolver
+    field :agent_claim_page, resolver: Resolvers::AgentClaimPageResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
     field :ai_conversations, resolver: Resolvers::AiConversationsResolver
     field :alert, resolver: Resolvers::Subscriptions::AlertResolver
