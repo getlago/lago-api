@@ -42,10 +42,11 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::BaselineService do
       # Its column holds the default 0, which would put every line at or above 0 in alarm
       let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 1_500) }
 
-      it "leaves the alert waiting for it and seeds nothing" do
-        expect(result.alerts).to be_empty
-        expect(alert.reload).to have_attributes(previous_value: nil, last_processed_at: nil)
-        expect(alert.all_triggered_alerts).to be_empty
+      it "takes the balance as the baseline, since no usage was deducted yet" do
+        expect(result.alerts).to eq([alert])
+        expect(alert.reload.previous_value).to eq(1_500)
+        # At 1500 only 2000 is in alarm among the opted-in lines; at the column's 0, so would the line at 0
+        expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["warning"])
       end
     end
   end

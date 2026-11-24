@@ -360,9 +360,10 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
       context "when the wallet's ongoing balance was never computed" do
         let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
 
-        it "changes the thresholds and seeds nothing" do
+        it "reads the balance, where the new line is not in alarm, and seeds nothing" do
           expect(result).to be_success
           expect(alert.thresholds.pluck(:code)).to eq(["zero"])
+          # At the column's 0 the line would be in alarm and seeded
           expect(alert.all_triggered_alerts).to be_empty
         end
       end

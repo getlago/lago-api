@@ -266,16 +266,22 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
             expect(result.alert.previous_value).to eq(0)
             expect(result.alert.all_triggered_alerts).to be_empty
           end
+        end
+      end
 
-          context "when the wallet's ongoing balance was never computed" do
-            let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
+      context "with an ongoing balance alert on a wallet whose ongoing balance was never computed" do
+        before do
+          params.merge!(alert_type: "ongoing_balance", thresholds: [
+            {code: "warning", value: "2000", notify_on: %w[triggered resolved]},
+            {code: "empty", value: "0", notify_on: %w[triggered resolved]}
+          ])
+        end
 
-            it "creates an alert that waits for it" do
-              expect(result).to be_success
-              expect(result.alert).to have_attributes(previous_value: nil, last_processed_at: nil)
-              expect(result.alert.all_triggered_alerts).to be_empty
-            end
-          end
+        it "watches from the balance, since no usage was deducted yet" do
+          expect(result).to be_success
+          expect(result.alert.previous_value).to eq(1_500)
+          # At the column's 0, the line at 0 would be seeded too
+          expect(result.alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["warning"])
         end
       end
     end

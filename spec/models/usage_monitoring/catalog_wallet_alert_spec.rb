@@ -65,9 +65,8 @@ RSpec.describe UsageMonitoring::CatalogWalletAlert do
     context "when the wallet's ongoing balance was never computed" do
       let(:catalog_wallet) { build(:catalog_wallet, balance_cents: 1_500, ongoing_balance_cents: 0) }
 
-      it "has no value for an ongoing balance alert and still reads the balance" do
-        expect(build(:catalog_wallet_alert, alert_type: "ongoing_balance").find_value(catalog_wallet)).to be_nil
-        expect(build(:catalog_wallet_alert, alert_type: "balance").find_value(catalog_wallet)).to eq(1_500)
+      it "reads the balance for an ongoing balance alert, since no usage was deducted yet" do
+        expect(build(:catalog_wallet_alert, alert_type: "ongoing_balance").find_value(catalog_wallet)).to eq(1_500)
       end
     end
   end

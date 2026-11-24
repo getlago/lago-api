@@ -67,8 +67,7 @@ module UsageMonitoring
       # Seeds what a create would seed now, the opted-in lines in alarm at the value of a wallet holding money, less
       # those the next evaluation crosses or recovers: it keeps the lines in alarm at the stored value too
       def seed_after_edit(alert, wallet)
-        value = alert.find_value(wallet) if wallet&.funded?
-        seed_alarms_already_past(alert, wallet, still_in_alarm_at: value) unless value.nil?
+        seed_alarms_already_past(alert, wallet, still_in_alarm_at: alert.find_value(wallet)) if wallet&.funded?
       end
     end
   end
