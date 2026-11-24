@@ -148,6 +148,29 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
       end
     end
 
+    context "when a wallet only targets deleted products" do
+      let(:wallet) { create(:plan_wallet, organization: sandbox, catalog_plan: plan) }
+      let(:deleted_product) { create(:product, :fixed, :standalone, organization: sandbox, code: "gpu") }
+
+      before do
+        create(:catalog_wallet_selector, :plan_level, organization: sandbox, plan_wallet: wallet,
+          selector_type: "product", fee_type: nil, product: deleted_product)
+        deleted_product.discard!
+      end
+
+      it "answers copy_to_production_target_deleted, as its copy would apply to every fee" do
+        expect(item.refusal(plan)).to eq("copy_to_production_target_deleted")
+      end
+
+      context "when it also targets a fee type" do
+        before { create(:catalog_wallet_selector, :plan_level, organization: sandbox, plan_wallet: wallet) }
+
+        it "accepts it" do
+          expect(item.refusal(plan)).to be_nil
+        end
+      end
+    end
+
     context "with an ongoing balance credit allocation" do
       before do
         create(:plan_wallet_credit_allocation, :ongoing_balance, organization: sandbox,

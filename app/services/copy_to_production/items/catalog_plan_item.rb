@@ -60,6 +60,9 @@ module CopyToProduction
         live_features = production.features.includes(:privileges)
           .where(code: entitlements(source).map { it.feature.code }).index_by(&:code)
         return "copy_to_production_privilege_missing" if entitlements(source).any? { missing_privilege?(it, live_features) }
+        return "copy_to_production_privilege_mismatch" if entitlements(source).any? { mismatched_privilege?(it, live_features) }
+        # Without selectors a live wallet applies to every fee, while this one reaches nothing.
+        return "copy_to_production_target_deleted" if wallets(source).any? { it.selectors.any? && selectors(it).empty? }
 
         "copy_to_production_filter_missing" if wallets(source).any? { missing_filter?(it) }
       end
@@ -128,6 +131,21 @@ module CopyToProduction
         return false unless live_feature
 
         (entitlement.values.filter_map { it.privilege&.code } - live_feature.privileges.map(&:code)).any?
+      end
+
+      # As Entitlement::Concerns::CreateOrUpdateConcern#validate_value: the sandbox value suits its own privilege, so a
+      # live one of the same value type takes it, unless it is a select without that option.
+      def mismatched_privilege?(entitlement, live_features)
+        live_privileges = live_features[entitlement.feature.code]&.privileges&.index_by(&:code)
+        return false unless live_privileges
+
+        entitlement.values.any? do |value|
+          live_privilege = value.privilege && live_privileges[value.privilege.code]
+          next false if live_privilege.nil? || value.value.nil?
+          next true if live_privilege.value_type != value.privilege.value_type
+
+          live_privilege.value_type == "select" && live_privilege.config.dig("select_options")&.exclude?(value.value)
+        end
       end
 
       def missing_filter?(wallet)

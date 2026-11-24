@@ -35,7 +35,8 @@ module CopyToProduction
       # As PlanRateCards::CreateService: a plan with contracts cannot change its pricing, it bills cards of its own
       # currency, and it prices a product, or one of its filters, once. The card read is the one the copy attaches: the
       # live card with its code, or the sandbox card it copies. A card the live plan already has answers
-      # value_already_exist before this.
+      # value_already_exist before this. A plan copied whole attaches the cards of its other rate cards, and a reused
+      # live card keeps its own filter, so two of them can price the same slice.
       def refusal(source)
         plan = live_plan(source)
         return "plan_locked" if plan&.attached_to_contracts?
@@ -43,7 +44,10 @@ module CopyToProduction
         card = attached_card(source)
         return "currency_does_not_match" if card.currency != (plan || source.catalog_plan).currency
 
-        "copy_to_production_already_priced" if plan && priced_slices(plan, except: card.code).include?(slice(card))
+        slices = plan ? priced_slices(plan, except: card.code) : sibling_slices(source, except: card.code)
+        return "copy_to_production_already_priced" if slices.include?(slice(card))
+
+        "copy_to_production_rate_mismatch" if override_mismatch?(source, card)
       end
 
       def copy!(source, resolved)
@@ -76,7 +80,17 @@ module CopyToProduction
       end
 
       def attached_card(source)
-        production.rate_cards.includes(:product, :product_filter).find_by(code: source.rate_card.code) || source.rate_card
+        @attached_cards ||= {}
+        code = source.rate_card.code
+        return @attached_cards[code] if @attached_cards.key?(code)
+
+        @attached_cards[code] = production.rate_cards.includes(:product, :product_filter).find_by(code:) || source.rate_card
+      end
+
+      # The cards the copy attaches for the other rate cards of the sandbox plan, as CatalogPlanItem#children lists them.
+      def sibling_slices(source, except:)
+        source.catalog_plan.applied_rate_cards.includes(rate_card: [:product, :product_filter])
+          .reject { it.rate_card.discarded? || it.rate_card.code == except }.map { slice(attached_card(it)) }
       end
 
       def priced_slices(plan, except:)
@@ -88,10 +102,23 @@ module CopyToProduction
         [rate_card.product.code, rate_card.product_filter&.code]
       end
 
+      # As RateOverrides::CreateService reads each override on the card the copy attaches, in the product it lands in.
+      def override_mismatch?(source, card)
+        card = landing_card(card) if card.organization_id == sandbox.id
+
+        source.rate_phases.filter_map(&:rate_override).any? do |override|
+          (card.applied_pricing_unit_code.present? && override.pricing_unit_conversion_rate.blank?) ||
+            (override.min_amount_cents.to_i.positive? && card.advance?) ||
+            RateCardRates::ModelCompatibility.error_code(rate_model: override.rate_model, rate_card: card).present?
+        end
+      end
+
+      # Storage adds each tier's lower bound, which the create service refuses: it takes tiers as the API shows them.
       def phase_params(phase)
-        phase.slice(*PHASE_ATTRIBUTES).symbolize_keys.merge(
-          rate_override: phase.rate_override&.slice(*RATE_OVERRIDE_ATTRIBUTES)&.symbolize_keys
-        )
+        override = phase.rate_override&.slice(*RATE_OVERRIDE_ATTRIBUTES)&.symbolize_keys
+        override[:rate_properties] = RateProperties.present(override[:rate_properties]) if override
+
+        phase.slice(*PHASE_ATTRIBUTES).symbolize_keys.merge(rate_override: override)
       end
     end
   end

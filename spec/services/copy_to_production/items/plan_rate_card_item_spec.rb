@@ -131,6 +131,28 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
       end
     end
 
+    context "when a phase override sets a spend floor" do
+      let(:live_rate_card) { create(:rate_card, organization: production, product: live_product, code: "seat_eur") }
+
+      before do
+        live_rate_card
+        create(:rate_phase, organization: sandbox, plan_rate_card:,
+          rate_override: create(:rate_override, organization: sandbox, min_amount_cents: 500))
+      end
+
+      it "accepts it when the live card with its code bills in arrears" do
+        expect(item.refusal(plan_rate_card)).to be_nil
+      end
+
+      context "when the live card with its code bills in advance" do
+        let(:live_rate_card) { create(:rate_card, :advance, organization: production, product: live_product, code: "seat_eur") }
+
+        it "answers copy_to_production_rate_mismatch" do
+          expect(item.refusal(plan_rate_card)).to eq("copy_to_production_rate_mismatch")
+        end
+      end
+    end
+
     context "when the live card with its code prices a slice the live plan already prices" do
       before do
         live_seat_eu = create(:rate_card, :with_filter, organization: production, product: live_product, code: "seat_eu")
@@ -177,6 +199,29 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
       create(:rate_phase, organization: sandbox, plan_rate_card:, code: "intro", name: "Intro", position: 1,
         billing_interval_cycle_count: 3, rate_override: override)
       plan_rate_card.update!(units: 5)
+    end
+
+    context "with a tiered override" do
+      # Stored as the create service saves it: each tier with the lower bound it starts at.
+      let(:graduated_ranges) do
+        [
+          {"from_value" => 0, "to_value" => 10, "flat_amount" => "0", "per_unit_amount" => "1"},
+          {"from_value" => 10, "to_value" => nil, "flat_amount" => "0", "per_unit_amount" => "0.5"}
+        ]
+      end
+
+      before do
+        override = create(:rate_override, organization: sandbox, rate_model: "graduated",
+          rate_properties: {"graduated_ranges" => graduated_ranges})
+        # Between the intro and the indefinite default phase, which must stay last.
+        plan_rate_card.rate_phases.find_by!(code: "default").update!(position: 3)
+        create(:rate_phase, organization: sandbox, plan_rate_card:, code: "tiers", position: 2, billing_interval_cycle_count: 1,
+          rate_override: override)
+      end
+
+      it "copies its tiers" do
+        expect(copy.rate_phases.find_by!(code: "tiers").rate_override.rate_properties["graduated_ranges"]).to eq(graduated_ranges)
+      end
     end
 
     it "creates it in the live plan with its phases and their overrides" do
