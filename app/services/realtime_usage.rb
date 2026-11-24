@@ -74,6 +74,14 @@ module RealtimeUsage
       forced_gate? || organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
     end
 
+    # On top of enabled?, so turning on the buckets for an organization does not also add a second
+    # evaluation lane to its alerts.
+    def alerts_enabled?(organization)
+      return false unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"])
+
+      enabled?(organization) && organization.feature_flag_enabled?(:realtime_usage_alerts)
+    end
+
     # Served from the snapshot of the previous period plus the buckets of the window, rather than
     # from the window alone.
     def recurring_charge?(charge)
