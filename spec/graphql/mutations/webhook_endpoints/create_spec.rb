@@ -158,7 +158,7 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
       )
     end
 
-    before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+    before { create_migration_shadowed_by(organization) }
 
     it "refuses with shadow_organization_outbound_disabled" do
       expect { result }.not_to change(WebhookEndpoint, :count)

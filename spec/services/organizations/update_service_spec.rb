@@ -237,7 +237,7 @@ RSpec.describe Organizations::UpdateService do
 
         before do
           organization.default_billing_entity.update!(email_settings: [])
-          create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization)
+          create_migration_shadowed_by(organization)
         end
 
         it "refuses the update and saves no email setting" do
@@ -597,7 +597,7 @@ RSpec.describe Organizations::UpdateService do
       context "when the organization is the shadow of a migration" do
         let(:organization) { create(:organization, webhook_url: nil) }
 
-        before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+        before { create_migration_shadowed_by(organization) }
 
         it "refuses the update and creates no endpoint" do
           result = update_service.call

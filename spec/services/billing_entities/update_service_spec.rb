@@ -324,7 +324,7 @@ RSpec.describe BillingEntities::UpdateService do
     end
 
     context "when the organization is the shadow of a migration" do
-      before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+      before { create_migration_shadowed_by(organization) }
 
       it "updates the billing entity when nothing is sent out" do
         expect(update_service.call).to be_success

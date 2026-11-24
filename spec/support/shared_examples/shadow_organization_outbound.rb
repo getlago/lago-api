@@ -6,7 +6,7 @@ RSpec.shared_examples "refused on a shadow organization" do |unchanged|
 
   %w[shadowing paused].each do |status|
     context "when the organization is the shadow of a #{status} migration" do
-      before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization, status:) }
+      before { create_migration_shadowed_by(organization, status:) }
 
       it "refuses with shadow_organization_outbound_disabled" do
         expect { subject }.not_to change { unchanged_state }
@@ -19,7 +19,7 @@ RSpec.shared_examples "refused on a shadow organization" do |unchanged|
   end
 
   context "when the organization is the shadow of an aborted migration" do
-    before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization, status: "aborted") }
+    before { create_migration_shadowed_by(organization, status: "aborted") }
 
     it { expect(subject).to be_success }
   end

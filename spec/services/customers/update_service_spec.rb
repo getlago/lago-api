@@ -1152,7 +1152,7 @@ RSpec.describe Customers::UpdateService do
           end
 
           context "when the organization is the shadow of a migration" do
-            before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+            before { create_migration_shadowed_by(organization) }
 
             it "removes the dunning campaign" do
               expect { customers_service.call }.to change { customer.reload.applied_dunning_campaign_id }.to(nil)
