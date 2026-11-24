@@ -1005,6 +1005,24 @@
               "deprecationReason": null
             },
             {
+              "name": "contract_wallet_created",
+              "description": "contract_wallet.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_wallet_updated",
+              "description": "contract_wallet.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_wallet_deleted",
+              "description": "contract_wallet.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract_created",
               "description": "contract.created",
               "isDeprecated": false,
@@ -83103,6 +83121,12 @@
             {
               "name": "contract_rate_card",
               "description": "ContractRateCard",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_wallet",
+              "description": "CatalogWallet",
               "isDeprecated": false,
               "deprecationReason": null
             },
