@@ -550,7 +550,8 @@ RSpec.describe Api::V1::WalletTransactionsController do
 
     context "when wallet transaction exits" do
       let(:wallet_transaction_id) { wallet_transaction.id }
-      let(:wallet_transaction) { create(:wallet_transaction, :with_invoice, wallet:, status: :pending, customer:) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:, status: :pending, invoice:) }
+      let(:invoice) { create(:invoice, customer:, organization:, status: :finalized) }
       let(:wallet) { create(:wallet, customer:) }
       let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
       let(:generated_payment_url) { "https://example.com" }
@@ -561,13 +562,38 @@ RSpec.describe Api::V1::WalletTransactionsController do
 
       include_examples "requires API permission", "wallet_transaction", "write"
 
-      it "returns the generated payment url" do
-        subject
+      context "when the invoice is finalized" do
+        it "returns the generated payment url" do
+          subject
 
-        expect(response).to have_http_status(:success)
-        expect(json).to match({
-          wallet_transaction_payment_details: hash_including(payment_url: generated_payment_url)
-        })
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transaction_payment_details][:payment_url]).to eq(generated_payment_url)
+        end
+      end
+
+      context "when the invoice is open" do
+        let(:invoice) { create(:invoice, customer:, organization:, status: :open) }
+
+        it "returns the generated payment url" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet_transaction_payment_details][:payment_url]).to eq(generated_payment_url)
+        end
+      end
+
+      context "when the invoice is still generating" do
+        let(:invoice) { create(:invoice, customer:, organization:, status: :generating) }
+
+        it "returns a validation error without creating a payment intent" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:code]).to eq("validation_errors")
+          expect(json[:error_details]).to eq({base: ["invalid_invoice_status_or_payment_status"]})
+          expect(PaymentIntent.where(invoice:)).to be_empty
+          expect(::Stripe::Checkout::Session).not_to have_received(:create)
+        end
       end
     end
 

@@ -116,6 +116,25 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       end
     end
 
+    context "when invoice is still generating" do
+      let(:invoice) { create(:invoice, customer:, status: :generating) }
+
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create)
+          .and_return({"url" => "https://example55.com"})
+      end
+
+      it "refuses before creating a payment intent or calling Stripe" do
+        result = generate_payment_url_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:base]).to eq(["invalid_invoice_status_or_payment_status"])
+        expect(PaymentIntent.where(invoice:)).to be_empty
+        expect(::Stripe::Checkout::Session).not_to have_received(:create)
+      end
+    end
+
     context "when provider service return a third party error" do
       let(:provider) { "cashfree" }
       let(:code) { "cashfree_1" }
