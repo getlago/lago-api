@@ -4,11 +4,12 @@ module UsageMonitoring
   class ProcessAlertService < BaseService
     Result = BaseResult[:alert]
 
-    def initialize(alert:, current_metrics:, alertable:, expected_billable_metric_id: nil)
+    def initialize(alert:, current_metrics:, alertable:, expected_billable_metric_id: nil, measured_at: nil)
       @alert = alert
       @alertable = alertable
       @current_metrics = current_metrics
       @expected_billable_metric_id = expected_billable_metric_id
+      @measured_at = measured_at
       super
     end
 
@@ -22,6 +23,9 @@ module UsageMonitoring
         # NOTE: the caller measured usage for one metric, so a metric changed since then makes that usage
         # unrelated to the configuration now held under the lock
         next if stale_metric?
+
+        # NOTE: two evaluations of one alert can finish out of order: an older usage would overwrite previous_value
+        next if stale_usage?
 
         # NOTE: the job and the wallet alerts consumer can evaluate one wallet concurrently: reading it under
         # the lock keeps an older balance from overwriting previous_value and triggering the threshold twice
@@ -42,10 +46,14 @@ module UsageMonitoring
 
     private
 
-    attr_reader :alert, :alertable, :current_metrics, :expected_billable_metric_id
+    attr_reader :alert, :alertable, :current_metrics, :expected_billable_metric_id, :measured_at
 
     def stale_metric?
       expected_billable_metric_id.present? && alert.billable_metric_id != expected_billable_metric_id
+    end
+
+    def stale_usage?
+      measured_at.present? && alert.last_processed_at.present? && alert.last_processed_at > measured_at
     end
 
     def evaluate(current, now)
@@ -74,11 +82,13 @@ module UsageMonitoring
 
     # NOTE: usage measured just before a renewal but processed after it still belongs to the old period. Stamping it
     # with the clock time would place it in the new period, and the first evaluation there would miss the rollover.
+    # The measurement time, when given, is what stale_usage? compares the next usage with.
     def processed_at(now)
-      return now unless Alert::CURRENT_USAGE_TYPES.include?(alert.alert_type)
-      return now if current_metrics.to_datetime.blank?
+      time = measured_at || now
+      return time unless Alert::CURRENT_USAGE_TYPES.include?(alert.alert_type)
+      return time if current_metrics.to_datetime.blank?
 
-      [now, Time.zone.parse(current_metrics.to_datetime.to_s)].min
+      [time, Time.zone.parse(current_metrics.to_datetime.to_s)].min
     end
 
     def record_trigger(crossed_threshold_values, current, now)

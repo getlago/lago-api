@@ -111,6 +111,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
     let(:alert_4) { create(:lifetime_usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
 
     before do
+      freeze_time
       alert
       alert_2
       alert_3
@@ -121,9 +122,9 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
     it "processes the alerts" do
       service.call
       expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).exactly(4).times
-      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
-      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
-      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
       expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_4, alertable: subscription, current_metrics: subscription.lifetime_usage)
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
@@ -142,7 +143,20 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
           use_usage_buckets: true
         )
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert:, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+          .with(alert:, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
+      end
+
+      it "dates the alerts with the time read before progressive billing built the usage" do
+        measured_at = Time.current
+        allow(::Invoices::CustomerUsageService).to receive(:call) do
+          travel 2.seconds
+          Invoices::CustomerUsageService::Result.new.tap { it.usage = mocked_current_usage }
+        end
+
+        service.call
+
+        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
+          .with(alert:, alertable: subscription, current_metrics: mocked_current_usage, measured_at:, expected_billable_metric_id: nil)
       end
     end
 
@@ -158,21 +172,21 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       it "still processes the other alerts and raises the first error" do
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call).and_call_original
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
-          .with(alert: alert, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+          .with(alert: alert, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
           .and_raise(StandardError, "first alert failed")
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
-          .with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+          .with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
-          .with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+          .with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
           .with(alert: alert_4, alertable: subscription, current_metrics: subscription.lifetime_usage)
 
         expect { service.call }.to raise_error(StandardError, "first alert failed")
 
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+          .with(alert: alert_2, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+          .with(alert: alert_3, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
         expect(::UsageMonitoring::ProcessAlertService).to have_received(:call)
           .with(alert: alert_4, alertable: subscription, current_metrics: subscription.lifetime_usage)
         expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
@@ -185,7 +199,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       it "processes alert and then raise" do
         allow(LifetimeUsages::CheckThresholdsService).to receive(:call!).and_raise(StandardError, "boom")
         expect { service.call }.to raise_error(StandardError, "boom")
-        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert:, alertable: subscription, current_metrics: mocked_current_usage, expected_billable_metric_id: nil)
+        expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert:, alertable: subscription, current_metrics: mocked_current_usage, measured_at: Time.current, expected_billable_metric_id: nil)
         expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
       end
     end
