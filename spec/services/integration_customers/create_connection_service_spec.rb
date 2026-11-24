@@ -119,6 +119,22 @@ RSpec.describe IntegrationCustomers::CreateConnectionService do
       end
     end
 
+    context "with a QuickBooks integration" do
+      let(:integration) { create(:quickbooks_integration, organization:, code: "qbo_main") }
+      let(:params) { {integration_id: integration.id, external_customer_id:} }
+
+      it "links the customer in the accounting category" do
+        integration_customer = result.integration_customer
+
+        expect(result).to be_success
+        expect(integration_customer).to be_a(IntegrationCustomers::QuickbooksCustomer)
+        expect(integration_customer.category).to eq("accounting")
+        expect(integration_customer.code).to eq("qbo_main")
+        expect(integration_customer.external_customer_id).to eq(external_customer_id)
+        expect(integration_customer).to be_is_default
+      end
+    end
+
     context "when no code is given" do
       let(:params) { {integration_id: integration.id, external_customer_id:} }
 

@@ -28,6 +28,8 @@ module V1
         "avalara"
       when "IntegrationCustomers::XeroCustomer"
         "xero"
+      when "IntegrationCustomers::QuickbooksCustomer"
+        "quickbooks"
       when "IntegrationCustomers::HubspotCustomer"
         "hubspot"
       when "IntegrationCustomers::SalesforceCustomer"

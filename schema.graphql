@@ -8258,7 +8258,7 @@ enum IntegrationConnectionCategoryEnum {
   tax
 }
 
-union IntegrationCustomer = AnrokCustomer | AvalaraCustomer | HubspotCustomer | NetsuiteCustomer | SalesforceCustomer | XeroCustomer
+union IntegrationCustomer = AnrokCustomer | AvalaraCustomer | HubspotCustomer | NetsuiteCustomer | QuickbooksCustomer | SalesforceCustomer | XeroCustomer
 
 input IntegrationCustomerInput {
   code: String
@@ -14285,6 +14285,18 @@ type Query {
   Query Webhooks
   """
   webhooks(eventTypes: [String!], fromDate: ISO8601DateTime, httpStatuses: [String!], limit: Int, page: Int, searchTerm: String, status: WebhookStatusEnum, statuses: [WebhookStatusEnum!], toDate: ISO8601DateTime, webhookEndpointId: String!): WebhookCollection!
+}
+
+type QuickbooksCustomer {
+  category: IntegrationConnectionCategoryEnum
+  code: String
+  externalCustomerId: String
+  id: ID!
+  integrationCode: String
+  integrationId: ID
+  integrationType: IntegrationTypeEnum
+  isDefault: Boolean!
+  syncWithProvider: Boolean
 }
 
 type QuickbooksIntegration {

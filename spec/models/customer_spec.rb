@@ -27,6 +27,7 @@ RSpec.describe Customer do
   it { is_expected.to have_one(:netsuite_customer) }
   it { is_expected.to have_one(:anrok_customer) }
   it { is_expected.to have_one(:xero_customer) }
+  it { is_expected.to have_one(:quickbooks_customer) }
   it { is_expected.to have_one(:hubspot_customer) }
   it { is_expected.to have_one(:salesforce_customer) }
 

@@ -557,6 +557,147 @@ RSpec.describe Api::V1::CustomersController do
           end
         end
       end
+
+      context "with a QuickBooks integration" do
+        let(:nango_requests) { a_request(:any, %r{\Ahttps://api\.nango\.dev/}) }
+        let(:quickbooks_integration) { create(:quickbooks_integration, organization:) }
+        let(:quickbooks_params) do
+          {
+            integration_type: "quickbooks",
+            integration_code: quickbooks_integration.code,
+            external_customer_id: "58",
+            sync_with_provider: false
+          }
+        end
+        let(:create_params) do
+          {external_id: SecureRandom.uuid, name: "Foo Bar", integration_customers: [quickbooks_params]}
+        end
+
+        it "links the customer to the QuickBooks customer and returns it as type quickbooks" do
+          expect { subject }.to have_enqueued_job(IntegrationCustomers::CreateJob).with(
+            integration_customer_params: quickbooks_params,
+            integration: quickbooks_integration,
+            customer: a_kind_of(Customer)
+          )
+          expect(response).to have_http_status(:success)
+
+          perform_enqueued_jobs(only: IntegrationCustomers::CreateJob)
+
+          customer = organization.customers.find_by!(external_id: create_params[:external_id])
+          link = customer.integration_customers.sole
+          expect(link).to be_a(IntegrationCustomers::QuickbooksCustomer)
+          expect(link).to have_attributes(
+            integration: quickbooks_integration,
+            external_customer_id: "58",
+            category: "accounting",
+            is_default: true,
+            code: quickbooks_integration.code,
+            sync_with_provider: false
+          )
+          expect(nango_requests).not_to have_been_made
+
+          get_with_token(organization, "/api/v1/customers/#{customer.external_id}")
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:customer][:integration_customers].sole).to include(
+            lago_id: link.id,
+            external_customer_id: "58",
+            type: "quickbooks",
+            integration_code: quickbooks_integration.code,
+            category: "accounting",
+            is_default: true
+          )
+        end
+
+        context "when syncing with the provider without an external customer id" do
+          let(:quickbooks_params) do
+            {integration_type: "quickbooks", integration_code: quickbooks_integration.code, sync_with_provider: true}
+          end
+
+          it "runs the creation job without storing a link or calling QuickBooks" do
+            expect { subject }.to have_enqueued_job(IntegrationCustomers::CreateJob).with(
+              integration_customer_params: quickbooks_params,
+              integration: quickbooks_integration,
+              customer: a_kind_of(Customer)
+            )
+            expect(response).to have_http_status(:success)
+
+            perform_enqueued_jobs(only: IntegrationCustomers::CreateJob)
+
+            customer = organization.customers.find_by!(external_id: create_params[:external_id])
+            expect(customer.integration_customers).to be_empty
+            expect(nango_requests).not_to have_been_made
+          end
+        end
+
+        context "when the customer already has a QuickBooks link" do
+          let(:customer) { create(:customer, organization:) }
+          let!(:quickbooks_customer) do
+            create(:quickbooks_customer, customer:, integration: quickbooks_integration, external_customer_id: "58")
+          end
+          let(:quickbooks_params) do
+            {
+              id: quickbooks_customer.id,
+              integration_type: "quickbooks",
+              integration_code: quickbooks_integration.code,
+              external_customer_id: "59"
+            }
+          end
+          let(:create_params) do
+            {external_id: customer.external_id, name: "Foo Bar", integration_customers: [quickbooks_params]}
+          end
+
+          it "stores the new QuickBooks customer id without calling QuickBooks" do
+            expect { subject }.to have_enqueued_job(IntegrationCustomers::UpdateJob).with(
+              integration_customer_params: quickbooks_params,
+              integration: quickbooks_integration,
+              integration_customer: quickbooks_customer
+            )
+            expect(response).to have_http_status(:success)
+
+            perform_enqueued_jobs(only: IntegrationCustomers::UpdateJob)
+
+            expect(customer.integration_customers.reload).to eq([quickbooks_customer])
+            expect(quickbooks_customer.reload.external_customer_id).to eq("59")
+            expect(nango_requests).not_to have_been_made
+          end
+        end
+      end
+
+      context "when no QuickBooks integration of the organization matches the integration code" do
+        let(:netsuite_params) do
+          {integration_type: "netsuite", integration_code: "netsuite", external_customer_id: "ns-1", sync_with_provider: false}
+        end
+        let(:create_params) do
+          {
+            external_id: SecureRandom.uuid,
+            name: "Foo Bar",
+            integration_customers: [
+              {integration_type: "quickbooks", integration_code: "quickbooks", external_customer_id: "58", sync_with_provider: false},
+              netsuite_params
+            ]
+          }
+        end
+
+        before { create(:quickbooks_integration, organization: create(:organization), code: "quickbooks") }
+
+        it "links the matched integration only and skips the QuickBooks entry" do
+          expect { subject }.to have_enqueued_job(IntegrationCustomers::CreateJob).exactly(:once)
+          expect(IntegrationCustomers::CreateJob).to have_been_enqueued.with(
+            integration_customer_params: netsuite_params,
+            integration:,
+            customer: a_kind_of(Customer)
+          )
+          expect(response).to have_http_status(:success)
+
+          perform_enqueued_jobs(only: IntegrationCustomers::CreateJob)
+
+          customer = organization.customers.find_by!(external_id: create_params[:external_id])
+          expect(customer.integration_customers.sole).to be_a(IntegrationCustomers::NetsuiteCustomer)
+          expect(IntegrationCustomers::QuickbooksCustomer.count).to eq(0)
+          expect(a_request(:any, %r{\Ahttps://api\.nango\.dev/})).not_to have_been_made
+        end
+      end
     end
 
     context "with metadata" do

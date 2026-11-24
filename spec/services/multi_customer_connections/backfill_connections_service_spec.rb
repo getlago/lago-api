@@ -72,6 +72,29 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
       end
     end
 
+    context "with a QuickBooks integration_customer missing code and category" do
+      let(:integration) { create(:quickbooks_integration, organization:, code: "quickbooks_us") }
+      let(:int_customer) do
+        # Simulate a legacy row: skipping validation skips the callbacks that derive code and category.
+        build(:quickbooks_customer, customer:, organization:, integration:, category: nil, code: nil).tap do |ic|
+          ic.save!(validate: false)
+        end
+      end
+
+      before { int_customer }
+
+      it "sets the code, derives the accounting category and marks it default" do
+        expect(result.summary[:integration_codes_set]).to eq(1)
+        expect(result.summary[:integration_categories_set]).to eq(1)
+        expect(result.summary[:integration_defaults_set]).to eq(1)
+
+        int_customer.reload
+        expect(int_customer.code).to eq("quickbooks_us")
+        expect(int_customer.category).to eq("accounting")
+        expect(int_customer.is_default).to be(true)
+      end
+    end
+
     context "with an integration_customer whose type CATEGORY_BY_TYPE maps to accounting" do
       let(:integration) { create(:hubspot_integration, organization:, code: "hubspot_eu") }
       let(:int_customer) do
