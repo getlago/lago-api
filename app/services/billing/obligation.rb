@@ -18,6 +18,13 @@ module Billing
       segments.first.started_at >= timestamp
     end
 
+    def segment_ends_at?(timestamp, starting_before:)
+      return false if terms.cycle_scope?
+
+      segment = segments.sole
+      segment.started_at < starting_before && segment.ended_at == timestamp
+    end
+
     def pricing_inputs_for(segment)
       {
         rate_card_rate: segment.rate, rate_override: cycle.phase.rate_override,

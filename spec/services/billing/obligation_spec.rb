@@ -39,6 +39,27 @@ RSpec.describe Billing::Obligation do
     end
   end
 
+  describe "#segment_ends_at?" do
+    let(:billing_scope) { :segment }
+    let(:terms) { Billing::Terms.new(timing: :advance, prorated:, billing_scope:) }
+    let(:ended_at) { Time.utc(2026, 2, 20) }
+    let(:boundary) { Time.utc(2026, 2, 15) }
+
+    it "requires an exact end and a start strictly before the saved billing date" do
+      expect(obligation.segment_ends_at?(ended_at, starting_before: boundary)).to be(true)
+      expect(obligation.segment_ends_at?(ended_at, starting_before: started_at)).to be(false)
+      expect(obligation.segment_ends_at?(cycle_ended_at, starting_before: boundary)).to be(false)
+    end
+
+    context "with cycle billing" do
+      let(:billing_scope) { :cycle }
+
+      it "does not treat the cycle as an extended segment" do
+        expect(obligation.segment_ends_at?(ended_at, starting_before: boundary)).to be(false)
+      end
+    end
+  end
+
   describe "#operation_billing_at" do
     let(:termination_at) { Time.utc(2026, 3, 5) }
     let(:terminated_obligation) { obligation.with(termination_billing_at: termination_at) }

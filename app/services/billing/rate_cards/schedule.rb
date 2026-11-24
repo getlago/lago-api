@@ -33,6 +33,15 @@ module Billing
         obligations(from:).find { it.starts_on_or_after?(from) }
       end
 
+      def reconciliation_obligation(effective_from:, next_billing_at:)
+        if next_billing_at && next_billing_at < effective_from
+          covering = obligation_at(next_billing_at)
+          return covering if covering&.segment_ends_at?(effective_from, starting_before: next_billing_at)
+        end
+
+        obligation_at(effective_from)
+      end
+
       def obligations_due_by(timestamp, from:, after: nil)
         Enumerator.new do |yielder|
           billing_at = after

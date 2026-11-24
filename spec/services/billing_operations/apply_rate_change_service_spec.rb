@@ -141,6 +141,28 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
         end
       end
     end
+
+    [15, 18].each do |day|
+      context "when an intervening rate starts on November #{day}, before the changed rate" do
+        let(:clock) { Time.utc(2026, 11, 15) }
+        let(:intervening_start) { Time.utc(2026, 11, day) }
+        let(:effective_from) { Time.utc(2026, 11, 20) }
+
+        before do
+          create(:rate_card_rate, organization:, rate_card:, effective_from: intervening_start)
+          create(:billing_operation, organization:, customer:, contract_rate_card: card, action_type: "renew_fixed_advance",
+            billing_at: contract.started_at, target_cycle_started_at: contract.started_at,
+            coverage_started_at: contract.started_at, coverage_ended_at: clock, processed_at: contract.started_at)
+        end
+
+        it "schedules the intervening renewal and reconciles the changed rate from November 20" do
+          expect(result).to be_success
+          expect(card.reload.next_billing_at).to eq(intervening_start)
+          expect(card.billing_operations.pending.sole.segments.pluck(:started_at, :ended_at, :rate_card_rate_id))
+            .to eq([[effective_from, Time.utc(2026, 12, 1), rate.id]])
+        end
+      end
+    end
   end
 
   context "with metered arrears" do

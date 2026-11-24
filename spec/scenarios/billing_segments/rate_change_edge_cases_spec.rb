@@ -123,6 +123,22 @@ RSpec.describe "Fixed advance rate change edge cases" do
     end
   end
 
+  it "moves the first cycle renewal when its only price is postponed" do
+    moved_to = Time.utc(2026, 12, 15)
+    expect(card.next_billing_at).to eq(december)
+
+    travel_to(Time.utc(2026, 11, 12)) do
+      api_call do
+        put_with_token(organization, "/api/v2/rate_cards/edge-card/rates/old", {rate: {effective_from: moved_to.iso8601}})
+      end
+    end
+
+    expect(card.reload.next_billing_at).to eq(moved_to)
+    reconciliation = card.billing_operations.pending.sole
+    expect(reconciliation.action_type).to eq("reconcile_advance_coverage")
+    expect(reconciliation.segments.pluck(:started_at, :ended_at)).to eq([[moved_to, january]])
+  end
+
   context "when a prepaid future price moves later" do
     let(:initial_rates) do
       [
