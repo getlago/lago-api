@@ -131,4 +131,20 @@ RSpec.describe Mutations::IntegrationItems::FetchCustomers do
       expect(records_request).not_to have_been_requested
     end
   end
+
+  context "when QuickBooks has more customers than the fetch limit" do
+    let(:records_request) do
+      stub_request(:get, %r{https://api.nango.dev/records})
+        .to_return(status: 200, body: {records: [active_customer], next_cursor: "c"}.to_json, headers: {})
+    end
+
+    it "returns a validation error and keeps the stored customers" do
+      stored_customer = create(:integration_item, integration:, item_type: :customer, external_id: "1")
+
+      result = fetch_customers
+
+      expect_graphql_error(result:, message: "unprocessable_entity", details: {customers: ["too_many_customers"]})
+      expect(integration.integration_items.customer.pluck(:id)).to eq([stored_customer.id])
+    end
+  end
 end

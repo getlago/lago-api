@@ -40,9 +40,10 @@ module Integrations
         Rails.logger.warn(
           "QuickBooks customers over the fetch limit #{{integration_id: integration.id, fetched: records.size}.to_json}"
         )
-        result.service_failure!(
-          code: "integration_customers_limit_exceeded",
-          message: "More than #{MAX_REQUESTS * LIMIT} customers to fetch"
+        result.single_validation_failure!(
+          field: :customers,
+          error_code: "too_many_customers",
+          meta: {max_items: MAX_REQUESTS * LIMIT}
         )
       end
 

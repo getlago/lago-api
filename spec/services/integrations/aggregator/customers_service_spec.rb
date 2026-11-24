@@ -133,7 +133,8 @@ RSpec.describe Integrations::Aggregator::CustomersService do
 
         expect(lago_client).to have_received(:get).exactly(25).times
         expect(result).not_to be_success
-        expect(result.error.code).to eq("integration_customers_limit_exceeded")
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(customers: ["too_many_customers"])
         expect(integration.integration_items.customer.pluck(:id)).to eq([old_customer.id])
         expect(Rails.logger).to have_received(:warn)
           .with(%(QuickBooks customers over the fetch limit {"integration_id":"#{integration.id}","fetched":50}))
