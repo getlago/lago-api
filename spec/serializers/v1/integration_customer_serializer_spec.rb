@@ -57,6 +57,14 @@ RSpec.describe ::V1::IntegrationCustomerSerializer do
       end
     end
 
+    context "when customer is a quickbooks customer" do
+      let(:integration_customer) { create(:quickbooks_customer) }
+
+      it "returns quickbooks" do
+        expect(subject).to eq("quickbooks")
+      end
+    end
+
     context "when customer is a hubspot customer" do
       let(:integration_customer) { create(:hubspot_customer) }
 

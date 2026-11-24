@@ -105,6 +105,34 @@ RSpec.describe IntegrationCustomers::UpdateConnectionService do
       end
     end
 
+    context "with a quickbooks connection" do
+      let(:integration) { create(:quickbooks_integration, organization:) }
+      let(:integration_customer) { create(:quickbooks_customer, integration:, customer:, code: "old_code") }
+      let(:params) { {code: "new_code", external_customer_id: "58"} }
+
+      before { allow(Integrations::Aggregator::Contacts::UpdateService).to receive(:call) }
+
+      it "enqueues the update job with the integration customer params" do
+        expect { update_service.call }.to have_enqueued_job(IntegrationCustomers::UpdateJob).with(
+          integration_customer_params: {
+            external_customer_id: "58",
+            integration_type: "quickbooks",
+            integration_code: integration.code
+          },
+          integration:,
+          integration_customer:
+        )
+      end
+
+      it "stores the new external customer id without calling the provider" do
+        update_service.call
+        perform_enqueued_jobs(only: IntegrationCustomers::UpdateJob)
+
+        expect(integration_customer.reload).to have_attributes(external_customer_id: "58", code: "new_code")
+        expect(Integrations::Aggregator::Contacts::UpdateService).not_to have_received(:call)
+      end
+    end
+
     context "with a salesforce connection" do
       let(:integration) { create(:salesforce_integration, organization:) }
       let(:integration_customer) { create(:salesforce_customer, integration:, customer:, code: "old_code") }

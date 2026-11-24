@@ -4,6 +4,8 @@ module Api
   module V1
     module X402
       class CreditPurchasesController < BaseController
+        RAW_FIELDS = %w[payment payment_requirements idempotency_key mode settle_response verify_response].freeze
+
         filter_audit_log_params! :idempotency_key
 
         def create
@@ -30,7 +32,7 @@ module Api
           purchase = body["credit_purchase"] if body.is_a?(Hash)
 
           if purchase.is_a?(Hash)
-            {payment: purchase["payment"], payment_requirements: purchase["payment_requirements"], idempotency_key: purchase["idempotency_key"]}
+            purchase.slice(*RAW_FIELDS).symbolize_keys
           else
             {}
           end

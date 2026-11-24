@@ -73,6 +73,26 @@ RSpec.describe UsageMonitoring::ContractAlert do
         expect(alert).to be_invalid
         expect(alert.errors[:product_filter]).to eq(["value_is_invalid"])
       end
+
+      it "accepts with_product_filters on a product" do
+        alert.assign_attributes(product:, with_product_filters: true)
+
+        expect(alert).to be_valid
+      end
+
+      it "refuses with_product_filters without a product" do
+        alert.with_product_filters = true
+
+        expect(alert).to be_invalid
+        expect(alert.errors[:with_product_filters]).to eq(["value_is_invalid"])
+      end
+
+      it "refuses with_product_filters on a product filter" do
+        alert.assign_attributes(product:, product_filter:, with_product_filters: true)
+
+        expect(alert).to be_invalid
+        expect(alert.errors[:with_product_filters]).to eq(["value_is_invalid"])
+      end
     end
   end
 

@@ -97,3 +97,7 @@ invoice_usage_on_wallet_expiration:
 contract_alerts:
   description: "Enable usage alerts on contracts (alerts v2) on the v2 API and GraphQL, on top of product_catalog"
   owners: ["@lovrocolic"]
+
+agent_storefront:
+  description: "Enable the Agent Storefront: storefront connections, agent signup, enrollment, gate checks, funding and claims"
+  owners: ["@anassg-lago"]

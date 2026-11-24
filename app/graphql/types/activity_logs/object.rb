@@ -6,6 +6,9 @@ module Types
       graphql_name "ActivityLog"
       description "Base activity log"
 
+      # Wallet templates and contract wallets have no GraphQL type yet, so the union cannot resolve them.
+      RESOURCE_TYPES_WITHOUT_OBJECT = %w[PlanWallet CatalogWallet].freeze
+
       field :activity_id, ID, null: false
       field :activity_object, GraphQL::Types::JSON
       field :activity_object_changes, GraphQL::Types::JSON
@@ -22,6 +25,10 @@ module Types
 
       def user_email
         object.user&.email
+      end
+
+      def resource
+        object.resource unless RESOURCE_TYPES_WITHOUT_OBJECT.include?(object.resource_type)
       end
 
       # TODO: remove this once we have a proper way to handle JSON in Clickhouse

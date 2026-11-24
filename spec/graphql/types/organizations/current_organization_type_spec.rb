@@ -57,6 +57,7 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
 
     expect(subject).to have_field(:feature_flags).of_type("[FeatureFlagEnum!]!")
     expect(subject).to have_field(:realtime_usage_enabled).of_type("Boolean!")
+    expect(subject).to have_field(:wallet_refresh_enabled).of_type("Boolean!")
 
     expect(subject).to have_field(:activation_status).of_type("OrganizationActivationStatusEnum!")
     expect(subject).to have_field(:environment).of_type("OrganizationEnvironmentEnum!")

@@ -17,6 +17,7 @@ module Types
     field :admin_cs_admins, resolver: Resolvers::Admin::CsAdminsResolver
     field :admin_organization, resolver: Resolvers::Admin::OrganizationResolver
     field :admin_organizations, resolver: Resolvers::Admin::OrganizationsResolver
+    field :agent_claim_page, resolver: Resolvers::AgentClaimPageResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
     field :ai_conversations, resolver: Resolvers::AiConversationsResolver
     field :alert, resolver: Resolvers::Subscriptions::AlertResolver
@@ -86,6 +87,7 @@ module Types
     field :invoice_credit_notes, resolver: Resolvers::InvoiceCreditNotesResolver
     field :invoice_custom_section, resolver: Resolvers::InvoiceCustomSectionResolver
     field :invoice_custom_sections, resolver: Resolvers::InvoiceCustomSectionsResolver
+    field :invoice_product_fees, resolver: Resolvers::InvoiceProductFeesResolver
     field :invoiced_usages, resolver: Resolvers::Analytics::InvoicedUsagesResolver
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver

@@ -835,6 +835,42 @@ RSpec.describe Invoice do
           end
         end
       end
+
+      context "with a QuickBooks integration customer only" do
+        let(:integration) { create(:quickbooks_integration, organization:, sync_invoices:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { create(:quickbooks_customer, integration:, customer:) }
+
+        context "when sync invoices is true" do
+          let(:sync_invoices) { true }
+
+          it "returns true" do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context "when sync invoices is false" do
+          let(:sync_invoices) { false }
+
+          it "returns false" do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+
+      context "with a non-accounting integration customer only" do
+        let(:customer) { create(:customer, organization:) }
+
+        before do
+          create(:quickbooks_integration, organization:, sync_invoices: true)
+          create(:hubspot_customer, integration: create(:hubspot_integration, organization:), customer:)
+        end
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
     end
 
     context "when the invoice is finalized for a customer with an accounting integration" do
