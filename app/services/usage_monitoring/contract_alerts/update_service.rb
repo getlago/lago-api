@@ -7,7 +7,7 @@ module UsageMonitoring
 
       Result = BaseResult[:alert]
 
-      UNCHANGEABLE_FIELDS = %i[code alert_type product_code product_filter_code product_id product_filter_id].freeze
+      UNCHANGEABLE_FIELDS = %i[code alert_type product_code product_filter_code product_id product_filter_id with_product_filters].freeze
 
       def initialize(alert:, params:)
         @alert = alert

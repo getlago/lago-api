@@ -15,6 +15,8 @@ module Types
         field :direction, Types::UsageMonitoring::Alerts::DirectionEnum, null: false
         field :product, Types::Products::Object
         field :product_filter, Types::ProductFilters::Object
+        field :with_product_filters, Boolean, null: false,
+          description: "On a product scope, whether the usage of the product's filters counts too. False counts the product's own fees only."
 
         field :code, String, null: false
         field :name, String
