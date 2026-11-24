@@ -35,7 +35,8 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
       "lago_contract_rate_card_id",
       "lago_rate_card_rate_id",
       "lago_product_filter_id",
-      "lago_product_id"
+      "lago_product_id",
+      "lago_rate_override_id"
     ).values).to all(be_nil)
   end
 
@@ -222,6 +223,30 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
         "lago_product_id" => product.id,
         "lago_subscription_id" => nil
       )
+    end
+
+    context "when the fee is billed from a rate override" do
+      let(:rate_override) { create(:rate_override, organization:) }
+      let!(:product_fee) do
+        create(
+          :product_fee,
+          invoice: contract_invoice,
+          organization:,
+          subscription: nil,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate:,
+          rate_override:
+        )
+      end
+
+      it "exposes lago_rate_override_id" do
+        expect(row_for(product_fee.id)["lago_rate_override_id"]).to eq(rate_override.id)
+      end
+    end
+
+    it "leaves lago_rate_override_id null when the fee has no rate override" do
+      expect(row_for(product_fee.id)["lago_rate_override_id"]).to be_nil
     end
 
     it "takes the customer from the contract" do

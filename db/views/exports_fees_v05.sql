@@ -142,7 +142,8 @@ SELECT
     f.contract_rate_card_id AS lago_contract_rate_card_id,
     f.rate_card_rate_id AS lago_rate_card_rate_id,
     f.product_filter_id AS lago_product_filter_id,
-    rc.product_id AS lago_product_id
+    rc.product_id AS lago_product_id,
+    f.rate_override_id AS lago_rate_override_id
 FROM fees AS f
 LEFT JOIN subscriptions AS s ON f.subscription_id = s.id
 LEFT JOIN customers AS c ON s.customer_id = c.id
