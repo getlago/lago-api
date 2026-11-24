@@ -37,9 +37,11 @@ RSpec.describe RealtimeUsage::BucketWatermark, clickhouse: {clean_before: true},
       end
 
       it "measures the wait under its lane" do
+        freeze_time
+
         reason
 
-        expect(bucket_wait).to have_received(:measure).with({lane: :wallet_refresh}, be_within(60).of(0))
+        expect(bucket_wait).to have_received(:measure).with({lane: :wallet_refresh}, 0)
       end
 
       it "polls with sequential consistency" do
@@ -79,7 +81,7 @@ RSpec.describe RealtimeUsage::BucketWatermark, clickhouse: {clean_before: true},
       it "measures the wait it gave up on" do
         reason
 
-        expect(bucket_wait).to have_received(:measure).with({lane: :wallet_refresh}, be_within(60).of(0))
+        expect(bucket_wait).to have_received(:measure).with({lane: :wallet_refresh}, be >= described_class::TIMEOUT)
       end
     end
 

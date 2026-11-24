@@ -9,7 +9,7 @@ module RealtimeUsage
     STALE_CUTOFF = 30.seconds
 
     # Replicas apply a write seconds apart, so a read after the wait could land on one that lacks the
-    # bucket the wait saw. On SharedMergeTree the replica syncs its parts first; elsewhere it is a no-op.
+    # bucket the wait saw. On SharedMergeTree the replica syncs its parts first; on non-replicated tables it is a no-op.
     CONSISTENT_READ_SETTINGS = {select_sequential_consistency: 1}.freeze
 
     def self.consistent_reads(&)
