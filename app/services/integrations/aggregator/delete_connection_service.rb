@@ -9,11 +9,6 @@ module Integrations
     class DeleteConnectionService < BaseService
       Result = BaseResult
 
-      DELETE_ERRORS = [
-        *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES,
-        *LagoHttpClient::Client::CONNECT_FALLBACK_ERRORS
-      ].uniq.freeze
-
       def action_path
         "connection/#{ERB::Util.url_encode(integration.connection_id)}"
       end
@@ -31,10 +26,8 @@ module Integrations
         end
 
         result
-      rescue *DELETE_ERRORS => e
-        log_delete_failure(e)
-        result
       rescue => e
+        # Deliberately broad: a Nango failure, a timeout or a connect error must never fail the destroy.
         log_delete_failure(e)
         result
       end
