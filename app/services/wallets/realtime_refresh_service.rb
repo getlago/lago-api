@@ -22,7 +22,12 @@ module Wallets
       return result if customer.nil?
       return result unless customer.wallets.active.exists?
 
-      RealtimeUsage::BucketWatermark.consistent_reads { refresh(customer) }
+      # Without a watermark nothing says which buckets to expect, so a consistent read would buy nothing.
+      if expected_ingested_at.empty?
+        refresh(customer)
+      else
+        RealtimeUsage.consistent_reads { refresh(customer) }
+      end
     end
 
     private
@@ -32,7 +37,12 @@ module Wallets
     def refresh(customer)
       # Refreshing on buckets that have not caught up writes a stale balance and clears
       # awaiting_wallet_refresh, the flag the sweep selects on: nothing would correct it after.
-      wait_reason = RealtimeUsage::BucketWatermark.wait(organization_id:, pending: expected_ingested_at, lane: :wallet_refresh)
+      wait_reason = RealtimeUsage::WaitForBucketsService.call(
+        organization_id:,
+        pending: expected_ingested_at,
+        lane: :wallet_refresh,
+        log_context: {customer_id: customer.id}
+      ).reason
       return skipped(wait_reason) if wait_reason
 
       if wallet_codes.present? && customer.wallets.active.where(code: wallet_codes).none?

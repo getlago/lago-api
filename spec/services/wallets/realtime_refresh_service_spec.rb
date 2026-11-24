@@ -50,6 +50,19 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
     end
   end
 
+  context "without a watermark to wait for" do
+    before do
+      create(:wallet, customer:, organization:)
+      allow(RealtimeUsage).to receive(:consistent_reads)
+    end
+
+    it "refreshes without leasing a ClickHouse connection for consistent reads" do
+      expect(service_result).to be_success
+      expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+      expect(RealtimeUsage).not_to have_received(:consistent_reads)
+    end
+  end
+
   context "without an active wallet" do
     it "does nothing" do
       expect(service_result).to be_success
@@ -73,7 +86,7 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
 
     before do
       create(:wallet, customer:, organization:)
-      stub_const("RealtimeUsage::BucketWatermark::TIMEOUT", 0.2)
+      stub_const("RealtimeUsage::WaitForBucketsService::TIMEOUT", 0.2)
     end
 
     context "when the bucket has caught up to the watermark" do
@@ -107,6 +120,14 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
 
       it "reports the reason it walked away" do
         expect(service_result.reason).to eq(:bucket_wait_timeout)
+      end
+
+      it "names the customer in the warning" do
+        allow(Rails.logger).to receive(:warn)
+
+        service_result
+
+        expect(Rails.logger).to have_received(:warn).with(/customer_id=#{customer.id}/)
       end
     end
 

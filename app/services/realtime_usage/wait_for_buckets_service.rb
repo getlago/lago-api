@@ -3,46 +3,36 @@
 module RealtimeUsage
   # Trigger and bucket upsert are two sinks of the same RisingWave epoch, unordered between
   # them: without the wait a fast consumer reads the previous epoch's usage.
-  class BucketWatermark
+  class WaitForBucketsService < BaseService
+    Result = BaseResult[:reason]
+
     TIMEOUT = 5.seconds
     INTERVAL = 0.1
     STALE_CUTOFF = 30.seconds
 
-    # Replicas apply a write seconds apart, so a read after the wait could land on one that lacks the bucket the
-    # wait saw, or the raw events of charges served from the events store. On SharedMergeTree the replica syncs
-    # its parts first, at a few ms per query; on non-replicated tables it is a no-op.
-    CONSISTENT_READ_SETTINGS = {select_sequential_consistency: 1}.freeze
-
-    def self.consistent_reads(&)
-      ::Clickhouse::BaseRecord.with_connection do |connection|
-        connection.with_settings(**CONSISTENT_READ_SETTINGS, &)
-      end
-    end
-
-    # pending maps subscription ids to the trigger watermark in milliseconds. Returns nil once every
-    # subscription's buckets reached it, otherwise the reason it gave up (:stale_watermark, :bucket_wait_timeout).
-    def self.wait(organization_id:, pending:, lane:)
-      new(organization_id:, pending:, lane:).wait
-    end
-
-    def initialize(organization_id:, pending:, lane:)
+    # pending maps subscription ids to the trigger watermark in milliseconds. reason stays nil once every
+    # subscription's buckets reached it, otherwise it says why the wait gave up (:stale_watermark, :bucket_wait_timeout).
+    # log_context names the entity the caller acts on, which its own logs key on.
+    def initialize(organization_id:, pending:, lane:, log_context: {})
       @organization_id = organization_id
       @pending = pending.dup
       @lane = lane
+      @log_context = log_context
+      super
     end
 
-    def wait
-      return nil if pending.empty?
+    def call
+      return result if pending.empty?
 
       started_at = Time.current
-      reason = self.class.consistent_reads { poll }
+      result.reason = RealtimeUsage.consistent_reads { poll }
       Yabeda.realtime_usage.bucket_wait.measure({lane:}, Time.current - started_at)
-      reason
+      result
     end
 
     private
 
-    attr_reader :organization_id, :pending, :lane
+    attr_reader :organization_id, :pending, :lane, :log_context
 
     def poll
       stale_cutoff_ms = ((Time.current - STALE_CUTOFF).to_f * 1000).to_i
@@ -83,8 +73,9 @@ module RealtimeUsage
     end
 
     def log_pending(reason, pending)
+      context = log_context.map { |key, value| " #{key}=#{value}" }.join
       Rails.logger.warn(
-        "[realtime_usage] #{reason} lane=#{lane} organization_id=#{organization_id} pending=#{pending.keys.inspect}"
+        "[realtime_usage] #{reason} lane=#{lane} organization_id=#{organization_id}#{context} pending=#{pending.keys.inspect}"
       )
     end
   end

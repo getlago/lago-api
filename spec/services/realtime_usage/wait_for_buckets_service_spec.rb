@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe RealtimeUsage::BucketWatermark, clickhouse: {clean_before: true}, transaction: false do
+RSpec.describe RealtimeUsage::WaitForBucketsService, clickhouse: {clean_before: true}, transaction: false do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
@@ -12,9 +12,14 @@ RSpec.describe RealtimeUsage::BucketWatermark, clickhouse: {clean_before: true},
     Clickhouse::BaseRecord.connection.select_value("SELECT getSetting('select_sequential_consistency')").to_i
   end
 
-  describe ".wait" do
+  describe "#call" do
     subject(:reason) do
-      described_class.wait(organization_id: organization.id, pending: {subscription.id => watermark_ms}, lane: :wallet_refresh)
+      described_class.call(
+        organization_id: organization.id,
+        pending: {subscription.id => watermark_ms},
+        lane: :wallet_refresh,
+        log_context: {customer_id: customer.id}
+      ).reason
     end
 
     let(:watermark) { Time.current }
@@ -75,7 +80,10 @@ RSpec.describe RealtimeUsage::BucketWatermark, clickhouse: {clean_before: true},
     context "when the buckets never catch up" do
       it "gives up with the reason and a warning" do
         expect(reason).to eq(:bucket_wait_timeout)
-        expect(Rails.logger).to have_received(:warn).with(/usage buckets did not catch up lane=wallet_refresh/)
+        expect(Rails.logger).to have_received(:warn).with(
+          "[realtime_usage] usage buckets did not catch up lane=wallet_refresh organization_id=#{organization.id} " \
+          "customer_id=#{customer.id} pending=#{[subscription.id].inspect}"
+        )
       end
 
       it "measures the wait it gave up on" do
@@ -108,21 +116,12 @@ RSpec.describe RealtimeUsage::BucketWatermark, clickhouse: {clean_before: true},
     end
 
     context "without a pending subscription" do
-      subject(:reason) { described_class.wait(organization_id: organization.id, pending: {}, lane: :wallet_refresh) }
+      subject(:reason) { described_class.call(organization_id: organization.id, pending: {}, lane: :wallet_refresh).reason }
 
       it "returns no reason without measuring a wait" do
         expect(reason).to be_nil
         expect(bucket_wait).not_to have_received(:measure)
       end
-    end
-  end
-
-  describe ".consistent_reads" do
-    it "reads with sequential consistency inside the block only" do
-      inside = described_class.consistent_reads { sequential_consistency }
-
-      expect(inside).to eq(1)
-      expect(sequential_consistency).to eq(0)
     end
   end
 end
