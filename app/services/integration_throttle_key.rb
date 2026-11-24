@@ -84,16 +84,11 @@ module IntegrationThrottleKey
     customer_id = klass.unscoped.where(id:).pick(:customer_id)
     return unless customer_id
 
-    links = IntegrationCustomers::BaseCustomer.where(customer_id:)
-    # The record jobs sync to the first accounting_kind link of the customer (NetSuite or Xero).
-    # A customer that has one is not counted against QuickBooks. Revisit when QuickBooks joins accounting_kind.
-    return if links.accounting_kind.exists?
-
-    links
-      .joins(:integration)
-      .where(integrations: {type: QUICKBOOKS_TYPE})
-      .order("integrations.id")
-      .pick("integrations.id")
+    # The record jobs sync to the customer's first accounting link, read as customer.integration_customers
+    # .accounting_kind.first: when that link is NetSuite or Xero, QuickBooks is not called.
+    type, integration_id = IntegrationCustomers::BaseCustomer.where(customer_id:).accounting_kind
+      .order(:id).pick(:type, :integration_id)
+    integration_id if type == "IntegrationCustomers::QuickbooksCustomer"
   end
 
   private_class_method :company_key, :warn_fail_open, :cached, :company_key_for, :lookup

@@ -9,12 +9,10 @@ RSpec.describe IntegrationThrottleKey do
   let(:credit_note) { create(:credit_note, customer:, invoice:) }
   let(:payment) { create(:payment, payable: invoice) }
 
-  # The QuickBooks customer link has no model yet: a NetSuite link whose type is rewritten
-  # stands in for it, outside accounting_kind.
-  let(:quickbooks_customer_type) { "IntegrationCustomers::QuickbooksCustomer" }
   let(:realm_id) { "1111111111" }
   let(:integration) { quickbooks_integration(realm_id:) }
-  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+  let(:link_ids) { [SecureRandom.uuid, SecureRandom.uuid].sort }
+  let(:integration_customer) { create(:quickbooks_customer, id: link_ids.first, integration:, customer:) }
   let(:integration_gid) { integration.to_gid.to_s }
 
   let(:invoice_args) { Integrations::Aggregator::Invoices::CreateJob.new(invoice:).serialize["arguments"] }
@@ -64,9 +62,7 @@ RSpec.describe IntegrationThrottleKey do
     let(:args) { invoice_args }
 
     context "when the customer is connected to a QuickBooks integration" do
-      before do
-        integration_customer.update_column(:type, quickbooks_customer_type) # rubocop:disable Rails/SkipsModelValidations
-      end
+      before { integration_customer }
 
       it "returns the limit and a digest of the QuickBooks company for the jobs of a record" do
         record_shapes.each do |shape|
@@ -115,11 +111,29 @@ RSpec.describe IntegrationThrottleKey do
       end
 
       context "when the customer is also linked to a NetSuite integration" do
-        before { create(:netsuite_customer, integration: create(:netsuite_integration, organization:), customer:) }
+        let(:netsuite_integration) { create(:netsuite_integration, organization:) }
 
-        it "returns no limit for the jobs of a record, which sync to NetSuite" do
-          record_shapes.each do |shape|
-            expect(resolve(public_send(shape))).to eq([nil, described_class::NO_CONNECTION_SUFFIX]), shape.to_s
+        context "when the NetSuite link comes first, so the record jobs sync to NetSuite" do
+          let(:integration_customer) { create(:quickbooks_customer, id: link_ids.last, integration:, customer:) }
+
+          before { create(:netsuite_customer, id: link_ids.first, integration: netsuite_integration, customer:) }
+
+          it "returns no limit for the jobs of a record" do
+            record_shapes.each do |shape|
+              expect(resolve(public_send(shape))).to eq([nil, described_class::NO_CONNECTION_SUFFIX]), shape.to_s
+            end
+          end
+        end
+
+        context "when the QuickBooks link comes first, so the record jobs sync to QuickBooks" do
+          before { create(:netsuite_customer, id: link_ids.last, integration: netsuite_integration, customer:) }
+
+          it "returns the limit and the QuickBooks company digest" do
+            expected = Digest::SHA256.hexdigest("quickbooks:#{realm_id}")
+
+            record_shapes.each do |shape|
+              expect(resolve(public_send(shape))).to eq([3, expected]), shape.to_s
+            end
           end
         end
       end
@@ -162,8 +176,7 @@ RSpec.describe IntegrationThrottleKey do
         let(:other_args) { Integrations::Aggregator::Invoices::CreateJob.new(invoice: other_invoice).serialize["arguments"] }
 
         before do
-          create(:netsuite_customer, integration: other_integration, customer: other_customer)
-            .update_column(:type, quickbooks_customer_type) # rubocop:disable Rails/SkipsModelValidations
+          create(:quickbooks_customer, integration: other_integration, customer: other_customer)
         end
 
         context "when it is connected to another company" do
@@ -181,24 +194,6 @@ RSpec.describe IntegrationThrottleKey do
           it "returns the same suffix, so both share the company's slots" do
             expect(described_class.key_suffix(*other_args)).to eq(described_class.key_suffix(*invoice_args))
           end
-        end
-      end
-
-      context "when the customer is linked to two QuickBooks integrations" do
-        let(:integration_ids) { [SecureRandom.uuid, SecureRandom.uuid].sort }
-        # The first link created points to the highest id, so the insertion order is not the answer.
-        let(:integration) { quickbooks_integration(realm_id:, id: integration_ids.last) }
-        let(:lowest_integration) { quickbooks_integration(realm_id: "3333333333", id: integration_ids.first) }
-
-        # The second link takes another type outside accounting_kind: a customer has one link per type.
-        before { create(:hubspot_customer, integration: lowest_integration, customer:) }
-
-        it "returns the digest of the company of the lowest integration id on every call" do
-          expected = Digest::SHA256.hexdigest("quickbooks:3333333333")
-
-          3.times { expect(described_class.key_suffix(*invoice_args)).to eq(expected) }
-          expect(resolve(credit_note_args)).to eq([3, expected])
-          expect(resolve(payment_args)).to eq([3, expected])
         end
       end
 
