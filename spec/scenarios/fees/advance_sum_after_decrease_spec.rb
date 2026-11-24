@@ -122,7 +122,7 @@ RSpec.describe "Advance SUM billing after a usage decrease" do
     let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
     let(:customer) { create(:customer, organization:, currency: "USD", timezone: "UTC") }
     let(:contract) do
-      create(:contract, organization:, customer:, started_at:, billing_time: :anniversary,
+      create(:contract, organization:, customer:, started_at:,
         billing_entity: customer.billing_entity)
     end
     let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "units") }

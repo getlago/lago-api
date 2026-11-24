@@ -71,6 +71,41 @@ RSpec.describe Mutations::IntegrationCustomers::Update do
     end.to have_enqueued_job(IntegrationCustomers::UpdateJob)
   end
 
+  context "with a QuickBooks connection" do
+    let(:integration) { create(:quickbooks_integration, organization:) }
+    let(:integration_customer) do
+      create(:quickbooks_customer, integration:, customer:, organization:, external_customer_id: "57", code: "old_code")
+    end
+    let(:mutation) do
+      <<-GQL
+        mutation($input: UpdateIntegrationCustomerInput!) {
+          updateIntegrationCustomer(input: $input) {
+            ... on QuickbooksCustomer { id code externalCustomerId integrationType }
+          }
+        }
+      GQL
+    end
+
+    it "stores the new external customer id without calling the provider" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: integration_customer.id, code: "new_code", externalCustomerId: "58"}
+        }
+      )
+      perform_enqueued_jobs(only: IntegrationCustomers::UpdateJob)
+
+      data = result["data"]["updateIntegrationCustomer"]
+      expect(data["id"]).to eq(integration_customer.id)
+      expect(data["integrationType"]).to eq("quickbooks")
+      expect(integration_customer.reload).to have_attributes(external_customer_id: "58", code: "new_code")
+      expect(a_request(:any, /.*/)).not_to have_been_made
+    end
+  end
+
   context "when the integration customer belongs to another organization" do
     let(:integration_customer) { create(:netsuite_customer, code: "old_code") }
 

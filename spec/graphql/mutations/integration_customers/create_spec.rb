@@ -108,6 +108,53 @@ RSpec.describe Mutations::IntegrationCustomers::Create do
     end
   end
 
+  context "with a QuickBooks integration" do
+    let(:quickbooks_integration) { create(:quickbooks_integration, organization:, code: "qb_main") }
+    let(:mutation) do
+      <<-GQL
+        mutation($input: CreateIntegrationCustomerInput!) {
+          createIntegrationCustomer(input: $input) {
+            ... on QuickbooksCustomer {
+              id
+              code
+              category
+              isDefault
+              externalCustomerId
+              integrationCode
+              integrationType
+            }
+          }
+        }
+      GQL
+    end
+
+    it "creates a QuickBooks connection" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            integrationId: quickbooks_integration.id,
+            code: "qb_link",
+            externalCustomerId: external_customer_id
+          }
+        }
+      )
+
+      data = result["data"]["createIntegrationCustomer"]
+      expect(data["id"]).to eq(customer.reload.quickbooks_customer.id)
+      expect(data["code"]).to eq("qb_link")
+      expect(data["category"]).to eq("accounting")
+      expect(data["isDefault"]).to be(true)
+      expect(data["externalCustomerId"]).to eq(external_customer_id)
+      expect(data["integrationCode"]).to eq("qb_main")
+      expect(data["integrationType"]).to eq("quickbooks")
+    end
+  end
+
   context "when the customer is not found" do
     it "returns an error" do
       result = execute_graphql(

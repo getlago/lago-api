@@ -10,7 +10,7 @@ RSpec.describe Contracts::UpdateService do
   let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
 
-  let(:params) { {name: "Renamed", billing_time: "anniversary"} }
+  let(:params) { {name: "Renamed", billing_anchor_date: "2026-03-01"} }
   let(:activity_log_results) { [] }
 
   before do
@@ -24,7 +24,7 @@ RSpec.describe Contracts::UpdateService do
 
   it "updates the editable authoring fields" do
     expect(result).to be_success
-    expect(contract.reload).to have_attributes(name: "Renamed", billing_time: "anniversary")
+    expect(contract.reload).to have_attributes(name: "Renamed", billing_anchor_date: Date.new(2026, 3, 1))
   end
 
   context "when the billing schedule is locked" do
@@ -98,7 +98,6 @@ RSpec.describe Contracts::UpdateService do
         {
           name: "Renamed",
           plan_code: catalog_plan.code,
-          billing_time: "calendar",
           started_at: "2026-09-01T03:30:00Z",
           billing_anchor_date: contract.effective_billing_anchor_date.iso8601
         }
@@ -210,7 +209,6 @@ RSpec.describe Contracts::UpdateService do
     end
 
     {
-      billing_time: "anniversary",
       billing_anchor_date: "2026-03-01",
       started_at: "2026-03-01T00:00:00Z"
     }.each do |field, value|
@@ -272,7 +270,7 @@ RSpec.describe Contracts::UpdateService do
   context "when an active contract sends sections with a locked field" do
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
     let(:section) { create(:invoice_custom_section, organization:) }
-    let(:params) { {billing_time: "anniversary", invoice_custom_section: {invoice_custom_section_ids: [section.id]}} }
+    let(:params) { {billing_anchor_date: "2026-03-01", invoice_custom_section: {invoice_custom_section_ids: [section.id]}} }
 
     it "rejects the edit and attaches nothing" do
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
@@ -402,6 +400,50 @@ RSpec.describe Contracts::UpdateService do
           expect(wallet).not_to eq(old_wallet)
           expect(wallet).to have_attributes(code: "ai_credits", customer:)
           expect(wallet.credit_allocations.sole.code).to eq("monthly_allowance")
+        end
+      end
+
+      context "when the wallets have alerts" do
+        let(:old_alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: old_wallet, code: "low_balance", name: "Edited on the contract") }
+        let(:old_threshold) { create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: old_alert, value: 100) }
+        let(:alert_template) { create(:plan_wallet_alert, organization:, plan_wallet:, code: "low_balance", name: "Low balance") }
+
+        before do
+          old_threshold
+          create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: alert_template, value: 2_000)
+        end
+
+        it "deletes the alerts of the discarded wallet, thresholds included" do
+          expect(result).to be_success
+
+          expect(UsageMonitoring::CatalogWalletAlert.where(id: old_alert.id)).to be_empty
+          expect(UsageMonitoring::CatalogWalletAlertThreshold.where(id: old_threshold.id)).to be_empty
+        end
+
+        context "when another contract of the customer has a wallet with alerts" do
+          let(:other_wallet) { create(:catalog_wallet, organization:, customer:, code: "ai_credits") }
+          let(:other_alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: other_wallet, code: "low_balance") }
+          let(:other_threshold) { create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: other_alert, value: 100) }
+
+          before { other_threshold }
+
+          it "keeps that wallet's alerts" do
+            expect(result).to be_success
+
+            expect(other_alert.reload.thresholds).to eq([other_threshold])
+          end
+        end
+
+        context "when the organization has contract wallets enabled" do
+          let(:organization) { create(:organization, feature_flags: %w[product_catalog catalog_wallets]) }
+
+          it "gives the new wallet the new plan's alerts, not the edits made on the old one" do
+            expect(result).to be_success
+
+            alert = contract.reload.wallets.sole.alerts.sole
+            expect(alert).to have_attributes(code: "low_balance", name: "Low balance")
+            expect(alert.thresholds.pluck(:value)).to eq([2_000])
+          end
         end
       end
     end
@@ -607,6 +649,42 @@ RSpec.describe Contracts::UpdateService do
           expect(activity_log_results).to eq([result])
           expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
         end
+      end
+    end
+  end
+
+  context "when the contract is a draft" do
+    let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-15")) }
+
+    around { |example| travel_to(Time.zone.parse("2026-09-30T12:00:00Z")) { example.run } }
+
+    context "when changing the plan" do
+      let(:other_plan) { create(:catalog_plan, organization:) }
+      let(:new_rate_card) { create(:rate_card, organization:) }
+      let(:old_card) { create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:)) }
+      let(:params) { {plan_code: other_plan.code} }
+
+      before do
+        old_card
+        create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card: new_rate_card)
+      end
+
+      it "re-materializes the rate cards from the new plan" do
+        expect(result).to be_success
+        expect(contract.reload.catalog_plan).to eq(other_plan)
+        expect(contract.applied_rate_cards.map(&:rate_card)).to eq([new_rate_card])
+        expect(old_card.reload).to be_discarded
+      end
+    end
+
+    context "when moving the start into the past" do
+      let(:params) { {started_at: "2026-09-01T00:00:00"} }
+
+      it "applies the authoring fields and keeps it a draft" do
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(
+          status: "draft", started_at: Time.zone.parse("2026-09-01")
+        )
       end
     end
   end

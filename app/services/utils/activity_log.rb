@@ -11,6 +11,7 @@ module Utils
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
       catalog_plan: %i[taxes],
+      catalog_wallet: %i[taxes metadata],
       # Every rate rather than `active_rate`, one of them, so that the audit diff shows what changed.
       rate_card: %i[rates taxes],
       contract_rate_card: %i[rate_phases],
@@ -137,6 +138,7 @@ module Utils
       serializer = case object
       when PlanRateCard then V2::PlanRateCardSerializer
       when ContractRateCard then V2::ContractAppliedRateCardSerializer
+      when CatalogWallet then V2::ContractWalletSerializer
       # A catalog invoice logs the body its webhooks send.
       when Invoice then object.product_catalog? ? V2::InvoiceSerializer : V1::InvoiceSerializer
       else

@@ -10,16 +10,14 @@ class Contract < ApplicationRecord
   include PaperTrailTraceable
   include Terminatable
 
+  self.ignored_columns += %w[billing_time]
+
   STATUSES = {
+    draft: "draft",
     pending: "pending",
     active: "active",
     terminated: "terminated",
     canceled: "canceled"
-  }.freeze
-
-  BILLING_TIMES = {
-    calendar: "calendar",
-    anniversary: "anniversary"
   }.freeze
 
   PAYMENT_METHOD_TYPES = {provider: "provider", manual: "manual"}.freeze
@@ -52,10 +50,11 @@ class Contract < ApplicationRecord
   has_one :contract_activity, class_name: "UsageMonitoring::ContractActivity"
 
   enum :status, STATUSES, validate: true
-  enum :billing_time, BILLING_TIMES, validate: true
   enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
 
-  LIVE_STATUSES = %w[pending active].freeze
+  # A draft is live (it holds its external id, stays editable and can be
+  # canceled) but never billable.
+  LIVE_STATUSES = %w[draft pending active].freeze
 
   # Live contracts accepting rate changes and usage billing. Terminated cards with owed
   # coverage remain discoverable separately through their billing cursors.
@@ -82,9 +81,12 @@ class Contract < ApplicationRecord
   validate :validate_started_before_ended
   validate :validate_code_unchanged, on: :update
 
+  # Termination ends the agreement in force, so it prefers the active contract,
+  # then a pending replacement, then a draft. started_at/created_at break ties
+  # deterministically within a status.
   def self.terminatable_by_external_id(external_id)
     live.where(external_id:)
-      .order(Arel.sql("status = 'active' DESC"), started_at: :desc, created_at: :desc)
+      .order(Arel.sql("status = 'active' DESC, status = 'pending' DESC"), started_at: :desc, created_at: :desc)
       .first
   end
 
@@ -102,12 +104,12 @@ class Contract < ApplicationRecord
     [ended_at, terminated_at].compact.min
   end
 
-  # Rate cards are authored while pending only: once the agreement is active
-  # (or ended) they are signed. Unit changes on an active contract are a
+  # Rate cards are authored while draft or pending only: once the agreement is
+  # active (or ended) they are signed. Unit changes on an active contract are a
   # lifecycle concern priced by the billing engine, not an authoring edit.
   # The contract's own settings follow Contracts::UpdateService instead.
   def editable?
-    pending?
+    draft? || pending?
   end
 
   # The currency fees bill in: the plan's when there is one, otherwise the
@@ -158,7 +160,6 @@ end
 #
 #  id                           :uuid             not null, primary key
 #  billing_anchor_date          :date
-#  billing_time                 :enum             default("calendar"), not null
 #  canceled_at                  :datetime
 #  code                         :string
 #  consolidate_invoice          :boolean          default(TRUE), not null
@@ -186,7 +187,7 @@ end
 #  index_contracts_on_billing_entity_id                         (billing_entity_id)
 #  index_contracts_on_catalog_plan_id                           (catalog_plan_id)
 #  index_contracts_on_customer_id                               (customer_id)
-#  index_contracts_on_live_external_id                          (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
+#  index_contracts_on_live_external_id                          (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['draft'::contract_status, 'pending'::contract_status, 'active'::contract_status]))
 #  index_contracts_on_organization_id                           (organization_id)
 #  index_contracts_on_organization_id_and_external_id           (organization_id,external_id)
 #  index_contracts_on_organization_id_external_id_code          (organization_id,external_id,code) UNIQUE

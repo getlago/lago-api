@@ -8,8 +8,11 @@ FactoryBot.define do
     status { :active }
     external_id { SecureRandom.uuid }
     sequence(:code) { |n| "contract-#{n}" }
-    billing_time { :calendar }
     started_at { 1.day.ago }
+
+    trait :draft do
+      status { :draft }
+    end
 
     trait :pending do
       status { :pending }

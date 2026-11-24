@@ -123,6 +123,43 @@ RSpec.describe IntegrationCustomers::UpdateService do
         end
       end
 
+      context "with quickbooks customer" do
+        let(:external_customer_id) { "58" }
+        let(:integration) { create(:quickbooks_integration, organization:) }
+        let(:integration_customer) { create(:quickbooks_customer, integration:, customer:, code: "old_code") }
+        let(:params) { {integration_type: "quickbooks", integration_code: integration.code, external_customer_id:, code: "qb_new"} }
+
+        it "does not call aggregator update service" do
+          service_call
+
+          expect(Integrations::Aggregator::Contacts::UpdateService).not_to have_received(:call)
+        end
+
+        it "stores the external customer id and the code" do
+          result = service_call
+
+          expect(result).to be_success
+          expect(result.integration_customer).to eq(integration_customer)
+          expect(integration_customer.reload).to have_attributes(external_customer_id: "58", code: "qb_new")
+        end
+      end
+
+      context "with xero customer" do
+        let(:external_customer_id) { "58" }
+        let(:integration) { create(:xero_integration, organization:) }
+        let(:integration_customer) { create(:xero_customer, integration:, customer:) }
+        let(:params) { {integration_type: "xero", integration_code: integration.code, external_customer_id:} }
+
+        it "calls aggregator update service" do
+          result = service_call
+
+          expect(Integrations::Aggregator::Contacts::UpdateService)
+            .to have_received(:call).with(integration:, integration_customer:)
+          expect(result).to be_success
+          expect(integration_customer.reload.external_customer_id).to eq("58")
+        end
+      end
+
       context "when sync with provider is false" do
         let(:sync_with_provider) { false }
 

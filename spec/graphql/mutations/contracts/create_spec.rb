@@ -33,7 +33,7 @@ RSpec.describe Mutations::Contracts::Create do
     <<-GQL
       mutation($input: CreateContractInput!) {
         createContract(input: $input) {
-          id externalId code status billingTime
+          id externalId code status
           selectedInvoiceCustomSections { id }
           skipInvoiceCustomSections
           plan { id }
@@ -57,7 +57,6 @@ RSpec.describe Mutations::Contracts::Create do
     expect(result_data["externalId"]).to eq("contract-1")
     expect(result_data["code"]).to eq("initial")
     expect(result_data["status"]).to eq("active")
-    expect(result_data["billingTime"]).to eq("calendar")
     expect(result_data["plan"]["id"]).to eq(catalog_plan.id)
     expect(result_data["appliedRateCardsCount"]).to eq(1)
   end
