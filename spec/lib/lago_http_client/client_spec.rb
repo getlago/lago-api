@@ -575,11 +575,9 @@ RSpec.describe LagoHttpClient::Client do
       end
 
       it "sends the request without a query string" do
-        allow(Net::HTTP::Delete).to receive(:new).and_call_original
-
         client.delete(params: nil)
 
-        expect(Net::HTTP::Delete).to have_received(:new).with("/connection/conn-1")
+        expect(a_request(:delete, url)).to have_been_made.once
       end
     end
 
