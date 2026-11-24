@@ -130,6 +130,19 @@ RSpec.describe "record_deletion trigger", transaction: false do # rubocop:disabl
     end
   end
 
+  describe "contract_rate_cards_terms" do
+    it "records the deleted row" do
+      term = create(:contract_rate_card_term, organization:)
+
+      term.destroy!
+
+      expect(RecordDeletion.find_by(record_id: term.id)).to have_attributes(
+        record_table: "contract_rate_cards_terms",
+        organization_id: organization.id
+      )
+    end
+  end
+
   describe "customers_taxes" do
     it "records the deleted row" do
       applied_tax = create(:customer_applied_tax, customer:, tax:, organization:)
@@ -176,6 +189,20 @@ RSpec.describe "record_deletion trigger", transaction: false do # rubocop:disabl
           [applied_taxes[1].id, "customers_taxes"],
           [applied_taxes[2].id, "rate_cards_taxes"]
         ])
+    end
+  end
+
+  describe "a contract rate card units update" do
+    let(:contract) { create(:contract, :pending, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, units: 2) }
+
+    it "records the terms it replaces" do
+      replaced_term = contract_rate_card.terms.sole
+
+      ContractRateCards::UpdateService.call(contract_rate_card:, params: {units: 5}).raise_if_error!
+
+      expect(RecordDeletion.where(record_id: replaced_term.id).pick(:record_table)).to eq("contract_rate_cards_terms")
+      expect(contract_rate_card.terms.reload.sole.units).to eq(5)
     end
   end
 
