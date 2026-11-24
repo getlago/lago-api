@@ -63,9 +63,7 @@ module Api
           )
 
           if result.success?
-            response[:authorization] = result.stripe_payment_intent.to_hash.slice(
-              :id, :object, :amount, :amount_capturable, :status
-            )
+            response[:authorization] = result.authorization
           else
             return render_error_response(result)
           end

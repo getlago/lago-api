@@ -27,7 +27,7 @@ RSpec.describe "Contract percentage billing with duplicate unique_count_agg even
   let(:customer) { create(:customer, organization:, currency: "USD", timezone: "UTC") }
   let(:started_at) { Time.zone.parse("2026-10-07 00:00:00") }
   let(:contract) do
-    create(:contract, organization:, customer:, started_at:, billing_time: :anniversary,
+    create(:contract, organization:, customer:, started_at:,
       billing_entity: customer.billing_entity)
   end
   let(:billable_metric) do

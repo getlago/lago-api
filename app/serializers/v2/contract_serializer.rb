@@ -24,7 +24,6 @@ module V2
         name: model.name,
         plan_code: model.catalog_plan&.code,
         status: model.status,
-        billing_time: model.billing_time,
         consolidate_invoice: model.consolidate_invoice,
         purchase_order_number: model.purchase_order_number,
         billing_anchor_date: format_date(model.billing_anchor_date),
