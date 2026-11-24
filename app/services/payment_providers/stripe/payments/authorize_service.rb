@@ -4,7 +4,7 @@ module PaymentProviders
   module Stripe
     module Payments
       class AuthorizeService < BaseService
-        Result = BaseResult[:stripe_payment_intent]
+        Result = BaseResult[:stripe_payment_intent, :authorization]
 
         # The authorization is a manual-capture hold, which Stripe refuses for these types.
         # Card and Link can be held.
@@ -41,6 +41,7 @@ module PaymentProviders
           payment_intent = create_payment_intent
 
           result.stripe_payment_intent = payment_intent
+          result.authorization = authorization_payload(payment_intent)
 
           result
         rescue ::Stripe::StripeError => e
@@ -80,7 +81,7 @@ module PaymentProviders
         def create_payment_intent
           ::Stripe::PaymentIntent.create(
             {
-              amount:,
+              amount: stripe_amount,
               currency: currency.downcase,
               confirm: true,
               capture_method: "manual",
@@ -99,6 +100,31 @@ module PaymentProviders
               idempotency_key: "auth-#{provider_customer.id}-#{unique_id}"
             }
           )
+        end
+
+        # The amount comes from the request as is. When it is not an integer, Stripe rejects it, as before.
+        def stripe_amount
+          integer_amount = Integer(amount.to_s, 10, exception: false)
+
+          if integer_amount.nil?
+            amount
+          else
+            ::PaymentProviders::StripeProvider.to_stripe_amount(integer_amount, currency)
+          end
+        end
+
+        # Stripe reads some currencies in hundredths: answer in the units of the request
+        def authorization_payload(payment_intent)
+          intent = payment_intent.to_hash
+          payload = intent.slice(:id, :object, :amount, :amount_capturable, :status)
+
+          %i[amount amount_capturable].each do |key|
+            next unless payload.key?(key)
+
+            payload[key] = ::PaymentProviders::StripeProvider.from_stripe_amount(payload[key], intent[:currency])
+          end
+
+          payload
         end
 
         attr_reader :amount, :currency, :provider_customer, :payment_method, :payment_method_id, :unique_id, :metadata

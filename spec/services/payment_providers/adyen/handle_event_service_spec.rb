@@ -70,6 +70,93 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
       end
     end
 
+    context "when succeeded one-time authorisation event in a currency with other decimals in Adyen" do
+      let(:event_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_authorisation_payment_response.json")
+        item = JSON.parse(File.read(path))["notificationItems"].first["NotificationRequestItem"]
+        item["amount"] = event_amount
+        item["additionalData"]["metadata.lago_invoice_id"] = lago_invoice_id
+        item.to_json
+      end
+
+      let(:lago_invoice_id) { "ec82efeb-88bb-44f8-ba30-0d55b3fd583a" }
+
+      context "when the currency is IDR" do
+        let(:event_amount) { {"currency" => "IDR", "value" => 12_345} }
+
+        it "passes the amount in Lago minor units" do
+          event_service.call
+
+          expect(Invoices::Payments::AdyenService).to have_received(:call).with(
+            :update_payment_status, hash_including(amount_cents: 1_234_500) # 12_345 * 100
+          )
+        end
+      end
+
+      context "when the currency is HUF" do
+        let(:event_amount) { {"currency" => "HUF", "value" => 5_000_000} }
+
+        it "passes the amount in Lago minor units" do
+          event_service.call
+
+          expect(Invoices::Payments::AdyenService).to have_received(:call).with(
+            :update_payment_status, hash_including(amount_cents: 50_000) # 5_000_000 / 100
+          )
+        end
+      end
+
+      context "when the amount has no value" do
+        let(:event_amount) { {"currency" => "IDR"} }
+
+        it "passes a nil amount so the payment falls back to the invoice amount" do
+          event_service.call
+
+          expect(Invoices::Payments::AdyenService).to have_received(:call).with(
+            :update_payment_status, hash_including(amount_cents: nil)
+          )
+        end
+      end
+
+      context "when Adyen captured a rounded IDR amount of an invoice with a sub-unit part" do
+        let(:event_amount) { {"currency" => "IDR", "value" => 124} }
+        let(:lago_invoice_id) { invoice.id }
+        let(:customer) { create(:customer, organization:, payment_provider_code: "adyen_1") }
+        let(:adyen_payment_provider) { create(:adyen_provider, organization:, code: "adyen_1") }
+        let(:invoice) do
+          create(
+            :invoice,
+            organization:,
+            customer:,
+            currency: "IDR",
+            total_amount_cents: 12_350,
+            total_paid_amount_cents: 0,
+            ready_for_payment_processing: true
+          )
+        end
+
+        before do
+          create(:adyen_customer, customer:, payment_provider: adyen_payment_provider)
+          allow(Invoices::Payments::AdyenService).to receive(:call).and_call_original
+        end
+
+        it "stores the captured amount on the payment and the invoice, without a cap at the amount due" do
+          event_service.call
+
+          payment = invoice.payments.sole
+          expect(payment).to have_attributes(
+            amount_cents: 12_400, # Adyen captured 124 rupiah = 124 * 100
+            amount_currency: "IDR",
+            payable_payment_status: "succeeded"
+          )
+          expect(invoice.reload).to have_attributes(
+            payment_status: "succeeded",
+            total_paid_amount_cents: 12_400,
+            total_due_amount_cents: -50 # 12_350 invoiced - 12_400 paid
+          )
+        end
+      end
+    end
+
     context "when succeeded authorisation event for processed one-time payment belonging to a Payment Request" do
       let(:event_json) do
         JSON.parse(event_response_json)["notificationItems"]

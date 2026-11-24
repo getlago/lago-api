@@ -11,11 +11,45 @@ module PaymentProviders
     SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze
     FAILED_STATUSES = %w[Cancelled CaptureFailed Error Expired Refused].freeze
 
+    # Adyen's minor units differ from ISO 4217 (and Money) for these currencies: https://docs.adyen.com/development-resources/currency-codes
+    ADYEN_DECIMALS_OVERRIDES = {"CLP" => 2, "HUF" => 2, "ISK" => 2, "CVE" => 0, "IDR" => 0}.freeze
+
     validates :api_key, :merchant_account, presence: true
     validates :success_redirect_url, adyen_url: true, allow_nil: true, length: {maximum: 1024}
 
     settings_accessors :live_prefix, :merchant_account
     secrets_accessors :api_key, :hmac_key
+
+    def self.to_adyen_amount(amount_cents, currency)
+      code = currency.to_s.upcase
+
+      if amount_cents.nil? || !ADYEN_DECIMALS_OVERRIDES.key?(code)
+        amount_cents
+      else
+        convert_minor_units(amount_cents, Money::Currency.new(code).exponent, ADYEN_DECIMALS_OVERRIDES[code])
+      end
+    end
+
+    def self.from_adyen_amount(value, currency)
+      code = currency.to_s.upcase
+
+      if value.nil? || !ADYEN_DECIMALS_OVERRIDES.key?(code)
+        value
+      else
+        convert_minor_units(value, ADYEN_DECIMALS_OVERRIDES[code], Money::Currency.new(code).exponent)
+      end
+    end
+
+    def self.convert_minor_units(amount, from_exponent, to_exponent)
+      shift = to_exponent - from_exponent
+
+      if shift >= 0
+        amount.to_i * 10**shift
+      else
+        (BigDecimal(amount.to_s) / 10**(-shift)).round(0, BigDecimal::ROUND_HALF_UP).to_i
+      end
+    end
+    private_class_method :convert_minor_units
 
     def environment
       if Rails.env.production? && live_prefix.present?

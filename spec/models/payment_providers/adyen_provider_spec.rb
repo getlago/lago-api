@@ -129,4 +129,77 @@ RSpec.describe PaymentProviders::AdyenProvider do
       expect(provider.success_redirect_url).to eq success_redirect_url
     end
   end
+
+  describe ".to_adyen_amount" do
+    it "multiplies by 100 the currencies Adyen gives 2 decimals and Money none" do
+      expect(described_class.to_adyen_amount(50_000, "HUF")).to eq(5_000_000) # 50000 * 10**(2 - 0)
+      expect(described_class.to_adyen_amount(50_000, "CLP")).to eq(5_000_000) # 50000 * 10**(2 - 0)
+      expect(described_class.to_adyen_amount(1_500, "ISK")).to eq(150_000) # 1500 * 10**(2 - 0)
+    end
+
+    it "divides by 100 the currencies Adyen gives no decimals and Money 2" do
+      expect(described_class.to_adyen_amount(1_234_500, "IDR")).to eq(12_345) # 1234500 / 10**(2 - 0)
+      expect(described_class.to_adyen_amount(1_234_500, "CVE")).to eq(12_345) # 1234500 / 10**(2 - 0)
+    end
+
+    it "rounds a sub-unit part half up" do
+      expect(described_class.to_adyen_amount(12_350, "IDR")).to eq(124) # 12350 / 100 = 123.5, rounds half up to 124
+      expect(described_class.to_adyen_amount(12_349, "IDR")).to eq(123) # 12349 / 100 = 123.49, rounds down to 123
+    end
+
+    it "keeps the amount of the other currencies" do
+      expect(described_class.to_adyen_amount(1_000, "EUR")).to eq(1_000)
+      expect(described_class.to_adyen_amount(1_000, "USD")).to eq(1_000)
+      expect(described_class.to_adyen_amount(1_000, "JPY")).to eq(1_000)
+    end
+
+    it "converts a lower-case currency" do
+      expect(described_class.to_adyen_amount(50_000, "huf")).to eq(5_000_000) # 50000 * 10**(2 - 0)
+    end
+
+    it "keeps the amount when the currency is blank" do
+      expect(described_class.to_adyen_amount(1_000, nil)).to eq(1_000)
+    end
+
+    it "returns nil for a nil amount" do
+      expect(described_class.to_adyen_amount(nil, "HUF")).to be_nil
+    end
+  end
+
+  describe ".from_adyen_amount" do
+    it "divides by 100 the currencies Adyen gives 2 decimals and Money none" do
+      expect(described_class.from_adyen_amount(5_000_000, "HUF")).to eq(50_000) # 5000000 / 10**(2 - 0)
+      expect(described_class.from_adyen_amount(5_000_000, "CLP")).to eq(50_000) # 5000000 / 10**(2 - 0)
+      expect(described_class.from_adyen_amount(150_000, "ISK")).to eq(1_500) # 150000 / 10**(2 - 0)
+    end
+
+    it "multiplies by 100 the currencies Adyen gives no decimals and Money 2" do
+      expect(described_class.from_adyen_amount(12_345, "IDR")).to eq(1_234_500) # 12345 * 10**(2 - 0)
+      expect(described_class.from_adyen_amount(12_345, "CVE")).to eq(1_234_500) # 12345 * 10**(2 - 0)
+      expect(described_class.from_adyen_amount(124, "IDR")).to eq(12_400) # 124 * 10**(2 - 0)
+    end
+
+    it "rounds a sub-unit part half up" do
+      expect(described_class.from_adyen_amount(5_000_050, "HUF")).to eq(50_001) # 5000050 / 100 = 50000.5, rounds half up to 50001
+      expect(described_class.from_adyen_amount(5_000_049, "HUF")).to eq(50_000) # 5000049 / 100 = 50000.49, rounds down to 50000
+    end
+
+    it "keeps the amount of the other currencies" do
+      expect(described_class.from_adyen_amount(1_000, "EUR")).to eq(1_000)
+      expect(described_class.from_adyen_amount(1_000, "USD")).to eq(1_000)
+      expect(described_class.from_adyen_amount(1_000, "JPY")).to eq(1_000)
+    end
+
+    it "converts a lower-case currency" do
+      expect(described_class.from_adyen_amount(5_000_000, "huf")).to eq(50_000) # 5000000 / 10**(2 - 0)
+    end
+
+    it "keeps the amount when the currency is blank" do
+      expect(described_class.from_adyen_amount(1_000, nil)).to eq(1_000)
+    end
+
+    it "returns nil for a nil amount" do
+      expect(described_class.from_adyen_amount(nil, "IDR")).to be_nil
+    end
+  end
 end
