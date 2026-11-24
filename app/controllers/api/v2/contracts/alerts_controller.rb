@@ -94,6 +94,7 @@ module Api
             :name,
             :product_code,
             :product_filter_code,
+            :with_product_filters,
             thresholds: THRESHOLD_PARAMS
           )
         end

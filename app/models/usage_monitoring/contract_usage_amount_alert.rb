@@ -19,6 +19,7 @@ end
 #  name                 :string
 #  previous_value       :decimal(30, 5)   default(0.0), not null
 #  previous_windows     :jsonb            not null
+#  with_product_filters :boolean          default(FALSE), not null
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  contract_external_id :string           not null
@@ -28,8 +29,8 @@ end
 #
 # Indexes
 #
-#  idx_contract_alerts_code_unique   (organization_id,contract_external_id,code) UNIQUE WHERE (deleted_at IS NULL)
-#  idx_contract_alerts_scope_unique  (organization_id,contract_external_id,alert_type,product_id,product_filter_id) UNIQUE NULLS NOT DISTINCT WHERE (deleted_at IS NULL)
+#  idx_contract_alerts_code_unique                (organization_id,contract_external_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#  idx_contract_alerts_scope_with_filters_unique  (organization_id,contract_external_id,alert_type,product_id,product_filter_id,with_product_filters) UNIQUE NULLS NOT DISTINCT WHERE (deleted_at IS NULL)
 #
 # Foreign Keys
 #

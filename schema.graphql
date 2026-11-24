@@ -2086,6 +2086,11 @@ type ContractAlert {
   productFilter: ProductFilter
   thresholds: [AlertThreshold!]!
   updatedAt: ISO8601DateTime!
+
+  """
+  On a product scope, whether the usage of the product's filters counts too. False counts the product's own fees only.
+  """
+  withProductFilters: Boolean!
 }
 
 """
@@ -3756,6 +3761,7 @@ input CreateContractAlertInput {
   productFilterId: ID
   productId: ID
   thresholds: [ThresholdInput!]!
+  withProductFilters: Boolean
 }
 
 """
@@ -7661,7 +7667,12 @@ type Fee implements InvoiceItem {
   preciseUnitAmount: Float!
   presentationBreakdowns: [PresentationBreakdownUsage!]
   pricingUnitUsage: PricingUnitUsage
+  product: Product
+  productFilter: ProductFilter
   properties: FeeProperties
+  rateCardRate: RateCardRate
+  rateModel: RateCardRateModelEnum
+  rateOverride: RateOverride
   subTotalExcludingTaxesAmountCents: BigInt!
   subTotalExcludingTaxesPreciseAmountCents: Float!
   subscription: Subscription
@@ -7727,6 +7738,21 @@ type FeeAppliedTax implements AppliedTax {
   taxName: String!
   taxRate: Float!
   updatedAt: ISO8601DateTime!
+}
+
+"""
+FeeCollection type
+"""
+type FeeCollection {
+  """
+  A collection of paginated FeeCollection
+  """
+  collection: [Fee!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 """
@@ -8436,6 +8462,7 @@ type Invoice {
   prepaidCreditAmountCents: BigInt!
   prepaidGrantedCreditAmountCents: BigInt
   prepaidPurchasedCreditAmountCents: BigInt
+  productCatalogContracts: [InvoiceProductCatalogContract!]
   progressiveBillingCreditAmountCents: BigInt!
   purchaseOrderNumber: String
   readyForPaymentProcessing: Boolean!
@@ -8614,6 +8641,29 @@ enum InvoicePaymentStatusTypeEnum {
   failed
   pending
   succeeded
+}
+
+type InvoiceProductCatalogContract {
+  contract: Contract!
+  productCatalogSections: [InvoiceProductCatalogSection!]!
+}
+
+type InvoiceProductCatalogFilterGroup {
+  amountCents: BigInt!
+  feesCount: Int!
+  productFilter: ProductFilter!
+}
+
+type InvoiceProductCatalogProductGroup {
+  amountCents: BigInt!
+  feesCount: Int!
+  filters: [InvoiceProductCatalogFilterGroup!]!
+  product: Product!
+}
+
+type InvoiceProductCatalogSection {
+  productCategory: ProductCategory
+  products: [InvoiceProductCatalogProductGroup!]!
 }
 
 enum InvoiceSettlementTypeEnum {
@@ -13697,6 +13747,11 @@ type Query {
   Query invoice_custom_sections
   """
   invoiceCustomSections(limit: Int, page: Int): InvoiceCustomSectionCollection
+
+  """
+  Query the product fees of an invoice, in the order of the invoice PDF
+  """
+  invoiceProductFees(contractId: ID, invoiceId: ID!, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): FeeCollection!
 
   """
   Query invoiced usage of an organization

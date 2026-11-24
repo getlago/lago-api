@@ -27,6 +27,10 @@ module UsageMonitoring
           return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
         end
 
+        unless [nil, true, false].include?(params[:with_product_filters])
+          return result.single_validation_failure!(field: :with_product_filters, error_code: "value_is_invalid")
+        end
+
         thresholds_result = UsageMonitoring::Thresholds::ValidateService.call(thresholds: params[:thresholds])
         return result.fail_with_error!(thresholds_result.error) unless thresholds_result.success?
 
@@ -44,7 +48,8 @@ module UsageMonitoring
             code: params[:code],
             name: params[:name],
             product:,
-            product_filter:
+            product_filter:,
+            with_product_filters: params[:with_product_filters] == true
           )
           alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
           seed_alarms_already_past(alert, contract)
@@ -56,7 +61,7 @@ module UsageMonitoring
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
       rescue ActiveRecord::RecordNotUnique => e
-        if violated_unique_index(e) == "idx_contract_alerts_scope_unique"
+        if violated_unique_index(e) == "idx_contract_alerts_scope_with_filters_unique"
           result.single_validation_failure!(field: :base, error_code: "alert_already_exists")
         else
           unique_index_failure!(e, "idx_contract_alerts_code_unique" => :code)
