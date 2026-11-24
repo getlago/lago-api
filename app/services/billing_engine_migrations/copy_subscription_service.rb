@@ -24,13 +24,23 @@ module BillingEngineMigrations
     delegate :shadow_organization, to: :migration
 
     def copy_latest_state
-      subscription.reload
+      reload_subscription
 
       if subscription_ended? || !mapped_plan?
         terminate_own_contract
       elsif subscription.active?
         copy_active_subscription
       end
+    end
+
+    def reload_subscription
+      plan = subscription.association(:plan).target
+      customer = subscription.association(:customer).target
+
+      subscription.reload
+
+      subscription.association(:plan).target = plan if plan&.id == subscription.plan_id
+      subscription.association(:customer).target = customer if customer&.id == subscription.customer_id
     end
 
     def subscription_ended?

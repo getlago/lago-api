@@ -557,6 +557,35 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     end
   end
 
+  context "when the plan and the customer are preloaded" do
+    let(:preloaded_subscription) { Subscription.preload(:plan, :customer).find(subscription.id) }
+
+    it "keeps the preloaded records through the reload" do
+      preloaded_plan = preloaded_subscription.plan
+      preloaded_customer = preloaded_subscription.customer
+
+      expect(described_class.call(migration:, subscription: preloaded_subscription)).to be_success
+      expect(preloaded_subscription.plan).to be(preloaded_plan)
+      expect(preloaded_subscription.customer).to be(preloaded_customer)
+    end
+
+    context "when the plan changed after the preload" do
+      let(:override_plan) { create(:plan, organization:, code: plan.code, parent: plan) }
+
+      before do
+        preloaded_subscription
+        Subscription.find(subscription.id).update!(plan: override_plan)
+      end
+
+      it "copies from the current plan" do
+        expect { described_class.call(migration:, subscription: preloaded_subscription) }
+          .not_to change { shadow_organization.contracts.count }
+
+        expect(preloaded_subscription.plan).to eq(override_plan)
+      end
+    end
+  end
+
   context "when the copy runs" do
     let(:previous_subscription) do
       create(:subscription, :terminated, organization:, customer:, plan:, external_id: subscription.external_id)
