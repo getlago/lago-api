@@ -21,7 +21,7 @@ module BillingOperations
         if operation&.action_type == "adjust_fixed_advance"
           resolve_adjustment(segment)
         elsif segment.contract_rate_card.rate_card.advance?
-          segment.units = units_at(segment, cycle.started_at)
+          segment.units = units_at(segment, segment.started_at)
           segment
         else
           resolve_arrears(segment)
@@ -77,12 +77,15 @@ module BillingOperations
     def resolve_adjustment(segment)
       timestamp = operation.billing_at
       segment.started_at = timestamp
-      segment.ended_at = BillingSegment.inclusive_end(cycle.ended_at)
       segment.units = units_at(segment, timestamp)
       segment.prepaid_units = prepaid_units_at(timestamp)
       return if segment.units <= segment.prepaid_units
 
-      segment.proration_ratio = segment.contract_rate_card.rate_card.proration? ? elapsed_ratio(timestamp, cycle.ended_at) : 1.to_d
+      segment.proration_ratio = if segment.contract_rate_card.rate_card.proration?
+        elapsed_ratio(timestamp, BillingSegment.exclusive_end(segment.ended_at))
+      else
+        1.to_d
+      end
       segment
     end
 
@@ -109,7 +112,6 @@ module BillingOperations
       operation.contract_rate_card.billing_operations.completed
         .where(organization_id: operation.organization_id, target_cycle_started_at: operation.target_cycle_started_at,
           cancelled_at: nil, action_type: %w[renew_fixed_advance adjust_fixed_advance])
-        .includes(invoice: :fees)
     end
 
     def prepaid_units_from_snapshot(snapshot, timestamp)
@@ -121,12 +123,11 @@ module BillingOperations
     def prepaid_units_from_fees(invoice, timestamp)
       return [] unless invoice
 
-      invoice.fees.filter_map do |fee|
-        next unless fee.contract_rate_card_id == operation.contract_rate_card_id && fee.pay_in_advance?
-
-        from = fee.properties["from_datetime"]
-        to = fee.properties["to_datetime"]
-        fee.units if from && to && timestamp.between?(Time.iso8601(from), Time.iso8601(to))
+      invoice.fees.where(organization_id: operation.organization_id, contract_rate_card_id: operation.contract_rate_card_id,
+        pay_in_advance: true).pluck(:units, :properties).filter_map do |units, properties|
+        from = properties["from_datetime"]
+        to = properties["to_datetime"]
+        units if from && to && timestamp.between?(Time.iso8601(from), Time.iso8601(to))
       end
     end
   end

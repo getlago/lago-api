@@ -2147,6 +2147,8 @@ type ContractAppliedRateCard {
   rateCard: RateCard!
   ratePhases: [RatePhase!]!
   ratePhasesCount: Int!
+  scheduledUnits: Float
+  scheduledUnitsEffectiveAt: ISO8601DateTime
   units: Float
   updatedAt: ISO8601DateTime!
 }

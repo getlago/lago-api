@@ -39,6 +39,8 @@ RSpec.describe Webhooks::ContractRateCards::CreatedService do
           "external_contract_id" => "contract-123",
           "rate_card_code" => "api_usage",
           "units" => "2.5",
+          "scheduled_units" => nil,
+          "scheduled_units_effective_at" => nil,
           "effective_date" => "2026-01-02",
           "billing_anchor_date" => "2026-01-03",
           "next_billing_at" => "2026-02-03T04:05:06Z",

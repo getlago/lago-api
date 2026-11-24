@@ -42,7 +42,7 @@ module Contracts
         ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
 
         segments
-          .map { |card, billable_segment, billing_segment| rate_card_usage(card, billable_segment, billing_segment) }
+          .map { |card, billable_segment, billing_segment, cycle| rate_card_usage(card, billable_segment, billing_segment, cycle) }
           .sort_by { |usage| usage_order(usage) }
       else
         []
@@ -139,15 +139,16 @@ module Contracts
       billing_segment = BillingSegments::BuildEventSegmentService.call!(
         contract_rate_card: card, billable_segment:
       ).billing_segment
-      [card, billable_segment, billing_segment]
+      cycle = schedule.cycle_at(timestamp) if card.product.fixed?
+      [card, billable_segment, billing_segment, cycle]
     end
 
-    def rate_card_usage(card, billable_segment, billing_segment)
+    def rate_card_usage(card, billable_segment, billing_segment, cycle)
       RateCardUsage.new(
         contract_rate_card: card,
         billing_segment:,
         rate_phase: card.rate_phases.find { |phase| phase.code == billable_segment.rate_phase_code },
-        fees: compute_fees(billing_segment)
+        fees: compute_fees(billing_segment, cycle:)
       )
     end
 
@@ -156,7 +157,7 @@ module Contracts
       [usage.billing_segment.started_at, usage.billing_segment.ended_at, usage.contract_rate_card.rate_card.code]
     end
 
-    def compute_fees(billing_segment)
+    def compute_fees(billing_segment, cycle:)
       if billing_segment.contract_rate_card.rate_card.product.metered?
         Fees::ChargeService.call!(
           invoice: nil,
@@ -165,8 +166,6 @@ module Contracts
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
-        schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: billing_segment.contract_rate_card).schedule
-        cycle = schedule.cycle_at(timestamp)
         resolved = BillingOperations::ResolveFixedUnitsService.call!(segments: [billing_segment], cycle:).segments
         resolved.map { BillingOperations::Fees::ComputeService.call!(billing_segment: it).fee }
       end

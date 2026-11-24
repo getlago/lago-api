@@ -34,6 +34,22 @@ RSpec.describe BillingOperations::ProcessService do
     operation
   end
 
+  it "preserves microseconds when saving pricing inputs" do
+    result
+
+    inputs = operation.reload.pricing_segments.sole
+    expect(inputs.fetch("started_at")).to eq("2026-01-01T00:00:00.000000Z")
+    expect(inputs.fetch("ended_at")).to eq("2026-01-31T23:59:59.999999Z")
+    expect(inputs.fetch("billing_at")).to eq("2026-02-01T00:00:00.000000Z")
+  end
+
+  it "reads due operations once when there are no units adjustments" do
+    queries = capture_sql { result }
+
+    expect(queries.grep(/DISTINCT ON \(billing_operations.contract_rate_card_id\)/).size).to eq(1)
+    expect(result.invoices.sole.total_amount_cents).to eq(3100)
+  end
+
   it "atomically records billed coverage and advances the cursor without future operations" do
     expect(BillingOperation.count).to eq(1)
     invoice = result.invoices.sole

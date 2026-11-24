@@ -31,16 +31,15 @@ module BillingOperations
     attr_reader :customer, :timestamp, :attempted_operation_ids
 
     def process_due_operations
-      schedule_renewals_before_adjustments
+      adjustments_pending = schedule_renewals_before_adjustments
       process_invoice_groups(due_operations)
-      process_remaining_units_adjustments unless @processing_error
+      process_remaining_units_adjustments if adjustments_pending && !@processing_error
     end
 
     # One periodic obligation per card is processed per run. Units adjustments can follow
     # that renewal in the same run, since they need its completed prepaid coverage.
     def process_remaining_units_adjustments
-      loop do
-        schedule_renewals_before_adjustments
+      while schedule_renewals_before_adjustments
         adjustments = due_operations.select do |operation|
           units_adjustment?(operation) && attempted_operation_ids.exclude?(operation.id)
         end
@@ -70,6 +69,9 @@ module BillingOperations
       # renewal first, so the adjustment sees its prepaid coverage rather than buying it twice.
       if customer.billing_operations.pending.where(action_type: "adjust_fixed_advance", billing_at: ..timestamp).exists?
         ScheduleService.call!(customer:, timestamp:)
+        true
+      else
+        false
       end
     end
 
@@ -279,7 +281,7 @@ module BillingOperations
       resolutions.each do |operation, resolution|
         attributes = {processed_at: timestamp}
         if operation.contract_rate_card.product.fixed?
-          attributes[:pricing_segments] = resolution.segments.map(&:attributes)
+          attributes[:pricing_segments] = resolution.segments.map(&:as_json)
         end
         operation.update!(attributes)
         advance_periodic_cursor(operation, resolution) unless units_adjustment?(operation)

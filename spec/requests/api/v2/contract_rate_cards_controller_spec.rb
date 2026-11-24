@@ -9,8 +9,8 @@ RSpec.describe Api::V2::ContractRateCardsController do
   let(:rate_card) { create(:rate_card, organization:, currency: "EUR") }
   let(:flat_keys) do
     %i[
-      lago_id external_contract_id rate_card_code units effective_date billing_anchor_date next_billing_at
-      created_at updated_at deleted_at
+      lago_id external_contract_id rate_card_code units scheduled_units effective_date billing_anchor_date next_billing_at
+      created_at updated_at deleted_at scheduled_units_effective_at
     ]
   end
 
@@ -246,6 +246,44 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(contract_rate_card.reload.terms.sole.units).to eq(42)
+    end
+
+    context "when scheduling an active contract's units change" do
+      subject do
+        put_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}",
+          {applied_rate_card: {units: "5", apply_units: "next_billing_period"}})
+      end
+
+      let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 9, 1)) }
+      let(:rate_card) { create(:rate_card, organization:, product: create(:product, :fixed, organization:), currency: "EUR") }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, units: 8,
+          effective_date: Date.new(2026, 9, 1), billing_anchor_date: Date.new(2026, 9, 1))
+      end
+
+      around { |example| travel_to(Time.utc(2026, 9, 15)) { example.run } }
+
+      before { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 1)) }
+
+      it "returns both the current and scheduled quantities" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:applied_rate_card]).to eq(
+          lago_id: contract_rate_card.id,
+          external_contract_id: contract.external_id,
+          rate_card_code: rate_card.code,
+          units: "8.0",
+          scheduled_units: "5.0",
+          scheduled_units_effective_at: "2026-10-01T00:00:00.000000Z",
+          effective_date: "2026-09-01",
+          billing_anchor_date: "2026-09-01",
+          next_billing_at: contract_rate_card.reload.next_billing_at.iso8601(6),
+          created_at: contract_rate_card.created_at.iso8601(6),
+          updated_at: contract_rate_card.updated_at.iso8601(6),
+          deleted_at: nil
+        )
+      end
     end
   end
 

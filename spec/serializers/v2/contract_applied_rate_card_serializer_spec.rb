@@ -33,6 +33,8 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
       external_contract_id: "contract_001",
       rate_card_code: "seats",
       units: BigDecimal("12.3456789012345678901"),
+      scheduled_units: nil,
+      scheduled_units_effective_at: nil,
       effective_date: "2026-10-01",
       billing_anchor_date: "2026-10-15",
       next_billing_at: "2026-10-15T00:00:00Z",
@@ -44,6 +46,39 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
 
   it "serializes the applied rate card, with a null deletion timestamp" do
     expect(payload).to eq(flat_payload)
+  end
+
+  context "with a future draft contract" do
+    let(:contract) { create(:contract, :draft, external_id: "contract_001", started_at: Time.utc(2026, 10, 1)) }
+
+    around { |example| travel_to(Time.utc(2026, 9, 1)) { example.run } }
+
+    it "returns the saved starting units" do
+      expect(payload).to eq(flat_payload)
+    end
+  end
+
+  context "with a scheduled units change" do
+    let(:timestamp) { Time.utc(2026, 11, 15) }
+
+    around { |example| travel_to(timestamp) { example.run } }
+
+    before do
+      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 5, effective_date: nil,
+        effective_at: Time.utc(2026, 12, 1), application_timing: :next_billing_cycle)
+    end
+
+    it "returns current units and the scheduled quantity and time" do
+      expect(payload).to eq(flat_payload.merge(scheduled_units: 5, scheduled_units_effective_at: "2026-12-01T00:00:00Z"))
+    end
+
+    context "when the scheduled change takes effect" do
+      let(:timestamp) { Time.utc(2026, 12, 1) }
+
+      it "returns the new current units without a scheduled change" do
+        expect(payload).to eq(flat_payload.merge(units: 5))
+      end
+    end
   end
 
   context "when multiple units rows exist" do

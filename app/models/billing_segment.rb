@@ -80,6 +80,12 @@ class BillingSegment
     ATTRIBUTES.index_with { |name| public_send(name) }
   end
 
+  def as_json(options = nil)
+    attributes.merge(%w[started_at ended_at cycle_started_at billing_at].index_with do |name|
+      public_send(name)&.iso8601(6)
+    end).as_json(options)
+  end
+
   def rate
     rate_override || rate_card_rate
   end

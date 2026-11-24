@@ -2,7 +2,7 @@
 
 module ContractRateCards
   class UnitsAtService < BaseService
-    Result = BaseResult[:units]
+    Result = BaseResult[:units, :scheduled_term]
 
     def initialize(contract_rate_card:, timestamp:)
       @contract_rate_card = contract_rate_card
@@ -14,6 +14,8 @@ module ContractRateCards
       term = contract_rate_card.terms.select { it.starts_at <= timestamp }
         .max_by { [it.starts_at, it.created_at, it.id] }
       result.units = term&.units
+      result.scheduled_term = contract_rate_card.terms.select { it.next_billing_cycle? && it.starts_at > timestamp }
+        .min_by { [it.starts_at, it.created_at, it.id] }
       result
     end
 

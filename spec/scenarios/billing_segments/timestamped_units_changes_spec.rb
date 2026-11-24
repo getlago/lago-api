@@ -17,10 +17,12 @@ describe "Billing timestamped contract units changes" do
   end
   let(:rate_model) { "standard" }
   let(:rate_properties) { {"amount" => "30"} }
+  let(:future_rate) { nil }
 
   before do
     stub_pdf_generation
     create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 1), rate_model:, rate_properties:)
+    future_rate
     contract_rate_card
     travel_to(Time.utc(2026, 9, 1)) do
       perform_enqueued_jobs { Clock::ActivateContractsJob.perform_now }
@@ -68,6 +70,17 @@ describe "Billing timestamped contract units changes" do
     expect(contract_rate_card.reload.terms.count).to eq(2)
   end
 
+  it "preserves a scheduled change when units change immediately" do
+    change_units(5, at: Time.utc(2026, 9, 10), mode: "next_billing_period")
+    change_units(10, at: Time.utc(2026, 9, 20))
+    bill_at(Time.utc(2026, 10, 1))
+    bill_at(Time.utc(2026, 11, 1))
+
+    expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([26_200, 15_000])
+    # September: (8 × 19/30 + 10 × 11/30) × 3000; October: scheduled 5 × 3000.
+    expect(contract_rate_card.reload.terms.find_by!(effective_at: Time.utc(2026, 10, 1)).units).to eq(5)
+  end
+
   context "with graduated pricing" do
     let(:rate_model) { "graduated" }
     let(:rate_properties) do
@@ -87,6 +100,26 @@ describe "Billing timestamped contract units changes" do
 
   context "when paid in advance" do
     let(:timing) { "advance" }
+
+    context "with a rate change inside the period" do
+      let(:future_rate) do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 20),
+          rate_properties: {"amount" => "60"})
+      end
+
+      it "prices additional units at each rate without charging the same coverage twice" do
+        change_units(10, at: Time.utc(2026, 9, 10))
+
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 9, 20))
+        bill_at(Time.utc(2026, 9, 20))
+        bill_at(Time.utc(2026, 9, 20, 1))
+
+        expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([15_200, 2_000, 22_000])
+        # First coverage: 8 × 3000 × 19/30; increase: 2 × 3000 × 10/30; later coverage: 10 × 6000 × 11/30.
+        expect(contract_rate_card.billing_operations.find_by!(action_type: "adjust_fixed_advance")
+          .pricing_segments.sole.fetch("ended_at")).to eq("2026-09-19T23:59:59.999999Z")
+      end
+    end
 
     it "does not charge again for 8 to 5 to 8" do
       original_cursor = contract_rate_card.reload.next_billing_at
@@ -132,6 +165,15 @@ describe "Billing timestamped contract units changes" do
       expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([24_000, 30_000])
     end
 
+    it "keeps scheduled units after an immediate increase" do
+      change_units(5, at: Time.utc(2026, 9, 10), mode: "next_billing_period")
+      change_units(10, at: Time.utc(2026, 9, 20))
+      bill_at(Time.utc(2026, 10, 1))
+
+      expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([24_000, 2_200, 15_000])
+      # September: 8 × 3000 plus 2 × 3000 × 11/30; October: scheduled 5 × 3000.
+    end
+
     it "completes an unprocessed renewal before calculating the adjustment" do
       change_units(10, at: Time.utc(2026, 10, 1, 12))
       bill_at(Time.utc(2026, 10, 1, 13))
@@ -152,6 +194,22 @@ describe "Billing timestamped contract units changes" do
 
     context "with an invoice grace period" do
       let(:grace_period) { 3 }
+
+      it "retains exact adjustment boundaries when a draft is refreshed" do
+        change_units(10, at: Time.utc(2026, 9, 16, 12, 0, 0, 123456))
+        invoice = contract_rate_card.billing_operations.find_by!(action_type: "adjust_fixed_advance").invoice
+        properties = invoice.fees.sole.properties
+
+        expect(properties.slice("from_datetime", "to_datetime")).to eq(
+          "from_datetime" => "2026-09-16T12:00:00.123456Z",
+          "to_datetime" => "2026-09-30T23:59:59.999999Z"
+        )
+        put_with_token(organization, "/api/v2/invoices/#{invoice.id}/refresh", {})
+
+        expect(response).to have_http_status(:success)
+        expect(invoice.reload.fees.sole.properties).to eq(properties)
+        expect(invoice.total_amount_cents).to eq(2_900) # 2 × 3000 × (14.5 days minus 0.123456 seconds)/30 days, rounded once.
+      end
 
       it "preserves the original renewal when its draft is refreshed after a decrease" do
         change_units(5, at: Time.utc(2026, 9, 2, 12))

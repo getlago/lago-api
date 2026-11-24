@@ -538,6 +538,7 @@ RSpec.describe Contracts::CurrentUsageService do
           units: 4, effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
         create(:rate_card_rate, organization:, rate_card: second_rate_card,
           effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "10"})
+        allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_call_original
       end
 
       it "loads all card units in one query" do
@@ -548,6 +549,11 @@ RSpec.describe Contracts::CurrentUsageService do
 
         expect(result.rate_card_usages.size).to eq(2)
         expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
+      end
+
+      it "builds each card's schedule once" do
+        expect(result.rate_card_usages.size).to eq(2)
+        expect(Billing::RateCards::BuildScheduleService).to have_received(:call!).twice
       end
     end
   end

@@ -21,6 +21,7 @@ RSpec.describe Webhooks::ContractRateCards::UpdatedService do
     )
   end
   let(:phase) { create(:rate_phase, :contract_level, contract_rate_card:, code: "monthly", position: 1) }
+  let(:scheduled_at) { Time.current.beginning_of_month + 1.month }
 
   before do
     allow(organization).to receive(:product_catalog_enabled?).and_return(true)
@@ -31,6 +32,8 @@ RSpec.describe Webhooks::ContractRateCards::UpdatedService do
       next_billing_at: Time.zone.parse("2026-03-06T07:08:09Z"),
       billing_anchor_date: Date.new(2026, 2, 5)
     )
+    create(:contract_rate_card_term, organization:, contract_rate_card:, units: 7, effective_date: nil,
+      effective_at: scheduled_at, application_timing: :next_billing_cycle)
   end
 
   describe ".call" do
@@ -46,6 +49,8 @@ RSpec.describe Webhooks::ContractRateCards::UpdatedService do
           "external_contract_id" => "contract-123",
           "rate_card_code" => "api_usage",
           "units" => "4.0",
+          "scheduled_units" => "7.0",
+          "scheduled_units_effective_at" => scheduled_at.iso8601,
           "effective_date" => "2026-02-04",
           "billing_anchor_date" => "2026-02-05",
           "next_billing_at" => "2026-03-06T07:08:09Z",

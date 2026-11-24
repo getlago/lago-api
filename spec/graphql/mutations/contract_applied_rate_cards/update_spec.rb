@@ -26,6 +26,8 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
         updateContractAppliedRateCard(input: $input) {
           id
           units
+          scheduledUnits
+          scheduledUnitsEffectiveAt
           billingAnchorDate
           nextBillingAt
         }
@@ -123,6 +125,17 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
         expect(execution.dig("data", "updateContractAppliedRateCard", "units")).to eq(8.0)
         expect(contract_rate_card.reload.terms.find_by(effective_at: Time.current)).to have_attributes(units: 8)
         expect(contract_rate_card.terms.first.units).to eq(5)
+      end
+    end
+
+    context "when applying at the next billing period" do
+      let(:input) { {id: contract_rate_card.id, units: 8, applyUnits: "next_billing_period"} }
+
+      around { |example| travel_to(Time.utc(2026, 9, 15)) { example.run } }
+
+      it "returns current units and the accepted scheduled change" do
+        expect(execution.dig("data", "updateContractAppliedRateCard").slice("units", "scheduledUnits", "scheduledUnitsEffectiveAt"))
+          .to eq("units" => 5.0, "scheduledUnits" => 8.0, "scheduledUnitsEffectiveAt" => "2026-10-01T00:00:00Z")
       end
     end
   end

@@ -94,6 +94,15 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
       expect(result.segments.sole).to have_attributes(units: 10, prepaid_units: 8)
     end
 
+    it "queries only matching advance fees on the legacy path" do
+      queries = capture_sql { result }
+      fee_queries = queries.grep(/FROM "fees"/)
+
+      expect(fee_queries.size).to eq(1)
+      expect(fee_queries.sole).to include('"fees"."organization_id" =', '"fees"."contract_rate_card_id" =', '"fees"."pay_in_advance" =')
+      expect(result.segments.sole.prepaid_units).to eq(8)
+    end
+
     context "with saved pricing inputs" do
       let(:pricing_segments) do
         [{"started_at" => cycle.started_at.iso8601(6), "ended_at" => cycle.ended_at.iso8601(6), "units" => "9.0"}]
@@ -101,6 +110,13 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
 
       it "uses the saved coverage instead of reconstructing it from fees" do
         expect(result.segments.sole).to have_attributes(units: 10, prepaid_units: 9)
+      end
+
+      it "does not load invoice fees when pricing inputs were saved" do
+        queries = capture_sql { result }
+
+        expect(queries.grep(/FROM "fees"/)).to be_empty
+        expect(result.segments.sole.prepaid_units).to eq(9)
       end
     end
 

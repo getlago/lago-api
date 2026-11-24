@@ -46,4 +46,27 @@ RSpec.describe ContractRateCards::UnitsAtService do
       expect(queries.grep(/FROM "contract_rate_cards_terms"/i)).to be_empty
     end
   end
+
+  context "with a scheduled units change" do
+    let(:scheduled_at) { Time.utc(2026, 10, 1, 4) }
+
+    before do
+      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 12, effective_date: nil,
+        effective_at: scheduled_at, application_timing: :next_billing_cycle)
+    end
+
+    it "returns the scheduled quantity without applying it early" do
+      expect(result.units).to eq(5)
+      expect(result.scheduled_term).to have_attributes(units: 12, effective_at: scheduled_at)
+    end
+
+    context "when the scheduled instant is reached" do
+      let(:timestamp) { scheduled_at }
+
+      it "returns the scheduled quantity as current and no future change" do
+        expect(result.units).to eq(12)
+        expect(result.scheduled_term).to be_nil
+      end
+    end
+  end
 end
