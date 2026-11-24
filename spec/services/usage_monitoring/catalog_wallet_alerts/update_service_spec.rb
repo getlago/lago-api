@@ -282,12 +282,12 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
               end
             end
           end
-          Timeout.timeout(10) { locked.pop }
-
-          editor = Thread.new do
-            ApplicationRecord.connection_pool.with_connection { described_class.call(alert: UsageMonitoring::CatalogWalletAlert.find(alert.id), params:) }
-          end
           begin
+            Timeout.timeout(10) { locked.pop }
+
+            editor = Thread.new do
+              ApplicationRecord.connection_pool.with_connection { described_class.call(alert: UsageMonitoring::CatalogWalletAlert.find(alert.id), params:) }
+            end
             Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? }
           ensure
             release << true

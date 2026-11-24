@@ -305,9 +305,9 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
 
         create = ->(alert_params) { Thread.new { ApplicationRecord.connection_pool.with_connection { described_class.call(catalog_wallet: CatalogWallet.find(wallet_id), params: alert_params) } } }
         first = create.call(params)
-        Timeout.timeout(10) { arrived.pop }
-        second = create.call(ongoing_params)
         begin
+          Timeout.timeout(10) { arrived.pop }
+          second = create.call(ongoing_params)
           # The second create either waits for the wallet or reaches its baseline sharing it with the first
           Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? || arrived.size.positive? }
         ensure
