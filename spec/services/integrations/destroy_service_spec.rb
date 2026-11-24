@@ -60,6 +60,20 @@ RSpec.describe Integrations::DestroyService do
           expect(Integrations::BaseIntegration.exists?(integration.id)).to be(false)
           expect(WebMock).to have_requested(:delete, connection_url).once
         end
+
+        it_behaves_like "produces a security log", "integration.deleted" do
+          before { destroy_service.call }
+        end
+      end
+
+      it "does not delete the Nango connection when the surrounding transaction rolls back" do
+        ActiveRecord::Base.transaction(requires_new: true) do
+          destroy_service.call
+          raise ActiveRecord::Rollback
+        end
+
+        expect(a_request(:delete, /api\.nango\.dev/)).not_to have_been_made
+        expect(Integrations::BaseIntegration.exists?(integration.id)).to be(true)
       end
 
       context "when another QuickBooks integration shares the connection" do
