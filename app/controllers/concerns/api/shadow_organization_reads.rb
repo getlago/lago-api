@@ -22,8 +22,13 @@ module Api
       return forbidden_error(code: "organization_migration_read_only") unless read_request?
       return unless migration.serves_v2_reads?(BillingEngineMigration.v2_endpoint(controller_path))
 
+      @api_key_organization = current_organization
       @current_organization = Organization.find(migration.shadow_organization_id)
       response.set_header(SERVED_FROM_HEADER, "shadow_organization")
+    end
+
+    def api_log_organization
+      @api_key_organization || super
     end
 
     def read_request?

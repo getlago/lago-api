@@ -80,6 +80,15 @@ RSpec.describe Api::ShadowOrganizationReads, type: :request do
       expect(response).to have_http_status(:success)
       expect(served_from).to eq("shadow_organization")
     end
+
+    it "logs the request on the v1 organization" do
+      allow(Utils::ApiLog).to receive(:produce)
+      headers = {}
+      set_headers(organization, headers)
+      head("/api/v2/contracts/subscription-1", headers:)
+
+      expect(Utils::ApiLog).to have_received(:produce).with(anything, anything, hash_including(organization:))
+    end
   end
 
   context "with a read-only POST on an endpoint the migration opens" do
@@ -93,6 +102,14 @@ RSpec.describe Api::ShadowOrganizationReads, type: :request do
 
       expect(json[:code]).not_to eq("organization_migration_read_only")
       expect(served_from).to eq("shadow_organization")
+    end
+
+    it "logs the request on the v1 organization" do
+      allow(Utils::ApiLog).to receive(:produce)
+
+      post_with_token(organization, "/api/v2/credit_notes/estimate", {credit_note: {invoice_id: shadow_invoice.id, items: []}})
+
+      expect(Utils::ApiLog).to have_received(:produce).with(anything, anything, hash_including(organization:))
     end
 
     it "does not find an invoice of the v1 organization" do
