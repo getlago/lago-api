@@ -160,6 +160,23 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
       end
     end
 
+    context "when progressive billing could not build the usage" do
+      let(:premium_integrations) { %w[progressive_billing] }
+
+      before do
+        allow(::Invoices::CustomerUsageService).to receive(:call)
+          .and_return(Invoices::CustomerUsageService::Result.new.service_failure!(code: "usage_failure", message: "unreachable"))
+        allow(::UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to receive(:call)
+      end
+
+      it "lets the alerts build their own usage" do
+        service.call
+
+        expect(::UsageMonitoring::EvaluateSubscriptionUsageAlertsService).to have_received(:call)
+          .with(hash_including(full_plan_usage: nil))
+      end
+    end
+
     context "when alerting fail" do
       it "deletes subscription_activity before raising" do
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call).and_raise(StandardError, "boom")

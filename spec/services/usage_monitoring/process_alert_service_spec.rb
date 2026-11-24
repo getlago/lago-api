@@ -559,7 +559,8 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
         it "evaluates it" do
           expect(result).to be_success
-          expect(alert.reload.previous_value).to eq(25)
+          expect(alert.all_triggered_alerts.count).to eq(1)
+          expect(alert.reload).to have_attributes(previous_value: 25, last_processed_at: now - 10.seconds)
         end
       end
     end
@@ -598,6 +599,15 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
         expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
         expect(triggered.previous_value).to eq(0)
+      end
+
+      it "dates a new period usage measured just before the renewal at the period start" do
+        described_class.call(alert:, alertable: subscription, current_metrics: new_period_usage, measured_at: period_start - 1.second)
+        next_usage = instance_double(SubscriptionUsage, amount_cents: 16, from_datetime: period_start.iso8601, to_datetime: period_end)
+        described_class.call(alert:, alertable: subscription, current_metrics: next_usage, measured_at: period_start + 30.seconds)
+
+        expect(alert.all_triggered_alerts.sole.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+        expect(alert.reload).to have_attributes(previous_value: 16, last_processed_at: period_start + 30.seconds)
       end
 
       # Accepted gap: last_processed_at is capped to the old period's end, so it cannot order usages measured after it.

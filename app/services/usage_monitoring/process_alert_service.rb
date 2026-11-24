@@ -82,10 +82,13 @@ module UsageMonitoring
 
     # NOTE: usage measured just before a renewal but processed after it still belongs to the old period. Stamping it
     # with the clock time would place it in the new period, and the first evaluation there would miss the rollover.
-    # The measurement time, when given, is what stale_usage? compares the next usage with.
+    # The measurement time, when given, is what stale_usage? compares the next usage with. It is read just before
+    # the usage picks its period, so it can fall before a period that just opened: kept at its start for the rollover.
     def processed_at(now)
       time = measured_at || now
       return time unless Alert::CURRENT_USAGE_TYPES.include?(alert.alert_type)
+
+      time = [time, Time.zone.parse(current_metrics.from_datetime.to_s)].max if measured_at && current_metrics.from_datetime.present?
       return time if current_metrics.to_datetime.blank?
 
       [time, Time.zone.parse(current_metrics.to_datetime.to_s)].min
