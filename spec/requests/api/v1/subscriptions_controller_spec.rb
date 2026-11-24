@@ -518,6 +518,40 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           )
         end
 
+        context "with a currency that Stripe reads in hundredths" do
+          let(:body) do
+            {
+              authorization: {amount_cents: "50000", amount_currency: "HUF"},
+              subscription: params
+            }
+          end
+          let(:stripe_pi) do
+            {
+              id: "pi_12345",
+              object: "payment_intent",
+              amount: 5_000_000,
+              amount_capturable: 5_000_000,
+              currency: "huf",
+              status: "requires_capture"
+            }
+          end
+
+          it "sends Stripe the amount in hundredths and returns it in Lago units" do
+            subject
+
+            expect(response).to have_http_status(:ok)
+            expect(WebMock).to have_requested(:post, "https://api.stripe.com/v1/payment_intents")
+              .with(body: hash_including("amount" => "5000000", "currency" => "huf")) # 50,000 HUF * 100
+            expect(json[:authorization]).to eq(
+              id: "pi_12345",
+              object: "payment_intent",
+              amount: 50_000, # 5,000,000 hundredths / 100
+              amount_capturable: 50_000,
+              status: "requires_capture"
+            )
+          end
+        end
+
         context "when parameters are incorrect" do
           let(:body) do
             {
