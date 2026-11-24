@@ -4,9 +4,9 @@ require "rails_helper"
 
 require "rake"
 
-RSpec.describe "billing_engine_migrations:parity" do # rubocop:disable RSpec/DescribeClass
+RSpec.describe "billing_engine_migrations:parity", clickhouse: {clean_before: true} do # rubocop:disable RSpec/DescribeClass
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:shadow_organization) { create(:shadow_organization) }
+  let_it_be(:shadow_organization) { create(:shadow_organization, clickhouse_events_store: true) }
   let_it_be(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
   let_it_be(:shadow_customer) do
     create(:customer, organization: shadow_organization, external_id: customer.external_id, timezone: "UTC", currency: "EUR")
@@ -41,8 +41,14 @@ RSpec.describe "billing_engine_migrations:parity" do # rubocop:disable RSpec/Des
   end
 
   def send_event(event_organization, external_subscription_id, code: "api_calls")
-    create(:event, organization_id: event_organization.id, external_subscription_id:, code:,
-      timestamp: Time.zone.parse("2027-02-05"))
+    timestamp = Time.zone.parse("2027-02-05")
+
+    if event_organization.clickhouse_events_store?
+      create(:clickhouse_events_enriched, organization_id: event_organization.id, external_subscription_id:, code:,
+        timestamp:, value: "1", decimal_value: 1)
+    else
+      create(:event, organization_id: event_organization.id, external_subscription_id:, code:, timestamp:)
+    end
   end
 
   around { |example| travel_to(Time.zone.parse("2027-02-10 12:00:00")) { example.run } }
