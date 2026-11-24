@@ -122,7 +122,18 @@ RSpec.describe ::V1::CustomerSerializer do
 
   context "with a quickbooks link and a xero link" do
     let(:customer) { create(:customer) }
-    let(:quickbooks_customer) { create(:quickbooks_customer, customer:, external_customer_id: "58") }
+    let(:quickbooks_integration) { create(:quickbooks_integration, organization: customer.organization, code: "qb_main") }
+    let(:quickbooks_customer) do
+      create(
+        :quickbooks_customer,
+        customer:,
+        integration: quickbooks_integration,
+        external_customer_id: "58",
+        code: "qb_link",
+        is_default: true,
+        sync_with_provider: true
+      )
+    end
     let(:xero_customer) { create(:xero_customer, customer:) }
 
     before do
@@ -131,9 +142,18 @@ RSpec.describe ::V1::CustomerSerializer do
     end
 
     it "nests each link with its own type" do
-      expect(result["customer"]["integration_customers"]).to contain_exactly(
-        hash_including("lago_id" => quickbooks_customer.id, "external_customer_id" => "58", "type" => "quickbooks", "category" => "accounting"),
-        hash_including("lago_id" => xero_customer.id, "type" => "xero", "category" => "accounting")
+      links = result["customer"]["integration_customers"]
+
+      expect(links.pluck("type")).to contain_exactly("quickbooks", "xero")
+      expect(links.find { |link| link["type"] == "quickbooks" }).to eq(
+        "lago_id" => quickbooks_customer.id,
+        "external_customer_id" => "58",
+        "type" => "quickbooks",
+        "integration_code" => "qb_main",
+        "code" => "qb_link",
+        "is_default" => true,
+        "category" => "accounting",
+        "sync_with_provider" => true
       )
     end
   end
