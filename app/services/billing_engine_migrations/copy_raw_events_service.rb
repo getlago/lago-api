@@ -8,16 +8,6 @@ module BillingEngineMigrations
   class CopyRawEventsService < BaseService
     Result = BaseResult[:copied_count, :unmapped_count, :invalid_count, :replayed_count]
 
-    RawEvent = Data.define(
-      :external_customer_id,
-      :external_subscription_id,
-      :transaction_id,
-      :code,
-      :timestamp,
-      :precise_total_amount_cents,
-      :properties
-    )
-
     NUMERIC_TIMESTAMP = /\A\d+(\.\d+)?\z/
 
     def initialize(migrations:, raw_payloads:)
@@ -27,8 +17,6 @@ module BillingEngineMigrations
     end
 
     def call
-      return product_topic_missing_failure if ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].blank?
-
       result.copied_count = 0
       result.unmapped_count = 0
       result.invalid_count = 0
@@ -52,12 +40,11 @@ module BillingEngineMigrations
         .filter_map { build_event(it, migration) }
       return if events.empty?
 
-      mapped_ids = MappedSubscriptions.filter(migration, events.filter_map(&:external_subscription_id))
-      copies = events.select { mapped_ids.include?(it.external_subscription_id) }
-      produce(migration, copies) if copies.any?
+      copy_result = CopyEventsService.call(migration:, events:)
+      return result.fail_with_error!(copy_result.error) if copy_result.failure?
 
-      result.copied_count += copies.size
-      result.unmapped_count += events.size - copies.size
+      result.copied_count += copy_result.copied_count
+      result.unmapped_count += copy_result.unmapped_count
     end
 
     def build_event(raw_payload, migration)
@@ -69,7 +56,7 @@ module BillingEngineMigrations
       timestamp = parse_timestamp(payload["timestamp"])
       return count_invalid if timestamp.nil? || payload["transaction_id"].blank? || payload["code"].blank?
 
-      RawEvent.new(
+      CopyEventsService::Event.new(
         external_customer_id: payload["external_customer_id"],
         external_subscription_id: payload["external_subscription_id"],
         transaction_id: payload["transaction_id"],
@@ -102,13 +89,6 @@ module BillingEngineMigrations
       nil
     end
 
-    def produce(migration, events)
-      shadow_organization = Organization.find(migration.shadow_organization_id)
-      return shadow_organization_store_failure unless shadow_organization.clickhouse_events_store?
-
-      Events::KafkaProducerService.call!(events:, organization: shadow_organization, catalog_events: true, sync: true)
-    end
-
     def count_invalid
       result.invalid_count += 1
       nil
@@ -117,20 +97,6 @@ module BillingEngineMigrations
     def count_replayed
       result.replayed_count += 1
       nil
-    end
-
-    def shadow_organization_store_failure
-      result.service_failure!(
-        code: "shadow_organization_not_on_clickhouse_events_store",
-        message: "The shadow organization reads its usage from PostgreSQL, events copied from the raw topic would not reach it"
-      )
-    end
-
-    def product_topic_missing_failure
-      result.service_failure!(
-        code: "product_raw_events_topic_missing",
-        message: "LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC is not set, events cannot be copied to the shadow organization"
-      )
     end
   end
 end
