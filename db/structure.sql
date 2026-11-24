@@ -1604,11 +1604,8 @@ DROP TABLE IF EXISTS public.rate_phases;
 DROP VIEW IF EXISTS public.exports_rate_overrides;
 DROP TABLE IF EXISTS public.rate_overrides;
 DROP VIEW IF EXISTS public.exports_rate_cards;
-DROP TABLE IF EXISTS public.rate_cards;
 DROP VIEW IF EXISTS public.exports_rate_card_rates;
-DROP TABLE IF EXISTS public.rate_card_rates;
 DROP VIEW IF EXISTS public.exports_products;
-DROP TABLE IF EXISTS public.products;
 DROP VIEW IF EXISTS public.exports_product_filters;
 DROP TABLE IF EXISTS public.product_filters;
 DROP TABLE IF EXISTS public.product_filter_values;
@@ -1638,6 +1635,9 @@ DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
+DROP TABLE IF EXISTS public.rate_cards;
+DROP TABLE IF EXISTS public.rate_card_rates;
+DROP TABLE IF EXISTS public.products;
 DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.fixed_charges;
@@ -4917,6 +4917,75 @@ CREATE TABLE public.plans (
 
 
 --
+-- Name: products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.products (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_category_id uuid,
+    billable_metric_id uuid,
+    add_on_id uuid,
+    charge_id uuid,
+    product_type public.product_type NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    invoice_display_name character varying,
+    description text,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: rate_card_rates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_card_rates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    rate_card_id uuid NOT NULL,
+    code character varying NOT NULL,
+    effective_from timestamp(6) without time zone NOT NULL,
+    rate_model public.rate_card_rate_model NOT NULL,
+    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    min_amount_cents bigint DEFAULT 0 NOT NULL,
+    billing_interval_count integer DEFAULT 1 NOT NULL,
+    billing_interval_unit public.rate_card_rate_billing_interval_unit NOT NULL,
+    applied_pricing_unit_conversion_rate numeric(30,10),
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT rate_card_rates_billing_interval_count_positive CHECK ((billing_interval_count >= 1))
+);
+
+
+--
+-- Name: rate_cards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rate_cards (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    product_filter_id uuid,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    description character varying,
+    currency character varying NOT NULL,
+    billing_timing public.rate_card_billing_timing DEFAULT 'arrears'::public.rate_card_billing_timing NOT NULL,
+    proration boolean DEFAULT false NOT NULL,
+    display_on_invoice boolean DEFAULT true NOT NULL,
+    regroup_paid_fees public.rate_card_regroup_paid_fees,
+    applied_pricing_unit_code character varying,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4970,7 +5039,7 @@ CREATE VIEW public.exports_fees AS
     f.charge_filter_id AS lago_charge_filter_id,
     f.invoice_id AS lago_invoice_id,
     f.subscription_id AS lago_subscription_id,
-    c.id AS lago_customer_id,
+    COALESCE(c.id, ct.customer_id) AS lago_customer_id,
     json_build_object('type',
         CASE f.fee_type
             WHEN 0 THEN 'charge'::text
@@ -4979,6 +5048,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN 'credit'::text
             WHEN 4 THEN 'commitment'::text
             WHEN 5 THEN 'fixed_charge'::text
+            WHEN 6 THEN 'product'::text
             ELSE 'unknown'::text
         END, 'code',
         CASE f.fee_type
@@ -4986,6 +5056,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN ao.code
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.code
+            WHEN 6 THEN pr.code
             ELSE p.code
         END, 'name',
         CASE f.fee_type
@@ -4993,6 +5064,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN ao.name
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.name
+            WHEN 6 THEN pr.name
             ELSE p.name
         END, 'description',
         CASE f.fee_type
@@ -5000,6 +5072,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN ao.description
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.description
+            WHEN 6 THEN (pr.description)::character varying
             ELSE p.description
         END, 'invoice_display_name', COALESCE(f.invoice_display_name,
         CASE f.fee_type
@@ -5007,6 +5080,11 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN COALESCE(ao.invoice_display_name, ao.name)
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN COALESCE(fc.invoice_display_name, fao.invoice_display_name, fao.name)
+            WHEN 6 THEN COALESCE(
+            CASE
+                WHEN ((pr.invoice_display_name)::text !~ '^[[:space:]]*$'::text) THEN pr.invoice_display_name
+                ELSE NULL::character varying
+            END, pr.name)
             ELSE p.invoice_display_name
         END), 'filters', ( SELECT json_agg(json_build_object('id', cf.id, 'charge_id', cf.charge_id, 'properties', cf.properties, 'invoice_display_name', cf.invoice_display_name)) AS json_agg
            FROM public.charge_filters cf
@@ -5016,6 +5094,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN ao.id
             WHEN 3 THEN f.invoiceable_id
             WHEN 5 THEN fao.id
+            WHEN 6 THEN pr.id
             ELSE f.subscription_id
         END, 'item_type',
         CASE f.fee_type
@@ -5023,11 +5102,15 @@ CREATE VIEW public.exports_fees AS
             WHEN 1 THEN 'add_on'::text
             WHEN 3 THEN 'wallet_transaction'::text
             WHEN 5 THEN 'add_on'::text
+            WHEN 6 THEN 'product'::text
             ELSE 'subscription'::text
         END, 'grouped_by', f.grouped_by) AS item,
     f.pay_in_advance,
     f.amount_cents,
-    ch.invoiceable,
+        CASE f.fee_type
+            WHEN 6 THEN rc.display_on_invoice
+            ELSE ch.invoiceable
+        END AS invoiceable,
     f.taxes_amount_cents,
     f.taxes_precise_amount_cents,
     f.taxes_rate,
@@ -5063,8 +5146,14 @@ CREATE VIEW public.exports_fees AS
             WHEN 0 THEN (((f.properties ->> 'charges_to_datetime'::text))::timestamp with time zone)::text
             WHEN 5 THEN (((f.properties ->> 'fixed_charges_to_datetime'::text))::timestamp with time zone)::text
             ELSE (((f.properties ->> 'to_datetime'::text))::timestamp with time zone)::text
-        END AS to_date
-   FROM (((((((((public.fees f
+        END AS to_date,
+    f.contract_id AS lago_contract_id,
+    f.contract_rate_card_id AS lago_contract_rate_card_id,
+    f.rate_card_rate_id AS lago_rate_card_rate_id,
+    f.product_filter_id AS lago_product_filter_id,
+    rc.product_id AS lago_product_id,
+    f.rate_override_id AS lago_rate_override_id
+   FROM (((((((((((((public.fees f
      LEFT JOIN public.subscriptions s ON ((f.subscription_id = s.id)))
      LEFT JOIN public.customers c ON ((s.customer_id = c.id)))
      LEFT JOIN public.charges ch ON ((f.charge_id = ch.id)))
@@ -5073,6 +5162,10 @@ CREATE VIEW public.exports_fees AS
      LEFT JOIN public.fixed_charges fc ON ((f.fixed_charge_id = fc.id)))
      LEFT JOIN public.add_ons fao ON ((fc.add_on_id = fao.id)))
      LEFT JOIN public.plans p ON ((s.plan_id = p.id)))
+     LEFT JOIN public.contracts ct ON ((f.contract_id = ct.id)))
+     LEFT JOIN public.rate_card_rates rcr ON ((f.rate_card_rate_id = rcr.id)))
+     LEFT JOIN public.rate_cards rc ON ((rcr.rate_card_id = rc.id)))
+     LEFT JOIN public.products pr ON ((rc.product_id = pr.id)))
      LEFT JOIN public.invoices i ON ((i.id = f.invoice_id)))
   WHERE (i.status IS DISTINCT FROM 8);
 
@@ -5681,28 +5774,6 @@ CREATE VIEW public.exports_product_filters AS
 
 
 --
--- Name: products; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.products (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_category_id uuid,
-    billable_metric_id uuid,
-    add_on_id uuid,
-    charge_id uuid,
-    product_type public.product_type NOT NULL,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    invoice_display_name character varying,
-    description text,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
 -- Name: exports_products; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -5725,29 +5796,6 @@ CREATE VIEW public.exports_products AS
 
 
 --
--- Name: rate_card_rates; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_card_rates (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    rate_card_id uuid NOT NULL,
-    code character varying NOT NULL,
-    effective_from timestamp(6) without time zone NOT NULL,
-    rate_model public.rate_card_rate_model NOT NULL,
-    rate_properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    min_amount_cents bigint DEFAULT 0 NOT NULL,
-    billing_interval_count integer DEFAULT 1 NOT NULL,
-    billing_interval_unit public.rate_card_rate_billing_interval_unit NOT NULL,
-    applied_pricing_unit_conversion_rate numeric(30,10),
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT rate_card_rates_billing_interval_count_positive CHECK ((billing_interval_count >= 1))
-);
-
-
---
 -- Name: exports_rate_card_rates; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -5767,30 +5815,6 @@ CREATE VIEW public.exports_rate_card_rates AS
     rcr.updated_at,
     rcr.deleted_at
    FROM public.rate_card_rates rcr;
-
-
---
--- Name: rate_cards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.rate_cards (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    product_id uuid NOT NULL,
-    product_filter_id uuid,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    description character varying,
-    currency character varying NOT NULL,
-    billing_timing public.rate_card_billing_timing DEFAULT 'arrears'::public.rate_card_billing_timing NOT NULL,
-    proration boolean DEFAULT false NOT NULL,
-    display_on_invoice boolean DEFAULT true NOT NULL,
-    regroup_paid_fees public.rate_card_regroup_paid_fees,
-    applied_pricing_unit_code character varying,
-    deleted_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
 
 
 --
@@ -18886,6 +18910,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261123142145'),
 ('20261123142142'),
 ('20261123142140'),
+('20261123132341'),
 ('20261123112950'),
 ('20261123112949'),
 ('20261123100000'),
