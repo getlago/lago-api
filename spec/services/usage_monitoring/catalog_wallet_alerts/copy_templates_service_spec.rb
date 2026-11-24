@@ -54,13 +54,28 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
 
     before { create(:catalog_wallet_alert_threshold, :template, organization:, plan_wallet_alert: ongoing_template, code: "empty", value: 0) }
 
-    it "copies each one with its own thresholds" do
-      expect(result.alerts.map(&:code)).to contain_exactly("low_balance", "low_ongoing_balance")
+    it "copies each one with its own thresholds, in the templates' order" do
+      expect(result.alerts.map(&:code)).to eq(%w[low_balance low_ongoing_balance])
+      expect(catalog_wallet.alerts.order(:created_at).pluck(:code)).to eq(%w[low_balance low_ongoing_balance])
 
       alerts = catalog_wallet.alerts.index_by(&:alert_type)
       expect(alerts.fetch("balance").thresholds.pluck(:value)).to contain_exactly(2_000, 10_000)
       expect(alerts.fetch("ongoing_balance")).to have_attributes(code: "low_ongoing_balance", name: nil)
       expect(alerts.fetch("ongoing_balance").thresholds.pluck(:code, :value)).to eq([["empty", 0]])
+    end
+
+    # The copy runs under the customer's billing lock, so it holds it for one statement per table, not one per row
+    it "inserts the alerts in one statement and their thresholds in another" do
+      plan_wallet = load_plan_wallet
+      wallet = catalog_wallet
+      tables = []
+      subscriber = ->(*, payload) { tables << payload[:sql][/\AINSERT INTO "(\w+)"/, 1] if payload[:sql].start_with?("INSERT") }
+
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+        described_class.call!(plan_wallet:, catalog_wallet: wallet)
+      end
+
+      expect(tables).to eq(%w[usage_monitoring_catalog_wallet_alerts usage_monitoring_catalog_wallet_alert_thresholds])
     end
   end
 
