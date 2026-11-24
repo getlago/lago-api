@@ -14,7 +14,7 @@ RSpec.describe "Contract usage billing behavior" do
   let(:started_at) { Time.zone.parse("2026-10-06 00:00:00") }
   let(:boundary) { started_at + 1.month }
   let(:contract) do
-    create(:contract, organization:, customer:, started_at:, billing_time: :anniversary,
+    create(:contract, organization:, customer:, started_at:,
       billing_entity: customer.billing_entity)
   end
   let(:aggregation_type) { :sum_agg }

@@ -37,6 +37,33 @@ RSpec.describe Resolvers::OrganizationResolver do
     expect(data["city"]).to eq(organization.city)
   end
 
+  context "with walletRefreshEnabled" do
+    let(:query) { "query { organization { walletRefreshEnabled } }" }
+    let(:disable_wallet_refresh) { nil }
+
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("LAGO_REDIS_CACHE_URL").and_return("redis://cache:6379")
+      allow(ENV).to receive(:[]).with("LAGO_DISABLE_WALLET_REFRESH").and_return(disable_wallet_refresh)
+    end
+
+    it "answers true when the deployment refreshes wallets" do
+      result = execute_graphql(current_user: membership.user, current_organization: organization, query:, variables: {})
+
+      expect(result["data"]["organization"]["walletRefreshEnabled"]).to be(true)
+    end
+
+    context "when the refresh is disabled" do
+      let(:disable_wallet_refresh) { "true" }
+
+      it "answers false" do
+        result = execute_graphql(current_user: membership.user, current_organization: organization, query:, variables: {})
+
+        expect(result["data"]["organization"]["walletRefreshEnabled"]).to be(false)
+      end
+    end
+  end
+
   context "with an organization waiting for a payment method" do
     include_context "with self-serve enabled"
 

@@ -114,7 +114,6 @@ RSpec.describe Mutations::Contracts::Update do
           id: contract.id,
           name: "Renamed",
           planCode: catalog_plan.code,
-          billingTime: "calendar",
           startedAt: contract.started_at.iso8601,
           billingAnchorDate: contract.effective_billing_anchor_date.iso8601
         }
