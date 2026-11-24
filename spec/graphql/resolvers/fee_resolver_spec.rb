@@ -3,10 +3,21 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::FeeResolver do
+  subject(:result) do
+    execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query:,
+      variables:
+    )
+  end
+
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
   let(:required_permission) { "invoices:view" }
   let(:fee) { create(:charge_fee, organization:, units: 3, precise_unit_amount: 100) }
+  let(:variables) { {feeId: fee.id} }
 
   let(:query) do
     <<~GQL
@@ -25,14 +36,6 @@ RSpec.describe Resolvers::FeeResolver do
   it_behaves_like "requires permission", "invoices:view"
 
   it "returns the fee" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query:,
-      variables: {feeId: fee.id}
-    )
-
     fee_response = result["data"]["fee"]
 
     expect(fee_response["id"]).to eq(fee.id)
@@ -41,15 +44,9 @@ RSpec.describe Resolvers::FeeResolver do
   end
 
   context "when the fee does not exist" do
-    it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:,
-        variables: {feeId: "invalid"}
-      )
+    let(:variables) { {feeId: "invalid"} }
 
+    it "returns an error" do
       expect_graphql_error(result:, message: "Resource not found")
     end
   end
@@ -83,14 +80,6 @@ RSpec.describe Resolvers::FeeResolver do
     end
 
     it "returns the fee's stored period, matching Query.invoice" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:,
-        variables: {feeId: fee.id}
-      )
-
       expect(result["data"]["fee"]["properties"]).to eq(
         "fromDatetime" => "2026-08-05T00:00:00+00:00",
         "toDatetime" => "2026-08-05T00:00:00+00:00"
@@ -103,14 +92,15 @@ RSpec.describe Resolvers::FeeResolver do
     let(:fee) { create(:charge_fee, organization: other_organization) }
 
     it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:,
-        variables: {feeId: fee.id}
-      )
+      expect_graphql_error(result:, message: "Resource not found")
+    end
+  end
 
+  context "when the fee's invoice is not visible" do
+    let(:invoice) { create(:invoice, :deleted, organization:) }
+    let(:fee) { create(:charge_fee, organization:, invoice:) }
+
+    it "returns an error" do
       expect_graphql_error(result:, message: "Resource not found")
     end
   end

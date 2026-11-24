@@ -7416,8 +7416,8 @@ type Fee implements InvoiceItem {
   id: ID!
   invoiceDisplayName: String
   invoiceId: ID
+  invoiceIsRegeneration: Boolean!
   invoiceName: String
-  invoiceWasRegenerated: Boolean!
   itemCode: String!
   itemName: String!
   itemType: String!

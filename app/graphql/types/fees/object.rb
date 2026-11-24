@@ -20,8 +20,8 @@ module Types
       field :grouped_by, GraphQL::Types::JSON, null: false
       field :invoice_display_name, String, null: true
       field :invoice_id, ID, null: true
+      field :invoice_is_regeneration, Boolean, null: false
       field :invoice_name, String, null: true
-      field :invoice_was_regenerated, Boolean, null: false
       field :original_fee_id, ID, null: true
       field :subscription, Types::Subscriptions::Object, null: true
       field :true_up_fee, Types::Fees::Object, null: true
@@ -62,7 +62,7 @@ module Types
         object.invoiceable if object.credit?
       end
 
-      def invoice_was_regenerated
+      def invoice_is_regeneration
         dataloader.with(Sources::ActiveRecordAssociation, :invoice).load(object)&.voided_invoice_id.present?
       end
 

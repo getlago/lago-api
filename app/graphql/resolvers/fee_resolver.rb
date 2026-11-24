@@ -15,7 +15,7 @@ module Resolvers
 
     def resolve(id:)
       context.scoped_set!(:preserve_add_on_fee_period_dates, true)
-      current_organization.fees.find(id)
+      current_organization.fees.joins(:invoice).merge(Invoice.visible).find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "fee")
     end

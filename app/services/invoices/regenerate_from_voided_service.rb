@@ -216,7 +216,7 @@ module Invoices
         end
 
         adjusted_fee_params = {
-          invoice_display_name: fee_params[:invoice_display_name],
+          invoice_display_name: fee_params.key?(:invoice_display_name) ? fee_params[:invoice_display_name] : dup_fee&.invoice_display_name,
           units: fee_params[:units],
           charge_id: fee_params[:charge_id],
           charge_filter_id: fee_params[:charge_filter_id],

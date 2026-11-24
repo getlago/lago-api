@@ -562,6 +562,26 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "when invoice_display_name is omitted and the fee already has a custom name" do
+      let(:fees_params) do
+        [
+          {
+            id: original_fee.id,
+            subscription_id: subscription.id,
+            units: original_fee.units
+          }
+        ]
+      end
+
+      before { original_fee.update!(invoice_display_name: "old-custom-name") }
+
+      it "keeps the existing display name instead of clearing it" do
+        regenerated_fee = regenerate_result.invoice.fees.first
+
+        expect(regenerated_fee.invoice_display_name).to eq("old-custom-name")
+      end
+    end
+
     context "with updated units" do
       let(:fees_params) do
         [
