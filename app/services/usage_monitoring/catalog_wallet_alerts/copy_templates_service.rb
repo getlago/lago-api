@@ -40,7 +40,7 @@ module UsageMonitoring
       def insert_alerts(templates)
         now = Time.current
         rows = templates.each_with_index.map do |template, index|
-          created_at = now + (index / 1_000_000.0)
+          created_at = now + Rational(index, 1_000_000)
           {organization_id: organization.id, catalog_wallet_id: catalog_wallet.id, created_at:, updated_at: created_at, **template.attributes.slice(*ALERT_ATTRIBUTES)}
         end
 

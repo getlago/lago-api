@@ -64,6 +64,14 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CopyTemplatesService do
       expect(alerts.fetch("ongoing_balance").thresholds.pluck(:code, :value)).to eq([["empty", 0]])
     end
 
+    # A frozen clock sits on a whole second, where a float offset of one microsecond rounds down to the same timestamp
+    it "dates each copy apart on a frozen clock" do
+      freeze_time { result }
+
+      expect(catalog_wallet.alerts.distinct.count(:created_at)).to eq(2)
+      expect(catalog_wallet.alerts.order(:created_at).pluck(:code)).to eq(%w[low_balance low_ongoing_balance])
+    end
+
     # The copy runs under the customer's billing lock, so it holds it for one statement per table, not one per row
     it "inserts the alerts in one statement and their thresholds in another" do
       plan_wallet = load_plan_wallet
