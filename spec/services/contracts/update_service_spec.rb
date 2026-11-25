@@ -46,6 +46,19 @@ RSpec.describe Contracts::UpdateService do
     )
   end
 
+  ["draft", nil].each do |status|
+    context "with a #{status.inspect} status" do
+      let(:params) { {name: "Renamed", status:} }
+
+      it "refuses it without changing the contract or notifying" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(result.error.messages).to eq(status: ["value_is_invalid"])
+        expect(contract.reload.name).not_to eq("Renamed")
+      end
+    end
+  end
+
   context "when no serialized fields change" do
     let(:params) { {} }
 

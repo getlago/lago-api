@@ -777,6 +777,57 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "when the contract is a draft" do
+      let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.from_now) }
+      let(:update_params) { {name: "Renamed", started_at: 1.month.ago.iso8601} }
+
+      it "updates it and keeps it a draft, even with a start that has passed" do
+        expect { subject }.not_to change(BillingOperation, :count)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(name: "Renamed", status: "draft")
+      end
+
+      context "when changing the plan" do
+        let(:other_plan) { create(:catalog_plan, organization:) }
+        let(:rate_card) { create(:rate_card, organization:) }
+        let(:update_params) { {plan_code: other_plan.code} }
+
+        before { create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card:) }
+
+        it "materializes the new plan's rate cards on the draft" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:contract]).to include(plan_code: other_plan.code, status: "draft")
+          expect(contract.reload.applied_rate_cards.map(&:rate_card)).to eq([rate_card])
+        end
+      end
+    end
+
+    context "with a status" do
+      let(:update_params) { super().merge(status: "draft") }
+
+      it "refuses it without updating the contract" do
+        expect { subject }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "status", meta: {}}])
+        expect(contract.reload.name).not_to eq("Renamed")
+      end
+    end
+
+    context "with a non-scalar status" do
+      let(:update_params) { super().merge(status: ["draft"]) }
+
+      it "refuses it rather than ignoring it" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "status", meta: {}}])
+      end
+    end
+
     context "when attempting to change the code" do
       let(:update_params) { super().merge(code: "replacement") }
 

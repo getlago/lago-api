@@ -36,6 +36,12 @@ module Contracts
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
+      # Only publishing and cancelling change a status: refused rather than
+      # ignored, so a caller trying to move a contract back to draft finds out.
+      if params.key?(:status)
+        return result.single_validation_failure!(field: :status, error_code: "value_is_invalid")
+      end
+
       # Match scheduling's customer-first lock order before the contract lock.
       ActiveRecord::Base.transaction do
         Customers::LockService.call!(customer:, scope: :billing_schedule) do
