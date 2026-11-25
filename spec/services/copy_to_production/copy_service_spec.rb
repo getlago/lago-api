@@ -708,6 +708,31 @@ RSpec.describe CopyToProduction::CopyService do
     end
   end
 
+  context "with a plan rate card whose product code is live in another category" do
+    let(:item_type) { "plan_rate_card" }
+    let(:id) { plan_rate_card.id }
+    let(:category) { create(:product_category, organization: sandbox, code: "compute") }
+    let(:product) { create(:product, :fixed, organization: sandbox, product_category: category, code: "seat") }
+    let(:plan_rate_card) do
+      create(:plan_rate_card, organization: sandbox, catalog_plan: create(:catalog_plan, organization: sandbox, code: "pro"),
+        rate_card: create(:rate_card, organization: sandbox, product:, code: "seat_eur"))
+    end
+
+    before do
+      create(:catalog_plan, organization: production, code: "pro")
+      create(:product, :fixed, :standalone, organization: production, code: "seat")
+      plan_rate_card
+    end
+
+    it "answers value_already_exist on code and copies nothing" do
+      expect { result }.not_to change { [ProductCategory.count, Product.count, RateCard.count, PlanRateCard.count] }
+
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq(code: ["value_already_exist"])
+    end
+  end
+
   context "with an internal item type" do
     let(:item_type) { "tax" }
     let(:tax) { create(:tax, organization: sandbox) }

@@ -71,11 +71,23 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
         .to eq([["product_category", category], ["product", product], ["rate_card", rate_card]])
     end
 
-    context "when the product is live" do
-      before { live_product }
+    context "when the product is live in its category" do
+      before do
+        create(:product, :fixed, organization: production, code: "seat",
+          product_category: create(:product_category, organization: production, code: "compute"))
+      end
 
       it "leaves the category out" do
         expect(item.dependencies(plan_rate_card)).to eq([["product", product], ["rate_card", rate_card]])
+      end
+    end
+
+    context "when the product code is live in another category" do
+      before { live_product }
+
+      it "keeps the category, as the product is copied" do
+        expect(item.dependencies(plan_rate_card))
+          .to eq([["product_category", category], ["product", product], ["rate_card", rate_card]])
       end
     end
   end

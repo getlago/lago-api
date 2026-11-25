@@ -63,11 +63,11 @@ module CopyToProduction
 
       attr_reader :sandbox, :production
 
-      # A product another item references, preceded by its category when the product is copied: a product copied along
-      # this way brings neither the other products of its category nor its rate cards.
+      # A product another item references, preceded by its category when the product is not reused. A product copied
+      # along this way brings neither the other products of its category nor its rate cards.
       def product_dependencies(product)
         dependencies = []
-        if product.product_category && !production.products.exists?(code: product.code)
+        if product.product_category && !Items.build("product", sandbox:, production:).find_existing(product)
           dependencies << ["product_category", product.product_category]
         end
         dependencies << ["product", product]
