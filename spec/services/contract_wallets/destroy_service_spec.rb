@@ -78,6 +78,15 @@ describe ContractWallets::DestroyService do
       expect(result).to be_success
       expect(UsageMonitoring::CatalogWalletAlert.where(id: [alert.id, other_alert.id])).to eq([other_alert])
     end
+
+    context "when the wallet holds credit" do
+      let(:balance_cents) { 1 }
+
+      it "refuses it and keeps them" do
+        expect(result.error.code).to eq("wallet_holds_credit")
+        expect(UsageMonitoring::CatalogWalletAlert.where(id: [alert.id, other_alert.id]).count).to eq(2)
+      end
+    end
   end
 
   context "when the wallet has been credited since it was loaded" do

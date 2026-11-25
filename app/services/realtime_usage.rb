@@ -25,7 +25,18 @@ module RealtimeUsage
   # comparison only opens on charges it found served.
   class RecurringFallbackError < StandardError; end
 
+  # Replicas apply a write seconds apart, so a read after the bucket wait could land on one that lacks the bucket the
+  # wait saw, or the raw events of charges served from the events store. On SharedMergeTree the replica syncs its
+  # parts first, at a few ms per query; on non-replicated tables it is a no-op.
+  CONSISTENT_READ_SETTINGS = {select_sequential_consistency: 1}.freeze
+
   class << self
+    def consistent_reads(&)
+      ::Clickhouse::BaseRecord.with_connection do |connection|
+        connection.with_settings(**CONSISTENT_READ_SETTINGS, &)
+      end
+    end
+
     # Opens the flag and the kill switch for the duration of the block. Reserved for the parity
     # comparison, which has to exercise the bucket path on an organization the flag is off for;
     # production callers never open it.
@@ -61,6 +72,14 @@ module RealtimeUsage
     # for the organization's other charges.
     def recurring_sum_enabled?(organization)
       forced_gate? || organization.feature_flag_enabled?(:realtime_usage_recurring_sum)
+    end
+
+    # On top of enabled?, so turning on the buckets for an organization does not also add a second
+    # evaluation lane to its alerts.
+    def alerts_enabled?(organization)
+      return false unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ALERTS_ENABLED"])
+
+      enabled?(organization) && organization.feature_flag_enabled?(:realtime_usage_alerts)
     end
 
     # Served from the snapshot of the previous period plus the buckets of the window, rather than

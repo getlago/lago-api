@@ -133,6 +133,20 @@ describe X402::Settlements::ReconcileService do
           expect(invoice.reload.payment_status).to eq("pending")
         end
       end
+
+      context "with the transaction recorded by another organization's merchant" do
+        before { create(:x402_settlement, :merchant, transaction_hash: chain_hash) }
+
+        it "marks the row settled" do
+          expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
+        end
+
+        it "marks the invoice paid" do
+          result
+
+          expect(invoice.reload.payment_status).to eq("succeeded")
+        end
+      end
     end
 
     context "when the grant fails" do
@@ -303,6 +317,42 @@ describe X402::Settlements::ReconcileService do
             extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, holder_id: holder.id, network: "eip155:84532"}
           )
         end
+
+        context "with another organization's merchant recording the transaction first" do
+          let(:holder) do
+            create(:x402_settlement, :merchant, transaction_hash: chain_hash)
+            create(:x402_settlement, :failed, transaction_hash: chain_hash)
+          end
+
+          it "reports the failed row as the holder" do
+            result
+
+            expect(Sentry).to have_received(:capture_message).with(
+              "[x402] transaction held by a failed settlement",
+              extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, holder_id: holder.id, network: "eip155:84532"}
+            )
+          end
+        end
+      end
+    end
+
+    context "with the transaction recorded by another organization's merchant" do
+      before { create(:x402_settlement, :merchant, transaction_hash: chain_hash) }
+
+      it "marks the row settled" do
+        expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
+      end
+
+      it "grants the credits" do
+        expect(result.settlement.reload.wallet_transaction).to be_present
+      end
+    end
+
+    context "with the transaction recorded by the organization's merchant" do
+      before { create(:x402_settlement, :merchant, x402_connection:, transaction_hash: chain_hash) }
+
+      it "marks the row failed" do
+        expect(result.settlement.reload).to have_attributes(status: "failed", error_reason: "transaction_already_recorded")
       end
     end
 

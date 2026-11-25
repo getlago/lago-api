@@ -25,8 +25,7 @@ module PlanWallets
 
         # The taxes, scope and metadata stay on the deleted template, which still renders them.
         plan_wallet.credit_allocations.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-        # Alert templates are deleted for good; their thresholds go with them (ON DELETE CASCADE)
-        plan_wallet.alerts.delete_all
+        UsageMonitoring::CatalogWalletAlerts::DeleteAllService.call!(plan_wallets: plan_wallet)
         plan_wallet.discard!
       end
 

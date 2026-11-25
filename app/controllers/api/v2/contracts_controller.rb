@@ -7,7 +7,7 @@ module Api
 
       cursor_paginated_index(Contract)
       date_range_filtered_index(:created_at)
-      serializable_with ::V2::ContractSerializer
+      serializable_with ::V2::ContractSerializer, expand_on: %i[show publish]
 
       def create
         result = ::Contracts::CreateService.call(
@@ -43,6 +43,20 @@ module Api
         contract = find_contract(params[:external_id])
 
         result = ::Contracts::TerminateService.call(contract:)
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
+      # Releases a draft for billing. A retry is safe: it publishes nothing again,
+      # and activates a pending contract whose start has passed.
+      def publish
+        contract = find_contract(params[:external_id])
+
+        result = ::Contracts::PublishService.call(contract:)
 
         if result.success?
           render_contract(result.contract)

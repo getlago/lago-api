@@ -13,8 +13,25 @@ module IntegrationCustomers
       super(nil)
     end
 
-    # Creating the customer in QuickBooks is not wired yet: nothing is created or stored.
     def create
+      create_result = Integrations::Aggregator::Contacts::CreateService.call(
+        integration:,
+        customer:,
+        subsidiary_id: nil
+      )
+
+      return create_result if create_result.error
+
+      new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
+        organization_id: integration.organization_id,
+        integration:,
+        customer:,
+        external_customer_id: create_result.contact_id,
+        type: "IntegrationCustomers::QuickbooksCustomer",
+        sync_with_provider: true
+      )
+
+      result.integration_customer = new_integration_customer
       result
     end
 

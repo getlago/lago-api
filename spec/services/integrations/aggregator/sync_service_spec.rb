@@ -106,6 +106,18 @@ RSpec.describe Integrations::Aggregator::SyncService do
           end
         end
       end
+
+      context "with only_customers option" do
+        subject(:sync_service) { described_class.new(integration:, options: {only_customers: true}) }
+
+        it "triggers the customers sync only" do
+          sync_service.call
+
+          expect(lago_client).to have_received(:post_with_response) do |payload|
+            expect(payload[:syncs]).to eq(["customers"])
+          end
+        end
+      end
     end
   end
 end

@@ -42,6 +42,13 @@ module Integrations
                 integration_customer:,
                 subsidiary_id:
               )
+            when "Integrations::QuickbooksIntegration"
+              Integrations::Aggregator::Contacts::Payloads::Quickbooks.new(
+                integration:,
+                customer:,
+                integration_customer:,
+                subsidiary_id:
+              )
             else
               raise(NotImplementedError)
             end
