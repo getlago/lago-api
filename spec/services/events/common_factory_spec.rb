@@ -92,6 +92,44 @@ RSpec.describe Events::CommonFactory do
       end
     end
 
+    context "when source is an instance of Clickhouse::EventsEnriched", clickhouse: true do
+      let(:source) { create(:clickhouse_events_enriched, precise_total_amount_cents: BigDecimal("12.5")) }
+
+      it "returns a new instance of Events::Common without an id" do
+        new_instance = described_class.new_instance(source:)
+
+        expect(new_instance).to have_attributes(
+          id: nil,
+          organization_id: source.organization_id,
+          transaction_id: source.transaction_id,
+          external_subscription_id: source.external_subscription_id,
+          timestamp: source.timestamp,
+          code: source.code,
+          properties: source.properties,
+          precise_total_amount_cents: BigDecimal("12.5")
+        )
+      end
+    end
+
+    context "when source is an instance of Clickhouse::ProductEventsEnriched", clickhouse: true do
+      let(:source) { create(:clickhouse_product_events_enriched, precise_total_amount_cents: BigDecimal("12.5")) }
+
+      it "returns a new instance of Events::Common keyed by the contract" do
+        new_instance = described_class.new_instance(source:)
+
+        expect(new_instance).to have_attributes(
+          id: nil,
+          organization_id: source.organization_id,
+          transaction_id: source.transaction_id,
+          external_subscription_id: source.external_contract_id,
+          timestamp: source.timestamp,
+          code: source.code,
+          properties: source.properties,
+          precise_total_amount_cents: BigDecimal("12.5")
+        )
+      end
+    end
+
     context "when source is an instance of Clickhouse::EventsRaw", clickhouse: true do
       let(:source) { create(:clickhouse_events_raw) }
 

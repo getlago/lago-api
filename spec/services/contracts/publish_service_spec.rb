@@ -21,6 +21,7 @@ RSpec.describe Contracts::PublishService do
     expect(result).to be_success
     expect(contract.reload).to be_pending
     expect(SendWebhookJob).not_to have_been_enqueued.with("contract.started", anything)
+    expect(Contracts::ReplayDraftUsageJob).not_to have_been_enqueued
     expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.published")
 
     travel_to(started_at) { Contracts::ActivateAllPendingService.call }
@@ -83,10 +84,16 @@ RSpec.describe Contracts::PublishService do
       )
     end
 
+    it "replays the usage received in advance while it was a draft, up to the publication" do
+      freeze_time do
+        expect { result }.to have_enqueued_job_after_commit(Contracts::ReplayDraftUsageJob).with(contract, Time.current)
+      end
+    end
+
     it "activates it once when the publication is retried" do
       described_class.call(contract:)
 
-      expect { described_class.call(contract: Contract.find(contract.id)) }.not_to have_enqueued_job(SendWebhookJob)
+      expect { described_class.call(contract: Contract.find(contract.id)) }.not_to have_enqueued_job
       expect(contract.reload).to be_active
       expect(BillingOperation.count).to eq(1)
       expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.published").once

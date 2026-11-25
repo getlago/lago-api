@@ -3,8 +3,8 @@
 require "rails_helper"
 
 # A draft holds its pricing while it is prepared: nothing bills it, whatever its start date, until it
-# is published. Publishing late then catches up the elapsed fixed periods, while usage billed in
-# advance during the draft is not replayed.
+# is published. Publishing late then catches up the elapsed fixed periods and replays the usage billed
+# in advance that arrived while it was a draft.
 describe "A draft contract never bills until it is published" do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
   let(:customer) { organization.customers.find_by!(external_id: "draft-customer") }
@@ -107,11 +107,19 @@ describe "A draft contract never bills until it is published" do
       travel_to(Time.zone.parse("2027-02-02 12:00:00")) { run_clocks }
     end
 
-    it "bills the elapsed fixed periods, without the usage received in advance while it was a draft" do
+    it "bills the elapsed fixed periods and the usage received in advance while it was a draft" do
       expect(contract.reload).to be_active
-      expect(Fee.where(contract:, fee_type: :product).map(&:amount_cents)).to all(eq(10_000))
-      expect(Fee.where(contract:, fee_type: :product).sum(:amount_cents)).to eq(2 * 10_000) # January and February, $100 each
-      expect(Fee.where(contract:).where(pay_in_advance: true, units: 40)).to be_empty
+
+      usage_fee = Fee.where(contract:).where.not(pay_in_advance_event_transaction_id: nil).sole
+      expect(usage_fee).to have_attributes(units: 40, amount_cents: 4_000) # 40 units at $1, sent on January 20
+      expect(Fee.where(contract:, fee_type: :product).where.not(id: usage_fee.id).map(&:amount_cents))
+        .to eq([10_000, 10_000]) # January and February, $100 each
+    end
+
+    it "bills the draft usage once when the replay runs again" do
+      replay = -> { Contracts::ReplayDraftUsageJob.perform_now(contract, Time.zone.parse("2027-02-02 11:00:00")) }
+
+      expect { perform_enqueued_jobs(&replay) }.not_to change(Fee, :count)
     end
   end
 end
