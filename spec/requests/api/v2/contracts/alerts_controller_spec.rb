@@ -221,11 +221,22 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     context "with a plain notify_on" do
       let(:create_params) { super().merge(thresholds: [{code: "warn", value: 10, notify_on: "resolved"}]) }
 
-      it "returns a validation error on the thresholds rather than ignoring it" do
+      it "returns a validation error on its notify_on rather than ignoring it" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[0].notify_on", meta: {}}])
+      end
+    end
+
+    context "with a value that is not a number in the second threshold" do
+      let(:create_params) { super().merge(thresholds: [{value: 10}, {value: "abc"}]) }
+
+      it "returns a validation error on that threshold's value" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[1].value", meta: {}}])
       end
     end
 
@@ -325,13 +336,13 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     context "with invalid thresholds" do
       let(:update_params) { {thresholds: [{value: 10}, {value: "10.0"}]} }
 
-      it "returns a validation error on the thresholds" do
+      it "returns a validation error on the later threshold's value" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(
           code: "validation_errors",
-          details: [{code: "duplicate_threshold_values", field: "thresholds", meta: {}}]
+          details: [{code: "duplicate_threshold_values", field: "thresholds[1].value", meta: {}}]
         )
       end
     end

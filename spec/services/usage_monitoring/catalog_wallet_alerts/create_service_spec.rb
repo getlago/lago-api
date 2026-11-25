@@ -52,9 +52,9 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
     # Its first line sits one step below 0, which a balance never reaches
     before { params[:thresholds] = [{value: "5000", recurring: true}] }
 
-    it "fails and creates nothing" do
+    it "fails on its value and creates nothing" do
       expect(result).to be_failure
-      expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+      expect(result.error.messages).to eq({"thresholds[0].value": ["value_is_invalid"]})
       expect(plan_wallet.alerts).to be_empty
     end
   end
@@ -63,9 +63,9 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
     # Its first line is 1000 - 5000 = -4000
     before { params[:thresholds] = [{value: "1000"}, {value: "5000", recurring: true}] }
 
-    it "fails and creates nothing" do
+    it "fails on the recurring step's value and creates nothing" do
       expect(result).to be_failure
-      expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+      expect(result.error.messages).to eq({"thresholds[1].value": ["value_is_invalid"]})
       expect(plan_wallet.alerts).to be_empty
     end
   end
@@ -128,9 +128,9 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
   context "with a fraction of a cent" do
     before { params[:thresholds] = [{value: "10000"}, {value: "10000.5"}] }
 
-    it "fails and creates nothing" do
+    it "fails on its value and creates nothing" do
       expect(result).to be_failure
-      expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+      expect(result.error.messages).to eq({"thresholds[1].value": ["value_is_invalid"]})
       expect(plan_wallet.alerts).to be_empty
     end
   end
@@ -147,9 +147,9 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::CreateService do
   context "with a negative balance threshold" do
     before { params[:thresholds] = [{value: "10000"}, {value: "-100"}] }
 
-    it "fails and creates nothing" do
+    it "fails on its value and creates nothing" do
       expect(result).to be_failure
-      expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+      expect(result.error.messages).to eq({"thresholds[1].value": ["value_is_invalid"]})
       expect(plan_wallet.alerts).to be_empty
     end
   end

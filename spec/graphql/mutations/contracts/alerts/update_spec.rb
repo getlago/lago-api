@@ -105,8 +105,8 @@ RSpec.describe Mutations::Contracts::Alerts::Update do
   context "with a threshold value that is not a number" do
     let(:input) { {id: alert.id, thresholds: [{value: "abc"}]} }
 
-    it "returns a validation error on the thresholds" do
-      expect_unprocessable_entity(execution, details: {thresholds: ["value_is_invalid"]})
+    it "returns a validation error on its value" do
+      expect_unprocessable_entity(execution, details: {"thresholds[0].value": ["value_is_invalid"]})
     end
   end
 
