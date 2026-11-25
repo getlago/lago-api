@@ -21,14 +21,18 @@ module Integrations
             mapped_fields.merge("Id" => integration_customer.external_customer_id, "sparse" => true).compact_blank
           end
 
-          # The external id is appended to the name, which is shortened so the suffix is always kept.
-          # Returns nil when the name already is the external id, as the suffix would not make it unique.
           def with_unique_display_name(body)
+            body.merge("DisplayName" => unique_display_name) if unique_display_name
+          end
+
+          # The external id is appended to the name, which is shortened so the suffix is always kept.
+          # Nil when the name already is the external id, as the suffix would not make it unique.
+          def unique_display_name
             external_id = clean_display_name(customer.external_id)
             return if display_name == external_id
 
             suffix = " (#{external_id})"
-            body.merge("DisplayName" => "#{display_name.first(DISPLAY_NAME_MAX_LENGTH - suffix.length).strip}#{suffix}")
+            "#{display_name.first(DISPLAY_NAME_MAX_LENGTH - suffix.length).strip}#{suffix}"
           end
 
           # Written in the Notes of a customer Lago creates, to recognize it when its name is found taken.

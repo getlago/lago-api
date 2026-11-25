@@ -330,6 +330,13 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Quickbooks do
     end
   end
 
+  describe "#unique_display_name" do
+    it "returns the suffixed name sent on a duplicate-name retry" do
+      expect(payload.unique_display_name).to eq("Acme Inc (cust-ext-001)")
+      expect(payload.with_unique_display_name(payload.create_body)["DisplayName"]).to eq(payload.unique_display_name)
+    end
+  end
+
   describe "#notes_marker" do
     it "holds the Lago customer id written in Notes" do
       expect(payload.notes_marker).to eq("Lago customer: #{customer.id}")

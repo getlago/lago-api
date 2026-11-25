@@ -559,6 +559,32 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         end
       end
 
+      context "when the QuickBooks customer was created under the suffixed name" do
+        let(:proxy_response) do
+          {status: 200, body: {Customer: {Id: "58", SyncToken: "3", DisplayName: "Example Co (cust-ext-1)"}}.to_json}
+        end
+
+        it "keeps the suffixed name" do
+          service_call
+
+          expect(WebMock).to have_requested(:post, endpoint)
+            .with(body: {action_name: "update-customer", input: expected_input.merge("DisplayName" => "Example Co (cust-ext-1)")})
+            .once
+        end
+      end
+
+      context "when the QuickBooks customer has another name" do
+        let(:proxy_response) do
+          {status: 200, body: {Customer: {Id: "58", SyncToken: "3", DisplayName: "Old Name"}}.to_json}
+        end
+
+        it "sends the Lago name" do
+          service_call
+
+          expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name: "update-customer", input: expected_input}).once
+        end
+      end
+
       context "when the name already exists" do
         let(:action_responses) { [duplicate_name_response] }
 

@@ -59,9 +59,10 @@ RSpec.describe Integrations::Aggregator::Contacts::FetchQuickbooksSyncTokenServi
   end
 
   context "when QuickBooks returns the customer" do
-    it "returns its SyncToken" do
+    it "returns its SyncToken and DisplayName" do
       expect(result).to be_success
       expect(result.sync_token).to eq("3")
+      expect(result.display_name).to eq("Example Co")
       expect(WebMock).to have_requested(:get, proxy_url).with(headers: request_headers).once
     end
   end

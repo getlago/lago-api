@@ -74,7 +74,8 @@ module Integrations
         end
 
         # QuickBooks refuses an update without the current SyncToken, so it is read through the Nango proxy first.
-        # A name already used in QuickBooks fails the update: the customer is never renamed.
+        # A name already used in QuickBooks fails the update: the customer is never renamed. A customer created
+        # under the suffixed name, because the name was taken, keeps it.
         def update_in_quickbooks
           token_result = Integrations::Aggregator::Contacts::FetchQuickbooksSyncTokenService.call(
             integration:,
@@ -90,7 +91,12 @@ module Integrations
             return result.service_failure!(code:, message:)
           end
 
-          trigger_quickbooks_action(payload.update_body.merge("SyncToken" => token_result.sync_token))
+          body = payload.update_body.merge("SyncToken" => token_result.sync_token)
+          if payload.unique_display_name.present? && token_result.display_name == payload.unique_display_name
+            body["DisplayName"] = payload.unique_display_name
+          end
+
+          trigger_quickbooks_action(body)
 
           result
         end

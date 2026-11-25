@@ -7,7 +7,7 @@ module Integrations
       #       update without the current one. Proxy errors carry the realm id in their URI, so none of them
       #       leaves this service: they become a failure with a fixed code and message.
       class FetchQuickbooksSyncTokenService < Integrations::Aggregator::BaseService
-        Result = BaseResult[:sync_token]
+        Result = BaseResult[:sync_token, :display_name]
 
         LOOKUP_FAILURE_LOG = "QuickBooks customer lookup failed"
 
@@ -36,6 +36,7 @@ module Integrations
             result.service_failure!(code: "sync_token_missing", message: "QuickBooks customer has no SyncToken")
           else
             result.sync_token = sync_token.to_s
+            result.display_name = response.dig("Customer", "DisplayName")
             result
           end
         rescue LagoHttpClient::HttpError => e
