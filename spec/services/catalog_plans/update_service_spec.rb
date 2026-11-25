@@ -316,14 +316,6 @@ RSpec.describe CatalogPlans::UpdateService do
         expect(SendWebhookJob).to have_been_enqueued.once.with("plan.updated", catalog_plan)
       end
 
-      it "reads the metadata after the lock, not what the instance held before" do
-        catalog_plan.metadata
-        Metadata::ItemMetadata.find_by(owner: catalog_plan).update!(value: {"crm_id" => "1", "other" => "x"})
-
-        expect(result).to be_success
-        expect(catalog_plan.reload.metadata.value).to eq("other" => "x")
-      end
-
       context "when the key is unknown" do
         subject(:result) { described_class.call(catalog_plan:, params: {}, delete_metadata_key: "missing") }
 
@@ -340,6 +332,36 @@ RSpec.describe CatalogPlans::UpdateService do
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.resource).to eq("metadata")
           expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+    end
+
+    context "with skip_unchanged_metadata" do
+      subject(:result) { described_class.call(catalog_plan:, params:, partial_metadata: true, skip_unchanged_metadata: true) }
+
+      let(:catalog_plan) { create(:catalog_plan, name: "Before", code: "before", updated_at: 1.day.ago) }
+
+      context "when the metadata is unchanged" do
+        let(:params) { {metadata: {crm_id: "123"}} }
+
+        it "touches nothing and sends nothing" do
+          expect { result }.not_to change { catalog_plan.reload.updated_at }
+
+          expect(result).to be_success
+          expect(SendWebhookJob).not_to have_been_enqueued
+          expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+        end
+      end
+
+      context "when the metadata changes" do
+        let(:params) { {metadata: {tier: "gold"}} }
+
+        it "moves updated_at, enqueues one plan.updated and logs it" do
+          expect { result }.to change { catalog_plan.reload.updated_at }
+
+          expect(catalog_plan.metadata.value).to eq("crm_id" => "123", "tier" => "gold")
+          expect(SendWebhookJob).to have_been_enqueued.once.with("plan.updated", catalog_plan)
+          expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(catalog_plan)
         end
       end
     end

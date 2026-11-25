@@ -67,6 +67,21 @@ RSpec.describe "API v2 routing parity" do
       .to include(controller: "api/v2/plans/metadata", action: "destroy_key", plan_code: "foo", key: "crm_id")
   end
 
+  it "reads a metadata key containing a dot whole" do
+    expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/metadata/app.version", method: :delete))
+      .to include(controller: "api/v2/plans/metadata", action: "destroy_key", plan_code: "foo", key: "app.version")
+  end
+
+  it "keeps the native metadata scope ahead of the entitlement and charge routes" do
+    %w[entitlements charges fixed_charges].each do |key|
+      expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/metadata/#{key}", method: :delete))
+        .to include(controller: "api/v2/plans/metadata", action: "destroy_key", plan_code: "foo", key:)
+    end
+
+    expect(Rails.application.routes.recognize_path("/api/v1/plans/foo/entitlements/metadata", method: :delete))
+      .to include(controller: "api/v1/plans/entitlements", action: "destroy", plan_code: "foo", code: "metadata")
+  end
+
   it "keeps customer-nested paths on their shared controllers" do
     recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/credit_notes", method: :get)
 

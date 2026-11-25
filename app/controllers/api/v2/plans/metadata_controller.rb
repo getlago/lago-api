@@ -38,8 +38,8 @@ module Api
         end
 
         def update_metadata(**options)
-          result = ::CatalogPlans::UpdateService.call(catalog_plan:, **options)
-          result.success? ? render_resource(catalog_plan.reload.metadata) : render_error_response(result)
+          result = ::CatalogPlans::UpdateService.call(catalog_plan:, skip_unchanged_metadata: true, **options)
+          result.success? ? render_resource(catalog_plan.metadata) : render_error_response(result)
         end
 
         def metadata

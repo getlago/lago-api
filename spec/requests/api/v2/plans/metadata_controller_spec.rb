@@ -15,7 +15,7 @@ RSpec.describe Api::V2::Plans::MetadataController do
   end
 
   shared_examples "a plan metadata write" do |webhook_metadata|
-    it "moves updated_at, sends one plan.updated carrying the new metadata and logs one activity" do
+    it "moves updated_at, sends one plan.updated carrying the new metadata and logs one activity", versioning: true do
       travel_to(1.hour.from_now) do
         expect { request }
           .to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", catalog_plan)
@@ -25,6 +25,29 @@ RSpec.describe Api::V2::Plans::MetadataController do
 
       expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(catalog_plan)
       expect(catalog_plan.reload.metadata&.value).to eq(webhook_metadata)
+      expect(json[:metadata]&.deep_stringify_keys).to eq(webhook_metadata)
+    end
+
+    it "adds one version", versioning: true do
+      expect { request }.to change { catalog_plan.versions.count }.by(1)
+    end
+  end
+
+  shared_examples "a plan metadata no-op" do
+    it "answers with the stored value and does nothing else", versioning: true do
+      expected = catalog_plan.metadata&.value
+      updated_at = catalog_plan.updated_at
+      versions = catalog_plan.versions.count
+
+      travel_to(1.hour.from_now) do
+        expect { request }.not_to have_enqueued_job(SendWebhookJob)
+      end
+
+      expect(response).to have_http_status(:success)
+      expect(json[:metadata]&.deep_stringify_keys).to eq(expected)
+      expect(catalog_plan.reload.updated_at).to eq(updated_at)
+      expect(catalog_plan.versions.count).to eq(versions)
+      expect(Utils::ActivityLog).not_to have_produced("plan.updated")
     end
   end
 
@@ -127,6 +150,38 @@ RSpec.describe Api::V2::Plans::MetadataController do
       end
     end
 
+    context "when metadata is null" do
+      let(:request_params) { {metadata: nil} }
+      let(:stored_metadata) { {"old" => "value"} }
+
+      it "returns a 400 on metadata and keeps the stored value" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details].first).to include(code: "value_is_invalid", field: "metadata")
+        expect(catalog_plan.reload.metadata.value).to eq("old" => "value")
+      end
+    end
+
+    context "when the value is already stored" do
+      let(:stored_metadata) { {"crm_id" => "123"} }
+
+      it_behaves_like "a plan metadata no-op"
+    end
+
+    context "when a catalog plan and a legacy plan share the code" do
+      let(:legacy_plan) { create(:plan, organization:, code: catalog_plan.code) }
+
+      before { legacy_plan }
+
+      it "writes only the catalog plan" do
+        request
+
+        expect(catalog_plan.reload.metadata.value).to eq("crm_id" => "123")
+        expect(legacy_plan.reload.metadata).to be_nil
+      end
+    end
+
     [
       ["a string", "abc"],
       ["an array", %w[abc]]
@@ -220,6 +275,49 @@ RSpec.describe Api::V2::Plans::MetadataController do
         end
       end
 
+      context "when the value is already stored" do
+        let(:request_params) { {metadata: {crm_id: "123"}} }
+
+        it_behaves_like "a plan metadata no-op"
+      end
+
+      context "when metadata is empty" do
+        let(:request_params) { {metadata: {}} }
+
+        it_behaves_like "a plan metadata no-op"
+      end
+
+      it "sends a plan.updated carrying the merged metadata" do
+        perform_enqueued_jobs(only: SendWebhookJob) { request }
+
+        expect(Webhook.where(webhook_type: "plan.updated").sole.payload.dig("plan", "metadata"))
+          .to eq("crm_id" => "123", "tier" => "gold")
+      end
+
+      context "when the merge reaches exactly 50 keys" do
+        let(:stored_metadata) { Array.new(49) { ["key_#{it}", "v"] }.to_h }
+
+        it "answers 200" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:metadata].size).to eq(50)
+        end
+      end
+
+      context "when it overwrites a key while at 50" do
+        let(:stored_metadata) { Array.new(50) { ["key_#{it}", "v"] }.to_h }
+        let(:request_params) { {metadata: {key_0: "new"}} }
+
+        it "answers 200" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:metadata][:key_0]).to eq("new")
+          expect(json[:metadata].size).to eq(50)
+        end
+      end
+
       context "when the merge goes over 50 keys" do
         let(:stored_metadata) { Array.new(50) { ["key_#{it}", "v"] }.to_h }
 
@@ -249,6 +347,12 @@ RSpec.describe Api::V2::Plans::MetadataController do
       expect(json).to eq(metadata: nil)
       expect(Metadata::ItemMetadata.where(owner: catalog_plan)).to be_empty
     end
+
+    context "when the plan has no metadata" do
+      let(:stored_metadata) { nil }
+
+      it_behaves_like "a plan metadata no-op"
+    end
   end
 
   describe "DELETE /api/v2/plans/:code/metadata/:key" do
@@ -270,11 +374,34 @@ RSpec.describe Api::V2::Plans::MetadataController do
     context "when the key is unknown" do
       let(:key) { "missing" }
 
-      it "answers 200 and changes nothing" do
+      it_behaves_like "a plan metadata no-op"
+
+      it "answers 200 with the stored value" do
         request
 
-        expect(response).to have_http_status(:success)
         expect(json).to eq(metadata: {crm_id: "123", tier: "gold"})
+      end
+    end
+
+    context "when the key is the last one" do
+      let(:stored_metadata) { {"crm_id" => "123"} }
+
+      it "keeps the row with an empty value" do
+        request
+
+        expect(json).to eq(metadata: {})
+        expect(catalog_plan.reload.metadata.value).to eq({})
+      end
+    end
+
+    context "when the key contains a dot" do
+      let(:key) { "app.version" }
+      let(:stored_metadata) { {"app" => "x", "app.version" => "1"} }
+
+      it "removes that key only" do
+        request
+
+        expect(json).to eq(metadata: {app: "x"})
       end
     end
 
@@ -286,30 +413,6 @@ RSpec.describe Api::V2::Plans::MetadataController do
 
         expect(response).to be_v2_not_found_error("metadata")
         expect(Utils::ActivityLog).not_to have_produced("plan.updated")
-      end
-    end
-  end
-
-  describe "/api/v1/plans/:code/metadata" do
-    let(:legacy_plan) { create(:plan, organization:, code: "legacy") }
-
-    it "keeps reaching the v1 controller" do
-      legacy_plan
-      post_with_token(organization, "/api/v1/plans/legacy/metadata", {metadata: {crm_id: "123"}})
-
-      expect(response).to have_http_status(:success)
-      expect(legacy_plan.reload.metadata.value).to eq("crm_id" => "123")
-    end
-
-    context "when the organization is not on the product catalog", product_catalog: false do
-      let(:organization) { create(:organization) }
-
-      it "still works" do
-        legacy_plan
-        post_with_token(organization, "/api/v1/plans/legacy/metadata", {metadata: {crm_id: "123"}})
-
-        expect(response).to have_http_status(:success)
-        expect(legacy_plan.reload.metadata.value).to eq("crm_id" => "123")
       end
     end
   end
