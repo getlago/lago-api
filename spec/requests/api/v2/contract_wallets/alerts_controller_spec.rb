@@ -474,6 +474,17 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
     end
 
     context "when the contract has ended" do
+      before { Contracts::TerminateService.call!(contract: Contract.find(contract.id)) }
+
+      it "returns a not found error, since the end deleted the alert" do
+        subject
+
+        expect(response).to be_v2_not_found_error("alert")
+      end
+    end
+
+    # The alert was read before the end committed: the service reads the contract again under its lock
+    context "when the contract ends between the alert lookup and the write" do
       let(:contract) { create(:contract, :terminated, organization:, customer:, external_id: "acme-pro") }
 
       it "returns a forbidden error and changes nothing" do
@@ -532,6 +543,17 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
     end
 
     context "when the contract has ended" do
+      before { Contracts::TerminateService.call!(contract: Contract.find(contract.id)) }
+
+      it "returns a not found error, since the end deleted the alert" do
+        subject
+
+        expect(response).to be_v2_not_found_error("alert")
+      end
+    end
+
+    # The alert was read before the end committed: the service reads the contract again under its lock
+    context "when the contract ends between the alert lookup and the write" do
       let(:contract) { create(:contract, :terminated, organization:, customer:, external_id: "acme-pro") }
 
       it "returns a forbidden error and deletes nothing" do
