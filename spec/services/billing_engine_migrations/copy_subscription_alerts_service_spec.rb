@@ -77,6 +77,23 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
       ])
     end
 
+    it "passes the threshold values as plain decimal strings" do
+      allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
+
+      expect(result).to be_success
+      expect(UsageMonitoring::ContractAlerts::CreateService).to have_received(:call).with(
+        organization: shadow_organization,
+        contract:,
+        params: hash_including(
+          thresholds: contain_exactly(
+            hash_including(code: "rec", value: "500.0"),
+            hash_including(code: "warn1000", value: "1000.0"),
+            hash_including(code: "high", value: "2000.5")
+          )
+        )
+      )
+    end
+
     it "copies it once when it runs twice" do
       described_class.call(migration:, subscription:)
       allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
@@ -151,6 +168,24 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
         other_shadow_metric = create(:billable_metric, organization: shadow_organization, code: other_metric.code)
         other_contract = create(:contract, customer: contract.customer)
         price_on(other_contract, create(:product, organization: shadow_organization, billable_metric: other_shadow_metric))
+      end
+
+      it "skips it with the reason" do
+        expect(result).to be_success
+        expect(contract.contract_alerts).to be_empty
+        expect(Rails.logger).to have_received(:info).with(a_string_including("skipped alert tokens: shadow_product_not_found"))
+      end
+    end
+
+    context "when the shadow product with the metric code is not metered" do
+      let(:other_metric) { create(:billable_metric, organization:) }
+      let(:alert_metric) { other_metric }
+
+      before do
+        other_shadow_metric = create(:billable_metric, organization: shadow_organization, code: other_metric.code)
+        fixed_product = create(:product, organization: shadow_organization, billable_metric: other_shadow_metric)
+        fixed_product.update_column(:product_type, "fixed") # rubocop:disable Rails/SkipsModelValidations
+        price_on(contract, fixed_product)
       end
 
       it "skips it with the reason" do
@@ -246,6 +281,38 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
         "BillingEngineMigrations::CopySubscriptionAlertsService: subscription #{subscription.external_id} " \
         "(migration #{migration.id}): skipped: contract_not_found"
       )
+    end
+  end
+
+  context "with a newer terminated contract of the external id" do
+    before do
+      create(:contract, :terminated, customer: contract.customer, external_id: contract.external_id, created_at: contract.created_at + 1.day)
+      create_v1_alert(:usage_current_amount_alert, code: "spend")
+      allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
+    end
+
+    it "copies the alert on the live contract" do
+      expect(result).to be_success
+      expect(UsageMonitoring::ContractAlerts::CreateService).to have_received(:call).with(hash_including(contract:))
+      expect(shadow_organization.contract_alerts.pluck(:code)).to eq(["spend"])
+    end
+  end
+
+  context "with a newer pending contract of the external id" do
+    let(:pending_contract) do
+      create(:contract, :pending, customer: contract.customer, external_id: contract.external_id, created_at: contract.created_at + 1.day)
+    end
+
+    before do
+      pending_contract
+      create_v1_alert(:usage_current_amount_alert, code: "spend")
+      allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
+    end
+
+    it "copies the alert on the newest live contract" do
+      expect(result).to be_success
+      expect(UsageMonitoring::ContractAlerts::CreateService).to have_received(:call).with(hash_including(contract: pending_contract))
+      expect(shadow_organization.contract_alerts.pluck(:code)).to eq(["spend"])
     end
   end
 
