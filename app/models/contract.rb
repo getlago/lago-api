@@ -65,6 +65,10 @@ class Contract < ApplicationRecord
   # active contract. Terminated and canceled siblings are history.
   scope :live, -> { where(status: LIVE_STATUSES) }
 
+  # A canceled contract never took effect and has no fees, so it no longer freezes the
+  # plan, rate cards or product filters it was built from. A draft still does.
+  scope :not_canceled, -> { where.not(status: :canceled) }
+
   # Pending contracts whose start has arrived, compared as an instant: the rule
   # creation uses to choose pending or active. A start given as a date is the
   # customer's local midnight, so it activates on the customer's day. No

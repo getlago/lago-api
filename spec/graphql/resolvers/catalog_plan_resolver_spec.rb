@@ -70,6 +70,14 @@ RSpec.describe Resolvers::CatalogPlanResolver do
     end
   end
 
+  context "when the plan's only contract was canceled" do
+    before { create(:contract, :canceled, organization:, customer: create(:customer, organization:), catalog_plan:) }
+
+    it "counts it but no longer flags the plan as frozen" do
+      expect(result["data"]["catalogPlan"]).to include("contractsCount" => 1, "attachedToContracts" => false)
+    end
+  end
+
   context "when the catalog plan belongs to another organization" do
     let(:catalog_plan) { create(:catalog_plan) }
 

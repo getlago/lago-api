@@ -129,6 +129,20 @@ RSpec.describe ProductFilters::UpdateService do
     end
   end
 
+  context "when the only contract with a card scoped to the filter was canceled" do
+    before do
+      rate_card = create(:rate_card, organization:, product:, product_filter:)
+      contract = create(:contract, :canceled, organization:, customer: create(:customer, organization:))
+      create(:contract_rate_card, organization:, contract:, rate_card:)
+    end
+
+    let(:params) { {values: [{billable_metric_filter_id: region_filter.id, value: "eu"}]} }
+
+    it "accepts the values change" do
+      expect(result).to be_success
+    end
+  end
+
   context "when a subscription bills through a card scoped to the filter" do
     before do
       rate_card = create(:rate_card, organization:, product:, product_filter:)

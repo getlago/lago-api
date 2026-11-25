@@ -100,6 +100,22 @@ RSpec.describe CatalogPlans::UpdateService do
     end
   end
 
+  context "when the plan's only contract was canceled" do
+    let(:catalog_plan) { create(:catalog_plan, name: "Growth", code: "growth") }
+
+    before do
+      customer = create(:customer, organization: catalog_plan.organization)
+      create(:contract, :canceled, organization: catalog_plan.organization, customer:, catalog_plan:)
+    end
+
+    it "accepts a code change" do
+      result = described_class.call(catalog_plan:, params: {code: "growth-v2"})
+
+      expect(result).to be_success
+      expect(catalog_plan.reload.code).to eq("growth-v2")
+    end
+  end
+
   context "when the plan is attached to a contract" do
     let(:catalog_plan) { create(:catalog_plan, name: "Growth", code: "growth", description: "Old") }
 

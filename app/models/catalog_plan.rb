@@ -30,10 +30,10 @@ class CatalogPlan < ApplicationRecord
 
   default_scope -> { kept }
 
-  # A catalog plan is subscribed through contracts; any attachment freezes its
-  # pricing (its rate cards can no longer be edited).
+  # A catalog plan is subscribed through contracts; any contract but a canceled one
+  # freezes its pricing (its rate cards can no longer be edited).
   def attached_to_contracts?
-    contracts.exists?
+    contracts.not_canceled.exists?
   end
 
   def self.ransackable_attributes(_auth_object = nil)

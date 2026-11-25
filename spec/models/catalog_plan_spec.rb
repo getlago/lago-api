@@ -66,6 +66,24 @@ RSpec.describe CatalogPlan do
       create(:contract, organization: catalog_plan.organization, catalog_plan:)
       expect(catalog_plan.attached_to_contracts?).to be(true)
     end
+
+    it "ignores a canceled contract, which never took effect" do
+      catalog_plan = create(:catalog_plan)
+      customer = create(:customer, organization: catalog_plan.organization)
+      create(:contract, :canceled, organization: catalog_plan.organization, customer:, catalog_plan:)
+
+      expect(catalog_plan.attached_to_contracts?).to be(false)
+    end
+
+    %i[draft pending terminated].each do |status|
+      it "counts a #{status} contract" do
+        catalog_plan = create(:catalog_plan)
+        customer = create(:customer, organization: catalog_plan.organization)
+        create(:contract, status, organization: catalog_plan.organization, customer:, catalog_plan:)
+
+        expect(catalog_plan.attached_to_contracts?).to be(true)
+      end
+    end
   end
 
   describe "soft deletion" do

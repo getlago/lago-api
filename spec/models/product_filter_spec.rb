@@ -110,6 +110,30 @@ RSpec.describe ProductFilter do
     end
   end
 
+  describe "#attached_to_subscriptions?" do
+    let(:filter) { create(:product_filter) }
+    let(:rate_card) { create(:rate_card, organization: filter.organization, product: filter.product, product_filter: filter) }
+    let(:status) { :active }
+
+    before do
+      customer = create(:customer, organization: filter.organization)
+      contract = create(:contract, status, organization: filter.organization, customer:)
+      create(:contract_rate_card, organization: filter.organization, contract:, rate_card:)
+    end
+
+    it "is true when a contract prices the filter" do
+      expect(filter.attached_to_subscriptions?).to be(true)
+    end
+
+    context "when that contract is canceled" do
+      let(:status) { :canceled }
+
+      it "is false, as a canceled contract never took effect" do
+        expect(filter.attached_to_subscriptions?).to be(false)
+      end
+    end
+  end
+
   describe "#attached_to_plan_or_subscription?" do
     let(:product) { create(:product) }
     let(:filter) { create(:product_filter, organization: product.organization, product:) }

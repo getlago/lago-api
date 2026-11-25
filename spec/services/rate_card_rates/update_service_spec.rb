@@ -259,6 +259,23 @@ RSpec.describe RateCardRates::UpdateService do
     end
   end
 
+  context "when the card's only contract was canceled" do
+    let(:params) { {rate_properties: {"amount" => "25"}} }
+    let(:rate_card_rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.ago.beginning_of_day)
+    end
+
+    before do
+      contract = create(:contract, :canceled, organization:, customer: create(:customer, organization:))
+      create(:contract_rate_card, organization:, contract:, rate_card:)
+    end
+
+    it "updates the active rate, as a canceled contract never billed" do
+      expect(result).to be_success
+      expect(result.rate_card_rate.rate_properties).to eq("amount" => "25")
+    end
+  end
+
   context "when a concurrent request takes the new code" do
     let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:, code: "before", effective_from: 1.month.from_now) }
     let(:params) { {code: "taken"} }

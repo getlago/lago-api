@@ -21,8 +21,8 @@ module CatalogPlans
 
       # A contract prices against the plan by reference — it serializes the
       # plan_code through the association (so the code must stay stable) and its
-      # fees invoice in the plan currency. Once a contract is attached both are
-      # frozen; name, description and invoice display name stay editable.
+      # fees invoice in the plan currency. Once a contract that is not canceled is
+      # attached both are frozen; name, description and invoice display name stay editable.
       if catalog_plan.attached_to_contracts? && (code_change_requested? || currency_change_requested?)
         return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
       end
