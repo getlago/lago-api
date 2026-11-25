@@ -110,7 +110,7 @@ RSpec.describe Customers::TerminateRelationsService do
       freeze_time do
         expect { terminate_service.call }
           .to change { draft_contract.reload.status }.from("draft").to("canceled")
-          .and change(draft_contract, :canceled_at).from(nil).to(Time.current)
+          .and change(draft_contract, :canceled_at).from(nil).to(customer.deleted_at)
       end
     end
 
@@ -118,7 +118,7 @@ RSpec.describe Customers::TerminateRelationsService do
       freeze_time do
         expect { terminate_service.call }
           .to change { active_contract.reload.status }.from("active").to("terminated")
-          .and change(active_contract, :terminated_at).from(nil).to(Time.current)
+          .and change(active_contract, :terminated_at).from(nil).to(customer.deleted_at)
           .and not_change { terminated_contract.reload.attributes.slice("status", "terminated_at", "canceled_at") }
           .and not_change { canceled_contract.reload.attributes.slice("status", "terminated_at", "canceled_at") }
       end
@@ -135,7 +135,7 @@ RSpec.describe Customers::TerminateRelationsService do
       contract
       invoices
 
-      allow(Contracts::TerminateService).to receive(:call!).and_wrap_original do |original, **kwargs|
+      allow(Contracts::TerminateService).to receive(:call).and_wrap_original do |original, **kwargs|
         calls << [:contract, kwargs[:contract].id]
         original.call(**kwargs)
       end
@@ -163,8 +163,8 @@ RSpec.describe Customers::TerminateRelationsService do
       contract
       invoices
 
-      allow(Contracts::TerminateService).to receive(:call!)
-        .and_raise(BaseService::LockAcquisitionFailure.new(nil, code: "lock_acquisition_failed", error_message: "Failed to acquire lock"))
+      allow(Contracts::TerminateService).to receive(:call)
+        .and_return(Contracts::TerminateService::Result.new.lock_acquisition_failure!(message: "Failed to acquire lock"))
     end
 
     it "raises and keeps the drafts for the retry" do
@@ -193,14 +193,89 @@ RSpec.describe Customers::TerminateRelationsService do
       expect(invoices.map(&:reload)).to all(be_deleted)
     end
 
-    context "when a billing run holds the lock" do
+    context "when the deletion of each draft is recorded" do
+      let(:lock_held) { [] }
+
       before do
+        allow(Invoices::DeleteService).to receive(:call).and_wrap_original do |original, **kwargs|
+          lock_held << Customers::LockService.new(customer:, scope: :billing_schedule).locked?
+          original.call(**kwargs)
+        end
+      end
+
+      it "deletes every draft while the lock is held" do
+        terminate_service.call
+
+        expect(lock_held).to eq([true, true])
+      end
+    end
+
+    context "when a billing run holds the lock" do
+      let(:wallet) { create(:wallet, customer:) }
+
+      before do
+        wallet
         allow(Customers::LockService).to receive(:call!).and_raise(BaseLockService::FailedToAcquireLock, "Failed to acquire lock")
       end
 
-      it "raises and keeps the drafts for the retry" do
+      it "raises, keeps the drafts for the retry and has already terminated the wallets" do
         expect { terminate_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
 
+        expect(invoices.map(&:reload)).to all(be_draft)
+        expect(wallet.reload).to be_terminated
+      end
+    end
+  end
+
+  context "with a live contract another writer ends before its termination on the shadow organization of a migration" do
+    let(:contract) { create(:contract, customer:) }
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization)
+      contract
+      invoices
+
+      allow(Contracts::TerminateService).to receive(:call)
+        .and_return(Contracts::TerminateService::Result.new.single_validation_failure!(field: :contract, error_code: "cannot_terminate"))
+    end
+
+    it "treats the contract as ended and still deletes the drafts" do
+      result = nil
+
+      expect { result = terminate_service.call }.not_to have_enqueued_job(Invoices::FinalizeJob)
+
+      expect(result).to be_success
+      expect(invoices.map(&:reload)).to all(be_deleted)
+    end
+  end
+
+  context "with draft invoices on the shadow organization of a migration in another status" do
+    let(:contract) { create(:contract, :pending, customer:) }
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+    let(:migration_entry) do
+      BillingEngineMigrations::Lookup::Entry.new(
+        id: SecureRandom.uuid,
+        organization_id: SecureRandom.uuid,
+        shadow_organization_id: customer.organization_id,
+        status: "switched",
+        plan_mapping: {}
+      )
+    end
+
+    before do
+      contract
+      invoices
+
+      allow(BillingEngineMigrations::Lookup).to receive(:for_shadow).with(customer.organization_id).and_return(migration_entry)
+    end
+
+    it "finalizes the drafts and leaves the contract alone" do
+      freeze_time do
+        expect { terminate_service.call }
+          .to have_enqueued_job(Invoices::FinalizeJob).at(5.minutes.from_now).exactly(:twice)
+
+        expect(contract.reload).to be_pending
         expect(invoices.map(&:reload)).to all(be_draft)
       end
     end
