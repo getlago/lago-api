@@ -508,6 +508,38 @@ describe CatalogWallets::Ledger::DebitService do
     end
   end
 
+  context "with two applications of one invoice at the same time", transaction: false do
+    subject(:outcomes) do
+      wallet_id = wallet.id
+      entry_id = older_entry.id
+      invoice_id = invoice.id
+      fee_id = first_fee.id
+
+      with_advisory_lock("customer-#{customer.id}-catalog_wallet", lock_released_after: 1.second) do
+        Array.new(2) do
+          race do
+            described_class.call(
+              wallet: CatalogWallet.find(wallet_id),
+              reason: "invoice_application",
+              invoice: Invoice.find(invoice_id),
+              consumptions: [
+                {inbound_transaction: CatalogWalletTransaction.find(entry_id), fee: Fee.find(fee_id), credit_amount_cents: 1_000}
+              ]
+            )
+          end
+        end.map(&:value)
+      end
+    end
+
+    it "writes one debit" do
+      expect(outcomes.map(&:success?)).to eq([true, true])
+      expect(outcomes.map(&:replayed)).to match_array([false, true])
+      expect(wallet.transactions.outbound.count).to eq(1)
+      expect(older_entry.reload.remaining_credit_amount_cents).to eq(5_000 - 1_000)
+      expect(wallet.reload.balance_cents).to eq(15_000 - 1_000)
+    end
+  end
+
   context "with operations on two contracts of one customer", transaction: false do
     subject(:outcomes) do
       pending_entry_id = pending_entry.id
