@@ -405,4 +405,356 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
       expect(copy_lock).not_to be_locked
     end
   end
+
+  describe "reconciliation of the contract alerts of the external id" do
+    let(:kept_codes) { shadow_organization.contract_alerts.where(contract_external_id: subscription.external_id).pluck(:code) }
+
+    def copy_now
+      described_class.call(migration:, subscription:)
+    end
+
+    def destroy_v1_alerts
+      UsageMonitoring::Alerts::DestroyAllService.call(alertable: subscription)
+    end
+
+    def discarded?(contract_alert)
+      UsageMonitoring::ContractAlert.with_discarded.find(contract_alert.id).discarded?
+    end
+
+    context "when the V1 alerts of the subscription are destroyed" do
+      let(:other_external_id_alert) { create(:contract_alert, organization: shadow_organization) }
+      let(:other_organization_alert) do
+        create(:contract_alert, organization: create(:organization), contract_external_id: subscription.external_id)
+      end
+
+      before do
+        create_v1_alert(:usage_current_amount_alert, code: "spend")
+        create_v1_alert(:billable_metric_current_usage_units_alert, billable_metric:, code: "tokens")
+        copy_now
+        other_external_id_alert
+        other_organization_alert
+        destroy_v1_alerts
+      end
+
+      it "soft deletes every contract alert of the external id and creates none" do
+        copies = contract.contract_alerts.order(:code).to_a
+        allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
+
+        expect(copies.map(&:code)).to contain_exactly("spend", "tokens")
+        expect(result).to be_success
+        expect(contract.contract_alerts).to be_empty
+        expect(UsageMonitoring::ContractAlert.with_discarded.where(id: copies.map(&:id)).pluck(:deleted_at)).to all(be_present)
+        expect(UsageMonitoring::ContractAlertThreshold.where(contract_alert_id: copies.map(&:id))).to be_empty
+        expect(UsageMonitoring::ContractAlerts::CreateService).not_to have_received(:call)
+        expect(Rails.logger).to have_received(:info).with(a_string_including("destroyed alert spend: v1_alert_missing"))
+        expect(Rails.logger).to have_received(:info).with(a_string_including("destroyed alert tokens: v1_alert_missing"))
+      end
+
+      it "leaves the contract alerts of another external id or another organization" do
+        expect(result).to be_success
+        expect(discarded?(other_external_id_alert)).to be(false)
+        expect(discarded?(other_organization_alert)).to be(false)
+      end
+    end
+
+    context "without a V1 alert and with a contract alert of the external id only in another organization" do
+      let(:contract_status) { :terminated }
+
+      before { create(:contract_alert, organization: create(:organization), contract_external_id: subscription.external_id) }
+
+      it "does nothing" do
+        expect(result).to be_success
+        expect(Rails.logger).not_to have_received(:info)
+      end
+    end
+
+    context "when a V1 alert is discarded and another one is created with a new code" do
+      let(:old_alert) { create_v1_alert(:usage_current_amount_alert, code: "spend", name: "Spend") }
+      let(:old_copy) { contract.contract_alerts.sole }
+
+      before do
+        old_alert
+        copy_now
+        old_copy
+        old_alert.discard!
+        create_v1_alert(:usage_current_amount_alert, code: "spend_v2", name: "Spend v2")
+      end
+
+      it "destroys the old copy before creating the new one" do
+        expect(result).to be_success
+        expect(discarded?(old_copy)).to be(true)
+        expect(contract.contract_alerts.sole).to have_attributes(code: "spend_v2", name: "Spend v2", alert_type: "usage_amount")
+      end
+    end
+
+    context "when a V1 alert is recreated with the same code and other values" do
+      let(:other_metric) { create(:billable_metric, organization:) }
+      let(:other_product) do
+        create(:product, organization: shadow_organization, billable_metric: create(:billable_metric, organization: shadow_organization, code: other_metric.code))
+      end
+      let(:first_copy) { contract.contract_alerts.sole }
+
+      def v1_alert_with(factory, thresholds:, **attributes)
+        alert = create_v1_alert(factory, code: "spend", name: "Spend", thresholds: [], **attributes)
+        thresholds.each { create(:alert_threshold, alert:, **it) }
+        alert
+      end
+
+      def copy_then_recreate(from:, to:)
+        v1_alert_with(from.fetch(:factory), thresholds: [{code: "high", value: 10_00}], **from.except(:factory))
+        copy_now
+        first_copy
+        destroy_v1_alerts
+        v1_alert_with(to.fetch(:factory), thresholds: to.fetch(:thresholds, [{code: "high", value: 10_00}]), **to.except(:factory, :thresholds))
+      end
+
+      def expect_replaced_copy(**attributes)
+        expect(result).to be_success
+        expect(discarded?(first_copy)).to be(true)
+        expect(kept_codes).to eq(["spend"])
+        copy = contract.contract_alerts.sole
+        expect(copy).to have_attributes(code: "spend", **attributes)
+        expect(Rails.logger).to have_received(:info).with(a_string_including("destroyed alert spend: content_differs"))
+        copy
+      end
+
+      before { price_on(contract, other_product) }
+
+      it "replaces the copy when only the alert type differs" do
+        copy_then_recreate(
+          from: {factory: :billable_metric_current_usage_amount_alert, billable_metric:},
+          to: {factory: :billable_metric_current_usage_units_alert, billable_metric:}
+        )
+
+        expect_replaced_copy(alert_type: "usage_units", product:, with_product_filters: true)
+      end
+
+      it "replaces the copy when only the metric differs" do
+        copy_then_recreate(
+          from: {factory: :billable_metric_current_usage_amount_alert, billable_metric:},
+          to: {factory: :billable_metric_current_usage_amount_alert, billable_metric: other_metric}
+        )
+
+        expect_replaced_copy(alert_type: "usage_amount", product: other_product, with_product_filters: true)
+      end
+
+      it "replaces a metric copy by a whole contract copy" do
+        copy_then_recreate(
+          from: {factory: :billable_metric_current_usage_amount_alert, billable_metric:},
+          to: {factory: :usage_current_amount_alert}
+        )
+
+        expect_replaced_copy(alert_type: "usage_amount", product: nil, with_product_filters: false)
+      end
+
+      it "replaces the copy when only the name differs" do
+        copy_then_recreate(
+          from: {factory: :usage_current_amount_alert},
+          to: {factory: :usage_current_amount_alert, name: "Spending"}
+        )
+
+        expect_replaced_copy(name: "Spending")
+      end
+
+      {
+        "value" => {code: "high", value: 20_00},
+        "code" => {code: "higher", value: 10_00},
+        "recurring flag" => {code: "high", value: 10_00, recurring: true},
+        "notify_on" => {code: "high", value: 10_00, notify_on: %w[triggered resolved]}
+      }.each do |field, threshold|
+        it "replaces the copy when only the threshold #{field} differs" do
+          copy_then_recreate(
+            from: {factory: :usage_current_amount_alert},
+            to: {factory: :usage_current_amount_alert, thresholds: [threshold]}
+          )
+
+          copy = expect_replaced_copy
+          expected = {recurring: false, notify_on: %w[triggered]}.merge(threshold)
+          expect(copied_thresholds(copy)).to eq([expected.values_at(:code, :value, :recurring, :notify_on)])
+        end
+      end
+
+      it "replaces the copy when a threshold is added" do
+        copy_then_recreate(
+          from: {factory: :usage_current_amount_alert},
+          to: {factory: :usage_current_amount_alert, thresholds: [{code: "high", value: 10_00}, {code: "higher", value: 20_00}]}
+        )
+
+        copy = expect_replaced_copy
+        expect(copy.thresholds.count).to eq(2)
+      end
+
+      it "leaves no copy when the new type is not copied" do
+        copy_then_recreate(from: {factory: :usage_current_amount_alert}, to: {factory: :lifetime_usage_amount_alert})
+
+        expect(result).to be_success
+        expect(discarded?(first_copy)).to be(true)
+        expect(kept_codes).to be_empty
+        expect(Rails.logger).to have_received(:info).with(a_string_including("destroyed alert spend: unsupported_alert_type"))
+        expect(Rails.logger).to have_received(:info).with(a_string_including("skipped alert spend: unsupported_alert_type")).once
+      end
+
+      it "leaves no copy when the new metric has no shadow product" do
+        copy_then_recreate(
+          from: {factory: :usage_current_amount_alert},
+          to: {factory: :billable_metric_current_usage_amount_alert, billable_metric: create(:billable_metric, organization:)}
+        )
+
+        expect(result).to be_success
+        expect(discarded?(first_copy)).to be(true)
+        expect(kept_codes).to be_empty
+        expect(Rails.logger).to have_received(:info).with(a_string_including("destroyed alert spend: shadow_product_not_found"))
+        expect(Rails.logger).to have_received(:info).with(a_string_including("skipped alert spend: shadow_product_not_found")).once
+      end
+
+      it "leaves no copy when the contract alert refuses the new thresholds" do
+        copy_then_recreate(
+          from: {factory: :usage_current_amount_alert},
+          to: {factory: :usage_current_amount_alert, thresholds: [{code: "a", value: 30_00}, {code: "b", value: 30_00}]}
+        )
+
+        expect(result).to be_success
+        expect(discarded?(first_copy)).to be(true)
+        expect(kept_codes).to be_empty
+        expect(Rails.logger).to have_received(:info).with(a_string_including("skipped alert spend: Validation errors:"))
+      end
+    end
+
+    context "when the copy of a metric alert was changed on the shadow side" do
+      let(:first_copy) { contract.contract_alerts.sole }
+
+      before do
+        create_v1_alert(:billable_metric_current_usage_amount_alert, billable_metric:, code: "tokens")
+        copy_now
+      end
+
+      it "replaces a copy without product filters" do
+        first_copy.update_column(:with_product_filters, false) # rubocop:disable Rails/SkipsModelValidations
+
+        expect(result).to be_success
+        expect(discarded?(first_copy)).to be(true)
+        expect(contract.contract_alerts.sole).to have_attributes(code: "tokens", product:, with_product_filters: true)
+        expect(Rails.logger).to have_received(:info).with(a_string_including("destroyed alert tokens: content_differs"))
+      end
+
+      it "replaces a copy scoped to a product filter" do
+        product_filter = create(:product_filter, organization: shadow_organization, product:)
+        first_copy.update_column(:product_filter_id, product_filter.id) # rubocop:disable Rails/SkipsModelValidations
+
+        expect(result).to be_success
+        expect(discarded?(first_copy)).to be(true)
+        expect(contract.contract_alerts.sole).to have_attributes(code: "tokens", product:, product_filter: nil, with_product_filters: true)
+      end
+    end
+
+    context "when the copy matches its V1 alert" do
+      let(:alert) { create_v1_alert(:usage_current_amount_alert, code: "spend", name: "Spend", thresholds: [10_00], recurring_threshold: 5_00) }
+
+      before do
+        create(:alert_threshold, alert:, code: "high", value: 20_00.5, notify_on: %w[resolved triggered])
+        create(:alert_threshold, alert:, code: nil, value: 30_00)
+        create(:alert_threshold, alert:, code: nil, value: 40_00)
+        copy_now
+        allow(UsageMonitoring::ContractAlerts::DestroyService).to receive(:call).and_call_original
+        allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
+      end
+
+      it "keeps it with the same id" do
+        copy_id = contract.contract_alerts.sole.id
+
+        expect(result).to be_success
+        expect(contract.contract_alerts.sole.id).to eq(copy_id)
+        expect(UsageMonitoring::ContractAlerts::DestroyService).not_to have_received(:call)
+        expect(UsageMonitoring::ContractAlerts::CreateService).not_to have_received(:call)
+      end
+    end
+
+    context "when a V1 alert is created between two runs" do
+      before do
+        create_v1_alert(:usage_current_amount_alert, code: "spend")
+        copy_now
+      end
+
+      it "copies the new alert and destroys nothing" do
+        first_copy = contract.contract_alerts.sole
+        create_v1_alert(:billable_metric_current_usage_units_alert, billable_metric:, code: "tokens")
+        allow(UsageMonitoring::ContractAlerts::DestroyService).to receive(:call).and_call_original
+
+        expect(result).to be_success
+        expect(contract.contract_alerts.order(:code).pluck(:id, :code)).to match([[first_copy.id, "spend"], [be_present, "tokens"]])
+        expect(UsageMonitoring::ContractAlerts::DestroyService).not_to have_received(:call)
+      end
+    end
+
+    context "when the destroy of a stale copy fails" do
+      before do
+        create_v1_alert(:usage_current_amount_alert, code: "a_spend")
+        create_v1_alert(:billable_metric_current_usage_units_alert, billable_metric:, code: "b_tokens")
+        copy_now
+        destroy_v1_alerts
+        create_v1_alert(:usage_current_amount_alert, code: "c_new")
+        allow(Rails.logger).to receive(:warn)
+        allow(UsageMonitoring::ContractAlerts::DestroyService).to receive(:call)
+          .and_return(BaseService::Result.new.service_failure!(code: "unexpected", message: "boom"))
+        allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
+      end
+
+      it "fails without destroying the next copies or creating any" do
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(UsageMonitoring::ContractAlerts::DestroyService).to have_received(:call).once
+        expect(UsageMonitoring::ContractAlerts::CreateService).not_to have_received(:call)
+        expect(Rails.logger).to have_received(:warn).with(a_string_including("cannot destroy alert a_spend: unexpected: boom"))
+      end
+    end
+
+    context "without a live contract of the external id" do
+      let(:contract_status) { :terminated }
+      let(:contract_alert) { create(:contract_alert, organization: shadow_organization, contract_external_id: subscription.external_id) }
+
+      before { contract_alert }
+
+      it "keeps the existing contract alerts" do
+        expect(result).to be_success
+        expect(discarded?(contract_alert)).to be(false)
+        expect(Rails.logger).to have_received(:info).with(a_string_including("skipped: contract_not_found"))
+      end
+    end
+
+    context "when the migration is paused" do
+      let(:status) { "paused" }
+      let(:contract_alert) { create(:contract_alert, organization: shadow_organization, contract_external_id: subscription.external_id) }
+
+      before { contract_alert }
+
+      it "destroys nothing" do
+        expect(result).to be_success
+        expect(discarded?(contract_alert)).to be(false)
+      end
+    end
+
+    context "when a stale copy is replaced" do
+      before do
+        create_v1_alert(:usage_current_amount_alert, code: "spend", name: "Spend")
+        copy_now
+        destroy_v1_alerts
+        create_v1_alert(:usage_current_amount_alert, code: "spend", name: "Spending")
+      end
+
+      it "destroys and creates the contract alerts while holding the copy lock of the external id" do
+        copy_lock = BillingEngineMigrations::SubscriptionCopyLockService.new(subscription:)
+        [UsageMonitoring::ContractAlerts::DestroyService, UsageMonitoring::ContractAlerts::CreateService].each do |service|
+          allow(service).to receive(:call).and_wrap_original do |original, **args|
+            expect(copy_lock).to be_locked
+            original.call(**args)
+          end
+        end
+
+        expect(result).to be_success
+        expect(UsageMonitoring::ContractAlerts::DestroyService).to have_received(:call)
+        expect(UsageMonitoring::ContractAlerts::CreateService).to have_received(:call)
+        expect(copy_lock).not_to be_locked
+      end
+    end
+  end
 end

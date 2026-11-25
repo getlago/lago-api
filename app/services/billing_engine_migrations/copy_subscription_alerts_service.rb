@@ -30,18 +30,24 @@ module BillingEngineMigrations
     delegate :shadow_organization, to: :migration
 
     def copy_alerts
-      if v1_alerts.any? && contract.nil?
+      reconcile_contract_alerts if v1_alerts.any? || contract_alerts_of_external_id.exists?
+    end
+
+    def reconcile_contract_alerts
+      if contract.nil?
         log(:info, "skipped: contract_not_found")
-      elsif v1_alerts.any?
-        v1_alerts.each do |alert|
-          copy_alert(alert)
-          break if result.failure?
-        end
+      else
+        destroy_stale_contract_alerts
+        create_missing_contract_alerts if result.success?
       end
     end
 
     def v1_alerts
       @v1_alerts ||= subscription.alerts.includes(:thresholds, :billable_metric).order(:code).to_a
+    end
+
+    def contract_alerts_of_external_id
+      UsageMonitoring::ContractAlert.where(organization_id: shadow_organization.id, contract_external_id: subscription.external_id)
     end
 
     def contract
@@ -51,12 +57,75 @@ module BillingEngineMigrations
         .last
     end
 
+    def contract_alerts
+      @contract_alerts ||= contract.contract_alerts.includes(:thresholds).order(:code).to_a
+    end
+
     def existing_codes
-      @existing_codes ||= contract.contract_alerts.pluck(:code)
+      @existing_codes ||= contract_alerts.map(&:code)
+    end
+
+    def expected_params_by_code
+      @expected_params_by_code ||= v1_alerts.to_h { [it.code, expected_params(it)] }
+    end
+
+    # Both unique indexes of contract alerts skip soft-deleted rows, so a stale copy goes before its replacement
+    def destroy_stale_contract_alerts
+      contract_alerts.each do |contract_alert|
+        reason = stale_reason(contract_alert)
+        destroy_contract_alert(contract_alert, reason) if reason
+        break if result.failure?
+      end
+    end
+
+    def stale_reason(contract_alert)
+      expected = expected_params_by_code[contract_alert.code]
+
+      if expected.nil?
+        "v1_alert_missing"
+      elsif expected.is_a?(String)
+        expected
+      elsif !matches_expected?(contract_alert, expected)
+        "content_differs"
+      end
+    end
+
+    def destroy_contract_alert(contract_alert, reason)
+      destruction = UsageMonitoring::ContractAlerts::DestroyService.call(alert: contract_alert)
+
+      if destruction.success?
+        existing_codes.delete(contract_alert.code)
+        log(:info, "destroyed alert #{contract_alert.code}: #{reason}")
+      else
+        log(:warn, "cannot destroy alert #{contract_alert.code}: #{destruction.error.message}")
+        result.fail_with_error!(destruction.error)
+      end
+    end
+
+    def matches_expected?(contract_alert, expected)
+      contract_alert.alert_type == expected[:alert_type] &&
+        contract_alert.product_id == expected[:product_id] &&
+        contract_alert.product_filter_id.nil? &&
+        contract_alert.with_product_filters == (expected[:with_product_filters] == true) &&
+        contract_alert.name == expected[:name] &&
+        comparable_thresholds(contract_alert.thresholds) == comparable_thresholds(expected[:thresholds])
+    end
+
+    def comparable_thresholds(thresholds)
+      thresholds
+        .map { [it[:code], BigDecimal(it[:value].to_s), it[:recurring], it[:notify_on].sort] }
+        .sort_by { |code, value, recurring, notify_on| [value, code.to_s, recurring.to_s, notify_on.join(",")] }
+    end
+
+    def create_missing_contract_alerts
+      v1_alerts.each do |alert|
+        copy_alert(alert)
+        break if result.failure?
+      end
     end
 
     def copy_alert(alert)
-      params = expected_params(alert)
+      params = expected_params_by_code[alert.code]
 
       if params.is_a?(String)
         log(:info, "skipped alert #{alert.code}: #{params}")
