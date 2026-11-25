@@ -133,7 +133,7 @@ describe Api::V2::ContractWallets::TransactionsController do
       create(:catalog_wallet_transaction, organization:, catalog_wallet: create(:catalog_wallet, organization:, customer:, contract:))
     end
 
-    include_examples "requires API permission", "contract_wallet", "read"
+    include_examples "requires API permission", "wallet_transaction", "read"
     include_examples "requires the catalog_wallets flag"
     include_examples "requires the contract wallet"
 

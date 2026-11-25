@@ -244,6 +244,17 @@ RSpec.describe Api::V2::ContractWallets::AlertsController do
       end
     end
 
+    context "when its code is the last segment of the transactions route" do
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet: contract_wallet, code: "transactions") }
+
+      it "returns the alert, not the wallet's transactions" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:alert][:code]).to eq("transactions")
+      end
+    end
+
     context "when its code is the one of another wallet's alert" do
       let(:code) { "other_alert" }
 

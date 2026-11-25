@@ -57,7 +57,7 @@ module Api
         end
 
         def resource_name
-          "contract_wallet"
+          "wallet_transaction"
         end
       end
     end
