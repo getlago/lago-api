@@ -19,7 +19,13 @@ module UsageMonitoring
       # Read once, before the usage: the usage holds at least the events ingested until then and prices the windows
       # open at that instant, so it is never stamped with a time from the other side of a renewal.
       measured_at = Time.current
-      usage = Contracts::CurrentUsageService.call!(contract:, timestamp: measured_at, apply_taxes: false) # Never use taxes for alerting
+      begin
+        usage = Contracts::CurrentUsageService.call!(contract:, timestamp: measured_at, apply_taxes: false) # Never use taxes for alerting
+      rescue
+        # As for subscriptions, a usage that failed to build is not retried: the next activity evaluates the contract again
+        delete_activity
+        raise
+      end
 
       exception_to_raise = nil
 

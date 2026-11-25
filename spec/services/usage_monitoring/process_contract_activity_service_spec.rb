@@ -238,12 +238,19 @@ RSpec.describe UsageMonitoring::ProcessContractActivityService, :premium do
   context "when the usage cannot be read" do
     before { allow(Contracts::CurrentUsageService).to receive(:call!).and_raise(ActiveRecord::QueryCanceled) }
 
-    it "evaluates nothing and keeps the contract activity for the job to retry" do
+    it "evaluates nothing, deletes the contract activity and raises the error, as for subscriptions" do
       expect { result }.to raise_error(ActiveRecord::QueryCanceled)
 
       expect(alert.reload).to have_attributes(previous_value: 0, last_processed_at: nil)
       expect(alert.all_triggered_alerts).to be_empty
-      expect(contract_activity_kept?).to be(true)
+      expect(contract_activity_kept?).to be(false)
+    end
+
+    it "lets the next wake-up track the contract again" do
+      expect { result }.to raise_error(ActiveRecord::QueryCanceled)
+
+      expect { UsageMonitoring::TrackContractActivityService.call(contract:) }
+        .to change(UsageMonitoring::ContractActivity, :count).by(1)
     end
   end
 end
