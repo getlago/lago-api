@@ -2,6 +2,9 @@
 
 module CatalogPlans
   class UpdateService < BaseService
+    include Entitlement::Concerns::OwnerLockConcern
+    include MetadataParams
+
     Result = BaseResult[:catalog_plan]
 
     def initialize(catalog_plan:, params:, send_webhook: true)
@@ -18,6 +21,10 @@ module CatalogPlans
 
     def call
       return result.not_found_failure!(resource: "plan") unless catalog_plan
+
+      if malformed_metadata?(params[:metadata])
+        return result.single_validation_failure!(field: :metadata, error_code: "value_is_invalid")
+      end
 
       # A contract prices against the plan by reference — it serializes the
       # plan_code through the association (so the code must stay stable) and its
@@ -39,13 +46,17 @@ module CatalogPlans
       end
 
       ActiveRecord::Base.transaction do
+        lock_plan!(catalog_plan)
+
         catalog_plan.name = params[:name] if params.key?(:name)
         catalog_plan.code = params[:code] if params.key?(:code)
         catalog_plan.description = params[:description] if params.key?(:description)
         catalog_plan.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
         catalog_plan.currency = params[:currency] if params.key?(:currency)
+        catalog_plan.updated_at = Time.current if params.key?(:metadata)
         catalog_plan.save!
 
+        replace_metadata!(catalog_plan, params[:metadata]) if params.key?(:metadata)
         apply_taxes
       end
 
