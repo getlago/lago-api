@@ -44,6 +44,21 @@ describe CatalogWallets::Ledger::SettleService do
     expect(CatalogWallets::ThresholdTopUpService).to have_received(:call).with(wallet:).once
   end
 
+  context "when the entry is loaded without its wallet" do
+    subject(:result) { described_class.call(wallet_transaction: loaded_transaction) }
+
+    let(:loaded_transaction) { CatalogWalletTransaction.find(wallet_transaction.id) }
+
+    before { loaded_transaction }
+
+    it "takes the customer lock without loading the customer" do
+      statements = capture_sql { result }
+
+      expect(result).to be_success
+      expect(statements).not_to include(a_string_matching(/FROM "customers"/))
+    end
+  end
+
   context "when the pending entry holds no remaining credit" do
     let(:wallet_transaction) do
       create(

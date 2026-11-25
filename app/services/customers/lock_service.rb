@@ -17,9 +17,11 @@ module Customers
   class LockService < BaseLockService
     VALID_SCOPES = %i[prepaid_credit payment_method credit_note coupon billing_schedule catalog_wallet].freeze
 
-    def initialize(customer:, scope:, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true)
-      @customer = customer
+    def initialize(scope:, customer: nil, customer_id: nil, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true)
+      @customer_id = customer_id || customer&.id
       @scope = scope
+
+      raise ArgumentError, "customer or customer_id is required" unless @customer_id
 
       validate_scope!
 
@@ -28,7 +30,7 @@ module Customers
 
     private
 
-    attr_reader :customer, :scope
+    attr_reader :customer_id, :scope
 
     def lock_owner
       Customer
@@ -41,7 +43,7 @@ module Customers
     end
 
     def lock_key
-      "customer-#{customer.id}-#{scope}"
+      "customer-#{customer_id}-#{scope}"
     end
   end
 end
