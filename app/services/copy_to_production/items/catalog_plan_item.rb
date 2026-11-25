@@ -2,36 +2,14 @@
 
 module CopyToProduction
   module Items
-    # A plan is copied whole: its rate cards with their phases after it, its wallets with their scope, credit allocations
-    # and alerts, its entitlements and its taxes. The taxes, features, products and categories they reference are
-    # reused by code or copied before it.
+    # A plan is copied whole: its rate cards and phases after it, its wallets, entitlements and taxes with it. What they
+    # reference is reused by code or copied before it.
     class CatalogPlanItem < BaseItem
       ATTRIBUTES = %i[name code description invoice_display_name currency].freeze
       CREDIT_ALLOCATION_ATTRIBUTES = %i[
         code trigger billing_cycles threshold_amount_cents credit_amount_cents purchase_amount_cents priority
         invoice_requires_successful_payment
       ].freeze
-      PRODUCT_PRELOADS = [:product_category, *ProductItem::OWN_PRELOADS].freeze
-      PRODUCT_TARGET_PRELOADS = [{product: PRODUCT_PRELOADS}, {product_filter: {product: PRODUCT_PRELOADS}}].freeze
-      PRELOADS = [
-        :taxes,
-        {entitlements: [:feature, {values: :privilege}]},
-        {applied_rate_cards: [:catalog_plan, *PlanRateCardItem::PRELOADS]},
-        {
-          wallets: [
-            :taxes, :metadata, {alerts: :thresholds}, {credit_allocations: PRODUCT_TARGET_PRELOADS},
-            {selectors: [:product_category, *PRODUCT_TARGET_PRELOADS]}
-          ]
-        }
-      ].freeze
-
-      def find_source(id)
-        sandbox.catalog_plans.includes(*PRELOADS).find_by(id:)
-      end
-
-      def find_existing(source)
-        production.catalog_plans.find_by(code: source.code)
-      end
 
       def dependencies(source)
         dependencies = source.taxes.sort_by(&:code).map { ["tax", it] }
@@ -46,25 +24,14 @@ module CopyToProduction
         dependencies.uniq
       end
 
-      # Nothing of a plan whose code is live is copied: its rate cards would be read against the live plan.
       def children(source)
-        return [] if find_existing(source)
-
         source.applied_rate_cards.reject { it.rate_card.discarded? }.sort_by { it.rate_card.code }
           .map { ["plan_rate_card", it] }
       end
 
-      # The entitlements and wallets of a plan name privileges and filters by code, which a reused live feature or
-      # product may lack.
+      # Without selectors a live wallet applies to every fee, while this one reaches nothing.
       def refusal(source)
-        live_features = production.features.includes(:privileges)
-          .where(code: entitlements(source).map { it.feature.code }).index_by(&:code)
-        return "copy_to_production_privilege_missing" if entitlements(source).any? { missing_privilege?(it, live_features) }
-        return "copy_to_production_privilege_mismatch" if entitlements(source).any? { mismatched_privilege?(it, live_features) }
-        # Without selectors a live wallet applies to every fee, while this one reaches nothing.
-        return "copy_to_production_target_deleted" if wallets(source).any? { it.selectors.any? && selectors(it).empty? }
-
-        "copy_to_production_filter_missing" if wallets(source).any? { missing_filter?(it) }
+        "copy_to_production_target_deleted" if wallets(source).any? { it.selectors.any? && selectors(it).empty? }
       end
 
       def copy!(source, resolved)
@@ -79,10 +46,6 @@ module CopyToProduction
         copy_entitlements!(source, plan)
         wallets(source).each { copy_wallet!(it, plan, resolved) }
         plan
-      end
-
-      def unique_indexes
-        {"index_catalog_plans_on_organization_id_and_code" => :code}
       end
 
       # Catalog plans are logged as plans.
@@ -102,12 +65,13 @@ module CopyToProduction
 
       # A selector or a credit allocation on a deleted target was left behind by the deletion: it reaches nothing.
       def selectors(wallet)
-        wallet.selectors.reject { (target = target_of(it)) && target.discarded? }
+        wallet.selectors.reject { target_of(it)&.discarded? }
+          .sort_by { [it.selector_type, (target_of(it)&.code || it.fee_type).to_s] }
       end
 
       # An ongoing balance allocation has no target.
       def credit_allocations(wallet)
-        wallet.credit_allocations.reject { (target = target_of(it)) && target.discarded? }
+        wallet.credit_allocations.reject { target_of(it)&.discarded? }.sort_by(&:code)
       end
 
       def target_of(record)
@@ -123,34 +87,6 @@ module CopyToProduction
           product_dependencies(record.product_filter.product)
         else
           []
-        end
-      end
-
-      def missing_privilege?(entitlement, live_features)
-        live_feature = live_features[entitlement.feature.code]
-        return false unless live_feature
-
-        (entitlement.values.filter_map { it.privilege&.code } - live_feature.privileges.map(&:code)).any?
-      end
-
-      # As Entitlement::Concerns::CreateOrUpdateConcern#validate_value: the sandbox value suits its own privilege, so a
-      # live one of the same value type takes it, unless it is a select without that option.
-      def mismatched_privilege?(entitlement, live_features)
-        live_privileges = live_features[entitlement.feature.code]&.privileges&.index_by(&:code)
-        return false unless live_privileges
-
-        entitlement.values.any? do |value|
-          live_privilege = value.privilege && live_privileges[value.privilege.code]
-          next false if live_privilege.nil? || value.value.nil?
-          next true if live_privilege.value_type != value.privilege.value_type
-
-          live_privilege.value_type == "select" && live_privilege.config.dig("select_options")&.exclude?(value.value)
-        end
-      end
-
-      def missing_filter?(wallet)
-        (selectors(wallet) + credit_allocations(wallet)).filter_map(&:product_filter).any? do |filter|
-          live_filter_codes(filter.product)&.exclude?(filter.code)
         end
       end
 
@@ -182,7 +118,7 @@ module CopyToProduction
         ).plan_wallet
 
         # Credit allocations have no create service: they are written as Contracts::MaterializeWalletsService does.
-        credit_allocations(wallet).sort_by(&:code).each do |allocation|
+        credit_allocations(wallet).each do |allocation|
           live_wallet.credit_allocations.create!(
             organization: production,
             **allocation.slice(*CREDIT_ALLOCATION_ATTRIBUTES).symbolize_keys,
@@ -214,15 +150,11 @@ module CopyToProduction
         if allocation.product
           {product: resolved.fetch(["product", allocation.product_id])}
         elsif (filter = allocation.product_filter)
-          {product_filter: live_filters(resolved.fetch(["product", filter.product_id])).fetch(filter.code)}
+          live_product = resolved.fetch(["product", filter.product_id])
+          {product_filter: live_product.filters.find_by(code: filter.code) || not_found!("product_filter")}
         else
           {}
         end
-      end
-
-      def live_filters(live_product)
-        @live_filters ||= {}
-        @live_filters[live_product.id] ||= live_product.filters.index_by(&:code)
       end
 
       def copy_alert!(alert, live_wallet)

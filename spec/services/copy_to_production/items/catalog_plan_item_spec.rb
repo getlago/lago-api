@@ -9,37 +9,11 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
   let(:sandbox) { create(:organization, :sandbox, production_organization: production) }
   let(:plan) { create(:catalog_plan, organization: sandbox, code: "pro") }
 
+  it_behaves_like "a copy to production item matched by code", :catalog_plan
+
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("catalog_plan")
     expect(item.activity_type).to eq("plan.copied_to_production")
-  end
-
-  describe "#find_source" do
-    it "finds a catalog plan of the sandbox" do
-      expect(item.find_source(plan.id)).to eq(plan)
-    end
-
-    it "ignores a catalog plan of production" do
-      expect(item.find_source(create(:catalog_plan, organization: production).id)).to be_nil
-    end
-  end
-
-  describe "#find_existing" do
-    let(:live_plan) { create(:catalog_plan, organization: production, code: "pro") }
-
-    before { live_plan }
-
-    it "finds the kept production plan with the same code" do
-      expect(item.find_existing(plan)).to eq(live_plan)
-    end
-
-    context "when the production plan is deleted" do
-      before { live_plan.discard! }
-
-      it "finds nothing" do
-        expect(item.find_existing(plan)).to be_nil
-      end
-    end
   end
 
   describe "#dependencies" do
@@ -94,58 +68,11 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
       expect(item.children(item.find_source(plan.id)))
         .to eq([["plan_rate_card", other_plan_rate_card], ["plan_rate_card", plan_rate_card]])
     end
-
-    context "when production has a plan with the same code" do
-      before { create(:catalog_plan, organization: production, code: "pro") }
-
-      it "lists nothing" do
-        expect(item.children(plan)).to eq([])
-      end
-    end
   end
 
   describe "#refusal" do
-    let(:feature) { create(:feature, organization: sandbox, code: "seats") }
-    let(:privilege) { create(:privilege, organization: sandbox, feature:, code: "max") }
-
-    before do
-      entitlement = create(:entitlement, :catalog_plan, organization: sandbox, catalog_plan: plan, feature:)
-      create(:entitlement_value, organization: sandbox, entitlement:, privilege:, value: "3")
-    end
-
-    it "accepts a plan whose features are not live" do
+    it "accepts a plan" do
       expect(item.refusal(plan)).to be_nil
-    end
-
-    context "when a live feature lacks a privilege of the plan" do
-      before { create(:privilege, organization: production, feature: create(:feature, organization: production, code: "seats"), code: "min") }
-
-      it "answers copy_to_production_privilege_missing" do
-        expect(item.refusal(plan)).to eq("copy_to_production_privilege_missing")
-      end
-    end
-
-    context "when a live feature has the privileges of the plan" do
-      before { create(:privilege, organization: production, feature: create(:feature, organization: production, code: "seats"), code: "max") }
-
-      it "accepts it" do
-        expect(item.refusal(plan)).to be_nil
-      end
-    end
-
-    context "when a credit allocation targets a filter a live product lacks" do
-      let(:product) { create(:product, :fixed, :standalone, organization: sandbox, code: "seat") }
-
-      before do
-        create(:product, :fixed, :standalone, organization: production, code: "seat")
-        create(:plan_wallet_credit_allocation, organization: sandbox, product: nil,
-          plan_wallet: create(:plan_wallet, organization: sandbox, catalog_plan: plan),
-          product_filter: create(:product_filter, organization: sandbox, product:, code: "eu"))
-      end
-
-      it "answers copy_to_production_filter_missing" do
-        expect(item.refusal(plan)).to eq("copy_to_production_filter_missing")
-      end
     end
 
     context "when a wallet only targets deleted products" do

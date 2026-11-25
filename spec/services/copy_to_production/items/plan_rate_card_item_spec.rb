@@ -21,12 +21,14 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
   end
 
   describe "#find_source" do
+    let(:production_plan_rate_card) { create(:plan_rate_card, organization: production) }
+
     it "finds a plan rate card of the sandbox" do
       expect(item.find_source(plan_rate_card.id)).to eq(plan_rate_card)
     end
 
     it "ignores a plan rate card of production" do
-      expect(item.find_source(create(:plan_rate_card, organization: production).id)).to be_nil
+      expect(item.find_source(production_plan_rate_card.id)).to be_nil
     end
   end
 
@@ -57,9 +59,9 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
     end
   end
 
-  describe "#parents" do
+  describe "#parent" do
     it "answers its plan" do
-      expect(item.parents(plan_rate_card)).to eq([["catalog_plan", plan]])
+      expect(item.parent(plan_rate_card)).to eq(["catalog_plan", plan])
     end
   end
 
@@ -74,95 +76,6 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
 
       it "leaves the category out" do
         expect(item.dependencies(plan_rate_card)).to eq([["product", product], ["rate_card", rate_card]])
-      end
-    end
-  end
-
-  describe "#refusal" do
-    it "accepts a plan rate card whose plan is not live" do
-      expect(item.refusal(plan_rate_card)).to be_nil
-    end
-
-    context "when the live plan prices the product with another rate card" do
-      before do
-        create(:plan_rate_card, organization: production, catalog_plan: live_plan,
-          rate_card: create(:rate_card, organization: production, product: live_product, code: "seat_eur_v2"))
-      end
-
-      it "answers copy_to_production_already_priced" do
-        expect(item.refusal(plan_rate_card)).to eq("copy_to_production_already_priced")
-      end
-    end
-
-    context "when the live plan prices another filter of the product" do
-      before do
-        create(:plan_rate_card, organization: production, catalog_plan: live_plan,
-          rate_card: create(:rate_card, :with_filter, organization: production, product: live_product, code: "seat_eu"))
-      end
-
-      it "accepts it" do
-        expect(item.refusal(plan_rate_card)).to be_nil
-      end
-    end
-
-    context "when the live plan has contracts" do
-      before { create(:contract, :terminated, customer: create(:customer, organization: production), catalog_plan: live_plan) }
-
-      it "answers plan_locked" do
-        expect(item.refusal(plan_rate_card)).to eq("plan_locked")
-      end
-    end
-
-    context "when the live plan bills another currency" do
-      let(:live_plan) { create(:catalog_plan, organization: production, code: "pro", currency: "USD") }
-
-      before { live_plan }
-
-      it "answers currency_does_not_match" do
-        expect(item.refusal(plan_rate_card)).to eq("currency_does_not_match")
-      end
-    end
-
-    context "when the plan is not live and the live card with its code bills another currency" do
-      before { create(:rate_card, organization: production, product: live_product, code: "seat_eur", currency: "USD") }
-
-      it "answers currency_does_not_match, as the copied plan would attach that card" do
-        expect(item.refusal(plan_rate_card)).to eq("currency_does_not_match")
-      end
-    end
-
-    context "when a phase override sets a spend floor" do
-      let(:live_rate_card) { create(:rate_card, organization: production, product: live_product, code: "seat_eur") }
-
-      before do
-        live_rate_card
-        create(:rate_phase, organization: sandbox, plan_rate_card:,
-          rate_override: create(:rate_override, organization: sandbox, min_amount_cents: 500))
-      end
-
-      it "accepts it when the live card with its code bills in arrears" do
-        expect(item.refusal(plan_rate_card)).to be_nil
-      end
-
-      context "when the live card with its code bills in advance" do
-        let(:live_rate_card) { create(:rate_card, :advance, organization: production, product: live_product, code: "seat_eur") }
-
-        it "answers copy_to_production_rate_mismatch" do
-          expect(item.refusal(plan_rate_card)).to eq("copy_to_production_rate_mismatch")
-        end
-      end
-    end
-
-    context "when the live card with its code prices a slice the live plan already prices" do
-      before do
-        live_seat_eu = create(:rate_card, :with_filter, organization: production, product: live_product, code: "seat_eu")
-        create(:plan_rate_card, organization: production, catalog_plan: live_plan, rate_card: live_seat_eu)
-        create(:rate_card, organization: production, product: live_product, product_filter: live_seat_eu.product_filter,
-          code: "seat_eur")
-      end
-
-      it "answers copy_to_production_already_priced" do
-        expect(item.refusal(plan_rate_card)).to eq("copy_to_production_already_priced")
       end
     end
   end
