@@ -46,6 +46,7 @@ module Types
     field :destroy_contract_alert, mutation: Mutations::Contracts::Alerts::Destroy
     field :destroy_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Destroy
     field :destroy_contract_rate_phase, mutation: Mutations::ContractRatePhases::Destroy
+    field :publish_contract, mutation: Mutations::Contracts::Publish
     field :terminate_contract, mutation: Mutations::Contracts::Terminate
     field :update_charge, mutation: Mutations::Charges::Update
     field :update_contract, mutation: Mutations::Contracts::Update

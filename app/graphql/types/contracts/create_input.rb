@@ -14,6 +14,8 @@ module Types
       # Optional by design: a plan-less contract prices through directly
       # attached rate cards.
       argument :plan_code, String, required: false
+      # A draft never bills until it is published; omitted or null, the start date decides.
+      argument :status, Types::Contracts::CreateStatusEnum, required: false
 
       argument :billing_anchor_date, GraphQL::Types::ISO8601Date, required: false
       argument :ended_at, GraphQL::Types::ISO8601DateTime, required: false
