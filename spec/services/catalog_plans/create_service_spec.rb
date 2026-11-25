@@ -89,6 +89,49 @@ RSpec.describe CatalogPlans::CreateService do
     end
   end
 
+  context "with metadata" do
+    before { args[:metadata] = {crm_id: "123", tier: nil} }
+
+    it "stores it with string keys" do
+      expect(result).to be_success
+      expect(result.catalog_plan.metadata).to have_attributes(organization_id: organization.id, value: {"crm_id" => "123", "tier" => nil})
+    end
+  end
+
+  context "with null metadata" do
+    before { args[:metadata] = nil }
+
+    it "creates the catalog plan without metadata" do
+      expect(result).to be_success
+      expect(result.catalog_plan.metadata).to be_nil
+    end
+  end
+
+  context "when the metadata is not an object" do
+    before { args[:metadata] = "abc" }
+
+    it "returns a validation failure on metadata and creates nothing" do
+      expect { result }.not_to change(CatalogPlan, :count)
+
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq(metadata: ["value_is_invalid"])
+      expect(SendWebhookJob).not_to have_been_enqueued
+      expect(Utils::ActivityLog).not_to have_produced("plan.created")
+    end
+  end
+
+  context "when the metadata content is invalid" do
+    before { args[:metadata] = {crm_id: "a" * 256} }
+
+    it "returns a validation failure on metadata and rolls back the catalog plan" do
+      expect { result }.not_to change(CatalogPlan, :count)
+
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq(metadata: ["value_is_invalid"])
+      expect(Metadata::ItemMetadata.count).to eq(0)
+    end
+  end
+
   context "when a concurrent request creates the same code" do
     before do
       create(:catalog_plan, organization:, code: "growth")

@@ -351,6 +351,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
             create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax: vat)
             create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax: create(:tax, organization:, deleted_at: Time.current))
+            create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123"})
           end
 
           it "serializes the plan with its kept taxes, without the count of its rate cards" do
@@ -365,7 +366,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               currency: "EUR",
               created_at: timestamp,
               deleted_at: nil,
-              taxes: [vat_v2_payload]
+              taxes: [vat_v2_payload],
+              metadata: {crm_id: "123"}
             )
           end
 
@@ -387,7 +389,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
                 currency: "EUR",
                 created_at: timestamp,
                 deleted_at: timestamp,
-                taxes: [vat_v2_payload]
+                taxes: [vat_v2_payload],
+                metadata: {crm_id: "123"}
               )
             end
           end

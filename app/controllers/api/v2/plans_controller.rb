@@ -59,7 +59,13 @@ module Api
       private
 
       def input_params
-        params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency, tax_codes: [])
+        plan = params.require(:plan)
+        permitted = plan.permit(:name, :code, :description, :invoice_display_name, :currency, tax_codes: [])
+        return permitted unless plan.key?(:metadata)
+
+        # Unfiltered, so that the service refuses a value of another shape instead of ignoring it.
+        metadata = plan[:metadata]
+        permitted.to_h.merge(metadata: metadata.is_a?(ActionController::Parameters) ? metadata.to_unsafe_h : metadata)
       end
 
       def resource_name

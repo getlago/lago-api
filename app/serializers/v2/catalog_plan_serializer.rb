@@ -5,6 +5,7 @@ module V2
     timestamps :created_at, :deleted_at
 
     expandable :taxes, serializer: ::V2::TaxSerializer, webhooks: true
+    expandable :metadata, serializer: ::V1::MetadataSerializer, webhooks: true
 
     def serialize
       {

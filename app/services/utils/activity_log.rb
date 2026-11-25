@@ -10,7 +10,7 @@ module Utils
 
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
-      catalog_plan: %i[taxes],
+      catalog_plan: %i[taxes metadata],
       catalog_wallet: %i[taxes metadata],
       # Every rate rather than `active_rate`, one of them, so that the audit diff shows what changed.
       rate_card: %i[rates taxes],
