@@ -49,7 +49,59 @@ module UsageMonitoring
       STI_MAPPING.invert.fetch(name)
     end
 
+    def cards_in_scope(usage)
+      usage.rate_card_usages.select do |card_usage|
+        rate_card = card_usage.contract_rate_card.rate_card
+
+        if product_id.nil?
+          rate_card.product.metered?
+        elsif product_filter_id.nil?
+          rate_card.product_id == product_id && (with_product_filters || rate_card.product_filter_id.nil?)
+        else
+          rate_card.product_id == product_id && rate_card.product_filter_id == product_filter_id
+        end
+      end
+    end
+
+    def find_value(usage)
+      cards = cards_in_scope(usage)
+      cards.sum(BigDecimal(0)) { card_value(it) } if cards.any?
+    end
+
+    # Each card in scope, with the start of the window it measures and its value, in the shape previous_windows
+    # stores them. Keyed by product and filter, as a new version of a card or the card of a replacement contract
+    # reads the same events. The start is in the customer's local time, which a change of timezone keeps, and a
+    # recurring metric carries its usage over renewals, so its card has no window.
+    def windows_in_scope(usage)
+      timezone = usage.contract.customer.applicable_timezone
+
+      cards_in_scope(usage).to_h do |card_usage|
+        rate_card = card_usage.contract_rate_card.rate_card
+        unless recurring_card?(card_usage)
+          started_at = card_usage.billing_segment.started_at.in_time_zone(timezone).strftime("%Y-%m-%dT%H:%M:%S.%6N")
+        end
+
+        [
+          [rate_card.product_id, rate_card.product_filter_id].compact.join("/"),
+          {"started_at" => started_at, "value" => card_value(card_usage).to_s("F")}
+        ]
+      end
+    end
+
+    def same_window?(slice, window)
+      previous_windows.key?(slice) && !window.nil? && previous_windows[slice]["started_at"] == window["started_at"]
+    end
+
+    def card_value(_card_usage)
+      raise NotImplementedError
+    end
+
     private
+
+    def recurring_card?(card_usage)
+      billable_metric = card_usage.contract_rate_card.rate_card.product.billable_metric
+      billable_metric.present? && billable_metric.recurring?
+    end
 
     # Units of different products do not add up, and a filter only narrows its own product
     def need_product?

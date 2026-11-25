@@ -57,6 +57,13 @@ module UsageMonitoring
     end
 
     def evaluate(current, now)
+      # The cards of a contract rebaseline one by one. Its types never roll over as a whole (period_rolled_over?),
+      # so resolution still runs, on the cards still in their window: a renewal alone resolves nothing.
+      if alert.is_a?(ContractAlert)
+        windows = alert.windows_in_scope(current_metrics)
+        rebaseline_renewed_windows(windows)
+      end
+
       # Re-baselining discards the evidence a recovery would be measured against, so it replaces the resolution.
       rebaselined = period_rolled_over? && alert.window_resets_each_period?(alertable)
       alert.previous_value = 0 if rebaselined
@@ -70,6 +77,18 @@ module UsageMonitoring
       end
 
       alert.previous_value = current
+      alert.previous_windows = windows.reject { |_, window| BigDecimal(window["value"]).zero? } if windows
+    end
+
+    # The cards of a contract renew on their own dates, so the baseline keeps only the value of the cards still
+    # measuring the window of the last evaluation. Summing them rather than subtracting the others from
+    # previous_value, which is rounded to its column, takes a single card back to exactly 0.
+    def rebaseline_renewed_windows(windows)
+      kept = alert.previous_windows.select { |slice, _| alert.same_window?(slice, windows[slice]) }
+
+      if kept.size < alert.previous_windows.size
+        alert.previous_value = kept.values.sum(BigDecimal(0)) { BigDecimal(it["value"]) }
+      end
     end
 
     def period_rolled_over?

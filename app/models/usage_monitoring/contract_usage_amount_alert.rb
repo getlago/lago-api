@@ -2,6 +2,9 @@
 
 module UsageMonitoring
   class ContractUsageAmountAlert < ContractAlert
+    def card_value(card_usage)
+      BigDecimal(card_usage.amount_cents)
+    end
   end
 end
 
