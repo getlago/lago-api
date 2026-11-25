@@ -14,6 +14,7 @@ module Types
       field :code, String, null: false
       field :description, String, null: true
       field :invoice_display_name, String, null: true
+      field :metadata, [Types::Metadata::Object], null: true
       field :name, String, null: false
 
       field :currency, Types::CurrencyEnum, null: false
@@ -40,6 +41,12 @@ module Types
 
       def attached_to_contracts
         contracts_count.positive?
+      end
+
+      # A metadata deleted by the mutation stays cached, destroyed, on the association.
+      def metadata
+        item_metadata = dataloader.with(Sources::ActiveRecordAssociation, :metadata).load(object)
+        item_metadata.value unless item_metadata.nil? || item_metadata.destroyed?
       end
     end
   end

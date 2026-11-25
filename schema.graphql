@@ -1660,6 +1660,7 @@ type CatalogPlan {
   description: String
   id: ID!
   invoiceDisplayName: String
+  metadata: [ItemMetadata!]
   name: String!
   organization: Organization
   taxes: [Tax!]!
@@ -3746,6 +3747,7 @@ input CreateCatalogPlanInput {
   currency: CurrencyEnum!
   description: String
   invoiceDisplayName: String
+  metadata: [MetadataInput!]
   name: String!
   taxCodes: [String!]
 }
@@ -17160,6 +17162,7 @@ input UpdateCatalogPlanInput {
   description: String
   id: ID!
   invoiceDisplayName: String
+  metadata: [MetadataInput!]
   name: String
   taxCodes: [String!]
 }

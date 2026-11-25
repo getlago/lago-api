@@ -170,4 +170,44 @@ RSpec.describe Resolvers::ContractsResolver do
       expect(counts.sum).to eq(2)
     end
   end
+
+  context "when the plan metadata is requested for several contracts" do
+    let(:query) do
+      <<~GQL
+        query {
+          contracts(limit: 10) {
+            collection { id plan { code metadata { key value } } }
+          }
+        }
+      GQL
+    end
+
+    before do
+      2.times do
+        catalog_plan = create(:catalog_plan, organization:)
+        create(:item_metadata, owner: catalog_plan, organization:, value: {"tier" => catalog_plan.code})
+        create(:contract, organization:, customer:, catalog_plan:)
+      end
+    end
+
+    def count_queries(table)
+      queries = []
+      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        queries << payload[:sql] if payload[:sql].include?(%("#{table}"))
+      end
+      yield
+      queries
+    ensure
+      ActiveSupport::Notifications.unsubscribe(sub)
+    end
+
+    it "loads the metadata in one query, not one per plan" do
+      metadata_queries = count_queries("item_metadata") { execution }
+
+      expect(metadata_queries.size).to eq(1)
+      plans = execution["data"]["contracts"]["collection"].filter_map { it["plan"] }
+      expect(plans.size).to eq(2)
+      expect(plans.map { it["metadata"] }).to eq(plans.map { [{"key" => "tier", "value" => it["code"]}] })
+    end
+  end
 end

@@ -51,6 +51,44 @@ RSpec.describe Mutations::CatalogPlans::Update do
     expect(catalog_plan.reload.name).to eq("Renamed")
   end
 
+  context "with metadata" do
+    before { allow(CatalogPlans::UpdateService).to receive(:call).and_call_original }
+
+    [
+      ["pairs", [{key: "tier", value: "gold"}, {key: "note", value: nil}], {"tier" => "gold", "note" => nil}],
+      ["an empty list", [], {}],
+      ["null", nil, nil]
+    ].each do |description, metadata, expected|
+      context "with #{description}" do
+        let(:input) { {id: catalog_plan.id, metadata:} }
+
+        it "passes the metadata to the update service as a hash" do
+          result
+
+          expect(CatalogPlans::UpdateService).to have_received(:call)
+            .with(catalog_plan:, params: {metadata: expected})
+        end
+      end
+    end
+
+    context "without the argument" do
+      it "passes no metadata to the update service" do
+        result
+
+        expect(CatalogPlans::UpdateService).to have_received(:call).with(catalog_plan:, params: {name: "Renamed"})
+      end
+    end
+
+    context "when a key is duplicated" do
+      let(:input) { {id: catalog_plan.id, metadata: [{key: "tier", value: "gold"}, {key: "tier", value: "silver"}]} }
+
+      it "returns duplicated_field without calling the update service" do
+        expect(result["errors"].first["message"]).to include("duplicated_field")
+        expect(CatalogPlans::UpdateService).not_to have_received(:call)
+      end
+    end
+  end
+
   context "with taxes" do
     let(:tax) { create(:tax, organization:) }
     let(:input) { {id: catalog_plan.id, taxCodes: [tax.code]} }
