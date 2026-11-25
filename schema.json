@@ -48248,8 +48248,8 @@
               "deprecationReason": null
             },
             {
-              "name": "copy_to_production_item_unsupported",
-              "description": "This item cannot be copied to production",
+              "name": "copy_to_production_item_refused",
+              "description": "A create service refuses an item to copy, as refusalCode tells",
               "isDeprecated": false,
               "deprecationReason": null
             }
@@ -48443,6 +48443,30 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "CopyToProductionItem",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "refusalCode",
+              "description": "With copy_to_production_item_refused, the error code the move would answer for the refused item",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "refusalField",
+              "description": "With copy_to_production_item_refused, the field of a validation error or the resource not found",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "isDeprecated": false,

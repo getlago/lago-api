@@ -31,6 +31,8 @@ RSpec.describe Resolvers::CopyToProductionPreviewResolver do
           copiedItems { id itemType code name }
           reusedItems { id itemType code name }
           missingParent { id }
+          refusalCode
+          refusalField
         }
       }
     GQL
@@ -51,7 +53,9 @@ RSpec.describe Resolvers::CopyToProductionPreviewResolver do
       "blockingReason" => nil,
       "copiedItems" => [{"id" => metric.id, "itemType" => "billable_metric", "code" => "api_calls", "name" => "API calls"}],
       "reusedItems" => [],
-      "missingParent" => nil
+      "missingParent" => nil,
+      "refusalCode" => nil,
+      "refusalField" => nil
     )
   end
 
@@ -60,6 +64,22 @@ RSpec.describe Resolvers::CopyToProductionPreviewResolver do
 
     it "answers the blocking reason" do
       expect(execution["data"]["copyToProductionPreview"]["blockingReason"]).to eq("value_already_exist")
+    end
+  end
+
+  context "when the create service refuses the copy" do
+    let(:production) { create(:organization, custom_aggregation: true) }
+    let(:metric) do
+      create(:billable_metric, organization: sandbox, code: "api_calls", aggregation_type: "custom_agg",
+        custom_aggregator: "aggregator")
+    end
+
+    it "answers its error code and field" do
+      expect(execution["data"]["copyToProductionPreview"]).to include(
+        "blockingReason" => "copy_to_production_item_refused",
+        "refusalCode" => "value_is_mandatory",
+        "refusalField" => "customAggregator"
+      )
     end
   end
 

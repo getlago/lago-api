@@ -15,28 +15,14 @@ RSpec.describe CopyToProduction::Items::BillableMetricItem do
   end
 
   describe "#find_source" do
+    let(:production_metric) { create(:billable_metric, organization: production) }
+
     it "finds a metric of the sandbox" do
       expect(item.find_source(metric.id)).to eq(metric)
     end
 
     it "ignores a metric of production" do
-      expect(item.find_source(create(:billable_metric, organization: production).id)).to be_nil
-    end
-  end
-
-  describe "#refusal" do
-    it "accepts a metric" do
-      expect(item.refusal(metric)).to be_nil
-    end
-
-    context "with a custom aggregation" do
-      let(:metric) do
-        create(:billable_metric, organization: sandbox, aggregation_type: "custom_agg", custom_aggregator: "aggregator")
-      end
-
-      it "refuses it" do
-        expect(item.refusal(metric)).to eq("copy_to_production_item_unsupported")
-      end
+      expect(item.find_source(production_metric.id)).to be_nil
     end
   end
 

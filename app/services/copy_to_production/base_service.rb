@@ -13,7 +13,7 @@ module CopyToProduction
       def entry(record = source) = Entry.new(item_type: item.item_type, record:)
     end
 
-    Plan = Data.define(:copied, :reused, :existing, :missing_parent)
+    Plan = Data.define(:requested, :copied, :reused, :existing, :missing_parent)
 
     def initialize(organization:, user:, item_type:, id:)
       @organization = organization
@@ -54,33 +54,30 @@ module CopyToProduction
       "copy_to_production_admin_only" unless production_membership&.admin?
     end
 
-    # The error code that refuses the copy, or nil: the item's code taken in production, then an item to copy that
-    # cannot be, then a parent that is not live. A live item answers that it is live, whatever its copy would refuse.
+    # The copy's own refusal, as [error code, refused step], or nil: the item's code taken in production, then an item
+    # to copy that cannot be, then a parent that is not live. What a create service refuses is known by copying.
     def plan_refusal(plan)
-      return "value_already_exist" if plan.existing
+      return ["value_already_exist", nil] if plan.existing
 
-      code, = refused_step(plan)
-      return code if code
+      plan.copied.each do |step|
+        code = step.item.refusal(step.source)
+        return [code, step] if code
+      end
 
-      "copy_to_production_parent_missing" if plan.missing_parent
-    end
-
-    # The first item to copy, in plan order, that refuses to be copied, as [error code, step], or nil. Dependencies
-    # and children are checked too, as the copy would copy them.
-    def refused_step(plan)
-      return @refused_step if defined?(@refused_step)
-
-      @refused_step = plan.copied.lazy.map { [it.item.refusal(it.source), it] }.find(&:first)
+      ["copy_to_production_parent_missing", nil] if plan.missing_parent
     end
 
     # Members are mirrored from production, so the admin check reads the production membership.
     def production_membership
-      @production_membership ||= production.memberships.active.find_by(user_id: user.id)
+      production.memberships.active.find_by(user_id: user.id)
     end
 
     # Dependencies come before the items that reference them, the requested item last. Each one is reused when production
-    # has its code: it is neither copied nor visited further.
+    # has its code: it is neither copied nor visited further, and nothing is visited when the requested item is live.
     def build_plan
+      requested = Step.new(item:, source: source_record, existing: item.find_existing(source_record))
+      return Plan.new(requested:, copied: [], reused: [], existing: moved.existing, missing_parent: nil) if requested.existing
+
       copied = []
       reused = []
       missing_parent = nil
@@ -92,24 +89,30 @@ module CopyToProduction
         existing ? reused << parent.with(existing:) : missing_parent = parent
       end
 
-      visit_dependencies(item, source_record, copied, reused, Set.new)
-      copied << Step.new(item:, source: source_record, existing: nil)
-
-      Plan.new(copied:, reused:, existing: item.find_existing(source_record), missing_parent:)
+      visit(requested, copied, reused, Set.new)
+      Plan.new(requested:, copied:, reused:, existing: nil, missing_parent:)
     end
 
-    def visit_dependencies(dependent, dependent_source, copied, reused, seen)
-      dependent.dependencies(dependent_source).each do |dependency_type, dependency_source|
-        step = Step.new(item: build_item(dependency_type), source: dependency_source, existing: nil)
-        next unless seen.add?(step.key)
+    def visit(step, copied, reused, seen)
+      step.item.dependencies(step.source).each do |dependency_type, dependency_source|
+        dependency = Step.new(item: build_item(dependency_type), source: dependency_source, existing: nil)
+        next unless seen.add?(dependency.key)
 
-        existing = step.item.find_existing(dependency_source)
-        if existing
-          reused << step.with(existing:)
-        else
-          visit_dependencies(step.item, dependency_source, copied, reused, seen)
-          copied << step
-        end
+        existing = dependency.item.find_existing(dependency_source)
+        existing ? reused << dependency.with(existing:) : visit(dependency, copied, reused, seen)
+      end
+
+      copied << step
+    end
+
+    # Creates each item to copy in plan order, yielding each step with its production record. A create service that
+    # refuses raises BaseService::FailedResult, so that the caller's transaction rolls every copy back.
+    def copy(plan)
+      resolved = plan.reused.to_h { [it.key, it.existing] }
+
+      plan.copied.each do |step|
+        resolved[step.key] = step.item.copy!(step.source, resolved)
+        yield step, resolved[step.key]
       end
     end
 

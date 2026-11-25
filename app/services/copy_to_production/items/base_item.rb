@@ -15,13 +15,13 @@ module CopyToProduction
       end
 
       # The sandbox record to copy, nil when the sandbox has none with this id.
-      def find_source(_id)
-        raise NotImplementedError
+      def find_source(id)
+        sandbox.public_send(item_type.pluralize).find_by(id:)
       end
 
       # The kept production record with the source's code: a copy reuses it and never overwrites it.
-      def find_existing(_source)
-        raise NotImplementedError
+      def find_existing(source)
+        production.public_send(item_type.pluralize).find_by(code: source.code)
       end
 
       # The sandbox records the source references, as [item_type, record] pairs. Each one is reused when production
@@ -36,8 +36,8 @@ module CopyToProduction
         nil
       end
 
-      # The error code refusing a source that the create service would refuse, or that cannot be copied, so that the
-      # preview and the copy agree. Nil when it can be moved.
+      # The error code refusing a source that the create service would copy into something else than the sandbox holds,
+      # or nil. What the create service refuses itself, the copy answers as it does.
       def refusal(_source)
         nil
       end
@@ -47,11 +47,6 @@ module CopyToProduction
       # record of each dependency and parent, by [item_type, sandbox id].
       def copy!(_source, _resolved)
         raise NotImplementedError
-      end
-
-      # Unique indexes a concurrent write can hit, by name, with the field they answer on.
-      def unique_indexes
-        {}
       end
 
       def activity_type
