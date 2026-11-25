@@ -7,7 +7,7 @@ module CatalogWallets
 
       # The lock is per customer, not per contract: one invoice can draw on the wallets of several contracts.
       def with_ledger_lock(wallet)
-        Customers::LockService.call(customer: wallet.customer, scope: :catalog_wallet) do
+        Customers::LockService.call(customer_id: wallet.customer_id, scope: :catalog_wallet) do
           # Unlike FOR UPDATE, it lets rows that reference the wallet be inserted meanwhile.
           wallet.lock!("FOR NO KEY UPDATE")
 
