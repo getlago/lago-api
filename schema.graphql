@@ -138,6 +138,11 @@ enum ActivityTypeEnum {
   contract_created
 
   """
+  contract.published
+  """
+  contract_published
+
+  """
   contract_rate_card.created
   """
   contract_rate_card_created
@@ -7469,6 +7474,7 @@ enum EventTypeEnum {
   billable_metric_updated
   contract_canceled
   contract_created
+  contract_published
   contract_rate_card_created
   contract_rate_card_deleted
   contract_rate_card_updated
