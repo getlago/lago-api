@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe CatalogWallets::Ledger::DebitService do
-  subject(:result) { described_class.call(wallet:, reason:, consumptions:, invoice:) }
+  subject(:result) { described_class.call(wallet:, reason:, consumptions:, invoice:, idempotency_key:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -14,6 +14,7 @@ describe CatalogWallets::Ledger::DebitService do
   let(:first_fee) { create(:fee, invoice:) }
   let(:second_fee) { create(:fee, invoice:) }
   let(:reason) { "invoice_application" }
+  let(:idempotency_key) { nil }
   let(:consumptions) do
     [
       {inbound_transaction: older_entry, fee: first_fee, credit_amount_cents: 5_000},
@@ -47,6 +48,7 @@ describe CatalogWallets::Ledger::DebitService do
         purchase_amount_cents: nil,
         remaining_credit_amount_cents: nil
       )
+      expect(result.replayed).to be(false)
     end
   end
 
@@ -91,6 +93,76 @@ describe CatalogWallets::Ledger::DebitService do
       expect(newer_entry.reload.remaining_credit_amount_cents).to eq(10_000 - 4_000)
       expect(wallet.reload.balance_cents).to eq(15_000 - 4_000)
     end
+
+    context "with an idempotency key" do
+      let(:idempotency_key) { "void-1" }
+
+      it "stores the key on the outbound entry" do
+        expect(result).to be_success
+        expect(result.replayed).to be(false)
+        expect(result.wallet_transaction.reload.idempotency_key).to eq("void-1")
+      end
+
+      context "when a void with that key is already written" do
+        let(:consumptions) { [{inbound_transaction: newer_entry, credit_amount_cents: 6_000}] }
+        let(:first_void) do
+          described_class.call!(
+            wallet: CatalogWallet.find(wallet.id),
+            reason:,
+            idempotency_key:,
+            consumptions: [{inbound_transaction: CatalogWalletTransaction.find(newer_entry.id), credit_amount_cents: 4_000}]
+          ).wallet_transaction
+        end
+
+        before { first_void }
+
+        it "returns the first void and writes nothing" do
+          expect { result }.not_to change {
+            [
+              wallet.reload.balance_cents,
+              newer_entry.reload.remaining_credit_amount_cents,
+              CatalogWalletTransaction.outbound.count,
+              CatalogWalletConsumption.count
+            ]
+          }
+
+          expect(result).to be_success
+          expect(result.replayed).to be(true)
+          expect(result.wallet_transaction).to eq(first_void)
+        end
+      end
+
+      context "when another kind of entry of the wallet has that key" do
+        before { create(:catalog_wallet_transaction, organization:, catalog_wallet: wallet, idempotency_key:) }
+
+        it "fails on the key and writes nothing" do
+          expect { result }.not_to change {
+            [wallet.reload.balance_cents, newer_entry.reload.remaining_credit_amount_cents, CatalogWalletTransaction.outbound.count]
+          }
+
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({idempotency_key: ["already_exists"]})
+        end
+      end
+
+      context "when an entry of another wallet has that key" do
+        before { create(:catalog_wallet_transaction, organization:, idempotency_key:) }
+
+        it "takes the credit out of the entry" do
+          expect(result).to be_success
+          expect(result.replayed).to be(false)
+          expect(wallet.reload.balance_cents).to eq(15_000 - 4_000)
+        end
+      end
+
+      context "when the key is blank" do
+        let(:idempotency_key) { "" }
+
+        it "raises" do
+          expect { result }.to raise_error(ArgumentError, /idempotency key/)
+        end
+      end
+    end
   end
 
   context "when the wallet already paid the invoice" do
@@ -117,6 +189,7 @@ describe CatalogWallets::Ledger::DebitService do
       }
 
       expect(result).to be_success
+      expect(result.replayed).to be(true)
       expect(result.wallet_transaction).to eq(first_debit)
     end
   end
@@ -267,6 +340,22 @@ describe CatalogWallets::Ledger::DebitService do
     end
   end
 
+  context "when the invoice is in another currency than the wallet" do
+    let(:invoice) { create(:invoice, organization:, customer:, currency: "USD") }
+
+    it "raises" do
+      expect { result }.to raise_error(ArgumentError, /currency/)
+    end
+  end
+
+  context "when an invoice application has an idempotency key" do
+    let(:idempotency_key) { "application-1" }
+
+    it "raises" do
+      expect { result }.to raise_error(ArgumentError, /idempotency key/)
+    end
+  end
+
   context "when a void names an invoice" do
     let(:reason) { "void" }
     let(:consumptions) { [{inbound_transaction: newer_entry, credit_amount_cents: 4_000}] }
@@ -322,7 +411,7 @@ describe CatalogWallets::Ledger::DebitService do
   context "when the caller already holds the customer's wallet lock" do
     subject(:result) do
       Customers::LockService.call(customer:, scope: :catalog_wallet, timeout_seconds: 0) do
-        described_class.call(wallet:, reason:, consumptions:, invoice:)
+        described_class.call(wallet:, reason:, consumptions:, invoice:, idempotency_key:)
       end.value
     end
 
