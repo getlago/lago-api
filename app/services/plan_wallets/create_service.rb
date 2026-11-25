@@ -29,7 +29,7 @@ module PlanWallets
       ActiveRecord::Base.transaction do
         plan_wallet = catalog_plan.wallets.create!(organization:, **params.slice(*ATTRIBUTES).compact.symbolize_keys)
 
-        replace_metadata!(plan_wallet) unless params[:metadata].nil?
+        replace_metadata!(plan_wallet, params[:metadata]) unless params[:metadata].nil?
         replace_taxes_and_scope!(plan_wallet)
 
         result.plan_wallet = plan_wallet

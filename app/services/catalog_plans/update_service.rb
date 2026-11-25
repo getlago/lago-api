@@ -3,7 +3,7 @@
 module CatalogPlans
   class UpdateService < BaseService
     include Entitlement::Concerns::OwnerLockConcern
-    include MetadataParams
+    include Metadata::ReplaceItemParams
 
     Result = BaseResult[:catalog_plan]
 

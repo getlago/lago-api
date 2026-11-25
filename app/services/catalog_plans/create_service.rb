@@ -2,7 +2,7 @@
 
 module CatalogPlans
   class CreateService < BaseService
-    include MetadataParams
+    include Metadata::ReplaceItemParams
 
     Result = BaseResult[:catalog_plan]
 

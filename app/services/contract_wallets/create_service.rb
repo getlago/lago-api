@@ -37,7 +37,7 @@ module ContractWallets
           **params.slice(*ATTRIBUTES).compact.symbolize_keys
         )
 
-        replace_metadata!(contract_wallet) unless params[:metadata].nil?
+        replace_metadata!(contract_wallet, params[:metadata]) unless params[:metadata].nil?
         replace_taxes_and_scope!(contract_wallet)
 
         result.contract_wallet = contract_wallet
