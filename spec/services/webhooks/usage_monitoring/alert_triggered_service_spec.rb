@@ -46,6 +46,45 @@ RSpec.describe Webhooks::UsageMonitoring::AlertTriggeredService do
       end
     end
 
+    context "with a contract alert's history row" do
+      let(:customer) { create(:customer, external_id: "acme", currency: "USD") }
+      let(:contract) { create(:contract, customer:, external_id: "ctr_123") }
+      let(:product) { create(:product, organization: customer.organization, code: "llm_tokens") }
+      let(:alert) { create(:contract_usage_amount_alert, organization: customer.organization, contract_external_id: "ctr_123", product:, code: "tokens_spend", name: "Tokens spend") }
+      let(:triggered_alert) do
+        create(:contract_triggered_alert, alert:, contract:, current_value: 1_500, previous_value: 1_000, crossed_thresholds: [{code: "warn", value: BigDecimal(1_200), recurring: false}], triggered_at: Time.zone.parse("2026-11-22 12:00:00"))
+      end
+
+      it "sends its v2 body under the same event" do
+        webhook_service.call
+
+        expect(Webhook.order(created_at: :desc).first.payload).to eq(
+          "webhook_type" => "alert.triggered",
+          "object_type" => "triggered_alert",
+          "organization_id" => customer.organization_id,
+          "triggered_alert" => {
+            "lago_id" => triggered_alert.id,
+            "lago_alert_id" => alert.id,
+            "alert_code" => "tokens_spend",
+            "alert_name" => "Tokens spend",
+            "alert_type" => "usage_amount",
+            "currency" => "USD",
+            "lago_contract_id" => contract.id,
+            "external_contract_id" => "ctr_123",
+            "external_customer_id" => "acme",
+            "current_value" => "1500.0",
+            "previous_value" => "1000.0",
+            "product_code" => "llm_tokens",
+            "product_filter_code" => nil,
+            "with_product_filters" => false,
+            "applies_to" => {"type" => "contract"},
+            "crossed_thresholds" => [{"code" => "warn", "value" => "1200.0", "recurring" => false}],
+            "triggered_at" => "2026-11-22T12:00:00Z"
+          }
+        )
+      end
+    end
+
     context "when SIDEKIQ_WEBHOOK is true" do
       before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
       after { ENV.delete("SIDEKIQ_WEBHOOK") }

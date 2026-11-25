@@ -102,6 +102,7 @@ class SendWebhookJob < ApplicationJob
     "contract_rate_card.deleted" => Webhooks::ContractRateCards::DeletedService,
     "contract.created" => Webhooks::Contracts::CreatedService,
     "contract.updated" => Webhooks::Contracts::UpdatedService,
+    "contract.published" => Webhooks::Contracts::PublishedService,
     "contract.started" => Webhooks::Contracts::StartedService,
     "contract.terminated" => Webhooks::Contracts::TerminatedService,
     "contract.canceled" => Webhooks::Contracts::CanceledService,

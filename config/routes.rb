@@ -97,16 +97,20 @@ Rails.application.routes.draw do
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
         get :current_usage, on: :member, to: "contracts/usage#current"
+        post :publish, on: :member
         resources :alerts, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "contracts/alerts"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
-        # The transaction routes are drawn first, so a path that ends with `transactions` is not read as a
-        # wallet code by the wallet routes.
+        # The route with an alert code is drawn first, so an alert coded `alerts` is not read as a
+        # wallet code by the index.
         resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_wallets" do
           scope module: :contract_wallets do
+            resources :alerts, param: :code, code: /.*/, only: %i[show update destroy]
+            resources :alerts, only: %i[index create]
+            # Drawn before the wallet routes, so a path that ends with `transactions` is not read as a wallet code.
             resources :transactions, only: %i[index]
           end
         end

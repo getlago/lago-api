@@ -18,12 +18,6 @@ RSpec.describe Contracts::TerminateService do
     BillingOperations::ProcessService.call!(customer:, timestamp:)
   end
 
-  def lock_waits
-    ApplicationRecord.connection.select_value(
-      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
-    )
-  end
-
   it "terminates an active contract" do
     freeze_time do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.terminated", contract)

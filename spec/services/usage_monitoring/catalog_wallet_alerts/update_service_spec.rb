@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
   subject(:result) { described_class.call(alert:, params:) }
 
-  let_it_be(:organization) { create(:organization) }
+  # A let, not a let_it_be: a before_all holds the group in one transaction on a connection that every thread then
+  # shares, so the races below would wait on each other in Ruby instead of on the database
+  let(:organization) { create(:organization) }
 
   let(:alert) { create(:plan_wallet_alert, organization:, alert_type: "balance", code: "low_balance", name: "Low balance") }
   let(:params) { {name: "Running low", thresholds: [{code: "low", value: "5000"}, {value: "0"}]} }
@@ -260,6 +262,42 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
           end
         end
       end
+
+      context "when a balance change is in flight", transaction: false do
+        # 5000 is in alarm at the 1500 the wallet holds before the change, not at the 8000 it leaves; 10000 is at both
+        let(:params) do
+          {thresholds: [{code: "high", value: "5000", notify_on: %w[triggered resolved]}, {code: "top", value: "10000", notify_on: %w[triggered resolved]}]}
+        end
+
+        it "waits for it and seeds from the balance it leaves" do
+          locked = Queue.new
+          release = Queue.new
+
+          writer = Thread.new do
+            ApplicationRecord.connection_pool.with_connection do
+              ApplicationRecord.transaction do
+                CatalogWallet.find(catalog_wallet.id).update!(balance_cents: 8_000)
+                locked << true
+                release.pop
+              end
+            end
+          end
+          begin
+            Timeout.timeout(10) { locked.pop }
+
+            editor = Thread.new do
+              ApplicationRecord.connection_pool.with_connection { described_class.call(alert: UsageMonitoring::CatalogWalletAlert.find(alert.id), params:) }
+            end
+            Timeout.timeout(10) { sleep(0.01) until lock_waits.positive? }
+          ensure
+            release << true
+          end
+          Timeout.timeout(10) { writer.join }
+
+          expect(Timeout.timeout(10) { editor.value }).to be_success
+          expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["top"])
+        end
+      end
     end
 
     context "when an ongoing balance alert started on an empty wallet" do
@@ -274,7 +312,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
       end
 
       context "when money reached the wallet before the next evaluation" do
-        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: 1_500) }
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: 1_500, last_ongoing_balance_sync_at: 1.hour.ago) }
         let(:params) { {thresholds: [{code: "mid", value: "1000", notify_on: %w[triggered resolved]}, {code: "low", value: "10000", notify_on: %w[triggered resolved]}]} }
 
         it "seeds only the line still in alarm at the new value" do
@@ -300,7 +338,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
 
     context "when an ongoing balance alert watches a funded wallet whose ongoing balance is below 0" do
       let(:contract) { create(:contract, customer:) }
-      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: -500) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500, ongoing_balance_cents: -500, last_ongoing_balance_sync_at: 1.hour.ago) }
       let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", previous_value: -500, last_processed_at: 1.hour.ago) }
       let(:params) { {thresholds: [{code: "zero", value: "0", notify_on: %w[triggered resolved]}]} }
 
@@ -312,12 +350,23 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
       end
 
       context "when the ongoing balance is 0" do
-        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 500, ongoing_balance_cents: 0) }
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 500, ongoing_balance_cents: 0, last_ongoing_balance_sync_at: 1.hour.ago) }
         let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance", previous_value: 0, last_processed_at: 1.hour.ago) }
 
         it "seeds the line too" do
           expect(result).to be_success
           expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["zero"])
+        end
+      end
+
+      context "when the wallet's ongoing balance was never computed" do
+        let(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, balance_cents: 1_500) }
+
+        it "reads the balance, where the new line is not in alarm, and seeds nothing" do
+          expect(result).to be_success
+          expect(alert.thresholds.pluck(:code)).to eq(["zero"])
+          # At the column's 0 the line would be in alarm and seeded
+          expect(alert.all_triggered_alerts).to be_empty
         end
       end
     end

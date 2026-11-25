@@ -86,7 +86,8 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
     product_code: "llm_tokens",
     product_filter_code: "opus",
     product_id: SecureRandom.uuid,
-    product_filter_id: SecureRandom.uuid
+    product_filter_id: SecureRandom.uuid,
+    with_product_filters: true
   }.each do |field, value|
     context "with #{field}" do
       let(:params) { {name: "Renamed"}.merge(field => value) }
@@ -193,6 +194,20 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
       expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
     end
 
+    it "sends a webhook that renders the resolution" do
+      perform_enqueued_jobs(only: SendWebhookJob) { result }
+
+      resolved = alert.all_triggered_alerts.resolved.sole
+      expect(Webhook.where(webhook_type: "alert.resolved").sole.payload["resolved_alert"]).to include(
+        "lago_id" => resolved.id,
+        "lago_alert_id" => alert.id,
+        "lago_contract_id" => contract.id,
+        "external_contract_id" => contract.external_id,
+        "recovered_thresholds" => [{"code" => "warn", "value" => "50.0", "recurring" => false}],
+        "reason" => "threshold_updated"
+      )
+    end
+
     context "with a pending replacement on the same external id" do
       before { create(:contract, :pending, organization:, customer:, external_id: contract.external_id) }
 
@@ -211,6 +226,94 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
         expect(alert.all_triggered_alerts.resolved).to be_empty
         expect(SendWebhookJob).not_to have_been_enqueued
       end
+    end
+  end
+
+  context "with a premium license", :premium do
+    it "tracks the active contract once the edit is committed, so the next tick evaluates the new thresholds" do
+      ApplicationRecord.transaction do
+        expect(result).to be_success
+        expect(UsageMonitoring::ContractActivity.count).to eq(0)
+      end
+
+      expect(UsageMonitoring::ContractActivity.sole).to have_attributes(organization_id: organization.id, contract_id: contract.id, enqueued: false)
+    end
+
+    context "with only a name" do
+      let(:params) { {name: "Renamed"} }
+
+      it "tracks the active contract" do
+        expect(result).to be_success
+        expect(UsageMonitoring::ContractActivity.sole.contract_id).to eq(contract.id)
+      end
+    end
+
+    context "with a pending replacement on the same external id" do
+      before { create(:contract, :pending, organization:, customer:, external_id: contract.external_id) }
+
+      it "tracks the active contract only" do
+        expect(result).to be_success
+        expect(UsageMonitoring::ContractActivity.sole.contract_id).to eq(contract.id)
+      end
+    end
+
+    context "when only a pending contract is live" do
+      let(:contract) { create(:contract, :pending, organization:, customer:) }
+
+      it "does not track it, as it is not evaluated before it is active" do
+        expect(result).to be_success
+        expect(UsageMonitoring::ContractActivity.count).to eq(0)
+      end
+    end
+
+    context "when the only contract on the external id is terminated" do
+      let(:contract) { create(:contract, :terminated, organization:, customer:) }
+
+      it "does not track it" do
+        expect(result).to be_failure
+        expect(UsageMonitoring::ContractActivity.count).to eq(0)
+      end
+    end
+
+    context "when the alert is deleted while the update waits for its lock" do
+      before do
+        create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id)
+        UsageMonitoring::DestroyAlertService.call(alert: UsageMonitoring::ContractAlert.find(alert.id))
+      end
+
+      it "does not track the contract" do
+        expect(result).to be_failure
+        expect(UsageMonitoring::ContractActivity.count).to eq(0)
+      end
+    end
+
+    context "with invalid thresholds" do
+      let(:params) { {thresholds: [{value: 10}, {value: 10}]} }
+
+      it "does not track the contract" do
+        expect(result).to be_failure
+        expect(UsageMonitoring::ContractActivity.count).to eq(0)
+      end
+    end
+
+    context "without the contract_alerts flag" do
+      let(:other_organization) { create(:organization, feature_flags: %w[product_catalog]) }
+      let(:contract) { create(:contract, organization: other_organization, customer: create(:customer, organization: other_organization)) }
+      let(:alert) do
+        create(:contract_alert, organization: other_organization, contract_external_id: contract.external_id, name: "Spend", thresholds: nil)
+      end
+
+      it "does not track the contract" do
+        expect(result).to be_success
+        expect(UsageMonitoring::ContractActivity.count).to eq(0)
+      end
+    end
+  end
+
+  context "without a premium license" do
+    it "does not track the contract" do
+      expect(result).to be_success
+      expect(UsageMonitoring::ContractActivity.count).to eq(0)
     end
   end
 end

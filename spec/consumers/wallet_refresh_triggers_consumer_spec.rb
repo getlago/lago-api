@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe WalletRefreshTriggersConsumer do
-  subject(:consumer) { karafka.consumer_for(ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"]) }
+  subject(:consumer) { karafka.consumer_for(ENV["LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC"], :lago_wallet_refresh_triggers_consumer) }
 
   include_context "with realtime usage availability"
 

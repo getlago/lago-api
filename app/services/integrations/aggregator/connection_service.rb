@@ -9,11 +9,7 @@ module Integrations
     class ConnectionService < BaseService
       Result = BaseResult[:realm_id]
 
-      LOOKUP_ERRORS = [
-        JSON::ParserError,
-        *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES,
-        *LagoHttpClient::Client::CONNECT_FALLBACK_ERRORS
-      ].uniq.freeze
+      LOOKUP_FAILURE_LOG = "QuickBooks connection lookup failed"
 
       def action_path
         "connection/#{ERB::Util.url_encode(integration.connection_id)}"
@@ -34,7 +30,7 @@ module Integrations
           result
         end
       rescue LagoHttpClient::HttpError => e
-        log_lookup_failure(e, status: e.error_code)
+        log_nango_failure(LOOKUP_FAILURE_LOG, e, status: e.error_code)
 
         if e.error_code.to_i == 404
           result.third_party_failure!(
@@ -46,7 +42,7 @@ module Integrations
           lookup_failed
         end
       rescue *LOOKUP_ERRORS => e
-        log_lookup_failure(e)
+        log_nango_failure(LOOKUP_FAILURE_LOG, e)
         lookup_failed
       end
 
@@ -71,18 +67,6 @@ module Integrations
           error_code: "connection_lookup_failed",
           error_message: "QuickBooks connection lookup failed"
         )
-      end
-
-      # Never the response body, the headers or the connection id: they can hold OAuth credentials.
-      def log_lookup_failure(error, status: nil)
-        details = {
-          organization_id: integration.organization_id,
-          provider_config_key: provider_key,
-          error: error.class.name,
-          status:
-        }.compact
-
-        Rails.logger.warn("QuickBooks connection lookup failed #{details.to_json}")
       end
     end
   end

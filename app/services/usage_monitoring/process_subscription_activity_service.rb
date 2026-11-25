@@ -45,7 +45,7 @@ module UsageMonitoring
           alerts:,
           lifetime_usage:,
           # NOTE: reuse the usage built for progressive billing, so it is not computed twice
-          full_plan_usage: @current_usage
+          full_plan_usage: @full_plan_usage
         )
       rescue => e
         exception_to_raise ||= e
@@ -67,13 +67,22 @@ module UsageMonitoring
     attr_reader :subscription_activity, :subscription
 
     def current_usage
-      @current_usage ||= ::Invoices::CustomerUsageService.call(
-        customer: subscription.customer,
-        subscription:,
-        apply_taxes: false, # Never use taxes for alerting
-        with_cache: true,
-        use_usage_buckets: true
-      ).usage
+      full_plan_usage&.usage
+    end
+
+    def full_plan_usage
+      @full_plan_usage ||= begin
+        snapshot = UsageSnapshot.measure do
+          ::Invoices::CustomerUsageService.call(
+            customer: subscription.customer,
+            subscription:,
+            apply_taxes: false, # Never use taxes for alerting
+            with_cache: true,
+            use_usage_buckets: true
+          ).usage
+        end
+        snapshot if snapshot.usage
+      end
     end
 
     def find_or_create_lifetime_usage
