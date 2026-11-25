@@ -762,6 +762,46 @@ RSpec.describe Api::V1::WalletTransactionsController do
         expect(response).to be_not_found_error("wallet_transaction")
       end
     end
+
+    context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us", is_default: true) }
+      let(:anrok_connection) { create(:anrok_customer, customer:, organization:, code: "anrok_us", is_default: true) }
+
+      let(:consumption1) do
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: wallet_transaction,
+          outbound_wallet_transaction: create(:wallet_transaction, wallet:, transaction_type: "outbound"),
+          consumed_amount_cents: 500)
+      end
+      let(:consumption2) do
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: wallet_transaction,
+          outbound_wallet_transaction: create(:wallet_transaction, wallet:, transaction_type: "outbound"),
+          consumed_amount_cents: 300)
+      end
+
+      before do
+        organization.enable_feature_flag!(:multi_connection)
+
+        consumption1
+        consumption2
+
+        create(:billing_object_connection, owner: wallet_transaction, organization:, category: :payment,
+          behavior: :specific, payment_provider_customer: stripe_connection)
+        create(:billing_object_connection, owner: wallet_transaction, organization:, category: :tax,
+          behavior: :specific, integration_customer: anrok_connection)
+        create(:billing_object_connection, owner: wallet_transaction, organization:, category: :crm, behavior: :skip)
+      end
+
+      it "renders wallet transaction consumptions without N+1 queries" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction_consumptions].count).to eq(2)
+      end
+    end
   end
 
   describe "GET /api/v1/wallet_transactions/:id/fundings" do
@@ -877,6 +917,48 @@ RSpec.describe Api::V1::WalletTransactionsController do
         subject
 
         expect(response).to be_not_found_error("wallet_transaction")
+      end
+    end
+
+    context "with N+1 query detection", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:inbound_transaction1) { create(:wallet_transaction, wallet:, transaction_type: "inbound", remaining_amount_cents: 10000) }
+      let(:inbound_transaction2) { create(:wallet_transaction, wallet:, transaction_type: "inbound", remaining_amount_cents: 10000) }
+      let(:funding1) do
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: inbound_transaction1,
+          outbound_wallet_transaction: wallet_transaction,
+          consumed_amount_cents: 500)
+      end
+      let(:funding2) do
+        create(:wallet_transaction_consumption,
+          organization:,
+          inbound_wallet_transaction: inbound_transaction2,
+          outbound_wallet_transaction: wallet_transaction,
+          consumed_amount_cents: 300)
+      end
+
+      let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us", is_default: true) }
+      let(:anrok_connection) { create(:anrok_customer, customer:, organization:, code: "anrok_us", is_default: true) }
+
+      before do
+        organization.enable_feature_flag!(:multi_connection)
+
+        funding1
+        funding2
+
+        create(:billing_object_connection, owner: wallet_transaction, organization:, category: :payment,
+          behavior: :specific, payment_provider_customer: stripe_connection)
+        create(:billing_object_connection, owner: wallet_transaction, organization:, category: :tax,
+          behavior: :specific, integration_customer: anrok_connection)
+        create(:billing_object_connection, owner: wallet_transaction, organization:, category: :crm, behavior: :skip)
+      end
+
+      it "renders wallet transaction fundings without N+1 queries" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet_transaction_fundings].count).to eq(2)
       end
     end
   end
