@@ -106,6 +106,7 @@ module BillableMetrics
       end
 
       def period_initial_value
+        return carryover_variations.fetch(nil, 0) if carryover_variations
         return 0 unless billable_metric.recurring?
 
         latest_value
@@ -274,6 +275,7 @@ module BillableMetrics
       end
 
       def grouped_latest_values
+        return carryover_variations.map { |groups, value| {groups:, value:} } if carryover_variations
         return @grouped_latest_values if defined?(@grouped_latest_values)
 
         if latest_snapshots

@@ -24,6 +24,7 @@ RSpec.describe Fees::ChargeService::Trackers::CycleCarryoverUnits do
   end
 
   it "carries the previous segment's units into a different model" do
+    expect(usage.carryover_variation?).to be(false)
     expect { |b| usage.each_opening_balance(metered_item: first_item, groups: [local_usage], &b) }.not_to yield_control
     expect { |b| usage.each_opening_balance(metered_item: second_item, groups: [local_usage], &b) }.to yield_with_args(local_usage, 10)
   end

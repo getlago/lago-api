@@ -9,6 +9,7 @@ module BillableMetrics
         :aggregation, # Aggregation result computed using the event store
         :closing_units, # Max/Latest units to bill at segment close; nil uses the local aggregation
         :carryover_units, # Earlier segments' units after metric rounding, used only to price this group's tiers
+        :carryover_variation, # Unrounded quantity entering this weighted segment from earlier segments of the obligation
         :breakdowns, # Array of breakdowns when presentation_by is used
         :grouped_by, # Pricing group keys applied to this aggregation result
         :current_usage_units, # Number of aggregated units when computing the current usage
@@ -88,6 +89,10 @@ module BillableMetrics
       end
 
       def aggregate(options: {}, cycle_usage_tracker: BillingSegments::EMPTY_CYCLE_USAGE_TRACKER)
+        @carryover_variations = if cycle_usage_tracker.carryover_variation?
+          cycle_usage_tracker.opening_variations(metered_item:)
+        end
+
         if grouped_by.present?
           compute_grouped_by_aggregation(options:)
           if metered_item.dynamic?
@@ -103,6 +108,7 @@ module BillableMetrics
         return result if result.failure?
 
         groups = result.aggregations || [result]
+        apply_carryover_variation(groups, cycle_usage_tracker) if cycle_usage_tracker.carryover_variation?
         apply_closing_values(groups, cycle_usage_tracker) if cycle_usage_tracker.apply_closing_values?(groups:)
         groups.each { apply_rounding(it) }
         apply_carryover_units(groups, cycle_usage_tracker) if cycle_usage_tracker.apply_carry_over?
@@ -130,13 +136,13 @@ module BillableMetrics
       #   Used only for estimate_fees.
       # - With exclude_event: true, the current event (persisted) will be excluded from the list of event values
       #   Used only for in advance billing
-      def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
+      def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil, **options)
         PerEventAggregationResult.new.tap do |result|
           result.event_aggregation = if should_bypass_aggregation?
             []
           else
             event_store.with_grouped_by_values(grouped_by_values) do
-              compute_per_event_aggregation(exclude_event:, include_event_value:)
+              compute_per_event_aggregation(exclude_event:, include_event_value:, **options)
             end
           end
         end
@@ -152,6 +158,8 @@ module BillableMetrics
       delegate :precomputed?, to: :event_store
 
       protected
+
+      attr_reader :carryover_variations
 
       def snapshot_read_error?(error)
         error.equal?(@snapshot_read_error)
@@ -232,6 +240,7 @@ module BillableMetrics
 
       def should_bypass_aggregation?
         return false if billable_metric.recurring?
+        return false if carryover_variations.present?
         return false if precomputed?
 
         bypass_aggregation
@@ -263,6 +272,11 @@ module BillableMetrics
       def apply_carryover_units(groups, usage_carryover)
         groups = [] if should_bypass_aggregation?
         usage_carryover.each_opening_balance(metered_item:, groups:) { |group, units| group.carryover_units = units }
+      end
+
+      def apply_carryover_variation(groups, usage_carryover)
+        groups = groups.reject { it.variation.nil? }
+        usage_carryover.each_opening_balance(metered_item:, groups:) { |group, variation| group.carryover_variation = variation }
       end
 
       def apply_closing_values(groups, closing_values)

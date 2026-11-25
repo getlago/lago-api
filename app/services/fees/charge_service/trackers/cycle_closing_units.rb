@@ -16,6 +16,8 @@ module Fees
 
         def apply_carry_over? = false
 
+        def carryover_variation? = false
+
         def each_closing_value(metered_item:, groups:)
           values = closing_values_for(metered_item:, groups:)
           return if values.empty?

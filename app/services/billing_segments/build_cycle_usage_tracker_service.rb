@@ -12,7 +12,7 @@ module BillingSegments
 
     def call
       result.cycle_usage_tracker = EMPTY_CYCLE_USAGE_TRACKER
-      return result if segments.size < 2
+      return result if segments.empty?
 
       first = segments.first
       card = first.contract_rate_card
@@ -20,6 +20,15 @@ module BillingSegments
       return result unless first.organization.product_catalog_enabled? && rate_card.product.metered? && rate_card.arrears?
 
       metric = rate_card.product.billable_metric
+      if metric.weighted_sum_agg? && !metric.recurring? && card.billing_scope_cycle?
+        result.cycle_usage_tracker = Fees::ChargeService::Trackers::CycleCarryoverVariation.for(
+          segments:, coverage_started_at: obligation.coverage_started_at
+        )
+        return result
+      end
+
+      return result if segments.size < 2
+
       if metric.max_agg? || metric.latest_agg?
         return result unless card.billing_scope_cycle?
 

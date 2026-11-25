@@ -170,6 +170,65 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
     end
   end
 
+  context "with cycle carryover variation" do
+    let(:events_values) { [] }
+    let(:opening_variations) { {nil => BigDecimal("31.5")} }
+    let(:cycle_usage_tracker) do
+      instance_double(Fees::ChargeService::Trackers::CycleCarryoverVariation,
+        carryover_variation?: true, opening_variations:, apply_closing_values?: false, apply_carry_over?: false)
+    end
+
+    before do
+      allow(cycle_usage_tracker).to receive(:each_opening_balance) do |groups:, **, &block|
+        groups.each { |group| block.call(group, BigDecimal("31.5")) }
+      end
+    end
+
+    shared_examples "weights the opening variation" do
+      it "retains the raw opening quantity without adding events or tier carryover" do
+        result = aggregator.aggregate(cycle_usage_tracker:)
+
+        expect(result).to have_attributes(aggregation: BigDecimal("31.5"), variation: 0, count: 0,
+          carryover_variation: BigDecimal("31.5"), carryover_units: nil)
+      end
+    end
+
+    include_examples "weights the opening variation"
+
+    context "when the period filter reports no local events" do
+      let(:bypass_aggregation) { true }
+
+      include_examples "weights the opening variation"
+    end
+
+    shared_examples "weights an eventless pricing group" do
+      let(:grouped_by) { ["region"] }
+      let(:opening_variations) { {{"region" => "EU"} => BigDecimal("31.5")} }
+
+      it "uses the carried group without reading recurring history" do
+        result = aggregator.aggregate(cycle_usage_tracker:)
+
+        expect(result.aggregations.sole).to have_attributes(grouped_by: {"region" => "EU"},
+          aggregation: BigDecimal("31.5"), variation: 0, count: 0,
+          carryover_variation: BigDecimal("31.5"), carryover_units: nil)
+      end
+    end
+
+    context "with an eventless pricing group" do
+      include_examples "weights an eventless pricing group"
+    end
+
+    context "with ClickHouse events", clickhouse: true do
+      let(:event_store_class) { Events::Stores::ClickhouseStore }
+
+      include_examples "weights the opening variation"
+
+      context "with an eventless pricing group" do
+        include_examples "weights an eventless pricing group"
+      end
+    end
+  end
+
   context "with events with the same timestamp" do
     let(:events_values) do
       [

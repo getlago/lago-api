@@ -226,6 +226,151 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
       expect(segment_fees(invoice)).to eq([["old", 10, 1000], ["new", 10, 2000]])
       expect(invoice.fees.order(Arel.sql("properties->>'from_datetime'")).pluck(:events_count)).to eq([1, 1])
     end
+
+    context "when the new rate uses percentage pricing", :premium do
+      let(:new_model) { :percentage }
+      let(:new_price) { {rate: "10", per_transaction_min_amount: "0.01"} }
+      let(:later_value) { 3 }
+      let(:event_counts) { [1, 1] }
+      let(:new_amount_cents) { 100 }
+      let(:event_properties) { {} }
+
+      before do
+        event(start, 10, **event_properties)
+        add_rate
+        event(switch, later_value, **event_properties) unless later_value.nil?
+      end
+
+      shared_examples "prices the carried maximum" do
+        it "charges the carried maximum while keeping event counts segment-local" do
+          # The carried $10 maximum at 10% costs $1 before transaction limits and fixed fees.
+          expect(usage_cents(switch + 1.day)).to eq([1000, new_amount_cents])
+          invoice = bill
+          expect(segment_fees(invoice)).to eq([["old", 10, 1000], ["new", 10, new_amount_cents]])
+          expect(invoice.fees.order(Arel.sql("properties->>'from_datetime'")).pluck(:events_count)).to eq(event_counts)
+        end
+      end
+
+      include_examples "prices the carried maximum"
+
+      context "when the later event reports zero" do
+        let(:later_value) { 0 }
+
+        include_examples "prices the carried maximum"
+      end
+
+      context "with a fixed event fee" do
+        let(:new_price) { super().merge(fixed_amount: "2") }
+        let(:new_amount_cents) { 100 + 200 } # $10 × 10% plus one $2 event fee.
+
+        include_examples "prices the carried maximum"
+      end
+
+      context "with a monetary free allowance" do
+        let(:new_price) { super().merge(free_units_per_total_aggregation: "5") }
+        let(:new_amount_cents) { 50 } # ($10 carried maximum - $5 segment allowance) × 10%.
+
+        include_examples "prices the carried maximum"
+
+        context "when the second segment has no events" do
+          let(:later_value) { nil }
+          let(:event_counts) { [1, 0] }
+
+          include_examples "prices the carried maximum"
+        end
+
+        context "without transaction limits" do
+          let(:new_price) { super().except(:per_transaction_min_amount) }
+
+          include_examples "prices the carried maximum"
+
+          context "when the second segment has no events" do
+            let(:later_value) { nil }
+            let(:event_counts) { [1, 0] }
+
+            include_examples "prices the carried maximum"
+          end
+        end
+      end
+
+      context "with a free first event before a zero local maximum" do
+        let(:new_price) { super().merge(free_units_per_events: 1) }
+        let(:later_value) { -3 }
+        let(:event_counts) { [1, 2] }
+
+        before { event(switch + 1.hour, 0) }
+
+        # The negative event is free; the zero maximum's event bills the carried $10 at 10%.
+        include_examples "prices the carried maximum"
+      end
+
+      context "when the second segment has no events" do
+        let(:later_value) { nil }
+        let(:event_counts) { [1, 0] }
+
+        include_examples "prices the carried maximum"
+
+        context "with a binding minimum" do
+          let(:new_price) { super().merge(per_transaction_min_amount: "2") }
+          let(:new_amount_cents) { 200 }
+
+          include_examples "prices the carried maximum"
+        end
+
+        context "with a binding maximum" do
+          let(:new_price) { super().merge(per_transaction_max_amount: "0.50") }
+          let(:new_amount_cents) { 50 }
+
+          include_examples "prices the carried maximum"
+        end
+
+        context "with a fixed event fee" do
+          let(:new_price) { super().merge(fixed_amount: "2") }
+
+          include_examples "prices the carried maximum"
+        end
+      end
+
+      context "without a transaction minimum" do
+        let(:new_price) { {rate: "10"} }
+
+        include_examples "prices the carried maximum"
+      end
+
+      context "with regional pricing" do
+        let(:old_price) { super().merge(pricing_group_keys: ["region"]) }
+        let(:new_price) { super().merge(pricing_group_keys: ["region"]) }
+        let(:event_properties) { {region: "EU"} }
+        let(:eu_amount_cents) { 100 }
+        let(:us_amount_cents) { 200 }
+
+        shared_examples "prices regional closing maxima" do
+          it "prices each group's carried maximum independently" do
+            event(start, 20, region: "US")
+
+            expect(usage_cents(switch + 1.day)).to eq([3000, eu_amount_cents + us_amount_cents])
+            invoice = bill
+            expect(invoice.fees.map { |fee| [fee.rate_card_rate.code, fee.grouped_by, fee.units, fee.amount_cents, fee.events_count] })
+              .to match_array([
+                ["old", {"region" => "EU"}, 10, 1000, 1],
+                ["old", {"region" => "US"}, 20, 2000, 1],
+                ["new", {"region" => "EU"}, 10, eu_amount_cents, 1],
+                ["new", {"region" => "US"}, 20, us_amount_cents, 0]
+              ])
+          end
+        end
+
+        include_examples "prices regional closing maxima"
+
+        context "with monetary free allowances" do
+          let(:new_price) { super().merge(free_units_per_total_aggregation: "5") }
+          let(:eu_amount_cents) { 50 } # ($10 EU maximum - $5 EU allowance) × 10%.
+          let(:us_amount_cents) { 150 } # ($20 US maximum - $5 US allowance) × 10%.
+
+          include_examples "prices regional closing maxima"
+        end
+      end
+    end
   end
 
   context "with dynamic pricing of a non-prorated sum", :premium do
@@ -408,6 +553,82 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
       expect(segment_fees(bill)).to eq([["old", 15, 1500], ["new", 18, 3600]]) # 31 × 16/31 + 31 × 2/31.
     end
 
+    context "when the metric is non-recurring and the second segment has no events" do
+      let(:recurring) { false }
+
+      before do
+        event(start, 31)
+        add_rate
+      end
+
+      it "retains the running quantity in current usage after the switch" do
+        expect(usage_cents(switch + 1.day)).to eq([1500, 200]) # 31 × 15/31 at $1, then 31 × 1/31 at $2.
+      end
+
+      it "invoices both weighted segments at cycle end" do
+        invoice = bill
+
+        expect(segment_fees(invoice)).to eq([["old", 15, 1500], ["new", 16, 3200]]) # 31 × 15/31 at $1, then 31 × 16/31 at $2.
+        expect(invoice.total_amount_cents).to eq(1500 + 3200)
+      end
+    end
+
+    context "with non-recurring weighted variation and metric rounding" do
+      let(:recurring) { false }
+      let(:metric) do
+        create(:weighted_sum_billable_metric, organization:, field_name: "value", rounding_function: "floor", rounding_precision: 0)
+      end
+      let(:new_model) { :volume }
+      let(:new_price) do
+        {volume_ranges: [{to_value: "20", per_unit_amount: "2", flat_amount: "0"},
+          {to_value: nil, per_unit_amount: "10", flat_amount: "0"}]}
+      end
+
+      it "carries the unweighted fraction and selects tiers using only local weighted units" do
+        event(start, "31.5")
+        add_rate
+
+        # floor(31.5 × 15/31) = 15; floor(31.5 × 16/31) = 16, below the 20-unit volume threshold.
+        invoice = bill
+        expect(segment_fees(invoice)).to eq([["old", 15, 1500], ["new", 16, 3200]])
+        expect(invoice.fees.order(Arel.sql("properties->>'from_datetime'")).pluck(:events_count)).to eq([1, 0])
+      end
+    end
+
+    context "with non-recurring cycle-local history" do
+      let(:recurring) { false }
+      let(:first_price_at) { start + 4.days }
+      let(:event_properties) { {} }
+
+      shared_examples "bounds weighted history to priced coverage" do
+        it "excludes earlier unpriced events and resets at the next cycle" do
+          event(start, 100, **event_properties)
+          event(first_price_at, 27, **event_properties)
+          add_rate
+
+          expect(usage_cents(switch + 1.day)).to eq([1100, 200]) # 27 × 11/27 and 27 × 1/27.
+          expect(segment_fees(bill)).to eq([["old", 11, 1100], ["new", 16, 3200]]) # 27 × 11/27 and 27 × 16/27.
+
+          event(close, 28, **event_properties)
+          expect(usage_cents(close + 1.day)).to eq([200]) # 28 × 1/28 at $2.
+          travel_to(close + 1.month) do
+            clock_job { BillingOperations::ScheduleJob.perform_now(customer.id) }
+            expect(segment_fees(customer.invoices.order(:created_at).last)).to eq([["new", 28, 5600]])
+          end
+        end
+      end
+
+      include_examples "bounds weighted history to priced coverage"
+
+      context "with regional pricing" do
+        let(:old_price) { super().merge(pricing_group_keys: ["region"]) }
+        let(:new_price) { super().merge(pricing_group_keys: ["region"]) }
+        let(:event_properties) { {region: "EU"} }
+
+        include_examples "bounds weighted history to priced coverage"
+      end
+    end
+
     context "when the contract ends on January 21" do
       let(:close) { Time.utc(2027, 1, 21) }
       let(:contract) { create(:contract, organization:, customer:, started_at: start, ended_at: close) }
@@ -425,19 +646,29 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
       let(:first_price_at) { start + 4.days }
       let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "USD", invoice_grace_period: 3) }
 
-      it "uses the 27 priced days for current usage, the invoice and draft refresh" do
-        event(first_price_at, 27)
-        add_rate
-        expect(usage_cents(switch + 1.day)).to eq([1100, 200]) # 27 × 11/27 at $1, then 27 × 1/27 at $2.
-        invoice = bill
-        expect(invoice).to be_draft
-        expect(segment_fees(invoice)).to eq([["old", 11, 1100], ["new", 16, 3200]]) # Jan 5–15, then Jan 16–31.
+      shared_examples "refreshes weighted usage over priced coverage" do
+        it "uses the 27 priced days for current usage, the invoice and draft refresh" do
+          event(first_price_at, 27)
+          add_rate
+          expect(usage_cents(switch + 1.day)).to eq([1100, 200]) # 27 × 11/27 at $1, then 27 × 1/27 at $2.
+          invoice = bill
+          expect(invoice).to be_draft
+          expect(segment_fees(invoice)).to eq([["old", 11, 1100], ["new", 16, 3200]]) # Jan 5–15, then Jan 16–31.
 
-        event(switch, 27, received_at: close + 1.hour)
-        travel_to(close + 2.hours) do
-          api_call { put_with_token(organization, "/api/v2/invoices/#{invoice.id}/refresh") }
+          event(switch, 27, received_at: close + 1.hour)
+          travel_to(close + 2.hours) do
+            api_call { put_with_token(organization, "/api/v2/invoices/#{invoice.id}/refresh") }
+          end
+          expect(segment_fees(invoice.reload)).to eq([["old", 11, 1100], ["new", 32, 6400]]) # 54 × 16/27.
         end
-        expect(segment_fees(invoice.reload)).to eq([["old", 11, 1100], ["new", 32, 6400]]) # 54 × 16/27.
+      end
+
+      include_examples "refreshes weighted usage over priced coverage"
+
+      context "when the metric is non-recurring" do
+        let(:recurring) { false }
+
+        include_examples "refreshes weighted usage over priced coverage"
       end
     end
 

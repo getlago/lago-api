@@ -55,4 +55,26 @@ RSpec.describe BillingSegments::BuildCycleUsageTrackerService do
       it { is_expected.to be_empty }
     end
   end
+
+  context "with a non-recurring weighted sum" do
+    let(:aggregation_type) { :weighted_sum_agg }
+
+    it "tracks variation rather than tier units" do
+      expect(cycle_usage_tracker).to be_a(Fees::ChargeService::Trackers::CycleCarryoverVariation)
+      expect(cycle_usage_tracker).to be_carryover_variation
+      expect(cycle_usage_tracker.apply_carry_over?).to be(false)
+    end
+
+    context "with a recurring balance" do
+      let(:recurring) { true }
+
+      it { is_expected.to be_empty }
+    end
+
+    context "with segment scope" do
+      let(:billing_scope) { :segment }
+
+      it { is_expected.to be_empty }
+    end
+  end
 end
