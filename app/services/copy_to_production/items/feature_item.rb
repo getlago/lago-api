@@ -2,16 +2,7 @@
 
 module CopyToProduction
   module Items
-    # No unique_indexes: Entitlement::FeatureCreateService answers a concurrent create with value_already_exist itself.
     class FeatureItem < BaseItem
-      def find_source(id)
-        sandbox.features.find_by(id:)
-      end
-
-      def find_existing(source)
-        production.features.find_by(code: source.code)
-      end
-
       def copy!(source, _resolved)
         Entitlement::FeatureCreateService.call!(
           organization: production,

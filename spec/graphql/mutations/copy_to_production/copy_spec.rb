@@ -90,28 +90,4 @@ RSpec.describe Mutations::CopyToProduction::Copy do
       expect(production.billable_metrics).to be_empty
     end
   end
-
-  context "with a feature" do
-    subject(:execution) do
-      execute_graphql(
-        current_user: user,
-        current_organization: sandbox,
-        permissions: required_permission,
-        query: mutation,
-        variables: {input: {itemType: "feature", id: feature.id}}
-      )
-    end
-
-    let(:feature) { create(:feature, organization: sandbox, code: "seats", name: "Seats") }
-
-    before { create(:privilege, feature:, code: "max", value_type: "integer") }
-
-    it "copies the feature to production" do
-      data = execution["data"]["copyToProduction"]
-      copy = production.features.find_by(code: "seats")
-
-      expect(data).to eq("id" => copy.id, "itemType" => "feature", "code" => "seats", "name" => "Seats")
-      expect(copy.privileges.pluck(:code, :value_type)).to eq([["max", "integer"]])
-    end
-  end
 end

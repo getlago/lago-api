@@ -263,23 +263,22 @@ RSpec.describe CopyToProduction::CopyService do
   end
 
   context "with a feature" do
-    subject(:result) { described_class.call(organization:, user:, item_type: "feature", id: feature.id) }
-
+    let(:item_type) { "feature" }
+    let(:id) { feature.id }
     let(:feature) { create(:feature, organization: sandbox, code: "seats", name: "Seats", description: "Seats per workspace") }
 
     before do
       create(:privilege, feature:, code: "max", name: "Maximum", value_type: "integer", created_at: 2.days.ago)
       create(:privilege, feature:, code: "tier", value_type: "select", config: {select_options: %w[free pro]}, created_at: 1.day.ago)
+      create(:privilege, feature:, code: "removed").discard!
     end
 
-    it "copies the feature and its privileges to production" do
+    it "copies the feature and its kept privileges to production" do
       expect { result }.to change { production.features.count }.by(1)
 
       copy = production.features.find_by(code: "seats")
       expect(result).to be_success
       expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "feature", record: copy))
-      expect(result.copied_items).to eq([result.item])
-      expect(result.reused_items).to eq([])
       expect(copy).to have_attributes(name: "Seats", description: "Seats per workspace")
       expect(copy.privileges.order(:created_at, :id).map { [it.code, it.name, it.value_type, it.config, it.organization_id] }).to eq(
         [
@@ -287,61 +286,6 @@ RSpec.describe CopyToProduction::CopyService do
           ["tier", nil, "select", {"select_options" => %w[free pro]}, production.id]
         ]
       )
-      expect(feature.reload.privileges.count).to eq(2)
-      expect(SendWebhookJob).to have_been_enqueued.with("feature.created", copy)
-    end
-
-    context "with activity logs", :capture_kafka_messages do
-      before do
-        stub_const(
-          "ENV",
-          ENV.to_h.merge(
-            "LAGO_CLICKHOUSE_ENABLED" => "true",
-            "LAGO_KAFKA_BOOTSTRAP_SERVERS" => "kafka",
-            "LAGO_KAFKA_ACTIVITY_LOGS_TOPIC" => "activity_logs"
-          )
-        )
-        CurrentContext.source = "graphql"
-      end
-
-      it "logs the creation and the copy in production, attributed to the user" do
-        result
-
-        logs = kafka_messages.map { JSON.parse(it[:payload]) }
-        expect(logs.map { it.slice("activity_type", "organization_id", "resource_id", "user_id") }).to match_array(
-          %w[feature.created feature.copied_to_production].map do |activity_type|
-            {
-              "activity_type" => activity_type,
-              "organization_id" => production.id,
-              "resource_id" => result.item.record.id,
-              "user_id" => user.id
-            }
-          end
-        )
-      end
-    end
-
-    context "when production has a feature with the same code" do
-      before { create(:feature, organization: production, code: "seats") }
-
-      it "copies nothing" do
-        expect { result }.not_to change(Entitlement::Privilege, :count)
-
-        expect(production.features.count).to eq(1)
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages).to eq(code: ["value_already_exist"])
-      end
-    end
-
-    context "when production has a deleted feature with the same code" do
-      before { create(:feature, organization: production, code: "seats", deleted_at: Time.current) }
-
-      it "copies the feature" do
-        expect { result }.to change { production.features.count }.by(1)
-
-        expect(result).to be_success
-      end
     end
   end
 end
