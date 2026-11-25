@@ -49,6 +49,12 @@ module Clockwork
       .perform_later
   end
 
+  every(subscription_activity_processing_interval.to_i.seconds, "schedule:process_contract_activity") do
+    Clock::ProcessAllContractActivitiesJob
+      .set(sentry: {"slug" => "lago_process_contract_activity", "cron" => "#{subscription_activity_processing_interval} interval"})
+      .perform_later
+  end
+
   if Utils::DedicatedWorkerConfig.any?
     every(Utils::DedicatedWorkerConfig.refresh_interval, "schedule:process_dedicated_orgs_subscription_activities") do
       Clock::ProcessDedicatedOrgsSubscriptionActivitiesJob.perform_later

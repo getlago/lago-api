@@ -64,6 +64,15 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
     expect(alert.all_triggered_alerts).to be_empty
   end
 
+  it "tracks the contract once the alert is committed, so the next tick evaluates it" do
+    ApplicationRecord.transaction do
+      expect(result).to be_success
+      expect(UsageMonitoring::ContractActivity.count).to eq(0)
+    end
+
+    expect(UsageMonitoring::ContractActivity.sole).to have_attributes(organization_id: organization.id, contract_id: contract.id, enqueued: false)
+  end
+
   context "with the product and the filter given by id" do
     let(:params) do
       {alert_type: "usage_units", code: "opus_tokens", product_id: product.id, product_filter_id: product_filter.id, thresholds: [{value: 10}]}
@@ -142,6 +151,11 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
       expect(result).to be_success
       expect(result.alert.contract_external_id).to eq(contract.external_id)
     end
+
+    it "does not track the contract, which is not evaluated before it is active" do
+      expect(result).to be_success
+      expect(UsageMonitoring::ContractActivity.count).to eq(0)
+    end
   end
 
   context "with a threshold already past at creation" do
@@ -173,6 +187,11 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
       expect(result.error).to be_a(BaseService::ForbiddenFailure)
       expect(result.error.code).to eq("feature_unavailable")
     end
+
+    it "does not track the contract" do
+      result
+      expect(UsageMonitoring::ContractActivity.count).to eq(0)
+    end
   end
 
   context "without the contract_alerts flag" do
@@ -183,6 +202,11 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
       expect(result).to be_failure
       expect(result.error).to be_a(BaseService::ForbiddenFailure)
       expect(result.error.code).to eq("feature_unavailable")
+    end
+
+    it "does not track the contract" do
+      result
+      expect(UsageMonitoring::ContractActivity.count).to eq(0)
     end
   end
 
@@ -360,6 +384,11 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
 
     it "returns value_already_exist on code" do
       expect(result.error.messages).to eq({code: ["value_already_exist"]})
+    end
+
+    it "does not track the contract" do
+      expect(result).to be_failure
+      expect(UsageMonitoring::ContractActivity.count).to eq(0)
     end
   end
 

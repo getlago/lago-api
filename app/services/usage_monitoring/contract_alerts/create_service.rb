@@ -54,6 +54,9 @@ module UsageMonitoring
           alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
           seed_alarms_already_past(alert, contract)
 
+          # An alert created above its thresholds fires at the next evaluation, without waiting for an event
+          after_commit { UsageMonitoring::TrackContractActivityService.call!(contract:) }
+
           result.alert = alert
         end
 
