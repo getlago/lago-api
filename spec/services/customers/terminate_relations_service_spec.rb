@@ -96,12 +96,22 @@ RSpec.describe Customers::TerminateRelationsService do
     let(:active_contract) { create(:contract, customer:) }
     let(:terminated_contract) { create(:contract, :terminated, customer:, terminated_at: 2.days.ago) }
     let(:canceled_contract) { create(:contract, :canceled, customer:, canceled_at: 3.days.ago) }
+    let(:draft_contract) { create(:contract, :draft, customer:) }
 
     before do
       create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization, status: "shadowing")
       active_contract
       terminated_contract
       canceled_contract
+      draft_contract
+    end
+
+    it "cancels the draft contract" do
+      freeze_time do
+        expect { terminate_service.call }
+          .to change { draft_contract.reload.status }.from("draft").to("canceled")
+          .and change(draft_contract, :canceled_at).from(nil).to(Time.current)
+      end
     end
 
     it "terminates the active contract and leaves ended contracts alone" do
@@ -125,7 +135,7 @@ RSpec.describe Customers::TerminateRelationsService do
       contract
       invoices
 
-      allow(Contracts::TerminateService).to receive(:call).and_wrap_original do |original, **kwargs|
+      allow(Contracts::TerminateService).to receive(:call!).and_wrap_original do |original, **kwargs|
         calls << [:contract, kwargs[:contract].id]
         original.call(**kwargs)
       end
@@ -141,6 +151,58 @@ RSpec.describe Customers::TerminateRelationsService do
       expect(calls.map(&:first)).to eq([:contract, :invoice, :invoice])
       expect(calls.first).to eq([:contract, contract.id])
       expect(calls.drop(1).map(&:last)).to match_array(invoices.map(&:id))
+    end
+  end
+
+  context "with a live contract whose termination fails on the shadow organization of a migration" do
+    let(:contract) { create(:contract, :pending, customer:) }
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization)
+      contract
+      invoices
+
+      allow(Contracts::TerminateService).to receive(:call!)
+        .and_raise(BaseService::LockAcquisitionFailure.new(nil, code: "lock_acquisition_failed", error_message: "Failed to acquire lock"))
+    end
+
+    it "raises and keeps the drafts for the retry" do
+      expect { terminate_service.call }
+        .to raise_error(BaseService::LockAcquisitionFailure)
+        .and not_have_enqueued_job(Invoices::FinalizeJob)
+
+      expect(invoices.map(&:reload)).to all(be_draft)
+    end
+  end
+
+  context "with draft invoices on the shadow organization of a migration" do
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization)
+      invoices
+
+      allow(Customers::LockService).to receive(:call!).and_call_original
+    end
+
+    it "deletes the drafts under the customer billing-schedule lock" do
+      terminate_service.call
+
+      expect(Customers::LockService).to have_received(:call!).with(customer:, scope: :billing_schedule, transaction: false)
+      expect(invoices.map(&:reload)).to all(be_deleted)
+    end
+
+    context "when a billing run holds the lock" do
+      before do
+        allow(Customers::LockService).to receive(:call!).and_raise(BaseLockService::FailedToAcquireLock, "Failed to acquire lock")
+      end
+
+      it "raises and keeps the drafts for the retry" do
+        expect { terminate_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
+
+        expect(invoices.map(&:reload)).to all(be_draft)
+      end
     end
   end
 

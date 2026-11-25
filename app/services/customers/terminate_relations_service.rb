@@ -20,7 +20,7 @@ module Customers
       # NOTE: Cancel pending subscriptions
       customer.subscriptions.pending.find_each(&:mark_as_canceled!)
 
-      if BillingEngineMigrations::Lookup.shadow_organization?(customer.organization_id)
+      if shadow_organization?
         terminate_contracts
         delete_draft_invoices
       else
@@ -44,18 +44,28 @@ module Customers
 
     attr_reader :customer
 
-    def terminate_contracts
-      customer.contracts.live.find_each { |contract| Contracts::TerminateService.call(contract:) }
+    def shadow_organization?
+      migration = BillingEngineMigrations::Lookup.for_shadow(customer.organization_id)
+      return false unless migration
+
+      migration.shadowing? || migration.paused?
     end
 
-    def delete_draft_invoices
-      customer.invoices.draft.find_each do |invoice|
-        delete_result = Invoices::DeleteService.call(invoice:)
+    def terminate_contracts
+      customer.contracts.live.includes(:customer).find_each { |contract| Contracts::TerminateService.call!(contract:) }
+    end
 
-        if delete_result.failure?
-          Rails.logger.warn(
-            "Customers::TerminateRelationsService: draft invoice #{invoice.id} not deleted: #{delete_result.error.code}"
-          )
+    # A billing run in progress holds this lock while it builds drafts: waiting for it keeps them from escaping the deletion.
+    def delete_draft_invoices
+      Customers::LockService.call!(customer:, scope: :billing_schedule, transaction: false) do
+        customer.invoices.draft.find_each do |invoice|
+          delete_result = Invoices::DeleteService.call(invoice:)
+
+          if delete_result.failure?
+            Rails.logger.warn(
+              "Customers::TerminateRelationsService: draft invoice #{invoice.id} not deleted: #{delete_result.error.code}"
+            )
+          end
         end
       end
     end

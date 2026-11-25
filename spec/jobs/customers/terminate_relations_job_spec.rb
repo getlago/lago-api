@@ -17,6 +17,28 @@ RSpec.describe Customers::TerminateRelationsJob do
       .to have_received(:call)
   end
 
+  context "when a contract termination fails to acquire the lock" do
+    before do
+      allow(Customers::TerminateRelationsService).to receive(:call)
+        .and_raise(BaseService::LockAcquisitionFailure.new(nil, code: "lock_acquisition_failed", error_message: "Failed to acquire lock"))
+    end
+
+    it "retries the job" do
+      expect { described_class.perform_now(customer_id: customer.id) }.to have_enqueued_job(described_class)
+    end
+  end
+
+  context "when the draft deletion fails to acquire the lock" do
+    before do
+      allow(Customers::TerminateRelationsService).to receive(:call)
+        .and_raise(BaseLockService::FailedToAcquireLock, "Failed to acquire lock")
+    end
+
+    it "retries the job" do
+      expect { described_class.perform_now(customer_id: customer.id) }.to have_enqueued_job(described_class)
+    end
+  end
+
   context "when the customer belongs to the shadow organization of a migration" do
     let(:contract) { create(:contract, :pending, customer:) }
     let(:invoice) { create(:invoice, :draft, customer:) }
