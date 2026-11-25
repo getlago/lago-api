@@ -116,6 +116,20 @@ RSpec.describe "record_deletion trigger", transaction: false do # rubocop:disabl
     end
   end
 
+  describe "billing_entities_taxes" do
+    it "records the deleted row" do
+      billing_entity = create(:billing_entity, organization:)
+      applied_tax = create(:billing_entity_applied_tax, billing_entity:, tax:, organization:)
+
+      applied_tax.destroy!
+
+      expect(RecordDeletion.find_by(record_id: applied_tax.id)).to have_attributes(
+        record_table: "billing_entities_taxes",
+        organization_id: organization.id
+      )
+    end
+  end
+
   describe "contract_rate_cards_terms" do
     it "records the deleted row" do
       term = create(:contract_rate_card_term, organization:)
@@ -126,6 +140,55 @@ RSpec.describe "record_deletion trigger", transaction: false do # rubocop:disabl
         record_table: "contract_rate_cards_terms",
         organization_id: organization.id
       )
+    end
+  end
+
+  describe "customers_taxes" do
+    it "records the deleted row" do
+      applied_tax = create(:customer_applied_tax, customer:, tax:, organization:)
+
+      applied_tax.destroy!
+
+      expect(RecordDeletion.find_by(record_id: applied_tax.id)).to have_attributes(
+        record_table: "customers_taxes",
+        organization_id: organization.id
+      )
+    end
+  end
+
+  describe "rate_cards_taxes" do
+    it "records the deleted row" do
+      rate_card = create(:rate_card, organization:)
+      applied_tax = create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+
+      applied_tax.destroy!
+
+      expect(RecordDeletion.find_by(record_id: applied_tax.id)).to have_attributes(
+        record_table: "rate_cards_taxes",
+        organization_id: organization.id
+      )
+    end
+  end
+
+  describe "a tax deletion" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:rate_card) { create(:rate_card, organization:) }
+
+    it "records the applied taxes it removes from billing entities, customers and rate cards" do
+      applied_taxes = [
+        create(:billing_entity_applied_tax, billing_entity:, tax:, organization:),
+        create(:customer_applied_tax, customer:, tax:, organization:),
+        create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+      ]
+
+      Taxes::DestroyService.call(tax:).raise_if_error!
+
+      expect(RecordDeletion.where(record_id: applied_taxes.map(&:id)).pluck(:record_id, :record_table))
+        .to match_array([
+          [applied_taxes[0].id, "billing_entities_taxes"],
+          [applied_taxes[1].id, "customers_taxes"],
+          [applied_taxes[2].id, "rate_cards_taxes"]
+        ])
     end
   end
 
