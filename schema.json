@@ -16307,7 +16307,7 @@
             },
             {
               "name": "metadata",
-              "description": null,
+              "description": "Omit or null for none, [] to store an empty set.",
               "type": {
                 "kind": "LIST",
                 "name": null,
@@ -91479,7 +91479,7 @@
             },
             {
               "name": "metadata",
-              "description": null,
+              "description": "Replaces all pairs. Omit to keep them, [] to empty, null to remove.",
               "type": {
                 "kind": "LIST",
                 "name": null,
