@@ -194,6 +194,20 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
       expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
     end
 
+    it "sends a webhook that renders the resolution" do
+      perform_enqueued_jobs(only: SendWebhookJob) { result }
+
+      resolved = alert.all_triggered_alerts.resolved.sole
+      expect(Webhook.where(webhook_type: "alert.resolved").sole.payload["resolved_alert"]).to include(
+        "lago_id" => resolved.id,
+        "lago_alert_id" => alert.id,
+        "lago_contract_id" => contract.id,
+        "external_contract_id" => contract.external_id,
+        "recovered_thresholds" => [{"code" => "warn", "value" => "50.0", "recurring" => false}],
+        "reason" => "threshold_updated"
+      )
+    end
+
     context "with a pending replacement on the same external id" do
       before { create(:contract, :pending, organization:, customer:, external_id: contract.external_id) }
 
