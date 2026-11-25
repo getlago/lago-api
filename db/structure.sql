@@ -482,6 +482,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_fees_contract_rate_card_contract;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_daily_usages_contract_rate_card_contract;
 DROP TRIGGER IF EXISTS record_deletions_on_rate_cards_taxes ON public.rate_cards_taxes;
+DROP TRIGGER IF EXISTS record_deletions_on_plans_taxes ON public.plans_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_invoices_taxes ON public.invoices_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_invoice_subscriptions ON public.invoice_subscriptions;
 DROP TRIGGER IF EXISTS record_deletions_on_fees_taxes ON public.fees_taxes;
@@ -1617,6 +1618,7 @@ DROP VIEW IF EXISTS public.exports_product_categories;
 DROP TABLE IF EXISTS public.product_categories;
 DROP VIEW IF EXISTS public.exports_pricing_units;
 DROP TABLE IF EXISTS public.pricing_units;
+DROP VIEW IF EXISTS public.exports_plans_taxes;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
 DROP VIEW IF EXISTS public.exports_plan_rate_cards;
@@ -5800,6 +5802,21 @@ CREATE VIEW public.exports_plans AS
           WHERE (pt.plan_id = p.id))) AS lago_taxes_ids
    FROM public.plans p
   WHERE (p.deleted_at IS NULL);
+
+
+--
+-- Name: exports_plans_taxes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_plans_taxes AS
+ SELECT pt.organization_id,
+    pt.id AS lago_id,
+    pt.plan_id AS lago_plan_id,
+    pt.catalog_plan_id AS lago_catalog_plan_id,
+    pt.tax_id AS lago_tax_id,
+    pt.created_at,
+    pt.updated_at
+   FROM public.plans_taxes pt;
 
 
 --
@@ -15293,6 +15310,13 @@ CREATE CONSTRAINT TRIGGER record_deletions_on_invoices_taxes AFTER DELETE ON pub
 
 
 --
+-- Name: plans_taxes record_deletions_on_plans_taxes; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER record_deletions_on_plans_taxes AFTER DELETE ON public.plans_taxes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
+
+
+--
 -- Name: rate_cards_taxes record_deletions_on_rate_cards_taxes; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -19082,6 +19106,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261125113444'),
+('20261125113441'),
 ('20261124113226'),
 ('20261123224020'),
 ('20261123224017'),
