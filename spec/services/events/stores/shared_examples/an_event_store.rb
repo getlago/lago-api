@@ -1060,6 +1060,101 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
       end
 
+      context "with historical recurring identifiers" do
+        let(:started_at) { Time.zone.parse("2027-01-01") }
+        let(:boundaries) do
+          {from_datetime: started_at + 15.days, to_datetime: started_at.end_of_month.end_of_day, charges_duration: 31}
+        end
+        let(:added_at) { started_at + 1.hour }
+        let(:removed_at) { started_at + 9.days }
+        let(:group_properties) { {"agent_name" => "frodo", "other" => "west"} }
+        let(:expected_group) { {"agent_name" => "frodo", "other" => "west"} }
+        let(:expected_days) { 0 }
+        let(:expected_results) { [[expected_group, (expected_days.to_d / 31).round(8)]] }
+        let(:events) do
+          [
+            create_event(timestamp: added_at, properties: group_properties, value: "2"),
+            create_event(timestamp: removed_at, properties: group_properties.merge("operation_type" => "remove"), value: "2")
+          ]
+        end
+
+        before { event_store.use_from_boundary = false }
+
+        shared_examples "prorates only overlapping coverage" do
+          it "counts active calendar days within the window over the full billing period" do
+            result = event_store.grouped_prorated_unique_count
+
+            expect(result.map { [it.groups, it.value.round(8)] }).to match_array(expected_results)
+          end
+        end
+
+        include_examples "prorates only overlapping coverage"
+
+        context "when removal is immediately before the window" do
+          let(:removed_at) { boundaries[:from_datetime] - Rational(1, 1000) }
+
+          include_examples "prorates only overlapping coverage"
+        end
+
+        context "when removal is exactly at the window start" do
+          let(:removed_at) { boundaries[:from_datetime] }
+          let(:expected_days) { 1 }
+
+          include_examples "prorates only overlapping coverage"
+        end
+
+        context "when removal occurs inside the window" do
+          let(:removed_at) { boundaries[:from_datetime] + 4.days }
+          let(:expected_days) { 5 } # January 16–20, including removal day.
+
+          include_examples "prorates only overlapping coverage"
+        end
+
+        context "when the identifier remains active" do
+          let(:events) { [create_event(timestamp: added_at, properties: group_properties, value: "2")] }
+          let(:expected_days) { 16 } # January 16–31.
+
+          include_examples "prorates only overlapping coverage"
+        end
+
+        context "when both operations occur inside the window" do
+          let(:added_at) { boundaries[:from_datetime] + 4.days }
+          let(:removed_at) { boundaries[:from_datetime] + 6.days }
+          let(:expected_days) { 3 } # January 20–22, including removal day.
+
+          include_examples "prorates only overlapping coverage"
+        end
+
+        context "when the same identifier remains active in another group" do
+          let(:events) do
+            super() + [create_event(timestamp: added_at + 1.hour, properties: {"agent_name" => "aragorn", "other" => "west"}, value: "2")]
+          end
+          let(:expected_results) do
+            [[expected_group, 0], [{"agent_name" => "aragorn", "other" => "west"}, (16.to_d / 31).round(8)]]
+          end
+
+          include_examples "prorates only overlapping coverage"
+        end
+
+        context "when only the second group key differs" do
+          let(:events) do
+            super() + [create_event(timestamp: added_at + 1.hour, properties: {"agent_name" => "frodo", "other" => "east"}, value: "2")]
+          end
+          let(:expected_results) do
+            [[expected_group, 0], [{"agent_name" => "frodo", "other" => "east"}, (16.to_d / 31).round(8)]]
+          end
+
+          include_examples "prorates only overlapping coverage"
+        end
+
+        context "with null group keys" do
+          let(:group_properties) { {} }
+          let(:expected_group) { {"agent_name" => nil, "other" => nil} }
+
+          include_examples "prorates only overlapping coverage"
+        end
+      end
+
       context "with no events" do
         let(:events) { [] }
 

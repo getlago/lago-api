@@ -61,6 +61,43 @@ RSpec.describe Events::Stores::PostgresStore do
     end
   end
 
+  describe "#grouped_prorated_unique_count" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+    let(:subscription) { create(:subscription, customer:, started_at: Time.utc(2026, 10, 1)) }
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :unique_count_agg, recurring: true, field_name: "unique_id") }
+    let(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries: {
+          from_datetime: Time.utc(2026, 11, 1, 4),
+          to_datetime: Time.utc(2026, 11, 2, 5) - Rational(1, 1_000_000),
+          charges_duration: 30
+        },
+        filters: {grouped_by: ["region"]}
+      ).tap do |store|
+        store.aggregation_property = billable_metric.field_name
+        store.use_from_boundary = false
+      end
+    end
+
+    before do
+      create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+        timestamp: Time.utc(2026, 10, 15), properties: {unique_id: "a", region: "EU"})
+      create(:event, organization:, subscription:, customer:, code: billable_metric.code,
+        timestamp: Time.utc(2026, 11, 1, 4, 30), properties: {unique_id: "a", region: "EU", operation_type: "remove"})
+    end
+
+    it "includes removal day in the customer timezone across the fall-back transition" do
+      result = event_store.grouped_prorated_unique_count.sole
+
+      # New York's November 1 lasts 25 hours but contributes one of the cycle's 30 calendar days.
+      expect(result.groups).to eq("region" => "EU")
+      expect(result.value.round(8)).to eq((1.to_d / 30).round(8))
+    end
+  end
+
   describe "#count" do
     context "when the upper boundary is a pay-in-advance event (max_timestamp)" do
       let(:billable_metric) { create(:billable_metric) }
