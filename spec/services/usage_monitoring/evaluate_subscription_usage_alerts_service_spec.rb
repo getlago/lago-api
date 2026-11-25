@@ -22,6 +22,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
   let(:lifetime_alert) { create(:lifetime_usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
 
   before do
+    freeze_time
     charge
     allow(::Invoices::CustomerUsageService).to receive(:call).and_return(usage_result)
     allow(UsageMonitoring::ProcessAlertService).to receive(:call)
@@ -37,7 +38,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
 
       expect(UsageMonitoring::ProcessAlertService).to have_received(:call).twice
       expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-        .with(alert: metric_units_alert, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: billable_metric.id)
+        .with(alert: metric_units_alert, alertable: subscription, current_metrics: computed_usage, measured_at: Time.current, expected_billable_metric_id: billable_metric.id)
       expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
         .with(alert: lifetime_alert, alertable: subscription, current_metrics: lifetime_usage)
     end
@@ -58,12 +59,26 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
       )
       alerts.each do |alert|
         expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert:, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: nil)
+          .with(alert:, alertable: subscription, current_metrics: computed_usage, measured_at: Time.current, expected_billable_metric_id: nil)
       end
     end
 
+    it "dates the usage with the time read before it is built" do
+      measured_at = Time.current
+      allow(::Invoices::CustomerUsageService).to receive(:call) do
+        travel 2.seconds
+        usage_result
+      end
+
+      result
+
+      expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
+        .with(alert: amount_alert, alertable: subscription, current_metrics: computed_usage, measured_at:, expected_billable_metric_id: nil)
+    end
+
     context "when a full plan usage is given" do
-      let(:full_plan_usage) { instance_double(SubscriptionUsage) }
+      let(:full_plan_usage) { UsageMonitoring::UsageSnapshot.new(usage: full_usage, measured_at: 10.seconds.ago) }
+      let(:full_usage) { instance_double(SubscriptionUsage) }
 
       it "reuses it without computing a usage" do
         result
@@ -71,7 +86,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
         expect(::Invoices::CustomerUsageService).not_to have_received(:call)
         alerts.each do |alert|
           expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-            .with(alert:, alertable: subscription, current_metrics: full_plan_usage, expected_billable_metric_id: nil)
+            .with(alert:, alertable: subscription, current_metrics: full_usage, measured_at: 10.seconds.ago, expected_billable_metric_id: nil)
         end
       end
     end
@@ -101,7 +116,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
       )
       alerts.each do |alert|
         expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert:, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: alert.billable_metric_id)
+          .with(alert:, alertable: subscription, current_metrics: computed_usage, measured_at: Time.current, expected_billable_metric_id: alert.billable_metric_id)
       end
     end
 
@@ -122,14 +137,15 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
 
     context "when a full plan usage is given" do
       let(:alerts) { [metric_units_alert, lifetime_alert] }
-      let(:full_plan_usage) { instance_double(SubscriptionUsage) }
+      let(:full_plan_usage) { UsageMonitoring::UsageSnapshot.new(usage: full_usage, measured_at: 10.seconds.ago) }
+      let(:full_usage) { instance_double(SubscriptionUsage) }
 
       it "reuses it without computing a scoped usage" do
         result
 
         expect(::Invoices::CustomerUsageService).not_to have_received(:call)
         expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-          .with(alert: metric_units_alert, alertable: subscription, current_metrics: full_plan_usage, expected_billable_metric_id: nil)
+          .with(alert: metric_units_alert, alertable: subscription, current_metrics: full_usage, measured_at: 10.seconds.ago, expected_billable_metric_id: nil)
       end
     end
 
@@ -167,7 +183,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
 
         alerts.each do |alert|
           expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-            .with(alert:, alertable: subscription, current_metrics: have_attributes(fees: []), expected_billable_metric_id: alert.billable_metric_id)
+            .with(alert:, alertable: subscription, current_metrics: have_attributes(fees: []), measured_at: Time.current, expected_billable_metric_id: alert.billable_metric_id)
         end
       end
     end
@@ -182,7 +198,7 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
 
       expect(::Invoices::CustomerUsageService).not_to have_received(:call)
       expect(UsageMonitoring::ProcessAlertService).to have_received(:call)
-        .with(alert: metric_units_alert, alertable: subscription, current_metrics: have_attributes(fees: []), expected_billable_metric_id: billable_metric.id)
+        .with(alert: metric_units_alert, alertable: subscription, current_metrics: have_attributes(fees: []), measured_at: Time.current, expected_billable_metric_id: billable_metric.id)
     end
 
     context "when the billing period rolled over since the last evaluation" do
@@ -199,12 +215,10 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
 
       before { allow(UsageMonitoring::ProcessAlertService).to receive(:call).and_call_original }
 
-      it "keeps the previous value, triggers nothing and stamps the evaluation" do
-        freeze_time do
-          expect { result }.not_to change(UsageMonitoring::TriggeredAlert, :count)
+      it "keeps the previous value, triggers nothing and stamps the measurement" do
+        expect { result }.not_to change(UsageMonitoring::TriggeredAlert, :count)
 
-          expect(metric_units_alert.reload).to have_attributes(previous_value: 5, last_processed_at: Time.current)
-        end
+        expect(metric_units_alert.reload).to have_attributes(previous_value: 5, last_processed_at: Time.current)
       end
     end
   end
@@ -271,12 +285,10 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
     let(:alerts) { [lifetime_units_alert] }
 
     it "enqueues ProcessLifetimeUsageAlertJob after the processing interval" do
-      freeze_time do
-        result
+      result
 
-        expect(UsageMonitoring::ProcessLifetimeUsageAlertJob)
-          .to have_been_enqueued.with(alert: lifetime_units_alert, subscription:).at(1.minute.from_now)
-      end
+      expect(UsageMonitoring::ProcessLifetimeUsageAlertJob)
+        .to have_been_enqueued.with(alert: lifetime_units_alert, subscription:).at(1.minute.from_now)
       expect(::Invoices::CustomerUsageService).not_to have_received(:call)
     end
   end
@@ -321,10 +333,10 @@ RSpec.describe UsageMonitoring::EvaluateSubscriptionUsageAlertsService do
 
     before do
       allow(UsageMonitoring::ProcessAlertService).to receive(:call)
-        .with(alert: amount_alert, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: nil)
+        .with(alert: amount_alert, alertable: subscription, current_metrics: computed_usage, measured_at: Time.current, expected_billable_metric_id: nil)
         .and_raise(StandardError, "first alert failed")
       allow(UsageMonitoring::ProcessAlertService).to receive(:call)
-        .with(alert: metric_units_alert, alertable: subscription, current_metrics: computed_usage, expected_billable_metric_id: nil)
+        .with(alert: metric_units_alert, alertable: subscription, current_metrics: computed_usage, measured_at: Time.current, expected_billable_metric_id: nil)
         .and_raise(StandardError, "second alert failed")
     end
 

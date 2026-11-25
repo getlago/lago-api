@@ -137,6 +137,7 @@ module Clickhouse
       contract_wallet_deleted: "contract_wallet.deleted",
       contract_created: "contract.created",
       contract_updated: "contract.updated",
+      contract_published: "contract.published",
       contract_started: "contract.started",
       contract_terminated: "contract.terminated",
       contract_canceled: "contract.canceled",

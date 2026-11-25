@@ -160,7 +160,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - `let_it_be` records are frozen (`spec/spec_helper.rb`). When an example or the code under test updates one, add `refind: true` to that record only. It loads a fresh copy before each example, while `reload: true` reloads the shared instance in place.
 - Use `before_all` for setup that only needs to exist, such as `before_all { create_default(:billable_metric) }`.
 - `create_default(:organization)` makes factories reuse that organization. A record of another organization needs it passed explicitly (`create(:invoice, organization: create(:organization))`), and a `let_it_be` is declared after the records it depends on.
-- `transaction: false` groups delete all rows after each example, which removes `let_it_be` and `before_all` records: use `let` there.
+- `transaction: false` groups delete all rows after each example, which removes `let_it_be` and `before_all` records: use `let` there. A group whose examples run threads also needs no `let_it_be` or `before_all` in an outer group: `before_all` makes every thread share one connection (`lock_thread`), so the threads wait on each other in Ruby and the example hangs past its `Timeout`.
 
 ## Code Review Rules
 

@@ -22,12 +22,6 @@ module IntegrationCustomers
       integration_customer.targeted_object = targeted_object if targeted_object.present?
       integration_customer.save!
 
-      # Updating the customer in QuickBooks is not wired yet: only the link is stored.
-      if integration_customer.type == "IntegrationCustomers::QuickbooksCustomer"
-        result.integration_customer = integration_customer
-        return result
-      end
-
       if integration_customer.external_customer_id.present?
         update_result = update_service_class.call(integration:, integration_customer:)
         return update_result unless update_result.success?

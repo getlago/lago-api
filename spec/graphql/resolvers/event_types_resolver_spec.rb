@@ -12,7 +12,7 @@ RSpec.describe Resolvers::EventTypesResolver do
       rate_card_rate.created rate_card_rate.updated rate_card_rate.deleted
       plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted
       contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
-      contract.created contract.updated contract.started contract.terminated contract.canceled
+      contract.created contract.updated contract.published contract.started contract.terminated contract.canceled
     ]
   end
 
@@ -79,7 +79,7 @@ RSpec.describe Resolvers::EventTypesResolver do
 
       plan_rate_card_events = %w[plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted]
       contract_events = %w[
-        contract.created contract.updated contract.started contract.terminated contract.canceled
+        contract.created contract.updated contract.published contract.started contract.terminated contract.canceled
         contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
       ]
 

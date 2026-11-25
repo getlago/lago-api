@@ -11,6 +11,7 @@ module Types
         argument :name, String, required: false
         argument :product_filter_id, ID, required: false
         argument :product_id, ID, required: false
+        argument :with_product_filters, Boolean, required: false
 
         argument :thresholds, [Types::UsageMonitoring::Alerts::ThresholdInput], required: true
       end

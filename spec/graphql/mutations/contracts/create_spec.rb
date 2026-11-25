@@ -101,6 +101,40 @@ RSpec.describe Mutations::Contracts::Create do
     end
   end
 
+  context "with the draft status" do
+    let(:input) { super().merge(status: "draft", startedAt: 1.month.ago.iso8601) }
+
+    it "creates a draft, even with a start that has passed" do
+      expect(execution["data"]["createContract"]["status"]).to eq("draft")
+    end
+
+    context "without a start date" do
+      let(:input) { super().except(:startedAt) }
+
+      it "returns a validation error without creating a contract" do
+        expect { execution }.not_to change(Contract, :count)
+        expect_unprocessable_entity(execution, details: {startedAt: ["value_is_mandatory"]})
+      end
+    end
+  end
+
+  context "with a null status" do
+    let(:input) { super().merge(status: nil) }
+
+    it "creates the contract as when the status is omitted" do
+      expect(execution["data"]["createContract"]["status"]).to eq("active")
+    end
+  end
+
+  context "with a status other than draft" do
+    let(:input) { super().merge(status: "active") }
+
+    it "rejects it in the schema, as only a draft can be chosen" do
+      expect { execution }.not_to change(Contract, :count)
+      expect(execution["errors"].sole["message"]).to include('Expected "active" to be one of: draft')
+    end
+  end
+
   context "when a live contract already uses the external id" do
     before { create(:contract, organization:, customer:, external_id: "contract-1") }
 

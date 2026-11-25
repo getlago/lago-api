@@ -26,7 +26,7 @@ RSpec.describe Mutations::Contracts::Terminate do
     <<-GQL
       mutation($input: TerminateContractInput!) {
         terminateContract(input: $input) {
-          id externalId status terminatedAt
+          id externalId status terminatedAt canceledAt
         }
       }
     GQL
@@ -98,6 +98,17 @@ RSpec.describe Mutations::Contracts::Terminate do
         expect(contract.reload.status).to eq(status.to_s)
         expect(replacement.reload.status).to eq("pending")
       end
+    end
+  end
+
+  context "when the contract is a draft" do
+    let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.ago) }
+
+    it "cancels it" do
+      result_data = execution["data"]["terminateContract"]
+
+      expect(result_data).to include("status" => "canceled", "terminatedAt" => nil)
+      expect(result_data["canceledAt"]).to be_present
     end
   end
 
