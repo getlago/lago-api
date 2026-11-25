@@ -28,6 +28,8 @@ module Integrations
       result.integration = integration
       # Sent once committed: Okta and Entra ID destroy inside a transaction that can still roll back.
       after_commit { register_security_log(integration) }
+      # Separate hook so a Nango problem can never skip the security log.
+      after_commit { delete_nango_connection(integration) }
       result
     rescue BaseService::FailedResult
       result
@@ -44,6 +46,12 @@ module Integrations
         log_event: "integration.deleted",
         resources: {integration_name: integration.name, integration_type: integration.provider_key}
       )
+    end
+
+    def delete_nango_connection(integration)
+      if integration.is_a?(Integrations::QuickbooksIntegration)
+        Integrations::Aggregator::DeleteConnectionService.call(integration:)
+      end
     end
   end
 end

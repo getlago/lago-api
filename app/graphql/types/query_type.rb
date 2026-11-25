@@ -87,6 +87,7 @@ module Types
     field :invoice_credit_notes, resolver: Resolvers::InvoiceCreditNotesResolver
     field :invoice_custom_section, resolver: Resolvers::InvoiceCustomSectionResolver
     field :invoice_custom_sections, resolver: Resolvers::InvoiceCustomSectionsResolver
+    field :invoice_product_fees, resolver: Resolvers::InvoiceProductFeesResolver
     field :invoiced_usages, resolver: Resolvers::Analytics::InvoicedUsagesResolver
     field :invoices, resolver: Resolvers::InvoicesResolver
     field :memberships, resolver: Resolvers::MembershipsResolver
@@ -159,6 +160,8 @@ module Types
     field :webhook_endpoint, resolver: Resolvers::WebhookEndpointResolver
     field :webhook_endpoints, resolver: Resolvers::WebhookEndpointsResolver
     field :webhooks, resolver: Resolvers::WebhooksResolver
+    field :x402_connection, resolver: Resolvers::X402ConnectionResolver
+    field :x402_connections, resolver: Resolvers::X402ConnectionsResolver
 
     field :data_api_mrrs, resolver: Resolvers::DataApi::MrrsResolver
     field :data_api_mrrs_plans, resolver: Resolvers::DataApi::Mrrs::PlansResolver

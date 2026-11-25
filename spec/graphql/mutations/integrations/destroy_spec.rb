@@ -95,10 +95,14 @@ RSpec.describe Mutations::Integrations::Destroy do
 
   context "with a QuickBooks integration" do
     let(:integration) { create(:quickbooks_integration, organization:) }
+    let(:connection_url) { "https://api.nango.dev/connection/quickbooks-test-connection?provider_config_key=quickbooks" }
 
-    it "deletes the QuickBooks integration" do
+    before { stub_request(:delete, connection_url).to_return(status: 204) }
+
+    it "deletes the QuickBooks integration and its Nango connection" do
       expect { result }.to change(::Integrations::QuickbooksIntegration, :count).by(-1)
       expect(result["data"]["destroyIntegration"]["id"]).to eq(integration.id)
+      expect(WebMock).to have_requested(:delete, connection_url).once
     end
 
     context "when the QuickBooks integration belongs to another organization" do
@@ -107,6 +111,7 @@ RSpec.describe Mutations::Integrations::Destroy do
       it "does not delete the QuickBooks integration" do
         expect { result }.not_to change(::Integrations::QuickbooksIntegration, :count)
         expect_not_found(result)
+        expect(a_request(:delete, /api\.nango\.dev/)).not_to have_been_made
       end
     end
   end

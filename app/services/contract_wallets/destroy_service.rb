@@ -32,8 +32,7 @@ module ContractWallets
           return result.forbidden_failure!(code: "wallet_has_credit_allocations")
         end
 
-        # Alerts are deleted for good; their thresholds go with them (ON DELETE CASCADE)
-        contract_wallet.alerts.delete_all
+        UsageMonitoring::CatalogWalletAlerts::DeleteAllService.call!(catalog_wallets: contract_wallet)
         # The taxes, scope and metadata stay on the deleted wallet, which still renders them.
         contract_wallet.discard!
       end

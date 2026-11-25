@@ -556,7 +556,14 @@ RSpec.describe Api::V2::CustomersController do
         end
         let(:attributes) { {integration_customers: [quickbooks_params]} }
 
-        it "stores the new QuickBooks customer id without calling QuickBooks" do
+        before do
+          stub_request(:get, "https://api.nango.dev/proxy/v3/company/1234567890/customer/59")
+            .to_return(status: 200, body: {Customer: {Id: "59", SyncToken: "3"}}.to_json)
+          stub_request(:post, "https://api.nango.dev/action/trigger")
+            .to_return(status: 200, body: {id: "59", syncToken: "4"}.to_json)
+        end
+
+        it "stores the new QuickBooks customer id and updates that customer in QuickBooks" do
           expect { request }.to have_enqueued_job(IntegrationCustomers::UpdateJob).with(
             integration_customer_params: quickbooks_params,
             integration: quickbooks_integration,
@@ -568,7 +575,10 @@ RSpec.describe Api::V2::CustomersController do
 
           expect(link.reload.external_customer_id).to eq("59")
           expect(customer.integration_customers.reload).to eq([link])
-          expect(a_request(:any, %r{\Ahttps://api\.nango\.dev/})).not_to have_been_made
+          expect(WebMock).to have_requested(:get, "https://api.nango.dev/proxy/v3/company/1234567890/customer/59").once
+          expect(WebMock).to have_requested(:post, "https://api.nango.dev/action/trigger")
+            .with(body: {action_name: "update-customer", input: hash_including("Id" => "59", "SyncToken" => "3", "sparse" => true)})
+            .once
         end
       end
 

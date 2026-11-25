@@ -15,12 +15,10 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
     Customers::RefreshWalletsService::Result.new.tap { |r| r.wallets = [] }
   end
 
-  let(:bucket_wait) { Yabeda.realtime_usage.wallet_refresh_bucket_wait }
   let(:duration) { Yabeda.realtime_usage.wallet_refresh_duration }
 
   before do
     allow(Customers::RefreshWalletsService).to receive(:call).and_return(refresh_result)
-    allow(bucket_wait).to receive(:measure)
     allow(duration).to receive(:measure)
   end
 
@@ -52,6 +50,19 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
     end
   end
 
+  context "without a watermark to wait for" do
+    before do
+      create(:wallet, customer:, organization:)
+      allow(RealtimeUsage).to receive(:consistent_reads)
+    end
+
+    it "refreshes without leasing a ClickHouse connection for consistent reads" do
+      expect(service_result).to be_success
+      expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
+      expect(RealtimeUsage).not_to have_received(:consistent_reads)
+    end
+  end
+
   context "without an active wallet" do
     it "does nothing" do
       expect(service_result).to be_success
@@ -75,8 +86,7 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
 
     before do
       create(:wallet, customer:, organization:)
-      stub_const("#{described_class}::BUCKET_WAIT_TIMEOUT", 0.2)
-      allow(Rails.logger).to receive(:warn)
+      stub_const("RealtimeUsage::WaitForBucketsService::TIMEOUT", 0.2)
     end
 
     context "when the bucket has caught up to the watermark" do
@@ -84,39 +94,21 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
         create(:clickhouse_usage_bucket, organization:, customer:, subscription:, last_ingested_at: watermark + 1.second)
       end
 
-      it "refreshes without warning" do
+      it "refreshes" do
         expect(service_result).to be_success
         expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
-        expect(Rails.logger).not_to have_received(:warn).with(/usage buckets did not catch up/)
       end
 
-      it "measures the wait" do
+      it "reads the usage with sequential consistency" do
+        consistency = nil
+        allow(Customers::RefreshWalletsService).to receive(:call) do
+          consistency = Clickhouse::BaseRecord.connection.select_value("SELECT getSetting('select_sequential_consistency')").to_i
+          refresh_result
+        end
+
         service_result
 
-        expect(bucket_wait).to have_received(:measure).with({}, be_within(60).of(0))
-      end
-    end
-
-    context "when only another organization holds a bucket for that subscription id" do
-      let(:other_organization) { create(:organization) }
-
-      before do
-        create(
-          :clickhouse_usage_bucket,
-          organization:, customer:, subscription:,
-          organization_id: other_organization.id,
-          last_ingested_at: watermark + 1.second
-        )
-      end
-
-      it "does not treat it as caught up" do
-        expect(service_result).to be_success
-        expect(Rails.logger).to have_received(:warn).with(/usage buckets did not catch up/)
-      end
-
-      it "leaves the refresh to the sweep" do
-        expect(service_result).to be_success
-        expect(Customers::RefreshWalletsService).not_to have_received(:call)
+        expect(consistency).to eq(1)
       end
     end
 
@@ -124,45 +116,27 @@ RSpec.describe Wallets::RealtimeRefreshService, clickhouse: {clean_before: true}
       it "does not refresh, so the customer stays flagged for the sweep" do
         expect(service_result).to be_success
         expect(Customers::RefreshWalletsService).not_to have_received(:call)
-        expect(Rails.logger).to have_received(:warn).with(/usage buckets did not catch up/)
       end
 
       it "reports the reason it walked away" do
         expect(service_result.reason).to eq(:bucket_wait_timeout)
       end
 
-      it "measures the wait it gave up on" do
+      it "names the customer in the warning" do
+        allow(Rails.logger).to receive(:warn)
+
         service_result
 
-        expect(bucket_wait).to have_received(:measure)
+        expect(Rails.logger).to have_received(:warn).with(/customer_id=#{customer.id}/)
       end
     end
 
     context "when the watermark is older than the stale cutoff" do
       let(:watermark) { 1.minute.ago }
 
-      context "when the bucket landed" do
-        before do
-          create(:clickhouse_usage_bucket, organization:, customer:, subscription:, last_ingested_at: watermark + 1.second)
-        end
-
-        it "refreshes without waiting for the buckets" do
-          expect(service_result).to be_success
-          expect(Customers::RefreshWalletsService).to have_received(:call).with(customer:)
-          expect(Rails.logger).not_to have_received(:warn).with(/usage buckets/)
-        end
-      end
-
-      context "without a bucket at the watermark" do
-        it "leaves the refresh to the sweep rather than waiting it out" do
-          expect(service_result).to be_success
-          expect(Customers::RefreshWalletsService).not_to have_received(:call)
-          expect(Rails.logger).to have_received(:warn).with(/behind a stale watermark/)
-        end
-
-        it "reports the reason it walked away" do
-          expect(service_result.reason).to eq(:stale_watermark)
-        end
+      it "leaves the refresh to the sweep and reports why" do
+        expect(service_result.reason).to eq(:stale_watermark)
+        expect(Customers::RefreshWalletsService).not_to have_received(:call)
       end
     end
   end

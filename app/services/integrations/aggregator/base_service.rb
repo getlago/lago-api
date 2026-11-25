@@ -13,6 +13,14 @@ module Integrations
       ORCHESTRATOR_FAILURE_PATTERN = %r{POST https?://nango-orchestrator-svc\.nango/v1/immediate failed}
       # NOTE: Providers whose throttled jobs wait for the next rate limit window instead of backing off
       NEXT_WINDOW_RETRY_PROVIDERS = %i[quickbooks].freeze
+      # NOTE: Intuit answers 429 with a ThrottlingFault (Error 3001, "message=ThrottleExceeded")
+      QUICKBOOKS_RATE_LIMITED_PATTERN = /ThrottleExceeded|ThrottlingFault/
+      # NOTE: Errors of a Nango read other than an HTTP status: an unparsable body or a connection failure
+      LOOKUP_ERRORS = [
+        JSON::ParserError,
+        *LagoHttpClient::Client::TRANSIENT_ERROR_CLASSES,
+        *LagoHttpClient::Client::CONNECT_FALLBACK_ERRORS
+      ].uniq.freeze
 
       def self.retryable_errors
         [
@@ -143,6 +151,19 @@ module Integrations
         }
       end
 
+      # Never the response body, the headers, the URI or the connection id: they can hold OAuth credentials
+      # or the QuickBooks realm id.
+      def log_nango_failure(label, error, status: nil)
+        details = {
+          organization_id: integration.organization_id,
+          provider_config_key: provider_key,
+          error: error.class.name,
+          status:
+        }.compact
+
+        Rails.logger.warn("#{label} #{details.to_json}")
+      end
+
       def trigger_action(input)
         # NOTE: Every action shares the same URI, so errors are tagged with the action name to tell them apart
         Sentry.set_tags(nango_action: action_name) if defined?(Sentry)
@@ -231,6 +252,11 @@ module Integrations
 
       def request_limit_error?(http_error)
         http_error.error_body.include?(REQUEST_LIMIT_ERROR_CODE)
+      end
+
+      # Nango returns an action's upstream 429 inside its own error body, so the body is checked too.
+      def quickbooks_rate_limited?(http_error)
+        http_error.error_code.to_i == 429 || QUICKBOOKS_RATE_LIMITED_PATTERN.match?(http_error.error_body.to_s)
       end
 
       def bad_gateway_error?(http_error)

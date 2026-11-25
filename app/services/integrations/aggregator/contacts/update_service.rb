@@ -20,10 +20,14 @@ module Integrations
             "update-contact"
           when "avalara"
             "update-customer"
+          when "quickbooks"
+            "update-customer"
           end
         end
 
         def call
+          return update_in_quickbooks if provider == "quickbooks"
+
           Integrations::Hubspot::Contacts::DeployPropertiesService.call(integration:)
 
           throttle!(:anrok, :hubspot, :netsuite, :xero)
@@ -40,6 +44,7 @@ module Integrations
           result
         rescue LagoHttpClient::HttpError => e
           raise RequestLimitError.new(e) if request_limit_error?(e)
+          raise_if_quickbooks_rate_limited!(e)
 
           code = code(e)
           message = message(e)
@@ -56,12 +61,44 @@ module Integrations
         attr_reader :integration_customer, :subsidiary_id
 
         def params
-          Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
+          payload.update_body
+        end
+
+        def payload
+          @payload ||= Integrations::Aggregator::Contacts::Payloads::Factory.new_instance(
             integration:,
             integration_customer:,
             customer:,
             subsidiary_id:
-          ).update_body
+          )
+        end
+
+        # QuickBooks refuses an update without the current SyncToken, so it is read through the Nango proxy first.
+        # A name already used in QuickBooks fails the update: the customer is never renamed. A customer created
+        # under the suffixed name, because the name was taken, keeps it.
+        def update_in_quickbooks
+          token_result = Integrations::Aggregator::Contacts::FetchQuickbooksSyncTokenService.call(
+            integration:,
+            integration_customer:
+          )
+
+          unless token_result.success?
+            code = token_result.error.code
+            message = token_result.error.error_message
+
+            deliver_error_webhook(customer:, code:, message:)
+
+            return result.service_failure!(code:, message:)
+          end
+
+          body = payload.update_body.merge("SyncToken" => token_result.sync_token)
+          if payload.unique_display_name.present? && token_result.display_name == payload.unique_display_name
+            body["DisplayName"] = payload.unique_display_name
+          end
+
+          trigger_quickbooks_action(body)
+
+          result
         end
       end
     end

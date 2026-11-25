@@ -40,7 +40,7 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
     <<~GQL
       mutation($input: CreateContractAlertInput!) {
         createContractAlert(input: $input) {
-          id alertType code name contractExternalId
+          id alertType code name contractExternalId withProductFilters
           product { id }
           productFilter { id }
           thresholds { code value recurring notifyOn }
@@ -76,6 +76,7 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
       "code" => "opus_tokens",
       "name" => "Opus tokens",
       "contractExternalId" => contract.external_id,
+      "withProductFilters" => false,
       "product" => {"id" => product.id},
       "productFilter" => {"id" => product_filter.id},
       "thresholds" => [
@@ -84,6 +85,16 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
         {"code" => "every_500k", "value" => "500000.0", "recurring" => true, "notifyOn" => ["triggered"]}
       ]
     )
+  end
+
+  context "with withProductFilters on the product" do
+    let(:input) { super().except(:productFilterId).merge(withProductFilters: true) }
+
+    it "creates the alert on the product and its filters" do
+      response = execution["data"]["createContractAlert"]
+
+      expect(response).to include("withProductFilters" => true, "product" => {"id" => product.id}, "productFilter" => nil)
+    end
   end
 
   context "with an ended contract whose replacement on the external id is active" do

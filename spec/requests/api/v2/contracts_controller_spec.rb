@@ -894,6 +894,70 @@ RSpec.describe Api::V2::ContractsController do
     end
   end
 
+  describe "POST /api/v2/contracts/:external_id/publish" do
+    subject { post_with_token(organization, "/api/v2/contracts/#{contract.external_id}/publish") }
+
+    let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.from_now) }
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "publishes the draft and returns it flat" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract]).to include(lago_id: contract.id, status: "pending")
+      expect(json[:contract].keys).to match_array(flat_keys)
+    end
+
+    context "when the start has passed" do
+      let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.ago) }
+
+      it "activates it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("active")
+      end
+    end
+
+    context "with expand" do
+      subject { post_with_token(organization, "/api/v2/contracts/#{contract.external_id}/publish?expands[]=applied_rate_cards") }
+
+      let(:rate_card) { create(:rate_card, organization:) }
+
+      before { create(:contract_rate_card, organization:, contract:, rate_card:) }
+
+      it "returns the published contract with its rate cards" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("pending")
+        expect(json[:contract][:applied_rate_cards].map { it[:rate_card_code] }).to eq([rate_card.code])
+      end
+    end
+
+    context "when the contract was canceled" do
+      let(:contract) { create(:contract, :canceled, organization:, customer:, catalog_plan:) }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:details]).to eq([{code: "cannot_publish", field: "contract", meta: {}}])
+      end
+    end
+
+    context "when no contract matches the external id" do
+      subject { post_with_token(organization, "/api/v2/contracts/unknown/publish") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_v2_not_found_error("contract")
+      end
+    end
+  end
+
   describe "DELETE /api/v2/contracts/:external_id" do
     subject { delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}") }
 

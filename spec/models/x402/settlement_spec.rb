@@ -499,13 +499,13 @@ describe X402::Settlement do
     end
 
     describe "transaction hash" do
-      let(:duplicate) { build(:x402_settlement, organization: duplicate_connection.organization, x402_connection: duplicate_connection, network:, transaction_hash: "0xabc") }
-      let(:duplicate_connection) { connection }
+      let(:holder) { create(:x402_settlement, organization:, x402_connection: connection, transaction_hash: "0xabc") }
+      let(:duplicate) { build(:x402_settlement, :merchant, organization:, x402_connection: connection, network:, transaction_hash: "0xabc") }
       let(:network) { "eip155:84532" }
 
-      before { create(:x402_settlement, organization:, x402_connection: connection, transaction_hash: "0xabc") }
+      before { holder }
 
-      it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_network_and_transaction_hash/) }
+      it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_organization_network_and_hash/) }
 
       context "with another network" do
         let(:network) { "eip155:8453" }
@@ -513,10 +513,23 @@ describe X402::Settlement do
         it { expect(insert).to be(true) }
       end
 
-      context "with another organization" do
-        let(:duplicate_connection) { create(:x402_connection) }
+      context "when the merchant row belongs to another organization" do
+        let(:duplicate) { build(:x402_settlement, :merchant, x402_connection: create(:x402_connection), network:, transaction_hash: "0xabc") }
 
-        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_network_and_transaction_hash/) }
+        it { expect(insert).to be(true) }
+      end
+
+      context "when another organization's merchant row holds the hash" do
+        let(:holder) { create(:x402_settlement, :merchant, transaction_hash: "0xabc") }
+        let(:duplicate) { build(:x402_settlement, organization:, x402_connection: connection, network:, transaction_hash: "0xabc") }
+
+        it { expect(insert).to be(true) }
+      end
+
+      context "when Lago settled the hash for another organization" do
+        let(:duplicate) { build(:x402_settlement, x402_connection: create(:x402_connection), network:, transaction_hash: "0xabc") }
+
+        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_lago_network_and_hash/) }
       end
     end
 

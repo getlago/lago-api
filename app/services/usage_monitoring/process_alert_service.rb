@@ -4,11 +4,12 @@ module UsageMonitoring
   class ProcessAlertService < BaseService
     Result = BaseResult[:alert]
 
-    def initialize(alert:, current_metrics:, alertable:, expected_billable_metric_id: nil)
+    def initialize(alert:, current_metrics:, alertable:, expected_billable_metric_id: nil, measured_at: nil)
       @alert = alert
       @alertable = alertable
       @current_metrics = current_metrics
       @expected_billable_metric_id = expected_billable_metric_id
+      @measured_at = measured_at
       super
     end
 
@@ -22,6 +23,9 @@ module UsageMonitoring
         # NOTE: the caller measured usage for one metric, so a metric changed since then makes that usage
         # unrelated to the configuration now held under the lock
         next if stale_metric?
+
+        # NOTE: two evaluations of one alert can finish out of order: an older usage would overwrite previous_value
+        next if stale_usage?
 
         # NOTE: the job and the wallet alerts consumer can evaluate one wallet concurrently: reading it under
         # the lock keeps an older balance from overwriting previous_value and triggering the threshold twice
@@ -42,13 +46,24 @@ module UsageMonitoring
 
     private
 
-    attr_reader :alert, :alertable, :current_metrics, :expected_billable_metric_id
+    attr_reader :alert, :alertable, :current_metrics, :expected_billable_metric_id, :measured_at
 
     def stale_metric?
       expected_billable_metric_id.present? && alert.billable_metric_id != expected_billable_metric_id
     end
 
+    def stale_usage?
+      measured_at.present? && alert.last_processed_at.present? && alert.last_processed_at > measured_at
+    end
+
     def evaluate(current, now)
+      # The cards of a contract rebaseline one by one. Its types never roll over as a whole (period_rolled_over?),
+      # so resolution still runs, on the cards still in their window: a renewal alone resolves nothing.
+      if alert.is_a?(ContractAlert)
+        windows = alert.windows_in_scope(current_metrics)
+        rebaseline_renewed_windows(windows)
+      end
+
       # Re-baselining discards the evidence a recovery would be measured against, so it replaces the resolution.
       rebaselined = period_rolled_over? && alert.window_resets_each_period?(alertable)
       alert.previous_value = 0 if rebaselined
@@ -62,6 +77,18 @@ module UsageMonitoring
       end
 
       alert.previous_value = current
+      alert.previous_windows = windows.reject { |_, window| BigDecimal(window["value"]).zero? } if windows
+    end
+
+    # The cards of a contract renew on their own dates, so the baseline keeps only the value of the cards still
+    # measuring the window of the last evaluation. Summing them rather than subtracting the others from
+    # previous_value, which is rounded to its column, takes a single card back to exactly 0.
+    def rebaseline_renewed_windows(windows)
+      kept = alert.previous_windows.select { |slice, _| alert.same_window?(slice, windows[slice]) }
+
+      if kept.size < alert.previous_windows.size
+        alert.previous_value = kept.values.sum(BigDecimal(0)) { BigDecimal(it["value"]) }
+      end
     end
 
     def period_rolled_over?
@@ -74,11 +101,16 @@ module UsageMonitoring
 
     # NOTE: usage measured just before a renewal but processed after it still belongs to the old period. Stamping it
     # with the clock time would place it in the new period, and the first evaluation there would miss the rollover.
+    # The measurement time, when given, is what stale_usage? compares the next usage with. It is read just before
+    # the usage picks its period, so it can fall before a period that just opened: kept at its start for the rollover.
     def processed_at(now)
-      return now unless Alert::CURRENT_USAGE_TYPES.include?(alert.alert_type)
-      return now if current_metrics.to_datetime.blank?
+      time = measured_at || now
+      return time unless Alert::CURRENT_USAGE_TYPES.include?(alert.alert_type)
 
-      [now, Time.zone.parse(current_metrics.to_datetime.to_s)].min
+      time = [time, Time.zone.parse(current_metrics.from_datetime.to_s)].max if measured_at && current_metrics.from_datetime.present?
+      return time if current_metrics.to_datetime.blank?
+
+      [time, Time.zone.parse(current_metrics.to_datetime.to_s)].min
     end
 
     def record_trigger(crossed_threshold_values, current, now)

@@ -367,10 +367,4 @@ describe Contracts::MaterializeWalletsService do
       expect(result.wallets).to be_nil
     end
   end
-
-  def lock_waits
-    ApplicationRecord.connection.select_value(
-      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
-    )
-  end
 end
