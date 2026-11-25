@@ -165,6 +165,13 @@ RSpec.describe LagoHttpClient::Client do
           expect(connections_made).to eq(1)
         end
       end
+
+      context "when the server never answers a DELETE" do
+        it "sends the request once" do
+          expect { client.delete }.to raise_error(Net::ReadTimeout)
+          expect(connections_made).to eq(1)
+        end
+      end
     end
   end
 
@@ -525,6 +532,72 @@ RSpec.describe LagoHttpClient::Client do
 
       it "raises an HttpError" do
         expect { client.get }.to raise_error(LagoHttpClient::HttpError)
+      end
+    end
+  end
+
+  describe "#delete" do
+    let(:url) { "http://example.com/connection/conn-1" }
+
+    context "when response is 204 with an empty body" do
+      before do
+        stub_request(:delete, url)
+          .with(query: {provider_config_key: "quickbooks"}, headers: {"Authorization" => "Bearer token"})
+          .to_return(body: "", status: 204)
+      end
+
+      it "returns the response and sends the headers and query params" do
+        response = client.delete(headers: {"Authorization" => "Bearer token"}, params: {provider_config_key: "quickbooks"})
+
+        expect(response).to be_a(Net::HTTPResponse)
+        expect(response.code).to eq("204")
+        expect(
+          a_request(:delete, url).with(query: {provider_config_key: "quickbooks"}, headers: {"Authorization" => "Bearer token"})
+        ).to have_been_made.once
+      end
+    end
+
+    context "when response is 200 with a non-JSON body" do
+      before do
+        stub_request(:delete, url).to_return(body: "deleted", status: 200)
+      end
+
+      it "returns the response without parsing the body" do
+        response = client.delete
+
+        expect(response.body).to eq("deleted")
+      end
+    end
+
+    context "without params" do
+      before do
+        stub_request(:delete, url).to_return(body: "", status: 204)
+      end
+
+      it "sends the request without a query string" do
+        client.delete(params: nil)
+
+        expect(a_request(:delete, url)).to have_been_made.once
+      end
+    end
+
+    context "when response status code is 404" do
+      before do
+        stub_request(:delete, url).to_return(body: "Not Found", status: 404)
+      end
+
+      it "raises an HttpError with the status code" do
+        expect { client.delete }.to raise_error(LagoHttpClient::HttpError) { |error| expect(error.error_code.to_i).to eq(404) }
+      end
+    end
+
+    context "when response status code is 500" do
+      before do
+        stub_request(:delete, url).to_return(body: "Error", status: 500)
+      end
+
+      it "raises an HttpError" do
+        expect { client.delete }.to raise_error(LagoHttpClient::HttpError)
       end
     end
   end

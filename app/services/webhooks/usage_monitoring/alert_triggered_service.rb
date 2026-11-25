@@ -5,10 +5,13 @@ module Webhooks
     class AlertTriggeredService < Webhooks::BaseService
       private
 
-      # A catalog wallet alert keeps the v1 event and carries its v2 body, as catalog plans and invoices do
+      # Catalog wallet and contract alerts keep the v1 event and carry their v2 body, as catalog plans and invoices do
       def object_serializer
-        if object.is_a?(::UsageMonitoring::CatalogWalletTriggeredAlert)
+        case object
+        when ::UsageMonitoring::CatalogWalletTriggeredAlert
           ::V2::CatalogWalletTriggeredAlertSerializer.new(object, root_name: object_type)
+        when ::UsageMonitoring::ContractTriggeredAlert
+          ::V2::ContractTriggeredAlertSerializer.new(object, root_name: object_type)
         else
           ::V1::UsageMonitoring::TriggeredAlertSerializer.new(object, root_name: object_type)
         end

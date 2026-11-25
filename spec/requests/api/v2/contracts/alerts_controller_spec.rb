@@ -31,6 +31,7 @@ RSpec.describe Api::V2::Contracts::AlertsController do
       applies_to: {type: "contract"},
       product_code: alert.product&.code,
       product_filter_code: alert.product_filter&.code,
+      with_product_filters: alert.with_product_filters,
       direction: "increasing",
       thresholds:,
       previous_value: "0.0",
@@ -150,6 +151,45 @@ RSpec.describe Api::V2::Contracts::AlertsController do
       end
     end
 
+    context "with with_product_filters on the product" do
+      let(:create_params) { super().except(:product_filter_code).merge(with_product_filters: true) }
+
+      it "creates the alert on the product and its filters" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alert]).to include(product_code: "llm_tokens", product_filter_code: nil, with_product_filters: true)
+      end
+    end
+
+    context "with a with_product_filters that is not a boolean" do
+      let(:create_params) { super().except(:product_filter_code).merge(with_product_filters: "no") }
+
+      it "returns a validation error on with_product_filters" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "with_product_filters", meta: {}}]
+        )
+      end
+    end
+
+    context "with with_product_filters on a product filter" do
+      let(:create_params) { super().merge(with_product_filters: true) }
+
+      it "returns a validation error on with_product_filters" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "with_product_filters", meta: {}}]
+        )
+      end
+    end
+
     context "with a units alert without a product" do
       let(:create_params) { super().except(:product_code, :product_filter_code) }
 
@@ -254,7 +294,14 @@ RSpec.describe Api::V2::Contracts::AlertsController do
 
     context "with the code, the type and the scope" do
       let(:update_params) do
-        {name: "Opus spend", code: "new_code", alert_type: "usage_amount", product_code: "llm_tokens", product_filter_code: "opus"}
+        {
+          name: "Opus spend",
+          code: "new_code",
+          alert_type: "usage_amount",
+          product_code: "llm_tokens",
+          product_filter_code: "opus",
+          with_product_filters: true
+        }
       end
 
       it "returns a validation error on each of them and changes nothing" do
@@ -267,7 +314,8 @@ RSpec.describe Api::V2::Contracts::AlertsController do
             {code: "value_cannot_be_changed", field: "code", meta: {}},
             {code: "value_cannot_be_changed", field: "alert_type", meta: {}},
             {code: "value_cannot_be_changed", field: "product_code", meta: {}},
-            {code: "value_cannot_be_changed", field: "product_filter_code", meta: {}}
+            {code: "value_cannot_be_changed", field: "product_filter_code", meta: {}},
+            {code: "value_cannot_be_changed", field: "with_product_filters", meta: {}}
           ]
         )
         expect(alert.reload.name).to eq("Opus tokens")

@@ -46,6 +46,7 @@ module Types
     field :destroy_contract_alert, mutation: Mutations::Contracts::Alerts::Destroy
     field :destroy_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Destroy
     field :destroy_contract_rate_phase, mutation: Mutations::ContractRatePhases::Destroy
+    field :publish_contract, mutation: Mutations::Contracts::Publish
     field :terminate_contract, mutation: Mutations::Contracts::Terminate
     field :update_charge, mutation: Mutations::Charges::Update
     field :update_contract, mutation: Mutations::Contracts::Update
@@ -141,6 +142,7 @@ module Types
     field :destroy_integration_mapping, mutation: Mutations::IntegrationMappings::Destroy
 
     field :fetch_integration_accounts, mutation: Mutations::IntegrationItems::FetchAccounts
+    field :fetch_integration_customers, mutation: Mutations::IntegrationItems::FetchCustomers
     field :fetch_integration_items, mutation: Mutations::IntegrationItems::FetchItems
 
     field :sync_hubspot_integration_invoice, mutation: Mutations::Integrations::Hubspot::SyncInvoice
@@ -342,6 +344,10 @@ module Types
     field :create_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Create
     field :destroy_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Destroy
     field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
+
+    field :create_x402_connection, mutation: Mutations::X402::Connections::Create
+    field :destroy_x402_connection, mutation: Mutations::X402::Connections::Destroy
+    field :update_x402_connection, mutation: Mutations::X402::Connections::Update
 
     field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
     field :admin_link_sandbox_organization, mutation: Mutations::Admin::LinkSandboxOrganization

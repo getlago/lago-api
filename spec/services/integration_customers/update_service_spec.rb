@@ -129,10 +129,11 @@ RSpec.describe IntegrationCustomers::UpdateService do
         let(:integration_customer) { create(:quickbooks_customer, integration:, customer:, code: "old_code") }
         let(:params) { {integration_type: "quickbooks", integration_code: integration.code, external_customer_id:, code: "qb_new"} }
 
-        it "does not call aggregator update service" do
+        it "calls aggregator update service" do
           service_call
 
-          expect(Integrations::Aggregator::Contacts::UpdateService).not_to have_received(:call)
+          expect(Integrations::Aggregator::Contacts::UpdateService)
+            .to have_received(:call).with(integration:, integration_customer:)
         end
 
         it "stores the external customer id and the code" do
@@ -141,6 +142,36 @@ RSpec.describe IntegrationCustomers::UpdateService do
           expect(result).to be_success
           expect(result.integration_customer).to eq(integration_customer)
           expect(integration_customer.reload).to have_attributes(external_customer_id: "58", code: "qb_new")
+        end
+
+        context "when the provider update fails" do
+          let(:update_result) do
+            Integrations::Aggregator::Contacts::UpdateService::Result.new
+              .service_failure!(code: "realm_id_missing", message: "QuickBooks realm id is missing")
+          end
+
+          it "returns the provider failure and keeps the link edit" do
+            result = service_call
+
+            expect(result).not_to be_success
+            expect(result.error.code).to eq("realm_id_missing")
+            expect(integration_customer.reload).to have_attributes(external_customer_id: "58", code: "qb_new")
+          end
+        end
+
+        context "when the link has no external customer id" do
+          let(:external_customer_id) { nil }
+          let(:integration_customer) do
+            create(:quickbooks_customer, integration:, customer:, code: "old_code", external_customer_id: nil)
+          end
+
+          it "does not call aggregator update service" do
+            result = service_call
+
+            expect(Integrations::Aggregator::Contacts::UpdateService).not_to have_received(:call)
+            expect(result).to be_success
+            expect(integration_customer.reload).to have_attributes(external_customer_id: nil, code: "qb_new")
+          end
         end
       end
 

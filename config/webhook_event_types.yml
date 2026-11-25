@@ -461,6 +461,12 @@ contract_updated:
   category: Contracts
   deprecated: false
   product_catalog_only: true
+contract_published:
+  name: contract.published
+  description: A draft contract has been published
+  category: Contracts
+  deprecated: false
+  product_catalog_only: true
 contract_started:
   name: contract.started
   description: A contract has started

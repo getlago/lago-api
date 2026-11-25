@@ -68,9 +68,9 @@ module Contracts
       end
     end
 
-    # A contract wallet's alerts end with the contract, with their thresholds; their history stays
+    # A contract wallet's alerts end with the contract
     def delete_wallet_alerts
-      UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: contract.wallets.select(:id)).delete_all
+      UsageMonitoring::CatalogWalletAlerts::DeleteAllService.call!(catalog_wallets: contract.wallets)
     end
   end
 end

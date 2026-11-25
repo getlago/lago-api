@@ -61,5 +61,59 @@ RSpec.describe Webhooks::UsageMonitoring::AlertResolvedService do
         )
       end
     end
+
+    context "with a contract alert's history row" do
+      let(:customer) { create(:customer, external_id: "acme", currency: "USD") }
+      let(:contract) { create(:contract, customer:, external_id: "ctr_123") }
+      let(:product) { create(:product, organization: customer.organization, code: "llm_tokens") }
+      let(:alert) { create(:contract_usage_units_alert, organization: customer.organization, contract_external_id: "ctr_123", product:, code: "tokens", name: "Tokens") }
+      let(:resolved_alert) do
+        create(
+          :contract_triggered_alert,
+          alert:,
+          contract:,
+          kind: :resolved,
+          resolution_reason: :threshold_updated,
+          current_value: 1_500,
+          previous_value: 1_500,
+          crossed_thresholds: [{code: "warn", value: BigDecimal(1_200), recurring: false}],
+          in_alarm_thresholds: [],
+          fully_resolved: true,
+          triggered_at: Time.zone.parse("2026-11-22 12:00:00")
+        )
+      end
+
+      it "sends its v2 body under the same event" do
+        webhook_service.call
+
+        expect(Webhook.order(created_at: :desc).first.payload).to eq(
+          "webhook_type" => "alert.resolved",
+          "object_type" => "resolved_alert",
+          "organization_id" => customer.organization_id,
+          "resolved_alert" => {
+            "lago_id" => resolved_alert.id,
+            "lago_alert_id" => alert.id,
+            "alert_code" => "tokens",
+            "alert_name" => "Tokens",
+            "alert_type" => "usage_units",
+            "currency" => nil,
+            "lago_contract_id" => contract.id,
+            "external_contract_id" => "ctr_123",
+            "external_customer_id" => "acme",
+            "current_value" => "1500.0",
+            "previous_value" => "1500.0",
+            "product_code" => "llm_tokens",
+            "product_filter_code" => nil,
+            "with_product_filters" => false,
+            "applies_to" => {"type" => "contract"},
+            "recovered_thresholds" => [{"code" => "warn", "value" => "1200.0", "recurring" => false}],
+            "in_alarm_thresholds" => [],
+            "fully_resolved" => true,
+            "reason" => "threshold_updated",
+            "resolved_at" => "2026-11-22T12:00:00Z"
+          }
+        )
+      end
+    end
   end
 end

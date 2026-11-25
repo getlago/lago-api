@@ -4,7 +4,7 @@ module UsageMonitoring
   class EvaluateSubscriptionUsageAlertsService < BaseService
     Result = BaseResult
 
-    # full_plan_usage must cover every charge of the plan: current_usage_amount alerts read its total.
+    # full_plan_usage is a UsageSnapshot covering every charge of the plan: current_usage_amount alerts read its total.
     def initialize(subscription:, alerts:, lifetime_usage: nil, full_plan_usage: nil)
       @subscription = subscription
       @alerts = alerts
@@ -21,7 +21,7 @@ module UsageMonitoring
 
       if current_usage_alerts.any?
         begin
-          current_usage = full_plan_usage || compute_current_usage
+          current_usage = full_plan_usage || UsageSnapshot.measure { compute_current_usage }
         rescue => e
           exception_to_raise = e
         end
@@ -40,7 +40,8 @@ module UsageMonitoring
           ProcessAlertService.call(
             alert:,
             alertable: subscription,
-            current_metrics: current_usage,
+            current_metrics: current_usage.usage,
+            measured_at: current_usage.measured_at,
             expected_billable_metric_id: (alert.billable_metric_id if scoped_to_metrics)
           )
         end
