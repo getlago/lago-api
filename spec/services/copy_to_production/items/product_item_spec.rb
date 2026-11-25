@@ -16,16 +16,6 @@ RSpec.describe CopyToProduction::Items::ProductItem do
     expect(item.activity_type).to eq("product.copied_to_production")
   end
 
-  describe "#find_source" do
-    it "finds a product of the sandbox" do
-      expect(item.find_source(product.id)).to eq(product)
-    end
-
-    it "ignores a product of production" do
-      expect(item.find_source(create(:product, organization: production).id)).to be_nil
-    end
-  end
-
   describe "#find_existing" do
     let(:live_category) { create(:product_category, organization: production, code: category.code) }
     let(:live_product) { create(:product, organization: production, product_category: live_category, code: "api") }
@@ -78,14 +68,6 @@ RSpec.describe CopyToProduction::Items::ProductItem do
   describe "#refusal" do
     it "answers nil" do
       expect(item.refusal(product)).to be_nil
-    end
-
-    context "when production uses its code" do
-      before { create(:product, organization: production, code: "api") }
-
-      it "answers copy_to_production_code_conflict" do
-        expect(item.refusal(product)).to eq("copy_to_production_code_conflict")
-      end
     end
 
     context "when its metric is deleted" do

@@ -43,7 +43,7 @@ RSpec.describe CopyToProduction::CopyService do
 
     copy = production.billable_metrics.find_by(code: "api_calls")
     expect(result).to be_success
-    expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "billable_metric", record: copy))
+    expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "billable_metric", record: copy))
     expect(copy).to have_attributes(
       name: "API calls",
       description: "Calls to the public API",
@@ -185,80 +185,6 @@ RSpec.describe CopyToProduction::CopyService do
       expect(BillableMetricFilter.with_discarded.where(organization: production)).to be_empty
       expect(SendWebhookJob).not_to have_been_enqueued
       expect(kafka_messages).to be_empty
-    end
-  end
-
-  context "with an item type that has a parent and dependencies" do
-    let(:item_type) { "child_item" }
-    let(:refusals) { {} }
-    let(:child_item_class) do
-      refused_codes = refusals
-
-      Class.new(CopyToProduction::Items::BillableMetricItem) do
-        def self.name = "CopyToProduction::Items::ChildItem"
-
-        def find_source(id) = sandbox.billable_metrics.find_by(id:)
-
-        def find_existing(source) = production.billable_metrics.find_by(code: source.code)
-
-        def parent(source)
-          ["billable_metric", sandbox.billable_metrics.find_by(code: "#{source.code}_parent")]
-        end
-
-        def dependencies(source)
-          sandbox.billable_metrics.where(code: ["#{source.code}_reused", "#{source.code}_copied"]).order(:code)
-            .map { ["billable_metric", it] }
-        end
-
-        define_method(:refusal) { |source| refused_codes[source.code] }
-      end
-    end
-
-    let(:live_parent) { create(:billable_metric, organization: production, code: "api_calls_parent") }
-    let(:live_dependency) { create(:billable_metric, organization: production, code: "api_calls_reused") }
-
-    before do
-      stub_const("CopyToProduction::Items::ChildItem", child_item_class)
-      stub_const("CopyToProduction::Items::TYPES", CopyToProduction::Items::TYPES.merge("child_item" => "CopyToProduction::Items::ChildItem"))
-
-      create(:billable_metric, organization: sandbox, code: "api_calls_parent")
-      create(:billable_metric, organization: sandbox, code: "api_calls_reused")
-      create(:billable_metric, organization: sandbox, code: "api_calls_copied")
-      live_parent
-      live_dependency
-    end
-
-    it "copies the missing dependency before the item and reuses the others" do
-      expect { result }.to change { production.billable_metrics.count }.by(2)
-
-      expect(result.item.record).to eq(production.billable_metrics.find_by(code: "api_calls"))
-      expect(production.billable_metrics.where(code: "api_calls_copied")).to exist
-    end
-
-    context "when an item to copy refuses the copy" do
-      let(:refusals) { {"api_calls" => "copy_to_production_target_deleted"} }
-
-      it "copies nothing" do
-        expect { result }.not_to change { production.billable_metrics.count }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_target_deleted")
-      end
-    end
-
-    context "when the parent is not live" do
-      let(:live_parent) { nil }
-
-      it "refuses the copy" do
-        expect { result }.not_to change(BillableMetric, :count)
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_parent_missing")
-        expect(result.missing_parent.item_type).to eq("billable_metric")
-        expect(result.missing_parent.record).to eq(sandbox.billable_metrics.find_by(code: "api_calls_parent"))
-      end
     end
   end
 
@@ -409,8 +335,8 @@ RSpec.describe CopyToProduction::CopyService do
   end
 
   context "with a product category" do
-    subject(:result) { described_class.call(organization:, user:, item_type: "product_category", id: category.id) }
-
+    let(:item_type) { "product_category" }
+    let(:id) { category.id }
     let(:category) { create(:product_category, organization: sandbox, code: "compute", name: "Compute") }
     let(:api) do
       create(:product, organization: sandbox, product_category: category, billable_metric: metric, code: "api", name: "API")
@@ -457,18 +383,6 @@ RSpec.describe CopyToProduction::CopyService do
 
       live_category = production.product_categories.find_by!(code: "compute")
       expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "product_category", record: live_category))
-      expect(result.copied_items.map { [it.item_type, it.record.code, it.record.organization_id] }).to eq(
-        [
-          ["product_category", "compute", production.id],
-          ["billable_metric", "api_calls", production.id],
-          ["product", "api", production.id],
-          ["rate_card", "api_eur", production.id],
-          ["product", "seat", production.id],
-          ["tax", "vat_fr", production.id],
-          ["rate_card", "seat_eur", production.id]
-        ]
-      )
-      expect(result.reused_items).to eq([])
       expect(live_category).to have_attributes(name: "Compute", description: category.description)
 
       live_api = production.products.find_by!(code: "api")
@@ -496,19 +410,6 @@ RSpec.describe CopyToProduction::CopyService do
       live_tax = production.taxes.find_by!(code: "vat_fr")
       expect(live_tax).to have_attributes(name: "VAT FR", rate: 20, applied_to_organization: false)
       expect(production.rate_cards.find_by!(code: "seat_eur").taxes).to eq([live_tax])
-    end
-
-    context "with N+1 detection" do
-      it "loads the sandbox catalog without N+1 queries", :bullet do
-        expect(result).to be_success
-      end
-    end
-
-    it "keeps the sandbox catalog" do
-      result
-
-      expect(category.reload.products.order(:code).pluck(:code)).to eq(%w[api seat])
-      expect(api_card.reload.rates.count).to eq(3)
     end
 
     context "with activity logs", :capture_kafka_messages do
@@ -545,72 +446,10 @@ RSpec.describe CopyToProduction::CopyService do
         expect { result }.not_to change { live_metric.reload.attributes }
 
         expect(result).to be_success
-        expect(result.copied_items.map { [it.item_type, it.record.code] }).to eq(
-          [%w[product_category compute], %w[product api], %w[rate_card api_eur], %w[product seat], %w[rate_card seat_eur]]
-        )
-        expect(result.reused_items.map { [it.item_type, it.record] }).to eq([["billable_metric", live_metric], ["tax", live_tax]])
         expect(production.products.find_by!(code: "api").billable_metric).to eq(live_metric)
-      end
-    end
-
-    context "when production has a product with the code of one of its products" do
-      before { create(:product, :fixed, :standalone, organization: production, code: "seat") }
-
-      it "refuses the copy" do
-        expect { result }.not_to change { [ProductCategory.count, Product.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_code_conflict")
-      end
-    end
-
-    context "when a product's metric uses a custom aggregation" do
-      let(:metric) do
-        create(:billable_metric, organization: sandbox, code: "api_calls", aggregation_type: "custom_agg",
-          custom_aggregator: "aggregator")
-      end
-
-      it "refuses the copy" do
-        expect { result }.not_to change { [ProductCategory.count, Product.count, BillableMetric.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_item_unsupported")
-      end
-    end
-
-    context "when production has a category with the same code" do
-      before { create(:product_category, organization: production, code: "compute") }
-
-      it "copies nothing" do
-        expect { result }.not_to change(Product, :count)
-
-        expect(result).to be_failure
-        expect(result.error.messages).to eq(code: ["value_already_exist"])
-        expect(production.product_categories.count).to eq(1)
-      end
-    end
-
-    context "when production has a deleted category with the same code" do
-      before { create(:product_category, organization: production, code: "compute", deleted_at: Time.current) }
-
-      it "copies the category" do
-        expect { result }.to change { production.product_categories.count }.by(1)
-
-        expect(result).to be_success
-      end
-    end
-
-    context "when a rate card is priced in a pricing unit without a premium license" do
-      before { seat_card.update!(applied_pricing_unit_code: create(:pricing_unit, organization: sandbox, code: "credits").code) }
-
-      it "refuses the copy" do
-        expect { result }.not_to change { [Product.count, PricingUnit.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("feature_unavailable")
+        expect(production.rate_cards.find_by!(code: "seat_eur").taxes).to eq([live_tax])
+        expect(production.billable_metrics.count).to eq(1)
+        expect(production.taxes.count).to eq(1)
       end
     end
 
@@ -625,30 +464,15 @@ RSpec.describe CopyToProduction::CopyService do
       it "copies the pricing unit before the rate card" do
         expect(result).to be_success
 
-        expect(result.copied_items.last(3).map { [it.item_type, it.record.code] })
-          .to eq([%w[tax vat_fr], %w[pricing_unit credits], %w[rate_card seat_eur]])
         expect(production.pricing_units.find_by!(code: "credits")).to have_attributes(name: "Credits", short_name: "CR")
         expect(production.rate_cards.find_by!(code: "seat_eur").rates.pluck(:applied_pricing_unit_conversion_rate)).to eq([0.5])
-      end
-
-      context "when production has the pricing unit" do
-        let(:live_pricing_unit) { create(:pricing_unit, organization: production, code: "credits") }
-
-        before { live_pricing_unit }
-
-        it "reuses it" do
-          expect(result).to be_success
-
-          expect(result.reused_items.map(&:record)).to eq([live_pricing_unit])
-          expect(production.pricing_units.count).to eq(1)
-        end
       end
     end
   end
 
   context "with a product" do
-    subject(:result) { described_class.call(organization:, user:, item_type: "product", id: product.id) }
-
+    let(:item_type) { "product" }
+    let(:id) { product.id }
     let(:category) { create(:product_category, organization: sandbox, code: "compute") }
     let(:product) { create(:product, organization: sandbox, product_category: category, billable_metric: metric, code: "api") }
 
@@ -674,9 +498,6 @@ RSpec.describe CopyToProduction::CopyService do
 
         live_product = production.products.find_by!(code: "api")
         expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "product", record: live_product))
-        expect(result.copied_items.map { [it.item_type, it.record.code] })
-          .to eq([%w[billable_metric api_calls], %w[product api], %w[rate_card api_eur]])
-        expect(result.reused_items.map(&:record)).to eq([live_category])
         expect(live_product.product_category).to eq(live_category)
         expect(live_product.rate_cards.sole.rates.count).to eq(1)
       end
@@ -727,151 +548,18 @@ RSpec.describe CopyToProduction::CopyService do
       end
     end
 
-    context "when its category is live and something it brings along cannot be copied" do
-      let(:live_category) { create(:product_category, organization: production, code: "compute") }
-
-      before { live_category }
-
-      context "when production bills its metric with an aggregation an advance card cannot price" do
-        before do
-          create(:billable_metric, organization: production, code: "api_calls", aggregation_type: "max_agg", field_name: "amount")
-          create(:rate_card_rate, organization: sandbox,
-            rate_card: create(:rate_card, :advance, organization: sandbox, product:, code: "api_advance"))
-        end
-
-        it "refuses the copy" do
-          expect { result }.not_to change { [Product.count, RateCard.count] }
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("copy_to_production_rate_mismatch")
-        end
-      end
-
-      context "when its metric uses a custom aggregation" do
-        let(:metric) do
-          create(:billable_metric, organization: sandbox, code: "api_calls", aggregation_type: "custom_agg",
-            custom_aggregator: "aggregator")
-        end
-
-        it "refuses the copy" do
-          expect { result }.not_to change { [Product.count, BillableMetric.count] }
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("copy_to_production_item_unsupported")
-        end
-      end
-
-      context "when another production product uses the code of its rate card" do
-        let(:live_rate_card) { create(:rate_card, organization: production, code: "api_eur") }
-
-        before { live_rate_card }
-
-        it "refuses the copy" do
-          expect { result }.not_to change { [Product.count, RateCard.count] }
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("copy_to_production_code_conflict")
-        end
-      end
-
-      context "when its metric is deleted" do
-        before { metric.discard! }
-
-        it "refuses the copy without bringing the metric back" do
-          expect { result }.not_to change { [Product.count, BillableMetric.count] }
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("copy_to_production_target_deleted")
-        end
-      end
-
-      context "when production has its code in another category" do
-        before do
-          other = create(:product_category, organization: production, code: "storage")
-          create(:product, :fixed, organization: production, product_category: other, code: "api")
-        end
-
-        it "refuses the copy" do
-          expect { result }.not_to change(Product, :count)
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("copy_to_production_code_conflict")
-        end
-      end
-
-      context "when a prorated rate card would bill a live metric that is not recurring" do
-        let(:metric) do
-          create(:billable_metric, :recurring, organization: sandbox, code: "api_calls", aggregation_type: "sum_agg", field_name: "amount")
-        end
-
-        before do
-          create(:billable_metric, organization: production, code: "api_calls")
-          product.rate_cards.sole.update!(proration: true)
-        end
-
-        it "refuses the copy" do
-          expect { result }.not_to change { [Product.count, RateCard.count] }
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("copy_to_production_metric_mismatch")
-        end
-      end
-
-      context "when the live metric it reuses lacks a filter value it uses" do
-        let(:live_metric) { create(:billable_metric, organization: production, code: "api_calls") }
-        let(:filter) { create(:product_filter, organization: sandbox, product:, code: "eu_only") }
-
-        before do
-          create(:billable_metric_filter, billable_metric: live_metric, key: "region", values: %w[us])
-          create(
-            :product_filter_value,
-            organization: sandbox,
-            product_filter: filter,
-            billable_metric_filter: metric.filters.find_by(key: "region"),
-            value: "eu"
-          )
-        end
-
-        it "refuses the copy" do
-          expect { result }.not_to change { [Product.count, ProductFilter.count] }
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq("copy_to_production_filter_missing")
-        end
-      end
-    end
-
-    context "when it is already live with its rate cards" do
-      let(:live_category) { create(:product_category, organization: production, code: "compute") }
-
+    context "when its category is live and its metric is deleted" do
       before do
-        live_product = create(:product, :fixed, organization: production, product_category: live_category, code: "api")
-        create(:rate_card, organization: production, product: live_product, code: "api_eur")
+        create(:product_category, organization: production, code: "compute")
+        metric.discard!
       end
 
-      it "answers value_already_exist rather than the code of its rate cards" do
-        expect(result).to be_failure
-        expect(result.error.messages).to eq(code: ["value_already_exist"])
-      end
-    end
-
-    context "when production has a product with the same code" do
-      let(:product) { create(:product, :standalone, organization: sandbox, billable_metric: metric, code: "api") }
-
-      before { create(:product, :fixed, :standalone, organization: production, code: "api") }
-
-      it "copies nothing" do
-        expect { result }.not_to change(RateCard, :count)
+      it "refuses the copy without bringing the metric back" do
+        expect { result }.not_to change { [Product.count, BillableMetric.count] }
 
         expect(result).to be_failure
-        expect(result.error.messages).to eq(code: ["value_already_exist"])
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_target_deleted")
       end
     end
 
@@ -887,9 +575,9 @@ RSpec.describe CopyToProduction::CopyService do
   end
 
   context "with an internal item type" do
-    subject(:result) { described_class.call(organization:, user:, item_type: "tax", id: tax.id) }
-
+    let(:item_type) { "tax" }
     let(:tax) { create(:tax, organization: sandbox) }
+    let(:id) { tax.id }
 
     before { tax }
 

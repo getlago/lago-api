@@ -6,14 +6,6 @@ module CopyToProduction
     class ProductCategoryItem < BaseItem
       ATTRIBUTES = %i[name code description invoice_display_name].freeze
 
-      def find_source(id)
-        sandbox.product_categories.includes(products: ProductItem::PRELOADS).find_by(id:)
-      end
-
-      def find_existing(source)
-        production.product_categories.find_by(code: source.code)
-      end
-
       def children(source)
         source.products.sort_by(&:code).map { ["product", it] }
       end
@@ -23,10 +15,6 @@ module CopyToProduction
           organization: production,
           params: source.slice(*ATTRIBUTES)
         ).product_category
-      end
-
-      def unique_indexes
-        {"index_product_categories_on_organization_id_and_code" => :code}
       end
     end
   end

@@ -9,27 +9,11 @@ RSpec.describe CopyToProduction::Items::TaxItem do
   let(:sandbox) { create(:organization, :sandbox, production_organization: production) }
   let(:tax) { create(:tax, organization: sandbox, code: "vat") }
 
+  it_behaves_like "a copy to production item matched by code", :tax
+
   it "answers its item type and no activity type" do
     expect(item.item_type).to eq("tax")
     expect(item.activity_type).to be_nil
-  end
-
-  describe "#find_existing" do
-    let(:live_tax) { create(:tax, organization: production, code: "vat") }
-
-    before { live_tax }
-
-    it "finds the kept production tax with the same code" do
-      expect(item.find_existing(tax)).to eq(live_tax)
-    end
-
-    context "when the production tax is deleted" do
-      before { live_tax.discard! }
-
-      it "finds nothing" do
-        expect(item.find_existing(tax)).to be_nil
-      end
-    end
   end
 
   describe "#copy!" do

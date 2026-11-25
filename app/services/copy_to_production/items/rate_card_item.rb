@@ -12,24 +12,10 @@ module CopyToProduction
         code effective_from rate_model rate_properties min_amount_cents billing_interval_count billing_interval_unit
         applied_pricing_unit_conversion_rate
       ].freeze
-      PRELOADS = [:product_filter, :rates, :taxes].freeze
-
-      def find_source(id)
-        sandbox.rate_cards.includes(*PRELOADS).find_by(id:)
-      end
-
       # A rate card is only copied as part of a new product, so it is never reused: a live card with its code belongs
       # to another product, which refuses the copy.
       def find_existing(_source)
         nil
-      end
-
-      # A prorated card needs a recurring metric that is not a weighted sum, which a reused live metric may not be.
-      def refusal(source)
-        return "copy_to_production_code_conflict" if production.rate_cards.exists?(code: source.code)
-        return "copy_to_production_metric_mismatch" if source.proration? && prorating_metric_mismatch?(source.product)
-
-        "copy_to_production_rate_mismatch" if rate_mismatch?(source)
       end
 
       def dependencies(source)
@@ -55,27 +41,7 @@ module CopyToProduction
         ).rate_card
       end
 
-      def unique_indexes
-        {"index_rate_cards_on_organization_id_and_code" => :code}
-      end
-
       private
-
-      # As RateCard#validate_proration reads it on the live metric the card will bill: the live product's, or the
-      # production metric with the code of the product's.
-      def prorating_metric_mismatch?(product)
-        return false unless product.metered?
-
-        live_product = production.products.includes(:billable_metric).find_by(code: product.code)
-        live_metric = if live_product
-          live_product.billable_metric
-        elsif product.billable_metric
-          production.billable_metrics.find_by(code: product.billable_metric.code)
-        end
-        return false unless live_metric
-
-        !live_metric.recurring? || live_metric.weighted_sum_agg?
-      end
 
       # Production starts at the sandbox's active rate, effective from now, followed by its pending rates. The
       # superseded rates are history of the sandbox: a rate cannot be created in the past.
@@ -91,20 +57,6 @@ module CopyToProduction
       # Storage adds each tier's lower bound, which the create service refuses: it takes tiers as the API shows them.
       def rate_params(rate)
         rate.slice(*RATE_ATTRIBUTES).merge(rate_properties: RateProperties.present(rate.rate_properties))
-      end
-
-      # As RateCardRate#validate_rate_model_compatibility reads each rate on the product the card is created in: the
-      # live product with its code, or the copy of the sandbox one, which bills the live metric with its code.
-      def rate_mismatch?(source)
-        product = production.products.includes(:billable_metric).find_by(code: source.product.code) ||
-          Product.new(product_type: source.product.product_type, billable_metric: live_metric(source.product.billable_metric))
-        card = RateCard.new(billing_timing: source.billing_timing, proration: source.proration, product:)
-
-        rates_params(source).any? { RateCardRates::ModelCompatibility.error_code(rate_model: it[:rate_model], rate_card: card) }
-      end
-
-      def live_metric(metric)
-        metric && (production.billable_metrics.find_by(code: metric.code) || metric)
       end
     end
   end
