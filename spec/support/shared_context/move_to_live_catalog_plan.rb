@@ -51,4 +51,3 @@ RSpec.shared_context "with a copy to production catalog plan" do
       value: 1_000)
   end
 end
-
