@@ -278,6 +278,7 @@ RSpec.describe Mutations::Wallets::Update, :premium do
         )
 
         expect(result["errors"]).to be_nil
+        expect(result["data"]["updateCustomerWallet"]["metadata"]).to be_nil
         expect(Metadata::ItemMetadata.where(owner: wallet)).not_to exist
       end
     end

@@ -24,12 +24,6 @@ RSpec.describe Types::CatalogPlans::Object do
       it "returns the key-value pairs" do
         expect(metadata).to eq({"crm_id" => "123", "tier" => nil})
       end
-
-      it "returns nil once the loaded metadata is destroyed" do
-        catalog_plan.metadata.destroy!
-
-        expect(metadata).to be_nil
-      end
     end
   end
 end

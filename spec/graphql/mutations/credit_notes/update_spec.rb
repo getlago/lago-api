@@ -119,6 +119,7 @@ RSpec.describe Mutations::CreditNotes::Update do
       )
 
       expect(result["errors"]).to be_nil
+      expect(result["data"]["updateCreditNote"]["metadata"]).to be_nil
       expect(Metadata::ItemMetadata.where(owner: credit_note)).not_to exist
     end
   end

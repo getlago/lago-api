@@ -83,6 +83,17 @@ RSpec.describe Mutations::CatalogPlans::Create do
       end
     end
 
+    context "when metadata is an empty list" do
+      let(:metadata) { [] }
+
+      it "stores an empty value and returns an empty list" do
+        plan_response = result["data"]["createCatalogPlan"]
+
+        expect(plan_response["metadata"]).to eq([])
+        expect(Metadata::ItemMetadata.find_by(owner_type: "CatalogPlan", owner_id: plan_response["id"]).value).to eq({})
+      end
+    end
+
     context "when metadata is null" do
       let(:metadata) { nil }
 

@@ -47,6 +47,7 @@ module Metadata
 
       result.metadata = metadata
       result.metadata_changed = (metadata&.previous_changes&.any? || metadata&.destroyed?).present?
+      owner.association(:metadata).reset if metadata&.destroyed?
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

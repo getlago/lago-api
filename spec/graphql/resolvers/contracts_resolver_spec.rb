@@ -190,21 +190,8 @@ RSpec.describe Resolvers::ContractsResolver do
       end
     end
 
-    def count_queries(table)
-      queries = []
-      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-        queries << payload[:sql] if payload[:sql].include?(%("#{table}"))
-      end
-      yield
-      queries
-    ensure
-      ActiveSupport::Notifications.unsubscribe(sub)
-    end
-
     it "loads the metadata in one query, not one per plan" do
-      metadata_queries = count_queries("item_metadata") { execution }
-
-      expect(metadata_queries.size).to eq(1)
+      expect(capture_sql { execution }.grep(/FROM "item_metadata"/).size).to eq(1)
       plans = execution["data"]["contracts"]["collection"].filter_map { it["plan"] }
       expect(plans.size).to eq(2)
       expect(plans.map { it["metadata"] }).to eq(plans.map { [{"key" => "tier", "value" => it["code"]}] })

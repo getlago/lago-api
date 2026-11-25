@@ -100,21 +100,8 @@ RSpec.describe Resolvers::CatalogPlansResolver do
       end
     end
 
-    def count_queries(table)
-      queries = []
-      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-        queries << payload[:sql] if payload[:sql].include?(%("#{table}"))
-      end
-      yield
-      queries
-    ensure
-      ActiveSupport::Notifications.unsubscribe(sub)
-    end
-
     it "loads the metadata of every plan in one query" do
-      metadata_queries = count_queries("item_metadata") { result }
-
-      expect(metadata_queries.size).to eq(1)
+      expect(capture_sql { result }.grep(/FROM "item_metadata"/).size).to eq(1)
       expect(result["data"]["catalogPlans"]["collection"].to_h { [it["code"], it["metadata"]] }).to eq(
         "growth" => [{"key" => "tier", "value" => "gold"}],
         "scale" => [{"key" => "tier", "value" => "scale"}],
@@ -126,7 +113,7 @@ RSpec.describe Resolvers::CatalogPlansResolver do
       let(:metadata_selection) { "" }
 
       it "does not query the metadata" do
-        expect(count_queries("item_metadata") { result }).to be_empty
+        expect(capture_sql { result }.grep(/"item_metadata"/)).to be_empty
       end
     end
   end

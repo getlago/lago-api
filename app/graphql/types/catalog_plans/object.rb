@@ -43,10 +43,8 @@ module Types
         contracts_count.positive?
       end
 
-      # A metadata deleted by the mutation stays cached, destroyed, on the association.
       def metadata
-        item_metadata = dataloader.with(Sources::ActiveRecordAssociation, :metadata).load(object)
-        item_metadata.value unless item_metadata.nil? || item_metadata.destroyed?
+        dataloader.with(Sources::ActiveRecordAssociation, :metadata).load(object)&.value
       end
     end
   end
