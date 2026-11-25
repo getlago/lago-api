@@ -88,9 +88,14 @@ module CopyToProduction
       end
 
       # The cards the copy attaches for the other rate cards of the sandbox plan, as CatalogPlanItem#children lists them.
+      # Each card is a step of its own, so the live cards are read in one query rather than one per sibling.
       def sibling_slices(source, except:)
-        source.catalog_plan.applied_rate_cards.includes(rate_card: [:product, :product_filter])
-          .reject { it.rate_card.discarded? || it.rate_card.code == except }.map { slice(attached_card(it)) }
+        siblings = source.catalog_plan.applied_rate_cards.includes(rate_card: [:product, :product_filter])
+          .reject { it.rate_card.discarded? || it.rate_card.code == except }.map(&:rate_card)
+        live_cards = production.rate_cards.includes(:product, :product_filter)
+          .where(code: siblings.map(&:code)).index_by(&:code)
+
+        siblings.map { slice(live_cards[it.code] || it) }
       end
 
       def priced_slices(plan, except:)
