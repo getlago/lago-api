@@ -619,43 +619,6 @@ RSpec.describe Api::V2::PlansController do
     end
   end
 
-  # The legacy plan metadata routes are drawn inside the v2 plans block: they still reach the v1
-  # controller, which reads the legacy plans only.
-  describe "POST /api/v2/plans/:code/metadata", v2_timestamps: false do
-    subject { post_with_token(organization, "/api/v2/plans/#{code}/metadata", {metadata: {crm_id: "123"}}) }
-
-    let(:legacy_plan) { create(:plan, organization:, code: "legacy") }
-    let(:catalog_plan) { create(:catalog_plan, organization:, code: "catalog") }
-
-    before do
-      legacy_plan
-      catalog_plan
-    end
-
-    context "with the code of a legacy plan" do
-      let(:code) { "legacy" }
-
-      it "replaces the legacy plan metadata through the v1 controller" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json).to eq(metadata: {crm_id: "123"})
-        expect(legacy_plan.reload.metadata.value).to eq("crm_id" => "123")
-      end
-    end
-
-    context "with the code of a catalog plan" do
-      let(:code) { "catalog" }
-
-      it "returns the v1 not found error and leaves the catalog plan untouched" do
-        subject
-
-        expect(response).to be_not_found_error("plan")
-        expect(catalog_plan.reload.metadata).to be_nil
-      end
-    end
-  end
-
   # A plan created through this surface is a CatalogPlan, and the nested
   # applied_rate_cards routes resolve their parent from catalog_plans too, so
   # the create-then-attach flow works end to end.

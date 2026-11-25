@@ -282,6 +282,68 @@ RSpec.describe CatalogPlans::UpdateService do
       end
     end
 
+    context "with partial_metadata" do
+      subject(:result) { described_class.call(catalog_plan:, params:, partial_metadata: true) }
+
+      let(:params) { {metadata: {tier: "silver", crm_id: nil}} }
+
+      it "merges the keys and keeps a null value" do
+        expect(result).to be_success
+        expect(catalog_plan.reload.metadata.value).to eq("crm_id" => nil, "tier" => "silver")
+      end
+
+      context "when the plan has no metadata" do
+        let(:stored_metadata) { nil }
+        let(:params) { {metadata: {}} }
+
+        it "stores nothing" do
+          expect(result).to be_success
+          expect(catalog_plan.reload.metadata).to be_nil
+        end
+      end
+    end
+
+    context "with delete_metadata_key" do
+      subject(:result) { described_class.call(catalog_plan:, params: {}, delete_metadata_key: "crm_id") }
+
+      let(:stored_metadata) { {"crm_id" => "123", "tier" => "gold"} }
+
+      it "removes the key, moves updated_at and enqueues one plan.updated" do
+        expect { result }.to change { catalog_plan.reload.updated_at }
+
+        expect(result).to be_success
+        expect(catalog_plan.reload.metadata.value).to eq("tier" => "gold")
+        expect(SendWebhookJob).to have_been_enqueued.once.with("plan.updated", catalog_plan)
+      end
+
+      it "reads the metadata after the lock, not what the instance held before" do
+        catalog_plan.metadata
+        Metadata::ItemMetadata.find_by(owner: catalog_plan).update!(value: {"crm_id" => "1", "other" => "x"})
+
+        expect(result).to be_success
+        expect(catalog_plan.reload.metadata.value).to eq("other" => "x")
+      end
+
+      context "when the key is unknown" do
+        subject(:result) { described_class.call(catalog_plan:, params: {}, delete_metadata_key: "missing") }
+
+        it "changes nothing" do
+          expect(result).to be_success
+          expect(catalog_plan.reload.metadata.value).to eq("crm_id" => "123", "tier" => "gold")
+        end
+      end
+
+      context "when the plan has no metadata" do
+        let(:stored_metadata) { nil }
+
+        it "fails with metadata not found and sends nothing" do
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("metadata")
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+    end
+
     context "with metadata that is not an object" do
       let(:params) { {name: "After", metadata: "abc"} }
 
@@ -443,6 +505,63 @@ RSpec.describe CatalogPlans::UpdateService do
 
       expect([first.value, second.value]).to all(be_success)
       expect(catalog_plan.reload.metadata.value).to eq("tier" => "silver")
+    ensure
+      resume << true
+      [first, second].compact.each(&:join)
+    end
+  end
+
+  context "when two merges with different keys run at once", transaction: false do
+    def lock_waiters
+      ActiveRecord::Base.connection.select_value(<<~SQL)
+        SELECT count(*) FROM pg_stat_activity
+        WHERE datname = current_database() AND pid <> pg_backend_pid() AND wait_event_type = 'Lock'
+      SQL
+    end
+
+    def wait_for_lock_waiter
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 10
+      sleep 0.05 until lock_waiters.positive? || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    end
+
+    it "stores both keys" do
+      organization = catalog_plan.organization
+      create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123"})
+      catalog_plan_id = catalog_plan.id
+
+      first_call = Queue.new
+      first_call << true
+      written = Queue.new
+      resume = Queue.new
+
+      allow(Metadata::UpdateItemService).to receive(:call).and_wrap_original do |original, **kwargs|
+        original.call(**kwargs).tap do
+          if first_call.pop(timeout: 0)
+            written << true
+            resume.pop(timeout: 10)
+          end
+        end
+      end
+
+      merge = lambda do |metadata|
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            plan = CatalogPlan.find(catalog_plan_id)
+            plan.metadata
+            described_class.call(catalog_plan: plan, params: {metadata:}, partial_metadata: true)
+          end
+        end
+      end
+
+      first = merge.call({tier: "gold"})
+      expect(written.pop(timeout: 10)).to be(true)
+      second = merge.call({region: "eu"})
+      wait_for_lock_waiter
+      expect(lock_waiters).to eq(1)
+      resume << true
+
+      expect([first.value, second.value]).to all(be_success)
+      expect(catalog_plan.reload.metadata.value).to eq("crm_id" => "123", "tier" => "gold", "region" => "eu")
     ensure
       resume << true
       [first, second].compact.each(&:join)

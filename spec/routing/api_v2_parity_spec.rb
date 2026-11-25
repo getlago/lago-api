@@ -55,6 +55,18 @@ RSpec.describe "API v2 routing parity" do
     expect(recognized[:plan_code]).to eq("foo")
   end
 
+  it "routes plan metadata to v2 and keeps the v1 route on its controller, even for a code with a dot" do
+    [:post, :patch, :put, :delete].each do |method|
+      expect(Rails.application.routes.recognize_path("/api/v2/plans/foo.bar/metadata", method:))
+        .to include(controller: "api/v2/plans/metadata", plan_code: "foo.bar")
+      expect(Rails.application.routes.recognize_path("/api/v1/plans/foo.bar/metadata", method:))
+        .to include(controller: "api/v1/plans/metadata", plan_code: "foo.bar")
+    end
+
+    expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/metadata/crm_id", method: :delete))
+      .to include(controller: "api/v2/plans/metadata", action: "destroy_key", plan_code: "foo", key: "crm_id")
+  end
+
   it "keeps customer-nested paths on their shared controllers" do
     recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/credit_notes", method: :get)
 

@@ -92,6 +92,11 @@ Rails.application.routes.draw do
           end
         end
         draw(:plan_nested_api)
+        scope module: :plans do
+          resource :metadata, only: %i[create update destroy] do
+            delete ":key", action: :destroy_key, on: :member
+          end
+        end
       end
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.

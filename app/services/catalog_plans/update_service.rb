@@ -7,10 +7,12 @@ module CatalogPlans
 
     Result = BaseResult[:catalog_plan]
 
-    def initialize(catalog_plan:, params:, send_webhook: true)
+    def initialize(catalog_plan:, params:, send_webhook: true, partial_metadata: false, delete_metadata_key: nil)
       @catalog_plan = catalog_plan
       @params = params
       @send_webhook = send_webhook
+      @partial_metadata = partial_metadata
+      @delete_metadata_key = delete_metadata_key
       super()
     end
 
@@ -35,10 +37,10 @@ module CatalogPlans
         catalog_plan.description = params[:description] if params.key?(:description)
         catalog_plan.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
         catalog_plan.currency = params[:currency] if params.key?(:currency)
-        catalog_plan.updated_at = Time.current if params.key?(:metadata)
+        catalog_plan.updated_at = Time.current if writes_metadata?
         catalog_plan.save!
 
-        replace_metadata!(catalog_plan, params[:metadata]) if params.key?(:metadata)
+        write_metadata! if writes_metadata?
         apply_taxes
       end
 
@@ -55,7 +57,25 @@ module CatalogPlans
 
     private
 
-    attr_reader :catalog_plan, :params, :send_webhook
+    attr_reader :catalog_plan, :params, :send_webhook, :partial_metadata, :delete_metadata_key
+
+    def writes_metadata?
+      params.key?(:metadata) || !delete_metadata_key.nil?
+    end
+
+    def write_metadata!
+      current = current_metadata
+      return replace_metadata!(catalog_plan, params[:metadata], partial: partial_metadata) if delete_metadata_key.nil?
+
+      result.not_found_failure!(resource: "metadata").raise_if_error! unless current
+
+      replace_metadata!(catalog_plan, current.value.to_h.except(delete_metadata_key.to_s))
+    end
+
+    def current_metadata
+      catalog_plan.association(:metadata).reset
+      ActiveRecord::Base.uncached { catalog_plan.metadata }
+    end
 
     def check_editable!
       # A contract prices against the plan by reference — it serializes the
