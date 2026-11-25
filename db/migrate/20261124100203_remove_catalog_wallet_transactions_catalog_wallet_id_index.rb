@@ -12,6 +12,10 @@ class RemoveCatalogWalletTransactionsCatalogWalletIdIndex < ActiveRecord::Migrat
   end
 
   def down
+    if index_exists?(:catalog_wallet_transactions, nil, name: :index_catalog_wallet_transactions_on_catalog_wallet_id, valid: false)
+      remove_index :catalog_wallet_transactions, name: :index_catalog_wallet_transactions_on_catalog_wallet_id, algorithm: :concurrently
+    end
+
     add_index :catalog_wallet_transactions, :catalog_wallet_id,
       name: :index_catalog_wallet_transactions_on_catalog_wallet_id,
       algorithm: :concurrently,
