@@ -40,6 +40,9 @@ module Integrations
           end
         rescue LagoHttpClient::HttpError => e
           log_nango_failure(LOOKUP_FAILURE_LOG, e, status: e.error_code)
+          raise throttling_error(:quickbooks) if quickbooks_rate_limited?(e)
+          return customer_not_found if e.error_code.to_i == 404
+
           lookup_failed
         rescue *LOOKUP_ERRORS => e
           log_nango_failure(LOOKUP_FAILURE_LOG, e)
@@ -49,6 +52,11 @@ module Integrations
         private
 
         attr_reader :integration_customer
+
+        # The customer was deleted or merged in QuickBooks: the merchant has to link another one.
+        def customer_not_found
+          result.service_failure!(code: "customer_not_found", message: "QuickBooks customer not found")
+        end
 
         def lookup_failed
           result.service_failure!(code: "customer_lookup_failed", message: "QuickBooks customer lookup failed")

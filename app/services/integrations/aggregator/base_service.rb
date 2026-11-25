@@ -13,6 +13,8 @@ module Integrations
       ORCHESTRATOR_FAILURE_PATTERN = %r{POST https?://nango-orchestrator-svc\.nango/v1/immediate failed}
       # NOTE: Providers whose throttled jobs wait for the next rate limit window instead of backing off
       NEXT_WINDOW_RETRY_PROVIDERS = %i[quickbooks].freeze
+      # NOTE: Intuit answers 429 with a ThrottlingFault (Error 3001, "message=ThrottleExceeded")
+      QUICKBOOKS_RATE_LIMITED_PATTERN = /ThrottleExceeded|ThrottlingFault/
       # NOTE: Errors of a Nango read other than an HTTP status: an unparsable body or a connection failure
       LOOKUP_ERRORS = [
         JSON::ParserError,
@@ -250,6 +252,11 @@ module Integrations
 
       def request_limit_error?(http_error)
         http_error.error_body.include?(REQUEST_LIMIT_ERROR_CODE)
+      end
+
+      # Nango returns an action's upstream 429 inside its own error body, so the body is checked too.
+      def quickbooks_rate_limited?(http_error)
+        http_error.error_code.to_i == 429 || QUICKBOOKS_RATE_LIMITED_PATTERN.match?(http_error.error_body.to_s)
       end
 
       def bad_gateway_error?(http_error)

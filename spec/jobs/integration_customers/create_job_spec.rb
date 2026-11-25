@@ -78,6 +78,39 @@ RSpec.describe IntegrationCustomers::CreateJob do
     end
   end
 
+  describe "#perform twice with a quickbooks integration, after a timeout" do
+    let(:integration) { create(:quickbooks_integration) }
+    let(:integration_customer_params) do
+      {integration_type: "quickbooks", integration_code: integration.code, sync_with_provider: true}
+    end
+    let(:action_url) { "https://api.nango.dev/action/trigger" }
+    let(:search_url) { "https://api.nango.dev/proxy/v3/company/1234567890/query" }
+    let(:duplicate_name_body) do
+      File.read(Rails.root.join("spec/fixtures/integration_aggregator/contacts/quickbooks_duplicate_name_error.json"))
+    end
+
+    before do
+      # The first create-customer times out after QuickBooks saved the customer, so the second one finds the name taken.
+      stub_request(:post, action_url).to_raise(Net::ReadTimeout).then.to_return(status: 500, body: duplicate_name_body)
+      stub_request(:get, search_url).with(query: hash_including({})).to_return(
+        status: 200,
+        body: {QueryResponse: {Customer: [{Id: "77", Notes: "Lago customer: #{customer.id} (#{customer.external_id})"}]}}.to_json
+      )
+    end
+
+    it "links the customer created by the first run instead of creating a second one" do
+      expect { described_class.perform_now(integration_customer_params:, integration:, customer:) }
+        .to raise_error(Net::ReadTimeout)
+      expect(customer.reload.quickbooks_customer).to be_nil
+
+      described_class.perform_now(integration_customer_params:, integration:, customer:)
+
+      expect(customer.reload.quickbooks_customer.external_customer_id).to eq("77")
+      expect(WebMock).to have_requested(:post, action_url).twice
+      expect(WebMock).to have_requested(:get, search_url).with(query: hash_including({})).once
+    end
+  end
+
   describe "#lock_key_arguments" do
     it "returns customer and integration for the lock key" do
       job = described_class.new(

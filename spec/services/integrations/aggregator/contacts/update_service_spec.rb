@@ -281,8 +281,9 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
       end
     end
 
-    # The Nango action and proxy shapes are an assumption, checked once in a QuickBooks sandbox before merge.
-    # Fixture values are invented.
+    # The input and output follow Nango's catalog update-customer action (Intuit fields, Id and SyncToken in,
+    # `id` out). The error shape around Intuit's faults is an assumption, to check in a QuickBooks sandbox once
+    # the actions are deployed in Nango. Fixture values are invented.
     context "with a quickbooks integration" do
       let(:integration) { create(:quickbooks_integration, organization:) }
       let(:integration_customer) { create(:quickbooks_customer, integration:, customer:, external_customer_id: "58") }
@@ -338,6 +339,14 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
             }
           }.to_json
         }
+      end
+      let(:throttled_body) do
+        {
+          Fault: {
+            Error: [{Message: "message=ThrottleExceeded; errorCode=003001; statusCode=429", code: "3001"}],
+            type: "ThrottlingFault"
+          }
+        }.to_json
       end
       let(:action_responses) { [success_response] }
       let(:expected_input) do
@@ -513,6 +522,13 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
           "customer_lookup_failed", "QuickBooks customer lookup failed"
       end
 
+      context "when the QuickBooks customer no longer exists" do
+        let(:proxy_response) { {status: 404, body: {Fault: {Error: [{code: "610"}]}}.to_json} }
+
+        it_behaves_like "a quickbooks update failure without update-customer",
+          "customer_not_found", "QuickBooks customer not found"
+      end
+
       context "when the proxy read times out" do
         before { stub_request(:get, proxy_url).to_timeout }
 
@@ -543,49 +559,20 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         end
       end
 
-      context "when the name already exists and the retry succeeds" do
-        let(:action_responses) { [duplicate_name_response, success_response] }
-
-        it "retries once with the unique display name and the same SyncToken" do
-          service_call
-
-          expect(calls).to eq(%i[proxy action action])
-          expect(WebMock).to have_requested(:get, proxy_url).once
-          expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name: "update-customer", input: expected_input}).once
-          expect(WebMock).to have_requested(:post, endpoint)
-            .with(body: {action_name: "update-customer", input: expected_input.merge("DisplayName" => "Example Co (cust-ext-1)")})
-            .once
-        end
-
-        it "returns the customer id and delivers no webhook" do
-          result = nil
-
-          expect { result = service_call }.not_to have_enqueued_job(SendWebhookJob)
-          expect(result).to be_success
-          expect(result.contact_id).to eq("58")
-        end
-
-        it "checks the QuickBooks throttle before each Nango call" do
-          service_call
-
-          expect(limiter).to have_received(:check).with(:client, anything).exactly(3).times
-        end
-      end
-
-      context "when the name already exists twice" do
+      context "when the name already exists" do
         let(:action_responses) { [duplicate_name_response] }
 
-        it "makes exactly two update-customer calls, fails and delivers one error webhook" do
-          result = service_call
+        it "makes one update-customer call without renaming the customer" do
+          service_call
 
-          expect(WebMock).to have_requested(:post, endpoint).twice
-          expect(result).to be_failure
-          expect(result.error.code).to eq("action_script_failure")
-          expect(enqueued_webhooks("customer.accounting_provider_error").size).to eq(1)
+          expect(calls).to eq(%i[proxy action])
+          expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name: "update-customer", input: expected_input}).once
         end
 
-        it "delivers the error webhook with the provider error" do
-          expect { service_call }.to enqueue_job(SendWebhookJob)
+        it "fails and delivers the error webhook with the provider error" do
+          result = nil
+
+          expect { result = service_call }.to enqueue_job(SendWebhookJob)
             .with(
               "customer.accounting_provider_error",
               customer,
@@ -593,6 +580,8 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
               provider_code: integration.code,
               provider_error: {message: "Failed to create the customer in QuickBooks", error_code: "action_script_failure"}
             ).on_queue(webhook_queue)
+          expect(result).to be_failure
+          expect(enqueued_webhooks("customer.accounting_provider_error").size).to eq(1)
         end
 
         it "keeps the realm id and connection id out of the webhook, the failure and the logs" do
@@ -622,37 +611,32 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
         end
       end
 
-      context "when 6240 appears outside a code key or as part of another code" do
-        let(:action_responses) do
-          [
-            {
-              status: 500,
-              body: {
-                error: {
-                  code: "action_script_failure",
-                  message: "x",
-                  payload: {Fault: {Error: [{Message: "Other", Detail: "ref 6240", code: "62400"}]}}
-                }
-              }.to_json
-            }
-          ]
-        end
+      context "when QuickBooks answers 429 to update-customer" do
+        let(:action_responses) { [{status: 429, body: throttled_body}] }
 
-        it "makes one call, fails and delivers one error webhook" do
-          result = service_call
-
-          expect(WebMock).to have_requested(:post, endpoint).once
-          expect(result).to be_failure
-          expect(result.error.code).to eq("action_script_failure")
-          expect(enqueued_webhooks("customer.accounting_provider_error").size).to eq(1)
+        it "raises NextWindowThrottlingError without an error webhook" do
+          expect { service_call }.to raise_error(BaseService::NextWindowThrottlingError)
+          expect(enqueued_webhooks("customer.accounting_provider_error")).to be_empty
         end
       end
 
-      context "when update-customer hits the request limit" do
-        let(:action_responses) { [{status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json}] }
+      context "when update-customer fails with Intuit's ThrottlingFault" do
+        let(:action_responses) do
+          [{status: 500, body: {error: {code: "action_script_failure", payload: JSON.parse(throttled_body)}}.to_json}]
+        end
 
-        it "raises RequestLimitError without an error webhook" do
-          expect { service_call }.to raise_error(Integrations::Aggregator::RequestLimitError)
+        it "raises NextWindowThrottlingError without an error webhook" do
+          expect { service_call }.to raise_error(BaseService::NextWindowThrottlingError)
+          expect(enqueued_webhooks("customer.accounting_provider_error")).to be_empty
+        end
+      end
+
+      context "when the proxy read is rate limited" do
+        let(:proxy_response) { {status: 429, body: throttled_body} }
+
+        it "raises NextWindowThrottlingError without update-customer or a webhook" do
+          expect { service_call }.to raise_error(BaseService::NextWindowThrottlingError)
+          expect(WebMock).not_to have_requested(:post, endpoint)
           expect(enqueued_webhooks("customer.accounting_provider_error")).to be_empty
         end
       end

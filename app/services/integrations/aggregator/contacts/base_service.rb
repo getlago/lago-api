@@ -6,8 +6,6 @@ module Integrations
       class BaseService < Integrations::Aggregator::BaseService
         Result = BaseResult[:contact_id, :email]
 
-        QUICKBOOKS_DUPLICATE_NAME_ERROR_CODE = "6240"
-
         private
 
         def deliver_success_webhook(customer:, webhook_code:)
@@ -56,34 +54,14 @@ module Integrations
           end
         end
 
-        # QuickBooks refuses a DisplayName already used by another customer, vendor or employee:
-        # the call is made once more with the external id appended, and a second error is not retried.
-        def trigger_quickbooks_action_with_unique_name_retry(body)
+        def trigger_quickbooks_action(body)
           throttle!(:quickbooks)
-          trigger_action(body)
-        rescue LagoHttpClient::HttpError => e
-          raise unless quickbooks_duplicate_name_error?(e)
-
-          throttle!(:quickbooks)
-          trigger_action(payload.with_unique_display_name(body))
+          process_quickbooks_result(JSON.parse(trigger_action(body).body))
         end
 
-        # The Nango action error shape around Intuit's fault is not documented, so the whole parsed body is searched.
-        def quickbooks_duplicate_name_error?(http_error)
-          intuit_error_code?(http_error.json_message, QUICKBOOKS_DUPLICATE_NAME_ERROR_CODE)
-        end
-
-        def intuit_error_code?(node, error_code)
-          case node
-          when Hash
-            node.any? do |key, value|
-              (%w[code Code].include?(key) && value.to_s == error_code) || intuit_error_code?(value, error_code)
-            end
-          when Array
-            node.any? { |value| intuit_error_code?(value, error_code) }
-          else
-            false
-          end
+        # A QuickBooks rate limit waits for the next window instead of failing the job.
+        def raise_if_quickbooks_rate_limited!(http_error)
+          raise throttling_error(:quickbooks) if provider == "quickbooks" && quickbooks_rate_limited?(http_error)
         end
 
         def webhook_code

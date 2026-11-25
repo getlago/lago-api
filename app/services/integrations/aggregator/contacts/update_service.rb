@@ -44,6 +44,7 @@ module Integrations
           result
         rescue LagoHttpClient::HttpError => e
           raise RequestLimitError.new(e) if request_limit_error?(e)
+          raise_if_quickbooks_rate_limited!(e)
 
           code = code(e)
           message = message(e)
@@ -73,6 +74,7 @@ module Integrations
         end
 
         # QuickBooks refuses an update without the current SyncToken, so it is read through the Nango proxy first.
+        # A name already used in QuickBooks fails the update: the customer is never renamed.
         def update_in_quickbooks
           token_result = Integrations::Aggregator::Contacts::FetchQuickbooksSyncTokenService.call(
             integration:,
@@ -88,9 +90,7 @@ module Integrations
             return result.service_failure!(code:, message:)
           end
 
-          body = payload.update_body.merge("SyncToken" => token_result.sync_token)
-          response = trigger_quickbooks_action_with_unique_name_retry(body)
-          process_quickbooks_result(JSON.parse(response.body))
+          trigger_quickbooks_action(payload.update_body.merge("SyncToken" => token_result.sync_token))
 
           result
         end

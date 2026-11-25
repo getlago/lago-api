@@ -4,17 +4,36 @@ module Integrations
   module Aggregator
     module Contacts
       module Payloads
+        # NOTE: Updates are sparse: a field cleared in Lago is left unchanged in QuickBooks. No CurrencyRef is
+        #       sent, as the Nango create-customer action does not accept one: the customer gets the company's
+        #       home currency.
         class Quickbooks < BasePayload
+          # QuickBooks refuses a DisplayName with a colon, a tab or a newline.
+          DISPLAY_NAME_FORBIDDEN_CHARACTERS = /[:\t\r\n]/
+          DISPLAY_NAME_MAX_LENGTH = 500
+          NAME_MAX_LENGTH = 100
+
           def create_body
-            mapped_fields.merge("Notes" => "Lago customer: #{customer.id} (#{customer.external_id})").compact_blank
+            mapped_fields.merge("Notes" => "#{notes_marker} (#{customer.external_id})").compact_blank
           end
 
           def update_body
             mapped_fields.merge("Id" => integration_customer.external_customer_id, "sparse" => true).compact_blank
           end
 
+          # The external id is appended to the name, which is shortened so the suffix is always kept.
+          # Returns nil when the name already is the external id, as the suffix would not make it unique.
           def with_unique_display_name(body)
-            body.merge("DisplayName" => "#{display_name} (#{customer.external_id})")
+            external_id = clean_display_name(customer.external_id)
+            return if display_name == external_id
+
+            suffix = " (#{external_id})"
+            body.merge("DisplayName" => "#{display_name.first(DISPLAY_NAME_MAX_LENGTH - suffix.length).strip}#{suffix}")
+          end
+
+          # Written in the Notes of a customer Lago creates, to recognize it when its name is found taken.
+          def notes_marker
+            "Lago customer: #{customer.id}"
           end
 
           private
@@ -22,9 +41,9 @@ module Integrations
           def mapped_fields
             {
               "DisplayName" => display_name,
-              "CompanyName" => company_name,
-              "GivenName" => customer.firstname,
-              "FamilyName" => customer.lastname,
+              "CompanyName" => company_name&.first(NAME_MAX_LENGTH),
+              "GivenName" => customer.firstname&.first(NAME_MAX_LENGTH),
+              "FamilyName" => customer.lastname&.first(NAME_MAX_LENGTH),
               "PrimaryEmailAddr" => email.presence && {"Address" => email},
               "PrimaryPhone" => phone.presence && {"FreeFormNumber" => phone},
               "BillAddr" => address(billing_address),
@@ -33,7 +52,13 @@ module Integrations
           end
 
           def display_name
-            customer.name.presence || "#{customer.firstname} #{customer.lastname}".strip.presence || customer.external_id
+            @display_name ||= clean_display_name(
+              customer.name.presence || "#{customer.firstname} #{customer.lastname}".strip.presence || customer.external_id
+            ).first(DISPLAY_NAME_MAX_LENGTH).strip
+          end
+
+          def clean_display_name(name)
+            name.to_s.gsub(DISPLAY_NAME_FORBIDDEN_CHARACTERS, " ").squish
           end
 
           def company_name

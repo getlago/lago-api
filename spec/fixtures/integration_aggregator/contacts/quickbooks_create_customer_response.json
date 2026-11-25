@@ -1,5 +1,6 @@
 {
   "id": "58",
   "displayName": "Example Co",
-  "syncToken": "0"
+  "companyName": "Example Company SAS",
+  "active": true
 }

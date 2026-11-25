@@ -116,12 +116,28 @@ RSpec.describe Integrations::Aggregator::Contacts::FetchQuickbooksSyncTokenServi
     let(:response_status) { 404 }
     let(:response_body) { {"Fault" => {"Error" => [{"Detail" => "fake-intuit-detail"}]}}.to_json }
 
-    it_behaves_like "a customer lookup failure"
+    it "fails with customer_not_found without the realm id or the Nango body" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ServiceFailure)
+      expect(result.error.code).to eq("customer_not_found")
+      expect(result.error.error_message).to eq("QuickBooks customer not found")
+      expect(result.error.message).not_to include(realm_id)
+      expect(result.error.message).not_to include("fake-intuit-detail")
+    end
 
     it "logs the HTTP status" do
       result
 
       expect(log_output.string).to include('"status":"404"')
+    end
+  end
+
+  context "when Nango returns a 429" do
+    let(:response_status) { 429 }
+    let(:response_body) { {"Fault" => {"Error" => [{"code" => "3001"}], "type" => "ThrottlingFault"}}.to_json }
+
+    it "raises NextWindowThrottlingError" do
+      expect { result }.to raise_error(BaseService::NextWindowThrottlingError)
     end
   end
 

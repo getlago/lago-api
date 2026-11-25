@@ -85,6 +85,24 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Quickbooks do
     end
 
     describe "DisplayName" do
+      context "when name contains a colon, a tab or a newline" do
+        let(:customer_name) { "Acme: EU\tWest\nOffice" }
+
+        it "replaces them with a space" do
+          expect(create_body["DisplayName"]).to eq("Acme EU West Office")
+        end
+      end
+
+      context "when name is blank and firstname and lastname are longer than 500 characters together" do
+        let(:customer_name) { nil }
+        let(:firstname) { "f" * 255 }
+        let(:lastname) { "n" * 255 }
+
+        it "keeps the first 500" do
+          expect(create_body["DisplayName"]).to eq("#{"f" * 255} #{"n" * 244}")
+        end
+      end
+
       context "when name is blank" do
         let(:customer_name) { "" }
 
@@ -110,6 +128,20 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Quickbooks do
         it "uses the external id" do
           expect(create_body["DisplayName"]).to eq("cust-ext-001")
         end
+      end
+    end
+
+    context "when names are longer than 100 characters" do
+      let(:legal_name) { "l" * 150 }
+      let(:firstname) { "f" * 150 }
+      let(:lastname) { "n" * 150 }
+
+      it "keeps the first 100 of CompanyName, GivenName and FamilyName" do
+        expect(create_body).to include(
+          "CompanyName" => "l" * 100,
+          "GivenName" => "f" * 100,
+          "FamilyName" => "n" * 100
+        )
       end
     end
 
@@ -271,11 +303,37 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Quickbooks do
       let(:firstname) { nil }
       let(:lastname) { nil }
 
-      it "suffixes the fallback display name" do
+      it "returns nil, as the suffix would not make it unique" do
+        expect(payload.with_unique_display_name(payload.create_body)).to be_nil
+      end
+    end
+
+    context "when the name and the suffix are longer than 500 characters" do
+      let(:customer_name) { "a" * 255 }
+
+      before { customer.update!(external_id: "e" * 250) }
+
+      it "shortens the name and keeps the whole suffix" do
         body = payload.with_unique_display_name(payload.create_body)
 
-        expect(body["DisplayName"]).to eq("cust-ext-001 (cust-ext-001)")
+        expect(body["DisplayName"]).to eq("#{"a" * 247} (#{"e" * 250})")
+        expect(body["DisplayName"].length).to eq(500)
       end
+    end
+
+    context "when the external id contains a colon" do
+      before { customer.update!(external_id: "cust:001") }
+
+      it "replaces it in the suffix" do
+        expect(payload.with_unique_display_name(payload.create_body)["DisplayName"]).to eq("Acme Inc (cust 001)")
+      end
+    end
+  end
+
+  describe "#notes_marker" do
+    it "holds the Lago customer id written in Notes" do
+      expect(payload.notes_marker).to eq("Lago customer: #{customer.id}")
+      expect(payload.create_body["Notes"]).to start_with(payload.notes_marker)
     end
   end
 end
