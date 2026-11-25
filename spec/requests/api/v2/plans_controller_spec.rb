@@ -341,7 +341,7 @@ RSpec.describe Api::V2::PlansController do
         end
       end
 
-      context "when the plan is deleted" do
+      context "when the plan was deleted before the request" do
         before { catalog_plan.discard! }
 
         it "returns a not found error" do
