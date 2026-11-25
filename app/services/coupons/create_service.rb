@@ -35,7 +35,7 @@ module Coupons
         frequency_duration: args[:frequency_duration],
         expiration: args[:expiration]&.to_sym,
         expiration_at: args[:expiration_at],
-        limited_plans: plan_identifiers.present? || catalog_plans.present?,
+        limited_plans: plan_identifiers.present?,
         limited_billable_metrics: billable_metric_identifiers.present?,
         reusable:
       )
@@ -48,11 +48,7 @@ module Coupons
         return result.not_found_failure!(resource: "billable_metrics")
       end
 
-      if catalog_plan_ids.present? && catalog_plans.count != catalog_plan_ids.count
-        return result.not_found_failure!(resource: "plans")
-      end
-
-      if billable_metrics.present? && (plans.present? || catalog_plans.present?)
+      if billable_metrics.present? && plans.present?
         return result.not_allowed_failure!(code: "only_one_limitation_type_per_coupon_allowed")
       end
 
@@ -60,7 +56,6 @@ module Coupons
         coupon.save!
 
         plans.each { |plan| CouponTarget.create!(coupon:, plan:, organization_id:) } if plan_identifiers.present?
-        catalog_plans.each { |catalog_plan| CouponTarget.create!(coupon:, catalog_plan:, organization_id:) }
 
         if billable_metric_identifiers.present?
           billable_metrics.each { |bm| CouponTarget.create!(coupon:, billable_metric: bm, organization_id:) }
@@ -94,18 +89,6 @@ module Coupons
       return [] if plan_identifiers.blank?
 
       @plans = Plan.where(plan_key => plan_identifiers, :organization_id => organization_id)
-    end
-
-    # Catalog plans are only targeted by ids, from Copy to production: no API takes them yet.
-    def catalog_plan_ids
-      limitations[:catalog_plan_ids]&.compact&.uniq
-    end
-
-    def catalog_plans
-      return @catalog_plans if defined? @catalog_plans
-      return [] if catalog_plan_ids.blank?
-
-      @catalog_plans = CatalogPlan.where(id: catalog_plan_ids, organization_id:)
     end
 
     def billable_metric_identifiers

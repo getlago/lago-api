@@ -85,16 +85,16 @@ RSpec.describe CopyToProduction::Items::ProductItem do
     end
   end
 
-  describe "#parents" do
+  describe "#parent" do
     it "answers its category" do
-      expect(item.parents(product)).to eq([["product_category", category]])
+      expect(item.parent(product)).to eq(["product_category", category])
     end
 
     context "without a category" do
       let(:product) { create(:product, :standalone, organization: sandbox) }
 
-      it "answers none" do
-        expect(item.parents(product)).to eq([])
+      it "answers nil" do
+        expect(item.parent(product)).to be_nil
       end
     end
   end
