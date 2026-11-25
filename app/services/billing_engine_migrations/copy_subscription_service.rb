@@ -157,6 +157,7 @@ module BillingEngineMigrations
 
       if contract_result.success?
         result.contract = contract_result.contract
+        EnqueueSubscriptionAlertsCopyService.call(subscription:, migration:)
       elsif unique_conflict?(contract_result.error)
         resolve_conflict(contract_result)
       else
