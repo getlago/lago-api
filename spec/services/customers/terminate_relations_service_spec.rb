@@ -212,17 +212,20 @@ RSpec.describe Customers::TerminateRelationsService do
 
     context "when a billing run holds the lock" do
       let(:wallet) { create(:wallet, customer:) }
+      let(:applied_coupon) { create(:applied_coupon, customer:) }
 
       before do
         wallet
+        applied_coupon
         allow(Customers::LockService).to receive(:call!).and_raise(BaseLockService::FailedToAcquireLock, "Failed to acquire lock")
       end
 
-      it "raises, keeps the drafts for the retry and has already terminated the wallets" do
+      it "raises, keeps the drafts for the retry and has already terminated the wallets and coupons" do
         expect { terminate_service.call }.to raise_error(BaseLockService::FailedToAcquireLock)
 
         expect(invoices.map(&:reload)).to all(be_draft)
         expect(wallet.reload).to be_terminated
+        expect(applied_coupon.reload).to be_terminated
       end
     end
   end
@@ -247,6 +250,28 @@ RSpec.describe Customers::TerminateRelationsService do
 
       expect(result).to be_success
       expect(invoices.map(&:reload)).to all(be_deleted)
+    end
+  end
+
+  context "with a live contract whose termination is refused for another reason on the shadow organization of a migration" do
+    let(:contract) { create(:contract, customer:) }
+    let(:invoices) { create_list(:invoice, 2, :draft, customer:) }
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: customer.organization)
+      contract
+      invoices
+
+      allow(Contracts::TerminateService).to receive(:call)
+        .and_return(Contracts::TerminateService::Result.new.single_validation_failure!(field: :contract, error_code: "invalid_timestamp"))
+    end
+
+    it "raises and keeps the drafts" do
+      expect { terminate_service.call }
+        .to raise_error(BaseService::ValidationFailure)
+        .and not_have_enqueued_job(Invoices::FinalizeJob)
+
+      expect(invoices.map(&:reload)).to all(be_draft)
     end
   end
 
