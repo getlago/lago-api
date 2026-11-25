@@ -12,14 +12,16 @@ module CopyToProduction
         targeted_metrics(source).map { ["billable_metric", it] }
       end
 
-      # Only metric targets are moved. The create service would make a terminated coupon active, refuses a past
-      # expiration, and would apply a coupon whose targeted metrics are all deleted to every metric.
+      # Only metric targets are copied; the copy would activate a terminated coupon, or apply one whose metrics are deleted
+      # to every metric. An expired one, which the copy refuses too, gets the copy's own code before the copy.
       def refusal(source)
-        return "copy_to_production_unsupported_target" if source.coupon_targets.any? { it.plan_id || it.catalog_plan_id }
-        return "copy_to_production_item_inactive" if source.terminated?
-        return "copy_to_production_item_inactive" if source.time_limit? && !Validators::ExpirationDateValidator.valid?(source.expiration_at)
-
-        "copy_to_production_target_deleted" if source.limited_billable_metrics? && targeted_metrics(source).empty?
+        if source.coupon_targets.any? { it.plan_id || it.catalog_plan_id }
+          "copy_to_production_unsupported_target"
+        elsif source.terminated? || expired?(source)
+          "copy_to_production_item_inactive"
+        elsif source.limited_billable_metrics? && targeted_metrics(source).empty?
+          "copy_to_production_target_deleted"
+        end
       end
 
       # The create service reads metric ids or codes depending on the caller, so both are given.
@@ -39,6 +41,10 @@ module CopyToProduction
       end
 
       private
+
+      def expired?(source)
+        source.time_limit? && !Validators::ExpirationDateValidator.valid?(source.expiration_at)
+      end
 
       def targeted_metrics(source)
         source.coupon_targets.filter_map(&:billable_metric).sort_by(&:code)
