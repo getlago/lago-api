@@ -150,6 +150,36 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
 
     let(:alert_metric) { billable_metric }
 
+    context "with a second metric alert on another metric" do
+      let(:calls_metric) { create(:billable_metric, organization:) }
+
+      before { create_v1_alert(:billable_metric_current_usage_amount_alert, billable_metric: calls_metric, code: "calls") }
+
+      it "copies the alert whose metric is priced and skips the other" do
+        expect(result).to be_success
+        expect(contract.contract_alerts.sole).to have_attributes(code: "tokens", product:)
+        expect(Rails.logger).to have_received(:info).with(a_string_including("skipped alert calls: shadow_product_not_found"))
+      end
+
+      context "when the contract also prices a product of the second metric" do
+        let(:calls_product) do
+          create(
+            :product,
+            organization: shadow_organization,
+            billable_metric: create(:billable_metric, organization: shadow_organization, code: calls_metric.code)
+          )
+        end
+
+        before { price_on(contract, calls_product) }
+
+        it "copies each alert on the product of its own metric" do
+          expect(result).to be_success
+          expect(contract.contract_alerts.order(:code).map { [it.code, it.product] })
+            .to eq([["calls", calls_product], ["tokens", product]])
+        end
+      end
+    end
+
     context "when no shadow product has the metric code" do
       let(:alert_metric) { create(:billable_metric, organization:) }
 
@@ -727,6 +757,26 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
       it "keeps it with the same id" do
         copy_id = copy.id
 
+        expect(result).to be_success
+        expect(contract.contract_alerts.sole.id).to eq(copy_id)
+        expect(UsageMonitoring::ContractAlerts::DestroyService).not_to have_received(:call)
+      end
+    end
+
+    context "when a V1 threshold was stored before notify_on was normalized" do
+      let(:alert) { create_v1_alert(:usage_current_amount_alert, code: "spend", name: "Spend", thresholds: [10_00]) }
+
+      before do
+        # Raw SQL: assigning the attribute would normalize the value
+        alert.thresholds.update_all("notify_on = ARRAY['resolved', 'triggered']::varchar[]") # rubocop:disable Rails/SkipsModelValidations
+        copy_now
+        allow(UsageMonitoring::ContractAlerts::DestroyService).to receive(:call).and_call_original
+      end
+
+      it "keeps the copy with the same id" do
+        copy_id = contract.contract_alerts.sole.id
+
+        expect(alert.thresholds.pick(:notify_on)).to eq(%w[resolved triggered])
         expect(result).to be_success
         expect(contract.contract_alerts.sole.id).to eq(copy_id)
         expect(UsageMonitoring::ContractAlerts::DestroyService).not_to have_received(:call)

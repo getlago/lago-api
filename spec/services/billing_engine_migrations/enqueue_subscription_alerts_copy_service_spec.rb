@@ -53,34 +53,12 @@ RSpec.describe BillingEngineMigrations::EnqueueSubscriptionAlertsCopyService do
     end.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
   end
 
-  context "when the subscription has no alert and its external id no copy" do
+  context "when the V1 alerts were all destroyed before a running copy created theirs" do
     let(:v1_alert) { nil }
 
-    it "enqueues nothing" do
-      expect { enqueue }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
-    end
-  end
-
-  context "when only a copy is left on the external id" do
-    let(:v1_alert) { nil }
-
-    before do
-      create(:contract_alert, organization: migration.shadow_organization, contract_external_id: subscription.external_id)
-    end
-
-    it "enqueues the alert copy so the reconcile removes it" do
+    it "still enqueues the alert copy so the reconcile removes the late copies" do
       expect { enqueue }
         .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription)
-    end
-  end
-
-  context "when the only copy on the external id belongs to another organization" do
-    let(:v1_alert) { nil }
-
-    before { create(:contract_alert, contract_external_id: subscription.external_id) }
-
-    it "enqueues nothing" do
-      expect { enqueue }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
     end
   end
 
@@ -138,6 +116,37 @@ RSpec.describe BillingEngineMigrations::EnqueueSubscriptionAlertsCopyService do
         .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription)
 
       expect(BillingEngineMigrations::Lookup).not_to have_received(:for_source)
+    end
+
+    context "when the subscription has no alert and its external id no copy" do
+      let(:v1_alert) { nil }
+
+      it "enqueues nothing" do
+        expect { enqueue }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
+      end
+    end
+
+    context "when only a copy is left on the external id" do
+      let(:v1_alert) { nil }
+
+      before do
+        create(:contract_alert, organization: migration.shadow_organization, contract_external_id: subscription.external_id)
+      end
+
+      it "enqueues the alert copy so the reconcile removes it" do
+        expect { enqueue }
+          .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription)
+      end
+    end
+
+    context "when the only copy on the external id belongs to another organization" do
+      let(:v1_alert) { nil }
+
+      before { create(:contract_alert, contract_external_id: subscription.external_id) }
+
+      it "enqueues nothing" do
+        expect { enqueue }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
+      end
     end
   end
 

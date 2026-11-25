@@ -22,10 +22,8 @@ module BillingEngineMigrations
     # Runs after the V1 write committed: a failing lookup reload or an unreachable Redis must not
     # answer an error for a write that succeeded.
     def enqueue
-      target = migration || mapped_migration
-      if target && anything_to_reconcile?(target.shadow_organization_id)
-        CopySubscriptionAlertsJob.perform_later(target.id, subscription)
-      end
+      target = migration ? (migration if anything_to_reconcile?) : mapped_migration
+      CopySubscriptionAlertsJob.perform_later(target.id, subscription) if target
     rescue RedisClient::Error, Redlock::LockError, ActiveRecord::ActiveRecordError => e
       Sentry.capture_exception(e, extra: {subscription_id: subscription.id})
     end
@@ -35,10 +33,11 @@ module BillingEngineMigrations
       entry if entry&.plan_mapping&.key?(subscription.plan.code)
     end
 
-    # Most subscriptions have no alert: skip the job unless a V1 alert or a copy exists on the external id
-    def anything_to_reconcile?(shadow_organization_id)
+    # Most new contracts have no alert to copy. An alert write is never skipped: after a `destroy_all`
+    # there is no alert left, yet a job already running may still create copies of them.
+    def anything_to_reconcile?
       subscription.alerts.exists? ||
-        UsageMonitoring::ContractAlert.exists?(organization_id: shadow_organization_id, contract_external_id: subscription.external_id)
+        UsageMonitoring::ContractAlert.exists?(organization_id: migration.shadow_organization_id, contract_external_id: subscription.external_id)
     end
   end
 end

@@ -189,7 +189,13 @@ module BillingEngineMigrations
         code: alert.code,
         name: alert.name,
         thresholds: alert.thresholds.map do
-          {code: it.code, value: it.value.to_s("F"), recurring: it.recurring, notify_on: it.notify_on}
+          {
+            code: it.code,
+            value: it.value.to_s("F"),
+            recurring: it.recurring,
+            # V1 rows written before the normalization keep their order: compare what the copy stores
+            notify_on: UsageMonitoring::ContractAlertThreshold.normalize_value_for(:notify_on, it.notify_on)
+          }
         end
       }
     end
