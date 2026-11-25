@@ -48218,7 +48218,7 @@
         {
           "kind": "ENUM",
           "name": "CopyToProductionBlockingReasonEnum",
-          "description": "Why production refuses to receive an item, as the error code the move would answer",
+          "description": "Why production refuses to receive an item: a refusal of the move, or a create service's",
           "fields": null,
           "inputFields": null,
           "interfaces": null,
@@ -48249,7 +48249,7 @@
             },
             {
               "name": "copy_to_production_item_refused",
-              "description": "A create service refuses an item to copy, as refusalCode tells",
+              "description": "A create service refuses an item to copy, with the code and field of the move error's details",
               "isDeprecated": false,
               "deprecationReason": null
             }
@@ -48450,7 +48450,7 @@
             },
             {
               "name": "refusalCode",
-              "description": "With copy_to_production_item_refused, the error code the move would answer for the refused item",
+              "description": "With copy_to_production_item_refused, the code in the details of the move's error",
               "args": [],
               "type": {
                 "kind": "SCALAR",
@@ -48462,7 +48462,7 @@
             },
             {
               "name": "refusalField",
-              "description": "With copy_to_production_item_refused, the field of a validation error or the resource not found",
+              "description": "With copy_to_production_item_refused, the key of that code in the details: a field, or a resource",
               "args": [],
               "type": {
                 "kind": "SCALAR",
@@ -48474,7 +48474,7 @@
             },
             {
               "name": "refusedItem",
-              "description": "Sandbox item to copy that refuses the move",
+              "description": "Sandbox item that refuses the move: an item to copy, or the moved item when it is live",
               "args": [],
               "type": {
                 "kind": "OBJECT",

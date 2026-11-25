@@ -48,9 +48,8 @@ module BillableMetrics
       end
 
       if result.billable_metric
-        # NOTE: An event received for this code before the metric existed cached the absence of an
-        #       expression, so drop that entry to let the expression apply to the next events. After the commit of
-        #       an outer transaction too, or an event read before it would cache the absence again.
+        # NOTE: An event received before the metric existed cached the absence of an expression. Drop it after
+        #       the commit, or an event read before the commit would cache the absence again.
         code = result.billable_metric.code
         after_commit { BillableMetrics::ExpressionCacheService.expire_cache(organization.id, code) }
 

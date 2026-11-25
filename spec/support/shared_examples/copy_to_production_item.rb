@@ -15,8 +15,13 @@ RSpec.shared_examples "a copy to production item matched by code" do |factory, *
 
   it "finds the kept production record with the source's code" do
     expect(item.find_existing(matched_source)).to eq(production_twin)
+  end
 
-    production_twin.discard!
-    expect(item.find_existing(matched_source)).to be_nil
+  context "when the production record is deleted" do
+    before { production_twin.discard! }
+
+    it "finds nothing" do
+      expect(item.find_existing(matched_source)).to be_nil
+    end
   end
 end

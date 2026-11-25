@@ -42,9 +42,8 @@ module CopyToProduction
         nil
       end
 
-      # Creates the source in production through its create service and returns the record. Raises
-      # BaseService::FailedResult on a refusal, so that the whole move rolls back. `resolved` gives the production
-      # record of each dependency and parent, by [item_type, sandbox id].
+      # Creates the source in production through its create service, raising BaseService::FailedResult on a refusal.
+      # `resolved` gives the production record of each dependency and parent, by [item_type, sandbox id].
       def copy!(_source, _resolved)
         raise NotImplementedError
       end
