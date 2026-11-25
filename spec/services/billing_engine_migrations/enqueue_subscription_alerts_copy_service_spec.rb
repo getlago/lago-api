@@ -14,9 +14,12 @@ RSpec.describe BillingEngineMigrations::EnqueueSubscriptionAlertsCopyService do
     create(:billing_engine_migration, organization:, status: migration_status, plan_mapping: {mapped_plan.code => "catalog_plan"})
   end
 
+  let(:v1_alert) { create(:usage_current_amount_alert, organization:, subscription_external_id: subscription.external_id) }
+
   before do
     migration
     subscription
+    v1_alert
     BillingEngineMigrations::Lookup.expire!
   end
 
@@ -48,6 +51,37 @@ RSpec.describe BillingEngineMigrations::EnqueueSubscriptionAlertsCopyService do
         raise ActiveRecord::Rollback
       end
     end.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
+  end
+
+  context "when the subscription has no alert and its external id no copy" do
+    let(:v1_alert) { nil }
+
+    it "enqueues nothing" do
+      expect { enqueue }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
+    end
+  end
+
+  context "when only a copy is left on the external id" do
+    let(:v1_alert) { nil }
+
+    before do
+      create(:contract_alert, organization: migration.shadow_organization, contract_external_id: subscription.external_id)
+    end
+
+    it "enqueues the alert copy so the reconcile removes it" do
+      expect { enqueue }
+        .to have_enqueued_job_after_commit(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription)
+    end
+  end
+
+  context "when the only copy on the external id belongs to another organization" do
+    let(:v1_alert) { nil }
+
+    before { create(:contract_alert, contract_external_id: subscription.external_id) }
+
+    it "enqueues nothing" do
+      expect { enqueue }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
+    end
   end
 
   context "when the plan is not mapped" do

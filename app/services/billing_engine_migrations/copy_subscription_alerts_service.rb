@@ -19,7 +19,12 @@ module BillingEngineMigrations
     def call
       return result unless migration.shadowing? && subscription.organization_id == migration.organization_id
 
-      SubscriptionCopyLockService.call(subscription:) { copy_alerts }
+      if contract_alerts_available?
+        SubscriptionCopyLockService.call(subscription:) { copy_alerts }
+      else
+        log(:warn, "skipped: contract_alerts_unavailable")
+      end
+
       result
     end
 
@@ -28,6 +33,11 @@ module BillingEngineMigrations
     attr_reader :migration, :subscription
 
     delegate :shadow_organization, to: :migration
+
+    # ContractAlerts::CreateService refuses every alert without them: skip the run instead of logging each refusal
+    def contract_alerts_available?
+      License.premium? && shadow_organization.feature_flag_enabled?(:contract_alerts)
+    end
 
     def copy_alerts
       reconcile_contract_alerts if v1_alerts.any? || contract_alerts_of_external_id.exists?
@@ -113,7 +123,7 @@ module BillingEngineMigrations
 
     def comparable_thresholds(thresholds)
       thresholds
-        .map { [it[:code], BigDecimal(it[:value].to_s), it[:recurring], it[:notify_on].sort] }
+        .map { [it[:code], BigDecimal(it[:value].to_s), it[:recurring], it[:notify_on]] }
         .sort_by { |code, value, recurring, notify_on| [value, code.to_s, recurring.to_s, notify_on.join(",")] }
     end
 
@@ -162,7 +172,7 @@ module BillingEngineMigrations
     end
 
     def product_alert_params(alert, alert_type:)
-      product_ids = shadow_product_ids(alert.billable_metric.code)
+      product_ids = shadow_product_ids_by_metric_code.fetch(alert.billable_metric.code, [])
 
       if product_ids.empty?
         "shadow_product_not_found"
@@ -184,15 +194,15 @@ module BillingEngineMigrations
       }
     end
 
-    def shadow_product_ids(metric_code)
-      @shadow_product_ids ||= {}
-      @shadow_product_ids[metric_code] ||= shadow_organization.products.metered
+    def shadow_product_ids_by_metric_code
+      @shadow_product_ids_by_metric_code ||= shadow_organization.products.metered
         .joins(:billable_metric)
-        .where(billable_metrics: {code: metric_code})
+        .where(billable_metrics: {code: v1_alerts.filter_map { it.billable_metric&.code }.uniq})
         .where(id: priced_product_ids)
         .distinct
-        .limit(2)
-        .pluck(:id)
+        .pluck("billable_metrics.code", :id)
+        .group_by(&:first)
+        .transform_values { it.map(&:last) }
     end
 
     # Only a product priced on a live contract of the external id is accepted by ContractAlerts::CreateService

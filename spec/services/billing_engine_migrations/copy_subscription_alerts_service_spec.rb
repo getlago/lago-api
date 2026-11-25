@@ -238,23 +238,33 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
 
   context "when the shadow organization has no contract_alerts flag" do
     let(:shadow_feature_flags) { %w[product_catalog] }
+    let(:stale_copy) { create(:contract_alert, organization: shadow_organization, contract_external_id: contract.external_id, code: "gone") }
 
-    before { create_v1_alert(:usage_current_amount_alert, code: "spend") }
+    before do
+      create_v1_alert(:usage_current_amount_alert, code: "spend")
+      stale_copy
+      allow(Rails.logger).to receive(:warn)
+      allow(BillingEngineMigrations::SubscriptionCopyLockService).to receive(:call).and_call_original
+    end
 
-    it "skips the alert as forbidden" do
+    it "skips the whole run with a warning, without taking the lock or touching the copies" do
       expect(result).to be_success
-      expect(contract.contract_alerts).to be_empty
-      expect(Rails.logger).to have_received(:info).with(a_string_including("skipped alert spend: feature_unavailable"))
+      expect(contract.contract_alerts).to eq([stale_copy])
+      expect(BillingEngineMigrations::SubscriptionCopyLockService).not_to have_received(:call)
+      expect(Rails.logger).to have_received(:warn).with(a_string_including("skipped: contract_alerts_unavailable"))
     end
   end
 
   context "without a premium license", premium: false do
-    before { create_v1_alert(:usage_current_amount_alert, code: "spend") }
+    before do
+      create_v1_alert(:usage_current_amount_alert, code: "spend")
+      allow(Rails.logger).to receive(:warn)
+    end
 
-    it "skips the alert as forbidden" do
+    it "skips the whole run with a warning" do
       expect(result).to be_success
       expect(contract.contract_alerts).to be_empty
-      expect(Rails.logger).to have_received(:info).with(a_string_including("skipped alert spend: feature_unavailable"))
+      expect(Rails.logger).to have_received(:warn).with(a_string_including("skipped: contract_alerts_unavailable"))
     end
   end
 
@@ -332,6 +342,39 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
       expect(result).to be_success
       expect(UsageMonitoring::ContractAlerts::CreateService).to have_received(:call).with(hash_including(contract: pending_contract))
       expect(shadow_organization.contract_alerts.pluck(:code)).to eq(["spend"])
+    end
+  end
+
+  context "with a metric alert and a newer pending contract that prices nothing" do
+    let(:pending_contract) do
+      create(:contract, :pending, customer: contract.customer, external_id: contract.external_id, created_at: contract.created_at + 1.day)
+    end
+
+    before do
+      pending_contract
+      create_v1_alert(:billable_metric_current_usage_units_alert, billable_metric:, code: "tokens")
+      allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
+    end
+
+    it "copies it on the pending contract with the product priced on the active one" do
+      expect(result).to be_success
+      expect(UsageMonitoring::ContractAlerts::CreateService).to have_received(:call).with(hash_including(contract: pending_contract))
+      expect(shadow_organization.contract_alerts.sole).to have_attributes(code: "tokens", product:, with_product_filters: true)
+    end
+  end
+
+  context "when called with the terminated previous subscription of the external id" do
+    subject(:result) { described_class.call(migration:, subscription: previous_subscription) }
+
+    let(:previous_subscription) do
+      create(:subscription, :terminated, organization:, customer: subscription.customer, external_id: subscription.external_id)
+    end
+
+    before { create_v1_alert(:usage_current_amount_alert, code: "spend") }
+
+    it "reconciles the external id as the current subscription would" do
+      expect(result).to be_success
+      expect(contract.contract_alerts.pluck(:code)).to eq(["spend"])
     end
   end
 
@@ -666,6 +709,58 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
         expect(contract.contract_alerts.sole.id).to eq(copy_id)
         expect(UsageMonitoring::ContractAlerts::DestroyService).not_to have_received(:call)
         expect(UsageMonitoring::ContractAlerts::CreateService).not_to have_received(:call)
+      end
+    end
+
+    context "when the copy loads its thresholds in another order than its V1 alert" do
+      let(:alert) { create_v1_alert(:usage_current_amount_alert, code: "spend", name: "Spend", thresholds: [10_00]) }
+      let(:copy) { contract.contract_alerts.sole }
+
+      before do
+        create(:alert_threshold, alert:, code: "high", value: 20_00, notify_on: %w[resolved triggered])
+        copy_now
+        # Rewriting a row moves it after "high" in the table, so the copy's thresholds load in another order
+        copy.thresholds.where.not(code: "high").sole.update!(updated_at: 1.minute.from_now)
+        allow(UsageMonitoring::ContractAlerts::DestroyService).to receive(:call).and_call_original
+      end
+
+      it "keeps it with the same id" do
+        copy_id = copy.id
+
+        expect(result).to be_success
+        expect(contract.contract_alerts.sole.id).to eq(copy_id)
+        expect(UsageMonitoring::ContractAlerts::DestroyService).not_to have_received(:call)
+      end
+    end
+
+    context "when a plan move leaves the external id a new contract" do
+      let(:new_contract) do
+        create(:contract, customer: contract.customer, external_id: contract.external_id, created_at: contract.created_at + 1.day)
+      end
+      let(:new_contract_product) { create(:product, organization: shadow_organization, billable_metric: shadow_metric) }
+      let(:first_copy) { contract.contract_alerts.sole }
+
+      before do
+        create_v1_alert(:billable_metric_current_usage_units_alert, billable_metric:, code: "tokens")
+        copy_now
+        first_copy
+        contract.update!(status: :terminated, terminated_at: Time.current)
+        price_on(new_contract, new_contract_product)
+      end
+
+      it "replaces the copy with one on the product the new contract prices for the metric" do
+        expect(result).to be_success
+        expect(discarded?(first_copy)).to be(true)
+        expect(new_contract.contract_alerts.sole).to have_attributes(code: "tokens", product: new_contract_product)
+      end
+
+      context "when the new contract prices the same product" do
+        let(:new_contract_product) { product }
+
+        it "keeps the copy" do
+          expect(result).to be_success
+          expect(new_contract.contract_alerts.sole.id).to eq(first_copy.id)
+        end
       end
     end
 

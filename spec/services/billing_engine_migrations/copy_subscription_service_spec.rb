@@ -82,9 +82,8 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       .and not_change { shadow_organization.contracts.count }
   end
 
-  it "enqueues the alert copy of the subscription once the contract exists" do
-    expect { result }
-      .to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription).exactly(:once)
+  it "does not enqueue the alert copy of a subscription without alerts" do
+    expect { result }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
 
     expect(result.contract).to be_persisted
   end
@@ -99,6 +98,13 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
         code: "spend",
         thresholds: [10_00]
       )
+    end
+
+    it "enqueues the alert copy of the subscription once the contract exists" do
+      expect { result }
+        .to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription).exactly(:once)
+
+      expect(result.contract).to be_persisted
     end
 
     it "copies it to the new contract once the enqueued copy runs" do
@@ -732,9 +738,13 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
         .to contain_exactly(have_attributes(code: subscription.id, catalog_plan:))
     end
 
-    it "enqueues the alert copy of the new subscription" do
-      expect { result }
-        .to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription).exactly(:once)
+    context "when the subscription has an alert" do
+      before { create(:usage_current_amount_alert, organization:, subscription_external_id: subscription.external_id) }
+
+      it "enqueues the alert copy of the new subscription" do
+        expect { result }
+          .to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription).exactly(:once)
+      end
     end
 
     context "when the new subscription runs on an override of a mapped plan" do
