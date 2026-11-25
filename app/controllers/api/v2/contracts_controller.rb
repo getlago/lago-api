@@ -51,8 +51,8 @@ module Api
         end
       end
 
-      # Releases a draft for billing. Publishing a pending or active contract
-      # changes nothing, so a retry is safe.
+      # Releases a draft for billing. A retry is safe: it publishes nothing again,
+      # and activates a pending contract whose start has passed.
       def publish
         contract = find_contract(params[:external_id])
 
