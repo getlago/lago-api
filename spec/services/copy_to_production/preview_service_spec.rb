@@ -19,6 +19,16 @@ RSpec.describe CopyToProduction::PreviewService do
     create(:billable_metric_filter, billable_metric: metric, key: "region", values: %w[eu us])
   end
 
+  context "with the production lock" do
+    before { allow(Organizations::SandboxLockService).to receive(:call!).and_call_original }
+
+    it "takes it to copy, as the copy does" do
+      result
+
+      expect(Organizations::SandboxLockService).to have_received(:call!).with(organization: production)
+    end
+  end
+
   it "lists the metric to copy and leaves production unchanged" do
     expect { result }.not_to change { [BillableMetric.with_discarded.count, BillableMetricFilter.with_discarded.count] }
 
@@ -49,10 +59,11 @@ RSpec.describe CopyToProduction::PreviewService do
   context "when production has a metric with the same code" do
     before { create(:billable_metric, organization: production, code: "api_calls") }
 
-    it "answers value_already_exist without listing items" do
+    it "answers value_already_exist, names the metric and lists nothing" do
       expect(result.blocking_reason).to eq("value_already_exist")
+      expect(result.refused_item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "billable_metric", record: metric))
       expect(result.copied_items).to eq([])
-      expect(result.refused_item).to be_nil
+      expect(result.reused_items).to eq([])
     end
   end
 

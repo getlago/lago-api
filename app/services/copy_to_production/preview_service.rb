@@ -2,7 +2,7 @@
 
 module CopyToProduction
   # What CopyToProduction::CopyService would do: the sandbox items it would copy, the production items it would reuse, and
-  # the reason it would refuse the copy, if any. The copy runs as the copy's, without the lock, and is rolled back.
+  # the reason it would refuse the copy, if any. The copy runs as the copy's, under the same lock, and is rolled back.
   class PreviewService < BaseService
     Result = BaseResult[
       :copied_items, :reused_items, :blocking_reason, :missing_parent, :refused_item, :refusal_code, :refusal_field
@@ -39,11 +39,13 @@ module CopyToProduction
 
     private
 
-    # A new savepoint, so that the rollback holds inside a caller's transaction too.
+    # A new savepoint, so that the rollback holds inside a caller's transaction too. Its writes wait for a running
+    # move, as a copy's wait for the preview.
     def dry_run(plan)
       copied = 0
 
       ActiveRecord::Base.transaction(requires_new: true) do
+        Organizations::SandboxLockService.call!(organization: production)
         copy(plan) { copied += 1 }
         raise ActiveRecord::Rollback
       end
@@ -53,7 +55,7 @@ module CopyToProduction
       result.refusal_code, result.refusal_field = refusal_of(e.result.error)
     end
 
-    # The code and field the copy's GraphQL error would answer: the first validation error, or the resource not found.
+    # The code and field of the details of the copy's GraphQL error: the first validation error, or the resource.
     def refusal_of(error)
       case error
       when BaseService::ValidationFailure

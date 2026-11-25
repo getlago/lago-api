@@ -41,23 +41,27 @@ module CopyToProduction
 
     # Refuses an organization that is not a sandbox, and a source the sandbox does not have.
     def check_entry
-      return result.forbidden_failure!(code: "copy_to_production_sandbox_only") unless organization.sandbox? && production
-
-      result.not_found_failure!(resource: item_type) unless source_record
+      if !organization.sandbox? || !production
+        result.forbidden_failure!(code: "copy_to_production_sandbox_only")
+      elsif !source_record
+        result.not_found_failure!(resource: item_type)
+      end
     end
 
     # The error code that refuses the user access to production, or nil. Checked before the plan, which reads
     # production records.
     def access_refusal
-      return "organization_inactive" if production.awaiting_payment_method?
-
-      "copy_to_production_admin_only" unless production_membership&.admin?
+      if production.awaiting_payment_method?
+        "organization_inactive"
+      elsif !production_membership&.admin?
+        "copy_to_production_admin_only"
+      end
     end
 
-    # The copy's own refusal, as [error code, refused step], or nil: the item's code taken in production, then an item
-    # to copy that cannot be, then a parent that is not live. What a create service refuses is known by copying.
+    # The copy's own refusal, as [error code, refused step], or nil: the requested item live, then an item to copy that
+    # cannot be, then a parent that is not live. What a create service refuses is known by copying.
     def plan_refusal(plan)
-      return ["value_already_exist", nil] if plan.existing
+      return ["value_already_exist", plan.requested] if plan.existing
 
       plan.copied.each do |step|
         code = step.item.refusal(step.source)
