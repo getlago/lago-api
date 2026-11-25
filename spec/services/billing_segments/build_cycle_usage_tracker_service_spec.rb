@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe BillingSegments::BuildCycleUsageTrackerService do
-  subject(:cycle_usage_tracker) { described_class.call!(segments: [first, second], coverage_started_at: first.started_at).cycle_usage_tracker }
+  subject(:cycle_usage_tracker) do
+    described_class.call!(segments: [first, second], obligation:).cycle_usage_tracker
+  end
+
+  let(:obligation) { instance_double(Billing::Obligation, coverage_started_at: first.started_at) }
 
   let(:organization) { build(:organization, feature_flags: ["product_catalog"]) }
   let(:metric) { build(:billable_metric, aggregation_type:, recurring:) }
@@ -20,7 +24,7 @@ RSpec.describe BillingSegments::BuildCycleUsageTrackerService do
       rate_override: build(:rate_override, rate_model: :volume))
   end
 
-  it { is_expected.to be_a(Fees::ChargeService::MeteredItem::CycleClosingUnits) }
+  it { is_expected.to be_a(Fees::ChargeService::Trackers::CycleClosingUnits) }
 
   context "when each segment is billed independently" do
     let(:billing_scope) { :segment }
@@ -37,7 +41,7 @@ RSpec.describe BillingSegments::BuildCycleUsageTrackerService do
   context "when a sum switches to tiered pricing" do
     let(:aggregation_type) { :sum_agg }
 
-    it { is_expected.to be_a(Fees::ChargeService::MeteredItem::CycleUsageCarryover) }
+    it { is_expected.to be_a(Fees::ChargeService::Trackers::CycleCarryoverUnits) }
 
     context "with a recurring balance" do
       let(:recurring) { true }

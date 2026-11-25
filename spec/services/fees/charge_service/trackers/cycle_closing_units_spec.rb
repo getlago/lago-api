@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::ChargeService::MeteredItem::CycleClosingUnits do
+RSpec.describe Fees::ChargeService::Trackers::CycleClosingUnits do
   subject(:tracker) { described_class.new(maximum: false) }
 
   let(:start) { Time.zone.local(2027, 1, 1) }

@@ -53,10 +53,12 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
     )
   end
   let(:billing_segment_max_timestamp) { Time.zone.parse("2026-09-15 12:34:56") }
+  let(:cycle_coverage_window) { billing_segment.cycle_started_at...billing_segment.billing_at }
   let(:billing_segment_metered_item_with_max_timestamp) do
     Fees::ChargeService::MeteredItem.from_billing_segment(
       billing_segment:,
       max_timestamp: billing_segment_max_timestamp,
+      cycle_coverage_window:,
       event: Events::CommonFactory.new_instance(source: event)
     )
   end
@@ -203,20 +205,23 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
         .to raise_error(ActiveJob::DeserializationError)
     end
 
-    it "round trips the billing segment max timestamp" do
+    it "round trips the billing segment max timestamp and coverage window" do
       serialized = JSON.parse(ActiveJob::Arguments.serialize([billing_segment_metered_item_with_max_timestamp]).to_json).first
       deserialized = ActiveJob::Arguments.deserialize([serialized]).first
 
       expect(deserialized.source.max_timestamp).to eq(billing_segment_max_timestamp)
+      expect(deserialized.source.cycle_coverage_window).to eq(cycle_coverage_window)
     end
 
-    it "deserializes a billing segment job without a max timestamp" do
+    it "deserializes a billing segment job without a max timestamp or coverage window" do
       serialized = ActiveJob::Arguments.serialize([billing_segment_metered_item]).first
       serialized.delete("max_timestamp")
+      serialized.delete("cycle_coverage_window")
 
       deserialized = ActiveJob::Arguments.deserialize([serialized]).first
 
       expect(deserialized.source.max_timestamp).to be_nil
+      expect(deserialized.source.cycle_coverage_window).to be_nil
     end
 
     context "when the in-memory segment changes after the job is queued" do

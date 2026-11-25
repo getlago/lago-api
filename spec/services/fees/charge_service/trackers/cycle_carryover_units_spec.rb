@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Fees::ChargeService::MeteredItem::CycleUsageCarryover do
+RSpec.describe Fees::ChargeService::Trackers::CycleCarryoverUnits do
   subject(:usage) { described_class.for(segments:, coverage_started_at:) }
 
   let(:organization) { build(:organization, feature_flags: ["product_catalog"]) }

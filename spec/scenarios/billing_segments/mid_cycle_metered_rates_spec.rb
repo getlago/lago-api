@@ -6,6 +6,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
   let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "USD") }
   let(:start) { Time.utc(2027, 1, 1) }
+  let(:first_price_at) { start }
   let(:switch) { Time.utc(2027, 1, 16) }
   let(:close) { Time.utc(2027, 2, 1) }
   let(:contract) { create(:contract, organization:, customer:, started_at: start) }
@@ -31,7 +32,7 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
 
   before do
     stub_pdf_generation
-    create(:rate_card_rate, organization:, rate_card: card, code: "old", effective_from: start, rate_model: old_model, rate_properties: old_price)
+    create(:rate_card_rate, organization:, rate_card: card, code: "old", effective_from: first_price_at, rate_model: old_model, rate_properties: old_price)
     create(:contract_rate_card, organization:, contract:, rate_card: card, billing_scope: "cycle",
       effective_date: start.to_date, billing_anchor_date: start.to_date, next_billing_at: close)
   end
@@ -395,7 +396,64 @@ RSpec.describe "Metered rate changes on a January cycle-end invoice" do
       event(start, 31)
       add_rate
       event(switch, 31)
+      expect(usage_cents(switch + 1.day)).to eq([1500, 400]) # 62 units active for one of 31 days at $2.
       expect(segment_fees(bill)).to eq([["old", 15, 1500], ["new", 32, 6400]]) # 31 × 15/31, then 62 × 16/31.
+    end
+
+    it "weights a late increase only for the days it is active" do
+      event(start, 31)
+      add_rate
+      event(close - 2.days, 31)
+
+      expect(segment_fees(bill)).to eq([["old", 15, 1500], ["new", 18, 3600]]) # 31 × 16/31 + 31 × 2/31.
+    end
+
+    context "when the contract ends on January 21" do
+      let(:close) { Time.utc(2027, 1, 21) }
+      let(:contract) { create(:contract, organization:, customer:, started_at: start, ended_at: close) }
+
+      it "uses the same 20-day cycle for current usage and the closing invoice" do
+        event(start, 20)
+        add_rate
+
+        expect(usage_cents(switch + 1.day)).to eq([1500, 200])
+        expect(segment_fees(bill)).to eq([["old", 15, 1500], ["new", 5, 1000]]) # 20 × 15/20, then 20 × 5/20.
+      end
+    end
+
+    context "when a draft covers only part of the calendar month", :premium do
+      let(:first_price_at) { start + 4.days }
+      let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "USD", invoice_grace_period: 3) }
+
+      it "uses the 27 priced days for current usage, the invoice and draft refresh" do
+        event(first_price_at, 27)
+        add_rate
+        expect(usage_cents(switch + 1.day)).to eq([1100, 200]) # 27 × 11/27 at $1, then 27 × 1/27 at $2.
+        invoice = bill
+        expect(invoice).to be_draft
+        expect(segment_fees(invoice)).to eq([["old", 11, 1100], ["new", 16, 3200]]) # Jan 5–15, then Jan 16–31.
+
+        event(switch, 27, received_at: close + 1.hour)
+        travel_to(close + 2.hours) do
+          api_call { put_with_token(organization, "/api/v2/invoices/#{invoice.id}/refresh") }
+        end
+        expect(segment_fees(invoice.reload)).to eq([["old", 11, 1100], ["new", 32, 6400]]) # 54 × 16/27.
+      end
+    end
+
+    context "with regional pricing" do
+      let(:old_price) { super().merge(pricing_group_keys: ["region"]) }
+      let(:new_price) { super().merge(pricing_group_keys: ["region"]) }
+
+      it "carries an eventless group's running quantity without counting another event" do
+        event(start, 31, region: "EU")
+        add_rate
+        event(switch, 62, region: "US")
+
+        expect(usage_cents(switch + 1.day)).to eq([1500, (1 + 2) * 200])
+        expect(bill.fees.where(rate_card_rate: card.rates.find_by!(code: "new")).pluck(:grouped_by, :units, :events_count))
+          .to match_array([[{"region" => "EU"}, 16, 0], [{"region" => "US"}, 32, 1]])
+      end
     end
   end
 end

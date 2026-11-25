@@ -68,6 +68,35 @@ RSpec.describe Fees::ChargeService::MeteredItem do
     end
     let(:max_timestamp) { Time.zone.parse("2026-09-15 12:34:56") }
 
+    context "with a weighted sum and a coverage window" do
+      subject(:bucket) { described_class.from_billing_segment(billing_segment:, cycle_coverage_window:, max_timestamp:).pricing_buckets.sole }
+
+      let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+      let(:billable_metric) { build(:weighted_sum_billable_metric, organization:) }
+      let(:rate_card) { build(:rate_card, organization:, product:, billing_timing: :arrears) }
+      let(:cycle_coverage_window) { Time.utc(2027, 1, 1)...Time.utc(2027, 2, 1) }
+      let(:billing_segment) do
+        build(:billing_segment, organization:, customer: contract_rate_card.contract.customer, contract_rate_card:, rate_card_rate:,
+          started_at: Time.utc(2027, 1, 16), ended_at: BillingSegment.inclusive_end(cycle_coverage_window.end))
+      end
+      let(:max_timestamp) { Time.utc(2027, 1, 17) }
+
+      it "weights elapsed segment usage against the full cycle while retaining the fee's coverage" do
+        expect(bucket.aggregation_boundaries).to eq(from_datetime: billing_segment.started_at, to_datetime: max_timestamp,
+          charges_duration: 31, max_timestamp:)
+        expect(bucket.boundaries).to have_attributes(charges_duration: 16, charges_to_datetime: billing_segment.ended_at)
+      end
+
+      context "when the card bills per segment" do
+        let(:contract_rate_card) { build(:contract_rate_card, organization:, rate_card:, billing_scope: :segment) }
+
+        it "keeps the segment denominator and ordinary event cutoff" do
+          expect(bucket.aggregation_boundaries).to eq(from_datetime: billing_segment.started_at, to_datetime: billing_segment.ended_at,
+            charges_duration: 16, max_timestamp:)
+        end
+      end
+    end
+
     describe "#filtered_for_charge_boundaries" do
       subject(:properties) { described_class.from_billing_segment(billing_segment: billing_segment).filtered_for_charge_boundaries.as_json }
 

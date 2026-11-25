@@ -4,9 +4,9 @@ module BillingSegments
   class BuildCycleUsageTrackerService < BaseService
     Result = BaseResult[:cycle_usage_tracker]
 
-    def initialize(segments:, coverage_started_at:)
+    def initialize(segments:, obligation:)
       @segments = segments
-      @coverage_started_at = coverage_started_at
+      @obligation = obligation
       super
     end
 
@@ -23,17 +23,17 @@ module BillingSegments
       if metric.max_agg? || metric.latest_agg?
         return result unless card.billing_scope_cycle?
 
-        result.cycle_usage_tracker = Fees::ChargeService::MeteredItem::CycleClosingUnits.new(maximum: metric.max_agg?)
+        result.cycle_usage_tracker = Fees::ChargeService::Trackers::CycleClosingUnits.new(maximum: metric.max_agg?)
       elsif metric.count_agg? || metric.sum_agg?
         return result if metric.recurring? || rate_card.proration?
 
-        result.cycle_usage_tracker = Fees::ChargeService::MeteredItem::CycleUsageCarryover.for(segments:, coverage_started_at:)
+        result.cycle_usage_tracker = Fees::ChargeService::Trackers::CycleCarryoverUnits.for(segments:, coverage_started_at: obligation.coverage_started_at)
       end
       result
     end
 
     private
 
-    attr_reader :segments, :coverage_started_at
+    attr_reader :segments, :obligation
   end
 end

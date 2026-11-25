@@ -114,7 +114,7 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
   end
 
   context "when an earlier segment has a higher peak" do
-    let(:cycle_usage_tracker) { instance_double(Fees::ChargeService::MeteredItem::CycleClosingUnits, apply_closing_values?: true, apply_carry_over?: false) }
+    let(:cycle_usage_tracker) { instance_double(Fees::ChargeService::Trackers::CycleClosingUnits, apply_closing_values?: true, apply_carry_over?: false) }
     let(:billable_metric) do
       create(:billable_metric, organization:, aggregation_type: :max_agg, field_name: "total_count", rounding_function: "floor", rounding_precision: 0)
     end

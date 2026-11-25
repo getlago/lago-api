@@ -75,6 +75,50 @@ RSpec.describe "Contract usage billing behavior" do
     let(:inputs) { [3, 7, -3, 4].map { |value| {value: value.to_s} } }
     let(:invoices) { event_fees.map(&:invoice).uniq }
 
+    context "when an advance event was queued before cycle coverage windows were serialized" do
+      let(:pricing_job) { Invoices::CreatePayInAdvanceChargeJob }
+      let(:fee) { Fee.where(contract:, fee_type: :product).sole }
+      let(:segment_start) { started_at + 4.days }
+      let(:event_at) { segment_start + 1.hour }
+      let(:second_rate) do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: segment_start, rate_properties: {"amount" => "2"})
+      end
+
+      before do
+        second_rate
+        travel_to(event_at)
+        create_event({external_contract_id: contract.external_id, code: billable_metric.code,
+          timestamp: event_at.to_i, properties: {field_name => "3"}}, perform_jobs: false)
+        perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob, pricing_job])
+        job = enqueued_jobs(only: [pricing_job]).sole
+        job.fetch("arguments").sole.fetch("metered_item").delete("cycle_coverage_window")
+        perform_all_enqueued_jobs(only: [pricing_job])
+      end
+
+      shared_examples "prices the queued segment" do
+        it "charges three units at the second rate and keeps the segment's coverage" do
+          expect(fee).to have_attributes(rate_card_rate: second_rate, units: 3, amount_cents: 600)
+          expect(fee.properties).to include("from_datetime" => segment_start.iso8601(6),
+            "to_datetime" => BillingSegment.inclusive_end(boundary).iso8601(6))
+          if display
+            expect(fee.invoice).to be_finalized
+            expect(fee.invoice.fees_amount_cents).to eq(600)
+          else
+            expect(fee.invoice).to be_nil
+          end
+        end
+      end
+
+      include_examples "prices the queued segment"
+
+      context "when the card creates a standalone fee" do
+        let(:display) { false }
+        let(:pricing_job) { Fees::CreatePayInAdvanceJob }
+
+        include_examples "prices the queued segment"
+      end
+    end
+
     context "when the rebound stays below the billed maximum" do
       let(:inputs) { [3, 7, -3, 2, 2].map { |value| {value: value.to_s} } }
 

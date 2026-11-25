@@ -2,9 +2,9 @@
 
 module Fees
   class ChargeService
-    class MeteredItem
-      # Closing units per pricing group, kept until the last segment that uses them.
-      class CycleUsageCarryover
+    module Trackers
+      # Tracks each pricing group's opening units until the last segment that needs them.
+      class CycleCarryoverUnits
         ACTIONS = {
           reset: :reset, # Grouping changed: discard prior balances and start with this segment's units.
           carry: :carry, # Price this segment's tiers using each group's opening balance.

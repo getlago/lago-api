@@ -2,7 +2,7 @@
 
 module Fees
   class ChargeService
-    class MeteredItem
+    module Trackers
       # Max and Latest bill the closing value even if a group has no event in this segment.
       class CycleClosingUnits
         def initialize(maximum:)
