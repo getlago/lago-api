@@ -8,22 +8,12 @@ module CopyToProduction
         expiration reusable
       ].freeze
 
-      def find_source(id)
-        sandbox.coupons.includes(coupon_targets: {billable_metric: :filters}).find_by(id:)
-      end
-
-      def find_existing(source)
-        production.coupons.find_by(code: source.code)
-      end
-
       def dependencies(source)
         targeted_metrics(source).map { ["billable_metric", it] }
       end
 
-      # Self-serve organizations only use catalog plans, so a coupon limited to legacy plans is never moved. A coupon
-      # limited to catalog plans waits for the catalog plan item type, which will make each targeted plan a parent.
-      # The create service would create a terminated coupon active, refuses a past expiration, and would make a coupon
-      # whose targeted metrics are all deleted apply to every metric.
+      # Only metric targets are moved. The create service would make a terminated coupon active, refuses a past
+      # expiration, and would apply a coupon whose targeted metrics are all deleted to every metric.
       def refusal(source)
         return "copy_to_production_unsupported_target" if source.coupon_targets.any? { it.plan_id || it.catalog_plan_id }
         return "copy_to_production_item_inactive" if source.terminated?
@@ -48,14 +38,10 @@ module CopyToProduction
         ).coupon
       end
 
-      def unique_indexes
-        {"index_coupons_on_organization_id_and_code" => :code}
-      end
-
       private
 
       def targeted_metrics(source)
-        source.coupon_targets.filter_map(&:billable_metric)
+        source.coupon_targets.filter_map(&:billable_metric).sort_by(&:code)
       end
     end
   end

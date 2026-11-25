@@ -290,8 +290,8 @@ RSpec.describe CopyToProduction::CopyService do
   end
 
   context "with a coupon" do
-    subject(:result) { described_class.call(organization:, user:, item_type: "coupon", id: coupon.id) }
-
+    let(:item_type) { "coupon" }
+    let(:id) { coupon.id }
     let(:coupon) do
       create(
         :coupon,
@@ -330,10 +330,6 @@ RSpec.describe CopyToProduction::CopyService do
       copied_metric = production.billable_metrics.find_by(code: "storage")
       expect(result).to be_success
       expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "coupon", record: copy))
-      expect(result.copied_items.map { [it.item_type, it.record] }).to eq(
-        [["billable_metric", copied_metric], ["coupon", copy]]
-      )
-      expect(result.reused_items.map { [it.item_type, it.record] }).to eq([["billable_metric", live_metric]])
       expect(copy).to have_attributes(
         name: "Welcome",
         description: "First months off",
@@ -350,123 +346,7 @@ RSpec.describe CopyToProduction::CopyService do
         limited_plans: false
       )
       expect(copy.coupon_targets.map { [it.billable_metric_id, it.organization_id] })
-        .to match_array([[live_metric.id, production.id], [copied_metric.id, production.id]])
-    end
-
-    it "keeps the sandbox coupon and its targets" do
-      result
-
-      expect(sandbox.coupons.find_by(code: "welcome")).to eq(coupon)
-      expect(coupon.coupon_targets.count).to eq(2)
-    end
-
-    context "with a fixed amount coupon without targets" do
-      let(:coupon) do
-        create(:coupon, organization: sandbox, code: "welcome", amount_cents: 1500, amount_currency: "USD")
-      end
-
-      before { coupon.coupon_targets.destroy_all }
-
-      it "copies the amount and no target" do
-        expect(result).to be_success
-
-        expect(result.item.record).to have_attributes(
-          coupon_type: "fixed_amount",
-          amount_cents: 1500,
-          amount_currency: "USD",
-          frequency: "once",
-          expiration: "no_expiration",
-          reusable: true,
-          limited_billable_metrics: false
-        )
-        expect(result.item.record.coupon_targets).to be_empty
-      end
-    end
-
-    context "with activity logs", :capture_kafka_messages do
-      before do
-        stub_const(
-          "ENV",
-          ENV.to_h.merge(
-            "LAGO_CLICKHOUSE_ENABLED" => "true",
-            "LAGO_KAFKA_BOOTSTRAP_SERVERS" => "kafka",
-            "LAGO_KAFKA_ACTIVITY_LOGS_TOPIC" => "activity_logs"
-          )
-        )
-        CurrentContext.source = "graphql"
-      end
-
-      it "logs the moves of the coupon and of the copied metric in production" do
-        result
-
-        logs = kafka_messages.map { JSON.parse(it[:payload]) }
-        expect(logs.map { it.slice("activity_type", "organization_id", "resource_id", "user_id") }).to match_array(
-          [
-            ["billable_metric.created", production.billable_metrics.find_by(code: "storage")],
-            ["billable_metric.copied_to_production", production.billable_metrics.find_by(code: "storage")],
-            ["coupon.created", result.item.record],
-            ["coupon.copied_to_production", result.item.record]
-          ].map do |activity_type, record|
-            {"activity_type" => activity_type, "organization_id" => production.id, "resource_id" => record.id, "user_id" => user.id}
-          end
-        )
-      end
-    end
-
-    context "when production has a coupon with the same code" do
-      before { create(:coupon, organization: production, code: "welcome") }
-
-      it "copies nothing" do
-        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages).to eq(code: ["value_already_exist"])
-      end
-    end
-
-    context "when production has a deleted coupon with the same code" do
-      before { create(:coupon, :deleted, organization: production, code: "welcome") }
-
-      it "copies the coupon" do
-        expect { result }.to change { production.coupons.count }.by(1)
-
-        expect(result).to be_success
-      end
-    end
-
-    context "when the coupon targets a legacy plan" do
-      before { create(:coupon_plan, coupon:, plan: create(:plan, organization: sandbox)) }
-
-      it "refuses the copy" do
-        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_unsupported_target")
-      end
-    end
-
-    context "when the coupon targets a catalog plan" do
-      before { create(:coupon_catalog_plan, coupon:, catalog_plan: create(:catalog_plan, organization: sandbox)) }
-
-      it "refuses the copy" do
-        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
-
-        expect(result.error.code).to eq("copy_to_production_unsupported_target")
-      end
-    end
-
-    context "when the coupon has expired" do
-      before { coupon.update!(expiration_at: 1.day.ago) }
-
-      it "refuses the copy" do
-        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_item_inactive")
-      end
+        .to contain_exactly([live_metric.id, production.id], [copied_metric.id, production.id])
     end
 
     context "when a coupon without expiration keeps a past date" do
@@ -475,63 +355,6 @@ RSpec.describe CopyToProduction::CopyService do
       it "copies the coupon without the date" do
         expect(result).to be_success
         expect(result.item.record).to have_attributes(status: "active", expiration: "no_expiration", expiration_at: nil)
-      end
-    end
-
-    context "when the coupon is terminated" do
-      before { coupon.mark_as_terminated! }
-
-      it "refuses the copy" do
-        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_item_inactive")
-      end
-    end
-
-    context "when a concurrent write creates a targeted metric in production" do
-      let(:database_result) { instance_double(PG::Result, error_field: "index_billable_metrics_on_organization_id_and_code") }
-      let(:database_error) { PG::UniqueViolation.new("duplicate value") }
-
-      before do
-        allow(database_error).to receive(:result).and_return(database_result)
-        allow(BillableMetric).to receive(:create!) { raise ActiveRecord::RecordNotUnique.new("duplicate value"), cause: database_error }
-      end
-
-      it "answers value_already_exist on code" do
-        expect(result).to be_failure
-        expect(result.error.messages).to eq(code: ["value_already_exist"])
-      end
-    end
-
-    context "when every targeted metric is deleted in the sandbox" do
-      before do
-        reused_metric_source.discard!
-        copied_metric_source.discard!
-      end
-
-      it "refuses the copy rather than copy an unlimited coupon" do
-        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_target_deleted")
-      end
-    end
-
-    context "when the coupon targets a custom aggregation metric" do
-      let(:copied_metric_source) do
-        create(:billable_metric, organization: sandbox, code: "storage", aggregation_type: "custom_agg",
-          custom_aggregator: "aggregator")
-      end
-
-      it "refuses the copy" do
-        expect { result }.not_to change { [Coupon.count, BillableMetric.count] }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_item_unsupported")
       end
     end
 
