@@ -351,7 +351,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
     end
 
     context "when the object pins a payment connection with a deleted payment_provider_customer" do
-      let(:override_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+      let(:override_connection) { create(:gocardless_customer, customer: resolution_customer, organization:, code: "gocardless_eu") }
 
       before do
         create(:billing_object_connection, owner: resolvable, organization:, category: :payment,
@@ -361,7 +361,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
       end
 
       it "reports inherit with nil code" do
-        expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
+        expect(routing["payment"]).to have_attributes(behavior: "inherit", code: "stripe_default")
       end
     end
 
@@ -376,6 +376,8 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
     end
 
     context "when nothing resolves" do
+      before { default_connection.delete }
+
       it "reports inherit with a nil code" do
         expect(routing).to match(
           "payment" => have_attributes(behavior: "inherit", code: nil),
@@ -398,13 +400,13 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
         end
 
         it "reports specific with the pinned code" do
-          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
+          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: "gocardless_eu")
         end
       end
 
       context "when the object pins a connection with a deleted payment_provider_customer" do
-        let(:override_connection) { create(:moneyhash_customer, customer: resolution_customer, organization:) }
-        let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+        let(:override_connection) { create(:moneyhash_customer, customer: resolution_customer, organization:, code: "moneyhash_eu") }
+        let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:, code: "gocardless_eu") }
 
         before do
           create(:billing_object_connection, owner: resolvable, organization:, category: :payment,
@@ -416,12 +418,12 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
         end
 
         it "reports specific with the fallback_record connection pinned code" do
-          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
+          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: "gocardless_eu")
         end
       end
 
       context "when fallback_connection pins a connection with a deleted payment_provider_customer" do
-        let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+        let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:, code: "gocardless_eu") }
 
         before do
           create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment,
@@ -431,7 +433,7 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
         end
 
         it "reports specific with the customer default connection pinned code" do
-          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
+          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: "stripe_default")
         end
       end
 
