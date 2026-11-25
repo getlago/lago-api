@@ -47,9 +47,9 @@ module ContractWallets
 
     delegate :contract, to: :contract_wallet
 
-    # Credit it can spend, or credit bought that is still waiting for its payment.
+    # Credit it can spend, or credit bought that is not settled yet: a late payment still settles a failed purchase.
     def holds_credit?
-      contract_wallet.balance_cents.positive? || contract_wallet.transactions.inbound.pending.exists?
+      contract_wallet.balance_cents.positive? || contract_wallet.transactions.inbound.not_settled.exists?
     end
   end
 end
