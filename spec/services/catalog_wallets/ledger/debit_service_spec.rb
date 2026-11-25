@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe CatalogWallets::Ledger::DebitService do
-  subject(:result) { described_class.call(wallet:, reason:, consumptions:, invoice:, idempotency_key:) }
+  subject(:result) { described_class.call(wallet:, reason:, consumptions:, invoice:, idempotency_key:, request_digest:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -15,6 +15,7 @@ describe CatalogWallets::Ledger::DebitService do
   let(:second_fee) { create(:fee, invoice:) }
   let(:reason) { "invoice_application" }
   let(:idempotency_key) { nil }
+  let(:request_digest) { nil }
   let(:consumptions) do
     [
       {inbound_transaction: older_entry, fee: first_fee, credit_amount_cents: 5_000},
@@ -94,23 +95,35 @@ describe CatalogWallets::Ledger::DebitService do
       expect(wallet.reload.balance_cents).to eq(15_000 - 4_000)
     end
 
+    context "with a request digest and no idempotency key" do
+      let(:request_digest) { Digest::SHA256.hexdigest("void 4000") }
+
+      it "raises" do
+        expect { result }.to raise_error(ArgumentError, /request digest/)
+      end
+    end
+
     context "with an idempotency key" do
       let(:idempotency_key) { "void-1" }
+      let(:request_digest) { Digest::SHA256.hexdigest("void 4000") }
 
-      it "stores the key on the outbound entry" do
+      it "stores the key and the request digest on the outbound entry" do
         expect(result).to be_success
         expect(result.replayed).to be(false)
-        expect(result.wallet_transaction.reload.idempotency_key).to eq("void-1")
+        expect(result.wallet_transaction.reload).to have_attributes(idempotency_key: "void-1", request_digest:)
       end
 
-      context "when a void with that key is already written" do
-        let(:consumptions) { [{inbound_transaction: newer_entry, credit_amount_cents: 6_000}] }
+      context "when a void with that key is already written from other rows" do
         let(:first_void) do
           described_class.call!(
             wallet: CatalogWallet.find(wallet.id),
             reason:,
             idempotency_key:,
-            consumptions: [{inbound_transaction: CatalogWalletTransaction.find(newer_entry.id), credit_amount_cents: 4_000}]
+            request_digest: Digest::SHA256.hexdigest("void 4000"),
+            consumptions: [
+              {inbound_transaction: CatalogWalletTransaction.find(older_entry.id), credit_amount_cents: 3_000},
+              {inbound_transaction: CatalogWalletTransaction.find(newer_entry.id), credit_amount_cents: 1_000}
+            ]
           ).wallet_transaction
         end
 
@@ -120,6 +133,7 @@ describe CatalogWallets::Ledger::DebitService do
           expect { result }.not_to change {
             [
               wallet.reload.balance_cents,
+              older_entry.reload.remaining_credit_amount_cents,
               newer_entry.reload.remaining_credit_amount_cents,
               CatalogWalletTransaction.outbound.count,
               CatalogWalletConsumption.count
@@ -129,6 +143,35 @@ describe CatalogWallets::Ledger::DebitService do
           expect(result).to be_success
           expect(result.replayed).to be(true)
           expect(result.wallet_transaction).to eq(first_void)
+        end
+
+        context "with another request digest" do
+          let(:request_digest) { Digest::SHA256.hexdigest("void 2000") }
+
+          it "fails on the key and writes nothing" do
+            expect { result }.not_to change {
+              [wallet.reload.balance_cents, newer_entry.reload.remaining_credit_amount_cents, CatalogWalletTransaction.outbound.count]
+            }
+
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages).to eq({idempotency_key: ["used_for_another_request"]})
+          end
+        end
+      end
+
+      context "without a request digest" do
+        let(:request_digest) { nil }
+
+        it "raises" do
+          expect { result }.to raise_error(ArgumentError, /request digest/)
+        end
+      end
+
+      context "when the request digest is not a SHA-256 hex digest" do
+        let(:request_digest) { "void 4000" }
+
+        it "raises" do
+          expect { result }.to raise_error(ArgumentError, /SHA-256/)
         end
       end
 
@@ -411,7 +454,7 @@ describe CatalogWallets::Ledger::DebitService do
   context "when the caller already holds the customer's wallet lock" do
     subject(:result) do
       Customers::LockService.call(customer:, scope: :catalog_wallet, timeout_seconds: 0) do
-        described_class.call(wallet:, reason:, consumptions:, invoice:, idempotency_key:)
+        described_class.call(wallet:, reason:, consumptions:, invoice:, idempotency_key:, request_digest:)
       end.value
     end
 

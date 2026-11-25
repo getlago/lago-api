@@ -4,15 +4,17 @@ module CatalogWallets
   module Ledger
     class DebitService < BaseService
       REASONS = %w[invoice_application void].freeze
+      SHA256_HEX = /\A[0-9a-f]{64}\z/
 
       Result = BaseResult[:wallet_transaction, :replayed]
 
-      def initialize(wallet:, reason:, consumptions:, invoice: nil, idempotency_key: nil)
+      def initialize(wallet:, reason:, consumptions:, invoice: nil, idempotency_key: nil, request_digest: nil)
         @wallet = wallet
         @reason = reason.to_s
         @consumptions = consumptions
         @invoice = invoice
         @idempotency_key = idempotency_key
+        @request_digest = request_digest
         super
 
         check_arguments!
@@ -27,6 +29,11 @@ module CatalogWallets
             # A key is unique per wallet across every kind of entry, a top-up included.
             unless earlier.outbound? && earlier.reason == reason
               next result.single_validation_failure!(field: :idempotency_key, error_code: "already_exists")
+            end
+
+            # The rows of a retry can differ, since entries are picked by what they have left: only the request tells.
+            if earlier.request_digest != request_digest
+              next result.single_validation_failure!(field: :idempotency_key, error_code: "used_for_another_request")
             end
 
             result.wallet_transaction = earlier
@@ -57,7 +64,7 @@ module CatalogWallets
 
       private
 
-      attr_reader :wallet, :reason, :consumptions, :invoice, :idempotency_key
+      attr_reader :wallet, :reason, :consumptions, :invoice, :idempotency_key, :request_digest
 
       def check_arguments!
         raise ArgumentError, "Invalid reason: #{reason}. Valid reasons are: #{REASONS.join(", ")}" unless REASONS.include?(reason)
@@ -82,11 +89,13 @@ module CatalogWallets
         raise ArgumentError, "A void takes no invoice" if invoice
         raise ArgumentError, "A void takes no fee" if consumptions.any? { it[:fee] }
         raise ArgumentError, "An idempotency key can't be blank" unless idempotency_key.nil? || idempotency_key.present?
+        raise ArgumentError, "An idempotency key and a request digest come together" if idempotency_key.nil? != request_digest.nil?
+        raise ArgumentError, "A request digest is a SHA-256 hex digest" unless request_digest.nil? || SHA256_HEX.match?(request_digest)
       end
 
       def check_invoice_application_arguments!
         raise ArgumentError, "An invoice application needs an invoice" if invoice.nil?
-        raise ArgumentError, "An invoice application takes no idempotency key" if idempotency_key
+        raise ArgumentError, "An invoice application takes no idempotency key" if idempotency_key || request_digest
         raise ArgumentError, "The invoice must belong to the wallet's customer" if invoice.customer_id != wallet.customer_id
         raise ArgumentError, "The invoice must be in the wallet's currency" if invoice.currency != wallet.currency
         raise ArgumentError, "Each fee must belong to the invoice" unless consumptions.all? { it[:fee].nil? || it[:fee].invoice_id == invoice.id }
@@ -116,6 +125,7 @@ module CatalogWallets
           reason:,
           invoice:,
           idempotency_key:,
+          request_digest:,
           credit_amount_cents: debits.values.sum
         )
       end
