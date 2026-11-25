@@ -23,7 +23,7 @@ RSpec.describe Api::V2::Plans::MetadataController do
         expect(catalog_plan.reload.updated_at).to be_within(1.second).of(Time.current)
       end
 
-      expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(catalog_plan)
+      expect(Utils::ActivityLog).to have_received(:produce).with(catalog_plan, "plan.updated", after_commit: true).once
       expect(catalog_plan.reload.metadata&.value).to eq(webhook_metadata)
       expect(json[:metadata]&.deep_stringify_keys).to eq(webhook_metadata)
     end
@@ -47,7 +47,7 @@ RSpec.describe Api::V2::Plans::MetadataController do
       expect(json[:metadata]&.deep_stringify_keys).to eq(expected)
       expect(catalog_plan.reload.updated_at).to eq(updated_at)
       expect(catalog_plan.versions.count).to eq(versions)
-      expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+      expect(Utils::ActivityLog).not_to have_produced("plan.updated").after_commit.with(catalog_plan)
     end
   end
 
@@ -169,6 +169,19 @@ RSpec.describe Api::V2::Plans::MetadataController do
       it_behaves_like "a plan metadata no-op"
     end
 
+    context "when metadata is omitted on a plan with none" do
+      let(:request_params) { {} }
+
+      it_behaves_like "a plan metadata write", {}
+
+      it "stores an empty value" do
+        request
+
+        expect(json).to eq(metadata: {})
+        expect(catalog_plan.reload.metadata.value).to eq({})
+      end
+    end
+
     context "when a catalog plan and a legacy plan share the code" do
       let(:legacy_plan) { create(:plan, organization:, code: catalog_plan.code) }
 
@@ -253,6 +266,8 @@ RSpec.describe Api::V2::Plans::MetadataController do
       context "when metadata is empty and the plan has none" do
         let(:request_params) { {metadata: {}} }
         let(:stored_metadata) { nil }
+
+        it_behaves_like "a plan metadata no-op"
 
         it "returns null and stores nothing" do
           request
@@ -353,6 +368,19 @@ RSpec.describe Api::V2::Plans::MetadataController do
 
       it_behaves_like "a plan metadata no-op"
     end
+
+    context "when the stored metadata is empty" do
+      let(:stored_metadata) { {} }
+
+      it_behaves_like "a plan metadata write", nil
+
+      it "removes the row" do
+        request
+
+        expect(json).to eq(metadata: nil)
+        expect(Metadata::ItemMetadata.where(owner: catalog_plan)).to be_empty
+      end
+    end
   end
 
   describe "DELETE /api/v2/plans/:code/metadata/:key" do
@@ -412,7 +440,7 @@ RSpec.describe Api::V2::Plans::MetadataController do
         expect { request }.not_to have_enqueued_job(SendWebhookJob)
 
         expect(response).to be_v2_not_found_error("metadata")
-        expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+        expect(Utils::ActivityLog).not_to have_produced("plan.updated").after_commit.with(catalog_plan)
       end
     end
   end

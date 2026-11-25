@@ -78,6 +78,15 @@ RSpec.describe "API v2 routing parity" do
         .to include(controller: "api/v2/plans/metadata", action: "destroy_key", plan_code: "foo", key:)
     end
 
+    {
+      [:patch, "charges"] => "api/v1/plans/charges",
+      [:patch, "fixed_charges"] => "api/v1/plans/fixed_charges",
+      [:delete, "entitlements"] => "api/v1/plans/entitlements"
+    }.each do |(method, resource), controller|
+      expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/#{resource}/metadata", method:))
+        .to include(controller:, plan_code: "foo", code: "metadata")
+    end
+
     expect(Rails.application.routes.recognize_path("/api/v1/plans/foo/entitlements/metadata", method: :delete))
       .to include(controller: "api/v1/plans/entitlements", action: "destroy", plan_code: "foo", code: "metadata")
   end

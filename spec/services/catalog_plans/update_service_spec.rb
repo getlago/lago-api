@@ -349,7 +349,19 @@ RSpec.describe CatalogPlans::UpdateService do
 
           expect(result).to be_success
           expect(SendWebhookJob).not_to have_been_enqueued
-          expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          expect(Utils::ActivityLog).not_to have_produced("plan.updated").after_commit.with(catalog_plan)
+        end
+      end
+
+      context "when other attributes are sent with the stored metadata" do
+        let(:params) { {name: "New", metadata: {crm_id: "123"}} }
+
+        it "applies them, moves updated_at and enqueues plan.updated" do
+          expect { result }.to change { catalog_plan.reload.updated_at }
+
+          expect(catalog_plan.name).to eq("New")
+          expect(SendWebhookJob).to have_been_enqueued.once.with("plan.updated", catalog_plan)
+          expect(Utils::ActivityLog).to have_received(:produce).with(catalog_plan, "plan.updated", after_commit: true).once
         end
       end
 
@@ -361,7 +373,7 @@ RSpec.describe CatalogPlans::UpdateService do
 
           expect(catalog_plan.metadata.value).to eq("crm_id" => "123", "tier" => "gold")
           expect(SendWebhookJob).to have_been_enqueued.once.with("plan.updated", catalog_plan)
-          expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(catalog_plan)
+          expect(Utils::ActivityLog).to have_received(:produce).with(catalog_plan, "plan.updated", after_commit: true).once
         end
       end
     end

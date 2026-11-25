@@ -92,7 +92,7 @@ Rails.application.routes.draw do
           end
         end
         draw(:plan_nested_api)
-        # Must stay before any /entitlements or /charges catch-all drawn in this block.
+        # Drawn after the nested charge and entitlement routes (their codes are greedy), and before any catch-all added to this block.
         scope module: :plans do
           resource :metadata, only: %i[create update destroy] do
             delete ":key", action: :destroy_key, on: :member, constraints: {key: /[^\/]+/}

@@ -36,7 +36,7 @@ module CatalogPlans
         lock_plan!(catalog_plan)
         check_editable!
 
-        if skip_unchanged_metadata && unchanged_metadata?
+        if skip_unchanged_metadata && params.except(:metadata).empty? && unchanged_metadata?
           changed = false
         else
           log_activity { apply_changes }
