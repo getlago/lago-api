@@ -486,7 +486,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
     context "when the QuickBooks integration is flagged" do
       it "fails with realm_id_changed before any request and logs one safe line" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("realm_id_changed")
         expect(action_request).not_to have_been_requested
         expect(a_request(:any, /api.nango.dev/)).not_to have_been_made
@@ -507,7 +507,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
 
       it "raises a method not allowed failure through call!" do
         expect { service_class.call!(integration:) }
-          .to raise_error(BaseService::MethodNotAllowedFailure) { |error| expect(error.code).to eq("realm_id_changed") }
+          .to raise_error(BaseService::ForbiddenFailure) { |error| expect(error.code).to eq("realm_id_changed") }
       end
     end
 

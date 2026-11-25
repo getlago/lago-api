@@ -31,7 +31,7 @@ module Integrations
         else
           store_mismatch(true)
 
-          result.not_allowed_failure!(code: "realm_id_changed")
+          result.forbidden_failure!(code: "realm_id_changed")
         end
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
@@ -46,9 +46,12 @@ module Integrations
         found_realm_id == integration.realm_id.to_s
       end
 
+      # Reloaded under a row lock after the Nango lookup, so a settings change saved meanwhile is kept.
       # Writes only on a change, so a routine check adds no version and keeps updated_at.
       def store_mismatch(value)
-        if integration.realm_id_mismatch? != value
+        integration.with_lock do
+          next if integration.realm_id_mismatch? == value
+
           integration.realm_id_mismatch = value
           integration.save!
         end

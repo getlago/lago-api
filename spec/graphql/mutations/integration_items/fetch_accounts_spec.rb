@@ -123,8 +123,8 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts do
 
         expect(result["data"]).to be_nil
         expect(result["errors"].sole).to include(
-          "message" => "Method Not Allowed",
-          "extensions" => {"status" => 405, "code" => "realm_id_changed"}
+          "message" => "forbidden",
+          "extensions" => {"status" => 403, "code" => "realm_id_changed"}
         )
         expect(sync_request).not_to have_been_requested
         expect(a_request(:get, %r{api.nango.dev/records})).not_to have_been_made

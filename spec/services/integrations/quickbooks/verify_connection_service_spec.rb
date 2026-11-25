@@ -112,7 +112,7 @@ RSpec.describe Integrations::Quickbooks::VerifyConnectionService, :premium do
 
       it "refuses with realm_id_changed, flags the integration and keeps the stored realm id" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("realm_id_changed")
 
         integration.reload
@@ -124,6 +124,23 @@ RSpec.describe Integrations::Quickbooks::VerifyConnectionService, :premium do
         expect(log_output.string).not_to include("9999999999")
       end
 
+      context "when a sync flag is saved during the Nango lookup" do
+        before do
+          allow(Integrations::Aggregator::ConnectionService).to receive(:call).and_wrap_original do |original, **args|
+            Integrations::QuickbooksIntegration.find(integration.id).update!(sync_invoices: true)
+            original.call(**args)
+          end
+        end
+
+        it "flags the integration and keeps that sync flag" do
+          expect(result.error.code).to eq("realm_id_changed")
+
+          integration.reload
+          expect(integration.realm_id_mismatch?).to eq(true)
+          expect(integration.sync_invoices).to eq(true)
+        end
+      end
+
       context "when the integration is already flagged" do
         let(:mismatch) { true }
 
@@ -132,7 +149,7 @@ RSpec.describe Integrations::Quickbooks::VerifyConnectionService, :premium do
           updated_at = integration.reload.updated_at
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
           expect(result.error.code).to eq("realm_id_changed")
 
           integration.reload
@@ -147,7 +164,7 @@ RSpec.describe Integrations::Quickbooks::VerifyConnectionService, :premium do
 
       it "refuses with realm_id_changed and flags the integration without storing the found realm" do
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("realm_id_changed")
 
         integration.reload

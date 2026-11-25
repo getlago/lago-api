@@ -115,6 +115,24 @@ RSpec.describe Integrations::Quickbooks::UpdateService do
           end
         end
 
+        context "when a connection check flagged the integration after it was loaded" do
+          let(:update_args) { {sync_invoices: true} }
+
+          before do
+            stale = Integrations::QuickbooksIntegration.find(integration.id)
+            stale.realm_id_mismatch = true
+            stale.save!
+          end
+
+          it "keeps the flag and stores the update" do
+            expect(service_call).to be_success
+
+            integration.reload
+            expect(integration.realm_id_mismatch?).to be(true)
+            expect(integration.sync_invoices).to be(true)
+          end
+        end
+
         context "when only the name is given" do
           let(:integration) do
             create(

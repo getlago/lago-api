@@ -60,7 +60,7 @@ module Integrations
         }
 
         Rails.logger.warn("QuickBooks call blocked: realm id changed #{details.to_json}")
-        result.not_allowed_failure!(code: "realm_id_changed")
+        result.forbidden_failure!(code: "realm_id_changed")
       end
 
       # NOTE: Extend it with other providers if needed

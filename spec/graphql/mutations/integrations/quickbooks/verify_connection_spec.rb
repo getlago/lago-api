@@ -78,8 +78,8 @@ RSpec.describe Mutations::Integrations::Quickbooks::VerifyConnection, :premium d
     it "returns realm_id_changed, keeps the realm id and stores the flag" do
       expect(result["data"]["verifyQuickbooksIntegrationConnection"]).to be_nil
       expect(result["errors"].sole).to include(
-        "message" => "Method Not Allowed",
-        "extensions" => {"status" => 405, "code" => "realm_id_changed"}
+        "message" => "forbidden",
+        "extensions" => {"status" => 403, "code" => "realm_id_changed"}
       )
 
       integration.reload

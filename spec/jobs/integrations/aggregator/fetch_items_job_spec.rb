@@ -26,7 +26,7 @@ RSpec.describe Integrations::Aggregator::FetchItemsJob do
 
     it "fails on the first execution without any request to Nango or retry" do
       expect { described_class.perform_now(integration:) }
-        .to raise_error(BaseService::MethodNotAllowedFailure) { |error| expect(error.code).to eq("realm_id_changed") }
+        .to raise_error(BaseService::ForbiddenFailure) { |error| expect(error.code).to eq("realm_id_changed") }
 
       expect(a_request(:any, /api.nango.dev/)).not_to have_been_made
       expect(described_class).not_to have_been_enqueued
