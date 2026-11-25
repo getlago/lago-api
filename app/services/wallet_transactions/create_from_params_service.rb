@@ -21,7 +21,7 @@ module WalletTransactions
       # Normalize metadata
       params[:metadata] = [] if params[:metadata] == {}
 
-      return result.forbidden_failure! if params[:connections] && !organization.feature_flag_enabled?(:multi_connection)
+      return result.forbidden_failure! if connection_requested? && !organization.feature_flag_enabled?(:multi_connection)
       return result unless valid? # NOTE: validator sets result.current_wallet
 
       wallet_transactions = []
@@ -96,6 +96,10 @@ module WalletTransactions
     private
 
     attr_reader :organization, :params, :source, :metadata, :priority
+
+    def connections_requested?
+      params[:connections].present?
+    end
 
     def name
       params[:name].presence
