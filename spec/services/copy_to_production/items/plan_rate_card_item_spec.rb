@@ -167,25 +167,6 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
     end
   end
 
-  describe "#active_subscriptions_count" do
-    it "answers nil without a live plan" do
-      expect(item.active_subscriptions_count(plan_rate_card)).to be_nil
-    end
-
-    context "when the plan is live" do
-      before do
-        customer = create(:customer, organization: production)
-        create(:contract, customer:, catalog_plan: live_plan)
-        create(:contract, :pending, customer:, catalog_plan: live_plan)
-        create(:contract, :terminated, customer:, catalog_plan: live_plan)
-      end
-
-      it "counts its active contracts" do
-        expect(item.active_subscriptions_count(plan_rate_card)).to eq(1)
-      end
-    end
-  end
-
   describe "#copy!" do
     let(:live_rate_card) { create(:rate_card, organization: production, product: live_product, code: "seat_eur") }
     let(:copy) do

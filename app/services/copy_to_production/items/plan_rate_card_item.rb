@@ -61,10 +61,6 @@ module CopyToProduction
         ).plan_rate_card
       end
 
-      def active_subscriptions_count(source)
-        live_plan(source)&.contracts&.active&.count
-      end
-
       def unique_indexes
         {"index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id" => :code}
       end
