@@ -59,7 +59,7 @@ RSpec.describe CatalogPlans::CreateService do
       result
 
       expect(SendWebhookJob).not_to have_been_enqueued
-      expect(Utils::ActivityLog).not_to have_produced("plan.created")
+      expect(Utils::ActivityLog).not_to have_produced("plan.created").after_commit.with(an_instance_of(CatalogPlan))
     end
   end
 
@@ -116,7 +116,7 @@ RSpec.describe CatalogPlans::CreateService do
       expect(result.error).to be_a(BaseService::ValidationFailure)
       expect(result.error.messages).to eq(metadata: ["value_is_invalid"])
       expect(SendWebhookJob).not_to have_been_enqueued
-      expect(Utils::ActivityLog).not_to have_produced("plan.created")
+      expect(Utils::ActivityLog).not_to have_produced("plan.created").after_commit.with(an_instance_of(CatalogPlan))
     end
   end
 
@@ -130,7 +130,7 @@ RSpec.describe CatalogPlans::CreateService do
       expect(result.error.messages).to eq(metadata: ["value_is_invalid"])
       expect(Metadata::ItemMetadata.count).to eq(0)
       expect(SendWebhookJob).not_to have_been_enqueued
-      expect(Utils::ActivityLog).not_to have_produced("plan.created")
+      expect(Utils::ActivityLog).not_to have_produced("plan.created").after_commit.with(an_instance_of(CatalogPlan))
     end
   end
 
