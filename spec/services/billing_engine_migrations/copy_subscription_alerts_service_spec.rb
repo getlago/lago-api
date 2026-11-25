@@ -177,6 +177,25 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
       end
     end
 
+    context "when the shadow product is priced only on a terminated contract of the external id" do
+      let(:other_metric) { create(:billable_metric, organization:) }
+      let(:alert_metric) { other_metric }
+
+      before do
+        other_shadow_metric = create(:billable_metric, organization: shadow_organization, code: other_metric.code)
+        terminated_contract = create(:contract, :terminated, customer: contract.customer, external_id: contract.external_id)
+        price_on(terminated_contract, create(:product, organization: shadow_organization, billable_metric: other_shadow_metric))
+      end
+
+      it "skips it with the reason" do
+        expect { result }.not_to change { shadow_organization.contract_alerts.count }
+
+        expect(result).to be_success
+        expect(contract.contract_alerts).to be_empty
+        expect(Rails.logger).to have_received(:info).with(a_string_including("skipped alert tokens: shadow_product_not_found"))
+      end
+    end
+
     context "when the shadow product with the metric code is not metered" do
       let(:other_metric) { create(:billable_metric, organization:) }
       let(:alert_metric) { other_metric }
