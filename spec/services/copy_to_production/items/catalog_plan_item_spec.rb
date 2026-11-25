@@ -75,6 +75,39 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
       expect(item.refusal(plan)).to be_nil
     end
 
+    context "with an entitlement" do
+      let(:feature) { create(:feature, organization: sandbox, code: "seats") }
+      let(:privilege) { create(:privilege, organization: sandbox, feature:, code: "max", value_type: "integer") }
+      let(:live_feature) { create(:feature, organization: production, code: "seats") }
+      let(:live_value_type) { "integer" }
+
+      before do
+        entitlement = create(:entitlement, :catalog_plan, organization: sandbox, catalog_plan: plan, feature:)
+        create(:entitlement_value, organization: sandbox, entitlement:, privilege:, value: "10")
+        create(:privilege, organization: production, feature: live_feature, code: "max", value_type: live_value_type)
+      end
+
+      it "accepts a live privilege of the same value type" do
+        expect(item.refusal(plan)).to be_nil
+      end
+
+      context "when the live privilege has another value type" do
+        let(:live_value_type) { "string" }
+
+        it "answers copy_to_production_privilege_mismatch" do
+          expect(item.refusal(plan)).to eq("copy_to_production_privilege_mismatch")
+        end
+      end
+
+      context "when the live feature lacks the privilege" do
+        before { live_feature.privileges.find_by(code: "max").discard! }
+
+        it "leaves it to the entitlement service" do
+          expect(item.refusal(plan)).to be_nil
+        end
+      end
+    end
+
     context "when a wallet only targets deleted products" do
       let(:wallet) { create(:plan_wallet, organization: sandbox, catalog_plan: plan) }
       let(:deleted_product) { create(:product, :fixed, :standalone, organization: sandbox, code: "gpu") }

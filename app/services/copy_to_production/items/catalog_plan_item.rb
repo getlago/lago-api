@@ -29,9 +29,14 @@ module CopyToProduction
           .map { ["plan_rate_card", it] }
       end
 
-      # Without selectors a live wallet applies to every fee, while this one reaches nothing.
+      # Without selectors a live wallet applies to every fee, while this one reaches nothing. The entitlement service
+      # casts a value by the live privilege's type, so a live privilege of another type would grant another value.
       def refusal(source)
-        "copy_to_production_target_deleted" if wallets(source).any? { it.selectors.any? && selectors(it).empty? }
+        if wallets(source).any? { it.selectors.any? && selectors(it).empty? }
+          "copy_to_production_target_deleted"
+        elsif entitlements(source).any? { privilege_type_changed?(it) }
+          "copy_to_production_privilege_mismatch"
+        end
       end
 
       def copy!(source, resolved)
@@ -74,6 +79,16 @@ module CopyToProduction
         wallet.credit_allocations.reject { target_of(it)&.discarded? }.sort_by(&:code)
       end
 
+      def privilege_type_changed?(entitlement)
+        live_feature = production.features.find_by(code: entitlement.feature.code)
+        live_privileges = live_feature ? live_feature.privileges.index_by(&:code) : {}
+
+        entitlement.values.filter_map(&:privilege).any? do |privilege|
+          live_privilege = live_privileges[privilege.code]
+          live_privilege && live_privilege.value_type != privilege.value_type
+        end
+      end
+
       def target_of(record)
         record.try(:product_category) || record.product || record.product_filter
       end
@@ -96,15 +111,15 @@ module CopyToProduction
           values = entitlement.values.select(&:privilege).to_h { [it.privilege.code, it.value] }
           [entitlement.feature.code, values]
         end
-        return if params.empty?
-
-        Entitlement::PlanEntitlementsUpdateService.call!(
-          organization: production,
-          plan:,
-          entitlements_params: params,
-          partial: false,
-          send_webhook: false
-        )
+        if params.any?
+          Entitlement::PlanEntitlementsUpdateService.call!(
+            organization: production,
+            plan:,
+            entitlements_params: params,
+            partial: false,
+            send_webhook: false
+          )
+        end
       end
 
       def copy_wallet!(wallet, plan, resolved)
