@@ -7,7 +7,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::BaselineService do
 
   # A let, not a let_it_be: a record created in a before_all is not committed, and the race below needs a second connection
   let(:organization) { create(:organization) }
-  let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 1_500, ongoing_balance_cents: 1_200) }
+  let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 1_500, ongoing_balance_cents: 1_200, last_ongoing_balance_sync_at: 1.hour.ago) }
   let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "balance", code: "low_balance") }
 
   before do
@@ -37,10 +37,22 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::BaselineService do
       expect(alert.reload.previous_value).to eq(1_200)
       expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["warning"])
     end
+
+    context "when the wallet's ongoing balance was never computed" do
+      # Its column holds the default 0, which would put every line at or above 0 in alarm
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 1_500) }
+
+      it "takes the balance as the baseline, since no usage was deducted yet" do
+        expect(result.alerts).to eq([alert])
+        expect(alert.reload.previous_value).to eq(1_500)
+        # At 1500 only 2000 is in alarm among the opted-in lines; at the column's 0, so would the line at 0
+        expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to eq(["warning"])
+      end
+    end
   end
 
   context "when the wallet is empty" do
-    let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 0, ongoing_balance_cents: 0) }
+    let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 0, ongoing_balance_cents: 0, last_ongoing_balance_sync_at: 1.hour.ago) }
     let(:ongoing_alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing_balance") }
 
     before do
@@ -61,7 +73,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::BaselineService do
     end
 
     context "when usage already took the ongoing balance below 0" do
-      let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 0, ongoing_balance_cents: -300) }
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 0, ongoing_balance_cents: -300, last_ongoing_balance_sync_at: 1.hour.ago) }
 
       it "starts the ongoing balance alert at that value and seeds nothing" do
         expect(result.alerts).to eq([ongoing_alert])
@@ -122,11 +134,5 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::BaselineService do
 
       expect(alert.reload.previous_value).to eq(3_000)
     end
-  end
-
-  def lock_waits
-    ApplicationRecord.connection.select_value(
-      "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"
-    )
   end
 end
