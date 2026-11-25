@@ -36,12 +36,6 @@ module Contracts
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
-      # Only publishing and cancelling change a status: refused rather than
-      # ignored, so a caller trying to move a contract back to draft finds out.
-      if params.key?(:status)
-        return result.single_validation_failure!(field: :status, error_code: "value_is_invalid")
-      end
-
       # Match scheduling's customer-first lock order before the contract lock.
       ActiveRecord::Base.transaction do
         Customers::LockService.call!(customer:, scope: :billing_schedule) do
@@ -68,6 +62,12 @@ module Contracts
     delegate :organization, :customer, to: :contract
 
     def update_contract
+      # Only publishing and cancelling change a status, so another one is refused rather than
+      # ignored. The current one is accepted: a client resending the contract it read carries it.
+      if params.key?(:status) && params[:status] != contract.status
+        return result.single_validation_failure!(field: :status, error_code: "value_is_invalid")
+      end
+
       unless Contract::LIVE_STATUSES.include?(contract.status)
         return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
       end
@@ -182,6 +182,9 @@ module Contracts
       when :billing_anchor_date
         # A blank stored anchor falls back to the start date, which a form shows.
         [contract.billing_anchor_date, contract.effective_billing_anchor_date].exclude?(params[:billing_anchor_date]&.to_date)
+      when :status
+        # Reached only with the current status: update_contract refuses another one.
+        false
       else
         true
       end

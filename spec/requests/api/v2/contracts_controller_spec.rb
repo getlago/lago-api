@@ -820,6 +820,16 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with the status it already has" do
+      it "updates the contract, as a client resending what it read does" do
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}")
+        put_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {contract: json[:contract].merge(name: "Renamed")})
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(name: "Renamed", status: "pending")
+      end
+    end
+
     context "with a non-scalar status" do
       let(:update_params) { super().merge(status: ["draft"]) }
 
