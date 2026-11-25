@@ -131,7 +131,8 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
       end
 
       let(:contract) { create(:contract, :draft, organization:, customer:, started_at: 1.month.ago) }
-      let(:other_contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+      let(:other_contract) { create(:contract, organization:, customer:) }
+      let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract: other_contract, rate_card:) }
 
       before { create(:rate_phase, :contract_level, organization:, contract_rate_card: other_contract_rate_card, code: "default", position: 1) }
 

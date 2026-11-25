@@ -779,13 +779,16 @@ RSpec.describe Api::V2::ContractsController do
 
     context "when the contract is a draft" do
       let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.from_now) }
-      let(:update_params) { {name: "Renamed", started_at: 1.month.ago.iso8601} }
+      let(:update_params) { {name: "Renamed", started_at: "2026-10-01T00:00:00Z"} }
+
+      before { travel_to(Time.zone.parse("2026-11-01")) }
 
       it "updates it and keeps it a draft, even with a start that has passed" do
         expect { subject }.not_to change(BillingOperation, :count)
 
         expect(response).to have_http_status(:success)
         expect(json[:contract]).to include(name: "Renamed", status: "draft")
+        expect(contract.reload.started_at).to eq(Time.zone.parse("2026-10-01"))
       end
 
       context "when changing the plan" do
