@@ -22,7 +22,7 @@ module V2
         purchase_amount_cents: model.purchase_amount_cents,
         credit_amount_cents: model.credit_amount_cents,
         remaining_credit_amount_cents: model.remaining_credit_amount_cents,
-        priority: model.priority
+        priority: model.inbound? ? model.priority : nil
       }
     end
   end

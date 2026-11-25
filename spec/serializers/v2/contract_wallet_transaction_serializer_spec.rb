@@ -109,10 +109,10 @@ describe V2::ContractWalletTransactionSerializer do
     let(:invoice) { create(:invoice, organization:, customer:) }
     let(:wallet_transaction) do
       create(:catalog_wallet_transaction, :invoice_application, organization:, catalog_wallet: contract_wallet, invoice:,
-        credit_amount_cents: 2500, priority: 10, settled_at: Time.zone.parse("2026-09-30 08:30:00"))
+        credit_amount_cents: 2500, settled_at: Time.zone.parse("2026-09-30 08:30:00"))
     end
 
-    it "renders null purchase and remaining amounts, with the invoice it paid" do
+    it "renders null purchase and remaining amounts and priority, with the invoice it paid" do
       expect(payload).to eq(
         top_up_payload.merge(
           lago_invoice_id: invoice.id,
@@ -120,7 +120,8 @@ describe V2::ContractWalletTransactionSerializer do
           reason: "invoice_application",
           purchase_amount_cents: nil,
           credit_amount_cents: 2500,
-          remaining_credit_amount_cents: nil
+          remaining_credit_amount_cents: nil,
+          priority: nil
         )
       )
     end
