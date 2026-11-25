@@ -60,6 +60,8 @@ module Api
 
       def input_params
         plan = params.require(:plan)
+        raise ActionController::ParameterMissing, :plan unless plan.is_a?(ActionController::Parameters)
+
         permitted = plan.permit(:name, :code, :description, :invoice_display_name, :currency, tax_codes: [])
         return permitted unless plan.key?(:metadata)
 

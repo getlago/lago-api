@@ -61,6 +61,30 @@ RSpec.describe Api::V2::PlansController do
       end
     end
 
+    context "with metadata at its limits" do
+      # 50 keys: one of 100 characters holding 255 characters, and 49 short ones.
+      let(:metadata) { {"k" * 100 => "v" * 255, **Array.new(49) { ["key_#{it}", "value"] }.to_h} }
+      let(:create_params) { {name: "Growth", code: "growth", currency: "USD", metadata:} }
+
+      it "stores it as sent" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(CatalogPlan.find(json[:plan][:lago_id]).metadata.value).to eq(metadata)
+      end
+    end
+
+    context "when the plan wrapper is not an object" do
+      subject { post_with_token(organization, "/api/v2/plans", {plan: "abc"}) }
+
+      it "returns the missing parameter error and creates nothing" do
+        expect { subject }.not_to change(CatalogPlan, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "plan", meta: {}}])
+      end
+    end
+
     context "with empty metadata" do
       let(:create_params) { {name: "Growth", code: "growth", currency: "USD", metadata: {}} }
 
@@ -302,6 +326,19 @@ RSpec.describe Api::V2::PlansController do
           subject
 
           expect(json[:plan]).to eq(flat_payload.merge(metadata: nil))
+        end
+      end
+
+      context "when the plan was deleted" do
+        before do
+          create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123"})
+          CatalogPlans::DestroyService.call!(catalog_plan:)
+        end
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_v2_not_found_error("plan")
         end
       end
 
