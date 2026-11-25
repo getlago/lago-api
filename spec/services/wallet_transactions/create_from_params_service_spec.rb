@@ -588,7 +588,7 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
           end
         end
 
-        context "when a category is invalid" do
+        context "when a connections param is invalid" do
           let(:params) do
             {
               wallet_id: wallet.id,
