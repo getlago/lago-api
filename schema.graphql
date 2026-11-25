@@ -3807,6 +3807,7 @@ input CreateContractInput {
   planCode: String
   purchaseOrderNumber: String
   startedAt: ISO8601DateTime
+  status: CreateContractStatusEnum
 }
 
 """
@@ -3824,6 +3825,10 @@ input CreateContractRatePhaseInput {
   name: String
   position: Int
   rateOverride: RateOverrideInput
+}
+
+enum CreateContractStatusEnum {
+  draft
 }
 
 """
@@ -10774,6 +10779,16 @@ type Mutation {
   ): Fee
 
   """
+  Publishes a draft contract so billing can start
+  """
+  publishContract(
+    """
+    Parameters for PublishContract
+    """
+    input: PublishContractInput!
+  ): Contract
+
+  """
   Refresh a draft invoice
   """
   refreshInvoice(
@@ -13174,6 +13189,17 @@ enum ProviderTypeEnum {
   gocardless
   moneyhash
   stripe
+}
+
+"""
+Publish contract input arguments
+"""
+input PublishContractInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
 }
 
 type Query {
