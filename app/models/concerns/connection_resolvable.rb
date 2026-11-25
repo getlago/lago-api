@@ -5,7 +5,8 @@
 #
 #   * an override row (billing_object_connections) with behavior "specific" pins its connection
 #   * an override row with behavior "skip" resolves to nil (no connection for that category)
-#   * no override row means "inherit": fall back to the customer's default connection
+#   * no override row means "inherit": fall back to fallback_record connection if defined,
+#     otherwise use the customer's default connection.
 #
 # For a single-connection customer with no overrides this returns that connection, so behaviour
 # is unchanged.
@@ -63,6 +64,10 @@ module ConnectionResolvable
     fallback_connection(category, cache:)
   end
 
+  def fallback_record
+    nil
+  end
+
   private
 
   def billing_object_connection(category, cache:)
@@ -82,10 +87,6 @@ module ConnectionResolvable
     else
       override.integration_customer
     end
-  end
-
-  def fallback_record
-    nil
   end
 
   def fallback_connection(category, cache:)

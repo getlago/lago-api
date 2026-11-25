@@ -68,6 +68,39 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
           end
         end
 
+        context "when the object pins a connection with a deleted payment_provider_customer" do
+          let(:override_connection) { create(:moneyhash_customer, customer: resolution_customer, organization:) }
+          let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+
+          before do
+            create(:billing_object_connection, owner: resolvable, organization:, category: :payment,
+              behavior: :specific, payment_provider_customer: override_connection)
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment,
+              behavior: :specific, payment_provider_customer: fallback_connection)
+
+            override_connection.update(deleted_at: Time.zone.now)
+          end
+
+          it "falls back to the fallback_record connection" do
+            expect(resolvable.effective_payment_connection).to eq(fallback_connection)
+          end
+        end
+
+        context "when fallback_connection pins a connection with a deleted payment_provider_customer" do
+          let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+
+          before do
+            create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment,
+              behavior: :specific, payment_provider_customer: fallback_connection)
+
+            fallback_connection.update(deleted_at: Time.zone.now)
+          end
+
+          it "falls back to the customer default connection" do
+            expect(resolvable.effective_payment_connection).to eq(default_connection)
+          end
+        end
+
         context "when fallback_connection is defined as skip" do
           before do
             create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment, behavior: :skip)
@@ -286,6 +319,10 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
   end
 
   describe "#connection_routing" do
+    let!(:default_connection) do
+      create(:stripe_customer, customer: resolution_customer, organization:, is_default: true, code: "stripe_default")
+    end
+
     let(:routing) { resolvable.connection_routing.index_by(&:category) }
 
     it "reports every category" do
@@ -293,10 +330,6 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
     end
 
     context "when the category is inherited from the customer" do
-      let!(:default_connection) do
-        create(:stripe_customer, customer: resolution_customer, organization:, is_default: true, code: "stripe_default")
-      end
-
       it "reports inherit with the customer default's code" do
         expect(routing["payment"]).to have_attributes(behavior: "inherit", code: default_connection.code)
       end
@@ -365,7 +398,40 @@ RSpec.shared_examples "a connection-resolvable billing object" do |fallback: fal
         end
 
         it "reports specific with the pinned code" do
-          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: "gocardless_eu")
+          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
+        end
+      end
+
+      context "when the object pins a connection with a deleted payment_provider_customer" do
+        let(:override_connection) { create(:moneyhash_customer, customer: resolution_customer, organization:) }
+        let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+
+        before do
+          create(:billing_object_connection, owner: resolvable, organization:, category: :payment,
+            behavior: :specific, payment_provider_customer: override_connection)
+          create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment,
+            behavior: :specific, payment_provider_customer: fallback_connection)
+
+          override_connection.update(deleted_at: Time.zone.now)
+        end
+
+        it "reports specific with the fallback_record connection pinned code" do
+          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
+        end
+      end
+
+      context "when fallback_connection pins a connection with a deleted payment_provider_customer" do
+        let(:fallback_connection) { create(:gocardless_customer, customer: resolution_customer, organization:) }
+
+        before do
+          create(:billing_object_connection, owner: resolvable.fallback_record, organization:, category: :payment,
+            behavior: :specific, payment_provider_customer: fallback_connection)
+
+          fallback_connection.update(deleted_at: Time.zone.now)
+        end
+
+        it "reports specific with the customer default connection pinned code" do
+          expect(routing["payment"]).to have_attributes(behavior: "inherit", code: nil)
         end
       end
 
