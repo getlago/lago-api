@@ -154,25 +154,54 @@ module UsageMonitoring
         thresholds.all? { |t| valid_numeric_value?(t[:value]) }
       end
 
+      # v1 reports a notify_on error on the list as a whole
       def validate_notify_on!(thresholds)
+        _index, field, error_code = notify_on_violation(thresholds)
+
+        if error_code == "duplicate_threshold_codes"
+          result.single_validation_failure!(field: :thresholds, error_code:)
+        elsif error_code
+          result.single_validation_failure!(field: "thresholds:#{field}", error_code:)
+        end
+      end
+
+      # The first threshold that breaks a notify_on rule, as [index, field, error_code], or nil
+      def notify_on_violation(thresholds)
+        if (index = thresholds.index { !valid_notify_on?(it) })
+          return [index, :notify_on, "value_is_invalid"]
+        end
+
+        if (index = thresholds.index { notify_on_for(it).exclude?(AlertThreshold::NOTIFY_ON_TRIGGERED) })
+          return [index, :notify_on, "triggered_is_mandatory"]
+        end
+
+        opting_in = thresholds.each_index.select { notify_on_for(thresholds[it]).include?(AlertThreshold::NOTIFY_ON_RESOLVED) }
+
+        if (index = opting_in.find { recurring_param?(thresholds[it]) })
+          return [index, :notify_on, "recurring_not_supported"]
+        end
+
+        if (index = opting_in.find { thresholds[it][:code].blank? })
+          return [index, :code, "value_is_mandatory"]
+        end
+
+        opted_in_codes = opting_in.map { thresholds[it][:code] }
+        index = later_duplicate_index(thresholds.map { it[:code].presence }) { opted_in_codes.include?(it) }
+        [index, :code, "duplicate_threshold_codes"] if index
+      end
+
+      def valid_notify_on?(threshold)
         # A plain value such as "resolved" would otherwise read as a one-item list and hide a malformed request
-        if thresholds.any? { !it[:notify_on].nil? && !it[:notify_on].is_a?(Array) } ||
-            thresholds.any? { notify_on_for(it).any? { |value| AlertThreshold::NOTIFY_ON_VALUES.exclude?(value) } }
-          return result.single_validation_failure!(field: "thresholds:notify_on", error_code: "value_is_invalid")
-        end
+        return false unless threshold[:notify_on].nil? || threshold[:notify_on].is_a?(Array)
 
-        if thresholds.any? { notify_on_for(it).exclude?(AlertThreshold::NOTIFY_ON_TRIGGERED) }
-          return result.single_validation_failure!(field: "thresholds:notify_on", error_code: "triggered_is_mandatory")
-        end
+        notify_on_for(threshold).all? { AlertThreshold::NOTIFY_ON_VALUES.include?(it) }
+      end
 
-        opting_in = thresholds.select { notify_on_for(it).include?(AlertThreshold::NOTIFY_ON_RESOLVED) }
-
-        if opting_in.any? { recurring_param?(it) }
-          result.single_validation_failure!(field: "thresholds:notify_on", error_code: "recurring_not_supported")
-        elsif opting_in.any? { it[:code].blank? }
-          result.single_validation_failure!(field: "thresholds:code", error_code: "value_is_mandatory")
-        elsif opted_in_code_not_unique?(thresholds, opting_in)
-          result.single_validation_failure!(field: :thresholds, error_code: "duplicate_threshold_codes")
+      # The later of two equal items, so the first one stays valid in the client's form
+      def later_duplicate_index(items)
+        items.each_index.find do |index|
+          item = items[index]
+          !item.nil? && items.first(index).include?(item) && (!block_given? || yield(item))
         end
       end
 
@@ -189,11 +218,6 @@ module UsageMonitoring
         return [AlertThreshold::NOTIFY_ON_TRIGGERED] if values.nil?
 
         Array(values).map(&:to_s)
-      end
-
-      def opted_in_code_not_unique?(thresholds, opting_in)
-        codes = thresholds.filter_map { it[:code].presence }
-        opting_in.any? { codes.count(it[:code]) > 1 }
       end
 
       def valid_numeric_value?(value)

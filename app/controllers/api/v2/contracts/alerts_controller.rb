@@ -4,7 +4,7 @@ module Api
   module V2
     module Contracts
       class AlertsController < Api::V2::BaseController
-        THRESHOLD_PARAMS = [:code, :value, :recurring, :notify_on, {notify_on: []}].freeze
+        include Api::AlertThresholdParams
 
         cursor_paginated_index(UsageMonitoring::ContractAlert)
         date_range_filtered_index(:created_at)
@@ -38,7 +38,7 @@ module Api
           result = ::UsageMonitoring::ContractAlerts::CreateService.call(
             organization: current_organization,
             contract:,
-            params: input_params.to_h
+            params: input_params
           )
 
           if result.success?
@@ -49,7 +49,7 @@ module Api
         end
 
         def update
-          result = ::UsageMonitoring::ContractAlerts::UpdateService.call(alert:, params: input_params.to_h)
+          result = ::UsageMonitoring::ContractAlerts::UpdateService.call(alert:, params: input_params)
 
           if result.success?
             render_alert(result.alert)
@@ -88,15 +88,12 @@ module Api
         end
 
         def input_params
-          params.require(:alert).permit(
-            :alert_type,
-            :code,
-            :name,
-            :product_code,
-            :product_filter_code,
-            :with_product_filters,
-            thresholds: THRESHOLD_PARAMS
-          )
+          alert_params = params.require(:alert)
+          input = alert_params.permit(:alert_type, :code, :name, :product_code, :product_filter_code, :with_product_filters).to_h
+          # A null list leaves the thresholds as they are, as strong params did
+          thresholds = alert_params.to_unsafe_h[:thresholds]
+          input[:thresholds] = sent_thresholds(thresholds) unless thresholds.nil?
+          input
         end
 
         def resource_name

@@ -240,6 +240,19 @@ RSpec.describe Api::V2::Contracts::AlertsController do
       end
     end
 
+    [["x", {value: 10}, {value: "abc"}], [{value: 10}, "x"]].each do |thresholds|
+      context "with thresholds #{thresholds.inspect}" do
+        let(:create_params) { super().merge(thresholds:) }
+
+        it "returns a validation error on the list rather than dropping the item, and creates nothing" do
+          expect { subject }.not_to change(UsageMonitoring::ContractAlert, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        end
+      end
+    end
+
     context "when the code is taken on the contract" do
       before { alert }
 
@@ -343,6 +356,30 @@ RSpec.describe Api::V2::Contracts::AlertsController do
         expect(json).to eq(
           code: "validation_errors",
           details: [{code: "duplicate_threshold_values", field: "thresholds[1].value", meta: {}}]
+        )
+      end
+    end
+
+    context "with a threshold that is not an object" do
+      let(:update_params) { {thresholds: ["x", {value: 10}]} }
+
+      it "returns a validation error on the list" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+      end
+    end
+
+    context "with null thresholds" do
+      let(:update_params) { {name: "Opus spend", thresholds: nil} }
+
+      it "updates the name and keeps the thresholds" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json).to eq(
+          alert: alert_json(alert.reload, thresholds: [{code: "warn1000000", value: "1000000.0", recurring: false, notify_on: %w[triggered]}])
         )
       end
     end

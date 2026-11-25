@@ -3,8 +3,9 @@
 module Api
   # The alert fields of a plan wallet's templates and of a contract wallet's alerts
   module CatalogWalletAlertParams
+    include AlertThresholdParams
+
     ALERT_FIELDS = %i[alert_type code name].freeze
-    THRESHOLD_FIELDS = %i[code value recurring notify_on].freeze
 
     private
 
@@ -19,12 +20,6 @@ module Api
       input = sent.slice(*ALERT_FIELDS)
       input[:thresholds] = sent_thresholds(sent[:thresholds]) if sent.key?(:thresholds)
       input
-    end
-
-    def sent_thresholds(thresholds)
-      return thresholds unless thresholds.is_a?(Array)
-
-      thresholds.map { it.is_a?(Hash) ? it.slice(*THRESHOLD_FIELDS) : it }
     end
   end
 end
