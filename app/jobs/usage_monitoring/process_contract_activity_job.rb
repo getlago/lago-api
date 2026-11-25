@@ -12,9 +12,7 @@ module UsageMonitoring
 
     def perform(contract_activity_id, attempt = 1)
       contract_activity = ContractActivity.find_by(id: contract_activity_id)
-      return unless contract_activity
-
-      ProcessContractActivityService.call!(contract_activity:)
+      ProcessContractActivityService.call!(contract_activity:) if contract_activity
     rescue => e
       Sentry.capture_exception(e) if defined?(Sentry)
       if attempt > 3

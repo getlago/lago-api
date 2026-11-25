@@ -9,7 +9,8 @@ RSpec.describe UsageMonitoring::ProcessContractActivityService, :premium do
   let_it_be(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
   let_it_be(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
   let_it_be(:product) { create(:product, :metered, organization:, billable_metric:) }
-  let_it_be(:contract) { create(:contract, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
+  # The service loads the contract's alerts on it, which a shared instance would carry over to the next example
+  let_it_be(:contract, refind: true) { create(:contract, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
 
   let(:now) { Time.zone.parse("2027-02-10 12:00:00") }
   let(:contract_activity) { create(:contract_activity, organization:, contract:, enqueued: true, enqueued_at: now) }

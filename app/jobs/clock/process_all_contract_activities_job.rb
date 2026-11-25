@@ -5,9 +5,7 @@ module Clock
     unique :until_executed, on_conflict: :log
 
     def perform
-      return unless License.premium?
-
-      UsageMonitoring::ProcessAllContractActivitiesService.call!
+      UsageMonitoring::ProcessAllContractActivitiesService.call! if License.premium?
     end
   end
 end

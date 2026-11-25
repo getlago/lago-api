@@ -13,7 +13,7 @@ module UsageMonitoring
       # A terminated or canceled contract is no longer evaluated; its alerts stay readable
       return delete_activity unless contract.active?
 
-      alerts = ContractAlert.where(organization_id: contract.organization_id, contract_external_id: contract.external_id).load
+      alerts = contract.contract_alerts.load
       return delete_activity if alerts.empty?
 
       # Read once, before the usage: the usage holds at least the events ingested until then and prices the windows
