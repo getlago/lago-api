@@ -152,8 +152,9 @@ module Contracts
       end
     end
 
-    # The wallets came from the previous plan, as the rate cards did. Their scope, taxes and metadata stay on the
-    # discarded wallets; their alerts are deleted for good, thresholds included (ON DELETE CASCADE).
+    # Every wallet goes with the previous plan, one added to the contract directly included, as every rate card
+    # does. Their scope, taxes and metadata stay on the discarded wallets; their alerts are deleted for good,
+    # thresholds included (ON DELETE CASCADE).
     def discard_wallets
       UsageMonitoring::CatalogWalletAlert.where(catalog_wallet_id: contract.wallets.select(:id)).delete_all
       contract.wallets.find_each do |wallet|

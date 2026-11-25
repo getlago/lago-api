@@ -86,6 +86,23 @@ describe Contracts::MaterializeWalletsService do
 
       expect(plan_wallet.selectors.count).to eq(4)
     end
+
+    context "when the selectors were not stored in the order they were added" do
+      let(:first_product) { create(:product, organization:) }
+
+      before do
+        create(:catalog_wallet_selector, :plan_level, organization:, plan_wallet:, selector_type: "product", fee_type: nil,
+          product: first_product, created_at: 1.hour.ago)
+      end
+
+      it "copies them in the order they were added" do
+        copies = result.wallets.sole.selectors.sort_by { [it.created_at, it.id] }
+
+        expect(copies.map { [it.selector_type, it.product] }).to eq([
+          ["product", first_product], ["fee_type", nil], ["product_category", nil], ["product", product], ["product_filters", nil]
+        ])
+      end
+    end
   end
 
   context "when the template has taxes" do
@@ -97,6 +114,20 @@ describe Contracts::MaterializeWalletsService do
       expect { result }.to change(CatalogWalletAppliedTax, :count).by(1)
 
       expect(result.wallets.sole.applied_taxes.sole).to have_attributes(organization:, tax:, plan_wallet_id: nil)
+    end
+
+    context "when the taxes were not stored in the order they were added" do
+      let(:first_tax) { create(:tax, organization:) }
+
+      before do
+        create(:catalog_wallet_applied_tax, :plan_level, organization:, plan_wallet:, tax: first_tax, created_at: 1.hour.ago)
+      end
+
+      it "applies them in the order they were added" do
+        copies = result.wallets.sole.applied_taxes.sort_by { [it.created_at, it.id] }
+
+        expect(copies.map(&:tax)).to eq([first_tax, tax])
+      end
     end
 
     it "keeps the template's own taxes" do
