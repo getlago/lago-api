@@ -11,16 +11,10 @@ module Types
       field :item_type, Types::CopyToProduction::ItemTypeEnum, null: false
       field :name, String, null: true
 
+      delegate :code, :name, to: :named_record
+
       def id
         object.record.id
-      end
-
-      def code
-        named_record.code
-      end
-
-      def name
-        named_record.name
       end
 
       private
