@@ -4,7 +4,7 @@ class DailyUsage < ApplicationRecord
   DEFAULT_HISTORY_DAYS = 120
 
   belongs_to :organization
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
   # A subscription's daily usage, or a contract rate card's: a check constraint keeps exactly one.
   belongs_to :subscription, optional: true
   belongs_to :contract, optional: true

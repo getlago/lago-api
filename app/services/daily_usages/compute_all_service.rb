@@ -91,12 +91,13 @@ module DailyUsages
     #
     # `ComputeService` skips the billing day itself (its usage comes from the periodic invoice), so
     # the carry-over row (usage_date = period start) is created on the run of the *next* day. We
-    # therefore select subscriptions whose period rolled over yesterday (`timestamp - 1.day`).
+    # therefore select subscriptions whose period rolled over on the local yesterday. For customers
+    # in the window, `timestamp - 12.hours` falls in its middle, even after a 23-hour DST day.
     def recurring_rollover_subscriptions(organization)
       scope = base_scope(organization).where(plan_id: recurring_plan_ids(organization))
 
       # The query joins the customer and its billing entity, which the timezone conditions read.
-      Subscriptions::BillingDateQuery.call(subscriptions: scope, timestamp: timestamp - 1.day)
+      Subscriptions::BillingDateQuery.call(subscriptions: scope, timestamp: timestamp - 12.hours)
         .subscriptions
         .where(timezone_window_sql, timestamp:)
         .where(no_recent_event_sql, timestamp:)
@@ -177,14 +178,15 @@ module DailyUsages
       computed_yesterday(organization).where.not(contract_id: nil).distinct.pluck(:contract_id)
     end
 
-    # Daily usages of the customers entering a new day, for their local yesterday: the usage_date
-    # the compute services write. There it is the UTC date or the day before, hence the indexed range.
+    # Daily usages of each customer's local yesterday, the usage_date the compute services write.
+    # Only ids the windowed legs selected are subtracted, and for their customers that date is the
+    # UTC date or the day before, hence the indexed range. A window condition here would make
+    # Postgres, which cannot estimate it, read the whole history of every customer in the window.
     def computed_yesterday(organization)
       DailyUsage
         .where(organization_id: organization.id)
         .where(usage_date: yesterday..timestamp.to_date)
         .joins(customer: :billing_entity)
-        .where(timezone_window_sql, timestamp:)
         .where("daily_usages.usage_date = #{local_yesterday_sql}", timestamp:)
     end
 
