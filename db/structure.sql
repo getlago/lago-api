@@ -5979,7 +5979,7 @@ CREATE VIEW public.exports_product_filters AS
     pf.created_at,
     GREATEST(pf.updated_at, pfv_stats.updated_at) AS updated_at,
     pf.deleted_at,
-    COALESCE(pfv_stats.kept_values, '[]'::json) AS "values"
+    COALESCE(pfv_stats.kept_values, '[]'::json) AS filter_values
    FROM (public.product_filters pf
      LEFT JOIN LATERAL ( SELECT max(pfv.updated_at) AS updated_at,
             json_agg(json_build_object('key', bmf.key, 'value', pfv.value) ORDER BY pfv.created_at, pfv.id) FILTER (WHERE (pfv.deleted_at IS NULL)) AS kept_values
@@ -19219,6 +19219,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261126155955'),
 ('20261125113444'),
 ('20261125113441'),
 ('20261124113226'),

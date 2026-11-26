@@ -20,7 +20,7 @@ RSpec.describe "exports_product_filters view" do # rubocop:disable RSpec/Describ
 
   def row_for(product_filter)
     row = result.to_a.find { |r| r["lago_id"] == product_filter.id }.symbolize_keys
-    row.merge(values: JSON.parse(row[:values]))
+    row.merge(filter_values: JSON.parse(row[:filter_values]))
   end
 
   def create_value(billable_metric_filter, value, **attributes)
@@ -47,7 +47,7 @@ RSpec.describe "exports_product_filters view" do # rubocop:disable RSpec/Describ
         created_at
         updated_at
         deleted_at
-        values
+        filter_values
       ]
     )
   end
@@ -69,7 +69,7 @@ RSpec.describe "exports_product_filters view" do # rubocop:disable RSpec/Describ
       created_at: product_filter.created_at,
       updated_at: ProductFilterValue.unscoped.where(product_filter:).maximum(:updated_at),
       deleted_at: nil,
-      values: [
+      filter_values: [
         {"key" => "region", "value" => "eu"},
         {"key" => "cloud", "value" => nil}
       ]
@@ -79,7 +79,7 @@ RSpec.describe "exports_product_filters view" do # rubocop:disable RSpec/Describ
   it "takes the filter's updated_at when it has no values" do
     expect(row_for(empty_product_filter)).to include(
       updated_at: empty_product_filter.reload.updated_at,
-      values: []
+      filter_values: []
     )
   end
 
@@ -89,7 +89,7 @@ RSpec.describe "exports_product_filters view" do # rubocop:disable RSpec/Describ
 
     expect(row_for(product_filter)).to include(
       updated_at: value.reload.updated_at,
-      values: []
+      filter_values: []
     )
   end
 
