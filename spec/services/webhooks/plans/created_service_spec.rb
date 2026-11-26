@@ -38,6 +38,7 @@ RSpec.describe Webhooks::Plans::CreatedService do
         create(:plan_rate_card, organization:, catalog_plan:)
         create(:plan_rate_card, organization:, catalog_plan:, deleted_at: Time.current)
         create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:)
+        create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123", "tier" => nil})
       end
 
       it "sends the catalog plan payload with the count of its kept rate cards and its taxes" do
@@ -68,7 +69,8 @@ RSpec.describe Webhooks::Plans::CreatedService do
                 "updated_at" => "2026-03-22T12:00:00Z",
                 "deleted_at" => nil
               }
-            ]
+            ],
+            "metadata" => {"crm_id" => "123", "tier" => nil}
           }
         )
       end

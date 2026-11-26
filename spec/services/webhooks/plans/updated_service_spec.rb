@@ -68,7 +68,8 @@ RSpec.describe Webhooks::Plans::UpdatedService do
                 "updated_at" => "2026-03-22T12:00:00Z",
                 "deleted_at" => nil
               }
-            ]
+            ],
+            "metadata" => nil
           }
         )
       end

@@ -36,6 +36,100 @@ RSpec.describe Api::V2::PlansController do
       end
     end
 
+    context "with metadata and its expansion" do
+      subject { post_with_token(organization, "/api/v2/plans?expands[]=metadata", {plan: create_params}) }
+
+      let(:create_params) { {name: "Growth", code: "growth", currency: "USD", metadata: {crm_id: "123"}} }
+
+      it "creates nothing, as only show expands" do
+        expect { subject }.not_to change(CatalogPlan, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[metadata]}}])
+      end
+    end
+
+    context "with metadata" do
+      let(:create_params) { {name: "Growth", code: "growth", currency: "USD", metadata: {"crm_id" => "123", "tier" => nil, "" => "blank key"}} }
+
+      it "stores it with string keys and returns the plan without it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan].keys).to eq(plan_keys)
+        expect(CatalogPlan.find(json[:plan][:lago_id]).metadata.value).to eq("crm_id" => "123", "tier" => nil, "" => "blank key")
+      end
+    end
+
+    context "with metadata at its limits" do
+      # 50 keys: one of 100 characters holding 255 characters, and 49 short ones.
+      let(:metadata) { {"k" * 100 => "v" * 255, **Array.new(49) { ["key_#{it}", "value"] }.to_h} }
+      let(:create_params) { {name: "Growth", code: "growth", currency: "USD", metadata:} }
+
+      it "stores it as sent" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(CatalogPlan.find(json[:plan][:lago_id]).metadata.value).to eq(metadata)
+      end
+    end
+
+    context "when the plan wrapper is not an object" do
+      subject { post_with_token(organization, "/api/v2/plans", {plan: "abc"}) }
+
+      it "returns the missing parameter error and creates nothing" do
+        expect { subject }.not_to change(CatalogPlan, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "plan", meta: {}}])
+      end
+    end
+
+    context "with empty metadata" do
+      let(:create_params) { {name: "Growth", code: "growth", currency: "USD", metadata: {}} }
+
+      it "stores an empty object" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(CatalogPlan.find(json[:plan][:lago_id]).metadata.value).to eq({})
+      end
+    end
+
+    context "with null metadata" do
+      let(:create_params) { {name: "Growth", code: "growth", currency: "USD", metadata: nil} }
+
+      it "creates the plan without metadata" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(CatalogPlan.find(json[:plan][:lago_id]).metadata).to be_nil
+      end
+    end
+
+    {
+      "a string" => "abc",
+      "an empty string" => "",
+      "an array" => %w[crm_id 123],
+      "false" => false,
+      "51 keys" => Array.new(51) { ["key_#{it}", "value"] }.to_h,
+      "a 256-character value" => {crm_id: "a" * 256},
+      "a 101-character key" => {"k" * 101 => "value"},
+      "a number value" => {crm_id: 123},
+      "a nested object value" => {crm_id: {id: "123"}}
+    }.each do |description, metadata|
+      context "with #{description} as metadata" do
+        let(:create_params) { {name: "Growth", code: "growth", currency: "USD", metadata:} }
+
+        it "refuses the metadata and creates no plan" do
+          expect { subject }.not_to change(CatalogPlan, :count)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:details]).to eq([{code: "value_is_invalid", field: "metadata", meta: {}}])
+        end
+      end
+    end
+
     context "with taxes" do
       let(:tax1) { create(:tax, organization:) }
       let(:tax2) { create(:tax, organization:) }
@@ -201,6 +295,68 @@ RSpec.describe Api::V2::PlansController do
       end
     end
 
+    context "with expands[]=metadata" do
+      let(:params) { {expands: %w[metadata]} }
+
+      context "when the plan has metadata" do
+        before { create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123", "tier" => nil}) }
+
+        it "embeds it" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:plan]).to eq(flat_payload.merge(metadata: {crm_id: "123", tier: nil}))
+        end
+      end
+
+      context "when the plan has empty metadata" do
+        before { create(:item_metadata, owner: catalog_plan, organization:, value: {}) }
+
+        it "embeds an empty object" do
+          subject
+
+          expect(json[:plan]).to eq(flat_payload.merge(metadata: {}))
+        end
+      end
+
+      context "when the plan has no metadata" do
+        before { create(:item_metadata, owner: create(:catalog_plan, organization:), organization:, value: {"crm_id" => "other"}) }
+
+        it "embeds null" do
+          subject
+
+          expect(json[:plan]).to eq(flat_payload.merge(metadata: nil))
+        end
+      end
+
+      context "when the plan was deleted" do
+        before do
+          create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123"})
+          CatalogPlans::DestroyService.call!(catalog_plan:)
+        end
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_v2_not_found_error("plan")
+        end
+      end
+
+      context "with expands[]=taxes too" do
+        let(:params) { {expands: %w[metadata taxes]} }
+
+        before { create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123"}) }
+
+        it "embeds both, taxes first" do
+          subject
+
+          expect(json[:plan].keys.last(2)).to eq(%i[taxes metadata])
+          expect(json[:plan][:taxes].pluck(:lago_id)).to eq([tax.id])
+          expect(json[:plan][:metadata]).to eq(crm_id: "123")
+        end
+      end
+    end
+
     context "with an unknown expansion" do
       let(:params) { {expands: %w[taxes applied_rate_cards]} }
 
@@ -209,7 +365,7 @@ RSpec.describe Api::V2::PlansController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:details]).to eq([{code: "invalid_expand", field: "expands", meta: {invalid_values: %w[applied_rate_cards], allowed_values: %w[taxes]}}])
+        expect(json[:details]).to eq([{code: "invalid_expand", field: "expands", meta: {invalid_values: %w[applied_rate_cards], allowed_values: %w[taxes metadata]}}])
       end
     end
 
@@ -293,6 +449,19 @@ RSpec.describe Api::V2::PlansController do
       end
     end
 
+    context "with expands[]=metadata" do
+      let(:params) { {expands: %w[metadata]} }
+
+      before { create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123"}) }
+
+      it "returns an expand error, as only show expands" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[metadata]}}])
+      end
+    end
+
     it_behaves_like "a cursor paginated v2 endpoint", collection: :plans, model: CatalogPlan do
       let(:paginated_path) { "/api/v2/plans" }
       let(:create_paginated_record) { ->(created_at) { create(:catalog_plan, organization:, created_at:) } }
@@ -311,6 +480,43 @@ RSpec.describe Api::V2::PlansController do
 
         expect(response).to have_http_status(:forbidden)
         expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+  end
+
+  # The legacy plan metadata routes are drawn inside the v2 plans block: they still reach the v1
+  # controller, which reads the legacy plans only.
+  describe "POST /api/v2/plans/:code/metadata", v2_timestamps: false do
+    subject { post_with_token(organization, "/api/v2/plans/#{code}/metadata", {metadata: {crm_id: "123"}}) }
+
+    let(:legacy_plan) { create(:plan, organization:, code: "legacy") }
+    let(:catalog_plan) { create(:catalog_plan, organization:, code: "catalog") }
+
+    before do
+      legacy_plan
+      catalog_plan
+    end
+
+    context "with the code of a legacy plan" do
+      let(:code) { "legacy" }
+
+      it "replaces the legacy plan metadata through the v1 controller" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(metadata: {crm_id: "123"})
+        expect(legacy_plan.reload.metadata.value).to eq("crm_id" => "123")
+      end
+    end
+
+    context "with the code of a catalog plan" do
+      let(:code) { "catalog" }
+
+      it "returns the v1 not found error and leaves the catalog plan untouched" do
+        subject
+
+        expect(response).to be_not_found_error("plan")
+        expect(catalog_plan.reload.metadata).to be_nil
       end
     end
   end

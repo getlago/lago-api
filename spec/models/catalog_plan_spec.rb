@@ -21,6 +21,7 @@ RSpec.describe CatalogPlan do
       expect(catalog_plan).to have_many(:taxes).through(:applied_taxes)
       expect(catalog_plan).to have_many(:entitlements).class_name("Entitlement::Entitlement").dependent(:destroy)
       expect(catalog_plan).to have_many(:entitlement_values).through(:entitlements).source(:values)
+      expect(catalog_plan).to have_one(:metadata).class_name("Metadata::ItemMetadata").dependent(:destroy)
     end
   end
 
