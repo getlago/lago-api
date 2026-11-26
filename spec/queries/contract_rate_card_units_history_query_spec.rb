@@ -14,14 +14,16 @@ RSpec.describe ContractRateCardUnitsHistoryQuery do
   let(:cards) { [first_card, second_card, other_card] }
   let(:timestamp) { Time.utc(2026, 9, 15, 12, 30, 0, 123456) }
   let(:change) do
-    create(:billing_operation, organization:, customer:, contract_rate_card: first_card, action_type: "reconcile_units",
-      units_before: 8, units_after: 5, billing_at: timestamp, pricing_segments: [])
+    create(:billing_operation, organization:, customer:, contract_rate_card: first_card, action_type: "reconcile_advance_coverage",
+      units_before: 8, units_after: 5, billing_at: timestamp)
   end
 
   before do
     cards
     change
-    create(:billing_operation, organization:, customer:, contract_rate_card: second_card, action_type: "reconcile_units",
+    create(:billing_operation, organization:, customer:, contract_rate_card: first_card, action_type: "reconcile_advance_coverage",
+      reason: :rate_change, billing_at: timestamp + 1.hour, units_before: 5, units_after: 99)
+    create(:billing_operation, organization:, customer:, contract_rate_card: second_card, action_type: "reconcile_advance_coverage",
       units_before: 4, units_after: 6, billing_at: timestamp)
   end
 
@@ -30,15 +32,15 @@ RSpec.describe ContractRateCardUnitsHistoryQuery do
     history_queries = queries.grep(/FROM "billing_operations"/)
 
     expect(history_queries.size).to eq(1)
-    expect(history_queries.sole).not_to include("pricing_segments")
+    expect(history_queries.sole).to include('"billing_operations"."units_after"')
     expect(result.histories.keys).to match_array([first_card.id, second_card.id])
-    expect(result.histories.fetch(first_card.id).units_at(timestamp)).to eq(5)
+    expect(result.histories.fetch(first_card.id).units_at(timestamp + 2.hours)).to eq(5)
     expect(result.histories.fetch(second_card.id).units_at(timestamp)).to eq(6)
   end
 
   it "keeps the association usable as complete model records" do
     expect(first_card.units_changes.count).to eq(1)
-    expect(first_card.units_changes.sole).to have_attributes(action_type: "reconcile_units", pricing_segments: [], units_after: 5)
+    expect(first_card.units_changes.sole).to have_attributes(action_type: "reconcile_advance_coverage", units_after: 5)
     expect(first_card.units_changes.sole).not_to be_readonly
   end
 

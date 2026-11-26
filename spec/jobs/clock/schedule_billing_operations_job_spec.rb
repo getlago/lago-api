@@ -34,11 +34,12 @@ describe Clock::ScheduleBillingOperationsJob, job: true do
 
   context "when a units adjustment is pending before the next periodic billing" do
     let(:processed_at) { nil }
-    let(:action_type) { "reconcile_units" }
+    let(:reason) { "contract_units_change" }
+    let(:action_type) { "reconcile_advance_coverage" }
 
     before do
       create(:billing_operation, organization:, customer: future_customer, contract_rate_card: future_rate_card,
-        action_type:, reason: "contract_units_change", billing_at: 1.minute.ago, processed_at:)
+        action_type:, reason:, billing_at: 1.minute.ago, processed_at:)
     end
 
     it "recovers the adjustment without waiting for the periodic cursor" do
@@ -55,7 +56,7 @@ describe Clock::ScheduleBillingOperationsJob, job: true do
     end
 
     context "when the operation is deferred rate-change reconciliation" do
-      let(:action_type) { "reconcile_advance_coverage" }
+      let(:reason) { "rate_change" }
 
       it "does not dispatch unsupported reconciliation" do
         perform_job

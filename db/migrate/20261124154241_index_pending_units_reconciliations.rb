@@ -10,7 +10,7 @@ class IndexPendingUnitsReconciliations < ActiveRecord::Migration[8.1]
 
     add_index :billing_operations, [:billing_at, :customer_id],
       name: :index_pending_units_reconciliations,
-      where: "processed_at IS NULL AND cancelled_at IS NULL AND action_type = 'reconcile_units'",
+      where: "processed_at IS NULL AND cancelled_at IS NULL AND reason = 'contract_units_change'",
       algorithm: :concurrently, if_not_exists: true
   end
 

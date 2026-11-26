@@ -153,11 +153,11 @@ RSpec.describe BillingOperation do
 
     describe "units change validation" do
       let(:operation) do
-        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
           units_before: 8, units_after: 5)
       end
       let(:duplicate) do
-        build(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+        build(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
           billing_at: operation.billing_at)
       end
 
@@ -179,8 +179,8 @@ RSpec.describe BillingOperation do
       end
 
       it "retains quantity history when billing completes without an invoice" do
-        expect(operation.update(processed_at: Time.current, pricing_segments: [])).to be(true)
-        expect(operation.reload).to have_attributes(units_before: 8, units_after: 5, pricing_segments: [], invoice_id: nil)
+        expect(operation.update(processed_at: Time.current)).to be(true)
+        expect(operation.reload).to have_attributes(units_before: 8, units_after: 5, invoice_id: nil)
       end
 
       it "rejects another change for the same card and exact instant" do

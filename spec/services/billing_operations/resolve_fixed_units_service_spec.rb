@@ -7,7 +7,7 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
 
   let(:operation) { nil }
   let(:units_change) do
-    create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+    create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
       reason: "contract_units_change", billing_at: change_time, target_cycle_started_at: cycle.started_at,
       units_before: 8, units_after: changed_units)
   end
@@ -70,11 +70,10 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
     let(:changed_units) { 10 }
     let(:operation) { units_change }
     let(:previous_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
-    let(:pricing_segments) { nil }
     let(:previous_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, invoice: previous_invoice,
         action_type: "renew_fixed_advance", billing_at: cycle.started_at, target_cycle_started_at: cycle.started_at,
-        processed_at: cycle.started_at, pricing_segments:)
+        processed_at: cycle.started_at)
     end
     let(:fee_properties) do
       {"from_datetime" => cycle.started_at.iso8601(6), "to_datetime" => BillingSegment.inclusive_end(cycle.ended_at).iso8601(6)}
@@ -106,8 +105,9 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
     end
 
     context "with saved pricing inputs" do
-      let(:pricing_segments) do
-        [{"started_at" => cycle.started_at.iso8601(6), "ended_at" => cycle.ended_at.iso8601(6), "units" => "9.0"}]
+      before do
+        previous_operation.segments.create!(organization:, position: 0, rate_card_rate: rate,
+          started_at: cycle.started_at, ended_at: cycle.ended_at, proration_ratio: 1, units: 9)
       end
 
       it "uses the saved coverage instead of reconstructing it from fees" do

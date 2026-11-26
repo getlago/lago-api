@@ -69,7 +69,7 @@ describe "Billing timestamped contract units changes" do
     change_units(8, at: second_change, process: false)
 
     expect(customer.invoices).to be_empty
-    expect(contract_rate_card.billing_operations.pending.where(action_type: "reconcile_units").count).to eq(2)
+    expect(contract_rate_card.billing_operations.pending.where(action_type: "reconcile_advance_coverage").count).to eq(2)
     bill_at(Time.utc(2026, 10, 1))
 
     expect(customer.invoices.sole.total_amount_cents).to eq(23_850) # 8 × 3000 minus 3 × 3000 × 0.5/30.
@@ -126,7 +126,7 @@ describe "Billing timestamped contract units changes" do
       change_units(10, at: Time.utc(2026, 9, 25), process: false)
 
       expect(customer.invoices.pluck(:total_amount_cents)).to eq([24_000])
-      expect(contract_rate_card.billing_operations.pending.where(action_type: "reconcile_units").count).to eq(3)
+      expect(contract_rate_card.billing_operations.pending.where(action_type: "reconcile_advance_coverage").count).to eq(3)
       bill_at(Time.utc(2026, 10, 1))
       bill_at(Time.utc(2026, 10, 1, 1))
 
@@ -151,8 +151,8 @@ describe "Billing timestamped contract units changes" do
 
         expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([15_200, 2_000, 22_000])
         # First coverage: 8 × 3000 × 19/30; increase: 2 × 3000 × 10/30; later coverage: 10 × 6000 × 11/30.
-        expect(contract_rate_card.billing_operations.find_by!(action_type: "reconcile_units")
-          .pricing_segments.sole.fetch("ended_at")).to eq("2026-09-19T23:59:59.999999Z")
+        expect(contract_rate_card.billing_operations.find_by!(action_type: "reconcile_advance_coverage")
+          .segments.sole.ended_at.iso8601(6)).to eq("2026-09-20T00:00:00.000000Z")
       end
     end
 
@@ -164,7 +164,7 @@ describe "Billing timestamped contract units changes" do
       expect(customer.invoices.pluck(:total_amount_cents)).to eq([24_000])
       expect(customer.credit_notes).to be_empty
       expect(contract_rate_card.reload.next_billing_at).to eq(original_cursor)
-      expect(contract_rate_card.billing_operations.where(action_type: "reconcile_units").pending).to be_empty
+      expect(contract_rate_card.billing_operations.where(action_type: "reconcile_advance_coverage").pending).to be_empty
     end
 
     it "keeps additional coverage after a later decrease" do
@@ -232,7 +232,7 @@ describe "Billing timestamped contract units changes" do
 
       it "retains exact adjustment boundaries when a draft is refreshed" do
         change_units(10, at: Time.utc(2026, 9, 16, 12, 0, 0, 123456))
-        invoice = contract_rate_card.billing_operations.find_by!(action_type: "reconcile_units").invoice
+        invoice = contract_rate_card.billing_operations.find_by!(action_type: "reconcile_advance_coverage").invoice
         properties = invoice.fees.sole.properties
 
         expect(properties.slice("from_datetime", "to_datetime")).to eq(

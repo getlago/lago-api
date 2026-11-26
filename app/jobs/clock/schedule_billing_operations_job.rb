@@ -15,7 +15,7 @@ module Clock
       periodic_customer_ids = ContractRateCard.due_for_billing(Time.current).distinct
         .order("contracts.customer_id").pluck("contracts.customer_id")
       reconciliation_customer_ids = BillingOperation.pending
-        .where("billing_operations.action_type = 'reconcile_units'")
+        .where(action_type: "reconcile_advance_coverage", reason: "contract_units_change")
         .where(billing_at: ..Time.current)
         .joins(:customer, :contract_rate_card)
         .where(customers: {deleted_at: nil}, contract_rate_cards: {deleted_at: nil})

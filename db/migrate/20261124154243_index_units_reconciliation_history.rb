@@ -9,7 +9,7 @@ class IndexUnitsReconciliationHistory < ActiveRecord::Migration[8.1]
     end
 
     add_index :billing_operations, [:contract_rate_card_id, :billing_at], unique: true,
-      name: :index_units_reconciliation_history, where: "action_type = 'reconcile_units'",
+      name: :index_units_reconciliation_history, where: "reason = 'contract_units_change'",
       algorithm: :concurrently, if_not_exists: true
   end
 

@@ -22,7 +22,7 @@ class ContractRateCard < ApplicationRecord
   has_many :rate_phases, -> { order(:position) }
   has_many :terms, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardTerm", inverse_of: :contract_rate_card
   has_many :billing_operations
-  has_many :units_changes, -> { where(action_type: "reconcile_units").order(:billing_at) }, class_name: "BillingOperation"
+  has_many :units_changes, -> { where(reason: "contract_units_change").order(:billing_at) }, class_name: "BillingOperation"
   has_many :daily_usages
   has_many :fees
 

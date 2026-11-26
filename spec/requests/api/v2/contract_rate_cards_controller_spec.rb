@@ -131,8 +131,8 @@ RSpec.describe Api::V2::ContractRateCardsController do
       ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { subject }
 
       expect(queries.size).to eq(1)
-      expect(queries.sole).to include('"billing_operations"."action_type" =')
-      expect(queries.sole).not_to include('"billing_operations"."pricing_segments"')
+      expect(queries.sole).to include('"billing_operations"."reason" =')
+      expect(queries.sole).to include('"billing_operations"."units_after"')
       expect(json[:applied_rate_cards].to_h { [it[:lago_id], it[:next_billing_at]] }).to eq(
         contract_rate_card.id => first_billing_at.iso8601(6),
         second_card.id => second_billing_at.iso8601(6)

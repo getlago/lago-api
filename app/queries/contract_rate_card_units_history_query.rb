@@ -28,7 +28,7 @@ class ContractRateCardUnitsHistoryQuery < BaseQuery
     ids = cards.filter_map(&:id)
     return {} if ids.empty?
 
-    BillingOperation.where(organization:, contract_rate_card_id: ids, action_type: "reconcile_units")
+    BillingOperation.where(organization:, contract_rate_card_id: ids, reason: "contract_units_change")
       .order(:contract_rate_card_id, :billing_at)
       .pluck(:contract_rate_card_id, :billing_at, :units_after)
       .group_by(&:first)

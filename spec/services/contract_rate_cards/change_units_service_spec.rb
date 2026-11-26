@@ -110,7 +110,7 @@ RSpec.describe ContractRateCards::ChangeUnitsService do
 
   context "when the existing units change has already been billed" do
     before do
-      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
         billing_at: timestamp, processed_at: timestamp, units_before: 8, units_after: 10)
     end
 
@@ -124,7 +124,7 @@ RSpec.describe ContractRateCards::ChangeUnitsService do
 
   context "when a change is already pending at the same exact instant" do
     before do
-      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
         billing_at: timestamp, units_before: 8, units_after: 10)
     end
 

@@ -13,8 +13,8 @@ module BillingOperations
     end
 
     def call
-      if operation.processed_at && operation.pricing_segments
-        result.segments = operation.pricing_segments.map { restore_segment(it) }
+      if operation.processed_at && operation.segments.any? { !it.units.nil? }
+        result.segments = operation.segments.map { restore_segment(it) }
         return result
       end
 
@@ -23,7 +23,7 @@ module BillingOperations
         return result
       end
 
-      if operation.action_type == "reconcile_advance_coverage"
+      if operation.action_type == "reconcile_advance_coverage" && !operation.units_change?
         unless operation.reason == "rate_change" && operation.contract_rate_card.periodic_billing_action == "renew_fixed_advance"
           return result.single_validation_failure!(field: :operation, error_code: "fixed_advance_reconciliation_unsupported")
         end
@@ -36,7 +36,7 @@ module BillingOperations
       schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: operation.contract_rate_card).schedule
       result.schedule = schedule
       result.cycle = schedule.cycle_at(operation.target_cycle_started_at)
-      billable_segments = if operation.action_type == "reconcile_units"
+      billable_segments = if operation.units_change?
         [schedule.segment_covering(operation.billing_at)].compact
       else
         owned_billable_segments(after: previous_billing_at)
@@ -52,18 +52,17 @@ module BillingOperations
 
     attr_reader :operation, :pricing_units_by_code, :units_histories
 
-    def restore_segment(attributes)
+    def restore_segment(segment)
       card = operation.contract_rate_card
-      associations = {
-        organization: card.organization,
-        contract: card.contract,
-        customer: card.contract.customer,
-        contract_rate_card: card,
-        rate_card_rate: card.rate_card.rates.find { it.id == attributes["rate_card_rate_id"] },
-        rate_override: card.rate_phases.filter_map(&:rate_override).find { it.id == attributes["rate_override_id"] },
-        pricing_unit: pricing_units_by_code&.values&.find { it.id == attributes["pricing_unit_id"] }
-      }
-      BillingSegment.from_attributes(attributes, associations:)
+      BillingSegment.new(
+        organization: card.organization, customer: card.contract.customer, contract: card.contract,
+        contract_rate_card: card, rate_card_rate: segment.rate_card_rate, rate_override: segment.rate_override,
+        pricing_unit: segment.pricing_unit, rate_properties: segment.rate_properties, currency: segment.currency,
+        started_at: segment.started_at, ended_at: BillingSegment.inclusive_end(segment.ended_at),
+        cycle_started_at: operation.target_cycle_started_at, billing_at: operation.billing_at,
+        proration_ratio: segment.proration_ratio, units: segment.units, prepaid_units: segment.prepaid_units,
+        units_intervals: segment.units_intervals
+      )
     end
 
     # An operation whose cycle the schedule no longer has bills nothing.

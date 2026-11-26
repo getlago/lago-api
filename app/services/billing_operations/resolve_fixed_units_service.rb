@@ -109,9 +109,10 @@ module BillingOperations
     end
 
     def prepaid_units_at(timestamp)
-      completed_advance_operations.flat_map do |previous|
-        if previous.pricing_segments
-          prepaid_units_from_snapshot(previous.pricing_segments, timestamp)
+      completed_advance_operations.includes(:segments).flat_map do |previous|
+        saved = previous.segments.select { !it.units.nil? }
+        if saved.any?
+          saved.filter_map { it.units if it.started_at <= timestamp && timestamp < it.ended_at }
         else
           prepaid_units_from_fees(previous.invoice, timestamp)
         end
@@ -121,13 +122,7 @@ module BillingOperations
     def completed_advance_operations
       operation.contract_rate_card.billing_operations.completed
         .where(organization_id: operation.organization_id, target_cycle_started_at: operation.target_cycle_started_at,
-          cancelled_at: nil, action_type: %w[renew_fixed_advance reconcile_units])
-    end
-
-    def prepaid_units_from_snapshot(snapshot, timestamp)
-      snapshot.filter_map do |input|
-        input["units"].to_d if timestamp.between?(Time.iso8601(input.fetch("started_at")), Time.iso8601(input.fetch("ended_at")))
-      end
+          cancelled_at: nil, action_type: %w[renew_fixed_advance reconcile_advance_coverage])
     end
 
     def prepaid_units_from_fees(invoice, timestamp)

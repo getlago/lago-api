@@ -107,8 +107,8 @@ RSpec.describe V2::ContractSerializer do
       payload
 
       expect(statements.size).to eq(1)
-      expect(statements.sole).to include('"billing_operations"."action_type" =')
-      expect(statements.sole).not_to include('"billing_operations"."pricing_segments"')
+      expect(statements.sole).to include('"billing_operations"."reason" =')
+      expect(statements.sole).to include('"billing_operations"."units_after"')
     ensure
       ActiveSupport::Notifications.unsubscribe(subscriber)
     end

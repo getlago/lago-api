@@ -9,7 +9,7 @@ class BillingOperation < ApplicationRecord
     "regroup_paid_fees" => "Group paid advance fees onto an invoice when their service coverage ends"
   }.freeze
 
-  ACTION_TYPES = (PERIODIC_ACTIONS.keys + %w[reconcile_advance_coverage reconcile_units]).index_by(&:to_sym).freeze
+  ACTION_TYPES = (PERIODIC_ACTIONS.keys + ["reconcile_advance_coverage"]).index_by(&:to_sym).freeze
 
   REASONS = {
     contract_activation: "contract_activation",
@@ -49,7 +49,7 @@ class BillingOperation < ApplicationRecord
   scope :earliest_per_contract_rate_card, -> {
     select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
       .reorder(:contract_rate_card_id, :billing_at,
-        Arel.sql("CASE WHEN billing_operations.action_type = 'reconcile_units' THEN 1 ELSE 0 END"), :created_at, :id)
+        Arel.sql("CASE WHEN billing_operations.action_type = 'reconcile_advance_coverage' THEN 1 ELSE 0 END"), :created_at, :id)
   }
 
   def due_for_processing?(timestamp:)
@@ -57,13 +57,13 @@ class BillingOperation < ApplicationRecord
   end
 
   def units_change?
-    action_type == "reconcile_units"
+    reason == "contract_units_change"
   end
 
   private
 
   def validate_units_change_immutability
-    return unless persisted? && action_type_in_database == "reconcile_units"
+    return unless persisted? && reason_in_database == "contract_units_change"
 
     %w[units_before units_after billing_at target_cycle_started_at contract_rate_card_id customer_id organization_id action_type reason].each do |attribute|
       errors.add(attribute, :readonly) if will_save_change_to_attribute?(attribute)
@@ -145,8 +145,8 @@ end
 #  index_pending_billing_operations_on_card_and_date      (contract_rate_card_id,billing_at) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #  index_pending_billing_operations_on_org_and_date       (organization_id,billing_at,id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
 #  index_pending_billing_operations_on_org_customer_date  (organization_id,customer_id,billing_at,id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL))
-#  index_pending_units_reconciliations                    (billing_at,customer_id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL) AND ((action_type)::text = 'reconcile_units'::text))
-#  index_units_reconciliation_history                     (contract_rate_card_id,billing_at) UNIQUE WHERE ((action_type)::text = 'reconcile_units'::text)
+#  index_pending_units_reconciliations                    (billing_at,customer_id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL) AND (reason = 'contract_units_change'::billing_operation_reason))
+#  index_units_reconciliation_history                     (contract_rate_card_id,billing_at) UNIQUE WHERE (reason = 'contract_units_change'::billing_operation_reason)
 #
 # Foreign Keys
 #

@@ -12,9 +12,9 @@ RSpec.describe ContractRateCards::UnitsAtService do
   let(:timestamp) { Time.utc(2026, 9, 15, 12, 30) }
 
   before do
-    create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+    create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
       billing_at: Time.utc(2026, 9, 15, 12, 30), units_before: 8, units_after: 5)
-    create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+    create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
       billing_at: Time.utc(2026, 9, 15, 13), units_before: 5, units_after: 10)
   end
 
@@ -76,7 +76,7 @@ RSpec.describe ContractRateCards::UnitsAtService do
       let(:timestamp) { scheduled_at }
 
       before do
-        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_units",
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
           billing_at: scheduled_at, units_before: 12, units_after: 7)
       end
 
@@ -89,8 +89,8 @@ RSpec.describe ContractRateCards::UnitsAtService do
 
   context "when reconciliation has already completed without an invoice" do
     before do
-      contract_rate_card.billing_operations.find_by!(action_type: "reconcile_units", billing_at: timestamp)
-        .update!(processed_at: timestamp + 1.hour, pricing_segments: [])
+      contract_rate_card.billing_operations.find_by!(action_type: "reconcile_advance_coverage", billing_at: timestamp)
+        .update!(processed_at: timestamp + 1.hour)
     end
 
     it "retains the original quantity change as history" do
@@ -100,7 +100,7 @@ RSpec.describe ContractRateCards::UnitsAtService do
 
   context "when billing work is cancelled" do
     before do
-      contract_rate_card.billing_operations.find_by!(action_type: "reconcile_units", billing_at: timestamp)
+      contract_rate_card.billing_operations.find_by!(action_type: "reconcile_advance_coverage", billing_at: timestamp)
         .update!(cancelled_at: timestamp + 1.hour, cancellation_reason: :rate_change)
     end
 

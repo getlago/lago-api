@@ -429,6 +429,7 @@ ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_216ac
 ALTER TABLE IF EXISTS ONLY public.pending_signups DROP CONSTRAINT IF EXISTS fk_rails_216678edf6;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_20f157fa49;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_20cc0de4c7;
+ALTER TABLE IF EXISTS ONLY public.billing_operation_segments DROP CONSTRAINT IF EXISTS fk_rails_1f0a2a2010;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db0057d9b;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1d112bf8a0;
 ALTER TABLE IF EXISTS ONLY public.recurring_aggregation_snapshots DROP CONSTRAINT IF EXISTS fk_rails_1c2315fb03;
@@ -585,6 +586,7 @@ DROP INDEX IF EXISTS public.index_usage_attribution_values_on_customer_id;
 DROP INDEX IF EXISTS public.index_usage_attribution_types_on_parent_id;
 DROP INDEX IF EXISTS public.index_usage_attribution_types_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_usage_attribution_types_on_organization_id;
+DROP INDEX IF EXISTS public.index_units_reconciliation_history;
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
@@ -743,6 +745,7 @@ DROP INDEX IF EXISTS public.index_plan_rate_cards_by_cursor;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_pending_units_reconciliations;
 DROP INDEX IF EXISTS public.index_pending_signups_on_user_id;
 DROP INDEX IF EXISTS public.index_pending_signups_on_signup_secret_digest;
 DROP INDEX IF EXISTS public.index_pending_signups_on_open_expires_at;
@@ -3258,6 +3261,12 @@ CREATE TABLE public.billing_operation_segments (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     proration_ratio numeric(30,10) NOT NULL,
+    units numeric,
+    prepaid_units numeric,
+    units_intervals jsonb,
+    rate_properties jsonb,
+    currency character varying,
+    pricing_unit_id uuid,
     CONSTRAINT billing_operation_segments_positive_coverage CHECK ((ended_at > started_at)),
     CONSTRAINT billing_operation_segments_proration_ratio_bounds CHECK (((proration_ratio >= (0)::numeric) AND (proration_ratio <= (1)::numeric)))
 );
@@ -3283,7 +3292,9 @@ CREATE TABLE public.billing_operations (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     coverage_started_at timestamp(6) without time zone,
-    coverage_ended_at timestamp(6) without time zone
+    coverage_ended_at timestamp(6) without time zone,
+    units_before numeric,
+    units_after numeric
 );
 
 
@@ -13631,6 +13642,13 @@ CREATE INDEX index_pending_signups_on_user_id ON public.pending_signups USING bt
 
 
 --
+-- Name: index_pending_units_reconciliations; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_units_reconciliations ON public.billing_operations USING btree (billing_at, customer_id) WHERE ((processed_at IS NULL) AND (cancelled_at IS NULL) AND (reason = 'contract_units_change'::public.billing_operation_reason));
+
+
+--
 -- Name: index_pending_vies_checks_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14734,6 +14752,13 @@ CREATE UNIQUE INDEX index_unique_terminating_invoice_subscription ON public.invo
 --
 
 CREATE UNIQUE INDEX index_unique_transaction_id ON public.events USING btree (organization_id, external_subscription_id, transaction_id);
+
+
+--
+-- Name: index_units_reconciliation_history; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_units_reconciliation_history ON public.billing_operations USING btree (contract_rate_card_id, billing_at) WHERE (reason = 'contract_units_change'::public.billing_operation_reason);
 
 
 --
@@ -15850,6 +15875,14 @@ ALTER TABLE ONLY public.applied_usage_thresholds
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT fk_rails_1db0057d9b FOREIGN KEY (applied_coupon_id) REFERENCES public.applied_coupons(id);
+
+
+--
+-- Name: billing_operation_segments fk_rails_1f0a2a2010; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_operation_segments
+    ADD CONSTRAINT fk_rails_1f0a2a2010 FOREIGN KEY (pricing_unit_id) REFERENCES public.pricing_units(id);
 
 
 --
@@ -19219,8 +19252,13 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261126143645'),
+('20261126143529'),
 ('20261125113444'),
 ('20261125113441'),
+('20261124154243'),
+('20261124154241'),
+('20261124154238'),
 ('20261124113226'),
 ('20261124100203'),
 ('20261123224020'),

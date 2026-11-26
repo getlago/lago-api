@@ -69,7 +69,7 @@ module ContractRateCards
       return result.single_validation_failure!(field: :contract, error_code: "contract_locked") unless cycle
 
       if params[:apply_units] == "now"
-        record_units_change(cycle)
+        record_units_change(schedule)
       else
         schedule_units_change(cycle, schedule)
       end
@@ -79,7 +79,7 @@ module ContractRateCards
       SendWebhookJob.perform_after_commit("contract_rate_card.updated", contract_rate_card)
     end
 
-    def record_units_change(cycle)
+    def record_units_change(schedule)
       existing = contract_rate_card.units_changes.find_by(billing_at: timestamp)
       if existing
         code = existing.processed_at ? "units_already_billed" : "value_already_exist"
@@ -88,9 +88,9 @@ module ContractRateCards
 
       units_before = UnitsAtService.call!(contract_rate_card:, timestamp:).units || 0.to_d
       planned_operation = BillingOperations::Schedule::BuildPlannedOperation::PlannedOperation.new(
-        cycle_started_at: cycle.started_at, billing_at: timestamp
+        segment: schedule.segment_covering(timestamp).with(started_at: timestamp), billing_at: timestamp
       )
-      creation = BillingOperations::CreateService.call(contract_rate_card:, action_type: "reconcile_units",
+      creation = BillingOperations::CreateService.call(contract_rate_card:, action_type: "reconcile_advance_coverage",
         reason: "contract_units_change", planned_operation:, units_before:, units_after: params[:units])
       if creation.failure?
         error = creation.error

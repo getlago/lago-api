@@ -9,9 +9,9 @@ FactoryBot.define do
     end
     customer { contract_rate_card.contract.customer }
     action_type { "renew_fixed_advance" }
-    reason { (action_type == "reconcile_units") ? :contract_units_change : :contract_activation }
-    units_before { (action_type == "reconcile_units") ? 8 : nil }
-    units_after { (action_type == "reconcile_units") ? 10 : nil }
+    reason { (action_type == "reconcile_advance_coverage") ? :contract_units_change : :contract_activation }
+    units_before { (action_type == "reconcile_advance_coverage") ? 8 : nil }
+    units_after { (action_type == "reconcile_advance_coverage") ? 10 : nil }
     billing_at { Time.current }
     target_cycle_started_at { Time.current.beginning_of_month }
   end
