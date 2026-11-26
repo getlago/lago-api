@@ -3,18 +3,14 @@
 module Api
   module V1
     module X402
-      # The payer has no API key: the token in the path authorizes the call, and the invoice gives the
-      # organization that the callbacks below the lookup need.
+      # The payer has no API key: the token in the path authenticates the call, and its invoice gives the
+      # organization, so the base callbacks keep their order.
       class InvoicePaymentsController < Api::V1::BaseController
-        skip_before_action :authenticate, :refuse_inactive_organization, :set_context_source, :track_api_key_usage,
-          :authorize, :set_tracing_information
-        skip_around_action :produce_api_log
+        skip_before_action :set_context_source
 
-        before_action :find_invoice
-        before_action :refuse_inactive_organization
         before_action :ensure_x402_payments_enabled
-        before_action :set_tracing_information
-        around_action :produce_api_log, if: :produce_api_log?
+
+        filter_audit_log_params! :token
 
         INVOICE_REFUSALS = %w[invoice_currency_not_supported wallet_not_x402_enabled].freeze
 
@@ -39,11 +35,23 @@ module Api
 
         attr_reader :invoice
 
-        def find_invoice
-          @invoice = Invoice.find_by!(x402_payment_token: params[:token])
+        def authenticate
+          # The base strips null bytes after `authenticate`, and PostgreSQL refuses one in the token.
+          strip_null_bytes
+
+          @invoice = Invoice.find_by(x402_payment_token: params[:token])
+          return not_found_error(resource: "invoice") unless invoice
+
           @current_organization = invoice.organization
-        rescue ActiveRecord::RecordNotFound
-          not_found_error(resource: "invoice")
+          true
+        end
+
+        def authorize
+          true
+        end
+
+        def track_api_key_usage?
+          false
         end
 
         def ensure_x402_payments_enabled

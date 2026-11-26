@@ -57,6 +57,16 @@ describe Api::V1::X402::InvoicePaymentsController, :premium do
       end
     end
 
+    context "with a per_page query parameter" do
+      subject { get("/api/v1/x402/invoice_payments/#{token}", params: {per_page: 1}) }
+
+      it "answers 402" do
+        subject
+
+        expect(response).to have_http_status(:payment_required)
+      end
+    end
+
     context "with a null byte in the token" do
       subject { get("/api/v1/x402/invoice_payments/ab%00cd") }
 
@@ -240,6 +250,12 @@ describe Api::V1::X402::InvoicePaymentsController, :premium do
           "request_path" => "/api/v1/x402/invoice_payments/#{token}",
           "http_status" => 402
         )
+      end
+
+      it "masks the token in the logged parameters" do
+        subject
+
+        expect(api_log_payload["request_body"]).to eq("token" => "[FILTERED]")
       end
 
       context "with an unknown token" do
