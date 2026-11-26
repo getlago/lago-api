@@ -77,6 +77,20 @@ RSpec.describe Payments::ManualCreateService do
         end
       end
 
+      context "when the invoice is an advance_charges invoice regenerated from a voided one" do
+        let(:voided_invoice) { create(:invoice, customer:, organization:, invoice_type: :advance_charges, status: :voided) }
+        let(:invoice) do
+          create(:invoice, customer:, organization:, invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id, total_amount_cents: 10000, status: :finalized)
+        end
+
+        it "records the payment" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.payment).to have_attributes(payable: invoice, amount_cents: 10000, payment_type: "manual")
+        end
+      end
+
       context "when a regenerated advance_charges invoice is voided" do
         let(:voided_invoice) { create(:invoice, customer:, organization:, invoice_type: :advance_charges, status: :voided) }
         let(:invoice) do
