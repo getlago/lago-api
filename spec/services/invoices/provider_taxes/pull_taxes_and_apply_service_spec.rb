@@ -446,12 +446,13 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
             create(:invoice, :voided, organization:, customer:, billing_entity:, invoice_type: :advance_charges)
           end
 
-          before { invoice.update!(invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id) }
-
-          it "computes the taxes without committing them and charges the payment provider without the wallet" do
+          before do
+            invoice.update!(invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id)
             allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
             allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
+          end
 
+          it "computes the taxes without committing them and charges the payment provider without the wallet" do
             result = pull_taxes_service.call
 
             expect(result).to be_success
@@ -496,9 +497,11 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         end
 
         context "when the invoice is not a regenerated advance_charges invoice" do
-          it "commits the taxes, applies the wallet and charges the payment provider" do
+          before do
             allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
+          end
 
+          it "commits the taxes, applies the wallet and charges the payment provider" do
             result = pull_taxes_service.call
 
             expect(result).to be_success
