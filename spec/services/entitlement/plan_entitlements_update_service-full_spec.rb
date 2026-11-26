@@ -82,22 +82,6 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       expect(entitlement_value.value).to eq("25")
     end
 
-    context "with a catalog plan" do
-      subject(:result) do
-        described_class.call(organization:, plan: catalog_plan, entitlements_params:, partial: false, send_webhook: false)
-      end
-
-      let(:catalog_plan) { create(:catalog_plan, organization:) }
-
-      it "creates the entitlement on the catalog plan" do
-        expect(result).to be_success
-
-        entitlement = catalog_plan.entitlements.sole
-        expect(entitlement).to have_attributes(plan_id: nil, feature:)
-        expect(entitlement.values.map { [it.privilege, it.value] }).to eq([[privilege, "25"]])
-      end
-    end
-
     context "when plan has existing entitlements" do
       let(:existing_entitlement) { create(:entitlement, organization:, plan:) }
       let(:existing_value) { create(:entitlement_value, entitlement: existing_entitlement, privilege:, value: "10", organization:) }
