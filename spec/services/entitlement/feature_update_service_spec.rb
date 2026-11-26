@@ -199,6 +199,15 @@ RSpec.describe Entitlement::FeatureUpdateService do
           expect(privilege2.reload).to be_discarded
           expect(privilege3.reload).to be_discarded
         end
+
+        it "discards each removed privilege once" do
+          discards = 0
+          count_discards = ->(*, payload) { discards += 1 if payload[:sql].match?(/UPDATE "entitlement_privileges" SET "deleted_at"/) }
+
+          ActiveSupport::Notifications.subscribed(count_discards, "sql.active_record") { subject }
+
+          expect(discards).to eq(2) # min and opt
+        end
       end
 
       context "when a privilege code is padded with spaces" do

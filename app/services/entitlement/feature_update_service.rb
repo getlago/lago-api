@@ -149,11 +149,6 @@ module Entitlement
       missing_privilege_codes = feature.privileges.pluck(:code) - kept_privilege_codes
       EntitlementValue.where(privilege: feature.privileges.where(code: missing_privilege_codes)).discard_all!
       feature.privileges.where(code: missing_privilege_codes).discard_all!
-      missing_privilege_codes.each do |code|
-        privilege = privileges_by_code[code]
-        next unless privilege
-        privilege.discard!
-      end
     end
   end
 end
