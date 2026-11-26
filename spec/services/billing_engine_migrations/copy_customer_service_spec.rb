@@ -100,6 +100,7 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
 
       expect(result.customer).to eq(shadow_customer)
       expect(result.customer).to have_attributes(name: customer.name, email: customer.email, address_line1: customer.address_line1)
+      expect(result.customer.billing_entity.code).to eq(billing_entity.code)
     end
   end
 
@@ -120,6 +121,32 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
     it "returns it without writing when nothing changed" do
       expect(result.customer).to eq(shadow_customer)
       expect(Customers::UpdateService).not_to have_received(:call!)
+    end
+
+    context "when the shadow customer is on the shadow default billing entity" do
+      let(:shadow_entity_code) { "other_code" }
+
+      it "does not rewrite it" do
+        expect(result.customer.billing_entity).to eq(shadow_organization.default_billing_entity)
+        expect(Customers::UpdateService).not_to have_received(:call!)
+      end
+    end
+
+    context "when the customer moves back to the default billing entity" do
+      let(:shadow_entity_code) { "other_code" }
+
+      before do
+        customer.update!(billing_entity: other_entity)
+        described_class.call(migration:, customer:)
+        customer.update!(billing_entity:)
+        update_args.clear
+      end
+
+      it "moves the shadow customer back to the shadow default billing entity" do
+        expect(result).to be_success
+        expect(update_args).to eq([{billing_entity_code: shadow_organization.default_billing_entity.code}])
+        expect(result.customer.billing_entity).to eq(shadow_organization.default_billing_entity)
+      end
     end
 
     context "when the customer has a blank attribute that the shadow customer holds as nil" do
