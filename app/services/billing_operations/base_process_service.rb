@@ -256,7 +256,6 @@ module BillingOperations
         operation.update!(processed_at: timestamp)
         if BillingOperation::PERIODIC_ACTIONS.key?(operation.action_type)
           advance_periodic_cursor(operation, resolution)
-          result.periodic_card_ids << operation.contract_rate_card_id
         end
         result.processed_operation_ids << operation.id
       end

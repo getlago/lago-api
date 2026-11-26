@@ -11,6 +11,8 @@ module BillingOperations
 
     def process_due_operations
       operations = due_operations.reject { excluded_periodic_card_ids.include?(it.contract_rate_card_id) }
+      # Failed cards must not be retried by the coordinator in the same run.
+      result.periodic_card_ids = operations.map(&:contract_rate_card_id)
       process_invoice_groups(operations)
     end
   end

@@ -6,6 +6,7 @@ RSpec.describe ContractRateCards::ChangeUnitsService do
   subject(:result) { described_class.call(contract_rate_card:, params:) }
 
   let(:organization) { create(:organization) }
+  let(:rate_effective_from) { Time.utc(2026, 9, 1) }
   let(:customer) { create(:customer, organization:, timezone: "UTC") }
   let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 9, 1)) }
   let(:product) { create(:product, :fixed, organization:) }
@@ -20,7 +21,7 @@ RSpec.describe ContractRateCards::ChangeUnitsService do
   around { |example| travel_to(timestamp, with_usec: true) { example.run } }
 
   before do
-    create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 1))
+    create(:rate_card_rate, organization:, rate_card:, effective_from: rate_effective_from)
   end
 
   it "preserves the original quantity and records the exact change time" do
@@ -39,6 +40,39 @@ RSpec.describe ContractRateCards::ChangeUnitsService do
       expect(result).to be_success
       expect(contract_rate_card.terms.find_by(effective_date: Date.new(2026, 10, 1))).to have_attributes(units: 5, application_timing: "next_billing_cycle")
       expect(contract_rate_card.units_changes).to be_empty
+    end
+  end
+
+  context "when the first price is not effective yet" do
+    let(:rate_effective_from) { Time.utc(2026, 9, 20) }
+
+    before { contract_rate_card }
+
+    it "returns a validation failure without changing units or creating billing work" do
+      expect { result }.not_to change { [ContractRateCardTerm.count, BillingOperation.count] }
+      expect(result).to be_failure
+      expect(result.error.messages[:units]).to eq(["no_effective_rate"])
+      expect(contract_rate_card.reload.terms.sole.units).to eq(8)
+      expect(SendWebhookJob).not_to have_been_enqueued
+    end
+
+    context "when paid in advance" do
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+
+      it "returns the same validation error" do
+        expect(result).to be_failure
+        expect(result.error.messages[:units]).to eq(["no_effective_rate"])
+        expect(contract_rate_card.units_changes).to be_empty
+      end
+    end
+
+    context "when applying at the next billing period" do
+      let(:params) { {units: "5", apply_units: "next_billing_period"} }
+
+      it "preserves the ability to schedule units for a later priced period" do
+        expect(result).to be_success
+        expect(contract_rate_card.terms.find_by!(effective_date: Date.new(2026, 10, 1)).units).to eq(5)
+      end
     end
   end
 

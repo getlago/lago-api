@@ -119,7 +119,9 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
     end
     let(:input) { {id: contract_rate_card.id, units: 8, applyUnits: "now"} }
 
-    before { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 1)) }
+    let(:rate_effective_from) { Time.utc(2026, 9, 1) }
+
+    before { create(:rate_card_rate, organization:, rate_card:, effective_from: rate_effective_from) }
 
     it "records the change without replacing the original units" do
       freeze_time do
@@ -138,6 +140,18 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
       it "returns current units and the accepted scheduled change" do
         expect(execution.dig("data", "updateContractAppliedRateCard").slice("units", "scheduledUnits", "scheduledUnitsEffectiveAt"))
           .to eq("units" => 5.0, "scheduledUnits" => 8.0, "scheduledUnitsEffectiveAt" => "2026-10-01T00:00:00Z")
+      end
+    end
+
+    context "when the first price is not effective yet" do
+      let(:rate_effective_from) { Time.utc(2026, 9, 20) }
+
+      around { |example| travel_to(Time.utc(2026, 9, 15)) { example.run } }
+
+      it "returns a validation error without recording a units change" do
+        expect_unprocessable_entity(execution, details: {units: ["no_effective_rate"]})
+        expect(contract_rate_card.reload.units_changes).to be_empty
+        expect(contract_rate_card.terms.sole.units).to eq(5)
       end
     end
   end

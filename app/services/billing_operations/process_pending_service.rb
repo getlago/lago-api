@@ -15,19 +15,22 @@ module BillingOperations
       result.invoices = []
       periodic_card_ids = Set.new
       units_histories = {}
+      processing_error = nil
       Customers::LockService.call!(customer:, scope: :billing_schedule, transaction: false) do
         loop do
           ScheduleService.call!(customer:, timestamp:) if units_changes_pending?
-          periodic = ProcessService.call!(customer:, timestamp:, excluded_periodic_card_ids: periodic_card_ids, units_histories:)
+          periodic = ProcessService.call(customer:, timestamp:, excluded_periodic_card_ids: periodic_card_ids, units_histories:)
+          processing_error ||= periodic.error
           result.invoices.concat(periodic.invoices)
           periodic_card_ids.merge(periodic.periodic_card_ids)
           ScheduleService.call!(customer:, timestamp:) if units_changes_pending?
-          reconciliation = ReconcileAdvanceCoverageService.call!(customer:, timestamp:, units_histories:)
+          reconciliation = ReconcileAdvanceCoverageService.call(customer:, timestamp:, units_histories:)
+          processing_error ||= reconciliation.error
           result.invoices.concat(reconciliation.invoices)
-          break if reconciliation.processed_operation_ids.empty?
+          break if reconciliation.failure? || reconciliation.processed_operation_ids.empty?
         end
       end
-      result
+      processing_error ? result.fail_with_error!(processing_error) : result
     rescue BaseService::FailedResult => error
       result.fail_with_error!(error.result.error)
     end

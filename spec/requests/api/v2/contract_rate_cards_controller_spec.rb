@@ -253,7 +253,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
     context "when scheduling an active contract's units change" do
       subject do
         put_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}",
-          {applied_rate_card: {units: "5", apply_units: "next_billing_period"}})
+          {applied_rate_card: {units: "5", apply_units: application_timing}})
       end
 
       let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 9, 1)) }
@@ -263,9 +263,12 @@ RSpec.describe Api::V2::ContractRateCardsController do
           effective_date: Date.new(2026, 9, 1), billing_anchor_date: Date.new(2026, 9, 1))
       end
 
+      let(:application_timing) { "next_billing_period" }
+      let(:rate_effective_from) { Time.utc(2026, 9, 1) }
+
       around { |example| travel_to(Time.utc(2026, 9, 15)) { example.run } }
 
-      before { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 1)) }
+      before { create(:rate_card_rate, organization:, rate_card:, effective_from: rate_effective_from) }
 
       it "returns both the current and scheduled quantities" do
         subject
@@ -285,6 +288,20 @@ RSpec.describe Api::V2::ContractRateCardsController do
           updated_at: contract_rate_card.updated_at.iso8601(6),
           deleted_at: nil
         )
+      end
+
+      context "when applying now before the first price takes effect" do
+        let(:application_timing) { "now" }
+        let(:rate_effective_from) { Time.utc(2026, 9, 20) }
+
+        it "returns a validation error instead of a server error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:details]).to eq([{code: "no_effective_rate", field: "units", meta: {}}])
+          expect(contract_rate_card.reload.units_changes).to be_empty
+          expect(contract_rate_card.terms.sole.units).to eq(8)
+        end
       end
     end
   end

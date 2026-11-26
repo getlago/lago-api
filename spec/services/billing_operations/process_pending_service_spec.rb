@@ -92,4 +92,113 @@ RSpec.describe BillingOperations::ProcessPendingService do
       expect(card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
     end
   end
+
+  context "when one periodic invoice fails" do
+    let(:other_contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1)) }
+    let(:other_cursor) { Time.utc(2026, 2, 1) }
+    let(:other_anchor) { Date.new(2026, 1, 1) }
+    let(:other_card) do
+      create(:contract_rate_card, organization:, contract: other_contract, rate_card:, units: 8,
+        effective_date: Date.new(2026, 1, 1), billing_anchor_date: other_anchor, next_billing_at: other_cursor)
+    end
+    let(:other_change_time) { Time.utc(2026, 1, 16) }
+    let(:other_cycle) { Time.utc(2026, 1, 1) }
+    let(:later_change_time) { Time.utc(2026, 1, 17) }
+    let(:later_cycle) { other_cycle }
+    let(:other_change) do
+      create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: "reconcile_advance_coverage",
+        reason: :contract_units_change, billing_at: other_change_time, target_cycle_started_at: other_cycle, units_before: 8, units_after: 10)
+    end
+    let(:later_change) do
+      create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: "reconcile_advance_coverage",
+        reason: :contract_units_change, billing_at: later_change_time, target_cycle_started_at: later_cycle, units_before: 10, units_after: 11)
+    end
+    let(:previous_renewal) do
+      create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: "renew_fixed_advance",
+        billing_at: Time.utc(2026, 1, 1), target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 1, 1))
+    end
+    let(:failed_attempts) { [] }
+    let(:billing_failure) do
+      BillingOperations::ComputeInvoiceService::Result.new.tap do |failure|
+        failure.single_validation_failure!(field: :invoice, error_code: "value_is_invalid")
+      end
+    end
+
+    before do
+      previous_renewal.segments.create!(organization:, rate_card_rate: rate, position: 0,
+        started_at: Time.utc(2026, 1, 1), ended_at: other_cursor, proration_ratio: 1, units: 8)
+      other_change
+      later_change
+      allow(BillingOperations::ComputeInvoiceService).to receive(:call!).and_wrap_original do |original, **arguments|
+        if arguments.fetch(:billing_segments).any? { it.contract_rate_card.id == card.id }
+          failed_attempts << card.id
+          billing_failure.raise_if_error!
+        end
+        original.call(**arguments)
+      end
+    end
+
+    it "bills independent adjustments, leaves dependent changes pending and returns the original error" do
+      expect(result).to be_failure
+      expect(result.error).to eq(billing_failure.error)
+      expect(result.invoices.map(&:total_amount_cents)).to eq([3200, 1500]) # 2 × 3100 × 16/31, then 1 × 3100 × 15/31.
+      expect(other_change.reload.processed_at).to eq(timestamp)
+      expect(later_change.reload.processed_at).to eq(timestamp)
+      expect(periodic.reload.processed_at).to be_nil
+      expect(change.reload.processed_at).to be_nil
+      expect(card.reload.next_billing_at).to eq(cursor)
+      expect(failed_attempts).to eq([card.id])
+    end
+
+    context "when another card needs reconciliation before its renewal" do
+      let(:other_cursor) { Time.utc(2026, 1, 10) }
+      let(:other_anchor) { Date.new(2026, 1, 10) }
+      let(:other_change_time) { Time.utc(2026, 1, 5) }
+      let(:later_change_time) { Time.utc(2026, 1, 15) }
+      let(:later_cycle) { Time.utc(2026, 1, 10) }
+      let(:other_periodic) do
+        create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: "renew_fixed_advance",
+          billing_at: other_cursor, target_cycle_started_at: other_cursor)
+      end
+
+      before { other_periodic }
+
+      it "continues independent work across multiple processing passes" do
+        expect(result).to be_failure
+        expect(result.error).to eq(billing_failure.error)
+        expect(result.invoices.map(&:total_amount_cents)).to eq([1000, 31_000, 2600])
+        # 2 × 3100 × 5/31 before renewal; 10 × 3100 at renewal; 1 × 3100 × 26/31 afterward.
+        expect(other_change.reload.processed_at).to eq(timestamp)
+        expect(other_periodic.reload.processed_at).to eq(timestamp)
+        expect(later_change.reload.processed_at).to eq(timestamp)
+        expect(periodic.reload.processed_at).to be_nil
+        expect(change.reload.processed_at).to be_nil
+        expect(failed_attempts).to eq([card.id])
+      end
+    end
+  end
+
+  context "when reconciliation fails" do
+    let(:billing_failure) do
+      BillingOperations::ComputeInvoiceService::Result.new.tap do |failure|
+        failure.single_validation_failure!(field: :invoice, error_code: "value_is_invalid")
+      end
+    end
+
+    before do
+      allow(BillingOperations::ComputeInvoiceService).to receive(:call!).and_wrap_original do |original, **arguments|
+        billing_failure.raise_if_error! if arguments.fetch(:billing_segments).any? { !it.prepaid_units.nil? }
+        original.call(**arguments)
+      end
+    end
+
+    it "preserves the periodic invoice and returns the reconciliation error" do
+      expect(result).to be_failure
+      expect(result.error).to eq(billing_failure.error)
+      expect(result.invoices.sole.total_amount_cents).to eq(24_800) # 8 × 3100 for the full period.
+      expect(periodic.reload.processed_at).to eq(timestamp)
+      expect(change.reload.processed_at).to be_nil
+      expect(card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
+    end
+  end
 end

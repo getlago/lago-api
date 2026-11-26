@@ -86,9 +86,12 @@ module ContractRateCards
         return result.single_validation_failure!(field: :units, error_code: code)
       end
 
+      segment = schedule.segment_covering(timestamp)
+      return result.single_validation_failure!(field: :units, error_code: "no_effective_rate") unless segment
+
       units_before = UnitsAtService.call!(contract_rate_card:, timestamp:).units || 0.to_d
       planned_operation = BillingOperations::Schedule::BuildPlannedOperation::PlannedOperation.new(
-        segment: schedule.segment_covering(timestamp).with(started_at: timestamp), billing_at: timestamp
+        segment: segment.with(started_at: timestamp), billing_at: timestamp
       )
       creation = BillingOperations::CreateService.call(contract_rate_card:, action_type: "reconcile_advance_coverage",
         reason: "contract_units_change", planned_operation:, units_before:, units_after: params[:units])
