@@ -3,13 +3,13 @@
 module Api
   module V2
     module Plans
-      # Lists, shows, replaces, merges and removes the entitlements of a catalog plan, with the v1 body, and the v2
-      # response and errors. Only the privilege destroy of a plan still reaches the v1 controller.
+      # Lists, shows, replaces, merges and removes the entitlements of a catalog plan, and removes one of their privilege
+      # values, with the v1 body, and the v2 response and errors.
       class EntitlementsController < Api::V2::BaseController
         serializable_with ::V2::PlanEntitlementSerializer, root: :plan_entitlement, expand_on: []
 
         # Before the lookup, like the cursor of the paginated lists.
-        before_action :reject_pagination!, only: %i[index show create update destroy]
+        before_action :reject_pagination!, only: %i[index show create update destroy destroy_privilege]
         before_action :find_catalog_plan
 
         # Bounded by the entitlement limit of a catalog plan: returned whole, without pagination.
@@ -34,6 +34,20 @@ module Api
           return not_found_error(resource: "feature") unless entitlement
 
           result = ::Entitlement::PlanEntitlementDestroyService.call(entitlement:)
+
+          if result.success?
+            render_plan_entitlement(result.entitlement)
+          else
+            render_error_response(result)
+          end
+        end
+
+        # Removes one privilege value and renders the entitlement with the values it keeps.
+        def destroy_privilege
+          entitlement = find_entitlement
+          return not_found_error(resource: "feature") unless entitlement
+
+          result = ::Entitlement::PlanEntitlementPrivilegeDestroyService.call(entitlement:, privilege_code: params[:privilege_code])
 
           if result.success?
             render_plan_entitlement(result.entitlement)

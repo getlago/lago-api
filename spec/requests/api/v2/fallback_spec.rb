@@ -72,14 +72,24 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
       expect(entitlement.values.sole.value).to eq("30")
     end
 
-    it "still deletes a privilege value through the v1 controller" do
+    it "no longer deletes a privilege value through the v1 controller, as DELETE is native" do
       delete_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements/seats/privileges/max")
 
-      expect(response).to have_http_status(:success)
-      expect(json).to eq(entitlement: {code: "seats", name: "Seats", description: nil, privileges: []})
+      expect(response).to be_v2_not_found_error("plan")
       expect(entitlement.reload).not_to be_discarded
-      expect(entitlement.values).to be_empty
-      expect(Entitlement::EntitlementValue.with_discarded.where(entitlement:).sole).to be_discarded
+      expect(entitlement.values.sole.value).to eq("30")
+    end
+
+    it "does not destroy a plan through the v1 controller on a DELETE of the collection" do
+      # The greedy v1 :code would read this path as the code of this plan.
+      greedy_match = create(:plan, organization:, code: "#{plan.code}/entitlements")
+
+      delete_with_token(organization, "/api/v2/plans/#{plan.code}/entitlements")
+
+      expect(response).to be_not_found_error("resource")
+      expect(greedy_match.reload).not_to be_discarded
+      expect(plan.reload).not_to be_discarded
+      expect(entitlement.reload).not_to be_discarded
     end
 
     it "no longer replaces them through the v1 controller, as POST is native" do
