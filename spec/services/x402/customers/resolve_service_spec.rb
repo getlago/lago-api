@@ -13,6 +13,7 @@ describe X402::Customers::ResolveService do
       expect(result.customer).to have_attributes(
         organization:,
         external_id: "x402_0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2",
+        name: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2",
         x402_agent_address: address
       )
     end
@@ -45,6 +46,10 @@ describe X402::Customers::ResolveService do
     it "derives the external id from the checksummed address" do
       expect(result.customer.external_id).to eq("x402_0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2")
     end
+
+    it "names the customer after the checksummed address" do
+      expect(result.customer.name).to eq("0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2")
+    end
   end
 
   context "with a Solana address" do
@@ -53,7 +58,7 @@ describe X402::Customers::ResolveService do
     let(:address) { "BprZ3eTVMHAcqC2wcE4XY71tvjdxJ6C6pSYjVmD75ujf" }
 
     it "stores the address verbatim" do
-      expect(result.customer).to have_attributes(x402_agent_address: address, external_id: "x402_#{address}")
+      expect(result.customer).to have_attributes(x402_agent_address: address, external_id: "x402_#{address}", name: address)
     end
   end
 
