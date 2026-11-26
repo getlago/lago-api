@@ -209,6 +209,28 @@ RSpec.describe DailyUsages::ComputeService do
             expect { compute_service.call }.not_to change(DailyUsage, :count)
           end
         end
+
+        context "when timestamp is on another day" do
+          let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
+
+          it "creates a daily usage" do
+            travel_to(timestamp) do
+              expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+            end
+          end
+        end
+      end
+
+      context "when timestamp is on a monthly billing day of the fixed charges of a yearly plan" do
+        # Its charges are billed yearly, so the periodic invoice fills no daily usage on that day
+        let(:plan) { create(:plan, organization:, interval: :yearly, bill_fixed_charges_monthly: true) }
+        let(:timestamp) { Time.zone.parse("2024-11-01 00:05:00") }
+
+        it "creates a daily usage" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+          end
+        end
       end
 
       context "when timestamp is on subscription billing day" do
