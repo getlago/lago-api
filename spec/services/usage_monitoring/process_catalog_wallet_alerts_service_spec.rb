@@ -66,6 +66,18 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsService do
     end
   end
 
+  context "when the balance dipped below a line and recovered before the run" do
+    # From 120 down to 15, then back up to 50, all committed before the job read the wallet
+    let(:balance_cents) { 5_000 }
+
+    it "evaluates the balance it reads, as v1 does, so the dip below 20 is not announced" do
+      expect(result).to be_success
+
+      expect(alert.all_triggered_alerts.sole.crossed_thresholds).to eq([{"code" => "low", "value" => "10000.0", "recurring" => false}])
+      expect(alert.reload.previous_value).to eq(5_000)
+    end
+  end
+
   context "when the balance reaches a line exactly" do
     let(:previous_value) { 2_500 }
     let(:balance_cents) { 2_000 }
