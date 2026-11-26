@@ -432,11 +432,13 @@ RSpec.describe Api::V2::Contracts::UsageController do
     end
 
     context "with a pending replacement" do
+      let(:params) { {contract_code: contract.code} }
+
       before do
         create(:contract, :pending, organization:, customer:, external_id: contract.external_id)
       end
 
-      it "returns the usage of the active contract" do
+      it "returns the usage of the contract identified by its code" do
         subject
 
         expect(json[:current_usage][:rate_cards].size).to eq(2)
@@ -460,10 +462,28 @@ RSpec.describe Api::V2::Contracts::UsageController do
           ended_at: Time.zone.parse("2027-02-01"))
       end
 
-      it "returns a not found error" do
+      it "returns no usage" do
         subject
 
-        expect(response).to be_v2_not_found_error("contract")
+        expect(response).to have_http_status(:success)
+        expect(json[:current_usage]).to include(rate_cards: [], amount_cents: 0, total_amount_cents: 0)
+      end
+    end
+
+    context "when the selected contract was canceled after its start date" do
+      let(:contract) do
+        create(:contract, :canceled, organization:, customer:, started_at: Time.zone.parse("2027-01-01"),
+          canceled_at: Time.zone.parse("2027-02-01"))
+      end
+      let(:params) { {contract_code: contract.code} }
+
+      before { create(:contract, organization:, customer:, external_id: contract.external_id) }
+
+      it "returns no usage from the shared external id" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:current_usage]).to include(rate_cards: [], amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
       end
     end
 

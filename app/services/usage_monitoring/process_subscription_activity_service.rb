@@ -39,15 +39,14 @@ module UsageMonitoring
         organization_id: subscription_activity.organization_id
       ).load
 
-      alerts.each do |alert|
-        case alert.alert_type
-        when "lifetime_usage_amount"
-          ProcessAlertService.call(alert:, alertable: subscription, current_metrics: lifetime_usage)
-        when *Alert::BILLABLE_METRIC_LIFETIME_USAGE_TYPES
-          UsageMonitoring::ProcessLifetimeUsageAlertJob.set(wait: processing_interval).perform_later(alert:, subscription:)
-        when *Alert::CURRENT_USAGE_TYPES
-          ProcessAlertService.call(alert:, alertable: subscription, current_metrics: current_usage)
-        end
+      begin
+        EvaluateSubscriptionUsageAlertsService.call(
+          subscription:,
+          alerts:,
+          lifetime_usage:,
+          # NOTE: reuse the usage built for progressive billing, so it is not computed twice
+          full_plan_usage: @full_plan_usage
+        )
       rescue => e
         exception_to_raise ||= e
       end
@@ -67,18 +66,23 @@ module UsageMonitoring
 
     attr_reader :subscription_activity, :subscription
 
-    def processing_interval
-      (ENV["LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS"].presence || 1.minute).to_i.seconds
+    def current_usage
+      full_plan_usage&.usage
     end
 
-    def current_usage
-      @current_usage ||= ::Invoices::CustomerUsageService.call(
-        customer: subscription.customer,
-        subscription:,
-        apply_taxes: false, # Never use taxes for alerting
-        with_cache: true,
-        use_usage_buckets: true
-      ).usage
+    def full_plan_usage
+      @full_plan_usage ||= begin
+        snapshot = UsageSnapshot.measure do
+          ::Invoices::CustomerUsageService.call(
+            customer: subscription.customer,
+            subscription:,
+            apply_taxes: false, # Never use taxes for alerting
+            with_cache: true,
+            use_usage_buckets: true
+          ).usage
+        end
+        snapshot if snapshot.usage
+      end
     end
 
     def find_or_create_lifetime_usage

@@ -50,7 +50,7 @@ RSpec.describe "Fixed advance rate change edge cases" do
     end
     api_call do
       post_with_token(organization, "/api/v2/contracts", {contract: {
-        external_id: "edge-contract", external_customer_id: customer.external_id,
+        code: "edge-contract", external_id: "edge-contract", external_customer_id: customer.external_id,
         plan_code: "edge-plan", started_at: start_at.iso8601
       }})
     end

@@ -106,7 +106,10 @@ module PaymentProviders
           organization_id: organization.id,
           provider_payment_id:,
           status:,
-          amount_cents: event.dig("amount", "value"),
+          amount_cents: ::PaymentProviders::AdyenProvider.from_adyen_amount(
+            event.dig("amount", "value"),
+            event.dig("amount", "currency")
+          ),
           metadata:
         )
       end

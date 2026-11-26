@@ -119,6 +119,68 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       end
     end
 
+    context "when the currency is one Stripe reads in hundredths" do
+      let(:currency) { "HUF" }
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 50_000,
+          currency:,
+          ready_for_payment_processing: true
+        )
+      end
+
+      it "sends the amount in Stripe units" do
+        create_service.call
+
+        expect(Stripe::PaymentIntent).to have_received(:create).with(
+          hash_including(amount: 50_000 * 100, currency: "huf"), # 50,000 HUF, which Stripe reads in hundredths
+          anything
+        )
+      end
+
+      context "when the payable is a payment request" do
+        let(:payment_request) do
+          create(:payment_request, customer:, amount_cents: 50_000, currency:, invoices: [invoice])
+        end
+        let(:payment) do
+          create(
+            :payment,
+            payable: payment_request,
+            status: "pending",
+            payment_provider: stripe_payment_provider,
+            payment_provider_customer: stripe_customer,
+            payment_method:,
+            amount_cents: payment_request.total_amount_cents,
+            amount_currency: payment_request.currency,
+            provider_payment_id: nil
+          )
+        end
+
+        it "sends the amount in Stripe units" do
+          create_service.call
+
+          expect(Stripe::PaymentIntent).to have_received(:create).with(
+            hash_including(amount: 50_000 * 100, currency: "huf"), # 50,000 HUF, which Stripe reads in hundredths
+            anything
+          )
+        end
+      end
+    end
+
+    context "when the currency is EUR" do
+      it "sends the amount unchanged" do
+        create_service.call
+
+        expect(Stripe::PaymentIntent).to have_received(:create).with(
+          hash_including(amount: 200, currency: "eur"), # invoice total_amount_cents, EUR has two decimals in Lago and Stripe
+          anything
+        )
+      end
+    end
+
     context "when the invoice has already been paid" do
       before { invoice.update!(payment_status: :succeeded) }
 
@@ -250,6 +312,70 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
 
           expect(result).to be_success
           expect(Stripe::Customer).to have_received(:list_payment_methods).once
+        end
+      end
+    end
+
+    context "when the payment carries a shared payment token row" do
+      let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token]) }
+      let(:payment_method) do
+        create(:payment_method, customer:, payment_provider_customer: stripe_customer, is_default: false,
+          provider_method_type: "shared_payment_token", provider_method_id: "spt_lago_123", details: {})
+      end
+
+      before do
+        allow(Stripe::Customer).to receive(:retrieve).and_call_original
+        allow(Stripe::Customer).to receive(:list_payment_methods).and_call_original
+      end
+
+      it "charges the row's token without looking the Stripe customer up" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment.status).to eq("succeeded")
+        expect(Stripe::PaymentIntent).to have_received(:create)
+          .with(hash_including(payment_method_data: {shared_payment_granted_token: "spt_lago_123"}), anything)
+        expect(Stripe::Customer).not_to have_received(:retrieve)
+        expect(Stripe::Customer).not_to have_received(:list_payment_methods)
+        expect(PaymentProviderCustomers::Stripe::CheckPaymentMethodService).not_to have_received(:call)
+      end
+
+      context "when Stripe rejects the token" do
+        let(:payment_response) do
+          get_stripe_fixtures("payment_intent_card_declined_response.json") do |h|
+            h["error"]["payment_intent"]["id"] = "pi_declined"
+          end
+        end
+
+        before do
+          stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+            .to_return(status: 402, body: payment_response, headers: {})
+        end
+
+        it "fails the payment without falling back to another payment method" do
+          result = create_service.call
+
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.payment.status).to eq("failed")
+          expect(result.payment.payable_payment_status).to eq("failed")
+          expect(Stripe::PaymentIntent).to have_received(:create).once
+          expect(Stripe::Customer).not_to have_received(:list_payment_methods)
+        end
+      end
+
+      context "when the payment has no token row" do
+        let(:payment_method) { nil }
+
+        it "fails before calling Stripe and marks the payment failed" do
+          expect { create_service.call }.to raise_error(BaseService::ServiceFailure) do |error|
+            expect(error.code).to eq("missing_shared_payment_token")
+            expect(error.result.should_retry).to be_falsey
+          end
+
+          expect(payment.reload.status).to eq("failed")
+          expect(payment.payable_payment_status).to eq("failed")
+          expect(payment.error_code).to eq("missing_shared_payment_token")
+          expect(Stripe::PaymentIntent).not_to have_received(:create)
         end
       end
     end
@@ -666,6 +792,61 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
 
         it "returns the payload" do
           expect(payment_intent_payload).to eq(payload)
+        end
+      end
+
+      context "when the payment carries a shared payment token row" do
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token]) }
+        let(:payment_method) do
+          create(:payment_method, customer:, payment_provider_customer: stripe_customer, is_default: false,
+            provider_method_type: "shared_payment_token", provider_method_id: "spt_row_123", details: {})
+        end
+
+        it "reads the token from the row and lets Stripe pick the payment method type" do
+          expect(payment_intent_payload).to eq(
+            amount: invoice.total_amount_cents,
+            currency: invoice.currency.downcase,
+            customer: stripe_customer.provider_customer_id,
+            payment_method_data: {shared_payment_granted_token: "spt_row_123"},
+            confirm: true,
+            error_on_requires_action: true,
+            description: reference,
+            metadata:
+          )
+        end
+      end
+
+      context "when the shared payment token lives on the Stripe customer (legacy path)" do
+        let(:stripe_customer) do
+          create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[card])
+        end
+        let(:payment_method) { nil }
+
+        before do
+          organization.enable_feature_flag!("stripe_shared_payment_token")
+
+          allow(Stripe::Customer).to receive(:retrieve).and_return(
+            Stripe::StripeObject.construct_from(
+              invoice_settings: {default_payment_method: nil, default_shared_payment_token: "spt_stripe_side"},
+              default_source: nil
+            )
+          )
+          allow(Stripe::Customer).to receive(:list_payment_methods)
+            .and_return(Stripe::ListObject.construct_from(data: []))
+        end
+
+        it "sends the same payload as before this change" do
+          expect(payment_intent_payload).to eq(
+            amount: invoice.total_amount_cents,
+            currency: invoice.currency.downcase,
+            customer: stripe_customer.provider_customer_id,
+            payment_method_types: %w[card],
+            payment_method_data: {shared_payment_granted_token: "spt_stripe_side"},
+            confirm: true,
+            error_on_requires_action: true,
+            description: reference,
+            metadata:
+          )
         end
       end
 

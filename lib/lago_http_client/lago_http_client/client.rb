@@ -150,6 +150,17 @@ module LagoHttpClient
       JSON.parse(response.body.presence || "{}")
     end
 
+    def delete(headers: {}, params: nil)
+      path = params ? "#{uri.path}?#{URI.encode_www_form(params)}" : uri.path
+      req = Net::HTTP::Delete.new(path)
+
+      headers.keys.each do |key|
+        req[key] = headers[key]
+      end
+
+      request(req)
+    end
+
     private
 
     attr_reader :http_client, :open_timeout, :read_timeout, :write_timeout, :max_retries

@@ -6,10 +6,12 @@ module X402
       Result = BaseResult[:verified_payment]
       CLOCK_SKEW_TOLERANCE = 30.seconds
 
-      def initialize(connection:, payment:, payment_requirements:)
+      def initialize(connection:, payment:, payment_requirements:, settle_response: nil, verify_response: nil)
         @connection = connection
         @payment = payment
         @payment_requirements = payment_requirements
+        @settle_response = settle_response
+        @verify_response = verify_response
 
         super
       end
@@ -17,6 +19,9 @@ module X402
       def call
         return refuse(:payment, "invalid_payment") unless serialisable?(payment)
         return refuse(:payment_requirements, "invalid_payment_requirements") unless serialisable?(payment_requirements)
+
+        response_failure = responses_failure
+        return refuse(*response_failure) if response_failure
 
         term_failure = terms_failure
         return refuse(*term_failure) if term_failure
@@ -27,6 +32,22 @@ module X402
         family_failure = (family == :evm) ? evm_failure : svm_failure
         return refuse(*family_failure) if family_failure
 
+        if recorded?
+          check_settle_response(digest_result.digest)
+        else
+          verify_with_facilitator(digest_result.digest)
+        end
+      end
+
+      private
+
+      attr_reader :connection, :payment, :payment_requirements, :settle_response, :verify_response
+
+      def recorded?
+        !settle_response.nil?
+      end
+
+      def verify_with_facilitator(digest)
         verification = X402::Facilitator::Client.for(connection).verify(payment:, payment_requirements:)
         return refuse(:payment, verification.invalid_reason) unless verification.valid
 
@@ -34,19 +55,29 @@ module X402
         anomaly = payer_anomaly(reported)
         raise_anomaly(anomaly, verification) if anomaly
 
+        answer(digest, verification.response)
+      end
+
+      def check_settle_response(digest)
+        failure = settle_response_failure
+
+        if failure
+          refuse(*failure)
+        else
+          answer(digest, verify_response&.deep_stringify_keys)
+        end
+      end
+
+      def answer(digest, verify_answer)
         result.verified_payment = X402::Settlements::VerifiedPayment.new(
           connection:,
           payment_payload:,
           payer_address: derived_payer,
-          payment_digest: digest_result.digest,
-          verify_response: verification.response
+          payment_digest: digest,
+          verify_response: verify_answer
         )
         result
       end
-
-      private
-
-      attr_reader :connection, :payment, :payment_requirements
 
       def payment_payload
         @payment_payload ||= X402::PaymentPayload.new(payment:, payment_requirements:)
@@ -82,6 +113,16 @@ module X402
         result.validation_failure!(errors: {field => [code]})
       end
 
+      def responses_failure
+        return unless recorded?
+
+        if !serialisable?(settle_response)
+          [:settle_response, "invalid_settle_response"]
+        elsif !verify_response.nil? && !serialisable?(verify_response)
+          [:verify_response, "invalid_verify_response"]
+        end
+      end
+
       def terms_failure
         network = payment_payload.network
         asset = X402::Asset::DEFINITIONS[[connection.asset, network]]&.address
@@ -100,7 +141,7 @@ module X402
           [:payment_requirements, "invalid_pay_to"]
         elsif amount.nil? || amount < X402::Asset.fetch(code: connection.asset, network:).atomic_units_per_cent
           [:payment_requirements, "invalid_amount"]
-        elsif timeout.nil? || !(1..X402::PaymentPayload::MAX_TIMEOUT_SECONDS).cover?(timeout)
+        elsif !recorded? && (timeout.nil? || !(1..X402::PaymentPayload::MAX_TIMEOUT_SECONDS).cover?(timeout))
           [:payment_requirements, "invalid_max_timeout_seconds"]
         end
       end
@@ -110,7 +151,7 @@ module X402
           [:payment, "invalid_authorization"]
         elsif X402::Network.normalize_address(payment_payload.to, family: :evm) != connection.payout_addresses["evm"]
           [:payment, "invalid_pay_to"]
-        elsif payment_payload.valid_before > Time.current.to_i + payment_payload.max_timeout_seconds + CLOCK_SKEW_TOLERANCE.to_i
+        elsif !recorded? && payment_payload.valid_before > Time.current.to_i + payment_payload.max_timeout_seconds + CLOCK_SKEW_TOLERANCE.to_i
           [:payment, "invalid_valid_before"]
         end
       end
@@ -122,8 +163,46 @@ module X402
         [:payment, "unsupported_transaction"]
       end
 
+      def svm_reader
+        @svm_reader ||= X402::Chain::SvmReader.new(network: payment_payload.network, payment:, payment_requirements:, since: Time.current)
+      end
+
       def svm_payer
-        @svm_payer ||= X402::Chain::SvmReader.new(network: payment_payload.network, payment:, payment_requirements:, since: Time.current).payer
+        @svm_payer ||= svm_reader.payer
+      end
+
+      def settle_response_failure
+        if settled["success"] != true || !X402::Network.valid_transaction?(settled["transaction"], family:)
+          [:settle_response, "settle_not_successful"]
+        elsif transferred_amount != payment_payload.amount
+          [:payment, "amount_mismatch"]
+        elsif family == :svm && svm_reader.mint != payment_payload.asset
+          [:payment, "asset_mismatch"]
+        elsif settled["network"] != payment_payload.network
+          settle_mismatch("network_mismatch")
+        elsif !settled_payer_matches?
+          settle_mismatch("payer_mismatch")
+        end
+      rescue X402::Chain::UnreadablePaymentError
+        [:payment, "unsupported_transaction"]
+      end
+
+      def settled
+        @settled ||= settle_response.deep_stringify_keys
+      end
+
+      def transferred_amount
+        (family == :evm) ? payment_payload.value : svm_reader.transfer_amount
+      end
+
+      def settled_payer_matches?
+        payer = settled["payer"]
+        payer.nil? || X402::Network.normalize_address(payer, family:) == derived_payer
+      end
+
+      def settle_mismatch(reason)
+        Rails.logger.warn("#{self.class.name} call failed reason=#{reason} network=#{payment_payload.network}")
+        [:settle_response, "does_not_match_payment"]
       end
 
       def derived_payer

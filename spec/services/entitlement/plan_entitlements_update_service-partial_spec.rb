@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Entitlement::PlanEntitlementsUpdateService do
   subject(:result) { described_class.call(organization:, plan:, entitlements_params:, partial: true) }
 
-  let_it_be(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization) }
   let_it_be(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:) }
   let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
@@ -139,6 +139,23 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       it "returns both entitlements in the result" do
         expect(result.entitlements).to include(entitlement, entitlement2)
       end
+
+      context "when the existing value of the second feature is set to null" do
+        let(:entitlements_params) do
+          {
+            feature.code => {privilege.code => 60},
+            feature2.code => {privilege3.code => nil}
+          }
+        end
+
+        it "records the second feature and its privilege as the failing entry and writes nothing" do
+          expect { result }.not_to change { entitlement_value.reload.value }
+
+          expect(result.error.messages).to eq({"privilege.value": ["value_is_mandatory"]})
+          expect(result.error.codes).to eq({"entitlements.#{feature2.code}.max_storage": ["value_is_mandatory"]})
+          expect(result.failed_field).to be_nil
+        end
+      end
     end
 
     context "when plan is nil" do
@@ -181,6 +198,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages).to eq(feature: ["value_already_exist"])
         expect(plan.entitlements.where(feature: new_feature)).to be_empty
+        expect(result.failed_field).to be_nil
         expect(SendWebhookJob).not_to have_been_enqueued
         expect(Utils::ActivityLog).not_to have_produced("plan.updated")
       end
@@ -201,6 +219,186 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result.error.messages).to eq(privilege: ["value_already_exist"])
         expect(Entitlement::EntitlementValue.where(privilege: privilege2)).to be_empty
         expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
+    context "with a catalog plan" do
+      let(:plan) { create(:catalog_plan, organization:) }
+      let(:entitlement) { create(:entitlement, :catalog_plan, catalog_plan: plan, feature:) }
+      let(:new_feature) { create(:feature, organization:, code: "storage") }
+      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb", value_type: "integer") }
+      let(:entitlements_params) { {new_feature.code => {new_privilege.code => "100"}} }
+
+      # The per-entitlement events of a catalog plan are behind the entitlement_events flag.
+      before { organization.enable_feature_flag!(:entitlement_events) }
+
+      context "without the entitlement_events flag" do
+        before { organization.disable_feature_flag!(:entitlement_events) }
+
+        it "logs nothing and sends no webhook" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(result).to be_success
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+        end
+      end
+
+      it "adds the feature and keeps the other ones" do
+        expect(result).to be_success
+
+        new_entitlement = plan.entitlements.find_by!(feature: new_feature)
+        expect(new_entitlement.catalog_plan_id).to eq(plan.id)
+        expect(new_entitlement.plan_id).to be_nil
+        expect(new_entitlement.values.sole.value).to eq("100")
+        expect(entitlement_value.reload.value).to eq("10")
+        expect(result.entitlements).to eq([new_entitlement, entitlement])
+      end
+
+      it "logs and notifies only the added entitlement, with no plan.updated event" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(1).times
+
+        new_entitlement = plan.entitlements.find_by!(feature: new_feature)
+        expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", new_entitlement)
+        expect(Utils::ActivityLog).to have_received(:produce).with(
+          new_entitlement, "plan_entitlement.created", after_commit: true,
+          changes: {"values" => [nil, [{privilege_code: "max_gb", value: 100}]]},
+          activity_object: hash_including(lago_id: new_entitlement.id, values: [{privilege_code: "max_gb", value: 100}])
+        ).once
+        expect(Utils::ActivityLog).to have_received(:produce).once
+      end
+
+      context "when a value of a kept entitlement changes" do
+        let(:entitlements_params) { {feature.code => {privilege2.code => 5}} }
+
+        it "logs and notifies the entitlement as updated with all its values" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(1).times
+
+          expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.updated", entitlement)
+          expect(Utils::ActivityLog).to have_received(:produce).with(
+            entitlement, "plan_entitlement.updated", after_commit: true,
+            changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max_admins", value: 5}, {privilege_code: "max", value: 10}]]},
+            activity_object: hash_including(
+              lago_id: entitlement.id,
+              values: [{privilege_code: "max_admins", value: 5}, {privilege_code: "max", value: 10}]
+            )
+          ).once
+        end
+      end
+
+      context "when a concurrent request creates the same entitlement" do
+        before do
+          # The concurrent request inserts its row after this one read the plan entitlements.
+          allow(Entitlement::Entitlement).to receive(:create!).and_wrap_original do |original, **attributes|
+            original.call(**attributes)
+            original.call(**attributes)
+          end
+        end
+
+        it "returns the validation error of a taken feature" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq(feature: ["value_already_exist"])
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+        end
+      end
+
+      context "when a concurrent request creates the same entitlement value" do
+        let(:entitlements_params) { {feature.code => {privilege2.code => 5}} }
+
+        before do
+          allow(Entitlement::EntitlementValue).to receive(:create!).and_wrap_original do |original, **attributes|
+            original.call(**attributes)
+            original.call(**attributes)
+          end
+        end
+
+        it "returns the validation error of a taken privilege" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq(privilege: ["value_already_exist"])
+          expect(entitlement.values.where(privilege: privilege2)).to be_empty
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+        end
+      end
+
+      context "when the plan already holds more than 200 entitlements" do
+        before do
+          now = Time.current
+          rows = bulk_create_features(organization, 200).values.map do
+            {organization_id: organization.id, catalog_plan_id: plan.id, entitlement_feature_id: it, created_at: now, updated_at: now}
+          end
+          Entitlement::Entitlement.insert_all!(rows) # rubocop:disable Rails/SkipsModelValidations
+        end
+
+        context "when the write updates an existing value" do
+          let(:entitlements_params) { {feature.code => {privilege.code => 60}} }
+
+          it "accepts it" do
+            expect(result).to be_success
+            expect(plan.entitlements.count).to eq(201) # 200 bulk + the entitlement of feature
+            expect(entitlement_value.reload.value).to eq("60")
+          end
+        end
+
+        context "when the write adds a feature" do
+          it "refuses it and writes nothing" do
+            expect { result }.not_to change(Entitlement::Entitlement.with_discarded, :count)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(base: ["too_many_entitlements"])
+            expect(result.error.meta).to eq(base: {max_items: 200})
+            expect(result.failed_field).to be_nil
+            expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          end
+        end
+      end
+
+      context "when the plan already holds 50 values on an entitlement" do
+        # The value of privilege and 49 more: privilege2 has no value yet.
+        let(:more_privileges) { create_list(:privilege, 49, organization:, feature:, value_type: "integer") }
+
+        before do
+          now = Time.current
+          rows = more_privileges.map do |more_privilege|
+            {organization_id: organization.id, entitlement_entitlement_id: entitlement.id,
+             entitlement_privilege_id: more_privilege.id, value: "1", created_at: now, updated_at: now}
+          end
+          Entitlement::EntitlementValue.insert_all!(rows) # rubocop:disable Rails/SkipsModelValidations
+        end
+
+        context "when the write updates an existing value" do
+          let(:entitlements_params) { {feature.code => {privilege.code => 60}} }
+
+          it "accepts it" do
+            expect(result).to be_success
+            expect(entitlement.values.count).to eq(50)
+            expect(entitlement_value.reload.value).to eq("60")
+          end
+        end
+
+        context "when the write adds one" do
+          let(:entitlements_params) { {feature.code => {privilege2.code => 5}} }
+
+          it "refuses it and writes nothing" do
+            expect { result }.not_to change(Entitlement::EntitlementValue.with_discarded, :count)
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq("entitlements.#{feature.code}": ["too_many_values"])
+            expect(result.error.meta).to eq("entitlements.#{feature.code}": {max_items: 50})
+            expect(result.failed_field).to be_nil
+            expect(Utils::ActivityLog).not_to have_produced("plan.updated")
+          end
+        end
+      end
+    end
+
+    context "when a feature value is null on a legacy plan" do
+      let(:new_feature) { create(:feature, organization:, code: "storage") }
+      let(:entitlements_params) { {new_feature.code => nil} }
+
+      it "adds the entitlement with no values, as before" do
+        expect(result).to be_success
+        expect(plan.entitlements.find_by(feature: new_feature).values).to be_empty
       end
     end
 

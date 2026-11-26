@@ -320,6 +320,45 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     it_behaves_like "a keyset-paginated query", table: "plan_rate_cards", index: "index_plan_rate_cards_by_cursor"
   end
 
+  context "with ContractWalletsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        ContractWalletsQuery.call(organization:, pagination:, filters: {contract_id: SecureRandom.uuid, created_at_from: "2026-01-01"}).contract_wallets
+      end
+    end
+    let(:default_scope) do
+      ->(pagination) { ContractWalletsQuery.call(organization:, pagination:, filters: {contract_id: SecureRandom.uuid}).contract_wallets }
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "catalog_wallets", index: "index_catalog_wallets_by_cursor"
+  end
+
+  context "with ContractWalletTransactionsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        ContractWalletTransactionsQuery.call(
+          organization:,
+          pagination:,
+          filters: {
+            contract_wallet_id: SecureRandom.uuid,
+            direction: "inbound",
+            status: "settled",
+            reason: "credit_allocation",
+            credit_allocation_code: "monthly_allowance",
+            created_at_from: "2026-01-01"
+          }
+        ).wallet_transactions
+      end
+    end
+    let(:default_scope) do
+      lambda do |pagination|
+        ContractWalletTransactionsQuery.call(organization:, pagination:, filters: {contract_wallet_id: SecureRandom.uuid}).wallet_transactions
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "catalog_wallet_transactions", index: "index_catalog_wallet_transactions_by_cursor"
+  end
+
   context "with PlanWalletsQuery" do
     let(:filtered_scope) do
       lambda do |pagination|

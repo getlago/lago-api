@@ -32,6 +32,9 @@ module PaymentProviders
     FAILED_STATUSES = %w[canceled requires_payment_method].freeze
     SUPPORTED_EU_BANK_TRANSFER_COUNTRIES = %w[BE DE ES FR IE NL].freeze
 
+    # NOTE: Lago stores these currencies with subunit_to_unit 1, but Stripe reads their amounts in hundredths.
+    TWO_DECIMAL_OVERRIDE_CURRENCIES = %w[HUF ISK UGX].freeze
+
     # NOTE: retrying one of these can change the answer, so jobs talking to stripe retry them and
     #       lookups let them propagate rather than acting on data they could not confirm.
     TRANSIENT_ERRORS = [
@@ -55,6 +58,30 @@ module PaymentProviders
     secrets_accessors :secret_key
     settings_accessors :supports_3ds
     settings_accessors :require_terms_of_service_consent, default: false
+    settings_accessors :seller_profile
+
+    def self.to_stripe_amount(amount_cents, currency)
+      if two_decimal_override_currency?(currency)
+        amount_cents * 100
+      else
+        amount_cents
+      end
+    end
+
+    def self.from_stripe_amount(amount, currency)
+      if amount.nil?
+        nil
+      elsif two_decimal_override_currency?(currency)
+        amount / 100
+      else
+        amount
+      end
+    end
+
+    def self.two_decimal_override_currency?(currency)
+      TWO_DECIMAL_OVERRIDE_CURRENCIES.include?(currency.to_s.upcase)
+    end
+    private_class_method :two_decimal_override_currency?
 
     def payment_type
       "stripe"

@@ -3,9 +3,11 @@
 module Api
   module V2
     class ContractsController < Api::V2::BaseController
+      include Api::V2::ContractLookup
+
       cursor_paginated_index(Contract)
       date_range_filtered_index(:created_at)
-      serializable_with ::V2::ContractSerializer
+      serializable_with ::V2::ContractSerializer, expand_on: %i[show publish]
 
       def create
         result = ::Contracts::CreateService.call(
@@ -21,7 +23,7 @@ module Api
       end
 
       def update
-        contract = current_organization.contracts.live_by_external_id(params[:external_id])
+        contract = find_contract(params[:external_id])
 
         result = ::Contracts::UpdateService.call(
           contract:,
@@ -38,9 +40,23 @@ module Api
       # A contract is never destroyed: DELETE ends its lifecycle. An active
       # contract is terminated, a pending one canceled — the service decides.
       def terminate
-        contract = current_organization.contracts.terminatable_by_external_id(params[:external_id])
+        contract = find_contract(params[:external_id])
 
         result = ::Contracts::TerminateService.call(contract:)
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
+      # Releases a draft for billing. A retry is safe: it publishes nothing again,
+      # and activates a pending contract whose start has passed.
+      def publish
+        contract = find_contract(params[:external_id])
+
+        result = ::Contracts::PublishService.call(contract:)
 
         if result.success?
           render_contract(result.contract)
@@ -52,11 +68,7 @@ module Api
       def index
         filters = params.permit(:plan_code, :external_customer_id, :external_id, :has_rate_overrides, billing_entity_ids: [])
           .to_h.merge(date_range_filters)
-        # Accept both ?status=pending and ?status[]=pending — strong params
-        # would silently drop the scalar form and hand back active contracts
-        # to a caller who believes they filtered.
-        statuses = params[:status].is_a?(Array) ? params[:status] : [params[:status]]
-        filters[:status] = statuses.compact_blank.presence || ["active"]
+        filters[:status] = Array.wrap(params[:status]).compact_blank.presence
 
         result = ::ContractsQuery.call(
           organization: current_organization,
@@ -73,18 +85,7 @@ module Api
       end
 
       def show
-        # No status filter resolves to the live contract (pending or active),
-        # so a pending contract is visible on its own detail URL and matches
-        # what the nested applied-rate-card endpoints operate on. An explicit
-        # status reads a specific one, including terminated/canceled history.
-        contract =
-          if params[:status].present?
-            current_organization.contracts
-              .order(started_at: :desc)
-              .find_by(external_id: params[:external_id], status: requested_status)
-          else
-            current_organization.contracts.live_by_external_id(params[:external_id])
-          end
+        contract = find_contract(params[:external_id])
         return not_found_error(resource: "contract") unless contract
 
         render_contract(contract)
@@ -92,23 +93,14 @@ module Api
 
       private
 
-      # The column is a PostgreSQL enum: an unknown value would be a
-      # database-level cast error, so anything else falls back to active.
-      def requested_status
-        if Contract::STATUSES.value?(params[:status])
-          params[:status]
-        else
-          "active"
-        end
-      end
-
       def create_params
-        params.require(:contract).permit(
+        permitted = params.require(:contract).permit(
           :external_customer_id,
           :external_id,
+          :code,
           :name,
           :plan_code,
-          :billing_time,
+          :status,
           :billing_anchor_date,
           :started_at,
           :ended_at,
@@ -116,16 +108,18 @@ module Api
           :purchase_order_number,
           invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
+
+        keep_status(permitted)
       end
 
       # external_customer_id and external_id are set at creation and address the
       # contract. Contracts::UpdateService decides which of the rest may change
       # for the contract's status.
       def update_params
-        params.require(:contract).permit(
+        permitted = params.require(:contract).permit(
           :name,
           :plan_code,
-          :billing_time,
+          :status,
           :billing_anchor_date,
           :started_at,
           :ended_at,
@@ -133,6 +127,19 @@ module Api
           :purchase_order_number,
           invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
+
+        keep_status(permitted)
+      end
+
+      # permit drops a non-scalar status, which the services would then read as
+      # omitted (a contract that bills instead of a draft, an ignored update):
+      # keep it so they refuse it.
+      def keep_status(permitted)
+        if params[:contract].key?(:status) && !permitted.key?(:status)
+          permitted[:status] = params[:contract][:status].to_s
+        end
+
+        permitted
       end
 
       def resource_name

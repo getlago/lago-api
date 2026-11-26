@@ -12,6 +12,7 @@ describe "A contract billed in advance invoices on creation" do
       params: {
         external_customer_id: customer.external_id,
         external_id: "contract-advance",
+        code: "initial",
         plan_code: catalog_plan.code,
         started_at: "2026-01-15T00:00:00Z"
       }

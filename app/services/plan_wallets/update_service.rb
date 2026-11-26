@@ -3,10 +3,9 @@
 module PlanWallets
   # Edits a plan's wallet template. Contracts hold their own copy, so an edit reaches new contracts only.
   class UpdateService < BaseService
-    Result = BaseResult[:plan_wallet]
+    include CatalogWallets::SettingsParams
 
-    ATTRIBUTES = CreateService::ATTRIBUTES
-    RELATED_PARAMS = %i[metadata tax_codes applies_to].freeze
+    Result = BaseResult[:plan_wallet]
 
     activity_loggable(
       action: "plan_wallet.updated",
@@ -26,13 +25,7 @@ module PlanWallets
         return result.single_validation_failure!(field:, error_code: "value_is_invalid")
       end
 
-      if params.key?(:tax_application) && !PlanWallet.tax_applications.key?(params[:tax_application])
-        return result.single_validation_failure!(
-          field: :tax_application,
-          error_code: "value_is_invalid",
-          meta: {allowed_values: PlanWallet.tax_applications.keys}
-        )
-      end
+      return unknown_tax_application_failure if params.key?(:tax_application) && !known_tax_application?
 
       plan_wallet.with_lock do
         return result.not_found_failure!(resource: "plan_wallet") if plan_wallet.discarded?
@@ -48,9 +41,8 @@ module PlanWallets
         plan_wallet.updated_at = Time.current if RELATED_PARAMS.any? { params.key?(it) }
         plan_wallet.save!
 
-        replace_metadata! if params.key?(:metadata)
-        CatalogWallets::ApplyTaxesService.call!(wallet: plan_wallet, tax_codes: params[:tax_codes]) unless params[:tax_codes].nil?
-        CatalogWalletSelectors::ReplaceService.call!(wallet: plan_wallet, applies_to: params[:applies_to]) unless params[:applies_to].nil?
+        replace_metadata!(plan_wallet) if params.key?(:metadata)
+        replace_taxes_and_scope!(plan_wallet)
       end
 
       result.plan_wallet = plan_wallet
@@ -71,22 +63,6 @@ module PlanWallets
 
     def code_change_requested?
       params.key?(:code) && params[:code] != plan_wallet.code
-    end
-
-    # The metadata record names its errors in sentences, on its own `value` column.
-    def replace_metadata!
-      unless Metadata::UpdateItemService.call(owner: plan_wallet, value: params[:metadata]).success?
-        result.single_validation_failure!(field: :metadata, error_code: "value_is_invalid").raise_if_error!
-      end
-    end
-
-    # The field whose value has another shape than its service reads: a metadata object, a list of tax codes.
-    def malformed_param
-      if !params[:metadata].nil? && !params[:metadata].is_a?(Hash)
-        :metadata
-      elsif !params[:tax_codes].nil? && !(params[:tax_codes].is_a?(Array) && params[:tax_codes].all?(String))
-        :tax_codes
-      end
     end
   end
 end

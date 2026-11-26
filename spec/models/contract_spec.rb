@@ -13,11 +13,7 @@ RSpec.describe Contract do
       expect(subject).to define_enum_for(:status)
         .backed_by_column_of_type(:enum)
         .validating
-        .with_values(pending: "pending", active: "active", terminated: "terminated", canceled: "canceled")
-      expect(subject).to define_enum_for(:billing_time)
-        .backed_by_column_of_type(:enum)
-        .validating
-        .with_values(calendar: "calendar", anniversary: "anniversary")
+        .with_values(draft: "draft", pending: "pending", active: "active", terminated: "terminated", canceled: "canceled")
       expect(subject).to define_enum_for(:payment_method_type)
         .backed_by_column_of_type(:enum)
         .validating
@@ -70,7 +66,59 @@ RSpec.describe Contract do
   end
 
   describe "validations" do
-    it { is_expected.to validate_presence_of(:external_id) }
+    it do
+      expect(subject).to validate_presence_of(:external_id)
+      expect(subject).to validate_presence_of(:code).on(:create)
+    end
+
+    describe "code validation" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:existing) { create(:contract, :terminated, organization:, customer:, external_id: "contract-1", code: "initial") }
+
+      before { existing }
+
+      it "rejects reusing a code for the same external id, including historical contracts" do
+        contract = build(:contract, organization:, customer:, external_id: existing.external_id, code: existing.code)
+
+        expect(contract).not_to be_valid
+        expect(contract.errors.of_kind?(:code, :taken)).to be(true)
+      end
+
+      it "allows the same code for another external id of the same customer" do
+        contract = build(:contract, organization:, customer:, external_id: "contract-2", code: existing.code)
+
+        expect(contract).to be_valid
+      end
+
+      it "allows the same external id and code in another organization" do
+        contract = build(:contract, external_id: existing.external_id, code: existing.code)
+
+        expect(contract).to be_valid
+      end
+
+      it "does not allow changing the code" do
+        expect(existing.update(code: "changed")).to be(false)
+        expect(existing.errors.of_kind?(:code, :value_is_not_editable)).to be(true)
+        expect(existing.errors.messages[:code]).to eq(["value_is_not_editable"])
+        expect(existing.reload.code).to eq("initial")
+      end
+
+      context "when an older API instance created the contract without a code" do
+        before { described_class.where(id: existing.id).update_all(code: nil, updated_at: Time.current) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "still allows updating its other fields during rollout" do
+          expect(existing.reload.update(name: "Renamed")).to be(true)
+          expect(existing.reload).to have_attributes(name: "Renamed", code: nil)
+        end
+      end
+
+      it "enforces uniqueness in the database when model validation is skipped" do
+        duplicate = build(:contract, :canceled, organization:, customer:, external_id: existing.external_id, code: existing.code)
+
+        expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
 
     describe "payment_method_type validation" do
       it "rejects an unsupported payment method type" do
@@ -97,6 +145,15 @@ RSpec.describe Contract do
 
         expect { create(:contract, organization:, customer:, external_id: "c-1") }
           .to raise_error(ActiveRecord::RecordNotUnique)
+      end
+
+      it "never allows two drafts" do
+        organization = create(:organization)
+        customer = create(:customer, organization:)
+        create(:contract, :draft, organization:, customer:, external_id: "c-1")
+
+        expect { create(:contract, :draft, organization:, customer:, external_id: "c-1") }
+          .to raise_error(ActiveRecord::RecordNotUnique, /index_contracts_on_live_external_id/)
       end
 
       it "does not constrain finished contracts" do
@@ -274,7 +331,8 @@ RSpec.describe Contract do
   end
 
   describe "#editable?" do
-    it "is true only while the contract is pending" do
+    it "is true only while the contract is draft or pending" do
+      expect(build(:contract, :draft).editable?).to be(true)
       expect(build(:contract, :pending).editable?).to be(true)
       expect(build(:contract, status: :active).editable?).to be(false)
       expect(build(:contract, :terminated).editable?).to be(false)
@@ -357,6 +415,12 @@ RSpec.describe Contract do
         expect(described_class.due_for_activation(timestamp)).to eq([due])
       end
 
+      it "leaves out a draft whose start has arrived" do
+        create(:contract, :draft, started_at: timestamp - 1.day)
+
+        expect(described_class.due_for_activation(timestamp)).to eq([due])
+      end
+
       context "with sequential scans disabled" do
         around do |example|
           ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
@@ -392,38 +456,14 @@ RSpec.describe Contract do
     end
 
     describe ".live" do
-      it "returns only pending and active contracts" do
+      it "returns only draft, pending and active contracts" do
+        draft = create(:contract, :draft)
         pending = create(:contract, :pending)
         active = create(:contract)
         create(:contract, :terminated)
         create(:contract, :canceled)
 
-        expect(described_class.live).to match_array([pending, active])
-      end
-    end
-
-    describe ".live_by_external_id" do
-      let(:organization) { create(:organization) }
-
-      it "resolves to the live contract, ignoring terminated siblings" do
-        create(:contract, :terminated, organization:, external_id: "reused", started_at: 2.months.ago)
-        live = create(:contract, :pending, organization:, external_id: "reused")
-
-        expect(organization.contracts.live_by_external_id("reused")).to eq(live)
-      end
-
-      it "returns nil when only historical contracts share the id" do
-        create(:contract, :terminated, organization:, external_id: "gone")
-
-        expect(organization.contracts.live_by_external_id("gone")).to be_nil
-      end
-
-      it "prefers the pending replacement over its active sibling" do
-        active = create(:contract, organization:, external_id: "reused", started_at: 1.month.ago)
-        pending = create(:contract, :pending, organization:, external_id: "reused")
-
-        expect(organization.contracts.live_by_external_id("reused")).to eq(pending)
-        expect(active.reload.status).to eq("active")
+        expect(described_class.live).to match_array([draft, pending, active])
       end
     end
 
@@ -449,6 +489,13 @@ RSpec.describe Contract do
 
         expect(organization.contracts.terminatable_by_external_id("reused")).to eq(active)
         expect(pending.reload.status).to eq("pending")
+      end
+
+      it "prefers the pending contract over a draft" do
+        pending = create(:contract, :pending, organization:, external_id: "reused", started_at: 1.day.from_now)
+        create(:contract, :draft, organization:, external_id: "reused", started_at: 2.days.from_now)
+
+        expect(organization.contracts.terminatable_by_external_id("reused")).to eq(pending)
       end
     end
   end

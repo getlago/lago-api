@@ -62,7 +62,7 @@ RSpec.describe "Billing operation coverage across a rate change" do
     end
     api_call do
       post_with_token(organization, "/api/v2/contracts", {contract: {
-        external_id: "coverage-contract", external_customer_id: customer.external_id,
+        code: "coverage-contract", external_id: "coverage-contract", external_customer_id: customer.external_id,
         plan_code: "coverage-plan", started_at: start_at.iso8601
       }})
     end

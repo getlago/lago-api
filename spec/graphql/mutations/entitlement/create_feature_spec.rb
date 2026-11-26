@@ -77,4 +77,27 @@ RSpec.describe Mutations::Entitlement::CreateFeature, :premium do
       expect(result_data["privileges"].sole["valueType"]).to eq("string")
     end
   end
+
+  context "with 50 privileges" do
+    let(:input) { {code: "test_feature", privileges: Array.new(50) { |i| {code: "privilege_#{i}"} }} }
+
+    it "creates the feature with its 50 privileges" do
+      result = subject
+
+      expect(result["data"]["createFeature"]["privileges"].size).to eq(50)
+    end
+  end
+
+  context "with 51 privileges" do
+    let(:input) { {code: "test_feature", privileges: Array.new(51) { |i| {code: "privilege_#{i}"} }} }
+
+    it "returns too_many_privileges and creates nothing" do
+      result = nil
+      expect { result = subject }
+        .to not_change(Entitlement::Feature, :count)
+        .and not_change(Entitlement::Privilege, :count)
+
+      expect_graphql_error(result:, message: "unprocessable_entity", details: {base: ["too_many_privileges"]})
+    end
+  end
 end

@@ -172,6 +172,63 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
           end
         end
       end
+
+      context "with an amount in a currency with 2 decimals" do
+        let(:payable) do
+          create(:payment_request, organization:, customer:, amount_cents: 12345, amount_currency: "USD", invoices: [invoice_1])
+        end
+
+        let(:invoice_1) do
+          create(:invoice, organization:, customer:, total_amount_cents: 12345, currency: "USD", ready_for_payment_processing: true)
+        end
+
+        it "sends the amount with its cents as a JSON number" do
+          described_class.call(:create, payable)
+
+          expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+            expect(params[:amount]).to eq(123.45) # 12345 cents of USD, 2 decimals
+            expect(params.to_json).to include('"amount":123.45')
+          end
+        end
+      end
+
+      context "with an amount in a currency with 3 decimals" do
+        let(:payable) do
+          create(:payment_request, organization:, customer:, amount_cents: 12345, amount_currency: "KWD", invoices: [invoice_1])
+        end
+
+        let(:invoice_1) do
+          create(:invoice, organization:, customer:, total_amount_cents: 12345, currency: "KWD", ready_for_payment_processing: true)
+        end
+
+        it "sends the amount with its 3 decimals as a JSON number" do
+          described_class.call(:create, payable)
+
+          expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+            expect(params[:amount]).to eq(12.345) # 12345 fils of KWD, 3 decimals
+            expect(params.to_json).to include('"amount":12.345')
+          end
+        end
+      end
+
+      context "with an amount in a currency without decimals" do
+        let(:payable) do
+          create(:payment_request, organization:, customer:, amount_cents: 12345, amount_currency: "JPY", invoices: [invoice_1])
+        end
+
+        let(:invoice_1) do
+          create(:invoice, organization:, customer:, total_amount_cents: 12345, currency: "JPY", ready_for_payment_processing: true)
+        end
+
+        it "sends the amount without dividing it as a JSON number" do
+          described_class.call(:create, payable)
+
+          expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+            expect(params[:amount]).to eq(12345.0) # 12345 JPY, 0 decimals
+            expect(params.to_json).to include('"amount":12345.0')
+          end
+        end
+      end
     end
 
     context "when customer has a default payment method" do
