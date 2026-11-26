@@ -78,7 +78,7 @@ module UsageMonitoring
       cards_in_scope(usage).to_h do |card_usage|
         rate_card = card_usage.contract_rate_card.rate_card
         unless recurring_card?(card_usage)
-          started_at = card_usage.billing_segment.started_at.in_time_zone(timezone).strftime("%Y-%m-%dT%H:%M:%S.%6N")
+          started_at = card_usage.started_at.in_time_zone(timezone).strftime("%Y-%m-%dT%H:%M:%S.%6N")
         end
 
         [

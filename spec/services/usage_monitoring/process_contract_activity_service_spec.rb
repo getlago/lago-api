@@ -9,10 +9,12 @@ RSpec.describe UsageMonitoring::ProcessContractActivityService, :premium do
   let_it_be(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
   let_it_be(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
   let_it_be(:product) { create(:product, :metered, organization:, billable_metric:) }
+  let_it_be(:rate_card) { create(:rate_card, organization:, product:, currency: "EUR") }
   # The service loads the contract's alerts on it, which a shared instance would carry over to the next example
   let_it_be(:contract, refind: true) { create(:contract, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
 
   let(:now) { Time.zone.parse("2027-02-10 12:00:00") }
+  let(:billing_scope) { :cycle }
   let(:contract_activity) { create(:contract_activity, organization:, contract:, enqueued: true, enqueued_at: now) }
   let(:alert) do
     create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id, product:, thresholds: [1, 2])
@@ -20,9 +22,6 @@ RSpec.describe UsageMonitoring::ProcessContractActivityService, :premium do
 
   # One monthly card at 2 EUR per event, from Jan 1, and one event in January and two in February
   before_all do
-    rate_card = create(:rate_card, organization:, product:, currency: "EUR")
-    create(:contract_rate_card, organization:, contract:, rate_card:,
-      effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
     create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-01-01"),
       rate_properties: {"amount" => "2"})
 
@@ -34,6 +33,8 @@ RSpec.describe UsageMonitoring::ProcessContractActivityService, :premium do
 
   before do
     travel_to(now)
+    create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
+      effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
     alert
     allow(Contracts::CurrentUsageService).to receive(:call!).and_call_original
   end
@@ -122,6 +123,38 @@ RSpec.describe UsageMonitoring::ProcessContractActivityService, :premium do
 
   context "when two activity jobs evaluate the contract" do
     let(:next_contract_activity) { create(:contract_activity, organization:, contract:, enqueued: true) }
+
+    context "with a February 4 rate change between evaluations" do
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-04"),
+          rate_properties: {"amount" => "5"})
+        travel_to(Time.zone.parse("2027-02-03 12:00:00"))
+        described_class.call!(contract_activity:)
+        travel_to(now)
+      end
+
+      it "keeps the cycle baseline and crosses the second threshold" do
+        described_class.call!(contract_activity: next_contract_activity)
+
+        trigger = alert.triggered_alerts.find_by!(triggered_at: now)
+        expect(trigger).to have_attributes(previous_value: 1, current_value: 2)
+        expect(trigger.crossed_thresholds.pluck("code")).to eq(["warn2"])
+        expect(alert.reload.previous_windows).to eq(product.id => window("2027-02-01", 2))
+      end
+
+      context "with segment billing" do
+        let(:billing_scope) { :segment }
+
+        it "resets the baseline and crosses the first threshold again" do
+          described_class.call!(contract_activity: next_contract_activity)
+
+          trigger = alert.triggered_alerts.find_by!(triggered_at: now)
+          expect(trigger).to have_attributes(previous_value: 0, current_value: 1)
+          expect(trigger.crossed_thresholds.pluck("code")).to eq(["warn1"])
+          expect(alert.reload.previous_windows).to eq(product.id => window("2027-02-04", 1))
+        end
+      end
+    end
 
     it "sends one webhook for the crossing (B6)" do
       described_class.call!(contract_activity:)
