@@ -144,6 +144,103 @@ describe X402::Network do
     end
   end
 
+  describe ".valid_transaction?" do
+    subject(:valid) { described_class.valid_transaction?(transaction, family:) }
+
+    let(:evm_hash) { "0xefad33f01282b3a8b18893a9eb0aecbc2fc210ffcfa7fda7ca79f14c8822963a" }
+
+    context "with the EVM family" do
+      let(:family) { :evm }
+
+      context "with a lowercase hash" do
+        let(:transaction) { evm_hash }
+
+        it { is_expected.to be(true) }
+      end
+
+      context "with an uppercase hash" do
+        let(:transaction) { "0x#{evm_hash.delete_prefix("0x").upcase}" }
+
+        it { is_expected.to be(true) }
+      end
+
+      context "with a hash one byte short" do
+        let(:transaction) { evm_hash[0...-2] }
+
+        it { is_expected.to be(false) }
+      end
+
+      context "without the 0x prefix" do
+        let(:transaction) { evm_hash.delete_prefix("0x") }
+
+        it { is_expected.to be(false) }
+      end
+
+      context "with a Solana signature" do
+        let(:transaction) { X402::Base58.encode("\x01".b * 64) }
+
+        it { is_expected.to be(false) }
+      end
+    end
+
+    context "with the SVM family" do
+      let(:family) { :svm }
+
+      context "with a 64-byte signature" do
+        let(:transaction) { X402::Base58.encode("\xFF".b * 64) }
+
+        it { is_expected.to be(true) }
+      end
+
+      context "with a 32-byte key" do
+        let(:transaction) { solana_address }
+
+        it { is_expected.to be(false) }
+      end
+
+      context "with a string outside base58" do
+        let(:transaction) { "0#{X402::Base58.encode("\x01".b * 64)}" }
+
+        it { is_expected.to be(false) }
+      end
+
+      context "with more than 88 characters" do
+        let(:transaction) { "z" * 10_000 }
+
+        before { allow(X402::Base58).to receive(:decode).and_call_original }
+
+        it "refuses it without decoding" do
+          expect(valid).to be(false)
+          expect(X402::Base58).not_to have_received(:decode)
+        end
+      end
+
+      context "with an EVM hash" do
+        let(:transaction) { evm_hash }
+
+        it { is_expected.to be(false) }
+      end
+    end
+
+    [nil, 42, ["0xab"], {"hash" => "0xab"}].each do |value|
+      context "with #{value.inspect}" do
+        let(:family) { :evm }
+        let(:transaction) { value }
+
+        it { is_expected.to be(false) }
+      end
+    end
+
+    context "with an unknown family" do
+      let(:family) { :sui }
+      let(:transaction) { evm_hash }
+
+      it "raises" do
+        expect { valid }.to raise_error(ArgumentError, /unknown chain family/)
+      end
+    end
+  end
+
   describe ".normalize_address" do
     subject(:normalized) { described_class.normalize_address(address, family:) }
 

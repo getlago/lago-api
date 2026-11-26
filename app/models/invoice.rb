@@ -631,7 +631,7 @@ class Invoice < ApplicationRecord
   end
 
   def x402_payment_url
-    File.join(ENV["LAGO_API_URL"], "x402/invoice_payments", x402_payment_token) if x402_payment_token.present?
+    File.join(ENV["LAGO_API_URL"], "api/v1/x402/invoice_payments", x402_payment_token) if x402_payment_token.present?
   end
 
   # A safeguard while we're populating the expected finalization date.

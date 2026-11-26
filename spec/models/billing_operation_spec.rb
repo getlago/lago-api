@@ -32,6 +32,7 @@ RSpec.describe BillingOperation do
       expect(operation).to belong_to(:customer)
       expect(operation).to belong_to(:contract_rate_card)
       expect(operation).to belong_to(:invoice).optional
+      expect(operation).to have_many(:segments).class_name("BillingOperationSegment").inverse_of(:billing_operation).order(:position)
     end
   end
 

@@ -67,11 +67,15 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
     end
 
     context "when a terminated contract reuses the external id" do
+      subject do
+        post_with_token(organization, "#{base_path}?contract_code=#{contract.code}", {rate_phase: {code: "ramp", position: 1, billing_interval_cycle_count: 2}})
+      end
+
       before do
         create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
       end
 
-      it "targets the live contract's card" do
+      it "targets the contract identified by its code" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -118,6 +122,27 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:details]).to eq([{code: "contract_locked", field: "rate_phase", meta: {}}])
+      end
+    end
+
+    context "when the contract is a draft whose start has passed" do
+      subject do
+        put_with_token(organization, "#{base_path}/default", {rate_phase: {rate_override: {rate_model: "standard", rate_properties: {amount: "8"}}}})
+      end
+
+      let(:contract) { create(:contract, :draft, organization:, customer:, started_at: 1.month.ago) }
+      let(:other_contract) { create(:contract, organization:, customer:) }
+      let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract: other_contract, rate_card:) }
+
+      before { create(:rate_phase, :contract_level, organization:, contract_rate_card: other_contract_rate_card, code: "default", position: 1) }
+
+      it "saves the override on this contract only" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phase][:rate_override]).to include(rate_model: "standard", rate_properties: {amount: "8"})
+        expect(other_contract_rate_card.rate_phases.sole.rate_override).to be_nil
+        expect(contract.reload).to be_draft
       end
     end
   end

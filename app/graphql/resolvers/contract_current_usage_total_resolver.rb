@@ -16,6 +16,11 @@ module Resolvers
 
     Totals = Struct.new(
       :amount_cents, :taxes_amount_cents, :total_amount_cents, :taxes_unavailable,
+      :from_datetime, :to_datetime, :product_category_totals, keyword_init: true
+    )
+
+    CategoryTotals = Struct.new(
+      :product_category, :amount_cents, :taxes_amount_cents, :total_amount_cents,
       :from_datetime, :to_datetime, keyword_init: true
     )
 
@@ -40,9 +45,28 @@ module Resolvers
       Totals.new(
         amount_cents: result.amount_cents, taxes_amount_cents: result.taxes_amount_cents,
         total_amount_cents: result.total_amount_cents, taxes_unavailable: result.taxes_unavailable,
-        from_datetime: usages.map(&:started_at).min,
-        to_datetime: usages.map(&:ended_at).max
+        product_category_totals: category_totals(usages),
+        **window(usages)
       )
+    end
+
+    def category_totals(usages)
+      by_category = usages.group_by { |usage| usage.contract_rate_card.rate_card.product.product_category }
+
+      by_category.map do |product_category, category_usages|
+        amount_cents = category_usages.sum(&:amount_cents)
+        taxes_amount_cents = category_usages.sum(&:taxes_amount_cents)
+
+        CategoryTotals.new(
+          product_category:, amount_cents:, taxes_amount_cents:,
+          total_amount_cents: amount_cents + taxes_amount_cents,
+          **window(category_usages)
+        )
+      end
+    end
+
+    def window(usages)
+      {from_datetime: usages.map(&:started_at).min, to_datetime: usages.map(&:ended_at).max}
     end
   end
 end

@@ -33,8 +33,9 @@ RSpec.describe BillingOperations::TerminateService do
     expect(result).to be_success
     expect(result.billing_operations.sole).to have_attributes(
       action_type: "close_fixed_arrears", reason: "contract_termination",
-      billing_at: timestamp, target_cycle_started_at: started_at
+      billing_at: timestamp, target_cycle_started_at: started_at, coverage_started_at: started_at, coverage_ended_at: timestamp
     )
+    expect(result.billing_operations.sole.reload.segments.sole).to have_attributes(started_at:, ended_at: timestamp)
     expect(contract_rate_card.reload.next_billing_at).to eq(timestamp)
   end
 

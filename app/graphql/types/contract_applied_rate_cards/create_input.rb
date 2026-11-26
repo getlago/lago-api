@@ -6,7 +6,7 @@ module Types
       graphql_name "CreateContractAppliedRateCardInput"
       description "Attach rate card to contract input arguments"
 
-      argument :external_id, String, required: true, description: "External id of the contract"
+      argument :contract_id, ID, required: true
 
       argument :billing_anchor_date, GraphQL::Types::ISO8601Date, required: false
       argument :billing_scope, BillingScopeEnum, required: false

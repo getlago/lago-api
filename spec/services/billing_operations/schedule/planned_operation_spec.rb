@@ -55,7 +55,7 @@ RSpec.describe BillingOperations::Schedule::PlannedOperation do
   end
 
   describe "#due_by?" do
-    subject(:plan) { described_class.new(cycle_started_at:, billing_at:) }
+    subject(:plan) { described_class.new(obligation:, billing_at:) }
 
     it "is due at the inclusive cutoff without an upper bound" do
       expect(plan.due_by?(billing_at)).to be(true)

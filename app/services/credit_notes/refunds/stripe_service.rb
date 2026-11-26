@@ -48,7 +48,7 @@ module CreditNotes
           payment:,
           payment_provider: payment.payment_provider,
           payment_provider_customer: payment_provider_customer(payment),
-          amount_cents: stripe_result.amount,
+          amount_cents: ::PaymentProviders::StripeProvider.from_stripe_amount(stripe_result.amount, stripe_result.currency),
           amount_currency: stripe_result.currency&.upcase,
           status: stripe_result.status,
           provider_refund_id: stripe_result.id
@@ -137,8 +137,10 @@ module CreditNotes
         charge = stripe_charge
         # NOTE: bracket access, stripe objects raise NoMethodError on fields absent from the
         #       pinned API version.
-        captured = charge && (charge[:amount_captured] || charge[:amount])
-        refunded = charge && charge[:amount_refunded]
+        captured = charge && ::PaymentProviders::StripeProvider.from_stripe_amount(
+          charge[:amount_captured] || charge[:amount], charge[:currency]
+        )
+        refunded = charge && ::PaymentProviders::StripeProvider.from_stripe_amount(charge[:amount_refunded], charge[:currency])
 
         @stripe_refundable_amount_cents = if captured.nil? || refunded.nil?
           nil
@@ -214,7 +216,7 @@ module CreditNotes
       def stripe_refund_payload
         {
           payment_intent: payment.provider_payment_id,
-          amount: credit_note.refund_amount_cents,
+          amount: ::PaymentProviders::StripeProvider.to_stripe_amount(credit_note.refund_amount_cents, credit_note.currency),
           reason: stripe_reason,
           metadata: {
             lago_customer_id: customer.id,

@@ -6,7 +6,7 @@ module Types
       graphql_name "Fee"
       implements Types::Invoices::InvoiceItem
 
-      dataload_association :contract, :contract_rate_card
+      dataload_association :contract, :contract_rate_card, :product_filter, :rate_card_rate, :rate_override
 
       field :id, ID, null: false
 
@@ -20,7 +20,14 @@ module Types
       field :grouped_by, GraphQL::Types::JSON, null: false
       field :invoice_display_name, String, null: true
       field :invoice_id, ID, null: true
+      field :invoice_is_regeneration, Boolean, null: false
       field :invoice_name, String, null: true
+      field :original_fee_id, ID, null: true
+      field :product, Types::Products::Object, null: true
+      field :product_filter, Types::ProductFilters::Object, null: true
+      field :rate_card_rate, Types::RateCardRates::Object, null: true
+      field :rate_model, Types::RateCardRates::RateModelEnum, null: true
+      field :rate_override, Types::RateOverrides::Object, null: true
       field :subscription, Types::Subscriptions::Object, null: true
       field :true_up_fee, Types::Fees::Object, null: true
       field :true_up_parent_fee, Types::Fees::Object, null: true
@@ -60,12 +67,24 @@ module Types
         object.invoiceable if object.credit?
       end
 
+      def invoice_is_regeneration
+        dataloader.with(Sources::ActiveRecordAssociation, :invoice).load(object)&.voided_invoice_id.present?
+      end
+
       def item_type
         object.fee_type
       end
 
+      def product
+        dataloader.with(Sources::ActiveRecordAssociation, :billed_product).load(object) if object.product?
+      end
+
+      def rate_model
+        (rate_override || rate_card_rate)&.rate_model
+      end
+
       def applied_taxes
-        if object.applied_taxes.any? { |t| !t.persisted? }
+        if object.applied_taxes.loaded? || object.applied_taxes.any? { |t| !t.persisted? }
           object.applied_taxes.sort_by { |tax| -tax.tax_rate.to_f }
         else
           object.applied_taxes.order(tax_rate: :desc)

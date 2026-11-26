@@ -452,5 +452,20 @@ RSpec.describe Charges::UpdateService do
         end
       end
     end
+
+    context "when an agent storefront sells the plan", :premium do
+      let(:plan) { create(:plan, amount_cents: 0) }
+      let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+      let(:charge) { create(:standard_charge, plan:, organization:, billable_metric: sum_billable_metric) }
+      let(:params) { {charge_model: "standard", properties: {amount: "1"}, min_amount_cents: 100} }
+
+      before { create(:agent_storefront_integration, organization:).update!(plans: [{plan_code: plan.code}]) }
+
+      it "refuses a charge minimum and keeps the charge" do
+        expect(result).to be_failure
+        expect(result.error.code).to eq("plan_sold_by_agent_storefront")
+        expect(charge.reload.min_amount_cents).to eq(0)
+      end
+    end
   end
 end

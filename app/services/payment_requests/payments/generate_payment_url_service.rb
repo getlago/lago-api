@@ -30,6 +30,10 @@ module PaymentRequests
           return result.single_validation_failure!(error_code: "missing_payment_provider_customer")
         end
 
+        if stripe_shared_payment_token_only?
+          return result.single_validation_failure!(error_code: "payment_url_not_available_for_shared_payment_token")
+        end
+
         payment_url_result = PaymentRequests::Payments::PaymentProviders::Factory.for(payable)
           .call!(:generate_payment_url, payable)
 
@@ -58,6 +62,11 @@ module PaymentRequests
       def current_payment_provider_customer
         @current_payment_provider_customer ||= customer.payment_provider_customers
           .find_by(payment_provider_id: current_payment_provider.id)
+      end
+
+      def stripe_shared_payment_token_only?
+        current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
+          current_payment_provider_customer.shared_payment_token_only?
       end
 
       def current_payment_provider

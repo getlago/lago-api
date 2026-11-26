@@ -1,0 +1,13 @@
+{
+  "Customer": {
+    "Id": "58",
+    "SyncToken": "3",
+    "DisplayName": "Example Co",
+    "CompanyName": "Example Co",
+    "PrimaryEmailAddr": {
+      "Address": "billing@example.com"
+    },
+    "Active": true
+  },
+  "time": "2026-11-23T08:00:00.000-08:00"
+}

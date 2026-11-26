@@ -36,10 +36,17 @@ module Integrations
             items: "xero-items-sync",
             contacts: "xero-contacts-sync"
           }
+        when "Integrations::QuickbooksIntegration"
+          {
+            accounts: "accounts",
+            items: "items",
+            contacts: "customers"
+          }
         end
 
         return [list[:items]] if options[:only_items]
         return [list[:accounts]] if options[:only_accounts]
+        return [list[:contacts]] if options[:only_customers]
 
         list.values
       end
