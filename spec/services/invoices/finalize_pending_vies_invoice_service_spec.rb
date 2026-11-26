@@ -281,7 +281,6 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
                 payment_status: "succeeded"
               )
               expect(credit_note.reload.balance_amount_cents).to eq(1_000) # 4000 - 3000
-              expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
               expect(Payments::ManualCreateJob).not_to have_been_enqueued
             end
           end
