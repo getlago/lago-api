@@ -11,6 +11,3 @@ resources :entitlements, only: %i[index show create destroy], param: :code, code
   resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "/api/v1/plans/entitlements/privileges"
 end
 patch :entitlements, controller: "/api/v1/plans/entitlements", action: :update
-resource :metadata, only: %i[create update destroy], controller: "/api/v1/plans/metadata" do
-  delete ":key", action: :destroy_key, on: :member
-end

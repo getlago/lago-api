@@ -249,4 +249,34 @@ RSpec.describe Api::V1::Plans::MetadataController do
       end
     end
   end
+
+  describe "POST /api/v1/plans/:code/metadata in an organization on the product catalog" do
+    let(:catalog_organization) { create(:organization, feature_flags: ["product_catalog"]) }
+    let(:legacy_plan) { create(:plan, organization: catalog_organization, code: "same") }
+    let(:catalog_plan) { create(:catalog_plan, organization: catalog_organization, code: "same") }
+
+    before do
+      legacy_plan
+      catalog_plan
+    end
+
+    it "writes only the legacy plan when a catalog plan has the same code" do
+      post_with_token(catalog_organization, "/api/v1/plans/same/metadata", {metadata: {crm_id: "123"}})
+
+      expect(response).to have_http_status(:success)
+      expect(legacy_plan.reload.metadata.value).to eq("crm_id" => "123")
+      expect(catalog_plan.reload.metadata).to be_nil
+    end
+
+    context "when the organization is not on the product catalog", product_catalog: false do
+      let(:catalog_organization) { create(:organization) }
+
+      it "still works" do
+        post_with_token(catalog_organization, "/api/v1/plans/same/metadata", {metadata: {crm_id: "123"}})
+
+        expect(response).to have_http_status(:success)
+        expect(legacy_plan.reload.metadata.value).to eq("crm_id" => "123")
+      end
+    end
+  end
 end

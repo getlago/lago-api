@@ -55,6 +55,42 @@ RSpec.describe "API v2 routing parity" do
     expect(recognized[:plan_code]).to eq("foo")
   end
 
+  it "routes plan metadata to v2 and keeps the v1 route on its controller, even for a code with a dot" do
+    [:post, :patch, :put, :delete].each do |method|
+      expect(Rails.application.routes.recognize_path("/api/v2/plans/foo.bar/metadata", method:))
+        .to include(controller: "api/v2/plans/metadata", plan_code: "foo.bar")
+      expect(Rails.application.routes.recognize_path("/api/v1/plans/foo.bar/metadata", method:))
+        .to include(controller: "api/v1/plans/metadata", plan_code: "foo.bar")
+    end
+
+    expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/metadata/crm_id", method: :delete))
+      .to include(controller: "api/v2/plans/metadata", action: "destroy_key", plan_code: "foo", key: "crm_id")
+  end
+
+  it "reads a metadata key containing a dot whole" do
+    expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/metadata/app.version", method: :delete))
+      .to include(controller: "api/v2/plans/metadata", action: "destroy_key", plan_code: "foo", key: "app.version")
+  end
+
+  it "keeps the native metadata scope ahead of the entitlement and charge routes" do
+    %w[entitlements charges fixed_charges].each do |key|
+      expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/metadata/#{key}", method: :delete))
+        .to include(controller: "api/v2/plans/metadata", action: "destroy_key", plan_code: "foo", key:)
+    end
+
+    {
+      [:patch, "charges"] => "api/v1/plans/charges",
+      [:patch, "fixed_charges"] => "api/v1/plans/fixed_charges",
+      [:delete, "entitlements"] => "api/v1/plans/entitlements"
+    }.each do |(method, resource), controller|
+      expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/#{resource}/metadata", method:))
+        .to include(controller:, plan_code: "foo", code: "metadata")
+    end
+
+    expect(Rails.application.routes.recognize_path("/api/v1/plans/foo/entitlements/metadata", method: :delete))
+      .to include(controller: "api/v1/plans/entitlements", action: "destroy", plan_code: "foo", code: "metadata")
+  end
+
   it "keeps customer-nested paths on their shared controllers" do
     recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/credit_notes", method: :get)
 

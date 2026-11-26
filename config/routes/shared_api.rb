@@ -133,6 +133,9 @@ end
 resources :payments, only: %i[create index show]
 resources :plans, param: :code, code: /.*/ do
   draw(:plan_nested_api)
+  resource :metadata, only: %i[create update destroy], controller: "/api/v1/plans/metadata" do
+    delete ":key", action: :destroy_key, on: :member
+  end
 end
 resources :taxes, param: :code, code: /.*/
 resources :usage_attribution_types, param: :code, code: /.*/, only: %i[index show create update destroy]
