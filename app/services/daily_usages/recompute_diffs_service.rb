@@ -35,7 +35,8 @@ module DailyUsages
         .where("to_datetime >= ?", from_date)
         .order(:from_datetime, :usage_date)
 
-      daily_usages.group_by { |du| [du.from_datetime, du.to_datetime] }.values.flat_map do |period_usages|
+      # Rows chain on the period start, as in ComputeDiffService: a termination moves the end only
+      daily_usages.group_by(&:from_datetime).values.flat_map do |period_usages|
         period_usages.each_cons(2).filter_map do |previous, current|
           current if current.usage_date >= from_date && filters_changed?(previous.usage, current.usage)
         end
