@@ -10,17 +10,8 @@ module UsageMonitoring
     end
 
     def call
-      ActiveRecord::Base.transaction do
-        # Held until the evaluation commits, so a termination committed after this check cannot let an alert fire
-        contract = catalog_wallet.contract
-        contract.lock!("FOR SHARE")
-        next unless contract.active?
-
-        catalog_wallet.reload
-        next if catalog_wallet.terminated_at?
-
-        catalog_wallet.alerts.order(:id).each { evaluate(it) }
-      end
+      catalog_wallet.reload
+      catalog_wallet.alerts.order(:id).each { evaluate(it) } if watched?
 
       result
     end
@@ -28,6 +19,12 @@ module UsageMonitoring
     private
 
     attr_reader :catalog_wallet
+
+    # Read without a lock: a termination deletes the alerts under its contract lock, and an alert deleted while its
+    # evaluation waits is skipped
+    def watched?
+      catalog_wallet.contract.active? && !catalog_wallet.terminated_at?
+    end
 
     def evaluate(alert)
       if alert.previous_value.nil?

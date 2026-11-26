@@ -36,11 +36,11 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsJob do
         allow(UsageMonitoring::ProcessCatalogWalletAlertsService).to receive(:call!) { described_class.perform_later(changed_wallet) }
       end
 
-      it "accepts the run that change enqueues" do
+      it "drops the run that change enqueues, as v1 does" do
         described_class.perform_later(changed_wallet)
         job = ActiveJob::Base.deserialize(enqueued_jobs.last)
 
-        expect { job.perform_now }.to have_enqueued_job(described_class).with(changed_wallet)
+        expect { job.perform_now }.not_to have_enqueued_job(described_class)
       end
     end
   end

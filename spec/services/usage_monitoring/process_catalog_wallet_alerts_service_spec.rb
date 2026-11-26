@@ -188,6 +188,30 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsService do
     end
   end
 
+  context "when an alert raises after another one crossed" do
+    let(:ongoing_alert) do
+      create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing", previous_value: 12_000, last_processed_at: 1.hour.ago)
+    end
+    let(:alerts_in_order) { [alert, ongoing_alert].sort_by(&:id) }
+
+    before do
+      create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: ongoing_alert, value: 2_000)
+
+      failing = alerts_in_order.last
+      allow(UsageMonitoring::ProcessAlertService).to receive(:call!).and_wrap_original do |original, **args|
+        raise ActiveRecord::StatementInvalid, "boom" if args[:alert] == failing
+
+        original.call(**args)
+      end
+    end
+
+    it "keeps the crossing of the alert evaluated before it, as v1 does" do
+      expect { result }.to raise_error(ActiveRecord::StatementInvalid)
+
+      expect(alerts_in_order.first.all_triggered_alerts.count).to eq(1)
+    end
+  end
+
   (Contract::STATUSES.keys - [:active]).each do |status|
     context "when the contract is #{status}" do
       let(:contract) { create(:contract, status, organization:, customer:) }
@@ -263,15 +287,18 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsService do
       end
     end
 
-    context "when a termination holds the contract" do
-      it "waits for it and evaluates nothing" do
-        termination, release = hold { Contract.lock.find(contract.id).update!(status: :terminated, terminated_at: Time.current) }
+    context "when a termination is in flight" do
+      it "skips the alerts it deletes and sends nothing" do
+        # As Contracts::TerminateService: the contract first, then its wallets' alerts
+        termination, release = hold do
+          Contract.lock.find(contract.id).update!(status: :terminated, terminated_at: Time.current)
+          UsageMonitoring::CatalogWalletAlerts::DeleteAllService.call!(catalog_wallets: contract.wallets)
+        end
         job = in_thread { evaluate }
         release_once_waiting(release, 1)
         join(termination, job)
 
-        expect(alert.all_triggered_alerts).to be_empty
-        expect(alert.reload.previous_value).to eq(12_000)
+        expect(UsageMonitoring::CatalogWalletTriggeredAlert.where(catalog_wallet_alert_id: alert.id)).to be_empty
       end
     end
 

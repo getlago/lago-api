@@ -10,8 +10,7 @@ module UsageMonitoring
       end
     end
 
-    # Unlocked when it starts, so a balance change committed during a run gets a run of its own
-    unique :until_executing, on_conflict: :log
+    unique :until_executed, on_conflict: :log
 
     def perform(catalog_wallet)
       return unless License.premium?
