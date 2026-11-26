@@ -83,9 +83,9 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
-        # Ahead of the legacy nested routes: only the replace is native, the other entitlement
-        # routes still reach the v1 controller.
-        resources :entitlements, only: :create, controller: "plans/entitlements"
+        # Ahead of the legacy nested routes: the list and the replace are native, the other
+        # entitlement routes (show, update, destroy, privilege destroy) still reach the v1 controller.
+        resources :entitlements, only: %i[index create], controller: "plans/entitlements"
         # The route with an alert code is drawn first, so an alert coded `alerts` is not read as a
         # wallet code by the index.
         resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets" do
