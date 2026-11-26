@@ -81,6 +81,10 @@ module UsageMonitoring
       false
     end
 
+    def watches_wallet?
+      need_wallet?
+    end
+
     private
 
     def need_billable_metric?

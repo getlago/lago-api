@@ -16,6 +16,7 @@ module V2
         currency: wallet.currency,
         lago_contract_id: wallet.contract_id,
         external_contract_id: wallet.contract.external_id,
+        contract_code: wallet.contract.code,
         external_customer_id: wallet.customer.external_id,
         current_value: model.current_value,
         previous_value: model.previous_value,

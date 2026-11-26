@@ -7,7 +7,7 @@ RSpec.describe ::V2::CatalogWalletResolvedAlertSerializer do
 
   let_it_be(:organization) { create(:organization) }
   let_it_be(:customer) { create(:customer, organization:, external_id: "acme", currency: "USD") }
-  let_it_be(:contract) { create(:contract, customer:, external_id: "ctr_123") }
+  let_it_be(:contract) { create(:contract, customer:, external_id: "ctr_123", code: "main") }
   let_it_be(:catalog_wallet) { create(:catalog_wallet, organization:, customer:, contract:, code: "prepaid", currency: "USD") }
 
   let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing", name: "Low ongoing") }
@@ -40,6 +40,7 @@ RSpec.describe ::V2::CatalogWalletResolvedAlertSerializer do
         "currency" => "USD",
         "lago_contract_id" => contract.id,
         "external_contract_id" => "ctr_123",
+        "contract_code" => "main",
         "external_customer_id" => "acme",
         "current_value" => "1500.0",
         "previous_value" => "1500.0",

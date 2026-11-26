@@ -14,7 +14,7 @@ RSpec.describe Webhooks::UsageMonitoring::AlertResolvedService do
 
     context "with a catalog wallet alert's history row" do
       let(:customer) { create(:customer, external_id: "acme", currency: "USD") }
-      let(:catalog_wallet) { create(:catalog_wallet, organization: customer.organization, customer:, contract: create(:contract, customer:, external_id: "ctr_123"), code: "prepaid", currency: "USD") }
+      let(:catalog_wallet) { create(:catalog_wallet, organization: customer.organization, customer:, contract: create(:contract, customer:, external_id: "ctr_123", code: "main"), code: "prepaid", currency: "USD") }
       let(:alert) { create(:catalog_wallet_alert, organization: customer.organization, catalog_wallet:, alert_type: "balance", code: "low_balance", name: "Low balance") }
       let(:resolved_alert) do
         create(
@@ -49,6 +49,7 @@ RSpec.describe Webhooks::UsageMonitoring::AlertResolvedService do
             "currency" => "USD",
             "lago_contract_id" => catalog_wallet.contract_id,
             "external_contract_id" => "ctr_123",
+            "contract_code" => "main",
             "external_customer_id" => "acme",
             "current_value" => "1500.0",
             "previous_value" => "1500.0",
