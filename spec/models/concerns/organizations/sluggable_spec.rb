@@ -57,6 +57,12 @@ RSpec.describe Organizations::Sluggable do
       expect(organization).not_to be_valid
     end
 
+    it "rejects the path the front returns to after Stripe Checkout" do
+      organization.slug = "activate-production"
+
+      expect(organization).not_to be_valid
+    end
+
     it "skips slug validations when slug has not changed on persisted record" do
       organization = create(:organization)
       organization.name = "Updated Name"
