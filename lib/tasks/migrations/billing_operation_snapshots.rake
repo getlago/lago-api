@@ -17,7 +17,7 @@ class BillingOperationSnapshotsBackfill
         Customers::LockService.call!(customer_id: operation.customer_id, scope: :billing_schedule) do
           backfill(operation.reload(lock: true))
         end
-      rescue UnverifiableOperation, BaseService::FailedResult => error
+      rescue UnverifiableOperation, BaseService::FailedResult, BaseLockService::FailedToAcquireLock => error
         failures += 1
         puts "BLOCKED operation=#{operation.id}: #{error.message}"
       end

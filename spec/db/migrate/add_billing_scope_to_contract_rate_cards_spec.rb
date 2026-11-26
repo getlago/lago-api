@@ -14,6 +14,11 @@ RSpec.describe AddBillingScopeToContractRateCards do
     ActiveRecord::Migration.suppress_messages { described_class.new.migrate(:down) }
   end
 
+  after do
+    # Recreating the enum leaves prepared statements on this connection tied to its temporary type.
+    ContractRateCard.reset_column_information
+  end
+
   it "preserves segment billing for existing cards and defaults new cards to cycle billing" do
     migrate
 

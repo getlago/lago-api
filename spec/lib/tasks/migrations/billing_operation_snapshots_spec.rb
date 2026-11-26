@@ -81,6 +81,40 @@ RSpec.describe "migrations:billing_operation_snapshots" do # rubocop:disable RSp
     expect(operation.reload.attributes).to eq(attributes)
   end
 
+  context "when the first operation times out waiting for the billing-schedule lock" do
+    let(:blocked_operation) do
+      create(:billing_operation, id: "00000000-0000-4000-8000-000000000001", organization:, customer:,
+        contract_rate_card: card, action_type: operation.action_type, billing_at: operation.billing_at,
+        target_cycle_started_at: operation.target_cycle_started_at)
+    end
+
+    before do
+      blocked_operation
+      first_attempt = true
+      allow(Customers::LockService).to receive(:call!).and_wrap_original do |original, **args, &block|
+        if first_attempt
+          first_attempt = false
+          raise BaseLockService::FailedToAcquireLock, "lock timed out"
+        end
+        original.call(**args, &block)
+      end
+    end
+
+    it "reports the blocked row, finishes the next one, and backfills the missed row on rerun" do
+      expect { expect { run_task }.to raise_error(BillingOperationSnapshotsBackfill::UnverifiableOperation, /1 operations/) }
+        .to output(/BLOCKED operation=#{blocked_operation.id}: lock timed out.*BACKFILL operation=#{operation.id}/m).to_stdout
+      expect(blocked_operation.reload).to have_attributes(coverage_started_at: nil, coverage_ended_at: nil)
+      expect(blocked_operation.segments).to be_empty
+      expect(rows.count).to eq(1)
+
+      task.reenable
+      expect { task.invoke }.to output(/BACKFILL operation=#{blocked_operation.id}/).to_stdout
+      expect(blocked_operation.reload).to have_attributes(coverage_started_at: operation.target_cycle_started_at, coverage_ended_at: operation.billing_at)
+      expect(blocked_operation.segments.count).to eq(1)
+      expect(rows.count).to eq(1)
+    end
+  end
+
   context "when filtering another organization" do
     let(:organization_filter) { create(:organization).id }
 
