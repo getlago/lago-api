@@ -12,6 +12,11 @@ module Types
       argument :currency, Types::CurrencyEnum, required: false
       argument :description, String, required: false
       argument :invoice_display_name, String, required: false
+      argument :metadata,
+        [Types::Metadata::Input],
+        required: false,
+        description: "Replaces all pairs. Omit to keep them, [] to empty, null to remove.",
+        **Types::Metadata::Input::ARGUMENT_OPTIONS
       argument :name, String, required: false
       argument :tax_codes, [String], required: false
     end

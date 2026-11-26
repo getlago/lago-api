@@ -264,6 +264,24 @@ RSpec.describe Mutations::Wallets::Update, :premium do
         {"key" => "region", "value" => "us-east"}
       )
     end
+
+    context "when metadata is null" do
+      before { create(:item_metadata, owner: wallet, organization:, value: {"env" => "staging"}) }
+
+      it "deletes the metadata" do
+        result = execute_graphql(
+          current_organization: organization,
+          current_user: membership.user,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input: {id: wallet.id, priority: wallet.priority, metadata: nil}}
+        )
+
+        expect(result["errors"]).to be_nil
+        expect(result["data"]["updateCustomerWallet"]["metadata"]).to be_nil
+        expect(Metadata::ItemMetadata.where(owner: wallet)).not_to exist
+      end
+    end
   end
 
   context "when updating code" do
