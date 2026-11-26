@@ -196,6 +196,13 @@ RSpec.describe Api::V2::Contracts::EntitlementsController do
         {code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats", meta: {}}]}
     end
 
+    context "with a blank feature value" do
+      let(:request_params) { {entitlements: {seats: ""}} }
+
+      include_examples "a refused write", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "value_is_invalid", field: "entitlements.seats", meta: {}}]}
+    end
+
     context "with an unknown privilege" do
       let(:request_params) { {entitlements: {seats: {max: 60, unknown: 1}}} }
 

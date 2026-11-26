@@ -247,6 +247,18 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
       end
     end
 
+    ["", false, []].each do |blank_value|
+      context "with a blank feature value (#{blank_value.inspect})" do
+        let(:entitlements_params) { {"storage" => {"limit" => 10}, "seats" => blank_value} }
+
+        it "fails on the feature entry and rolls back" do
+          expect(result).not_to be_success
+          expect(result.error.codes).to eq("entitlements.seats": ["value_is_invalid"])
+          expect(contract.entitlements.reload).to be_empty
+        end
+      end
+    end
+
     context "with an unknown feature whose value is null" do
       let(:entitlements_params) { {"unknown" => nil} }
 

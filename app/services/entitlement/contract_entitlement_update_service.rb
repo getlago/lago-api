@@ -63,8 +63,7 @@ module Entitlement
       entitlements_params.each do |feature_code, privilege_params|
         path = :"entitlements.#{feature_code}"
         feature = features_by_code[feature_code] || not_found_at!(path, "feature")
-        validate_privilege_values_shape!(path, privilege_params)
-        refuse_null!(path, privilege_params)
+        refuse_non_map!(path, privilege_params)
 
         SubscriptionEntitlementCoreUpdateService.call!(
           owner: contract,
@@ -79,9 +78,10 @@ module Entitlement
       end
     end
 
-    # A null feature value is refused, as on the catalog plan merge, not read as an empty map.
-    def refuse_null!(path, privilege_params)
-      return unless privilege_params.nil?
+    # A feature value is a map, empty for none. Any other value, blank ones included (null, "", false), is refused,
+    # as on the catalog plan merge.
+    def refuse_non_map!(path, privilege_params)
+      return if privilege_params.is_a?(Hash)
 
       result.single_validation_failure!(field: path, error_code: "value_is_invalid").raise_if_error!
     end
