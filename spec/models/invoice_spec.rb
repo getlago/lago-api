@@ -688,6 +688,31 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#paid_advance_charges?" do
+    subject(:invoice) { build(:invoice, organization:, invoice_type:, voided_invoice_id:) }
+
+    let(:voided_invoice_id) { nil }
+
+    context "when the invoice is an original advance_charges invoice" do
+      let(:invoice_type) { :advance_charges }
+
+      it { expect(invoice.paid_advance_charges?).to be(true) }
+    end
+
+    context "when the invoice is an advance_charges invoice regenerated from a voided one" do
+      let(:invoice_type) { :advance_charges }
+      let(:voided_invoice_id) { SecureRandom.uuid }
+
+      it { expect(invoice.paid_advance_charges?).to be(false) }
+    end
+
+    context "when the invoice is of another type" do
+      let(:invoice_type) { :subscription }
+
+      it { expect(invoice.paid_advance_charges?).to be(false) }
+    end
+  end
+
   describe "ready_to_be_finalized" do
     let(:invoice) { create(:invoice, status: :draft, expected_finalization_date: Time.current - 1.day) }
 
