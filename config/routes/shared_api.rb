@@ -133,6 +133,11 @@ end
 resources :payments, only: %i[create index show]
 resources :plans, param: :code, code: /.*/ do
   draw(:plan_nested_api)
+  resources :entitlements, only: %i[index show create destroy], param: :code, code: /.*/, controller: "/api/v1/plans/entitlements" do
+    resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "/api/v1/plans/entitlements/privileges"
+  end
+  patch :entitlements, controller: "/api/v1/plans/entitlements", action: :update
+  draw(:plan_metadata_api)
 end
 resources :taxes, param: :code, code: /.*/
 resources :usage_attribution_types, param: :code, code: /.*/, only: %i[index show create update destroy]
