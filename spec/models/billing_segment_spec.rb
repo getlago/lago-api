@@ -115,6 +115,20 @@ RSpec.describe BillingSegment do
       expect { described_class.from_attributes(attributes.merge("rate_override_id" => other_rate_override.id)) }
         .to raise_error(ActiveRecord::RecordNotFound)
     end
+
+    it "reuses matching preloaded associations when restoring billing inputs" do
+      associations = {organization:, customer:, contract:, contract_rate_card:, rate_card_rate:, rate_override:, pricing_unit:}
+
+      queries = capture_sql { described_class.from_attributes(attributes, associations:) }
+
+      expect(queries).to be_empty
+    end
+
+    it "does not use a preloaded association with a different identity" do
+      expect do
+        described_class.from_attributes(attributes.merge("contract_id" => other_contract.id), associations: {organization:, contract:})
+      end.to raise_error(ActiveRecord::RecordNotFound)
+    end
   end
 
   describe "pricing and period helpers" do

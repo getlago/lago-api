@@ -34,6 +34,22 @@ RSpec.describe BillingOperations::ProcessService do
     operation
   end
 
+  it "preserves microseconds when saving pricing inputs" do
+    result
+
+    inputs = operation.reload.segments.sole
+    expect(inputs.started_at.iso8601(6)).to eq("2026-01-01T00:00:00.000000Z")
+    expect(inputs.ended_at.iso8601(6)).to eq("2026-02-01T00:00:00.000000Z")
+    expect(operation.billing_at.iso8601(6)).to eq("2026-02-01T00:00:00.000000Z")
+  end
+
+  it "reads due operations once when there are no units adjustments" do
+    queries = capture_sql { result }
+
+    expect(queries.grep(/DISTINCT ON \(billing_operations.contract_rate_card_id\)/).size).to eq(1)
+    expect(result.invoices.sole.total_amount_cents).to eq(3100)
+  end
+
   it "atomically records billed coverage and advances the cursor without future operations" do
     expect(BillingOperation.count).to eq(1)
     invoice = result.invoices.sole
@@ -48,6 +64,21 @@ RSpec.describe BillingOperations::ProcessService do
     expect(contract_rate_card.billing_operations.pending).to be_empty
     expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
     expect(contract_rate_card.fees.count).to eq(1)
+  end
+
+  context "with an earlier units reconciliation" do
+    let(:change) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
+        reason: :contract_units_change, billing_at: cursor - 1.day, target_cycle_started_at:, units_before: 1, units_after: 2)
+    end
+
+    before { change }
+
+    it "leaves reconciliation and the later periodic operation for coordinated processing" do
+      expect(result.invoices).to be_empty
+      expect(change.reload.processed_at).to be_nil
+      expect(operation.reload.processed_at).to be_nil
+    end
   end
 
   context "with a persisted periodic continuation operation" do

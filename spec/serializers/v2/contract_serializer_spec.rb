@@ -98,7 +98,7 @@ RSpec.describe V2::ContractSerializer do
       )
     end
 
-    it "reads stored cursors without querying operation history" do
+    it "reads stored cursors and loads only units history in one query" do
       statements = []
       subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_name, _start, _finish, _id, payload|
         statements << payload[:sql] if payload[:sql].include?("billing_operations")
@@ -106,7 +106,9 @@ RSpec.describe V2::ContractSerializer do
 
       payload
 
-      expect(statements).to be_empty
+      expect(statements.size).to eq(1)
+      expect(statements.sole).to include('"billing_operations"."reason" =')
+      expect(statements.sole).to include('"billing_operations"."units_after"')
     ensure
       ActiveSupport::Notifications.unsubscribe(subscriber)
     end

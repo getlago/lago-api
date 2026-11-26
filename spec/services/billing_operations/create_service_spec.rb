@@ -64,6 +64,18 @@ RSpec.describe BillingOperations::CreateService do
     end
   end
 
+  context "with invalid units on a reconciliation" do
+    let(:attributes) do
+      super().merge(action_type: "reconcile_advance_coverage", reason: "contract_units_change", units_before: 8, units_after: -1)
+    end
+
+    it "returns the operation field in the validation error" do
+      expect(result).to be_failure
+      expect(result.error.messages.keys).to eq([:units_after])
+      expect(contract_rate_card.billing_operations).to be_empty
+    end
+  end
+
   [
     [:action_type, "invalid_action"],
     [:reason, "invalid_causation"],

@@ -51,6 +51,8 @@ RSpec.describe Webhooks::Contracts::TerminatedService do
             "external_contract_id" => "contract_external_id",
             "rate_card_code" => "standard",
             "units" => "2.0",
+            "scheduled_units" => nil,
+            "scheduled_units_effective_at" => nil,
             "effective_date" => "2026-01-01",
             "billing_anchor_date" => "2026-01-01",
             "next_billing_at" => "2026-02-01T00:00:00Z",

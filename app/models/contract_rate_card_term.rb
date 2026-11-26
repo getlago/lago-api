@@ -13,10 +13,13 @@ class ContractRateCardTerm < ApplicationRecord
   belongs_to :organization
   belongs_to :contract_rate_card, -> { with_discarded }, inverse_of: :terms
 
-  validates :effective_date, presence: true
-  validates :effective_date, uniqueness: {scope: :contract_rate_card_id}
+  validates :effective_date, presence: true, uniqueness: {scope: :contract_rate_card_id}
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validate :organization_matches_contract_rate_card
+
+  def starts_at
+    effective_date.in_time_zone(contract_rate_card.contract.customer.applicable_timezone)
+  end
 
   private
 

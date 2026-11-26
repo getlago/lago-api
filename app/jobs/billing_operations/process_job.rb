@@ -12,7 +12,7 @@ module BillingOperations
     retry_on Sequenced::SequenceError, wait: :polynomially_longer, attempts: 15, jitter: 0.75
 
     def perform(customer_id)
-      ProcessService.call!(customer: Customer.find(customer_id), timestamp: Time.current)
+      ProcessPendingService.call!(customer: Customer.find(customer_id), timestamp: Time.current)
     end
   end
 end

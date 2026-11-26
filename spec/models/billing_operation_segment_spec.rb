@@ -18,6 +18,7 @@ RSpec.describe BillingOperationSegment do
   describe "associations" do
     it do
       expect(segment).to belong_to(:organization)
+      expect(segment).to belong_to(:pricing_unit).optional
       expect(segment).to belong_to(:billing_operation).inverse_of(:segments)
       expect(segment).to belong_to(:rate_card_rate)
       expect(segment).to belong_to(:rate_override).optional
@@ -50,6 +51,12 @@ RSpec.describe BillingOperationSegment do
 
     context "when the override belongs to another organization" do
       before { segment.rate_override = create(:rate_override) }
+
+      it { expect(segment).not_to be_valid }
+    end
+
+    context "when the pricing unit belongs to another organization" do
+      before { segment.pricing_unit = create(:pricing_unit) }
 
       it { expect(segment).not_to be_valid }
     end

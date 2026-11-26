@@ -150,7 +150,7 @@ module Invoices
 
       operations = invoice.billing_operations
         .order(:target_cycle_started_at, :billing_at, :id)
-        .includes(contract_rate_card: [
+        .includes(segments: [:rate_card_rate, :rate_override, :pricing_unit], contract_rate_card: [
           :organization,
           :terms,
           {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]},

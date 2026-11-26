@@ -26,6 +26,8 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
         updateContractAppliedRateCard(input: $input) {
           id
           units
+          scheduledUnits
+          scheduledUnitsEffectiveAt
           billingAnchorDate
           nextBillingAt
         }
@@ -103,6 +105,54 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
       expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
 
       expect(contract_rate_card.reload.terms.sole.units).to eq(5)
+    end
+  end
+
+  context "when changing an active contract's units explicitly" do
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 9, 1)) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, units: 5,
+        effective_date: Date.new(2026, 9, 1), billing_anchor_date: Date.new(2026, 9, 1))
+    end
+    let(:input) { {id: contract_rate_card.id, units: 8, applyUnits: "now"} }
+
+    let(:rate_effective_from) { Time.utc(2026, 9, 1) }
+
+    before { create(:rate_card_rate, organization:, rate_card:, effective_from: rate_effective_from) }
+
+    it "records the change without replacing the original units" do
+      freeze_time do
+        expect(execution["errors"]).to be_nil
+        expect(execution.dig("data", "updateContractAppliedRateCard", "units")).to eq(8.0)
+        expect(contract_rate_card.reload.units_changes.find_by(billing_at: Time.current)).to have_attributes(units_before: 5, units_after: 8)
+        expect(contract_rate_card.terms.first.units).to eq(5)
+      end
+    end
+
+    context "when applying at the next billing period" do
+      let(:input) { {id: contract_rate_card.id, units: 8, applyUnits: "next_billing_period"} }
+
+      around { |example| travel_to(Time.utc(2026, 9, 15)) { example.run } }
+
+      it "returns current units and the accepted scheduled change" do
+        expect(execution.dig("data", "updateContractAppliedRateCard").slice("units", "scheduledUnits", "scheduledUnitsEffectiveAt"))
+          .to eq("units" => 5.0, "scheduledUnits" => 8.0, "scheduledUnitsEffectiveAt" => "2026-10-01T00:00:00Z")
+      end
+    end
+
+    context "when the first price is not effective yet" do
+      let(:rate_effective_from) { Time.utc(2026, 9, 20) }
+
+      around { |example| travel_to(Time.utc(2026, 9, 15)) { example.run } }
+
+      it "returns a validation error without recording a units change" do
+        expect_unprocessable_entity(execution, details: {units: ["no_effective_rate"]})
+        expect(contract_rate_card.reload.units_changes).to be_empty
+        expect(contract_rate_card.terms.sole.units).to eq(5)
+      end
     end
   end
 

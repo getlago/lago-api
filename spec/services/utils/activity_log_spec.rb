@@ -730,6 +730,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               external_contract_id: "acme-2023",
               rate_card_code: "api_eu",
               units: nil,
+              scheduled_units: nil,
+              scheduled_units_effective_at: nil,
               effective_date: "2023-03-22",
               billing_anchor_date: "2023-03-22",
               next_billing_at: timestamp,

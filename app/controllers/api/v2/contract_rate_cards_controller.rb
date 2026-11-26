@@ -69,7 +69,7 @@ module Api
         )
 
         if result.success?
-          render_applied_rate_cards(result.contract_rate_cards.includes(:contract, :rate_card, :terms))
+          render_applied_rate_cards(result.contract_rate_cards.includes(:contract, :rate_card))
         else
           render_error_response(result)
         end
@@ -111,7 +111,7 @@ module Api
       end
 
       def update_params
-        params.require(:applied_rate_card).permit(:units, :billing_anchor_date)
+        params.require(:applied_rate_card).permit(:units, :billing_anchor_date, :apply_units)
       end
 
       def resource_name

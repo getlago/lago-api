@@ -39,10 +39,14 @@ module Contracts
         end
         segments = cards.filter_map { |card| billing_segment_for(card) }
         fixed_cards = segments.filter_map { |card, _, _| card unless card.rate_card.product.metered? }
-        ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
+        @units_histories = if fixed_cards.any?
+          ContractRateCardUnitsHistoryQuery.call!(organization: customer.organization, contract_rate_cards: fixed_cards).histories
+        else
+          {}
+        end
 
         segments
-          .map { |card, billable_segment, billing_segment| rate_card_usage(card, billable_segment, billing_segment) }
+          .map { |card, billable_segment, billing_segment, cycle| rate_card_usage(card, billable_segment, billing_segment, cycle) }
           .sort_by { |usage| usage_order(usage) }
       else
         []
@@ -60,7 +64,7 @@ module Contracts
 
     private
 
-    attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term
+    attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term, :units_histories
 
     delegate :customer, to: :contract
 
@@ -139,15 +143,16 @@ module Contracts
       billing_segment = BillingSegments::BuildEventSegmentService.call!(
         contract_rate_card: card, billable_segment:
       ).billing_segment
-      [card, billable_segment, billing_segment]
+      cycle = schedule.cycle_at(timestamp) if card.product.fixed?
+      [card, billable_segment, billing_segment, cycle]
     end
 
-    def rate_card_usage(card, billable_segment, billing_segment)
+    def rate_card_usage(card, billable_segment, billing_segment, cycle)
       RateCardUsage.new(
         contract_rate_card: card,
         billing_segment:,
         rate_phase: card.rate_phases.find { |phase| phase.code == billable_segment.rate_phase_code },
-        fees: compute_fees(billing_segment)
+        fees: compute_fees(billing_segment, cycle:)
       )
     end
 
@@ -156,7 +161,7 @@ module Contracts
       [usage.billing_segment.started_at, usage.billing_segment.ended_at, usage.contract_rate_card.rate_card.code]
     end
 
-    def compute_fees(billing_segment)
+    def compute_fees(billing_segment, cycle:)
       if billing_segment.contract_rate_card.rate_card.product.metered?
         Fees::ChargeService.call!(
           invoice: nil,
@@ -165,7 +170,8 @@ module Contracts
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else
-        [BillingOperations::Fees::ComputeService.call!(billing_segment:).fee]
+        resolved = BillingOperations::ResolveFixedUnitsService.call!(segments: [billing_segment], cycle:, units_histories:).segments
+        resolved.map { BillingOperations::Fees::ComputeService.call!(billing_segment: it).fee }
       end
     end
 

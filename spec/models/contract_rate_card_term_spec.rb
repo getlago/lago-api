@@ -85,4 +85,15 @@ RSpec.describe ContractRateCardTerm do
       end
     end
   end
+
+  describe "#starts_at" do
+    let(:customer) { build(:customer, timezone: "America/New_York") }
+    let(:contract) { build(:contract, customer:) }
+    let(:card) { build(:contract_rate_card, contract:) }
+    let(:term) { build(:contract_rate_card_term, contract_rate_card: card, effective_date: Date.new(2026, 9, 1)) }
+
+    it "starts at midnight in the customer timezone" do
+      expect(term.starts_at).to eq(Time.utc(2026, 9, 1, 4))
+    end
+  end
 end

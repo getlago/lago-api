@@ -2147,8 +2147,15 @@ type ContractAppliedRateCard {
   rateCard: RateCard!
   ratePhases: [RatePhase!]!
   ratePhasesCount: Int!
+  scheduledUnits: Float
+  scheduledUnitsEffectiveAt: ISO8601DateTime
   units: Float
   updatedAt: ISO8601DateTime!
+}
+
+enum ContractAppliedRateCardApplyUnitsEnum {
+  next_billing_period
+  now
 }
 
 """
@@ -11276,7 +11283,7 @@ type Mutation {
   ): ContractAlert
 
   """
-  Updates a rate card attached to a pending contract
+  Updates a pending contract rate card or changes units on an active contract
   """
   updateContractAppliedRateCard(
     """
@@ -17238,6 +17245,7 @@ input UpdateContractAlertInput {
 Update contract applied rate card input arguments
 """
 input UpdateContractAppliedRateCardInput {
+  applyUnits: ContractAppliedRateCardApplyUnitsEnum
   billingAnchorDate: ISO8601Date
 
   """

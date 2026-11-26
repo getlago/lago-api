@@ -176,7 +176,7 @@ class ModelSerializer
   def render_expansion(records, serializer)
     case records
     when nil then nil
-    when Array, ActiveRecord::Relation then records.map { serializer.new(it, nested_options).serialize }
+    when Array, ActiveRecord::Relation then CollectionSerializer.new(records, serializer, nested_options).serialize_models
     else serializer.new(records, nested_options).serialize
     end
   end

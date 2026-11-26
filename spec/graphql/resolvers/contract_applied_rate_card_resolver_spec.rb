@@ -34,7 +34,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
     <<~GQL
       query($id: ID!) {
         contractAppliedRateCard(id: $id) {
-          id units
+          id units scheduledUnits scheduledUnitsEffectiveAt
           effectiveDate billingAnchorDate nextBillingAt
           contract { id name }
           product { id }
@@ -50,6 +50,40 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "contracts:view"
 
+  context "with a future draft contract" do
+    let(:contract) { create(:contract, :draft, organization:, customer:, started_at: Time.utc(2026, 10, 1)) }
+
+    around { |example| travel_to(Time.utc(2026, 9, 1)) { example.run } }
+
+    it "returns the saved starting units" do
+      expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(3.0)
+    end
+  end
+
+  context "with a scheduled units change" do
+    let(:timestamp) { Time.utc(2026, 11, 15) }
+
+    around { |example| travel_to(timestamp) { example.run } }
+
+    before do
+      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 5, effective_date: Date.new(2026, 12, 1), application_timing: :next_billing_cycle)
+    end
+
+    it "returns current units and the scheduled quantity and time" do
+      expect(execution.dig("data", "contractAppliedRateCard").slice("units", "scheduledUnits", "scheduledUnitsEffectiveAt"))
+        .to eq("units" => 3.0, "scheduledUnits" => 5.0, "scheduledUnitsEffectiveAt" => "2026-12-01T00:00:00Z")
+    end
+
+    context "when the scheduled change takes effect" do
+      let(:timestamp) { Time.utc(2026, 12, 1) }
+
+      it "returns the new current units without a scheduled change" do
+        expect(execution.dig("data", "contractAppliedRateCard").slice("units", "scheduledUnits", "scheduledUnitsEffectiveAt"))
+          .to eq("units" => 5.0, "scheduledUnits" => nil, "scheduledUnitsEffectiveAt" => nil)
+      end
+    end
+  end
+
   context "when the applied rate card has a billing cursor" do
     it "returns the applied rate card with its contract, dates and rate phases" do
       rate_override = create(:rate_override, organization:)
@@ -58,6 +92,8 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
       expect(execution["data"]["contractAppliedRateCard"]).to eq(
         "id" => contract_rate_card.id,
         "units" => 3.0,
+        "scheduledUnits" => nil,
+        "scheduledUnitsEffectiveAt" => nil,
         "effectiveDate" => "2026-10-01",
         "billingAnchorDate" => "2026-10-15",
         "nextBillingAt" => "2026-10-15T00:00:00Z",
@@ -96,8 +132,8 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
         )
       end
 
-      it "returns the first effective units row" do
-        expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(7.0)
+      it "returns the current effective units row" do
+        expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(3.0)
       end
     end
   end
@@ -130,8 +166,8 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
       )
     end
 
-    it "returns the first effective units row" do
-      expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(7.0)
+    it "returns the current effective units row" do
+      expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(3.0)
     end
   end
 
