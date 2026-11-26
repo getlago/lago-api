@@ -27,8 +27,13 @@ module UsageMonitoring
           return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
         end
 
+        if params.key?(:scope)
+          read_scope
+          return result unless result.success?
+        end
+
         unless [nil, true, false].include?(params[:with_product_filters])
-          return result.single_validation_failure!(field: :with_product_filters, error_code: "value_is_invalid")
+          return validation_error(request_field(:with_product_filters), "value_is_invalid")
         end
 
         thresholds_result = UsageMonitoring::Thresholds::ValidateService.call(thresholds: params[:thresholds])
@@ -75,12 +80,47 @@ module UsageMonitoring
 
       attr_reader :organization, :contract, :params
 
+      def read_scope
+        scope = params[:scope]
+        return validation_error(:scope, "value_is_mandatory") if scope.nil?
+        return validation_error(:scope, "value_is_invalid") unless scope.is_a?(Array)
+        return validation_error(:scope, "value_is_invalid", max_items: 1) if scope.many?
+        return if scope.empty?
+
+        entry = scope.first
+        return validation_error(request_field(:type), "value_is_invalid", allowed_values: ["contract"]) unless entry[:type] == "contract"
+        return validation_error(request_field(:product_code), "value_is_mandatory") if entry[:product_code].blank?
+
+        codes = entry[:product_filter_codes]
+        if codes
+          return validation_error(request_field(:with_product_filters), "value_is_invalid") if entry.key?(:with_product_filters)
+          return validation_error(request_field(:product_filter_codes), "value_is_invalid") if codes.empty?
+          return validation_error(request_field(:product_filter_codes), "value_is_invalid", max_items: 1) if codes.many?
+        end
+
+        params.merge!(product_code: entry[:product_code], product_filter_code: codes&.first, with_product_filters: entry[:with_product_filters])
+      end
+
+      def request_field(name)
+        if !params.key?(:scope)
+          name
+        elsif params[:scope].empty?
+          :scope
+        else
+          ValidationFailure.item_field(:scope, 0, name)
+        end
+      end
+
+      def validation_error(field, error_code, **meta)
+        result.single_validation_failure!(field:, error_code:, meta:)
+      end
+
       def find_product
         if product_param.blank?
           if params[:alert_type].to_s == "usage_units"
-            result.single_validation_failure!(field: :product_code, error_code: "product_required_for_units")
+            validation_error(request_field(:product_code), "product_required_for_units")
           elsif product_filter_param.present?
-            result.single_validation_failure!(field: :product_code, error_code: "value_is_mandatory")
+            validation_error(request_field(:product_code), "value_is_mandatory")
           end
 
           return
@@ -93,7 +133,7 @@ module UsageMonitoring
           result.not_found_failure!(resource: "product")
           nil
         elsif product.fixed?
-          result.single_validation_failure!(field: :product_code, error_code: "value_is_invalid")
+          validation_error(request_field(:product_code), "value_is_invalid")
           nil
         else
           product

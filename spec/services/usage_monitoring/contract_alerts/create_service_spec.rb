@@ -142,6 +142,159 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
     end
   end
 
+  context "with a scope, as the v2 API names the target" do
+    let(:params) { {alert_type: "usage_units", code: "opus_tokens", scope:, thresholds: [{value: 10}]} }
+    let(:scope) { [entry] }
+    let(:entry) { {type: "contract", product_code: product.code, product_filter_codes: [product_filter.code]} }
+
+    it "creates the alert on the filter" do
+      expect(result).to be_success
+      expect(result.alert).to have_attributes(product:, product_filter:, with_product_filters: false)
+    end
+
+    context "with the product only" do
+      let(:entry) { {type: "contract", product_code: product.code} }
+
+      it "creates the alert on the product's own fees" do
+        expect(result).to be_success
+        expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: false)
+      end
+    end
+
+    [true, false].each do |flag|
+      context "with with_product_filters #{flag}" do
+        let(:entry) { {type: "contract", product_code: product.code, with_product_filters: flag} }
+
+        it "creates the alert on the product, and on its filters when true" do
+          expect(result).to be_success
+          expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: flag)
+        end
+      end
+    end
+
+    context "without a scope" do
+      let(:scope) { nil }
+
+      it "returns a validation failure on scope" do
+        expect(result.error.messages).to eq({scope: ["value_is_mandatory"]})
+        expect(organization.contract_alerts).to be_empty
+      end
+    end
+
+    context "with an empty scope on an amount alert" do
+      let(:params) { super().merge(alert_type: "usage_amount") }
+      let(:scope) { [] }
+
+      it "creates the alert on the whole contract" do
+        expect(result).to be_success
+        expect(result.alert).to have_attributes(product: nil, product_filter: nil, with_product_filters: false)
+      end
+    end
+
+    context "with an empty scope on a units alert" do
+      let(:scope) { [] }
+
+      it "returns product_required_for_units on scope" do
+        expect(result.error.messages).to eq({scope: ["product_required_for_units"]})
+      end
+    end
+
+    context "with a scope that is not a list" do
+      let(:scope) { entry }
+
+      it "returns a validation failure on scope" do
+        expect(result.error.messages).to eq({scope: ["value_is_invalid"]})
+      end
+    end
+
+    context "with two entries" do
+      let(:scope) { [entry, {type: "contract", product_code: product.code}] }
+
+      it "returns a validation failure on scope with its limit" do
+        expect(result.error.messages).to eq({scope: ["value_is_invalid"]})
+        expect(result.error.meta).to eq({scope: {max_items: 1}})
+      end
+    end
+
+    [nil, "plan"].each do |type|
+      context "with type #{type.inspect}" do
+        let(:entry) { super().merge(type:) }
+
+        it "returns a validation failure on the type, with the types allowed" do
+          expect(result.error.messages).to eq({"scope[0].type": ["value_is_invalid"]})
+          expect(result.error.meta).to eq({"scope[0].type": {allowed_values: ["contract"]}})
+        end
+      end
+    end
+
+    [{product_filter_codes: ["opus"]}, {with_product_filters: false}, {}].each do |fields|
+      context "with #{fields.inspect} and no product code" do
+        let(:entry) { {type: "contract", **fields} }
+
+        it "returns a validation failure on the product code" do
+          expect(result.error.messages).to eq({"scope[0].product_code": ["value_is_mandatory"]})
+        end
+      end
+    end
+
+    [true, false, nil].each do |flag|
+      context "with with_product_filters #{flag.inspect} next to product_filter_codes" do
+        let(:entry) { super().merge(with_product_filters: flag) }
+
+        it "returns a validation failure on with_product_filters, as the two exclude each other" do
+          expect(result.error.messages).to eq({"scope[0].with_product_filters": ["value_is_invalid"]})
+        end
+      end
+    end
+
+    ["no", 2].each do |flag|
+      context "with with_product_filters #{flag.inspect}" do
+        let(:entry) { {type: "contract", product_code: product.code, with_product_filters: flag} }
+
+        it "returns a validation failure on with_product_filters" do
+          expect(result.error.messages).to eq({"scope[0].with_product_filters": ["value_is_invalid"]})
+        end
+      end
+    end
+
+    context "with no product filter code" do
+      let(:entry) { super().merge(product_filter_codes: []) }
+
+      it "returns a validation failure on product_filter_codes" do
+        expect(result.error.messages).to eq({"scope[0].product_filter_codes": ["value_is_invalid"]})
+      end
+    end
+
+    context "with two product filter codes" do
+      let(:entry) { super().merge(product_filter_codes: [product_filter.code, "other"]) }
+
+      it "returns a validation failure on product_filter_codes with its limit" do
+        expect(result.error.messages).to eq({"scope[0].product_filter_codes": ["value_is_invalid"]})
+        expect(result.error.meta).to eq({"scope[0].product_filter_codes": {max_items: 1}})
+      end
+    end
+
+    context "with a fixed product" do
+      let(:fixed_product) { create(:product, :fixed, organization:) }
+      let(:entry) { {type: "contract", product_code: fixed_product.code} }
+
+      before { price_on(contract, fixed_product) }
+
+      it "returns a validation failure on the product code of the entry" do
+        expect(result.error.messages).to eq({"scope[0].product_code": ["value_is_invalid"]})
+      end
+    end
+
+    context "with a filter that the contract does not price" do
+      let(:entry) { super().merge(product_filter_codes: [create(:product_filter, organization:, product:).code]) }
+
+      it "returns a not found failure" do
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("product_filter")
+      end
+    end
+  end
+
   context "with a pending contract" do
     let(:contract) { create(:contract, :pending, organization:, customer:) }
 

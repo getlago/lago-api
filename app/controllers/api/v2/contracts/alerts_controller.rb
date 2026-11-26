@@ -5,6 +5,7 @@ module Api
     module Contracts
       class AlertsController < Api::V2::BaseController
         THRESHOLD_PARAMS = [:code, :value, :recurring, :notify_on, {notify_on: []}].freeze
+        SCOPE_PARAMS = [:type, :product_code, :with_product_filters, {product_filter_codes: []}].freeze
 
         cursor_paginated_index(UsageMonitoring::ContractAlert)
         date_range_filtered_index(:created_at)
@@ -38,7 +39,7 @@ module Api
           result = ::UsageMonitoring::ContractAlerts::CreateService.call(
             organization: current_organization,
             contract:,
-            params: input_params.to_h
+            params: input_params.to_h.with_defaults(scope: nil)
           )
 
           if result.success?
@@ -92,9 +93,7 @@ module Api
             :alert_type,
             :code,
             :name,
-            :product_code,
-            :product_filter_code,
-            :with_product_filters,
+            scope: SCOPE_PARAMS,
             thresholds: THRESHOLD_PARAMS
           )
         end

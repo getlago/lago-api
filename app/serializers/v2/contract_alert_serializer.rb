@@ -2,6 +2,8 @@
 
 module V2
   class ContractAlertSerializer < ModelSerializer
+    include ContractAlertScope
+
     timestamps :last_processed_at, :created_at, :updated_at, :deleted_at
 
     def serialize
@@ -11,10 +13,7 @@ module V2
         code: model.code,
         name: model.name,
         alert_type: model.alert_type,
-        applies_to: {type: "contract"},
-        product_code: model.product&.code,
-        product_filter_code: model.product_filter&.code,
-        with_product_filters: model.with_product_filters,
+        scope: scope_of(model),
         direction: model.direction,
         thresholds:,
         previous_value: model.previous_value

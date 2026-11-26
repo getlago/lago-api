@@ -40,10 +40,7 @@ RSpec.describe V2::ContractAlertSerializer do
       code: "opus_tokens",
       name: "Opus tokens",
       alert_type: "usage_units",
-      applies_to: {type: "contract"},
-      product_code: "llm_tokens",
-      product_filter_code: "opus",
-      with_product_filters: false,
+      scope: [{type: "contract", product_code: "llm_tokens", product_filter_codes: ["opus"]}],
       direction: "increasing",
       thresholds: [
         {code: "warn", value: BigDecimal("1000000"), recurring: false, notify_on: %w[triggered]},
@@ -71,13 +68,23 @@ RSpec.describe V2::ContractAlertSerializer do
     end
   end
 
+  context "with an alert on a product and its filters" do
+    let(:alert) do
+      create(:contract_usage_amount_alert, organization:, product:, with_product_filters: true, thresholds: nil)
+    end
+
+    it "renders the product and with_product_filters in the scope, as a request sends them" do
+      expect(payload[:scope]).to eq([{type: "contract", product_code: "llm_tokens", with_product_filters: true}])
+    end
+  end
+
   context "with an amount alert on the whole contract" do
     let(:alert) do
       create(:contract_usage_amount_alert, organization:, contract_external_id: "ctr_123", thresholds: nil)
     end
 
-    it "renders no product or filter" do
-      expect(payload).to include(alert_type: "usage_amount", product_code: nil, product_filter_code: nil)
+    it "renders an empty scope" do
+      expect(payload).to include(alert_type: "usage_amount", scope: [])
     end
   end
 

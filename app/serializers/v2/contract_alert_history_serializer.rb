@@ -4,6 +4,8 @@ module V2
   # A contract alert's history row as its alert.triggered and alert.resolved webhooks send it: the alert and its
   # scope, the contract evaluated and the observed values. Each event adds its own keys and time.
   class ContractAlertHistorySerializer < ModelSerializer
+    include ContractAlertScope
+
     def serialize
       {
         lago_id: model.id,
@@ -17,10 +19,7 @@ module V2
         external_customer_id: contract.customer.external_id,
         current_value: model.current_value,
         previous_value: model.previous_value,
-        product_code: alert.product&.code,
-        product_filter_code: alert.product_filter&.code,
-        with_product_filters: alert.with_product_filters,
-        applies_to: {type: "contract"},
+        scope: scope_of(alert),
         **event_payload
       }
     end

@@ -41,10 +41,7 @@ RSpec.describe ::V2::ContractTriggeredAlertSerializer do
         "external_customer_id" => "acme",
         "current_value" => "1200000.0",
         "previous_value" => "800000.0",
-        "product_code" => "llm_tokens",
-        "product_filter_code" => "opus",
-        "with_product_filters" => false,
-        "applies_to" => {"type" => "contract"},
+        "scope" => [{"type" => "contract", "product_code" => "llm_tokens", "product_filter_codes" => ["opus"]}],
         "crossed_thresholds" => [{"code" => "warn", "value" => "1000000.0", "recurring" => false}],
         "triggered_at" => "2026-11-22T12:00:00Z"
       }
@@ -70,10 +67,7 @@ RSpec.describe ::V2::ContractTriggeredAlertSerializer do
           "external_customer_id" => "acme",
           "current_value" => "1200000.0",
           "previous_value" => "800000.0",
-          "product_code" => nil,
-          "product_filter_code" => nil,
-          "with_product_filters" => false,
-          "applies_to" => {"type" => "contract"},
+          "scope" => [],
           "crossed_thresholds" => [{"code" => "warn", "value" => "1000000.0", "recurring" => false}],
           "triggered_at" => "2026-11-22T12:00:00Z"
         }
@@ -93,8 +87,7 @@ RSpec.describe ::V2::ContractTriggeredAlertSerializer do
         "alert_code" => "opus_tokens",
         "alert_name" => "Opus tokens",
         "alert_type" => "usage_units",
-        "product_code" => "llm_tokens",
-        "product_filter_code" => "opus"
+        "scope" => [{"type" => "contract", "product_code" => "llm_tokens", "product_filter_codes" => ["opus"]}]
       )
     end
   end

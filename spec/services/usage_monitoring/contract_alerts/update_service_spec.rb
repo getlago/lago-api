@@ -87,7 +87,8 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
     product_filter_code: "opus",
     product_id: SecureRandom.uuid,
     product_filter_id: SecureRandom.uuid,
-    with_product_filters: true
+    with_product_filters: true,
+    scope: [{type: "contract", product_code: "llm_tokens"}]
   }.each do |field, value|
     context "with #{field}" do
       let(:params) { {name: "Renamed"}.merge(field => value) }
