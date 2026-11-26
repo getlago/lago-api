@@ -72,6 +72,16 @@ RSpec.describe Integrations::Aggregator::DeleteConnectionService do
     end
   end
 
+  context "when the integration is flagged as pointing at another company" do
+    let(:settings) { {realm_id: "1234567890", sandbox:, realm_id_mismatch: true} }
+
+    it "still sends the DELETE, as the connection holds tokens for that company" do
+      expect(result).to be_success
+      expect(WebMock).to have_requested(:delete, connection_url).with(headers: request_headers).once
+      expect(log_output.string).not_to include("realm id changed")
+    end
+  end
+
   context "when the integration is a sandbox" do
     let(:sandbox) { true }
     let(:provider_config_key) { "quickbooks-sandbox" }

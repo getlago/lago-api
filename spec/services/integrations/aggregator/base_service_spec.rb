@@ -505,7 +505,7 @@ RSpec.describe Integrations::Aggregator::BaseService do
         expect(LagoTracer).to have_received(:in_span).with(a_string_ending_with("#call")).once
       end
 
-      it "raises a method not allowed failure through call!" do
+      it "raises a forbidden failure through call!" do
         expect { service_class.call!(integration:) }
           .to raise_error(BaseService::ForbiddenFailure) { |error| expect(error.code).to eq("realm_id_changed") }
       end
