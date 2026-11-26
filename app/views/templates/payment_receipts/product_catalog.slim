@@ -103,7 +103,7 @@ html
       - invoice = payment.payable
       - contracts = ProductCatalogReceiptHelper.contracts(invoice)
       .invoice-resume.mb-24.overflow-auto
-        - if invoice.advance_charges?
+        - if invoice.paid_advance_charges?
           == SlimHelper.render('templates/payment_receipts/product_catalog/_advance_fees', invoice, contracts:)
         - elsif contracts.one?
           == SlimHelper.render('templates/payment_receipts/product_catalog/_contract', invoice, contract: contracts.first.first, fees: contracts.first.last, several: false)
@@ -119,6 +119,6 @@ html
 
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', invoice)
 
-      - if !invoice.advance_charges? && contracts.many?
+      - if !invoice.paid_advance_charges? && contracts.many?
         - contracts.each do |contract, fees|
           == SlimHelper.render('templates/payment_receipts/product_catalog/_contract', invoice, contract:, fees:, several: true)

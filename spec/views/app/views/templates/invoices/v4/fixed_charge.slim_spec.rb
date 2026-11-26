@@ -488,4 +488,70 @@ RSpec.describe "templates/invoices/v4/fixed_charge.slim" do
       expect(rendered_template).to match_html_snapshot
     end
   end
+
+  context "with an advance_charges invoice" do
+    let(:voided_invoice_id) { nil }
+    let(:invoice) do
+      create(
+        :invoice,
+        customer:,
+        organization:,
+        number: "LAGO-202509-FC-001",
+        payment_due_date: Date.parse("2025-09-15"),
+        issuing_date: Date.parse("2025-09-01"),
+        invoice_type: :advance_charges,
+        voided_invoice_id:,
+        total_amount_cents: 5000,
+        currency: "USD",
+        fees_amount_cents: 5000,
+        sub_total_excluding_taxes_amount_cents: 5000,
+        sub_total_including_taxes_amount_cents: 5000,
+        coupons_amount_cents: 0
+      )
+    end
+    let(:rendered_text) do
+      document = Nokogiri::HTML(rendered_template)
+      document.css("style").remove
+      document.xpath("//body//text()").map(&:text).join(" ").squish
+    end
+    let(:due_date) { I18n.l(Date.new(2025, 9, 15), format: :default) }
+
+    before do
+      create(
+        :fixed_charge_fee,
+        invoice:,
+        fixed_charge: create(:fixed_charge, :pay_in_advance, plan:, add_on:),
+        subscription:,
+        pay_in_advance: true,
+        amount_cents: 5000,
+        amount_currency: "USD",
+        units: 2,
+        unit_amount_cents: 2500,
+        precise_unit_amount: 25.00,
+        invoice_display_name: "Standard Fixed Charge",
+        properties: {
+          fixed_charges_from_datetime: "2025-09-01 00:00:00",
+          fixed_charges_to_datetime: "2025-09-30 23:59:59"
+        }
+      )
+    end
+
+    it "renders a paid invoice with nothing due" do
+      expect(rendered_text).to include("Paid invoice")
+      expect(rendered_text).to include("$50.00 Already paid")
+      expect(rendered_text).to include("Already paid $50.00")
+      expect(rendered_text).not_to include("Due #{due_date}")
+    end
+
+    context "when it is regenerated from a voided invoice" do
+      let(:voided_invoice_id) { create(:invoice, customer:, organization:, invoice_type: :advance_charges, status: :voided).id }
+
+      it "renders like a regular invoice, with a due date and a total" do
+        expect(rendered_text).to include("$50.00 Due #{due_date}")
+        expect(rendered_text).to include("Total $50.00")
+        expect(rendered_text).not_to include("Already paid")
+        expect(rendered_text).not_to include("Paid invoice")
+      end
+    end
+  end
 end
