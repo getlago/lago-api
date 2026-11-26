@@ -19,7 +19,7 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
   let(:card) do
     create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
       effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1),
-      next_billing_at: clock || Time.utc(2026, 12, 1))
+      units: 1, next_billing_at: clock || Time.utc(2026, 12, 1))
   end
 
   around { |example| travel_to(Time.utc(2026, 11, 12)) { example.run } }
@@ -45,6 +45,40 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       expect(result).to be_success
       expect(card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
       expect(BillingOperation.where(contract_rate_card: card)).to be_empty
+    end
+
+    context "when a historical rate is inserted after the cycle was closed" do
+      let(:old_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: contract.started_at, rate_properties: {"amount" => "30"}) }
+      let(:closed_invoice) do
+        travel_to(Time.utc(2026, 12, 1))
+        BillingOperations::ScheduleService.call!(customer:, timestamp: Time.current)
+        invoice = BillingOperations::ProcessService.call!(customer:, timestamp: Time.current).invoices.sole
+        travel_to(Time.utc(2026, 12, 5))
+        invoice
+      end
+      # Legacy/imported rows can bypass the API's rejection of backdated rates.
+      let(:rate) do
+        closed_invoice
+        super()
+      end
+
+      it "keeps the completed invoice and operation unchanged and continues with the next cycle" do
+        invoice_attributes = closed_invoice.attributes
+        fee_attributes = closed_invoice.fees.order(:id).map(&:attributes)
+        completed_operation = closed_invoice.billing_operations.sole
+        operation_attributes = completed_operation.attributes
+        expect(closed_invoice.total_amount_cents).to eq(3000) # $30 for the full November cycle before the historical rate existed.
+
+        expect { result }.not_to change(BillingOperation, :count)
+        expect(result).to be_success
+        expect(closed_invoice.reload.attributes).to eq(invoice_attributes)
+        expect(closed_invoice.fees.order(:id).map(&:attributes)).to eq(fee_attributes)
+        expect(completed_operation.reload.attributes).to eq(operation_attributes)
+        expect(card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
+        expect(BillingOperations::ScheduleService.call!(customer:, timestamp: Time.current).billing_operations).to be_empty
+        expect(BillingOperations::ProcessService.call!(customer:, timestamp: Time.current).invoices).to be_empty
+        expect(customer.invoices.pluck(:id)).to eq([closed_invoice.id])
+      end
     end
   end
 

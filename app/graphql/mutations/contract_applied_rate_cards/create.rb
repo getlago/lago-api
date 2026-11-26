@@ -15,9 +15,8 @@ module Mutations
       input_object_class Types::ContractAppliedRateCards::CreateInput
       type Types::ContractAppliedRateCards::Object
 
-      def resolve(external_id:, **args)
-        # The editable (pending) contract is the one a card can be attached to.
-        contract = current_organization.contracts.live_by_external_id(external_id)
+      def resolve(contract_id:, **args)
+        contract = current_organization.contracts.find_by(id: contract_id)
 
         result = ::ContractRateCards::CreateService.call(contract:, params: args)
 

@@ -24,6 +24,7 @@ module Products
       end
 
       ActiveRecord::Base.transaction do
+        discard_contract_alerts
         ProductFilterValue.where(product_filter_id: product.filters.ids).discard_all!
         product.filters.discard_all!
         RateCardRate.where(rate_card_id: product.rate_cards.ids).discard_all!
@@ -41,5 +42,13 @@ module Products
     private
 
     attr_reader :product, :emit_events
+
+    def discard_contract_alerts
+      # Alert rows first, in a stable order, or this deadlocks against evaluation and edits.
+      alert_ids = product.contract_alerts.order(:id).lock.pluck(:id)
+
+      UsageMonitoring::ContractAlertThreshold.where(contract_alert_id: alert_ids).delete_all
+      UsageMonitoring::ContractAlert.where(id: alert_ids).update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    end
   end
 end

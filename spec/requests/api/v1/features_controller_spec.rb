@@ -177,6 +177,75 @@ RSpec.describe Api::V1::FeaturesController do
       end
     end
 
+    context "with 50 privileges" do
+      let(:params) { {feature: {code: "new_feature", privileges: Array.new(50) { |i| {code: "priv_#{i}"} }}} }
+
+      it "creates the feature with its 50 privileges" do
+        expect { subject }.to change(organization.privileges, :count).by(50)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:feature][:privileges].size).to eq(50)
+      end
+    end
+
+    context "with 51 privileges" do
+      let(:params) { {feature: {code: "new_feature", privileges: Array.new(51) { |i| {code: "priv_#{i}"} }}} }
+
+      it "returns too_many_privileges and creates nothing" do
+        expect { subject }.to not_change(organization.features, :count).and not_change(organization.privileges, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: ["too_many_privileges"])
+      end
+    end
+
+    context "when privileges is a single object instead of an array" do
+      let(:params) { {feature: {code: "new_feature", privileges: {code: "seats", value_type: "boolean"}}} }
+
+      it "returns a validation error on privileges and creates nothing" do
+        expect { subject }.to not_change(organization.features, :count).and not_change(organization.privileges, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("validation_errors")
+        expect(json[:error_details]).to eq(privileges: ["value_is_invalid"])
+      end
+    end
+
+    context "when privileges is an object with numeric keys" do
+      let(:params) { {feature: {code: "new_feature", privileges: {"0" => {code: "a"}, "1" => {code: "b"}}}} }
+
+      it "returns a validation error on privileges and creates nothing" do
+        expect { subject }
+          .to not_change(organization.features, :count)
+          .and not_change(organization.privileges, :count)
+          .and not_have_enqueued_job(SendWebhookJob)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("validation_errors")
+        expect(json[:error_details]).to eq(privileges: ["value_is_invalid"])
+      end
+    end
+
+    # Strong params reduce these hashes to {}: they are ignored, as before.
+    [
+      ["an empty object", {}],
+      ["an object keyed by privilege code", {seats: {value_type: "boolean"}}],
+      ["null", nil]
+    ].each do |label, privileges|
+      context "when privileges is #{label}" do
+        let(:params) { {feature: {code: "new_feature", name: "New Feature", privileges:}} }
+
+        it "creates the feature without privileges" do
+          expect { subject }.to change(organization.features, :count).by(1).and not_change(organization.privileges, :count)
+
+          expect(response).to have_http_status(:success)
+          expect(json[:feature][:code]).to eq("new_feature")
+          expect(json[:feature][:name]).to eq("New Feature")
+          expect(json[:feature][:privileges]).to eq([])
+        end
+      end
+    end
+
     context "when feature has no privileges" do
       let(:params) do
         {
@@ -384,6 +453,83 @@ RSpec.describe Api::V1::FeaturesController do
       expect(indexed_privileges[:nonexistent][:name]).to eq("New Name")
     end
 
+    %i[patch put].each do |verb|
+      context "when a privilege code is padded with spaces and sent with #{verb.upcase}" do
+        subject { public_send(:"#{verb}_with_token", organization, "/api/v1/features/#{feature_code}", params) }
+
+        let(:privilege2) do
+          create(:privilege, feature: feature1, code: "max", name: "Maximum", value_type: "select", config: {select_options: %w[one two]})
+        end
+        let(:plan_value) { create(:entitlement_value, entitlement: create(:entitlement, feature: feature1), privilege: privilege2, value: "one") }
+        let(:subscription_value) do
+          create(:entitlement_value, entitlement: create(:entitlement, :subscription, feature: feature1), privilege: privilege2, value: "two")
+        end
+        let(:params) { {feature: {privileges: [{code: " max ", name: "New"}]}} }
+
+        before do
+          plan_value
+          subscription_value
+        end
+
+        it "renames the stored privilege in place and keeps its entitlement values" do
+          expect { subject }.not_to change(Entitlement::Privilege.with_discarded, :count)
+
+          expect(response).to have_http_status(:ok)
+          expect(indexed_privileges[:max]).to include(name: "New", config: {select_options: %w[one two]})
+          expect(feature1.privileges.reload.pluck(:id, :code, :name)).to match_array([
+            [privilege1.id, "max_admins", ""],
+            [privilege2.id, "max", "New"]
+          ])
+          expect(Entitlement::EntitlementValue.where(privilege: privilege2)).to match_array([plan_value, subscription_value])
+        end
+      end
+    end
+
+    %i[patch put].each do |verb|
+      [
+        ["a single object", {code: "max", name: "New", value_type: "boolean"}],
+        ["an object with numeric keys", {"0" => {code: "max", name: "New"}, "1" => {code: "other"}}]
+      ].each do |label, privileges|
+        context "when privileges is #{label} and sent with #{verb.upcase}" do
+          subject { public_send(:"#{verb}_with_token", organization, "/api/v1/features/#{feature_code}", params) }
+
+          let(:params) { {feature: {name: "Updated Name", description: "Updated description", privileges:}} }
+
+          it "returns a validation error on privileges and changes nothing" do
+            expect { subject }
+              .to not_change { feature1.reload.attributes.slice("name", "description") }
+              .and not_change { feature1.privileges.reload.pluck(:id, :code, :name) }
+              .and not_have_enqueued_job(SendWebhookJob)
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:code]).to eq("validation_errors")
+            expect(json[:error_details]).to eq(privileges: ["value_is_invalid"])
+          end
+        end
+      end
+
+      # Strong params reduce these hashes to {}: they are ignored, as before.
+      [
+        ["an empty object", {}],
+        ["an object keyed by privilege code", {max: {name: "New"}}],
+        ["null", nil]
+      ].each do |label, privileges|
+        context "when privileges is #{label} and sent with #{verb.upcase}" do
+          subject { public_send(:"#{verb}_with_token", organization, "/api/v1/features/#{feature_code}", params) }
+
+          let(:params) { {feature: {name: "Updated Name", privileges:}} }
+
+          it "updates the feature and leaves its privileges unchanged" do
+            expect { subject }.not_to change { feature1.privileges.reload.pluck(:id, :code, :name) }
+
+            expect(response).to have_http_status(:ok)
+            expect(json[:feature][:name]).to eq("Updated Name")
+            expect(feature1.reload.name).to eq("Updated Name")
+          end
+        end
+      end
+    end
+
     context "when updating only feature attributes" do
       let(:params) do
         {
@@ -424,6 +570,29 @@ RSpec.describe Api::V1::FeaturesController do
         expect(json[:feature][:description]).to eq("Number of users of the account") # unchanged
         expect(indexed_privileges[:max][:name]).to eq("Max.")
         expect(indexed_privileges[:max_admins][:name]).to eq("Max Admins")
+      end
+    end
+
+    context "when the update adds 48 privileges to the 2 existing ones" do
+      let(:params) { {feature: {privileges: Array.new(48) { |i| {code: "priv_#{i}"} }}} }
+
+      it "ends with 50 privileges" do
+        expect { subject }.to change(organization.privileges, :count).by(48)
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:feature][:privileges].size).to eq(50)
+      end
+    end
+
+    context "when the update adds 49 privileges to the 2 existing ones" do
+      let(:params) { {feature: {name: "Renamed", privileges: Array.new(49) { |i| {code: "priv_#{i}"} }}} }
+
+      it "returns too_many_privileges and writes nothing" do
+        expect { subject }.not_to change(organization.privileges, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: ["too_many_privileges"])
+        expect(feature1.reload.name).to eq("Number of seats")
       end
     end
 

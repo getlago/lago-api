@@ -24,7 +24,8 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         :plan_rate_card_created, :plan_rate_card_updated, :plan_rate_card_deleted,
         :plan_wallet_created, :plan_wallet_updated, :plan_wallet_deleted,
         :contract_rate_card_created, :contract_rate_card_updated, :contract_rate_card_deleted,
-        :contract_created, :contract_updated, :contract_started, :contract_terminated, :contract_canceled
+        :contract_wallet_created, :contract_wallet_updated, :contract_wallet_deleted,
+        :contract_created, :contract_updated, :contract_published, :contract_started, :contract_terminated, :contract_canceled
       )).to eq(
         rate_card_rate_created: "rate_card_rate.created",
         rate_card_rate_updated: "rate_card_rate.updated",
@@ -38,21 +39,34 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         contract_rate_card_created: "contract_rate_card.created",
         contract_rate_card_updated: "contract_rate_card.updated",
         contract_rate_card_deleted: "contract_rate_card.deleted",
+        contract_wallet_created: "contract_wallet.created",
+        contract_wallet_updated: "contract_wallet.updated",
+        contract_wallet_deleted: "contract_wallet.deleted",
         contract_created: "contract.created",
         contract_updated: "contract.updated",
+        contract_published: "contract.published",
         contract_started: "contract.started",
         contract_terminated: "contract.terminated",
         contract_canceled: "contract.canceled"
       )
 
-      expect(described_class::RESOURCE_TYPES.slice(:rate_card_rate, :plan_rate_card, :plan_wallet, :contract_rate_card, :contract)).to eq(
+      expect(described_class::RESOURCE_TYPES.slice(:rate_card_rate, :plan_rate_card, :plan_wallet, :contract_rate_card, :contract_wallet, :contract)).to eq(
         rate_card_rate: "RateCardRate",
         plan_rate_card: "PlanRateCard",
         plan_wallet: "PlanWallet",
         contract_rate_card: "ContractRateCard",
+        contract_wallet: "CatalogWallet",
         contract: "Contract"
       )
-      expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("RateCardRate", "PlanRateCard", "ContractRateCard", "PlanWallet")
+      expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("RateCardRate", "PlanRateCard", "ContractRateCard", "PlanWallet", "CatalogWallet")
+    end
+
+    it "defines the plan entitlement activity types" do
+      expect(described_class::ACTIVITY_TYPES.slice(:plan_entitlement_created, :plan_entitlement_updated, :plan_entitlement_deleted)).to eq(
+        plan_entitlement_created: "plan_entitlement.created",
+        plan_entitlement_updated: "plan_entitlement.updated",
+        plan_entitlement_deleted: "plan_entitlement.deleted"
+      )
     end
   end
 

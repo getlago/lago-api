@@ -445,6 +445,42 @@ RSpec.describe CreditNote do
           end
         end
       end
+
+      context "with a QuickBooks integration customer only" do
+        let(:integration) { create(:quickbooks_integration, organization:, sync_credit_notes:) }
+        let(:customer) { create(:customer, organization:) }
+
+        before { create(:quickbooks_customer, integration:, customer:) }
+
+        context "when sync credit notes is true" do
+          let(:sync_credit_notes) { true }
+
+          it "returns true" do
+            expect(method_call).to eq(true)
+          end
+        end
+
+        context "when sync credit notes is false" do
+          let(:sync_credit_notes) { false }
+
+          it "returns false" do
+            expect(method_call).to eq(false)
+          end
+        end
+      end
+
+      context "with a non-accounting integration customer only" do
+        let(:customer) { create(:customer, organization:) }
+
+        before do
+          create(:quickbooks_integration, organization:, sync_credit_notes: true)
+          create(:hubspot_customer, integration: create(:hubspot_integration, organization:), customer:)
+        end
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
     end
 
     context "when the credit note is on a product catalog invoice" do

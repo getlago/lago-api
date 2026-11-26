@@ -25,6 +25,93 @@ RSpec.describe IntegrationCustomers::CreateService do
 
     let(:subsidiary_id) { "1" }
 
+    context "with quickbooks integration" do
+      let(:integration) { create(:quickbooks_integration, organization:) }
+      let(:integration_type) { "quickbooks" }
+      let(:integration_code) { integration.code }
+      let(:contact_id) { "1042" }
+      let(:create_result) do
+        result = Integrations::Aggregator::Contacts::CreateService::Result.new
+        result.contact_id = contact_id
+        result
+      end
+
+      before do
+        allow(Integrations::Aggregator::Contacts::CreateService)
+          .to receive(:call).and_return(create_result)
+      end
+
+      context "when customer external id is present" do
+        let(:external_customer_id) { "58" }
+        let(:sync_with_provider) { false }
+
+        it "links the customer to the quickbooks customer" do
+          expect { service_call }.to change(IntegrationCustomers::QuickbooksCustomer, :count).by(1)
+
+          expect(service_call).to be_success
+          expect(customer.reload.quickbooks_customer).to have_attributes(
+            external_customer_id: "58",
+            category: "accounting",
+            is_default: true,
+            code: integration.code,
+            sync_with_provider: false
+          )
+          expect(Integrations::Aggregator::Contacts::CreateService).not_to have_received(:call)
+        end
+
+        context "when the customer already has a default accounting connection" do
+          before do
+            create(:xero_customer, customer:, organization:, category: :accounting, is_default: true)
+          end
+
+          it "does not mark the quickbooks connection as default" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.integration_customer).to be_a(IntegrationCustomers::QuickbooksCustomer)
+            expect(result.integration_customer.is_default).to be(false)
+          end
+        end
+      end
+
+      context "when sync with provider is true and customer external id is not present" do
+        let(:external_customer_id) { nil }
+        let(:sync_with_provider) { true }
+
+        it "creates the customer in QuickBooks and stores its id" do
+          result = nil
+          expect { result = service_call }.to change(IntegrationCustomers::QuickbooksCustomer, :count).by(1)
+
+          expect(result).to be_success
+          expect(result.integration_customer).to have_attributes(
+            external_customer_id: contact_id,
+            sync_with_provider: true,
+            category: "accounting",
+            is_default: true,
+            code: integration.code
+          )
+          expect(Integrations::Aggregator::Contacts::CreateService)
+            .to have_received(:call).with(integration:, customer:, subsidiary_id: nil)
+        end
+
+        context "when the customer creation in QuickBooks fails" do
+          let(:create_result) do
+            result = Integrations::Aggregator::Contacts::CreateService::Result.new
+            result.service_failure!(code: "action_script_runtime_error", message: "Duplicate Name Exists Error")
+            result
+          end
+
+          it "fails without creating integration customer" do
+            result = nil
+            expect { result = service_call }.not_to change(IntegrationCustomers::BaseCustomer, :count)
+
+            expect(result).not_to be_success
+            expect(result.error.code).to eq("action_script_runtime_error")
+          end
+        end
+      end
+    end
+
     context "with netsuite premium integration present", :premium do
       let(:integration_code) { integration.code }
       let(:external_customer_id) { nil }

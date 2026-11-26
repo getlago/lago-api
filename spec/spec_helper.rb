@@ -98,8 +98,10 @@ RSpec.configure do |config|
   config.include XMLHelper
   config.include AdvisoryLockHelper
   config.include EmailLockHelper
+  config.include EntitlementHelper
   config.include RecaptchaHelper
   config.include SqlCaptureHelper
+  config.include LockWaitHelper
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers
   config.include Karafka::Testing::RSpec::Helpers

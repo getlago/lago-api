@@ -18,15 +18,6 @@ module MultiCustomerConnections
   class BackfillConnectionsService < BaseService
     Result = BaseResult[:summary]
 
-    CATEGORY_BY_TYPE = {
-      "IntegrationCustomers::AnrokCustomer" => "tax",
-      "IntegrationCustomers::AvalaraCustomer" => "tax",
-      "IntegrationCustomers::NetsuiteCustomer" => "accounting",
-      "IntegrationCustomers::XeroCustomer" => "accounting",
-      "IntegrationCustomers::HubspotCustomer" => "crm",
-      "IntegrationCustomers::SalesforceCustomer" => "crm"
-    }.freeze
-
     def initialize(organization:, dry_run: true, batch_size: 1000)
       @organization = organization
       @dry_run = dry_run
@@ -72,7 +63,7 @@ module MultiCustomerConnections
       scope.find_each(batch_size:) do |int_customer|
         updates = {}
         updates[:code] = int_customer.integration&.code if int_customer.code.nil?
-        updates[:category] = CATEGORY_BY_TYPE[int_customer.type] if int_customer.category.nil?
+        updates[:category] = IntegrationCustomers::BaseCustomer.category_for(int_customer.type) if int_customer.category.nil?
         updates.delete(:code) if updates[:code].blank?
         updates.delete(:category) if updates[:category].blank?
         next if updates.empty?
@@ -103,7 +94,7 @@ module MultiCustomerConnections
     def backfill_integration_defaults
       grouped = IntegrationCustomers::BaseCustomer
         .where(organization_id: organization.id)
-        .group_by { |ic| [ic.customer_id, CATEGORY_BY_TYPE[ic.type]] }
+        .group_by { |ic| [ic.customer_id, IntegrationCustomers::BaseCustomer.category_for(ic.type)] }
 
       grouped.each do |(_customer_id, category), connections|
         next if category.nil? # unknown STI type, nothing to route

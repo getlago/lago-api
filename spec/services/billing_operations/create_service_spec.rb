@@ -17,6 +17,8 @@ RSpec.describe BillingOperations::CreateService do
       effective_date: started_at.to_date, billing_anchor_date: started_at.to_date)
   end
   let(:planned_operation) do
+    first_rate
+    second_rate
     schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
     BillingOperations::Schedule::BuildPlannedOperation.call!(schedule:, at: started_at).planned_operation
   end
@@ -36,11 +38,6 @@ RSpec.describe BillingOperations::CreateService do
       reason: BillingOperation::REASONS.fetch(:rate_change),
       planned_operation:
     }
-  end
-
-  before do
-    first_rate
-    second_rate
   end
 
   it "creates an operation with its identity, cause, action and planned dates" do
@@ -131,6 +128,85 @@ RSpec.describe BillingOperations::CreateService do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(contract_rate_card.billing_operations).to be_empty
+      end
+    end
+  end
+
+  context "with an explicitly planned obligation" do
+    let(:started_at) { Time.utc(2026, 6, 6) }
+    let(:cycle_started_at) { started_at - 5.days }
+    let(:ended_at) { started_at + 15.days }
+    let(:rate) { first_rate }
+    let(:override) { create(:rate_override, organization:) }
+    let(:calendar) do
+      Billing::Calendar.new(anchor_date: Date.new(2026, 6, 1), interval: Billing::Interval.new(count: 1, unit: :month), timezone: "UTC")
+    end
+    let(:cycle) do
+      Billing::Cycle.new(
+        index: 0, started_at: cycle_started_at, ended_at: Time.utc(2026, 7, 1), calendar:,
+        phase: Billing::Phase.new(code: "intro", billing_interval_cycle_count: 1, rate_override: override)
+      )
+    end
+    let(:segments) { [Billing::Segments::Segment.new(started_at:, ended_at:, rate:)] }
+    let(:terms) { Billing::Terms.new(timing: :advance, prorated: true) }
+    let(:obligation) { Billing::Obligation.new(cycle:, segments:, billing_at: started_at, terms:) }
+    let(:planned_operation) do
+      BillingOperations::Schedule::PlannedOperation.from_obligation(obligation)
+    end
+
+    it "creates an operation with its identity, cause, action and planned dates" do
+      expect(result).to be_success
+      expect(result.operation.reload).to have_attributes(
+        organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
+        reason: "rate_change", billing_at: started_at,
+        target_cycle_started_at: cycle_started_at, processed_at: nil, coverage_started_at: started_at, coverage_ended_at: ended_at
+      )
+      expect(result.operation.segments.sole).to have_attributes(
+        organization:, position: 0, started_at:, ended_at:, rate_card_rate: rate, rate_override: override,
+        proration_ratio: BigDecimal("0.5") # 15 priced days out of 30 in June
+      )
+    end
+
+    context "when the obligation spans a rate change" do
+      let(:next_ended_at) { ended_at + 6.days }
+      let(:next_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card, effective_from: ended_at) }
+      let(:segments) do
+        super() + [Billing::Segments::Segment.new(started_at: ended_at, ended_at: next_ended_at, rate: next_rate)]
+      end
+
+      it "saves one operation covering both segments and snapshots each in coverage order" do
+        expect(result).to be_success
+        expect(result.operation.reload).to have_attributes(coverage_started_at: started_at, coverage_ended_at: next_ended_at)
+        expect(result.operation.segments).to match([
+          have_attributes(
+            organization:, position: 0, started_at:, ended_at:, rate_card_rate: rate, rate_override: override,
+            proration_ratio: BigDecimal("0.5") # 15 priced days out of 30 in June
+          ),
+          have_attributes(
+            organization:, position: 1, started_at: ended_at, ended_at: next_ended_at, rate_card_rate: next_rate, rate_override: override,
+            proration_ratio: BigDecimal("0.2") # 6 priced days out of 30 in June
+          )
+        ])
+      end
+    end
+
+    context "when the planned cycle start is missing" do
+      let(:cycle_started_at) { nil }
+
+      it "saves neither the invalid operation nor its segment" do
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(contract_rate_card.billing_operations).to be_empty
+        expect(BillingOperationSegment.where(organization:)).to be_empty
+      end
+    end
+
+    context "when the planned segment is invalid" do
+      let(:ended_at) { started_at }
+
+      it "saves neither the operation nor its invalid segment" do
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(contract_rate_card.billing_operations).to be_empty
+        expect(BillingOperationSegment.where(organization:)).to be_empty
       end
     end
   end

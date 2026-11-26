@@ -57,6 +57,12 @@ module Events
           BigDecimal(value.to_s).to_s("F")
         end
 
+        # NOTE: decimal_value is Decimal(38, 26) and ClickHouse sums a Decimal128 in Decimal128, wrapping silently
+        #       above 2^127 / 10^26 (about 1.70e12). Casting at the same scale widens the result, smaller totals unchanged.
+        def wide_decimal_sql(expression)
+          "toDecimal256(#{expression}, #{DECIMAL_SCALE})"
+        end
+
         def sql_condition(template, *values)
           sanitize_clickhouse_sql([template, *values])
         end

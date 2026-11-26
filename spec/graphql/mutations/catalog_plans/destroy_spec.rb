@@ -37,6 +37,24 @@ RSpec.describe Mutations::CatalogPlans::Destroy do
     expect(result["data"]["destroyCatalogPlan"]["id"]).to eq(catalog_plan.id)
   end
 
+  context "with entitlements" do
+    let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:) }
+    let(:entitlement_value) { create(:entitlement_value, organization:, entitlement:) }
+    let(:other_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: create(:catalog_plan, organization:)) }
+
+    before do
+      entitlement_value
+      other_entitlement
+    end
+
+    it "discards the plan's entitlements and their values only" do
+      expect(result["data"]["destroyCatalogPlan"]["id"]).to eq(catalog_plan.id)
+      expect(entitlement.reload).to be_discarded
+      expect(entitlement_value.reload).to be_discarded
+      expect(other_entitlement.reload).not_to be_discarded
+    end
+  end
+
   context "when the plan is attached to contracts" do
     before { create(:contract, organization:, catalog_plan:) }
 

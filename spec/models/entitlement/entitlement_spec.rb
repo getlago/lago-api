@@ -14,7 +14,43 @@ RSpec.describe Entitlement::Entitlement do
       expect(subject).to belong_to(:plan).optional
       expect(subject).to belong_to(:catalog_plan).optional
       expect(subject).to belong_to(:subscription).optional
-      expect(subject).to have_many(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
+      expect(subject).to have_many(:values).class_name("Entitlement::EntitlementValue").inverse_of(:entitlement).dependent(:destroy)
+    end
+  end
+
+  describe "Scopes" do
+    describe ".newest_first" do
+      let(:organization) { create(:organization) }
+      let(:created_at) { Time.zone.parse("2026-09-04T10:00:00Z") }
+      let(:recent) { create(:entitlement, organization:, created_at: created_at + 1.day) }
+      let(:same_time_higher_id) { create(:entitlement, organization:, id: "00000000-0000-0000-0000-000000000002", created_at:) }
+      let(:same_time_lower_id) { create(:entitlement, organization:, id: "00000000-0000-0000-0000-000000000001", created_at:) }
+
+      before do
+        recent
+        same_time_higher_id
+        same_time_lower_id
+      end
+
+      it "orders by creation, newest first, then by id" do
+        expect(described_class.where(organization:).newest_first).to eq([recent, same_time_lower_id, same_time_higher_id])
+      end
+    end
+  end
+
+  describe "#owner_plan" do
+    it "returns the catalog plan of a catalog plan entitlement" do
+      catalog_plan = build_stubbed(:catalog_plan)
+      expect(build_stubbed(:entitlement, plan: nil, catalog_plan:).owner_plan).to eq(catalog_plan)
+    end
+
+    it "returns the plan of a legacy plan entitlement" do
+      plan = build_stubbed(:plan)
+      expect(build_stubbed(:entitlement, plan:).owner_plan).to eq(plan)
+    end
+
+    it "returns nil for a subscription entitlement" do
+      expect(build_stubbed(:entitlement, plan: nil, subscription: build_stubbed(:subscription)).owner_plan).to be_nil
     end
   end
 

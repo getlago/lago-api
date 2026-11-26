@@ -6,7 +6,7 @@ module Types
       graphql_name "TerminateContractInput"
       description "Terminate contract input arguments"
 
-      argument :external_id, String, required: true, description: "External id of the contract to terminate"
+      argument :id, ID, required: true
     end
   end
 end

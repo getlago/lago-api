@@ -25,6 +25,7 @@ module PlanWallets
 
         # The taxes, scope and metadata stay on the deleted template, which still renders them.
         plan_wallet.credit_allocations.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        UsageMonitoring::CatalogWalletAlerts::DeleteAllService.call!(plan_wallets: plan_wallet)
         plan_wallet.discard!
       end
 

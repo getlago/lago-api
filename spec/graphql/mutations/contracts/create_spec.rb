@@ -24,6 +24,7 @@ RSpec.describe Mutations::Contracts::Create do
     {
       externalCustomerId: customer.external_id,
       externalId: "contract-1",
+      code: "initial",
       planCode: catalog_plan.code
     }
   end
@@ -32,7 +33,7 @@ RSpec.describe Mutations::Contracts::Create do
     <<-GQL
       mutation($input: CreateContractInput!) {
         createContract(input: $input) {
-          id externalId status billingTime
+          id externalId code status
           selectedInvoiceCustomSections { id }
           skipInvoiceCustomSections
           plan { id }
@@ -54,8 +55,8 @@ RSpec.describe Mutations::Contracts::Create do
 
     expect(result_data["id"]).to be_present
     expect(result_data["externalId"]).to eq("contract-1")
+    expect(result_data["code"]).to eq("initial")
     expect(result_data["status"]).to eq("active")
-    expect(result_data["billingTime"]).to eq("calendar")
     expect(result_data["plan"]["id"]).to eq(catalog_plan.id)
     expect(result_data["appliedRateCardsCount"]).to eq(1)
   end
@@ -82,7 +83,7 @@ RSpec.describe Mutations::Contracts::Create do
   end
 
   context "without a plan" do
-    let(:input) { {externalCustomerId: customer.external_id, externalId: "contract-1"} }
+    let(:input) { super().except(:planCode) }
 
     it "creates a plan-less contract" do
       result_data = execution["data"]["createContract"]
@@ -97,6 +98,40 @@ RSpec.describe Mutations::Contracts::Create do
 
     it "creates a pending contract" do
       expect(execution["data"]["createContract"]["status"]).to eq("pending")
+    end
+  end
+
+  context "with the draft status" do
+    let(:input) { super().merge(status: "draft", startedAt: 1.month.ago.iso8601) }
+
+    it "creates a draft, even with a start that has passed" do
+      expect(execution["data"]["createContract"]["status"]).to eq("draft")
+    end
+
+    context "without a start date" do
+      let(:input) { super().except(:startedAt) }
+
+      it "returns a validation error without creating a contract" do
+        expect { execution }.not_to change(Contract, :count)
+        expect_unprocessable_entity(execution, details: {startedAt: ["value_is_mandatory"]})
+      end
+    end
+  end
+
+  context "with a null status" do
+    let(:input) { super().merge(status: nil) }
+
+    it "creates the contract as when the status is omitted" do
+      expect(execution["data"]["createContract"]["status"]).to eq("active")
+    end
+  end
+
+  context "with a status other than draft" do
+    let(:input) { super().merge(status: "active") }
+
+    it "rejects it in the schema, as only a draft can be chosen" do
+      expect { execution }.not_to change(Contract, :count)
+      expect(execution["errors"].sole["message"]).to include('Expected "active" to be one of: draft')
     end
   end
 

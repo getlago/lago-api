@@ -18,7 +18,7 @@ module Integrations
           MAX_SUBSEQUENT_REQUESTS.times do |_i|
             response = fetch_records(limit: LIMIT, cursor:)
 
-            handle_accounts(response["records"])
+            handle_accounts(response["records"].reject { |account| unavailable_record?(account) })
             @cursor = response["next_cursor"]
 
             break if cursor.blank?

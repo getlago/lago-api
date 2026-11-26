@@ -32,6 +32,13 @@ RSpec.describe IntegrationCustomers::BaseCustomer do
       expect(integration_customer.category).to eq("accounting")
     end
 
+    it "derives the accounting category of a QuickBooks link" do
+      quickbooks_customer = build(:quickbooks_customer, category: nil)
+      quickbooks_customer.valid?
+
+      expect(quickbooks_customer.category).to eq("accounting")
+    end
+
     it "derives the code from the integration when absent" do
       integration.update!(code: "ns_eu")
       integration_customer.code = nil
@@ -54,6 +61,7 @@ RSpec.describe IntegrationCustomers::BaseCustomer do
       expect(described_class.category_for("IntegrationCustomers::AvalaraCustomer")).to eq("tax")
       expect(described_class.category_for("IntegrationCustomers::NetsuiteCustomer")).to eq("accounting")
       expect(described_class.category_for("IntegrationCustomers::XeroCustomer")).to eq("accounting")
+      expect(described_class.category_for("IntegrationCustomers::QuickbooksCustomer")).to eq("accounting")
       expect(described_class.category_for("IntegrationCustomers::HubspotCustomer")).to eq("crm")
       expect(described_class.category_for("IntegrationCustomers::SalesforceCustomer")).to eq("crm")
       expect(described_class.category_for("IntegrationCustomers::OktaCustomer")).to be_nil
@@ -63,18 +71,45 @@ RSpec.describe IntegrationCustomers::BaseCustomer do
   describe ".accounting_kind" do
     let(:netsuite_customer) { create(:netsuite_customer) }
     let(:xero_customer) { create(:xero_customer) }
+    let(:quickbooks_customer) { create(:quickbooks_customer) }
     let(:anrok_customer) { create(:anrok_customer) }
+    let(:avalara_customer) { create(:avalara_customer) }
     let(:hubspot_customer) { create(:hubspot_customer) }
+    let(:salesforce_customer) { create(:salesforce_customer) }
 
     before do
       netsuite_customer
       xero_customer
+      quickbooks_customer
       anrok_customer
+      avalara_customer
       hubspot_customer
+      salesforce_customer
     end
 
     it "returns only accounting kind customers" do
-      expect(described_class.accounting_kind).to contain_exactly(netsuite_customer, xero_customer)
+      expect(described_class.accounting_kind).to contain_exactly(netsuite_customer, xero_customer, quickbooks_customer)
+    end
+
+    it "filters on the accounting types of CATEGORY_BY_TYPE" do
+      accounting_types = described_class::CATEGORY_BY_TYPE.select { |_, category| category == "accounting" }.keys
+
+      expect(described_class.accounting_kind.where_values_hash["type"]).to match_array(accounting_types)
+    end
+
+    context "when CATEGORY_BY_TYPE maps another type to accounting" do
+      before do
+        stub_const(
+          "#{described_class}::CATEGORY_BY_TYPE",
+          described_class::CATEGORY_BY_TYPE.merge("IntegrationCustomers::HubspotCustomer" => "accounting")
+        )
+      end
+
+      it "includes links of that type" do
+        expect(described_class.accounting_kind).to contain_exactly(
+          netsuite_customer, xero_customer, quickbooks_customer, hubspot_customer
+        )
+      end
     end
   end
 
@@ -153,6 +188,15 @@ RSpec.describe IntegrationCustomers::BaseCustomer do
     context "when type is xero" do
       let(:type) { "xero" }
       let(:customer_type) { "IntegrationCustomers::XeroCustomer" }
+
+      it "returns customer type" do
+        expect(subject).to eq(customer_type)
+      end
+    end
+
+    context "when type is quickbooks" do
+      let(:type) { "quickbooks" }
+      let(:customer_type) { "IntegrationCustomers::QuickbooksCustomer" }
 
       it "returns customer type" do
         expect(subject).to eq(customer_type)

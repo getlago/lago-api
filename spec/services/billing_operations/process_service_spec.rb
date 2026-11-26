@@ -1406,5 +1406,48 @@ RSpec.describe BillingOperations::ProcessService do
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
       expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
     end
+
+    context "when cycle billing spans two rates" do
+      let(:second_rate) do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
+          rate_properties: {"amount" => "2"})
+      end
+      let(:operation) do
+        second_rate
+        super()
+      end
+      let(:paid_fees) do
+        BillingOperations::ResolveSegmentsService.call!(operation:).billing_segments.each_with_index.map do |segment, index|
+          metered_item = Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment)
+          create(:fee, :succeeded, invoice: nil, subscription: nil, organization:, billing_entity: customer.billing_entity,
+            contract:, contract_rate_card:, rate_card_rate: segment.rate_card_rate, invoiceable: product, fee_type: :product,
+            amount_currency: "USD", amount_cents: (index + 1) * 500, taxes_amount_cents: 0, pay_in_advance: true,
+            succeeded_at: segment.started_at + 1.day, properties: metered_item.filtered_for_charge_boundaries)
+        end
+      end
+      let(:paid_fee) { paid_fees.first }
+      let(:unpaid_fee) do
+        create(:fee, invoice: nil, subscription: nil, organization:, billing_entity: customer.billing_entity,
+          contract:, contract_rate_card:, rate_card_rate: second_rate, invoiceable: product, fee_type: :product,
+          amount_currency: "USD", amount_cents: 700, pay_in_advance: true, payment_status: :pending,
+          properties: paid_fees.last.properties)
+      end
+
+      before { unpaid_fee }
+
+      it "regroups both paid segments on one invoice without duplicating fees or including an unpaid fee" do
+        expect { result }.not_to change(Fee, :count)
+
+        invoice = result.invoices.sole
+        expect(invoice).to have_attributes(total_amount_cents: 500 + 1000, payment_status: "succeeded")
+        expect(invoice.fees).to match_array(paid_fees)
+        expect(invoice.fees.pluck(:rate_card_rate_id)).to match_array([rate.id, second_rate.id])
+        expect(unpaid_fee.reload.invoice_id).to be_nil
+        expect(operation.reload).to have_attributes(invoice_id: invoice.id, processed_at: timestamp)
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+        expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
+        expect(invoice.reload.fees).to match_array(paid_fees)
+      end
+    end
   end
 end

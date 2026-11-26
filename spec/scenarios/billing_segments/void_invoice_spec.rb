@@ -54,6 +54,7 @@ describe "Void a contract invoice" do
       api_call do
         post_with_token(organization, "/api/v2/contracts", {contract: {
           external_id: "void-contract", external_customer_id: "void-customer",
+          code: "default",
           plan_code: "void-plan", started_at: january.iso8601
         }})
       end

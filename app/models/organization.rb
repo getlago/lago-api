@@ -146,7 +146,9 @@ class Organization < ApplicationRecord
   has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
   has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
+  has_many :quickbooks_integrations, class_name: "Integrations::QuickbooksIntegration"
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
+  has_many :agent_storefront_integrations, class_name: "Integrations::AgentStorefrontIntegration"
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
@@ -165,6 +167,14 @@ class Organization < ApplicationRecord
   ENVIRONMENTS = {
     production: "production",
     sandbox: "sandbox"
+  }.freeze
+
+  # A self-serve production organization can wait for a payment method before it opens; every other one is active.
+  # The API key cache keeps the organization's attributes, so a change of status calls
+  # `ApiKeys::CacheService.expire_all_cache(organization)` in an `after_commit` block, or REST reads the old one.
+  ACTIVATION_STATUSES = {
+    pending_payment_method: "pending_payment_method",
+    active: "active"
   }.freeze
 
   EVENTS_STORES = {
@@ -188,6 +198,7 @@ class Organization < ApplicationRecord
     entra_id
     avalara
     xero
+    quickbooks
     progressive_billing
     lifetime_usage
     hubspot
@@ -212,6 +223,7 @@ class Organization < ApplicationRecord
     granular_lifetime_usage
     order_forms
     revenue_recognition
+    agent_storefront
   ].freeze
 
   SECURITY_LOGS_RETENTION_DAYS = 90
@@ -219,10 +231,12 @@ class Organization < ApplicationRecord
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
-  # Declared, so the model loads in older migrations that run before the column exists. Saving still fails there:
+  # Declared, so the model loads in older migrations that run before the columns exist. Saving still fails there:
   # the validations read `self_serve` and `production_organization_id`, which do not exist yet either.
   attribute :environment, :string
   enum :environment, ENVIRONMENTS, validate: true
+  attribute :activation_status, :string
+  enum :activation_status, ACTIVATION_STATUSES, prefix: true, validate: true
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
@@ -257,6 +271,7 @@ class Organization < ApplicationRecord
   validate :validate_customer_portal_locked_fields
   validate :validate_environment_link,
     if: -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }
+  validate :validate_activation_status, if: :activation_status_pending_payment_method?
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -302,6 +317,10 @@ class Organization < ApplicationRecord
 
   def x402_payments_enabled?
     License.premium? && feature_flag_enabled?(:x402_payments)
+  end
+
+  def agent_storefront_enabled?
+    License.premium? && premium_integrations.include?("agent_storefront") && feature_flag_enabled?(:agent_storefront)
   end
 
   def using_lifetime_usage?
@@ -394,6 +413,16 @@ class Organization < ApplicationRecord
     max_wallets if events_targeting_wallets_enabled?
   end
 
+  # With self-serve off, every organization counts as active, as the GraphQL environment fields answer production.
+  # Everything that shows or enforces the status reads this, never the column, so the UI and the API agree.
+  def effective_activation_status
+    Lago::SelfServe.enabled? ? activation_status : ACTIVATION_STATUSES[:active]
+  end
+
+  def awaiting_payment_method?
+    effective_activation_status == ACTIVATION_STATUSES[:pending_payment_method]
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
@@ -432,6 +461,12 @@ class Organization < ApplicationRecord
     errors.add(:environment, :invalid) if sandbox? && persisted? && sandbox_organization.present?
   end
 
+  # Mirrors check_organizations_on_activation_status: only a self-serve production organization can wait for a
+  # payment method.
+  def validate_activation_status
+    errors.add(:activation_status, :invalid) unless self_serve? && production?
+  end
+
   def set_hmac_key
     loop do
       self.hmac_key = SecureRandom.uuid
@@ -453,6 +488,7 @@ end
 # Database name: primary
 #
 #  id                            :uuid             not null, primary key
+#  activation_status             :enum             default("active"), not null
 #  address_line1                 :string
 #  address_line2                 :string
 #  api_key                       :string

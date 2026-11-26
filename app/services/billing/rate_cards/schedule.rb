@@ -33,6 +33,13 @@ module Billing
         obligations(from:).find { it.starts_on_or_after?(from) }
       end
 
+      def obligations_for_cycle(cycle_started_at)
+        cycle = walker.resume(cycle_started_at)
+        return [] unless cycle&.started_at == cycle_started_at
+
+        obligations_for(cycle)
+      end
+
       def obligations_due_by(timestamp, from:, after: nil)
         Enumerator.new do |yielder|
           billing_at = after

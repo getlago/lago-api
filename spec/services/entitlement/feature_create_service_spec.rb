@@ -162,6 +162,76 @@ RSpec.describe Entitlement::FeatureCreateService do
       end
     end
 
+    context "when two privilege codes are equal once stripped" do
+      let(:params) { {code: "seats", privileges: [{code: "max"}, {code: " max "}]} }
+
+      it "returns a validation failure and creates nothing" do
+        result = subject
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:"privilege.code"]).to eq ["value_is_duplicated"]
+        expect(Entitlement::Feature.count).to eq(0)
+        expect(Entitlement::Privilege.count).to eq(0)
+      end
+    end
+
+    context "with 50 privileges" do
+      let(:params) { {code: "seats", privileges: Array.new(50) { |i| {code: "privilege_#{i}"} }} }
+
+      it "creates the feature with its 50 privileges" do
+        result = subject
+
+        expect(result).to be_success
+        expect(result.feature.privileges.count).to eq(50)
+      end
+    end
+
+    context "with 51 privileges" do
+      let(:params) { {code: "seats", privileges: Array.new(51) { |i| {code: "privilege_#{i}"} }} }
+
+      it "returns too_many_privileges and creates nothing" do
+        expect { subject }
+          .to not_change(Entitlement::Feature, :count)
+          .and not_change(Entitlement::Privilege, :count)
+          .and not_have_enqueued_job(SendWebhookJob)
+
+        expect(subject).to be_failure
+        expect(subject.error).to be_a(BaseService::ValidationFailure)
+        expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+        expect(subject.error.meta).to eq({base: {max_items: 50}})
+      end
+    end
+
+    [
+      ["a single object", {code: "seats", value_type: "boolean"}],
+      ["an object with numeric keys", {"0" => {code: "a"}, "1" => {code: "b"}}]
+    ].each do |label, privileges|
+      context "when privileges is #{label}" do
+        let(:params) { {code: "seats", privileges:} }
+
+        it "returns value_is_invalid on privileges and creates nothing" do
+          expect { subject }
+            .to not_change(Entitlement::Feature, :count)
+            .and not_change(Entitlement::Privilege, :count)
+            .and not_have_enqueued_job(SendWebhookJob)
+
+          expect(subject).to be_failure
+          expect(subject.error).to be_a(BaseService::ValidationFailure)
+          expect(subject.error.messages).to eq({privileges: ["value_is_invalid"]})
+        end
+      end
+    end
+
+    context "when privileges is an empty hash" do
+      let(:params) { {code: "seats", privileges: {}} }
+
+      it "creates the feature without privileges" do
+        expect { subject }.to change(Entitlement::Feature, :count).by(1).and not_change(Entitlement::Privilege, :count)
+
+        expect(subject).to be_success
+      end
+    end
+
     context "when privilege value_type is invalid" do
       let(:params) do
         {

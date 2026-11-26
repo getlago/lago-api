@@ -6,6 +6,7 @@ module Types
       graphql_name "CreateContractInput"
       description "Create contract input arguments"
 
+      argument :code, String, required: true
       argument :external_customer_id, String, required: true
       # Generated server-side when blank or omitted; see Mutations::Contracts::Create.
       argument :external_id, String, required: false
@@ -13,9 +14,10 @@ module Types
       # Optional by design: a plan-less contract prices through directly
       # attached rate cards.
       argument :plan_code, String, required: false
+      # A draft never bills until it is published; omitted or null, the start date decides.
+      argument :status, Types::Contracts::CreateStatusEnum, required: false
 
       argument :billing_anchor_date, GraphQL::Types::ISO8601Date, required: false
-      argument :billing_time, Types::Contracts::BillingTimeEnum, required: false
       argument :ended_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :started_at, GraphQL::Types::ISO8601DateTime, required: false
 

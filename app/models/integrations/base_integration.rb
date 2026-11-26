@@ -8,7 +8,7 @@ module Integrations
 
     self.table_name = "integrations"
 
-    INTEGRATION_ACCOUNTING_TYPES = %w[Integrations::NetsuiteIntegration Integrations::XeroIntegration].freeze
+    INTEGRATION_ACCOUNTING_TYPES = %w[Integrations::NetsuiteIntegration Integrations::XeroIntegration Integrations::QuickbooksIntegration].freeze
     INTEGRATION_TAX_TYPES = %w[Integrations::AnrokIntegration Integrations::AvalaraIntegration].freeze
 
     belongs_to :organization
@@ -50,10 +50,14 @@ module Integrations
         "Integrations::AvalaraIntegration"
       when "xero"
         "Integrations::XeroIntegration"
+      when "quickbooks"
+        "Integrations::QuickbooksIntegration"
       when "hubspot"
         "Integrations::HubspotIntegration"
       when "salesforce"
         "Integrations::SalesforceIntegration"
+      when "agent_storefront"
+        "Integrations::AgentStorefrontIntegration"
       else
         raise(NotImplementedError)
       end

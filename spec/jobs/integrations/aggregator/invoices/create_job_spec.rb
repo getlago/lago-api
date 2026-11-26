@@ -59,6 +59,36 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateJob do
       end
     end
 
+    context "when the earlier executions were next-window throttling retries" do
+      subject(:create_job) { described_class.new(invoice:) }
+
+      before do
+        create_job.executions = 2
+        create_job.exception_executions = {"[BaseService::NextWindowThrottlingError]" => throttled_retries}
+      end
+
+      context "when every earlier execution was throttled" do
+        let(:throttled_retries) { 2 }
+
+        it "sends the invoice without reconciling, since no earlier attempt reached the provider" do
+          create_job.perform_now
+
+          expect(Integrations::Aggregator::Invoices::ReconcileService).not_to have_received(:call)
+          expect(Integrations::Aggregator::Invoices::CreateService).to have_received(:call).with(invoice:)
+        end
+      end
+
+      context "when one earlier execution reached the provider" do
+        let(:throttled_retries) { 1 }
+
+        it "reconciles first" do
+          create_job.perform_now
+
+          expect(Integrations::Aggregator::Invoices::ReconcileService).to have_received(:call).with(invoice:)
+        end
+      end
+    end
+
     context "when it is a retry execution" do
       subject(:create_job) { described_class.new(invoice:) }
 

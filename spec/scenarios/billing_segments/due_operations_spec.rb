@@ -48,7 +48,7 @@ describe "Daily contract billing after a scheduling outage" do
     travel_to(started_at + 5.minutes) do
       api_call do
         post_with_token(organization, "/api/v2/contracts", {contract: {
-          external_id: "daily-contract", external_customer_id: "daily-customer", plan_code: "daily-plan",
+          code: "daily-contract", external_id: "daily-contract", external_customer_id: "daily-customer", plan_code: "daily-plan",
           started_at: started_at.iso8601
         }})
       end

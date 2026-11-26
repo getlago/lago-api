@@ -13,6 +13,9 @@ module X402
 
     EVM_ADDRESS = /\A0x\h{40}\z/
     SVM_ADDRESS_BYTES = 32
+    EVM_TRANSACTION = /\A0x\h{64}\z/
+    SVM_SIGNATURE_BYTES = 64
+    SVM_SIGNATURE_MAX_LENGTH = 88
 
     def self.family_of_network(network)
       if NETWORKS.key?(network.to_s)
@@ -44,6 +47,14 @@ module X402
       case family
       when :evm then valid_evm_address?(address.to_s)
       when :svm then Base58.decode(address)&.bytesize == SVM_ADDRESS_BYTES
+      else raise ArgumentError, "unknown chain family: #{family.inspect}"
+      end
+    end
+
+    def self.valid_transaction?(transaction, family:)
+      case family
+      when :evm then transaction.is_a?(String) && EVM_TRANSACTION.match?(transaction)
+      when :svm then transaction.is_a?(String) && transaction.size <= SVM_SIGNATURE_MAX_LENGTH && Base58.decode(transaction)&.bytesize == SVM_SIGNATURE_BYTES
       else raise ArgumentError, "unknown chain family: #{family.inspect}"
       end
     end

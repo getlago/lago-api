@@ -9,6 +9,7 @@ module Types
         Types::IntegrationCustomers::Avalara,
         Types::IntegrationCustomers::Hubspot,
         Types::IntegrationCustomers::Netsuite,
+        Types::IntegrationCustomers::Quickbooks,
         Types::IntegrationCustomers::Salesforce,
         Types::IntegrationCustomers::Xero
 
@@ -22,6 +23,8 @@ module Types
           Types::IntegrationCustomers::Hubspot
         when "IntegrationCustomers::NetsuiteCustomer"
           Types::IntegrationCustomers::Netsuite
+        when "IntegrationCustomers::QuickbooksCustomer"
+          Types::IntegrationCustomers::Quickbooks
         when "IntegrationCustomers::SalesforceCustomer"
           Types::IntegrationCustomers::Salesforce
         when "IntegrationCustomers::XeroCustomer"
