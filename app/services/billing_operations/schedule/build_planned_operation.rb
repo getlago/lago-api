@@ -8,7 +8,9 @@ module BillingOperations
 
       # `cycle_started_at` identifies the cycle the operation bills. `billing_at` is when the
       # operation runs: the slice's periodic billing instant (see Billing::BillableSegment).
-      PlannedOperation = Data.define(:cycle_started_at, :billing_at)
+      PlannedOperation = Data.define(:segment, :billing_at) do
+        delegate :cycle_started_at, to: :segment
+      end
 
       # Two ways to plan, and exactly one must be given:
       # - `at:` when nothing was billed yet from that instant (activation, clock reset, rate
@@ -33,7 +35,7 @@ module BillingOperations
 
         if segment
           result.planned_operation = PlannedOperation.new(
-            cycle_started_at: segment.cycle_started_at,
+            segment:,
             billing_at: after_operation ? operation_billing_at(segment) : segment.billing_at
           )
         end
