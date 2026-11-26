@@ -153,7 +153,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
         context "when subscription already has overrides" do
           let(:partial) { false }
           let(:sub_entitlement) { create(:entitlement, feature: seats, subscription:, plan: nil) }
-          let(:sub_max_value) { create(:entitlement_value, entitlement: sub_entitlement, privilege: seats_max, value: 50) }
+          let(:sub_max_value) { create(:entitlement_value, entitlement: sub_entitlement, privilege: seats_max, value: 50, updated_at: 1.day.ago) }
 
           before { sub_max_value }
 
@@ -161,6 +161,14 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect(result).to be_success
             expect(sub_entitlement.reload).to be_discarded
             expect(sub_max_value.reload).to be_discarded
+          end
+
+          it "sets updated_at on the discarded values" do
+            freeze_time do
+              result
+
+              expect(sub_max_value.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+            end
           end
         end
       end
@@ -190,6 +198,21 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
 
             expect(subscription.entitlement_removals.count).to eq 1
             expect(subscription.entitlement_removals.where(privilege: seats_signin)).to exist
+          end
+        end
+
+        context "when the feature is removed from the subscription" do
+          let(:partial) { true }
+          let(:seats_removal) { create(:subscription_feature_removal, feature: seats, subscription:, updated_at: 1.day.ago) }
+
+          before { seats_removal }
+
+          it "discards the feature removal and sets its updated_at" do
+            freeze_time do
+              result
+
+              expect(seats_removal.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+            end
           end
         end
       end
@@ -236,12 +259,20 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
 
       context "when re-adding a removed privilege at the plan default value" do
         let(:privilege_params) { {seats_max.code => 2} }
-        let(:max_removal) { create(:subscription_feature_removal, privilege: seats_max, subscription:) }
+        let(:max_removal) { create(:subscription_feature_removal, privilege: seats_max, subscription:, updated_at: 1.day.ago) }
 
         before { max_removal }
 
         context "when partial" do
           let(:partial) { true }
+
+          it "sets updated_at on the discarded privilege removal" do
+            freeze_time do
+              result
+
+              expect(max_removal.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+            end
+          end
 
           it "discards the privilege removal so the plan default is restored" do
             expect(result).to be_success

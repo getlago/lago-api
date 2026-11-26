@@ -96,7 +96,7 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
 
     context "when privilege is on subscription" do
       let(:subscription_entitlement) { create(:entitlement, feature:, subscription:, plan: nil) }
-      let(:entitlement_value) { create(:entitlement_value, entitlement: subscription_entitlement, privilege:, value: "10") }
+      let(:entitlement_value) { create(:entitlement_value, entitlement: subscription_entitlement, privilege:, value: "10", updated_at: 1.day.ago) }
 
       before do
         entitlement_value
@@ -110,6 +110,14 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
 
       it "soft deletes the entitlement values" do
         expect { result }.to change { entitlement_value.reload.deleted_at }.from(nil)
+      end
+
+      it "sets updated_at on the discarded entitlement values" do
+        freeze_time do
+          result
+
+          expect(entitlement_value.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+        end
       end
 
       it "does not discards the subscription entitlement" do

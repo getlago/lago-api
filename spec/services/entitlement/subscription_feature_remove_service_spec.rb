@@ -84,7 +84,7 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
     context "when feature is on subscription" do
       let(:subscription_entitlement) { create(:entitlement, feature:, subscription:, plan: nil) }
       let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
-      let(:entitlement_value) { create(:entitlement_value, entitlement: subscription_entitlement, privilege:, value: "10") }
+      let(:entitlement_value) { create(:entitlement_value, entitlement: subscription_entitlement, privilege:, value: "10", updated_at: 1.day.ago) }
 
       before do
         entitlement_value
@@ -100,6 +100,14 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
         expect { result }.to change { entitlement_value.reload.deleted_at }.from(nil)
       end
 
+      it "sets updated_at on the discarded entitlement values" do
+        freeze_time do
+          result
+
+          expect(entitlement_value.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+        end
+      end
+
       it "discards the subscription entitlement" do
         expect { result }.to change { subscription_entitlement.reload.discarded? }.from(false).to(true)
       end
@@ -108,7 +116,7 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
         let(:privilege2) { create(:privilege, feature:, code: "max_admin", value_type: "integer") }
         let(:plan_entitlement) { create(:entitlement, feature:, plan:) }
         let(:plan_entitlement_value2) { create(:entitlement_value, privilege: privilege2, entitlement: plan_entitlement, value: "10") }
-        let(:privilege_removal) { create(:subscription_feature_removal, privilege: privilege2, subscription:) }
+        let(:privilege_removal) { create(:subscription_feature_removal, privilege: privilege2, subscription:, updated_at: 1.day.ago) }
 
         before do
           plan_entitlement_value2
@@ -131,6 +139,14 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
 
         it "cleans up existing privilege removals" do
           expect { result }.to change { privilege_removal.reload.discarded? }.from(false).to(true)
+        end
+
+        it "sets updated_at on the discarded privilege removals" do
+          freeze_time do
+            result
+
+            expect(privilege_removal.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+          end
         end
       end
 
