@@ -1108,8 +1108,8 @@ DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_organization_id
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_grant_occurrence;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_credit_allocation_id;
-DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_on_catalog_wallet_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_in_spending_order;
+DROP INDEX IF EXISTS public.index_catalog_wallet_transactions_by_cursor;
 DROP INDEX IF EXISTS public.index_catalog_wallet_selectors_on_plan_wallet_and_target;
 DROP INDEX IF EXISTS public.index_catalog_wallet_selectors_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_wallet_selectors_on_catalog_wallet_and_target;
@@ -10953,17 +10953,17 @@ CREATE UNIQUE INDEX index_catalog_wallet_selectors_on_plan_wallet_and_target ON 
 
 
 --
+-- Name: index_catalog_wallet_transactions_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_wallet_transactions_by_cursor ON public.catalog_wallet_transactions USING btree (catalog_wallet_id, created_at DESC, id DESC);
+
+
+--
 -- Name: index_catalog_wallet_transactions_in_spending_order; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_catalog_wallet_transactions_in_spending_order ON public.catalog_wallet_transactions USING btree (catalog_wallet_id, priority, ((purchase_amount_cents > 0)), created_at, id) WHERE ((direction = 'inbound'::public.catalog_wallet_transaction_direction) AND (status = 'settled'::public.catalog_wallet_transaction_status) AND (remaining_credit_amount_cents > 0));
-
-
---
--- Name: index_catalog_wallet_transactions_on_catalog_wallet_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_catalog_wallet_transactions_on_catalog_wallet_id ON public.catalog_wallet_transactions USING btree (catalog_wallet_id);
 
 
 --
@@ -19109,12 +19109,14 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261125113444'),
 ('20261125113441'),
 ('20261124113226'),
+('20261124100203'),
 ('20261123224020'),
 ('20261123224017'),
 ('20261123222615'),
 ('20261123222612'),
 ('20261123222610'),
 ('20261123222607'),
+('20261123221111'),
 ('20261123185222'),
 ('20261123142220'),
 ('20261123142148'),
