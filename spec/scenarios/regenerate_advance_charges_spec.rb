@@ -179,7 +179,7 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       expect(Payment.where(payable: regenerated_invoice)).to be_empty
     end
 
-    it "settles the invoice with the credit note of the voided invoice" do
+    it "settles the invoice with the credit note of the voided invoice", :premium do
       advance_charges_invoice = create_advance_charges_invoice
       subscription = customer.subscriptions.sole
       original_fee = advance_charges_invoice.fees.first
