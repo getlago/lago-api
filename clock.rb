@@ -274,5 +274,11 @@ module Clockwork
         .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions"})
         .perform_later
     end
+
+    every(10.seconds, "schedule:refresh_flagged_contracts") do
+      Clock::ConsumeContractRefreshedQueueJob
+        .set(sentry: {"slug" => "lago_refresh_flagged_contracts"})
+        .perform_later
+    end
   end
 end
