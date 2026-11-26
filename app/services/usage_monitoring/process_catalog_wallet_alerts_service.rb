@@ -30,17 +30,20 @@ module UsageMonitoring
     attr_reader :catalog_wallet
 
     def evaluate(alert)
-      # A baseline is taken once the wallet holds money, so a funded wallet without one means a missed hook.
-      # Taken late, it would swallow the first crossing.
       if alert.previous_value.nil?
-        log_missing_baseline(alert) if catalog_wallet.funded?
-        return
+        log_missing_baseline(alert) if baseline_due?(alert)
+      else
+        ProcessAlertService.call!(alert:, alertable: catalog_wallet, current_metrics: catalog_wallet)
       end
-
-      ProcessAlertService.call!(alert:, alertable: catalog_wallet, current_metrics: catalog_wallet)
     rescue ActiveRecord::RecordNotFound => e
       # Deleted since it was loaded: its lock no longer finds it
       raise unless e.model == alert.class.name
+    end
+
+    # A balance alert takes its baseline once the wallet holds money, an ongoing balance one at activation even at 0,
+    # so one still missing then means a missed hook. Taken late, it would swallow the first crossing.
+    def baseline_due?(alert)
+      catalog_wallet.funded? || alert.ongoing_balance?
     end
 
     def log_missing_baseline(alert)

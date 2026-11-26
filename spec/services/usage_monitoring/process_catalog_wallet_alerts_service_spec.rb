@@ -98,13 +98,13 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsService do
   end
 
   context "when the last evaluation is from an earlier billing period" do
-    let(:previous_value) { 1_500 }
     let(:last_processed_at) { 2.months.ago }
 
-    it "keeps watching the balance, with no window reset" do
+    it "crosses from the value it observed then, with no window reset" do
       expect(result).to be_success
 
-      expect(alert.all_triggered_alerts).to be_empty
+      # A reset to 0 would turn the drop from 120 to 15 into a rise, which crosses nothing
+      expect(alert.all_triggered_alerts.sole.crossed_thresholds.pluck("code")).to match_array(%w[low critical])
       expect(alert.reload.previous_value).to eq(1_500)
     end
   end
@@ -148,6 +148,31 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsService do
         expect(alert.all_triggered_alerts).to be_empty
         expect(Rails.logger).not_to have_received(:warn)
       end
+
+      context "with an ongoing balance alert" do
+        let(:alert) do
+          create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing", previous_value:, last_processed_at:)
+        end
+
+        it "reports the missed hook, since an ongoing balance alert starts even at 0" do
+          expect { result }.not_to change { alert.reload.attributes }
+
+          expect(Rails.logger).to have_received(:warn).with(
+            "[alerts] catalog wallet alert without a baseline alert_id=#{alert.id} catalog_wallet_id=#{catalog_wallet.id}"
+          )
+        end
+      end
+    end
+  end
+
+  context "when the evaluation raises RecordNotFound for another record" do
+    before do
+      allow(UsageMonitoring::ProcessAlertService).to receive(:call!)
+        .and_raise(ActiveRecord::RecordNotFound.new("not found", "CatalogWallet"))
+    end
+
+    it "raises it" do
+      expect { result }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
 
@@ -164,8 +189,15 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsService do
     end
   end
 
-  context "when the wallet is terminated" do
-    before { catalog_wallet.update!(terminated_at: 1.minute.ago) }
+  context "when the wallet is terminated after the job loaded it" do
+    subject(:result) { described_class.call!(catalog_wallet: loaded_wallet) }
+
+    let(:loaded_wallet) { CatalogWallet.find(catalog_wallet.id) }
+
+    before do
+      loaded_wallet
+      catalog_wallet.update!(terminated_at: 1.minute.ago)
+    end
 
     it "evaluates nothing" do
       expect { result }.not_to change { alert.reload.attributes }
@@ -232,6 +264,10 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsService do
     end
 
     context "when the alert is deleted while the evaluation waits for it" do
+      # Its id sorts first, so a rescue around the whole loop would also skip the alert after it
+      let(:alert) do
+        create(:catalog_wallet_alert, id: "00000000-0000-4000-8000-000000000001", organization:, catalog_wallet:, alert_type: "balance", code: "low_balance", previous_value:, last_processed_at:)
+      end
       let(:ongoing_alert) do
         create(:catalog_wallet_alert, organization:, catalog_wallet:, alert_type: "ongoing_balance", code: "low_ongoing", previous_value: 12_000, last_processed_at: 1.hour.ago)
       end
