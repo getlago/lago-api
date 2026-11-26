@@ -160,10 +160,10 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
   end
 
   context "with two recurring thresholds" do
-    let(:thresholds) { [{value: 10, recurring: true}, {value: 20, recurring: true}] }
+    let(:thresholds) { [{value: 5}, {value: 10, recurring: true}, {value: 20, recurring: true}] }
 
-    it "returns value_is_invalid on the second one's recurring" do
-      expect(result.error.messages).to eq({"thresholds[1].recurring": ["value_is_invalid"]})
+    it "returns value_is_invalid on the second recurring one's recurring" do
+      expect(result.error.messages).to eq({"thresholds[2].recurring": ["value_is_invalid"]})
     end
   end
 
@@ -260,10 +260,11 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
   end
 
   context "with several errors" do
-    let(:thresholds) { [{value: 10}, {value: "abc"}, {value: 20, notify_on: %w[resolved]}, {value: "xyz"}] }
+    # The value check runs before the notify_on check, so it wins although its threshold comes later
+    let(:thresholds) { [{value: 10}, {value: 20, notify_on: %w[resolved]}, {value: "abc"}, {value: "xyz"}] }
 
     it "returns the first check that fails, on the first threshold that fails it" do
-      expect(result.error.messages).to eq({"thresholds[1].value": ["value_is_invalid"]})
+      expect(result.error.messages).to eq({"thresholds[2].value": ["value_is_invalid"]})
     end
   end
 end

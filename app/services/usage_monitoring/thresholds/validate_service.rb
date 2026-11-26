@@ -88,9 +88,8 @@ module UsageMonitoring
 
       def valid_notify_on?(threshold)
         # A plain value such as "resolved" would otherwise read as a one-item list and hide a malformed request
-        return false unless threshold[:notify_on].nil? || threshold[:notify_on].is_a?(Array)
-
-        notify_on_for(threshold).all? { AlertThreshold::NOTIFY_ON_VALUES.include?(it) }
+        (threshold[:notify_on].nil? || threshold[:notify_on].is_a?(Array)) &&
+          notify_on_for(threshold).all? { AlertThreshold::NOTIFY_ON_VALUES.include?(it) }
       end
 
       # The later of two equal items, so the first one stays valid in the client's form
