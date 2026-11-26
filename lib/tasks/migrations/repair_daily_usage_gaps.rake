@@ -6,59 +6,91 @@
 #
 # For each active subscription of such a customer, it fills the days without a row that have usage,
 # then recomputes the diff of every filled row and of the row that follows one, which held the
-# usage of both days. Dry run by default: nothing is written, and it lists every day without a row,
-# including days the live run skips because they have no usage.
+# usage of both days. Each subscription is repaired in its own transaction, so a run that stops can
+# be run again. A dry run (the default) does the same work and rolls it back.
+#
+# Left as they are: terminated subscriptions, upgraded ones included, because the backfill ends
+# their last period's rows at the termination and they would not chain with the rows written
+# before; rows written twice on the monthly charges billing day of yearly and semiannual plans.
+# A filled day counts the events received after the next row was written, so that row's recomputed
+# diff can be negative.
 class RepairDailyUsageGaps
   AFFECTED_UTC_OFFSET = 3.hours
+  # The hourly job writes the local yesterday in the first hours of the local day, jitter included
+  HOURLY_JOB_HOURS = 4.hours
 
-  def self.call(...) = new(...).call
+  Error = Class.new(StandardError)
+
+  def self.call(**, &) = new(**).call(&)
 
   def initialize(organization_id:, from_date:, dry_run: true)
     @organization_id = organization_id
     @from_date = from_date
     @dry_run = dry_run
+    @affected = Hash.new { |cache, timezone| cache[timezone] = reached_affected_offset?(timezone) }
   end
 
-  # One entry per subscription with at least one day without a row
+  # Yields one entry per subscription with days to fill, as soon as it is repaired
   def call
-    subscriptions.find_each.filter_map { process(it) }
+    subscriptions.find_each do |subscription|
+      entry = process(subscription)
+      yield entry if entry
+    rescue => e
+      raise Error, "subscription #{subscription.id}: #{e.class}: #{e.message}"
+    end
   end
 
   private
 
-  attr_reader :organization_id, :from_date, :dry_run
+  attr_reader :organization_id, :from_date, :dry_run, :affected
 
   def subscriptions
     Subscription.where(organization_id:).active.where(skip_daily_usage: false).includes(:plan, customer: :billing_entity)
   end
 
   def process(subscription)
-    return unless affected?(subscription.customer.applicable_timezone)
+    timezone = subscription.customer.applicable_timezone
+    return unless affected[timezone]
 
     known_dates = usage_dates(subscription)
-    missing = (first_day(subscription)..last_day(subscription)).reject { known_dates.include?(it) }
-    return if missing.empty?
-    return entry(subscription, status: :days_without_row, days: missing) if dry_run
+    last_day = last_day(timezone)
+    return if (first_day(subscription, timezone)..last_day).all? { known_dates.include?(it) }
 
-    DailyUsages::FillHistoryService.call!(subscription:, from_date:)
+    entry = nil
 
-    filled = usage_dates(subscription) - known_dates
-    recomputed = recompute_diffs(subscription, filled)
-    entry(subscription, status: filled.any? ? :filled : :nothing_to_fill, days: filled.sort, recomputed:)
+    ApplicationRecord.transaction(requires_new: true) do
+      DailyUsages::FillHistoryService.call!(subscription:, from_date:, to_date: last_day)
+
+      filled = (usage_dates(subscription) - known_dates).sort
+      if filled.any?
+        entry = {
+          subscription_id: subscription.id,
+          timezone:,
+          status: dry_run ? :would_fill : :filled,
+          days: filled,
+          recomputed: recompute_diffs(subscription, filled)
+        }
+      end
+
+      raise ActiveRecord::Rollback if dry_run
+    end
+
+    entry
   end
 
   # The window was on the previous UTC date whenever the offset reached 3 hours in the range, DST included
-  def affected?(timezone)
+  def reached_affected_offset?(timezone)
     zone = ActiveSupport::TimeZone[timezone]
-    from_date.step(Date.current, 30).any? { zone.at(it.to_time(:utc)).utc_offset >= AFFECTED_UTC_OFFSET }
+    (from_date..Date.current).any? { zone.at(it.to_time(:utc)).utc_offset >= AFFECTED_UTC_OFFSET }
   end
 
-  def first_day(subscription)
-    [subscription.started_at.in_time_zone(subscription.customer.applicable_timezone).to_date, from_date].max
+  def first_day(subscription, timezone)
+    [subscription.started_at.in_time_zone(timezone).to_date, from_date].max
   end
 
-  def last_day(subscription)
-    Time.current.in_time_zone(subscription.customer.applicable_timezone).to_date - 1.day
+  # The local yesterday belongs to the hourly job until its window is over
+  def last_day(timezone)
+    (Time.current.in_time_zone(timezone) - HOURLY_JOB_HOURS).to_date - 1.day
   end
 
   def usage_dates(subscription)
@@ -77,10 +109,6 @@ class RepairDailyUsageGaps
       end
     end
   end
-
-  def entry(subscription, status:, days:, recomputed: [])
-    {subscription_id: subscription.id, timezone: subscription.customer.applicable_timezone, status:, days:, recomputed:}
-  end
 end
 
 namespace :migrations do
@@ -92,6 +120,11 @@ namespace :migrations do
     abort usage if args[:organization_id].blank?
     abort "Organization not found. #{usage}" unless Organization.exists?(id: args[:organization_id])
 
+    # Only the hourly job and the invoices of these organizations keep daily usages up to date
+    unless Organization.with_revenue_analytics_support.exists?(id: args[:organization_id])
+      abort "Revenue analytics is not enabled for this organization: its daily usages are not kept up to date."
+    end
+
     from_date = begin
       args[:from_date].present? ? Date.iso8601(args[:from_date]) : DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date
     rescue Date::Error
@@ -100,17 +133,21 @@ namespace :migrations do
 
     dry_run = ENV.fetch("DRY_RUN", "true") != "false"
     mode = dry_run ? "DRY RUN" : "LIVE"
+    count = 0
 
     puts "Repairing daily usage gaps [#{mode}] for organization #{args[:organization_id]} from #{from_date.iso8601}..."
 
-    report = RepairDailyUsageGaps.call(organization_id: args[:organization_id], from_date:, dry_run:)
-
-    report.each do |entry|
-      puts "  subscription=#{entry[:subscription_id]} timezone=#{entry[:timezone]} status=#{entry[:status]} " \
-        "days=#{entry[:days].map(&:iso8601).join(",")} recomputed=#{entry[:recomputed].map(&:iso8601).join(",")}"
+    begin
+      RepairDailyUsageGaps.call(organization_id: args[:organization_id], from_date:, dry_run:) do |entry|
+        count += 1
+        puts "  subscription=#{entry[:subscription_id]} timezone=#{entry[:timezone]} status=#{entry[:status]} " \
+          "days=#{entry[:days].map(&:iso8601).join(",")} recomputed=#{entry[:recomputed].map(&:iso8601).join(",")}"
+      end
+    rescue RepairDailyUsageGaps::Error => e
+      abort "Stopped [#{mode}] after #{count} subscription(s). Failed on #{e.message}. " \
+        "Its changes were rolled back: run the task again to resume."
     end
 
-    puts "Done [#{mode}]. Subscriptions with days without a daily usage: #{report.size}."
-    puts "  Totals by status: #{report.map { it[:status] }.tally.map { |key, count| "#{key}=#{count}" }.join(" ")}"
+    puts "Done [#{mode}]. Subscriptions #{dry_run ? "to repair" : "repaired"}: #{count}."
   end
 end
