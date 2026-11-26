@@ -987,6 +987,24 @@
               "deprecationReason": null
             },
             {
+              "name": "plan_entitlement_created",
+              "description": "plan_entitlement.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_updated",
+              "description": "plan_entitlement.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_deleted",
+              "description": "plan_entitlement.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract_rate_card_created",
               "description": "contract_rate_card.created",
               "isDeprecated": false,
@@ -37913,6 +37931,12 @@
             },
             {
               "name": "agent_storefront",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "entitlement_events",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

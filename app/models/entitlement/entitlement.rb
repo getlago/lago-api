@@ -13,11 +13,14 @@ module Entitlement
     belongs_to :plan, optional: true
     belongs_to :catalog_plan, optional: true
     belongs_to :subscription, optional: true
-    has_many :values, class_name: "Entitlement::EntitlementValue", foreign_key: :entitlement_entitlement_id, dependent: :destroy
+    has_many :values, class_name: "Entitlement::EntitlementValue", foreign_key: :entitlement_entitlement_id, inverse_of: :entitlement, dependent: :destroy
 
     validates_with ParentPresenceValidator,
       parents: %i[plan catalog_plan subscription],
       error: "one_of_plan_or_subscription_required"
+
+    # Newest first, ties by id, as Feature#ordered_privileges.
+    scope :newest_first, -> { order(created_at: :desc, id: :asc) }
   end
 end
 
