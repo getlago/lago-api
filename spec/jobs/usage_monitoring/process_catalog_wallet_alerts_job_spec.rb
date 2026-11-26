@@ -43,6 +43,17 @@ RSpec.describe UsageMonitoring::ProcessCatalogWalletAlertsJob do
         expect { job.perform_now }.not_to have_enqueued_job(described_class)
       end
     end
+
+    context "when the wallet was discarded after the dispatch" do
+      # GlobalID loads records past their default scope, so the run finds the wallet and, its alerts deleted, nothing to do
+      it "still runs instead of failing to load it" do
+        described_class.perform_later(catalog_wallet)
+        CatalogWallet.find(catalog_wallet.id).discard!
+
+        expect { perform_enqueued_jobs }.not_to raise_error
+        expect(UsageMonitoring::ProcessCatalogWalletAlertsService).to have_received(:call!).with(catalog_wallet:)
+      end
+    end
   end
 
   context "when freemium" do
