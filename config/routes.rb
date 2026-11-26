@@ -110,6 +110,8 @@ Rails.application.routes.draw do
           scope module: :contract_wallets do
             resources :alerts, param: :code, code: /.*/, only: %i[show update destroy]
             resources :alerts, only: %i[index create]
+            # Drawn before the wallet routes, so a path that ends with `transactions` is not read as a wallet code.
+            resources :transactions, only: %i[index]
           end
         end
       end
