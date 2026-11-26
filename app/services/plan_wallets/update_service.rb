@@ -41,7 +41,7 @@ module PlanWallets
         plan_wallet.updated_at = Time.current if RELATED_PARAMS.any? { params.key?(it) }
         plan_wallet.save!
 
-        replace_metadata!(plan_wallet) if params.key?(:metadata)
+        replace_metadata!(plan_wallet, params[:metadata]) if params.key?(:metadata)
         replace_taxes_and_scope!(plan_wallet)
       end
 

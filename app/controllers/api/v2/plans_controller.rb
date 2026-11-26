@@ -3,6 +3,8 @@
 module Api
   module V2
     class PlansController < Api::V2::BaseController
+      include Api::UnfilteredParams
+
       cursor_paginated_index(CatalogPlan)
       date_range_filtered_index(:created_at)
       serializable_with ::V2::CatalogPlanSerializer
@@ -66,8 +68,7 @@ module Api
         return permitted unless plan.key?(:metadata)
 
         # Unfiltered, so that the service refuses a value of another shape instead of ignoring it.
-        metadata = plan[:metadata]
-        permitted.to_h.merge(metadata: metadata.is_a?(ActionController::Parameters) ? metadata.to_unsafe_h : metadata)
+        permitted.to_h.merge(metadata: unfiltered(plan[:metadata]))
       end
 
       def resource_name

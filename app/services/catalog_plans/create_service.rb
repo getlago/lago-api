@@ -2,6 +2,8 @@
 
 module CatalogPlans
   class CreateService < BaseService
+    include Metadata::ReplaceItemParams
+
     Result = BaseResult[:catalog_plan]
 
     def initialize(args, send_webhook: true)
@@ -16,7 +18,7 @@ module CatalogPlans
     )
 
     def call
-      if !args[:metadata].nil? && !args[:metadata].is_a?(Hash)
+      if malformed_metadata?(args[:metadata])
         return result.single_validation_failure!(field: :metadata, error_code: "value_is_invalid")
       end
 
@@ -31,7 +33,7 @@ module CatalogPlans
         )
 
         apply_taxes(catalog_plan)
-        apply_metadata(catalog_plan)
+        replace_metadata!(catalog_plan, args[:metadata]) unless args[:metadata].nil?
 
         result.catalog_plan = catalog_plan
       end
@@ -54,15 +56,6 @@ module CatalogPlans
       return unless args.key?(:tax_codes) && !args[:tax_codes].nil?
 
       CatalogPlans::ApplyTaxesService.call!(catalog_plan:, tax_codes: args[:tax_codes])
-    end
-
-    # The metadata record names its errors in sentences, on its own `value` column.
-    def apply_metadata(catalog_plan)
-      return if args[:metadata].nil?
-
-      unless Metadata::UpdateItemService.call(owner: catalog_plan, value: args[:metadata].transform_keys(&:to_s)).success?
-        result.single_validation_failure!(field: :metadata, error_code: "value_is_invalid").raise_if_error!
-      end
     end
   end
 end
