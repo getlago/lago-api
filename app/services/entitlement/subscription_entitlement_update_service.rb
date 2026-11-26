@@ -26,7 +26,7 @@ module Entitlement
       ActiveRecord::Base.transaction do
         lock_subscription!(subscription)
         plan = subscription.plan.parent || subscription.plan
-        feature = organization.features.includes(:privileges).find_by!(code: feature_code)
+        feature = lock_features!([feature_code]).fetch(feature_code)
 
         SubscriptionEntitlementCoreUpdateService.call!(
           subscription:,

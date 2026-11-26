@@ -139,6 +139,37 @@ RSpec.describe Entitlement::FeatureDestroyService do
         subject
         expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(entitlement.plan)
       end
+
+      context "when the feature is also on a plan whose entitlement is discarded" do
+        let(:discarded_entitlement) { create(:entitlement, feature:, deleted_at: Time.current) }
+
+        before { discarded_entitlement }
+
+        it "notifies only the plans with a kept entitlement" do
+          expect { subject }.to have_enqueued_job(SendWebhookJob).with("plan.updated", entitlement.plan)
+            .and not_have_enqueued_job(SendWebhookJob).with("plan.updated", discarded_entitlement.plan)
+          expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(entitlement.plan)
+          expect(Utils::ActivityLog).not_to have_produced("plan.updated").after_commit.with(discarded_entitlement.plan)
+        end
+      end
+    end
+
+    context "when a plan entitlement is committed while the delete waits for the feature lock" do
+      let(:plan) { create(:plan, organization:) }
+
+      before do
+        allow(feature).to receive(:lock!).and_wrap_original do |original, *args|
+          # Stands for a write that inserted the entitlement before the lock and committed while the delete waited.
+          create(:entitlement, feature:, plan:)
+          original.call(*args)
+        end
+      end
+
+      it "discards the entitlement and notifies its plan" do
+        expect { subject }.to have_enqueued_job(SendWebhookJob).with("plan.updated", plan)
+        expect(Entitlement::Entitlement.where(entitlement_feature_id: feature.id).count).to eq(0)
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
+      end
     end
   end
 end
