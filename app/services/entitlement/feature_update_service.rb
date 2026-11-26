@@ -19,6 +19,10 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
+      if Utils::Entitlement.privileges_param_invalid?(params[:privileges])
+        return result.single_validation_failure!(field: :privileges, error_code: "value_is_invalid")
+      end
+
       if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges])
         return result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated")
       end

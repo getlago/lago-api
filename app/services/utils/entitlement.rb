@@ -7,6 +7,11 @@ module Utils
       code.is_a?(String) ? code.strip : code
     end
 
+    # A hash that strong params kept (a single object, numeric keys) is refused; a blank one is ignored as before.
+    def self.privileges_param_invalid?(privileges_params)
+      privileges_params.present? && !privileges_params.is_a?(Array)
+    end
+
     # Two codes are duplicates when they are equal once stripped, as they reach the same privilege.
     def self.privilege_code_is_duplicated?(privileges_params)
       return false if privileges_params.blank?

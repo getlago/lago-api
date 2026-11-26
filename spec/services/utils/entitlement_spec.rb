@@ -5,6 +5,40 @@ require "rails_helper"
 RSpec.describe Utils::Entitlement do
   subject(:utils_entitlement) { described_class }
 
+  describe ".privileges_param_invalid?" do
+    subject(:invalid) { utils_entitlement.privileges_param_invalid?(privileges_params) }
+
+    context "when privileges params are blank" do
+      let(:privileges_params) { {} }
+
+      it { expect(invalid).to be(false) }
+    end
+
+    context "when privileges params are nil" do
+      let(:privileges_params) { nil }
+
+      it { expect(invalid).to be(false) }
+    end
+
+    context "when privileges params are an array" do
+      let(:privileges_params) { [{code: "max"}] }
+
+      it { expect(invalid).to be(false) }
+    end
+
+    context "when privileges params are a single object" do
+      let(:privileges_params) { {code: "max"} }
+
+      it { expect(invalid).to be(true) }
+    end
+
+    context "when privileges params are keyed by index" do
+      let(:privileges_params) { {"0" => {code: "max"}} }
+
+      it { expect(invalid).to be(true) }
+    end
+  end
+
   describe ".privilege_code_is_duplicated?" do
     subject(:duplicated) { utils_entitlement.privilege_code_is_duplicated?(privileges_params) }
 
