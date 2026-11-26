@@ -254,10 +254,11 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(result.entitlements).to eq([new_entitlement, entitlement])
       end
 
-      it "logs only the added entitlement and sends no plan.updated event" do
-        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      it "logs and notifies only the added entitlement, with no plan.updated event" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(1).times
 
         new_entitlement = plan.entitlements.find_by!(feature: new_feature)
+        expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", new_entitlement)
         expect(Utils::ActivityLog).to have_received(:produce).with(
           new_entitlement, "plan_entitlement.created", after_commit: true,
           changes: {"values" => [nil, [{privilege_code: "max_gb", value: 100}]]},
@@ -269,9 +270,10 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       context "when a value of a kept entitlement changes" do
         let(:entitlements_params) { {feature.code => {privilege2.code => 5}} }
 
-        it "logs the entitlement as updated with all its values" do
-          result
+        it "logs and notifies the entitlement as updated with all its values" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(1).times
 
+          expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.updated", entitlement)
           expect(Utils::ActivityLog).to have_received(:produce).with(
             entitlement, "plan_entitlement.updated", after_commit: true,
             changes: {"values" => [[{privilege_code: "max", value: 10}], [{privilege_code: "max_admins", value: 5}, {privilege_code: "max", value: 10}]]},

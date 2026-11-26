@@ -414,13 +414,22 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       context "when activity logs cannot be sent" do
         before { allow(Utils::ActivityLog).to receive(:available?).and_return(false) }
 
-        it "logs nothing and renders no entitlement" do
-          allow(::V2::PlanEntitlementSerializer).to receive(:new).and_call_original
-
-          result
+        it "logs nothing and still sends the webhooks" do
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).twice
 
           expect(Utils::ActivityLog).not_to have_received(:produce)
-          expect(::V2::PlanEntitlementSerializer).not_to have_received(:new)
+        end
+
+        context "when the organization has no webhook endpoint" do
+          before { organization.webhook_endpoints.destroy_all }
+
+          it "renders no entitlement" do
+            allow(::V2::PlanEntitlementSerializer).to receive(:new).and_call_original
+
+            expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+            expect(::V2::PlanEntitlementSerializer).not_to have_received(:new)
+          end
         end
       end
 
@@ -462,7 +471,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       end
 
       it "sends no plan.updated webhook or activity log" do
-        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+        expect { result }.not_to have_enqueued_job(SendWebhookJob).with("plan.updated", plan)
         expect(Utils::ActivityLog).not_to have_produced("plan.updated")
       end
 
@@ -546,12 +555,36 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           )
           expect(Utils::ActivityLog).to have_received(:produce).exactly(3).times
         end
+
+        it "sends one webhook of the matching type for each changed entitlement, in one bulk push" do
+          bulk_pushes = []
+          ActiveSupport::Notifications.subscribed(->(event) { bulk_pushes << event.payload[:jobs].size }, "enqueue_all.active_job") do
+            expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(3).times
+          end
+
+          added_entitlement = plan.entitlements.find_by!(feature: storage_feature)
+          expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.created", added_entitlement)
+          expect(SendWebhookJob).to have_been_enqueued.with("plan_entitlement.updated", changed_entitlement)
+          expect(SendWebhookJob).to have_been_enqueued
+            .with("plan_entitlement.deleted", old_entitlement, {values: [{privilege_code: "provider", value: "okta"}]})
+          expect(bulk_pushes).to eq([3])
+        end
+
+        context "when the organization has no webhook endpoint" do
+          before { organization.webhook_endpoints.destroy_all }
+
+          it "enqueues no webhook" do
+            expect { result }.not_to have_enqueued_job(SendWebhookJob)
+          end
+        end
       end
 
       context "when the replace changes nothing" do
         let(:entitlements_params) { {"sso" => {"provider" => "okta"}} }
 
-        it "writes no activity log" do
+        it "writes no activity log and sends no webhook" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
           expect(result).to be_success
           expect(result.entitlements).to eq([old_entitlement])
           expect(Utils::ActivityLog).not_to have_received(:produce)
@@ -635,6 +668,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           expect(result.error.error_code).to eq("plan_not_found")
           expect(old_entitlement.reload).not_to be_discarded
           expect(Utils::ActivityLog).not_to have_received(:produce)
+          expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
     end
