@@ -11,6 +11,7 @@ RSpec.describe Resolvers::EventTypesResolver do
       rate_card.created rate_card.updated rate_card.deleted
       rate_card_rate.created rate_card_rate.updated rate_card_rate.deleted
       plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted
+      plan_entitlement.created plan_entitlement.updated plan_entitlement.deleted
       contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
       contract.created contract.updated contract.published contract.started contract.terminated contract.canceled
     ]
@@ -52,7 +53,7 @@ RSpec.describe Resolvers::EventTypesResolver do
   end
 
   context "when product catalog is enabled" do
-    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+    let(:organization) { create(:organization, feature_flags: ["product_catalog", "entitlement_events"]) }
 
     it "includes product catalog event types without requiring a premium license" do
       result = execute_graphql(
@@ -77,14 +78,35 @@ RSpec.describe Resolvers::EventTypesResolver do
 
       categories_by_name = result["data"]["eventTypes"].to_h { |event_type| event_type.values_at("name", "category") }
 
-      plan_rate_card_events = %w[plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted]
+      plan_events = %w[
+        plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted
+        plan_entitlement.created plan_entitlement.updated plan_entitlement.deleted
+      ]
       contract_events = %w[
         contract.created contract.updated contract.published contract.started contract.terminated contract.canceled
         contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
       ]
 
-      expect(categories_by_name.slice(*plan_rate_card_events)).to eq(plan_rate_card_events.index_with("PLANS"))
+      expect(categories_by_name.slice(*plan_events)).to eq(plan_events.index_with("PLANS"))
       expect(categories_by_name.slice(*contract_events)).to eq(contract_events.index_with("CONTRACTS"))
+    end
+  end
+
+  context "when product catalog is enabled without the entitlement_events flag" do
+    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+
+    it "hides the plan entitlement event types" do
+      result = execute_graphql(
+        current_user: user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      event_types_response = result["data"]["eventTypes"].map { |event_type| event_type["name"] }
+      expect(event_types_response).to match_array(
+        WebhookEndpoint::WEBHOOK_EVENT_TYPES - %w[plan_entitlement.created plan_entitlement.updated plan_entitlement.deleted]
+      )
     end
   end
 

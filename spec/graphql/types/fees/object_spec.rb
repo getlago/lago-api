@@ -18,6 +18,7 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:fixed_charge).of_type("FixedCharge")
     expect(subject).to have_field(:invoice_display_name).of_type("String")
     expect(subject).to have_field(:invoice_id).of_type("ID")
+    expect(subject).to have_field(:invoice_is_regeneration).of_type("Boolean!")
     expect(subject).to have_field(:invoice_name).of_type("String")
     expect(subject).to have_field(:product).of_type("Product")
     expect(subject).to have_field(:product_filter).of_type("ProductFilter")
@@ -27,6 +28,7 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:subscription).of_type("Subscription")
     expect(subject).to have_field(:true_up_fee).of_type("Fee")
     expect(subject).to have_field(:true_up_parent_fee).of_type("Fee")
+    expect(subject).to have_field(:original_fee_id).of_type("ID")
     expect(subject).to have_field(:wallet_transaction).of_type("WalletTransaction")
 
     expect(subject).to have_field(:creditable_amount_cents).of_type("BigInt!")
@@ -164,6 +166,57 @@ RSpec.describe Types::Fees::Object do
 
       it "returns nil" do
         expect(subject).to be_nil
+      end
+    end
+  end
+
+  describe "#original_fee_id" do
+    subject { run_graphql_field("Fee.originalFeeId", fee) }
+
+    context "when fee has an original_fee" do
+      let(:root_fee) { create(:charge_fee) }
+      let(:fee) { create(:charge_fee, original_fee: root_fee) }
+
+      it "returns the root fee's id" do
+        expect(subject).to eq(root_fee.id)
+      end
+    end
+
+    context "when fee has no original_fee" do
+      let(:fee) { create(:charge_fee) }
+
+      it "returns nil" do
+        expect(subject).to be_nil
+      end
+    end
+  end
+
+  describe "#invoice_is_regeneration" do
+    subject { run_graphql_field("Fee.invoiceIsRegeneration", fee) }
+
+    context "when fee's invoice is itself a product of a prior regenerate" do
+      let(:voided_invoice) { create(:invoice) }
+      let(:invoice) { create(:invoice, voided_invoice_id: voided_invoice.id) }
+      let(:fee) { create(:charge_fee, invoice:) }
+
+      it "returns true" do
+        expect(subject).to eq(true)
+      end
+    end
+
+    context "when fee's invoice has never been regenerated" do
+      let(:fee) { create(:charge_fee) }
+
+      it "returns false" do
+        expect(subject).to eq(false)
+      end
+    end
+
+    context "when fee has no invoice" do
+      let(:fee) { create(:charge_fee, invoice: nil) }
+
+      it "returns false" do
+        expect(subject).to eq(false)
       end
     end
   end

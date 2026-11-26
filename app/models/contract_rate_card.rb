@@ -112,6 +112,7 @@ end
 #
 #  id                  :uuid             not null, primary key
 #  billing_anchor_date :date             not null
+#  billing_scope       :enum             default("cycle"), not null
 #  deleted_at          :datetime
 #  effective_date      :date             not null
 #  next_billing_at     :datetime

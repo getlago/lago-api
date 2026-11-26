@@ -24,7 +24,7 @@ describe CatalogWallet do
       expect(catalog_wallet).to belong_to(:contract)
       expect(catalog_wallet).to belong_to(:customer)
       expect(catalog_wallet).to have_many(:credit_allocations).class_name("CatalogWalletCreditAllocation")
-      expect(catalog_wallet).to have_many(:transactions).class_name("CatalogWalletTransaction")
+      expect(catalog_wallet).to have_many(:transactions).class_name("CatalogWalletTransaction").inverse_of(:catalog_wallet)
       expect(catalog_wallet).to have_many(:alerts).class_name("UsageMonitoring::CatalogWalletAlert").dependent(:delete_all).inverse_of(:catalog_wallet)
       expect(catalog_wallet).to have_many(:selectors).class_name("CatalogWalletSelector")
       expect(catalog_wallet).to have_many(:applied_taxes).class_name("CatalogWalletAppliedTax")
@@ -53,6 +53,16 @@ describe CatalogWallet do
 
       it "accepts the code on another contract" do
         expect(build(:catalog_wallet, organization: existing.organization, code: "credits")).to be_valid
+      end
+
+      context "when the code of a deleted wallet is in use again" do
+        let(:deleted) { create(:catalog_wallet, code: "credits", deleted_at: 1.day.ago) }
+
+        before { create(:catalog_wallet, contract: deleted.contract, customer: deleted.customer, code: "credits") }
+
+        it "accepts the deleted wallet" do
+          expect(deleted).to be_valid
+        end
       end
     end
 

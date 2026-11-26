@@ -170,15 +170,33 @@ RSpec.describe "record_deletion trigger", transaction: false do # rubocop:disabl
     end
   end
 
+  describe "plans_taxes" do
+    it "records the deleted rows of plans and catalog plans" do
+      plan = create(:plan, organization:)
+      applied_taxes = [
+        create(:plan_applied_tax, plan:, tax:, organization:),
+        create(:plan_applied_tax, :catalog_plan, tax:, organization:)
+      ]
+
+      applied_taxes.each(&:destroy!)
+
+      expect(RecordDeletion.where(record_id: applied_taxes.map(&:id)).pluck(:record_table, :organization_id))
+        .to eq([["plans_taxes", organization.id]] * 2)
+    end
+  end
+
   describe "a tax deletion" do
     let(:billing_entity) { create(:billing_entity, organization:) }
     let(:rate_card) { create(:rate_card, organization:) }
+    let(:plan) { create(:plan, organization:) }
 
-    it "records the applied taxes it removes from billing entities, customers and rate cards" do
+    it "records the applied taxes it removes from billing entities, customers, rate cards and plans" do
       applied_taxes = [
         create(:billing_entity_applied_tax, billing_entity:, tax:, organization:),
         create(:customer_applied_tax, customer:, tax:, organization:),
-        create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+        create(:rate_card_applied_tax, rate_card:, tax:, organization:),
+        create(:plan_applied_tax, plan:, tax:, organization:),
+        create(:plan_applied_tax, :catalog_plan, tax:, organization:)
       ]
 
       Taxes::DestroyService.call(tax:).raise_if_error!
@@ -187,7 +205,9 @@ RSpec.describe "record_deletion trigger", transaction: false do # rubocop:disabl
         .to match_array([
           [applied_taxes[0].id, "billing_entities_taxes"],
           [applied_taxes[1].id, "customers_taxes"],
-          [applied_taxes[2].id, "rate_cards_taxes"]
+          [applied_taxes[2].id, "rate_cards_taxes"],
+          [applied_taxes[3].id, "plans_taxes"],
+          [applied_taxes[4].id, "plans_taxes"]
         ])
     end
   end

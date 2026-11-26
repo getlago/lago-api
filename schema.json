@@ -987,6 +987,24 @@
               "deprecationReason": null
             },
             {
+              "name": "plan_entitlement_created",
+              "description": "plan_entitlement.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_updated",
+              "description": "plan_entitlement.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_deleted",
+              "description": "plan_entitlement.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract_rate_card_created",
               "description": "contract_rate_card.created",
               "isDeprecated": false,
@@ -37437,6 +37455,24 @@
               "deprecationReason": null
             },
             {
+              "name": "plan_entitlement_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_entitlement_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract_rate_card_created",
               "description": null,
               "isDeprecated": false,
@@ -37916,6 +37952,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "entitlement_events",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -38392,6 +38434,22 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceIsRegeneration",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoiceName",
               "description": null,
               "args": [],
@@ -38463,6 +38521,18 @@
                   "name": "BigInt",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "originalFeeId",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -72903,6 +72973,35 @@
                   "name": "FeatureObjectCollection",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "fee",
+              "description": "Query a single fee of an organization",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the fee",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Fee",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null

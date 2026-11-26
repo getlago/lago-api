@@ -46,6 +46,38 @@ RSpec.describe Contracts::UpdateService do
     )
   end
 
+  ["draft", "active", nil].each do |status|
+    context "with a #{status.inspect} status on a pending contract" do
+      let(:params) { {name: "Renamed", status:} }
+
+      it "refuses it without changing the contract or notifying" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(result.error.messages).to eq(status: ["value_is_invalid"])
+        expect(contract.reload.name).not_to eq("Renamed")
+      end
+    end
+  end
+
+  context "with the current status, as a client resends the contract it read" do
+    let(:params) { {name: "Renamed", status: "pending"} }
+
+    it "updates the contract" do
+      expect(result).to be_success
+      expect(contract.reload).to have_attributes(name: "Renamed", status: "pending")
+    end
+
+    context "when the contract is active" do
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+      let(:params) { {name: "Renamed", status: "active"} }
+
+      it "does not treat the status as a locked field" do
+        expect(result).to be_success
+        expect(contract.reload.name).to eq("Renamed")
+      end
+    end
+  end
+
   context "when no serialized fields change" do
     let(:params) { {} }
 
