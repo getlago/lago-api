@@ -76,6 +76,25 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
     invoice
   end
 
+  def regenerate_with_five_units(voided_invoice)
+    Invoices::RegenerateFromVoidedService.call!(
+      voided_invoice:,
+      fees_params: [
+        {id: voided_invoice.fees.first.id, subscription_id: customer.subscriptions.sole.id, units: 5, unit_amount_cents: 20.0}
+      ]
+    ).invoice
+  end
+
+  def create_wallet_with_credits
+    create_wallet({
+      external_customer_id: customer.external_id,
+      rate_amount: "1",
+      currency: "EUR",
+      granted_credits: "50",
+      invoice_requires_successful_payment: false
+    }, as: :model)
+  end
+
   before do
     create(:tax, :applied_to_billing_entity, organization:, rate: tax_rate)
     create(
@@ -211,22 +230,9 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
   end
 
   context "when the customer has a tax provider", :premium do
-    let(:anrok_client) { instance_double(LagoHttpClient::Client) }
     let(:nango_action_endpoint) { "https://api.nango.dev/action/trigger" }
-    let(:success_body_template) do
-      JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")))
-    end
 
-    before do
-      allow(LagoHttpClient::Client).to receive(:new).and_call_original
-      allow(LagoHttpClient::Client).to receive(:new).with(nango_action_endpoint, anything).and_return(anrok_client)
-      allow(anrok_client).to receive(:post_with_response) do
-        # Anrok answers for the fees it receives, so its fee entry carries the regenerated fee id.
-        body = success_body_template.deep_dup
-        body["succeededInvoices"].first["fees"].first["item_id"] = customer.invoices.pending.sole.fees.sole.id
-        instance_double(Net::HTTPOK, body: body.to_json)
-      end
-    end
+    before { stub_tax_provider_taxes }
 
     it "computes the taxes without committing them at the provider and charges the payment provider" do
       advance_charges_invoice = create_advance_charges_invoice
@@ -255,10 +261,10 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       end.to have_enqueued_job(Invoices::Payments::CreateJob)
         .with(invoice: regenerated_invoice, payment_provider: :stripe, payment_method_params: {})
 
-      expect(anrok_client).to have_received(:post_with_response)
-        .with(hash_including(action_name: "anrok-create-ephemeral-transaction"), anything)
-      expect(anrok_client).not_to have_received(:post_with_response)
-        .with(hash_including(action_name: "anrok-create-or-update-transaction"), anything)
+      expect(a_request(:post, nango_action_endpoint).with(body: hash_including(action_name: "anrok-create-ephemeral-transaction")))
+        .to have_been_made.once
+      expect(a_request(:post, nango_action_endpoint).with(body: hash_including(action_name: "anrok-create-or-update-transaction")))
+        .not_to have_been_made
       expect(regenerated_invoice.reload).to have_attributes(
         invoice_type: "advance_charges",
         status: "finalized",
@@ -269,6 +275,174 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
         payment_status: "pending"
       )
       expect(Payment.where(payable: regenerated_invoice)).to be_empty
+    end
+  end
+
+  context "when the customer pays with Stripe" do
+    include_context "with Stripe configured for customer"
+
+    let(:payment_intents_endpoint) { "https://api.stripe.com/v1/payment_intents" }
+
+    before do
+      # Each payment intent gets its own id, as the subscription invoice is also charged.
+      stub_request(:post, payment_intents_endpoint).and_return(
+        status: 402,
+        body: lambda { |_request|
+          get_stripe_fixtures("payment_intent_card_declined_response.json") do |h|
+            h[:error][:payment_intent][:id] = "pi_#{SecureRandom.hex}"
+          end
+        }
+      )
+    end
+
+    it "applies neither the coupon nor the wallet and charges the full total" do
+      advance_charges_invoice = create_advance_charges_invoice
+
+      # The wallet and the coupon are added after the original invoice was issued, so only the regenerated one could use them.
+      wallet = create_wallet_with_credits
+      expect(wallet.reload.balance_cents).to eq(5_000)
+      create_coupon({
+        name: "Recurring",
+        code: "recurring",
+        coupon_type: "fixed_amount",
+        amount_cents: 1_000,
+        amount_currency: "EUR",
+        frequency: "recurring",
+        frequency_duration: 3,
+        expiration: "no_expiration"
+      })
+      apply_coupon({external_customer_id: customer.external_id, coupon_code: "recurring"})
+      applied_coupon = customer.applied_coupons.sole
+      expect(applied_coupon).to have_attributes(status: "active", frequency_duration_remaining: 3)
+
+      void_invoice(advance_charges_invoice)
+      regenerated_invoice = regenerate_with_five_units(advance_charges_invoice)
+      expect(regenerated_invoice).to have_attributes(status: "finalized", payment_status: "pending")
+
+      perform_all_enqueued_jobs
+
+      expect(regenerated_invoice.reload).to have_attributes(
+        invoice_type: "advance_charges",
+        fees_amount_cents: 10_000, # 5 units * 2000 cents
+        coupons_amount_cents: 0,
+        taxes_amount_cents: 2_000, # 10000 * 20% billing entity tax
+        prepaid_credit_amount_cents: 0,
+        total_amount_cents: 12_000, # 10000 + 2000
+        payment_status: "failed" # the Stripe stub declines the card
+      )
+      expect(a_request(:post, payment_intents_endpoint).with(body: hash_including("amount" => "12000")))
+        .to have_been_made.once
+      expect(wallet.reload.balance_cents).to eq(5_000)
+      expect(WalletTransaction.where(invoice: regenerated_invoice)).to be_empty
+      expect(applied_coupon.reload).to have_attributes(status: "active", frequency_duration_remaining: 3)
+      expect(Credit.where(invoice: regenerated_invoice)).to be_empty
+    end
+
+    it "applies a partial credit note of the voided invoice and charges the rest", :premium do
+      advance_charges_invoice = create_advance_charges_invoice
+
+      void_invoice(advance_charges_invoice, generate_credit_note: true, credit_amount: 1_000)
+      # The rest of the voided invoice goes to a second credit note, voided at once.
+      credit_note = advance_charges_invoice.credit_notes.where.not(credit_status: :voided).sole
+      expect(credit_note.balance_amount_cents).to eq(1_000)
+
+      regenerated_invoice = regenerate_with_five_units(advance_charges_invoice)
+      expect(regenerated_invoice).to have_attributes(
+        status: "finalized",
+        fees_amount_cents: 10_000, # 5 units * 2000 cents
+        taxes_amount_cents: 2_000, # 10000 * 20% billing entity tax
+        credit_notes_amount_cents: 1_000,
+        total_amount_cents: 11_000, # 10000 + 2000 - 1000 credit note
+        payment_status: "pending"
+      )
+      expect(credit_note.reload.balance_amount_cents).to eq(0)
+
+      perform_all_enqueued_jobs
+
+      expect(a_request(:post, payment_intents_endpoint).with(body: hash_including("amount" => "11000")))
+        .to have_been_made.once
+    end
+  end
+
+  context "when the VIES check of the customer is pending" do
+    let(:vat_number) { "IT12345678901" }
+
+    it "finalizes the invoice with taxes and without the wallet once the check completes" do
+      advance_charges_invoice = create_advance_charges_invoice
+      void_invoice(advance_charges_invoice)
+      wallet = create_wallet_with_credits
+
+      update_billing_entity(customer.billing_entity, {country: "FR", eu_tax_management: true})
+
+      # VIES is unavailable when the customer gives its VAT number: the check stays pending.
+      mock_vies_check_unavailable!
+      create_or_update_customer(
+        {external_id: customer.external_id, country: "IT", zipcode: "00146", tax_identification_number: vat_number},
+        perform_jobs: false
+      )
+      perform_enqueued_jobs(only: Customers::ViesCheckJob)
+      perform_all_enqueued_jobs(except: [Customers::ViesCheckJob])
+      # Drop the scheduled retry, so the example decides when VIES answers.
+      queue_adapter.enqueued_jobs.reject! { |job| job[:job] == Customers::ViesCheckJob }
+      expect(customer.reload.vies_check_in_progress?).to be(true)
+
+      regenerated_invoice = regenerate_with_five_units(advance_charges_invoice)
+      expect(regenerated_invoice.reload).to have_attributes(status: "pending", tax_status: "pending")
+
+      mock_vies_check!(vat_number)
+      Customers::ViesCheckJob.perform_now(customer)
+      perform_all_enqueued_jobs
+      expect(customer.reload.vies_check_in_progress?).to be(false)
+
+      expect(regenerated_invoice.reload).to have_attributes(
+        invoice_type: "advance_charges",
+        status: "finalized",
+        tax_status: "succeeded",
+        fees_amount_cents: 10_000, # 5 units * 2000 cents
+        taxes_amount_cents: 0, # 10000 * 0% EU reverse charge, the customer tax once VIES validates the VAT number
+        prepaid_credit_amount_cents: 0,
+        total_amount_cents: 10_000, # 10000 + 0
+        payment_status: "pending"
+      )
+      expect(regenerated_invoice.applied_taxes.sole.tax_code).to eq("lago_eu_reverse_charge")
+      expect(wallet.reload.balance_cents).to eq(5_000)
+      expect(WalletTransaction.where(invoice: regenerated_invoice)).to be_empty
+    end
+  end
+
+  context "when a manual payment is recorded through the API" do
+    def regenerated_pending_invoice
+      advance_charges_invoice = create_advance_charges_invoice
+      void_invoice(advance_charges_invoice)
+
+      regenerate_with_five_units(advance_charges_invoice).tap do |invoice|
+        perform_all_enqueued_jobs
+        expect(invoice.reload).to have_attributes(total_amount_cents: 12_000, payment_status: "pending") # 10000 + 20% tax
+      end
+    end
+
+    it "marks the regenerated invoice as paid", :premium do
+      regenerated_invoice = regenerated_pending_invoice
+
+      create_payment(customer, regenerated_invoice, 12_000)
+
+      expect(Payment.where(payable: regenerated_invoice).sole).to have_attributes(
+        amount_cents: 12_000,
+        payment_type: "manual",
+        payable_payment_status: "succeeded"
+      )
+      expect(regenerated_invoice.reload).to have_attributes(total_paid_amount_cents: 12_000, payment_status: "succeeded")
+    end
+
+    it "refuses the payment without a premium license" do
+      regenerated_invoice = regenerated_pending_invoice
+
+      create_payment(customer, regenerated_invoice, 12_000, raise_on_error: false)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(json[:code]).to eq("feature_unavailable")
+      expect(Payment.where(payable: regenerated_invoice)).to be_empty
+      expect(regenerated_invoice.reload).to have_attributes(total_paid_amount_cents: 0, payment_status: "pending")
     end
   end
 
