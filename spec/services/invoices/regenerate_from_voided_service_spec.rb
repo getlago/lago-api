@@ -1056,6 +1056,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
   context "when the voided invoice is advance_charges" do
     subject(:result) { Invoices::RegenerateFromVoidedService.call(voided_invoice:, fees_params:) }
 
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 8.5) }
     let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
     let(:plan) { create(:plan, organization:, interval: "monthly") }
     let(:subscription) { create(:subscription, organization:, customer:, plan:) }
@@ -1105,7 +1106,7 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
 
     before { tax }
 
-    it "marks the receipt paid and records a manual payment instead of charging the payment provider" do
+    it "applies the current taxes and charges the payment provider" do
       invoice = result.invoice
 
       expect(result).to be_success
@@ -1113,20 +1114,13 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         invoice_type: "advance_charges",
         status: "finalized",
         fees_amount_cents: 1_000,
-        taxes_amount_cents: 200, # 1000 * 20%
-        total_amount_cents: 1_200, # 1000 + 200
-        payment_status: "succeeded"
+        taxes_amount_cents: 85, # 1000 * 8.5% current tax, not the 20% of the voided fee
+        total_amount_cents: 1_085, # 1000 + 85
+        payment_status: "pending"
       )
-      expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
-        organization:,
-        params: {
-          invoice_id: invoice.id,
-          amount_cents: 1_200,
-          reference: I18n.t("invoice.charges_paid_in_advance"),
-          created_at: invoice.created_at
-        }
-      )
-      expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+      expect(Invoices::Payments::CreateJob).to have_been_enqueued
+        .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+      expect(Payments::ManualCreateJob).not_to have_been_enqueued
     end
 
     context "when the customer has a wallet and an applied coupon" do
@@ -1147,8 +1141,8 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         expect(invoice).to have_attributes(
           coupons_amount_cents: 0,
           prepaid_credit_amount_cents: 0,
-          total_amount_cents: 1_200, # 1000 + 1000 * 20%, no coupon or wallet deducted
-          payment_status: "succeeded"
+          total_amount_cents: 1_085, # 1000 + 1000 * 8.5%, no coupon or wallet deducted
+          payment_status: "pending"
         )
         expect(invoice.credits).to be_empty
         expect(WalletTransaction.where(invoice:)).to be_empty
@@ -1157,55 +1151,46 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
-    context "when credit-note credit covers the whole total" do
+    context "when the credit note of the voided invoice covers the whole total" do
       let(:credit_note) do
-        create(:credit_note, customer:, invoice: create(:invoice, organization:, customer:),
-          credit_amount_cents: 1_500, balance_amount_cents: 1_500)
+        create(:credit_note, customer:, invoice: voided_invoice, credit_amount_cents: 1_200, balance_amount_cents: 1_200)
       end
 
       before { credit_note }
 
-      it "marks the receipt paid without recording a manual payment" do
+      it "settles the invoice with the credit note" do
         invoice = result.invoice
 
         expect(invoice).to have_attributes(
-          credit_notes_amount_cents: 1_200, # the whole 1000 + 200 total
+          credit_notes_amount_cents: 1_085, # the whole 1000 + 85 total
           total_amount_cents: 0,
           payment_status: "succeeded"
         )
-        expect(credit_note.reload.balance_amount_cents).to eq(300) # 1500 - 1200
-        expect(Payments::ManualCreateJob).not_to have_been_enqueued
+        expect(credit_note.reload.balance_amount_cents).to eq(115) # 1200 - 1085
         expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+        expect(Payments::ManualCreateJob).not_to have_been_enqueued
       end
     end
 
-    context "when credit-note credit covers part of the total" do
+    context "when the credit note of the voided invoice covers part of the total" do
       let(:credit_note) do
-        create(:credit_note, customer:, invoice: create(:invoice, organization:, customer:),
-          credit_amount_cents: 500, balance_amount_cents: 500)
+        create(:credit_note, customer:, invoice: voided_invoice, credit_amount_cents: 500, balance_amount_cents: 500)
       end
 
       before { credit_note }
 
-      it "records a manual payment for the total left after the credit" do
+      it "charges the payment provider for the total left after the credit" do
         invoice = result.invoice
 
         expect(invoice).to have_attributes(
           credit_notes_amount_cents: 500,
-          total_amount_cents: 700, # 1000 + 1000 * 20% - 500 credit note
-          payment_status: "succeeded"
+          total_amount_cents: 585, # 1000 + 1000 * 8.5% - 500 credit note
+          payment_status: "pending"
         )
         expect(credit_note.reload.balance_amount_cents).to eq(0)
-        expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
-          organization:,
-          params: {
-            invoice_id: invoice.id,
-            amount_cents: 700,
-            reference: I18n.t("invoice.charges_paid_in_advance"),
-            created_at: invoice.created_at
-          }
-        )
-        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+        expect(Invoices::Payments::CreateJob).to have_been_enqueued
+          .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+        expect(Payments::ManualCreateJob).not_to have_been_enqueued
       end
     end
 
@@ -1220,13 +1205,12 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
         expect(invoice).to have_attributes(
           invoice_type: "subscription",
           prepaid_credit_amount_cents: 500,
-          total_amount_cents: 700, # 1000 + 1000 * 20% - 500 wallet
+          total_amount_cents: 585, # 1000 + 1000 * 8.5% - 500 wallet
           payment_status: "pending"
         )
         expect(WalletTransaction.where(invoice:).count).to eq(1)
         expect(Invoices::Payments::CreateJob).to have_been_enqueued
           .with(invoice:, payment_provider: :stripe, payment_method_params: {})
-        expect(Payments::ManualCreateJob).not_to have_been_enqueued
       end
     end
   end

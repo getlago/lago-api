@@ -18,7 +18,8 @@ module Invoices
         return result unless invoice.tax_pending?
 
         invoice.error_details.tax_error.discard_all # rubocop:disable Lago/DiscardAll
-        taxes_result = if invoice.draft? || invoice.subscription_gated?
+        # The pay-in-advance fees of a regenerated advance_charges invoice were already committed one by one.
+        taxes_result = if invoice.draft? || invoice.subscription_gated? || invoice.regenerated_advance_charges?
           Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
         else
           Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
@@ -52,7 +53,7 @@ module Invoices
           create_credit_note_credit if should_create_credit_note_credit?
           create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
-          invoice.payment_status = invoice.finalized_payment_status
+          invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
           invoice.tax_status = "succeeded"
 
           skip_payment_gating_for_zero_amount if invoice.subscription_payment_gated? && invoice.total_amount_cents.zero?
@@ -74,7 +75,7 @@ module Invoices
           GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-          Invoices::Payments::CollectService.call!(invoice:)
+          Invoices::Payments::CreateService.call_async(invoice:)
         elsif invoice.draft?
           notify_ready_to_finalize
         end
@@ -122,7 +123,7 @@ module Invoices
         !invoice.one_off?
       end
 
-      # A regenerated advance_charges invoice is a receipt for fees already paid: no wallet or PSP charge.
+      # A regenerated advance_charges invoice does not use the wallets of the customer.
       def should_create_applied_prepaid_credit?
         return false if invoice.draft?
         return false if invoice.one_off?

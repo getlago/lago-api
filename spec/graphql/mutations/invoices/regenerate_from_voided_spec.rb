@@ -226,7 +226,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided do
       create(:customer_applied_tax, customer:, tax: create(:tax, organization:, rate: 8.5))
     end
 
-    it "regenerates a paid advance_charges receipt without charging the payment provider" do
+    it "regenerates the advance_charges invoice with the current taxes and charges the payment provider" do
       freeze_time do
         result = execute_graphql(
           current_user: membership.user,
@@ -242,17 +242,11 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided do
           fees_amount_cents: 1_000,
           taxes_amount_cents: 85, # 1000 * 8.5%
           total_amount_cents: 1_085, # 1000 + 85
-          payment_status: "succeeded"
+          payment_status: "pending"
         )
-        expect(Payments::ManualCreateJob).to have_been_enqueued.with(
-          organization:,
-          params: hash_including(
-            invoice_id: regenerated_invoice.id,
-            amount_cents: 1_085,
-            reference: I18n.t("invoice.charges_paid_in_advance")
-          )
-        )
-        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+        expect(Invoices::Payments::CreateJob).to have_been_enqueued
+          .with(invoice: regenerated_invoice, payment_provider: :stripe, payment_method_params: {})
+        expect(Payments::ManualCreateJob).not_to have_been_enqueued
       end
     end
   end

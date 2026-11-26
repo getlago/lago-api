@@ -509,18 +509,9 @@ class Invoice < ApplicationRecord
     contract_fees.exists?
   end
 
-  # A receipt rebuilt from a voided advance_charges invoice: its fees were already paid.
+  # An advance_charges invoice rebuilt from a voided one: no coupon or wallet applies to it.
   def regenerated_advance_charges?
     advance_charges? && voided_invoice_id.present?
-  end
-
-  # Payment status once credits are applied: a receipt or an invoice with nothing left to pay is settled.
-  def finalized_payment_status
-    if regenerated_advance_charges? || !total_amount_cents.positive?
-      :succeeded
-    else
-      :pending
-    end
   end
 
   def subscription_gated?

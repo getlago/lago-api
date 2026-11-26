@@ -21,7 +21,7 @@ module Invoices
 
       SendWebhookJob.perform_later("invoice.created", invoice)
       Utils::ActivityLog.produce(invoice, "invoice.created")
-      Invoices::RecordAdvanceChargesPaymentService.call!(invoice:)
+      create_manual_payment
       Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: false)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -32,5 +32,16 @@ module Invoices
     private
 
     attr_reader :invoice
+
+    def create_manual_payment
+      params = {
+        invoice_id: invoice.id,
+        amount_cents: invoice.total_amount_cents,
+        reference: I18n.t("invoice.charges_paid_in_advance"),
+        created_at: invoice.created_at
+      }
+
+      ::Payments::ManualCreateJob.perform_later(organization: invoice.organization, params:)
+    end
   end
 end
