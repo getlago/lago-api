@@ -113,7 +113,7 @@ RSpec.describe Api::V2::Plans::EntitlementsController do
           ]
         )
         expect(catalog_plan.entitlements.sole.values.to_h { [it.privilege.code, it.value] })
-          .to eq("max" => "25", "provider" => "okta", "enabled" => "t", "invitation" => "phone")
+          .to eq("max" => "25", "provider" => "okta", "enabled" => "true", "invitation" => "phone")
       end
     end
 

@@ -246,10 +246,23 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         }
       end
 
-      it "converts boolean to string" do
-        result
+      it "stores the boolean as true, a value it accepts again" do
+        expect(result).to be_success
         entitlement_value = plan.entitlements.first.values.first
-        expect(entitlement_value.value).to eq("t")
+        expect(entitlement_value.value).to eq("true")
+
+        replay = described_class.call(organization:, plan:, entitlements_params: {"seats" => {"enabled" => entitlement_value.value}}, partial: false)
+        expect(replay).to be_success
+        expect(entitlement_value.reload.value).to eq("true")
+      end
+
+      context "when false" do
+        let(:entitlements_params) { {"seats" => {"enabled" => false}} }
+
+        it "stores false" do
+          expect(result).to be_success
+          expect(plan.entitlements.first.values.first.value).to eq("false")
+        end
       end
     end
 
@@ -466,7 +479,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(entitlement.catalog_plan_id).to eq(plan.id)
         expect(entitlement.plan_id).to be_nil
         expect(entitlement.values.to_h { [it.privilege.code, it.value] })
-          .to eq("max" => "25", "provider" => "okta", "enabled" => "t", "invitation" => "phone")
+          .to eq("max" => "25", "provider" => "okta", "enabled" => "true", "invitation" => "phone")
         expect(old_entitlement.reload).to be_discarded
         expect(old_value.reload).to be_discarded
         expect(result.entitlements).to eq([entitlement])

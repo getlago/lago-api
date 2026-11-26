@@ -17,8 +17,9 @@ module Entitlement
           raise value_failure(privilege, "value_not_in_select_options", path, allowed_values: privilege.config["select_options"].map(&:to_s))
         end
 
+        # The value column is a string, where Rails saves the boolean true as "t", a value this check then refuses.
         if privilege.value_type == "boolean" && [true, false, "true", "false"].include?(value)
-          return value
+          return value.to_s
         end
 
         if privilege.value_type == "integer"
