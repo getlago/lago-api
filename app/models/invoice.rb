@@ -600,11 +600,11 @@ class Invoice < ApplicationRecord
     return I18n.t("invoice.prepaid_credit_invoice") if credit?
 
     if TAX_INVOICE_LABEL_COUNTRIES.include?(billing_entity.country)
-      return I18n.t("invoice.paid_tax_invoice") if advance_charges?
+      return I18n.t("invoice.paid_tax_invoice") if advance_charges? && !regenerated_advance_charges?
       return I18n.t("invoice.document_tax_name")
     end
 
-    return I18n.t("invoice.paid_invoice") if advance_charges?
+    return I18n.t("invoice.paid_invoice") if advance_charges? && !regenerated_advance_charges?
 
     I18n.t("invoice.document_name")
   end

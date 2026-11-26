@@ -1996,6 +1996,41 @@ RSpec.describe Invoice do
         expect(invoice.document_invoice_name).to eq("Advance invoice")
       end
     end
+
+    context "when it is an advance_charges invoice" do
+      let(:invoice) { create(:invoice, customer:, organization:, billing_entity:, invoice_type: :advance_charges) }
+
+      it "returns the paid invoice name" do
+        expect(invoice.document_invoice_name).to eq(I18n.t("invoice.paid_invoice"))
+      end
+
+      context "when the billing entity country is in TAX_INVOICE_LABEL_COUNTRIES" do
+        let(:billing_entity) { create(:billing_entity, organization:, country: "AU") }
+
+        it "returns the paid tax invoice name" do
+          expect(invoice.document_invoice_name).to eq(I18n.t("invoice.paid_tax_invoice"))
+        end
+      end
+    end
+
+    context "when it is a regenerated advance_charges invoice" do
+      let(:voided_invoice) { create(:invoice, :voided, customer:, organization:, billing_entity:, invoice_type: :advance_charges) }
+      let(:invoice) do
+        create(:invoice, customer:, organization:, billing_entity:, invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id)
+      end
+
+      it "returns the standard invoice name" do
+        expect(invoice.document_invoice_name).to eq("Invoice")
+      end
+
+      context "when the billing entity country is in TAX_INVOICE_LABEL_COUNTRIES" do
+        let(:billing_entity) { create(:billing_entity, organization:, country: "AU") }
+
+        it "returns the standard tax invoice name" do
+          expect(invoice.document_invoice_name).to eq("Tax invoice")
+        end
+      end
+    end
   end
 
   describe "#charge_pay_in_advance_proration_range" do
