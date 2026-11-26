@@ -28,13 +28,21 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
     end
   end
 
-  [{value: 10}, "10", [{value: 1}, "10"]].each do |value|
+  [{value: 10}, "10"].each do |value|
     context "with thresholds #{value.inspect}" do
       let(:thresholds) { value }
 
       it "returns value_is_invalid on the list" do
         expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
       end
+    end
+  end
+
+  context "with items that are not objects" do
+    let(:thresholds) { [{value: 1}, "10", [{value: 2}]] }
+
+    it "returns value_is_invalid on the first of them" do
+      expect(result.error.messages).to eq({"thresholds[1]": ["value_is_invalid"]})
     end
   end
 
@@ -229,6 +237,24 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
 
       it "accepts them" do
         expect(result).to be_success
+      end
+    end
+  end
+
+  {
+    "a code that is not a single value" => [[{value: 1}, {value: 2, code: ["a"]}, {value: 3, code: ["b"]}], {"thresholds[1].code": ["value_is_invalid"]}],
+    "no value" => [[{value: 1}, {code: "a"}, {code: "b"}], {"thresholds[1].value": ["value_is_mandatory"]}],
+    "a value that is not a number" => [[{value: 1}, {value: "abc"}, {value: "xyz"}], {"thresholds[1].value": ["value_is_invalid"]}],
+    "a negative recurring value" => [[{value: 1}, {value: -1, recurring: true}, {value: -2, recurring: true}], {"thresholds[1].value": ["recurring_value_is_negative"]}],
+    "an unknown notify_on" => [[{value: 1}, {value: 2, notify_on: %w[unknown]}, {value: 3, notify_on: %w[other]}], {"thresholds[1].notify_on": ["value_is_invalid"]}],
+    "a notify_on without triggered" => [[{value: 1}, {value: 2, notify_on: []}, {value: 3, notify_on: %w[resolved]}], {"thresholds[1].notify_on": ["triggered_is_mandatory"]}],
+    "an opt-in to resolved without a code" => [[{value: 1}, {value: 2, notify_on: %w[triggered resolved]}, {value: 3, notify_on: %w[triggered resolved]}], {"thresholds[1].code": ["value_is_mandatory"]}]
+  }.each do |error, (list, messages)|
+    context "with two thresholds that have #{error}" do
+      let(:thresholds) { list }
+
+      it "returns the error on the first of them" do
+        expect(result.error.messages).to eq(messages)
       end
     end
   end

@@ -2,7 +2,7 @@
 
 module Api
   # Strong params would drop a threshold that is not an object and shift the indexes of the ones after it, which the
-  # errors name. The items go through as sent, without unknown fields, so that the service refuses any malformed shape.
+  # errors name. The items go through as sent, without unknown fields. Rails still drops null items when it parses the body.
   module AlertThresholdParams
     THRESHOLD_FIELDS = %i[code value recurring notify_on].freeze
 

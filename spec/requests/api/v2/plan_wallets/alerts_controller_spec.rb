@@ -505,11 +505,11 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
     context "with a threshold that is not an object" do
       let(:update_params) { {thresholds: [{code: "low", value: "5000"}, 2000]} }
 
-      it "returns a validation error on the thresholds rather than dropping it" do
+      it "returns a validation error on the item rather than dropping it" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[1]", meta: {}}])
         expect(alert.thresholds.pluck(:value)).to eq([10_000])
       end
     end

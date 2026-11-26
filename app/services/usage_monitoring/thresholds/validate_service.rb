@@ -2,8 +2,8 @@
 
 module UsageMonitoring
   module Thresholds
-    # Stops at the first failing check. An error on one threshold names its path, such as thresholds[1].value;
-    # an error on the list as a whole stays on thresholds.
+    # Stops at the first failing check. An error on one threshold names its path, such as thresholds[1].value, or
+    # thresholds[1] for an item that is not an object; an error on the list as a whole stays on thresholds.
     class ValidateService < BaseService
       include ::UsageMonitoring::Concerns::CreateOrUpdateConcern
 
@@ -18,7 +18,11 @@ module UsageMonitoring
 
       def call
         return failure("value_is_mandatory") if thresholds.blank?
-        return failure("value_is_invalid") if !thresholds.is_a?(Array) || !thresholds.all?(Hash)
+        return failure("value_is_invalid") unless thresholds.is_a?(Array)
+
+        if (index = thresholds.index { !it.is_a?(Hash) })
+          return element_failure(index, :base, "value_is_invalid")
+        end
 
         if (index = thresholds.index { !single_value?(it[:code]) || !single_value?(it[:recurring]) })
           field = single_value?(thresholds[index][:code]) ? :recurring : :code
