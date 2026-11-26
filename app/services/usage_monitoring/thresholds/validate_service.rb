@@ -56,9 +56,45 @@ module UsageMonitoring
 
       attr_reader :thresholds
 
+      # The rules of CreateOrUpdateConcern#validate_notify_on!, which the v1 services keep, on each threshold's path
       def validate_notify_on
-        index, field, error_code = notify_on_violation(thresholds)
-        error_code ? element_failure(index, field, error_code) : result
+        if (index = thresholds.index { !valid_notify_on?(it) })
+          return element_failure(index, :notify_on, "value_is_invalid")
+        end
+
+        if (index = thresholds.index { notify_on_for(it).exclude?(AlertThreshold::NOTIFY_ON_TRIGGERED) })
+          return element_failure(index, :notify_on, "triggered_is_mandatory")
+        end
+
+        opting_in = thresholds.each_index.select { notify_on_for(thresholds[it]).include?(AlertThreshold::NOTIFY_ON_RESOLVED) }
+
+        if (index = opting_in.find { recurring_param?(thresholds[it]) })
+          return element_failure(index, :notify_on, "recurring_not_supported")
+        end
+
+        if (index = opting_in.find { thresholds[it][:code].blank? })
+          return element_failure(index, :code, "value_is_mandatory")
+        end
+
+        opted_in_codes = opting_in.map { thresholds[it][:code] }
+        codes = thresholds.map { it[:code].presence }
+        index = later_duplicate_index(codes) { opted_in_codes.include?(it) }
+        index ? element_failure(index, :code, "duplicate_threshold_codes") : result
+      end
+
+      def valid_notify_on?(threshold)
+        # A plain value such as "resolved" would otherwise read as a one-item list and hide a malformed request
+        return false unless threshold[:notify_on].nil? || threshold[:notify_on].is_a?(Array)
+
+        notify_on_for(threshold).all? { AlertThreshold::NOTIFY_ON_VALUES.include?(it) }
+      end
+
+      # The later of two equal items, so the first one stays valid in the client's form
+      def later_duplicate_index(items)
+        items.each_index.find do |index|
+          item = items[index]
+          !item.nil? && items.first(index).include?(item) && (!block_given? || yield(item))
+        end
       end
 
       def failure(error_code, meta: {})
