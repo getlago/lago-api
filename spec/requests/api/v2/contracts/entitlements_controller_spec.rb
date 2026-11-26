@@ -588,33 +588,40 @@ RSpec.describe Api::V2::Contracts::EntitlementsController do
     end
 
     context "with a pending and an active contract sharing the external id" do
-      let(:pending_contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: "contract-1") }
+      let(:pending_contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: "contract-1", code: "renewal") }
 
       before { pending_contract }
 
-      it "removes it from the pending one" do
-        request
+      include_examples "a refused removal", :unprocessable_content,
+        {code: "validation_errors", details: [{code: "value_is_mandatory", field: "contract_code", meta: {}}]}
 
-        # Nothing was removed from the pending contract: sso, the newer privilege, comes first.
-        expect(response).to have_http_status(:success)
-        expect(json).to eq(
-          entitlement: contract_entitlement_render(
-            feature_code: "seats",
-            source: "plan",
-            owner: pending_contract,
-            values: [
-              {privilege_code: "sso", value: true, plan_value: true, source: "plan"},
-              {privilege_code: "max", value: 50, plan_value: 50, source: "plan"}
-            ]
+      context "with the code of the pending one" do
+        let(:query) { "?contract_code=renewal" }
+
+        it "removes it from the pending one" do
+          request
+
+          # Nothing was removed from the pending contract: sso, the newer privilege, comes first.
+          expect(response).to have_http_status(:success)
+          expect(json).to eq(
+            entitlement: contract_entitlement_render(
+              feature_code: "seats",
+              source: "plan",
+              owner: pending_contract,
+              values: [
+                {privilege_code: "sso", value: true, plan_value: true, source: "plan"},
+                {privilege_code: "max", value: 50, plan_value: 50, source: "plan"}
+              ]
+            )
           )
-        )
-        expect(pending_contract.entitlement_removals.map(&:entitlement_feature_id)).to eq([feature.id])
-        expect(contract.entitlement_removals.reload).to eq([privilege_removal])
-        expect(contract_entitlement.reload).not_to be_discarded
+          expect(pending_contract.entitlement_removals.map(&:entitlement_feature_id)).to eq([feature.id])
+          expect(contract.entitlement_removals.reload).to eq([privilege_removal])
+          expect(contract_entitlement.reload).not_to be_discarded
+        end
       end
 
-      context "with the active status" do
-        let(:query) { "?status=active" }
+      context "with the code of the active one" do
+        let(:query) { "?contract_code=#{contract.code}" }
 
         it "removes it from the active one" do
           request
@@ -628,7 +635,6 @@ RSpec.describe Api::V2::Contracts::EntitlementsController do
 
     context "with a terminated contract" do
       let(:contract) { create(:contract, :terminated, organization:, customer:, catalog_plan:, external_id: "contract-1") }
-      let(:query) { "?status=terminated" }
 
       include_examples "a refused removal", :unprocessable_content,
         {code: "validation_errors", details: [{code: "contract_not_editable", field: "base", meta: {}}]}
