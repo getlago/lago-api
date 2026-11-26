@@ -134,7 +134,7 @@ module WalletTransactions
         priority:,
         name:,
         purchase_order_number: params[:purchase_order_number],
-        payment_method: params[:payment_method]
+        payment_method: payment_method_params
       ).wallet_transaction
 
       BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)
@@ -173,10 +173,33 @@ module WalletTransactions
     end
 
     def valid?
+      return false unless shared_payment_token_resolved?
+
       result.payment_method = payment_method
 
-      validate_params = params.merge(organization: organization)
+      validate_params = params.merge(organization: organization, allow_shared_payment_token: @payment_method_params.present?)
       WalletTransactions::ValidateService.new(result, **validate_params).valid?
+    end
+
+    def shared_payment_token_resolved?
+      return true if params.dig(:payment_method, :shared_payment_token).blank?
+
+      customer = Wallet.find_by(id: params[:wallet_id], organization_id: organization.id)&.customer
+      return true unless customer
+
+      token_result = PaymentMethods::CreateFromSharedPaymentTokenService.call(customer:, params: params[:payment_method])
+      unless token_result.success?
+        result.fail_with_error!(token_result.error)
+        return false
+      end
+
+      @payment_method = token_result.payment_method
+      @payment_method_params = token_result.params
+      true
+    end
+
+    def payment_method_params
+      @payment_method_params || params[:payment_method]
     end
 
     def payment_method

@@ -91,6 +91,31 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionsResolver do
     end
   end
 
+  context "when the plan shows its organization" do
+    let(:pending_organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
+    let(:pending_customer) { create(:customer, organization: pending_organization) }
+    let(:pending_plan) { create(:plan, organization: pending_organization) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          customerPortalSubscriptions {
+            collection { plan { organization { id activationStatus } } }
+          }
+        }
+      GQL
+    end
+
+    before { create(:subscription, customer: pending_customer, plan: pending_plan) }
+
+    it "does not show the activation status to the end customer" do
+      result = execute_graphql(customer_portal_user: pending_customer, query:)
+
+      organizations = result["data"]["customerPortalSubscriptions"]["collection"].map { it["plan"]["organization"] }
+      expect(organizations).to eq([{"id" => pending_organization.id, "activationStatus" => nil}])
+    end
+  end
+
   context "without customer portal user" do
     it "returns an error" do
       result = execute_graphql(query:)

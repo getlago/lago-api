@@ -18,6 +18,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       revenue_share
       salesforce
       xero
+      quickbooks
       remove_branding_watermark
       manual_payments
       from_email
@@ -35,6 +36,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       granular_lifetime_usage
       order_forms
       revenue_recognition
+      agent_storefront
     ]
   end
 

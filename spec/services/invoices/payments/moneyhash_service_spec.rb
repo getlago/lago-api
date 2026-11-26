@@ -140,6 +140,54 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       expect(result.payment_url).to eq("#{payment_url_response.dig("data", "embed_url")}?lago_request=generate_payment_url")
     end
 
+    context "with an amount in a currency with 2 decimals" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, invoice_type: :subscription, payment_status: :pending,
+          total_amount_cents: 12345, currency: "USD")
+      end
+
+      it "sends the amount with its cents as a JSON number" do
+        described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+          expect(params[:amount]).to eq(123.45) # 12345 cents of USD, 2 decimals
+          expect(params.to_json).to include('"amount":123.45')
+        end
+      end
+    end
+
+    context "with an amount in a currency with 3 decimals" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, invoice_type: :subscription, payment_status: :pending,
+          total_amount_cents: 12345, currency: "KWD")
+      end
+
+      it "sends the amount with its 3 decimals as a JSON number" do
+        described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+          expect(params[:amount]).to eq(12.345) # 12345 fils of KWD, 3 decimals
+          expect(params.to_json).to include('"amount":12.345')
+        end
+      end
+    end
+
+    context "with an amount in a currency without decimals" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, invoice_type: :subscription, payment_status: :pending,
+          total_amount_cents: 12345, currency: "JPY")
+      end
+
+      it "sends the amount without dividing it as a JSON number" do
+        described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(lago_client).to have_received(:post_with_response) do |params, _headers|
+          expect(params[:amount]).to eq(12345.0) # 12345 JPY, 0 decimals
+          expect(params.to_json).to include('"amount":12345.0')
+        end
+      end
+    end
+
     context "when Moneyhash refuses the payment" do
       let(:http_error) { LagoHttpClient::HttpError.new(422, {status: {code: 422}}.to_json, endpoint) }
 

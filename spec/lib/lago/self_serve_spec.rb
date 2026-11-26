@@ -31,6 +31,26 @@ RSpec.describe Lago::SelfServe do
     end
   end
 
+  describe ".require_payment_method?" do
+    it "is off when the variable is unset, empty or false" do
+      expect([nil, "", "false"].map { described_class.require_payment_method?(value: it) }).to all(be(false))
+    end
+
+    it "is on for true, whatever its case and surrounding spaces" do
+      expect(["true", " TRUE ", "True\n"].map { described_class.require_payment_method?(value: it) }).to all(be(true))
+    end
+
+    it "is off for other truthy-looking values" do
+      expect(%w[1 yes on no].map { described_class.require_payment_method?(value: it) }).to all(be(false))
+    end
+
+    it "reads LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD" => "true"))
+
+      expect(described_class.require_payment_method?).to be(true)
+    end
+  end
+
   describe ".signup_disabled?" do
     it "is true for true only, with the exact comparison of the legacy check" do
       expect(described_class.signup_disabled?(value: "true")).to be(true)
@@ -41,6 +61,19 @@ RSpec.describe Lago::SelfServe do
       stub_const("ENV", ENV.to_h.merge("LAGO_DISABLE_SIGNUP" => "true"))
 
       expect(described_class.signup_disabled?).to be(true)
+    end
+  end
+
+  describe ".billing_accounts_key" do
+    it "is the key, stripped, or nil when it is blank" do
+      expect(described_class.billing_accounts_key(value: " key ")).to eq("key")
+      expect([nil, "", "  "].map { described_class.billing_accounts_key(value: it) }).to all(be_nil)
+    end
+
+    it "reads LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY" => "key"))
+
+      expect(described_class.billing_accounts_key).to eq("key")
     end
   end
 
@@ -73,8 +106,12 @@ RSpec.describe Lago::SelfServe do
   describe ".validate!" do
     let(:front_url) { "https://app.getlago.com" }
 
-    # Examples that leave disable_signup out read the variable, which the runner's environment must not decide.
-    before { stub_const("ENV", ENV.to_h.except("LAGO_DISABLE_SIGNUP")) }
+    # Examples that leave a variable out read it, which the runner's environment (or its .env) must not decide.
+    before do
+      stub_const("ENV", ENV.to_h.except(
+        "LAGO_DISABLE_SIGNUP", "LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD", "LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY"
+      ))
+    end
 
     it "accepts unset, empty, true and false" do
       [nil, "", "true", "false", " False "].each do |value|
@@ -154,6 +191,48 @@ RSpec.describe Lago::SelfServe do
       it "still refuses a front URL with a path" do
         expect { described_class.validate!(value: "true", front_url: "http://localhost:3000/x", local: true) }
           .to raise_error(ArgumentError, /LAGO_FRONT_URL/)
+      end
+    end
+
+    context "with the payment method switch" do
+      def validate(value: "true", require_payment_method: "true", billing_accounts_key: "key")
+        described_class.validate!(value:, front_url:, disable_signup: "false", require_payment_method:,
+          billing_accounts_key:, local: false)
+      end
+
+      it "accepts it unset, empty or false whatever the rest" do
+        [nil, "", "false", " False "].each do |require_payment_method|
+          expect { validate(value: nil, require_payment_method:, billing_accounts_key: nil) }.not_to raise_error
+          expect { validate(require_payment_method:, billing_accounts_key: nil) }.not_to raise_error
+        end
+      end
+
+      it "refuses any other value while self-serve is on" do
+        %w[1 yes].each do |require_payment_method|
+          expect { validate(require_payment_method:) }
+            .to raise_error(ArgumentError, /LAGO_SELF_SERVE_REQUIRE_PAYMENT_METHOD must be true or false/)
+        end
+      end
+
+      it "ignores any other value while self-serve is off, as self-hosted does" do
+        %w[1 yes].each do |require_payment_method|
+          expect { validate(value: nil, require_payment_method:, billing_accounts_key: nil) }.not_to raise_error
+        end
+      end
+
+      it "accepts it on with self-serve on and the activation key set" do
+        expect { validate }.not_to raise_error
+      end
+
+      it "refuses it on while self-serve is off" do
+        expect { validate(value: "false") }.to raise_error(ArgumentError, /needs LAGO_SELF_SERVE_ENABLED/)
+      end
+
+      it "refuses it on without the activation key" do
+        [nil, "", "  "].each do |billing_accounts_key|
+          expect { validate(billing_accounts_key:) }
+            .to raise_error(ArgumentError, /needs LAGO_ADMIN_API_BILLING_ACCOUNTS_KEY/)
+        end
       end
     end
   end

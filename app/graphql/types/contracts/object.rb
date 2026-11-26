@@ -8,11 +8,11 @@ module Types
 
       dataload_association :customer, :billing_entity, :payment_method, :selected_invoice_custom_sections
 
+      field :code, String, null: true
       field :external_id, String, null: false
       field :id, ID, null: false
       field :name, String, null: true
 
-      field :billing_time, Types::Contracts::BillingTimeEnum, null: false
       field :status, Types::Contracts::StatusEnum, null: false
 
       field :billing_anchor_date, GraphQL::Types::ISO8601Date, null: true

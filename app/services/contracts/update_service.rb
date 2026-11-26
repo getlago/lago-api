@@ -2,7 +2,7 @@
 
 module Contracts
   # Edits a contract's authoring fields. A pending contract is fully editable,
-  # and changing its plan re-materialises its rate cards onto the contract.
+  # and changing its plan re-materialises its rate cards and wallets onto the contract.
   # Moving a pending contract's start or anchor re-seeds its cards' lifecycle,
   # and a start moved to today or earlier activates it. Once active, its
   # pricing and schedule are signed: only the administrative fields in
@@ -62,6 +62,12 @@ module Contracts
     delegate :organization, :customer, to: :contract
 
     def update_contract
+      # Only publishing and cancelling change a status, so another one is refused rather than
+      # ignored. The current one is accepted: a client resending the contract it read carries it.
+      if params.key?(:status) && params[:status] != contract.status
+        return result.single_validation_failure!(field: :status, error_code: "value_is_invalid")
+      end
+
       unless Contract::LIVE_STATUSES.include?(contract.status)
         return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
       end
@@ -106,8 +112,7 @@ module Contracts
 
       # An active contract only gets here with its locked fields unchanged;
       # writing them back would still version them on a signed contract.
-      if contract.pending?
-        contract.billing_time = params[:billing_time] if params[:billing_time].present?
+      if contract.editable?
         contract.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
         contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
         contract.catalog_plan = catalog_plan if params.key?(:plan_code)
@@ -127,6 +132,10 @@ module Contracts
           ContractRateCards::DestroyService.call!(contract_rate_card: card, emit_events: false)
         end
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
+        discard_wallets
+        if contract.catalog_plan && organization.catalog_wallets_enabled?
+          Contracts::MaterializeWalletsService.call!(contract:)
+        end
       elsif lifecycle_moved
         reseed_rate_cards(previous_billing_anchor_date)
       end
@@ -149,6 +158,16 @@ module Contracts
       end
     end
 
+    # The wallets came from the previous plan, as the rate cards did. Their scope, taxes and metadata stay on the
+    # discarded wallets; their alerts are deleted for good.
+    def discard_wallets
+      UsageMonitoring::CatalogWalletAlerts::DeleteAllService.call!(catalog_wallets: contract.wallets)
+      contract.wallets.find_each do |wallet|
+        wallet.credit_allocations.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        wallet.discard!
+      end
+    end
+
     def locked_field_changed?
       (params.keys.map(&:to_sym) - EDITABLE_WHILE_ACTIVE).any? { |field| changes?(field) }
     end
@@ -158,13 +177,14 @@ module Contracts
       case field
       when :plan_code
         catalog_plan != contract.catalog_plan
-      when :billing_time
-        params[:billing_time].present? && params[:billing_time].to_s != contract.billing_time
       when :started_at
         params[:started_at].present? && started_at_in_customer_timezone.to_i != contract.started_at.to_i
       when :billing_anchor_date
         # A blank stored anchor falls back to the start date, which a form shows.
         [contract.billing_anchor_date, contract.effective_billing_anchor_date].exclude?(params[:billing_anchor_date]&.to_date)
+      when :status
+        # Reached only with the current status: update_contract refuses another one.
+        false
       else
         true
       end

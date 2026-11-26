@@ -518,6 +518,40 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
           )
         end
 
+        context "with a currency that Stripe reads in hundredths" do
+          let(:body) do
+            {
+              authorization: {amount_cents: "50000", amount_currency: "HUF"},
+              subscription: params
+            }
+          end
+          let(:stripe_pi) do
+            {
+              id: "pi_12345",
+              object: "payment_intent",
+              amount: 5_000_000,
+              amount_capturable: 5_000_000,
+              currency: "huf",
+              status: "requires_capture"
+            }
+          end
+
+          it "sends Stripe the amount in hundredths and returns it in Lago units" do
+            subject
+
+            expect(response).to have_http_status(:ok)
+            expect(WebMock).to have_requested(:post, "https://api.stripe.com/v1/payment_intents")
+              .with(body: hash_including("amount" => "5000000", "currency" => "huf")) # 50,000 HUF * 100
+            expect(json[:authorization]).to eq(
+              id: "pi_12345",
+              object: "payment_intent",
+              amount: 50_000, # 5,000,000 hundredths / 100
+              amount_capturable: 50_000,
+              status: "requires_capture"
+            )
+          end
+        end
+
         context "when parameters are incorrect" do
           let(:body) do
             {
@@ -575,6 +609,21 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
               request_id: "req_R6dwJQCrHDQkZr",
               http_status: 402
             })
+          end
+        end
+
+        context "when the payment method is a SEPA debit" do
+          let(:payment_method) do
+            create(:payment_method, customer:, organization:, payment_provider_customer: stripe_customer, provider_method_id: "pm_sepa",
+              details: {type: "sepa_debit", last4: "3000"})
+          end
+
+          it "returns a validation error without creating the subscription" do
+            expect { subject }.not_to change(Subscription, :count)
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details][:payment_method_id]).to include "payment_method_not_supported_for_authorization"
+            expect(WebMock).not_to have_requested(:post, "https://api.stripe.com/v1/payment_intents")
           end
         end
       end

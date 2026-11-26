@@ -1,6 +1,9 @@
 ---
 en:
   email:
+    agent_claim:
+      verification:
+        subject: Your code to claim an agent on %{storefront_name}
     api_key:
       created:
         access_warning: However, if you did not authorize this change, please reset your password and delete the API key immediately to protect your account.

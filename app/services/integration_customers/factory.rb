@@ -16,6 +16,8 @@ module IntegrationCustomers
         IntegrationCustomers::AvalaraService
       when "Integrations::XeroIntegration"
         IntegrationCustomers::XeroService
+      when "Integrations::QuickbooksIntegration"
+        IntegrationCustomers::QuickbooksService
       when "Integrations::HubspotIntegration"
         IntegrationCustomers::HubspotService
       when "Integrations::SalesforceIntegration"

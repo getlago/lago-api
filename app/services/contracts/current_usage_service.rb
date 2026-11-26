@@ -30,10 +30,9 @@ module Contracts
 
       result.contract = contract
 
-      # A pending contract has not started billing, so it has no usage yet.
-      result.rate_card_usages = if contract.pending?
-        []
-      else
+      # Only a contract that took effect has usage: a draft, a pending or a canceled one never billed,
+      # even once its planned start date has passed.
+      result.rate_card_usages = if (contract.active? || contract.terminated?) && !past_contract_end?
         cards = selected_cards
         preload_schedule_inputs(cards)
         obligations = cards.filter_map { |card| obligation_for(card) }
@@ -42,6 +41,8 @@ module Contracts
         obligations
           .map { |card, obligation| rate_card_usage(card, obligation) }
           .sort_by { |usage| usage_order(usage) }
+      else
+        []
       end
 
       result.taxes_unavailable = false
@@ -59,6 +60,11 @@ module Contracts
     attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term
 
     delegate :customer, to: :contract
+
+    def past_contract_end?
+      ends_at = [contract.ended_at, contract.terminated_at].compact.min
+      ends_at.present? && timestamp > ends_at
+    end
 
     def preload_schedule_inputs(cards)
       return if cards.empty?

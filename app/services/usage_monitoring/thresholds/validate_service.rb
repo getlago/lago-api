@@ -17,6 +17,7 @@ module UsageMonitoring
       def call
         return failure("value_is_mandatory") if thresholds.blank?
         return failure("value_is_invalid") if !thresholds.is_a?(Array) || !thresholds.all?(Hash)
+        return failure("value_is_invalid") unless thresholds.all? { single_values?(it) }
 
         if thresholds.size > ThresholdRecord::SOFT_LIMIT
           return failure("too_many_thresholds", meta: {max_items: ThresholdRecord::SOFT_LIMIT})
@@ -39,6 +40,10 @@ module UsageMonitoring
       private
 
       attr_reader :thresholds
+
+      def single_values?(threshold)
+        threshold.values_at(:code, :recurring).all? { single_value?(it) }
+      end
 
       def failure(error_code, meta: {})
         result.single_validation_failure!(field: :thresholds, error_code:, meta:)

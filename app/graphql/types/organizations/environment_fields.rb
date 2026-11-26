@@ -6,6 +6,7 @@ module Types
     # that show them. With self-serve off, every organization answers as a standalone production one.
     module EnvironmentFields
       extend ActiveSupport::Concern
+      include ViewerMembership
 
       included do
         field :environment, Types::Organizations::EnvironmentEnum, null: false
@@ -35,11 +36,11 @@ module Types
       # The user-facing types are reachable from the public invite query and from other members' memberships, so a
       # linked organization is shown only to a viewer who is an active member of it.
       def linked_organization(association)
-        viewer = context[:current_user]
-        return if viewer.nil?
+        # Without a session nothing is shown: skip loading the linked organization.
+        return if context[:current_user].nil?
 
         linked = dataloader.with(Sources::ActiveRecordAssociation, association).load(object)
-        linked if linked && dataloader.with(Sources::UserActiveMembership, viewer.id).load(linked.id)
+        linked if linked && viewer_active_member?(linked.id)
       end
     end
   end

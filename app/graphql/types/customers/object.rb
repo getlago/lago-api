@@ -5,6 +5,8 @@ module Types
     class Object < Types::BaseObject
       graphql_name "Customer"
 
+      dataload_association :organization
+
       field :id, ID, null: false
 
       field :account_type, Types::Customers::AccountTypeEnum, null: false
@@ -38,6 +40,7 @@ module Types
       field :tax_identification_number, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
       field :url, String, null: true
+      field :x402_agent_address, String, null: true
       field :zipcode, String, null: true
 
       field :shipping_address, Types::Customers::Address, null: true
@@ -91,6 +94,10 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :active_contracts_count,
+        Integer,
+        null: false,
+        description: "Number of active contracts per customer"
       field :active_subscriptions_count,
         Integer,
         null: false,
@@ -149,10 +156,18 @@ module Types
         object.invoices.payment_overdue.any?
       end
 
+      def x402_agent_address
+        object.x402_agent_address if organization.x402_payments_enabled?
+      end
+
       def overdue_balances
         object.overdue_balances.map do |currency, amount_cents|
           {currency:, amount_cents:}
         end
+      end
+
+      def active_contracts_count
+        dataloader.with(Sources::CustomerActiveContractsCount).load(object.id)
       end
 
       def active_subscriptions_count

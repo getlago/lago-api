@@ -66,6 +66,18 @@ RSpec.describe Api::V2::ContractRateCardsController do
       end
     end
 
+    context "when the contract is a draft" do
+      let(:contract) { create(:contract, :draft, organization:, customer:, started_at: 1.month.ago) }
+
+      it "attaches the rate card, even with a start that has passed" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
+        expect(contract.reload).to be_draft
+      end
+    end
+
     context "when the rate card does not exist" do
       let(:create_params) { {rate_card_code: "unknown"} }
 
@@ -85,11 +97,15 @@ RSpec.describe Api::V2::ContractRateCardsController do
     end
 
     context "when a terminated contract reuses the external id" do
+      subject do
+        post_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards?contract_code=#{contract.code}", {applied_rate_card: create_params})
+      end
+
       let!(:terminated) do
         create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
       end
 
-      it "attaches to the live contract, not the terminated sibling" do
+      it "attaches to the contract identified by its code" do
         subject
 
         expect(response).to have_http_status(:success)

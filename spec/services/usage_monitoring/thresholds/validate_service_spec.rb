@@ -127,6 +127,22 @@ RSpec.describe UsageMonitoring::Thresholds::ValidateService do
     end
   end
 
+  [
+    {code: ["warn"], value: 10},
+    {code: {text: "warn"}, value: 10},
+    {value: 10, recurring: [true]},
+    {value: 10, recurring: {every: true}},
+    {code: "warn", value: 10, recurring: [false], notify_on: %w[triggered resolved]}
+  ].each do |threshold|
+    context "with #{threshold.inspect}" do
+      let(:thresholds) { [{value: 1}, threshold] }
+
+      it "returns value_is_invalid" do
+        expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+      end
+    end
+  end
+
   context "with two recurring thresholds" do
     let(:thresholds) { [{value: 10, recurring: true}, {value: 20, recurring: true}] }
 

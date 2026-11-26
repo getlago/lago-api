@@ -27,7 +27,10 @@ module CreditNotes
           payment:,
           payment_provider: payment.payment_provider,
           payment_provider_customer: payment_provider_customer(payment),
-          amount_cents: adyen_result.response.dig("amount", "value"),
+          amount_cents: ::PaymentProviders::AdyenProvider.from_adyen_amount(
+            adyen_result.response.dig("amount", "value"),
+            adyen_result.response.dig("amount", "currency")
+          ),
           amount_currency: adyen_result.response.dig("amount", "currency"),
           status: "pending",
           provider_refund_id: adyen_result.response["pspReference"]
@@ -106,12 +109,14 @@ module CreditNotes
       end
 
       def adyen_refund_params
+        currency = credit_note.credit_amount_currency.upcase
+
         {
           paymentPspReference: payment.provider_payment_id,
           merchantAccount: payment.payment_provider.merchant_account,
           amount: {
-            value: credit_note.refund_amount_cents,
-            currency: credit_note.credit_amount_currency.upcase
+            value: ::PaymentProviders::AdyenProvider.to_adyen_amount(credit_note.refund_amount_cents, currency),
+            currency:
           }
         }
       end

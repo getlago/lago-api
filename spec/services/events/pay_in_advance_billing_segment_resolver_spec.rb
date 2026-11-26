@@ -431,6 +431,14 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
     end
   end
 
+  context "when the contract is a draft" do
+    let(:contract_status) { :draft }
+
+    it "returns no segment" do
+      expect(billing_segments).to be_empty
+    end
+  end
+
   context "when the contract is pending" do
     let(:contract_status) { :pending }
 

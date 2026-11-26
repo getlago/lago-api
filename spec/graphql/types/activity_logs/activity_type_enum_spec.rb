@@ -79,6 +79,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         contract_rate_card_deleted
         contract_created
         contract_updated
+        contract_published
         contract_started
         contract_terminated
         contract_canceled
@@ -98,6 +99,9 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         plan_wallet_created
         plan_wallet_updated
         plan_wallet_deleted
+        contract_wallet_created
+        contract_wallet_updated
+        contract_wallet_deleted
       ]
     )
   end

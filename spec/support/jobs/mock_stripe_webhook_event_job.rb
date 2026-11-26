@@ -32,6 +32,10 @@ module Jobs
             id: payment_intent_id,
             object: "payment_intent",
             status: status.to_s,
+            # The request is url-encoded, so Stripe echoes back the amount it received as an Integer
+            amount: request_body[:amount]&.to_i,
+            currency: request_body[:currency],
+            payment_method: request_body[:payment_method],
             metadata: request_body[:metadata]
           }
         }
@@ -43,7 +47,11 @@ module Jobs
     attr_reader :organization, :request_body, :status, :response_body
 
     def payment_intent_id
-      response_body.dig(:error, :payment_intent, :id)
+      if response_body[:error]
+        response_body.dig(:error, :payment_intent, :id)
+      else
+        response_body[:id]
+      end
     end
   end
 end
