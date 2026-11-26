@@ -7728,11 +7728,13 @@ type Fee implements InvoiceItem {
   id: ID!
   invoiceDisplayName: String
   invoiceId: ID
+  invoiceIsRegeneration: Boolean!
   invoiceName: String
   itemCode: String!
   itemName: String!
   itemType: String!
   offsettableAmountCents: BigInt!
+  originalFeeId: ID
   payInAdvance: Boolean!
   preciseAmountCents: Float!
   preciseCouponsAmountCents: Float!
@@ -13787,6 +13789,16 @@ type Query {
   Query features of an organization
   """
   features(limit: Int, page: Int, searchTerm: String): FeatureObjectCollection!
+
+  """
+  Query a single fee of an organization
+  """
+  fee(
+    """
+    Uniq ID of the fee
+    """
+    id: ID!
+  ): Fee
 
   """
   Get Google auth url.
