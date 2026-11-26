@@ -10,7 +10,9 @@ class ContractRateCardUnitsHistoryQuery < BaseQuery
 
   def call
     cards = contract_rate_cards.select { it.organization_id == organization.id }
-    ActiveRecord::Associations::Preloader.new(records: cards, associations: [:terms, {contract: {customer: :billing_entity}}]).call
+    ActiveRecord::Associations::Preloader.new(records: cards, associations: [:terms, {contract: :customer}]).call
+    customers = cards.filter_map { it.contract.customer if it.terms.any? }.select { it.timezone.blank? }.uniq
+    ActiveRecord::Associations::Preloader.new(records: customers, associations: :billing_entity).call
     changes = changes_by_card(cards)
 
     result.histories = cards.to_h do |card|

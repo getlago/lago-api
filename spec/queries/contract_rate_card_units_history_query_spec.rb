@@ -23,7 +23,7 @@ RSpec.describe ContractRateCardUnitsHistoryQuery do
     change
     create(:billing_operation, organization:, customer:, contract_rate_card: first_card, action_type: "reconcile_advance_coverage",
       reason: :rate_change, billing_at: timestamp + 1.hour, units_before: 5, units_after: 99)
-    create(:billing_operation, organization:, customer:, contract_rate_card: second_card, action_type: "reconcile_advance_coverage",
+    create(:billing_operation, organization:, customer: second_card.contract.customer, contract_rate_card: second_card, action_type: "reconcile_advance_coverage",
       units_before: 4, units_after: 6, billing_at: timestamp)
   end
 
@@ -42,6 +42,39 @@ RSpec.describe ContractRateCardUnitsHistoryQuery do
     expect(first_card.units_changes.count).to eq(1)
     expect(first_card.units_changes.sole).to have_attributes(action_type: "reconcile_advance_coverage", units_after: 5)
     expect(first_card.units_changes.sole).not_to be_readonly
+  end
+
+  context "when customers have their own timezone" do
+    let(:cards) { ContractRateCard.where(id: [first_card.id, second_card.id]).to_a }
+
+    it "does not load billing entities to resolve units history" do
+      queries = capture_sql { result }
+
+      expect(queries.grep(/FROM "billing_entities"/)).to be_empty
+      expect(result.histories.fetch(first_card.id).units_at(timestamp)).to eq(5)
+    end
+  end
+
+  context "when customers inherit their billing entity timezone" do
+    let(:billing_entity) { create(:billing_entity, organization:, timezone: "America/New_York") }
+    let(:customer) { create(:customer, organization:, billing_entity:, timezone: nil) }
+    let(:second_customer) do
+      create(:customer, organization:, billing_entity: create(:billing_entity, organization:, timezone: "Asia/Tokyo"), timezone: nil)
+    end
+    let(:second_card) do
+      create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer: second_customer),
+        units: 4, effective_date: Date.new(2026, 9, 1))
+    end
+    let(:cards) { ContractRateCard.where(id: [first_card.id, second_card.id]).to_a }
+
+    it "loads billing entities together and uses each customer's local midnight" do
+      queries = capture_sql { result }
+
+      expect(queries.grep(/FROM "billing_entities"/).size).to eq(1)
+      expect(result.histories.fetch(first_card.id).units_at(Time.utc(2026, 9, 1, 3))).to be_nil
+      expect(result.histories.fetch(first_card.id).units_at(Time.utc(2026, 9, 1, 4))).to eq(8)
+      expect(result.histories.fetch(second_card.id).units_at(Time.utc(2026, 8, 31, 15))).to eq(4)
+    end
   end
 
   context "without cards" do
