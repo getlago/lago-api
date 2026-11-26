@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe X402::InvoicePaymentsController, :premium do
+describe Api::V1::X402::InvoicePaymentsController, :premium do
   include_context "with an x402 payment"
 
   let(:organization) { create(:organization, feature_flags: ["x402_payments"]) }
@@ -21,8 +21,8 @@ describe X402::InvoicePaymentsController, :premium do
     invoice
   end
 
-  describe "GET /x402/invoice_payments/:token" do
-    subject { get("/x402/invoice_payments/#{token}") }
+  describe "GET /api/v1/x402/invoice_payments/:token" do
+    subject { get("/api/v1/x402/invoice_payments/#{token}") }
 
     it "answers 402" do
       subject
@@ -47,7 +47,7 @@ describe X402::InvoicePaymentsController, :premium do
     end
 
     context "with an unknown token" do
-      subject { get("/x402/invoice_payments/#{"cd" * 32}") }
+      subject { get("/api/v1/x402/invoice_payments/#{"cd" * 32}") }
 
       it "answers 404" do
         subject
@@ -58,7 +58,7 @@ describe X402::InvoicePaymentsController, :premium do
     end
 
     context "with a null byte in the token" do
-      subject { get("/x402/invoice_payments/ab%00cd") }
+      subject { get("/api/v1/x402/invoice_payments/ab%00cd") }
 
       it "answers 404" do
         subject
@@ -218,8 +218,8 @@ describe X402::InvoicePaymentsController, :premium do
     end
   end
 
-  describe "POST /x402/invoice_payments/:token" do
-    subject { post("/x402/invoice_payments/#{token}") }
+  describe "POST /api/v1/x402/invoice_payments/:token" do
+    subject { post("/api/v1/x402/invoice_payments/#{token}") }
 
     it "challenges like a GET" do
       subject
@@ -229,8 +229,8 @@ describe X402::InvoicePaymentsController, :premium do
     end
   end
 
-  describe "POST /x402/invoice_payments/:token with a payment" do
-    subject { post("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+  describe "POST /api/v1/x402/invoice_payments/:token with a payment" do
+    subject { post("/api/v1/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
 
     let(:x402_evm_requirements) { super().merge("amount" => "1050000") }
     let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "1050000"}}) }
@@ -281,7 +281,7 @@ describe X402::InvoicePaymentsController, :premium do
     end
 
     context "with a GET" do
-      subject { get("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+      subject { get("/api/v1/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
 
       it "answers 405 pointing at POST" do
         subject
@@ -299,7 +299,7 @@ describe X402::InvoicePaymentsController, :premium do
     end
 
     context "with a resent payment" do
-      before { post("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+      before { post("/api/v1/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
 
       it "answers the same receipt" do
         subject

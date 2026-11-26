@@ -77,7 +77,7 @@ describe X402::Wire::V2Codec do
   describe ".payment_required" do
     subject(:payment_required) { described_class.payment_required(requirements: [entry], resource:, error:) }
 
-    let(:resource) { {"url" => "https://api.example.com/x402/invoice_payments/abc", "description" => "Invoice 1", "mimeType" => "application/json"} }
+    let(:resource) { {"url" => "https://api.example.com/api/v1/x402/invoice_payments/abc", "description" => "Invoice 1", "mimeType" => "application/json"} }
     let(:error) { nil }
 
     it "renders a v2 challenge without extensions" do
