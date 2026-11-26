@@ -162,6 +162,33 @@ RSpec.describe Entitlement::FeatureCreateService do
       end
     end
 
+    context "with 50 privileges" do
+      let(:params) { {code: "seats", privileges: Array.new(50) { |i| {code: "privilege_#{i}"} }} }
+
+      it "creates the feature with its 50 privileges" do
+        result = subject
+
+        expect(result).to be_success
+        expect(result.feature.privileges.count).to eq(50)
+      end
+    end
+
+    context "with 51 privileges" do
+      let(:params) { {code: "seats", privileges: Array.new(51) { |i| {code: "privilege_#{i}"} }} }
+
+      it "returns too_many_privileges and creates nothing" do
+        expect { subject }
+          .to not_change(Entitlement::Feature, :count)
+          .and not_change(Entitlement::Privilege, :count)
+          .and not_have_enqueued_job(SendWebhookJob)
+
+        expect(subject).to be_failure
+        expect(subject.error).to be_a(BaseService::ValidationFailure)
+        expect(subject.error.messages).to eq({base: ["too_many_privileges"]})
+        expect(subject.error.meta).to eq({base: {max_items: 50}})
+      end
+    end
+
     context "when privilege value_type is invalid" do
       let(:params) do
         {
