@@ -7,7 +7,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
     create_default(:customer)
   end
 
-  subject(:result) { described_class.call(subscription:, plan:, feature: seats, plan_entitlement:, sub_entitlement:, privilege_params:, partial:) }
+  subject(:result) { described_class.call(owner: subscription, plan:, feature: seats, plan_entitlement:, sub_entitlement:, privilege_params:, partial:) }
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:plan) { create(:plan, organization:) }

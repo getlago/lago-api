@@ -117,7 +117,7 @@ module Entitlement
         feature = features_by_code[feature_code]
 
         SubscriptionEntitlementCoreUpdateService.call!(
-          subscription:,
+          owner: subscription,
           plan:,
           feature:,
           privilege_params:,

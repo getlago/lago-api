@@ -29,7 +29,7 @@ module Entitlement
         feature = organization.features.includes(:privileges).find_by!(code: feature_code)
 
         SubscriptionEntitlementCoreUpdateService.call!(
-          subscription:,
+          owner: subscription,
           plan:,
           feature:,
           plan_entitlement: plan.entitlements.includes(values: :privilege).find_by(feature:),

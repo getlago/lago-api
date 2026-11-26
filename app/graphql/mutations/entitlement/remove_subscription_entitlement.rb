@@ -20,7 +20,7 @@ module Mutations
         subscription = current_organization.subscriptions.find_by(id: args[:subscription_id])
 
         result = ::Entitlement::SubscriptionFeatureRemoveService.call(
-          subscription:,
+          owner: subscription,
           feature_code: args[:feature_code]
         )
 

@@ -8,8 +8,7 @@ module Entitlement
 
     Result = BaseResult
 
-    # Callers pass `subscription:`, or `owner:` for any override owner.
-    def initialize(plan:, feature:, plan_entitlement:, sub_entitlement:, privilege_params:, partial:, subscription: nil, owner: subscription)
+    def initialize(owner:, plan:, feature:, plan_entitlement:, sub_entitlement:, privilege_params:, partial:)
       @owner = owner
       @plan = plan
       @feature = feature

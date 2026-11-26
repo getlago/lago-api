@@ -8,8 +8,7 @@ module Entitlement
 
     Result = BaseResult[:feature_code]
 
-    # Callers pass `subscription:`, or `owner:` for any override owner.
-    def initialize(feature_code:, subscription: nil, owner: subscription)
+    def initialize(owner:, feature_code:)
       @owner = owner
       @feature_code = feature_code
       super

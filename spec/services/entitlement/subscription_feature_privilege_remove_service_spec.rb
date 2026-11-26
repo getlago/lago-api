@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
-  subject(:result) { described_class.call(subscription:, feature_code:, privilege_code:) }
+  subject(:result) { described_class.call(owner: subscription, feature_code:, privilege_code:) }
 
   # let, not let_it_be: the concurrency examples commit their rows and empty the tables.
   let(:organization) { create(:organization) }
@@ -145,7 +145,7 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
 
         remover = Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
-            described_class.call(subscription: Subscription.find(subscription.id), feature_code:, privilege_code:)
+            described_class.call(owner: Subscription.find(subscription.id), feature_code:, privilege_code:)
           end
         end
         expect(remover.join(0.5)).to be_nil
