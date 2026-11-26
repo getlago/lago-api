@@ -383,6 +383,21 @@ enum ActivityTypeEnum {
   plan_deleted
 
   """
+  plan_entitlement.created
+  """
+  plan_entitlement_created
+
+  """
+  plan_entitlement.deleted
+  """
+  plan_entitlement_deleted
+
+  """
+  plan_entitlement.updated
+  """
+  plan_entitlement_updated
+
+  """
   plan_rate_card.created
   """
   plan_rate_card_created
@@ -7638,6 +7653,7 @@ enum FeatureFlagEnum {
   catalog_wallets
   charge_filters_single_scan
   contract_alerts
+  entitlement_events
   fixed_charge_usage_delta_migration
   incremental_charge_cache
   invoice_usage_on_wallet_expiration

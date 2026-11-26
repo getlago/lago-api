@@ -598,6 +598,62 @@ RSpec.describe Mutations::Plans::Create, :premium do
     end
   end
 
+  context "when the entitlements are refused" do
+    let(:entitlements) { [{featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "abc"}]}] }
+    let(:input) do
+      {
+        name: "Plan with entitlements",
+        code: "plan_with_entitlements",
+        interval: "monthly",
+        payInAdvance: false,
+        amountCents: 100,
+        amountCurrency: "USD",
+        charges: [],
+        entitlements:
+      }
+    end
+
+    let(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+    end
+
+    it "returns the error of an invalid privilege value" do
+      expect(result["errors"]).to eq([
+        {
+          "message" => "Unprocessable Entity",
+          "locations" => [{"line" => 2, "column" => 3}],
+          "path" => ["createPlan"],
+          "extensions" => {
+            "status" => 422,
+            "code" => "unprocessable_entity",
+            "details" => {"maxPrivilegeValue" => ["value_is_invalid"]}
+          }
+        }
+      ])
+    end
+
+    context "when the feature does not exist" do
+      let(:entitlements) { [{featureCode: "unknown", privileges: [{privilegeCode: "max", value: "10"}]}] }
+
+      it "returns the error of an unknown feature" do
+        expect(result["errors"]).to eq([
+          {
+            "message" => "Resource not found",
+            "locations" => [{"line" => 2, "column" => 3}],
+            "path" => ["createPlan"],
+            "extensions" => {"status" => 404, "code" => "not_found", "details" => {"feature" => ["not_found"]}}
+          }
+        ])
+      end
+    end
+  end
+
   context "with metadata" do
     let(:mutation) do
       <<~GQL
