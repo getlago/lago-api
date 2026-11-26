@@ -56,7 +56,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       .and change { shadow_organization.contracts.count }.by(1)
 
     shadow_customer = shadow_organization.customers.find_by!(external_id: customer.external_id)
-    expect(shadow_customer.billing_entity).to eq(shadow_organization.default_billing_entity)
+    expect(shadow_customer.billing_entity.code).to eq(customer.billing_entity.code)
 
     expect(result).to be_success
     expect(result.contract).to have_attributes(
@@ -473,6 +473,8 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
 
   context "when the shadow organization has no billing entity with the code of the customer" do
     let(:shadow_entity_code) { "unknown_entity" }
+    let(:other_customer) { create(:customer, organization:, billing_entity: create(:billing_entity, organization:)) }
+    let(:subscription) { create(:subscription, organization:, customer: other_customer, plan:, started_at:, subscription_at:) }
 
     before { allow(Rails.logger).to receive(:warn) }
 

@@ -75,13 +75,20 @@ module BillingEngineMigrations
       input
     end
 
-    # Each organization's default billing entity has its own code, so the two defaults are matched to each other, not by code.
+    # Each organization's default billing entity has its own code: a customer of the V1 default goes on the shadow
+    # default when the shadow organization has no billing entity with that code.
     def shadow_billing_entity_code
-      if customer.billing_entity_id == migration.organization.default_billing_entity&.id
+      code = customer.billing_entity&.code
+
+      if on_v1_default_billing_entity? && !shadow_organization.billing_entities.exists?(code:)
         shadow_organization.default_billing_entity&.code
       else
-        customer.billing_entity.code
+        code
       end
+    end
+
+    def on_v1_default_billing_entity?
+      customer.billing_entity_id == BillingEntity.active.where(organization_id: migration.organization_id).order(:created_at).pick(:id)
     end
 
     def shipping_address

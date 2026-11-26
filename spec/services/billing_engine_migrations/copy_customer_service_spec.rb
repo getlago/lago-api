@@ -48,7 +48,17 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
       shipping_zipcode: customer.shipping_zipcode,
       shipping_country: customer.shipping_country
     )
-    expect(result.customer.billing_entity).to eq(shadow_organization.default_billing_entity)
+    expect(result.customer.billing_entity.code).to eq(billing_entity.code)
+    expect(result.customer.billing_entity).not_to eq(shadow_organization.default_billing_entity)
+  end
+
+  context "when the shadow organization has no billing entity with the code of the V1 default" do
+    let(:shadow_entity_code) { "other_code" }
+
+    it "puts the shadow customer on the shadow default billing entity" do
+      expect(result).to be_success
+      expect(result.customer.billing_entity).to eq(shadow_organization.default_billing_entity)
+    end
   end
 
   context "when the customer is on another billing entity than the default one" do
@@ -199,6 +209,7 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
 
       expect(result).to be_failure
       expect(result.customer).to be_nil
+      expect(result.error.error_code).to eq("billing_entity_not_found")
     end
   end
 end
