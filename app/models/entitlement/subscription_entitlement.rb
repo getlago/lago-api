@@ -42,6 +42,11 @@ module Entitlement
       ).each { it.contract = contract }
     end
 
+    # The entitlement of one feature on a contract, nil when the feature does not apply to it.
+    def self.for_contract_feature(contract, feature)
+      for_contract(contract).find { it.entitlement_feature_id == feature.id }
+    end
+
     def to_h
       h = attributes
       h["privileges"] = (h["privileges"] || []).map(&:to_h).index_by { |p| p[:code] }

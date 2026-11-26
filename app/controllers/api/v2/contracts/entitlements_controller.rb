@@ -47,6 +47,21 @@ module Api
           end
         end
 
+        # Renders the entitlement after the removal of the value.
+        def destroy_privilege
+          result = ::Entitlement::SubscriptionFeaturePrivilegeRemoveService.call(
+            owner: contract,
+            feature_code: params[:code],
+            privilege_code: params[:privilege_code]
+          )
+
+          if result.success?
+            render_entitlement(result.entitlement)
+          else
+            render_error_response(result)
+          end
+        end
+
         private
 
         attr_reader :contract

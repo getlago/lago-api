@@ -2,6 +2,8 @@
 
 module Entitlement
   class FeatureDestroyService < BaseService
+    include Concerns::ContractRemovalsConcern
+
     Result = BaseResult[:feature]
 
     def initialize(feature:)
@@ -50,14 +52,13 @@ module Entitlement
 
     attr_reader :feature
 
-    # Only contract removals are discarded: subscription removals keep their existing behaviour.
     def discard_contract_removals
       now = Time.current
-      contract_removals = SubscriptionFeatureRemoval.where(organization_id: feature.organization_id).where.not(contract_id: nil)
+      removals = contract_removals(feature.organization_id)
 
-      contract_removals
+      removals
         .where(entitlement_feature_id: feature.id)
-        .or(contract_removals.where(entitlement_privilege_id: feature.privileges.select(:id)))
+        .or(removals.where(entitlement_privilege_id: feature.privileges.select(:id)))
         .update_all(deleted_at: now, updated_at: now) # rubocop:disable Rails/SkipsModelValidations
     end
   end

@@ -282,6 +282,13 @@ RSpec.describe "API v2 routing parity" do
     expect(recognized).to include(controller: "api/v2/customers/invoices", customer_external_id: "acme.eu")
   end
 
+  it "routes a contract privilege removal ahead of the greedy feature code" do
+    expect(Rails.application.routes.recognize_path("/api/v2/contracts/ct.eu/entitlements/seats.v2/privileges/max.admins", method: :delete))
+      .to eq(controller: "api/v2/contracts/entitlements", action: "destroy_privilege", external_id: "ct.eu", code: "seats.v2", privilege_code: "max.admins")
+    expect(Rails.application.routes.recognize_path("/api/v2/contracts/ct.eu/entitlements/seats.v2", method: :delete))
+      .to eq(controller: "api/v2/contracts/entitlements", action: "destroy", external_id: "ct.eu", code: "seats.v2")
+  end
+
   it "routes the customer invoice list to the v2 controller" do
     recognized = Rails.application.routes.recognize_path("/api/v2/customers/cus_1/invoices", method: :get)
 

@@ -71,7 +71,7 @@ module Entitlement
     # Read under the contract lock, so that of two concurrent removals the second one finds nothing.
     # A feature that does not apply to the contract (never granted or already removed) is not found.
     def find_contract_entitlement!
-      result.entitlement = SubscriptionEntitlement.for_contract(contract).find { it.entitlement_feature_id == feature.id }
+      result.entitlement = SubscriptionEntitlement.for_contract_feature(contract, feature)
       result.not_found_failure!(resource: "feature").raise_if_error! unless result.entitlement
     end
 

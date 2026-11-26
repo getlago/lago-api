@@ -64,6 +64,39 @@ RSpec.describe Entitlement::SubscriptionEntitlement do
     end
   end
 
+  describe ".for_contract_feature" do
+    let(:organization) { create(:organization) }
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:contract) { create(:contract, organization:, customer: create(:customer, organization:), catalog_plan:) }
+    let(:feature) { create(:feature, organization:) }
+    let(:other_feature) { create(:feature, organization:) }
+    let(:entitlement) { described_class.new(code: feature.code, entitlement_feature_id: feature.id) }
+    let(:other_entitlement) { described_class.new(code: other_feature.code, entitlement_feature_id: other_feature.id) }
+
+    before do
+      allow(Entitlement::SubscriptionEntitlementQuery).to receive(:call).with(
+        organization: contract.organization,
+        filters: {contract_id: contract.id, catalog_plan_id: catalog_plan.id}
+      ).and_return(entitlements)
+    end
+
+    context "when the contract has the feature" do
+      let(:entitlements) { [other_entitlement, entitlement] }
+
+      it "returns the entitlement of that feature" do
+        expect(described_class.for_contract_feature(contract, feature)).to eq(entitlement)
+      end
+    end
+
+    context "when the feature does not apply to the contract" do
+      let(:entitlements) { [other_entitlement] }
+
+      it "returns nil" do
+        expect(described_class.for_contract_feature(contract, feature)).to be_nil
+      end
+    end
+  end
+
   describe "#to_h" do
     it "returns a hash" do
       privilege = Entitlement::SubscriptionEntitlementPrivilege.new(code: "max")

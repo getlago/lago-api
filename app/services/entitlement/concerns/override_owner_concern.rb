@@ -28,6 +28,15 @@ module Entitlement
         end
       end
 
+      # A contract row without values over a feature that the catalog plan grants changes nothing: it is discarded.
+      # Subscriptions keep theirs, as v1 always did.
+      def discard_empty_contract_entitlement(owner, entitlement)
+        return unless override_owner_key(owner) == :contract
+        return if ::Entitlement::EntitlementValue.where(entitlement:).exists?
+
+        entitlement.discard!
+      end
+
       # update_all skips the callbacks, so it sets updated_at itself.
       def discarded_columns
         now = Time.current
