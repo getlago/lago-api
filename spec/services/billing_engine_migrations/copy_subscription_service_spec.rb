@@ -56,7 +56,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       .and change { shadow_organization.contracts.count }.by(1)
 
     shadow_customer = shadow_organization.customers.find_by!(external_id: customer.external_id)
-    expect(shadow_customer.billing_entity.code).to eq(customer.billing_entity.code)
+    expect(shadow_customer.billing_entity).to eq(shadow_organization.default_billing_entity)
 
     expect(result).to be_success
     expect(result.contract).to have_attributes(

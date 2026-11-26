@@ -70,9 +70,18 @@ module BillingEngineMigrations
     def customer_input
       input = customer.slice(*CUSTOMER_ATTRIBUTES).symbolize_keys.compact_blank
       input[:timezone] = customer.applicable_timezone
-      input[:billing_entity_code] = customer.billing_entity.code
+      input[:billing_entity_code] = shadow_billing_entity_code
       input[:shipping_address] = shipping_address if shipping_address.any?
       input
+    end
+
+    # Each organization's default billing entity has its own code, so the two defaults are matched to each other, not by code.
+    def shadow_billing_entity_code
+      if customer.billing_entity_id == migration.organization.default_billing_entity&.id
+        shadow_organization.default_billing_entity&.code
+      else
+        customer.billing_entity.code
+      end
     end
 
     def shipping_address

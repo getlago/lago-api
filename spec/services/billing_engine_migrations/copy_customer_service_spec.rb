@@ -48,7 +48,19 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
       shipping_zipcode: customer.shipping_zipcode,
       shipping_country: customer.shipping_country
     )
-    expect(result.customer.billing_entity.code).to eq(billing_entity.code)
+    expect(result.customer.billing_entity).to eq(shadow_organization.default_billing_entity)
+  end
+
+  context "when the customer is on another billing entity than the default one" do
+    let(:other_entity) { create(:billing_entity, organization:) }
+    let(:shadow_entity_code) { other_entity.code }
+    let(:customer) { create(:customer, organization:, billing_entity: other_entity) }
+
+    it "puts the shadow customer on the shadow billing entity with the same code" do
+      expect(result).to be_success
+      expect(result.customer.billing_entity.code).to eq(other_entity.code)
+      expect(result.customer.billing_entity).not_to eq(shadow_organization.default_billing_entity)
+    end
   end
 
   context "when the customer has a payment provider, metadata and taxes" do
@@ -180,6 +192,7 @@ RSpec.describe BillingEngineMigrations::CopyCustomerService do
 
   context "when the shadow organization has no billing entity with the code of the customer" do
     let(:shadow_entity_code) { "unknown_entity" }
+    let(:customer) { create(:customer, organization:, billing_entity: create(:billing_entity, organization:)) }
 
     it "returns the failure and creates nothing" do
       expect { result }.not_to change { shadow_organization.customers.count }
