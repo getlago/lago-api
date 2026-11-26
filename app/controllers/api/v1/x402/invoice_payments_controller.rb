@@ -3,13 +3,18 @@
 module Api
   module V1
     module X402
-      # Not `X402::BaseController`: the payer has no API key, the token in the path authorizes the call.
-      class InvoicePaymentsController < ::ApplicationController
-        include Api::V1Errors
+      # The payer has no API key: the token in the path authorizes the call, and the invoice gives the
+      # organization that the callbacks below the lookup need.
+      class InvoicePaymentsController < Api::V1::BaseController
+        skip_before_action :authenticate, :refuse_inactive_organization, :set_context_source, :track_api_key_usage,
+          :authorize, :set_tracing_information
+        skip_around_action :produce_api_log
 
-        before_action { NullByteGuard.sanitize_params!(request, params) }
         before_action :find_invoice
+        before_action :refuse_inactive_organization
         before_action :ensure_x402_payments_enabled
+        before_action :set_tracing_information
+        around_action :produce_api_log, if: :produce_api_log?
 
         INVOICE_REFUSALS = %w[invoice_currency_not_supported wallet_not_x402_enabled].freeze
 
@@ -36,12 +41,13 @@ module Api
 
         def find_invoice
           @invoice = Invoice.find_by!(x402_payment_token: params[:token])
+          @current_organization = invoice.organization
         rescue ActiveRecord::RecordNotFound
           not_found_error(resource: "invoice")
         end
 
         def ensure_x402_payments_enabled
-          forbidden_error(code: "feature_unavailable") unless invoice.organization.x402_payments_enabled?
+          forbidden_error(code: "feature_unavailable") unless current_organization.x402_payments_enabled?
         end
 
         def payment_header
