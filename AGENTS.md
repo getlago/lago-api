@@ -140,6 +140,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - A webhook or serializer spec compares the whole serialized object with `eq`, with an explicit value per field. The `creates webhook` shared example only checks the keys it is given, so a missing or renamed field still passes.
 - An expected value computed by hand (proration, weighted sum, tiers) shows its derivation: write the arithmetic, or the literal with the arithmetic in a comment, and name where each term comes from (`eq((1000 + 7 + 20 * 18.fdiv(28)).ceil(5)) # snapshot + late event + 11 Feb event over 18 of 28 days`).
 - A run counts only when its summary shows the expected number of examples and no "errors occurred outside of examples": a spec file that fails to load is left out of the count. Run new spec files on their own first.
+- When a migration spec recreates a column or PostgreSQL type, reset the affected model's column information in an `after` hook so later examples do not reuse stale prepared statements.
 - Helpers:
   - REST: `get_with_token(organization, path, params)` (also `post_`, `put_`, `delete_`), `json` for the parsed body, `expect(response).to be_not_found_error("alert")` (`be_v2_not_found_error` on a native v2 endpoint), `include_examples "requires API permission", "alert", "write"`.
   - GraphQL: `execute_graphql(current_user:, current_organization:, permissions:, query:, variables:)`, `it_behaves_like "requires current user"`, `"requires current organization"` and `"requires permission", "alerts:create"`.
