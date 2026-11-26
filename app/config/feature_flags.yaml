@@ -105,3 +105,7 @@ contract_alerts:
 agent_storefront:
   description: "Enable the Agent Storefront: storefront connections, agent signup, enrollment, gate checks, funding and claims"
   owners: ["@anassg-lago"]
+
+entitlement_events:
+  description: "Send per-entitlement activity logs and webhooks (plan_entitlement.*, contract_entitlement.*) for catalog plans and contracts"
+  owners: ["@groyoh"]

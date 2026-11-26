@@ -98,6 +98,7 @@ RSpec.configure do |config|
   config.include XMLHelper
   config.include AdvisoryLockHelper
   config.include EmailLockHelper
+  config.include EntitlementHelper
   config.include RecaptchaHelper
   config.include SqlCaptureHelper
   config.include LockWaitHelper

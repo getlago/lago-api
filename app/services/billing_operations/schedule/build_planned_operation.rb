@@ -8,7 +8,9 @@ module BillingOperations
 
       # `cycle_started_at` identifies the cycle the operation bills. `billing_at` is when the
       # operation runs: the obligation's periodic billing instant (see Billing::Obligation).
-      PlannedOperation = Data.define(:cycle_started_at, :billing_at)
+      PlannedOperation = Data.define(:obligation, :billing_at) do
+        def cycle_started_at = obligation.cycle.started_at
+      end
 
       # Two ways to plan, and exactly one must be given:
       # - `at:` when nothing was billed yet from that instant (activation, clock reset, rate
@@ -33,7 +35,7 @@ module BillingOperations
 
         if obligation
           result.planned_operation = PlannedOperation.new(
-            cycle_started_at: obligation.cycle.started_at,
+            obligation:,
             billing_at: after_operation ? operation_billing_at(obligation) : obligation.billing_at
           )
         end
