@@ -50,7 +50,7 @@ module Entitlement
         subscription.lock!("FOR NO KEY UPDATE")
       end
 
-      # Locks a contract and re-reads its status: only a pending or active contract takes entitlement writes.
+      # Locks a contract and re-reads its status: only a live contract (draft, pending or active) takes entitlement writes.
       def lock_contract!(contract)
         contract.lock!("FOR NO KEY UPDATE")
         return if Contract::LIVE_STATUSES.include?(contract.status)
