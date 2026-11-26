@@ -3258,7 +3258,8 @@ CREATE TABLE public.billing_operation_segments (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     proration_ratio numeric(30,10) NOT NULL,
-    CONSTRAINT billing_operation_segments_positive_coverage CHECK ((ended_at > started_at))
+    CONSTRAINT billing_operation_segments_positive_coverage CHECK ((ended_at > started_at)),
+    CONSTRAINT billing_operation_segments_proration_ratio_bounds CHECK (((proration_ratio >= (0)::numeric) AND (proration_ratio <= (1)::numeric)))
 );
 
 
