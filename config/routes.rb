@@ -179,11 +179,6 @@ Rails.application.routes.draw do
     post "moneyhash/:organization_id", to: "webhooks#moneyhash", on: :collection, as: :moneyhash
   end
 
-  namespace :x402 do
-    get "invoice_payments/:token", to: "invoice_payments#show", as: :invoice_payment
-    post "invoice_payments/:token", to: "invoice_payments#create"
-  end
-
   # The only admin route outside local environments, drawn when self-serve is on and its key is set; anything else
   # falls through to the 404 below, so self-hosted installs never expose it.
   post "admin/organizations/:id/activate",

@@ -163,6 +163,8 @@ resources :agent_storefronts, param: :code, code: /.*/, only: %i[index show crea
 namespace :x402 do
   resources :gate_checks, only: :create
   resources :credit_purchases, only: :create
+  get "invoice_payments/:token", to: "invoice_payments#show", as: :invoice_payment
+  post "invoice_payments/:token", to: "invoice_payments#create"
 end
 
 namespace :agents do

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe X402::InvoicePaymentsController, :premium do
+describe Api::V1::X402::InvoicePaymentsController, :premium do
   include_context "with an x402 payment"
 
   let(:organization) { create(:organization, feature_flags: ["x402_payments"]) }
@@ -21,8 +21,8 @@ describe X402::InvoicePaymentsController, :premium do
     invoice
   end
 
-  describe "GET /x402/invoice_payments/:token" do
-    subject { get("/x402/invoice_payments/#{token}") }
+  describe "GET /api/v1/x402/invoice_payments/:token" do
+    subject { get("/api/v1/x402/invoice_payments/#{token}") }
 
     it "answers 402" do
       subject
@@ -47,7 +47,7 @@ describe X402::InvoicePaymentsController, :premium do
     end
 
     context "with an unknown token" do
-      subject { get("/x402/invoice_payments/#{"cd" * 32}") }
+      subject { get("/api/v1/x402/invoice_payments/#{"cd" * 32}") }
 
       it "answers 404" do
         subject
@@ -57,8 +57,18 @@ describe X402::InvoicePaymentsController, :premium do
       end
     end
 
+    context "with a per_page query parameter" do
+      subject { get("/api/v1/x402/invoice_payments/#{token}", params: {per_page: 1}) }
+
+      it "answers 402" do
+        subject
+
+        expect(response).to have_http_status(:payment_required)
+      end
+    end
+
     context "with a null byte in the token" do
-      subject { get("/x402/invoice_payments/ab%00cd") }
+      subject { get("/api/v1/x402/invoice_payments/ab%00cd") }
 
       it "answers 404" do
         subject
@@ -218,8 +228,8 @@ describe X402::InvoicePaymentsController, :premium do
     end
   end
 
-  describe "POST /x402/invoice_payments/:token" do
-    subject { post("/x402/invoice_payments/#{token}") }
+  describe "POST /api/v1/x402/invoice_payments/:token" do
+    subject { post("/api/v1/x402/invoice_payments/#{token}") }
 
     it "challenges like a GET" do
       subject
@@ -227,10 +237,75 @@ describe X402::InvoicePaymentsController, :premium do
       expect(response).to have_http_status(:payment_required)
       expect(payment_required["accepts"].size).to eq(2)
     end
+
+    context "when the API log is produced", :capture_kafka_messages do
+      include_context "with API log infrastructure"
+
+      it "logs the call under the invoice's organization" do
+        subject
+
+        expect(api_log_payload).to include(
+          "organization_id" => organization.id,
+          "api_key_id" => nil,
+          "request_path" => "/api/v1/x402/invoice_payments/#{token}",
+          "http_status" => 402
+        )
+      end
+
+      it "masks the token in the logged parameters" do
+        subject
+
+        expect(api_log_payload["request_body"]).to eq("token" => "[FILTERED]")
+      end
+
+      context "with an unknown token" do
+        subject { post("/api/v1/x402/invoice_payments/#{"cd" * 32}") }
+
+        before { allow(Rails.logger).to receive(:error).and_call_original }
+
+        it "logs nothing" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+          expect(kafka_messages.select { it[:topic] == kafka_api_logs_topic }).to be_empty
+          expect(Rails.logger).not_to have_received(:error).with(/Failed to produce API log/)
+        end
+      end
+    end
+
+    context "with a member in the organization" do
+      let(:membership) { create(:membership, organization:) }
+
+      before do
+        membership
+        allow(CurrentContext).to receive(:membership=).and_call_original
+      end
+
+      it "traces the call to the organization's first membership" do
+        subject
+
+        expect(CurrentContext).to have_received(:membership=).with("membership/#{membership.id}")
+      end
+    end
+
+    context "with an organization waiting for a payment method", cache: :memory do
+      include_context "with self-serve enabled"
+
+      let(:organization) do
+        create(:organization, :self_serve, activation_status: "pending_payment_method", feature_flags: ["x402_payments"])
+      end
+
+      it "refuses the call" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(status: 403, error: "Forbidden", code: "organization_inactive")
+      end
+    end
   end
 
-  describe "POST /x402/invoice_payments/:token with a payment" do
-    subject { post("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+  describe "POST /api/v1/x402/invoice_payments/:token with a payment" do
+    subject { post("/api/v1/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
 
     let(:x402_evm_requirements) { super().merge("amount" => "1050000") }
     let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "1050000"}}) }
@@ -281,7 +356,7 @@ describe X402::InvoicePaymentsController, :premium do
     end
 
     context "with a GET" do
-      subject { get("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+      subject { get("/api/v1/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
 
       it "answers 405 pointing at POST" do
         subject
@@ -299,7 +374,7 @@ describe X402::InvoicePaymentsController, :premium do
     end
 
     context "with a resent payment" do
-      before { post("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+      before { post("/api/v1/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
 
       it "answers the same receipt" do
         subject
