@@ -12,6 +12,7 @@ RSpec.describe Contracts::CurrentUsageService do
   let(:timestamp) { Time.zone.parse("2027-02-10 12:00:00") }
   let(:apply_taxes) { false }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
+  let(:early_event_properties) { {} }
   let(:product) { create(:product, :metered, organization:, billable_metric:) }
   let(:billing_timing) { :arrears }
   let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:, currency: "EUR") }
@@ -31,7 +32,7 @@ RSpec.describe Contracts::CurrentUsageService do
     rate
     [Time.zone.parse("2027-01-10"), Time.zone.parse("2027-02-05")].each do |event_timestamp|
       create(:event, organization:, customer:, external_subscription_id: contract.external_id,
-        code: billable_metric.code, timestamp: event_timestamp)
+        code: billable_metric.code, timestamp: event_timestamp, properties: early_event_properties)
     end
   end
 
@@ -67,19 +68,22 @@ RSpec.describe Contracts::CurrentUsageService do
   ContractRateCard::BILLING_SCOPES.each_value do |scope|
     context "with #{scope} billing and a mid-cycle rate change" do
       let(:timestamp) { Time.zone.parse("2027-02-15 12:00:00") }
+      let(:rate_change_at) { Time.zone.parse("2027-02-15") }
+      let(:late_event_at) { rate_change_at + 1.hour }
+      let(:late_event_properties) { {} }
       let(:contract_rate_card) do
         create(:contract_rate_card, organization:, contract:, rate_card:, units:, billing_scope: scope,
           effective_date:, billing_anchor_date: Date.new(2027, 1, 1))
       end
       let(:new_rate) do
-        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-15"),
+        create(:rate_card_rate, organization:, rate_card:, effective_from: rate_change_at,
           rate_properties: {"amount" => "5"})
       end
 
       before do
         new_rate
         create(:event, organization:, customer:, external_subscription_id: contract.external_id,
-          code: billable_metric.code, timestamp: Time.zone.parse("2027-02-15 01:00:00"))
+          code: billable_metric.code, timestamp: late_event_at, properties: late_event_properties)
       end
 
       it "prices the selected obligation in one usage entry" do
@@ -241,6 +245,95 @@ RSpec.describe Contracts::CurrentUsageService do
             expect(usage.fees.map { |fee| [fee.events_count, fee.amount_cents, fee.taxes_amount_cents] }).to eq(
               cycle ? [[1, 200, 40], [2, 1000, 200], [1, 800, 160]] : [[1, 800, 160]]
             )
+          end
+        end
+      end
+
+      if scope == ContractRateCard::BILLING_SCOPES.fetch(:cycle)
+        context "with events at the rate change and cycle end" do
+          let(:cycle_end) { Time.zone.parse("2027-03-01") }
+          let(:timestamp) { BillingSegment.inclusive_end(cycle_end) }
+          let(:late_event_at) { rate_change_at }
+
+          before do
+            create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+              code: billable_metric.code, timestamp: cycle_end)
+          end
+
+          it "assigns each boundary event to the segment that starts there" do
+            february_usage = result.rate_card_usages.sole
+            march_result = described_class.call!(contract:, timestamp: cycle_end, apply_taxes:, filters:)
+            march_usage = march_result.rate_card_usages.sole
+
+            expect(february_usage).to have_attributes(
+              started_at: Time.zone.parse("2027-02-01"), ended_at: timestamp, units: 2, events_count: 2
+            )
+            expect(february_usage.segments.map { [it.rate_properties, it.units, it.events_count, it.amount_cents] }).to eq(
+              [[rate.properties, 1, 1, 200], [new_rate.properties, 1, 1, 500]]
+            ) # Feb 5 at €2; Feb 15 at €5; the Mar 1 event is excluded.
+            expect(result).to have_attributes(amount_cents: 200 + 500, taxes_amount_cents: 0, total_amount_cents: 200 + 500)
+
+            expect(march_usage.segments.sole).to have_attributes(
+              started_at: cycle_end, rate_properties: new_rate.properties, units: 1, events_count: 1, amount_cents: 500
+            ) # Only the Mar 1 event, at the €5 rate.
+            expect(march_result).to have_attributes(amount_cents: 500, taxes_amount_cents: 0, total_amount_cents: 500)
+          end
+        end
+
+        [
+          [:sum_billable_metric, [3, 4], [3, 4]],
+          [:max_billable_metric, [7, 9], [7, 9]],
+          [:unique_count_billable_metric, %w[Alice Alice], [1, 1]]
+        ].each do |metric_factory, values, segment_units|
+          context "with a nonrecurring #{metric_factory.to_s.delete_suffix("_billable_metric")} metric" do
+            let(:billable_metric) { create(metric_factory, organization:, recurring: false) }
+            let(:early_event_properties) { {item_id: values.first} }
+            let(:late_event_properties) { {item_id: values.last} }
+
+            it "sums the priced segments' units, not a whole-cycle aggregation" do
+              usage = result.rate_card_usages.sole
+              old_units, new_units = segment_units
+              old_amount = old_units * 200
+              new_amount = new_units * 500
+
+              expect(usage.segments.map { [it.rate_properties, it.units, it.events_count, it.amount_cents] }).to eq(
+                [[rate.properties, old_units, 1, old_amount], [new_rate.properties, new_units, 1, new_amount]]
+              )
+              expect(usage.segments.map { it.fees.size }).to eq([1, 1])
+              expect(usage).to have_attributes(units: old_units + new_units, events_count: 2, amount_cents: old_amount + new_amount)
+              expect(result).to have_attributes(
+                amount_cents: old_amount + new_amount, taxes_amount_cents: 0, total_amount_cents: old_amount + new_amount
+              )
+            end
+          end
+        end
+
+        context "with a New York customer" do
+          let(:customer) { create(:customer, organization:, timezone: "America/New_York", currency: "EUR") }
+          let(:timestamp) { Time.utc(2027, 3, 1, 4, 59) } # Still February locally.
+          let(:rate_change_at) { Time.utc(2027, 2, 15) } # Feb 14 at 19:00 EST.
+          let(:late_event_at) { rate_change_at }
+
+          before do
+            create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+              code: billable_metric.code, timestamp: rate_change_at - 1.second)
+          end
+
+          it "uses the local cycle window and splits events at the persisted rate-change instant" do
+            expect(new_rate.effective_from).to eq(rate_change_at)
+
+            usage = result.rate_card_usages.sole
+            cycle_start = Time.utc(2027, 2, 1, 5)
+            cycle_end = BillingSegment.inclusive_end(Time.utc(2027, 3, 1, 5))
+
+            expect(usage).to have_attributes(started_at: cycle_start, ended_at: cycle_end, units: 3, events_count: 3)
+            expect(usage.segments.map { [it.started_at, it.ended_at] }).to eq(
+              [[cycle_start, BillingSegment.inclusive_end(rate_change_at)], [rate_change_at, cycle_end]]
+            )
+            expect(usage.segments.map { [it.rate_properties, it.units, it.events_count, it.amount_cents] }).to eq(
+              [[rate.properties, 2, 2, 2 * 200], [new_rate.properties, 1, 1, 500]]
+            ) # Feb 5 and one second before the change at €2 each; the boundary event at €5.
+            expect(result).to have_attributes(amount_cents: 2 * 200 + 500, taxes_amount_cents: 0, total_amount_cents: 2 * 200 + 500)
           end
         end
       end

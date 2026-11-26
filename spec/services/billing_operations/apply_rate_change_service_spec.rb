@@ -85,6 +85,37 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       expect(bill(Time.utc(2026, 12, 1))).to be_empty
       expect(contract_rate_card.fees.count).to eq(2)
     end
+
+    context "when a historical rate is inserted after the cycle was closed", billing_time: Time.utc(2026, 12, 5) do
+      let(:closed_invoice) do
+        travel_to(Time.utc(2026, 12, 1))
+        invoice = bill(Time.current).sole
+        travel_to(Time.utc(2026, 12, 5))
+        invoice
+      end
+      # Legacy/imported rows can bypass the API's rejection of backdated rates.
+      let(:new_rate) do
+        closed_invoice
+        super()
+      end
+
+      it "keeps the completed invoice and operation unchanged and continues with the next cycle" do
+        invoice_attributes = closed_invoice.attributes
+        fee_attributes = closed_invoice.fees.order(:id).map(&:attributes)
+        completed_operation = closed_invoice.billing_operations.sole
+        operation_attributes = completed_operation.attributes
+        expect(closed_invoice.total_amount_cents).to eq(3000) # $30 for the full November cycle before the historical rate existed.
+
+        expect { result }.not_to change(BillingOperation, :count)
+        expect(result).to be_success
+        expect(closed_invoice.reload.attributes).to eq(invoice_attributes)
+        expect(closed_invoice.fees.order(:id).map(&:attributes)).to eq(fee_attributes)
+        expect(completed_operation.reload.attributes).to eq(operation_attributes)
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2027, 1, 1))
+        expect(bill(Time.current)).to be_empty
+        expect(customer.invoices.pluck(:id)).to eq([closed_invoice.id])
+      end
+    end
   end
 
   context "when the rate starts on the boundary of the close still owed" do
