@@ -34,6 +34,7 @@ module X402
           ::Customers::CreateService.call!(
             organization_id: organization.id,
             external_id:,
+            name: X402::Network.normalize_address(address, family:),
             x402_agent_address: address,
             finalize_zero_amount_invoice: :skip,
             exclude_from_dunning_campaign: true
