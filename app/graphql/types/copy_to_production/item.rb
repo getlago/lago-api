@@ -16,11 +16,11 @@ module Types
       end
 
       def code
-        object.record.try(:code)
+        object.record.code
       end
 
       def name
-        object.record.try(:name)
+        object.record.name
       end
     end
   end
