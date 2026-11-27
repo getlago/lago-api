@@ -24,6 +24,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
   let(:subscription_at) { Time.zone.parse("2025-03-15 02:00:00") }
   let(:ending_at) { nil }
   let(:shadow_entity_code) { customer.billing_entity.code }
+  let(:plan_mapping) { {plan.code => catalog_plan.code} }
 
   let(:migration) do
     create(
@@ -31,7 +32,7 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       organization:,
       shadow_organization:,
       status:,
-      plan_mapping: {plan.code => catalog_plan.code}
+      plan_mapping:
     )
   end
 
@@ -488,6 +489,320 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
         a_string_including("cannot create customer", "subscription #{subscription.external_id}")
       )
     end
+  end
+
+  context "when the subscription is terminated with a live shadow contract" do
+    let(:terminated_at) { 1.hour.ago.change(usec: 0) }
+    let(:subscription) { create(:subscription, :terminated, organization:, customer:, plan:, terminated_at:) }
+    let(:contract) { create_shadow_contract(code: subscription.id) }
+
+    before { contract }
+
+    it "terminates the contract when the subscription was terminated" do
+      expect(result).to be_success
+      expect(contract.reload).to have_attributes(status: "terminated", terminated_at:)
+    end
+
+    context "when the contract was terminated concurrently" do
+      before do
+        allow(Contracts::TerminateService).to receive(:call).and_return(
+          BaseService::Result.new.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
+        )
+      end
+
+      it "succeeds" do
+        expect(result).to be_success
+      end
+    end
+
+    context "when the contract cannot be terminated" do
+      before do
+        allow(Rails.logger).to receive(:warn)
+        allow(Contracts::TerminateService).to receive(:call).and_return(
+          BaseService::Result.new.lock_acquisition_failure!(message: "locked")
+        )
+      end
+
+      it "logs the failure and returns it" do
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+        expect(Rails.logger).to have_received(:warn).with(
+          a_string_including("cannot terminate contract #{subscription.id}", "subscription #{subscription.external_id}")
+        )
+      end
+    end
+  end
+
+  context "when the subscription was loaded as active before its termination committed" do
+    let(:terminated_at) { 1.hour.ago.change(usec: 0) }
+
+    before { Subscription.find(subscription.id).update!(status: :terminated, terminated_at:) }
+
+    it "does not create a contract from the stale copy" do
+      expect { result }.not_to change { shadow_organization.contracts.count }
+
+      expect(result).to be_success
+      expect(subscription).to be_terminated
+    end
+
+    context "when the subscription already has a live shadow contract" do
+      let(:contract) { create_shadow_contract(code: subscription.id) }
+
+      before { contract }
+
+      it "terminates the contract" do
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(status: "terminated", terminated_at:)
+      end
+    end
+  end
+
+  context "when the plan and the customer are preloaded" do
+    let(:preloaded_subscription) { Subscription.preload(:plan, :customer).find(subscription.id) }
+
+    it "keeps the preloaded records through the reload" do
+      preloaded_plan = preloaded_subscription.plan
+      preloaded_customer = preloaded_subscription.customer
+
+      expect(described_class.call(migration:, subscription: preloaded_subscription)).to be_success
+      expect(preloaded_subscription.plan).to be(preloaded_plan)
+      expect(preloaded_subscription.customer).to be(preloaded_customer)
+    end
+
+    context "when the plan changed after the preload" do
+      let(:override_plan) { create(:plan, organization:, code: plan.code, parent: plan) }
+
+      before do
+        preloaded_subscription
+        Subscription.find(subscription.id).update!(plan: override_plan)
+      end
+
+      it "copies from the current plan" do
+        expect { described_class.call(migration:, subscription: preloaded_subscription) }
+          .not_to change { shadow_organization.contracts.count }
+
+        expect(preloaded_subscription.plan).to eq(override_plan)
+      end
+    end
+  end
+
+  context "when the copy runs" do
+    let(:previous_subscription) do
+      create(:subscription, :terminated, organization:, customer:, plan:, external_id: subscription.external_id)
+    end
+
+    it "writes the contract while holding the copy lock of every subscription of the external id" do
+      previous_copy_lock = BillingEngineMigrations::SubscriptionCopyLockService.new(subscription: previous_subscription)
+      allow(Contracts::CreateService).to receive(:call).and_wrap_original do |original, **args|
+        expect(previous_copy_lock).to be_locked
+        original.call(**args)
+      end
+
+      expect(result).to be_success
+      expect(Contracts::CreateService).to have_received(:call)
+      expect(previous_copy_lock).not_to be_locked
+    end
+  end
+
+  context "when a live contract with the external id has the id of a terminated subscription of another organization" do
+    let(:foreign_subscription) { create(:subscription, :terminated) }
+    let(:contract) { create_shadow_contract(code: foreign_subscription.id) }
+
+    before do
+      contract
+      allow(Rails.logger).to receive(:info)
+    end
+
+    it "leaves the contract live and skips the subscription" do
+      expect(result).to be_success
+      expect(contract.reload.status).to eq("active")
+      expect(Rails.logger).to have_received(:info).with(a_string_including("external_id_taken_by_other_subscription"))
+    end
+  end
+
+  context "when the subscription is terminated and its shadow contract already ended" do
+    let(:subscription) { create(:subscription, :terminated, organization:, customer:, plan:) }
+
+    before { create_shadow_contract(code: subscription.id, status: :terminated, terminated_at: Time.current) }
+
+    it "does nothing" do
+      allow(Contracts::TerminateService).to receive(:call)
+
+      expect(result).to be_success
+      expect(Contracts::TerminateService).not_to have_received(:call)
+    end
+  end
+
+  context "when a pending subscription is canceled with a pending shadow contract" do
+    let(:subscription) { create(:subscription, :canceled, organization:, customer:, plan:) }
+    let(:contract) { create_shadow_contract(code: subscription.id, status: :pending, started_at: 1.day.from_now) }
+
+    before { contract }
+
+    it "cancels the contract" do
+      expect(result).to be_success
+      expect(contract.reload.status).to eq("canceled")
+    end
+  end
+
+  context "when the plan of an active subscription is no longer mapped" do
+    let(:plan_mapping) { {"other_plan" => catalog_plan.code} }
+    let(:contract) { create_shadow_contract(code: subscription.id) }
+
+    before { contract }
+
+    it "terminates its shadow contract" do
+      freeze_time do
+        expect(result).to be_success
+        expect(contract.reload).to have_attributes(status: "terminated", terminated_at: Time.current)
+      end
+    end
+  end
+
+  context "when the subscription replaces a terminated one with the same external id" do
+    let(:terminated_at) { 1.hour.ago.change(usec: 0) }
+    let(:previous_subscription) do
+      create(
+        :subscription,
+        :terminated,
+        organization:,
+        customer:,
+        plan: previous_plan,
+        external_id: subscription.external_id,
+        terminated_at:
+      )
+    end
+    let(:previous_plan) { create(:plan, organization:) }
+    let(:previous_contract) { create_shadow_contract(code: previous_subscription.id) }
+
+    before { previous_contract }
+
+    it "terminates the previous contract and creates the new one" do
+      expect(result).to be_success
+      expect(previous_contract.reload).to have_attributes(status: "terminated", terminated_at:)
+      expect(shadow_organization.contracts.live.where(external_id: subscription.external_id))
+        .to contain_exactly(have_attributes(code: subscription.id, catalog_plan:))
+    end
+
+    context "when the new subscription runs on an override of a mapped plan" do
+      let(:override_plan) { create(:plan, organization:, code: plan.code, parent: plan) }
+      let(:subscription) { create(:subscription, organization:, customer:, plan: override_plan, started_at:, subscription_at:) }
+
+      before { allow(Rails.logger).to receive(:info) }
+
+      it "terminates the previous contract without creating one" do
+        expect(result).to be_success
+        expect(previous_contract.reload.status).to eq("terminated")
+        expect(shadow_organization.contracts.live.where(external_id: subscription.external_id)).to be_empty
+        expect(Rails.logger).to have_received(:info).with(a_string_including("plan_override_not_supported"))
+      end
+    end
+
+    context "when the previous subscription was canceled before it started" do
+      let(:previous_subscription) do
+        create(:subscription, :canceled, organization:, customer:, plan: previous_plan, external_id: subscription.external_id)
+      end
+
+      it "terminates the previous contract now" do
+        freeze_time do
+          expect(result).to be_success
+          expect(previous_subscription.terminated_at).to be_nil
+          expect(previous_contract.reload).to have_attributes(status: "terminated", terminated_at: Time.current)
+        end
+      end
+    end
+
+    context "when the previous contract cannot be terminated" do
+      before do
+        allow(Rails.logger).to receive(:warn)
+        allow(Contracts::TerminateService).to receive(:call).and_return(
+          BaseService::Result.new.lock_acquisition_failure!(message: "locked")
+        )
+      end
+
+      it "returns the failure without creating the new contract" do
+        expect { result }.not_to change { shadow_organization.contracts.count }
+
+        expect(result).to be_failure
+        expect(Rails.logger).to have_received(:warn).with(a_string_including("cannot terminate contract #{previous_subscription.id}"))
+      end
+    end
+  end
+
+  context "when the subscription end date changes after it was copied" do
+    let(:ending_at) { Time.zone.parse("2099-01-01 12:00:00.654321") }
+    let(:contract_ended_at) { nil }
+    let(:contract) { create_shadow_contract(code: subscription.id, ended_at: contract_ended_at) }
+
+    before do
+      contract
+      allow(Contracts::UpdateService).to receive(:call).and_call_original
+    end
+
+    it "moves the end date of the contract" do
+      expect(result).to be_success
+      expect(result.contract).to eq(contract)
+      expect(contract.reload.ended_at).to eq(ending_at)
+    end
+
+    context "when the subscription end date is removed" do
+      let(:ending_at) { nil }
+      let(:contract_ended_at) { Time.zone.parse("2099-01-01 12:00:00") }
+
+      it "removes the end date of the contract" do
+        expect(result).to be_success
+        expect(contract.reload.ended_at).to be_nil
+      end
+    end
+
+    context "when the contract already has the end date" do
+      let(:contract_ended_at) { ending_at }
+
+      it "does not update the contract" do
+        expect(result).to be_success
+        expect(Contracts::UpdateService).not_to have_received(:call)
+      end
+    end
+
+    context "when the subscription moved to an override of its plan" do
+      let(:override_plan) { create(:plan, organization:, code: plan.code, parent: plan) }
+
+      before { subscription.update!(plan: override_plan) }
+
+      it "still moves the end date of the contract" do
+        expect(result).to be_success
+        expect(contract.reload.ended_at).to eq(ending_at)
+      end
+    end
+
+    context "when the contract cannot be updated" do
+      before do
+        allow(Rails.logger).to receive(:warn)
+        allow(Contracts::UpdateService).to receive(:call).and_return(
+          BaseService::Result.new.single_validation_failure!(field: :contract, error_code: "contract_locked")
+        )
+      end
+
+      it "logs the failure and returns it" do
+        expect(result).to be_failure
+        expect(Rails.logger).to have_received(:warn).with(a_string_including("cannot update contract"))
+      end
+    end
+  end
+
+  def create_shadow_contract(code:, started_at: 1.month.ago, **attributes)
+    shadow_customer = shadow_organization.customers.find_by(external_id: customer.external_id) ||
+      create(:customer, organization: shadow_organization, external_id: customer.external_id)
+
+    create(
+      :contract,
+      organization: shadow_organization,
+      customer: shadow_customer,
+      external_id: subscription.external_id,
+      code:,
+      started_at:,
+      **attributes
+    )
   end
 
   def create_concurrent_contract(code:)
