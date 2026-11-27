@@ -40,7 +40,7 @@ class Tax < ApplicationRecord
   belongs_to :organization
 
   validates :name, :rate, presence: true
-  validates :code, presence: true, uniqueness: {scope: :organization_id}
+  validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
 
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
   scope :applied_to_billing_entity, ->(billing_entity) {

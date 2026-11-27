@@ -67,6 +67,8 @@ module Coupons
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, "index_coupons_on_organization_id_and_code" => :code)
     end
 
     private

@@ -54,6 +54,34 @@ RSpec.describe Coupons::UpdateService do
       expect(SendWebhookJob).to have_been_enqueued.with("coupon.updated", result.coupon)
     end
 
+    context "when a concurrent update took the code" do
+      let(:constraint) { "index_coupons_on_organization_id_and_code" }
+      let(:database_result) { instance_double(PG::Result, error_field: constraint) }
+      let(:database_error) { PG::UniqueViolation.new("duplicate value") }
+      let(:write_error) { ActiveRecord::RecordNotUnique.new("duplicate value") }
+
+      before do
+        allow(database_error).to receive(:result).and_return(database_result)
+        allow(coupon).to receive(:save!) { raise write_error, cause: database_error }
+      end
+
+      it "returns value_already_exist on code" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(code: ["value_already_exist"])
+      end
+
+      context "with another constraint" do
+        let(:constraint) { "coupons_pkey" }
+
+        it "raises the database error" do
+          expect { update_service.call }.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+      end
+    end
+
     context "with validation error" do
       let(:name) { nil }
 

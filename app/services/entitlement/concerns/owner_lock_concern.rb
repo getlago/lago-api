@@ -8,6 +8,7 @@ module Entitlement
 
       PLAN_UNIQUE_INDEXES = {
         "idx_unique_feature_per_plan" => :feature,
+        "idx_unique_feature_per_catalog_plan" => :feature,
         "idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a" => :privilege
       }.freeze
 
