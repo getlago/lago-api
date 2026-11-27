@@ -18,7 +18,8 @@ module DunningCampaigns
       ActiveRecord::Base.transaction do
         dunning_campaign.reset_customers_last_attempt
         dunning_campaign.discard!
-        dunning_campaign.thresholds.update_all(deleted_at: Time.current, updated_at: Time.current)
+        deleted_at = Time.current
+        dunning_campaign.thresholds.update_all(deleted_at:, updated_at: deleted_at)
         dunning_campaign.customers.update_all(applied_dunning_campaign_id: nil, updated_at: Time.current)
         dunning_campaign.billing_entities.update_all(applied_dunning_campaign_id: nil, updated_at: Time.current)
       end
