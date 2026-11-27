@@ -21,6 +21,24 @@ RSpec.describe PaymentProviders::Flutterwave::HandleEventJob do
     end
   end
 
+  PaymentProviders::FlutterwaveProvider::TRANSIENT_ERRORS.each do |error_class|
+    context "when the service raises #{error_class}" do
+      let(:error) do
+        (error_class == LagoHttpClient::HttpError) ? error_class.new(503, "", "https://api.flutterwave.com") : error_class.new
+      end
+
+      before do
+        allow(PaymentProviders::Flutterwave::HandleEventService).to receive(:call!).and_raise(error)
+      end
+
+      it "retries the job instead of dying" do
+        expect do
+          described_class.perform_now(organization:, event: event_json)
+        end.to have_enqueued_job(described_class)
+      end
+    end
+  end
+
   describe "queue configuration" do
     context "when SIDEKIQ_PAYMENTS is true" do
       before { ENV["SIDEKIQ_PAYMENTS"] = "true" }

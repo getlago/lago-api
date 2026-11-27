@@ -22,6 +22,8 @@ module PaymentProviders
 
         begin
           service_class.call!(organization_id: organization.id, event_json:)
+        rescue *PaymentProviders::FlutterwaveProvider::TRANSIENT_ERRORS
+          raise
         rescue => e
           Rails.logger.error("Flutterwave event processing error: #{e.message}")
         end

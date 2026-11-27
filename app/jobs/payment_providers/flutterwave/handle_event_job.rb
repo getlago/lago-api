@@ -11,6 +11,8 @@ module PaymentProviders
         end
       end
 
+      retry_on(*PaymentProviders::FlutterwaveProvider::TRANSIENT_ERRORS, wait: :polynomially_longer, attempts: 6, jitter: 0.75)
+
       def perform(organization:, event:)
         PaymentProviders::Flutterwave::HandleEventService.call!(
           organization:,
