@@ -5,11 +5,20 @@
 # row written from the terminating invoice found no earlier row, and its usage_diff repeated the usage of the rows
 # before it. Rows are now chained on the period start only.
 #
-# It recomputes the usage_diff of the rows whose previous row in the period ends at another time: the rows whose diff
-# that change affects. A row whose diff is already right is left as it is, so a run that stops can be run again and a
-# second run changes nothing. Dry run by default: nothing is written.
+# It recomputes the usage_diff of the rows of the periods whose rows end at several times, except the first row of
+# each period. Rows written out of order (a daily job run after the termination row was written) are covered too.
+# Until mid-2025 the invoice rows also ended at 23:59:59.999999 while the daily rows end at 23:59:59, so the periodic
+# invoice rows of that time, of active subscriptions too, are recomputed against the daily row before them.
+#
+# Left as they are:
+# - a row whose previous row ends at a fraction of a second: an invoice row written before mid-2025, which for a
+#   pay-in-advance plan held the usage of the period before under the start of the next one;
+# - a row without a stored diff (`{}`), such as the first row of a history fill.
+#
+# A row whose diff is already right is skipped, so a second run changes nothing. A row that cannot be diffed is
+# reported and the run goes on. Dry run by default: nothing is written.
 class RechainDailyUsageDiffs
-  Error = Class.new(StandardError)
+  SUBSCRIPTIONS_BATCH_SIZE = 500
 
   def self.call(**, &) = new(**).call(&)
 
@@ -18,26 +27,13 @@ class RechainDailyUsageDiffs
     @dry_run = dry_run
   end
 
-  # Yields one entry per row whose diff changes
+  # Yields one entry per row whose diff changes or cannot be computed
   def call
-    daily_usages.find_each do |daily_usage|
-      usage_diff = DailyUsages::ComputeDiffService.call!(daily_usage:).usage_diff
-      next if usage_diff == daily_usage.usage_diff
-
-      entry = {
-        daily_usage_id: daily_usage.id,
-        organization_id: daily_usage.organization_id,
-        subscription_id: daily_usage.subscription_id,
-        usage_date: daily_usage.usage_date,
-        status: dry_run ? :would_recompute : :recomputed,
-        amount_cents_before: amount_cents(daily_usage.usage_diff),
-        amount_cents_after: amount_cents(usage_diff)
-      }
-
-      daily_usage.update!(usage_diff:) unless dry_run
-      yield entry
-    rescue => e
-      raise Error, "daily usage #{daily_usage.id}: #{e.class}: #{e.message}"
+    subscriptions.in_batches(of: SUBSCRIPTIONS_BATCH_SIZE) do |batch|
+      candidates(batch.pluck(:id)).each do |daily_usage|
+        entry = process(daily_usage)
+        yield entry if entry && block_given?
+      end
     end
   end
 
@@ -45,34 +41,72 @@ class RechainDailyUsageDiffs
 
   attr_reader :organization_id, :dry_run
 
-  # Same lookup as DailyUsages::ComputeDiffService: the latest row of the subscription with the same start and an
-  # earlier usage_date. The (subscription_id, usage_date) index serves it.
-  def daily_usages
-    scope = DailyUsage.where.not(subscription_id: nil).where(<<~SQL.squish)
-      daily_usages.to_datetime <> (
-        SELECT previous.to_datetime
-        FROM daily_usages AS previous
-        WHERE previous.subscription_id = daily_usages.subscription_id
-          AND previous.from_datetime = daily_usages.from_datetime
-          AND previous.usage_date < daily_usages.usage_date
-        ORDER BY previous.usage_date DESC
-        LIMIT 1
-      )
-    SQL
-    scope = scope.where(organization_id:) if organization_id
-
-    scope.includes(:subscription)
+  def subscriptions
+    organization_id ? Subscription.where(organization_id:) : Subscription.all
   end
 
-  # usage_diff is the JSON string "{}" on rows that never got a snapshot
-  def amount_cents(usage_diff)
-    usage_diff["amount_cents"] if usage_diff.is_a?(Hash)
+  def process(daily_usage)
+    return if without_diff?(daily_usage.usage_diff)
+
+    usage_diff = DailyUsages::ComputeDiffService.call!(daily_usage:).usage_diff
+    return if usage_diff == daily_usage.usage_diff
+
+    amount_cents_before = daily_usage.usage_diff["amount_cents"]
+    daily_usage.update!(usage_diff:) unless dry_run
+
+    entry(daily_usage, status: dry_run ? :would_recompute : :recomputed, amounts: [amount_cents_before, usage_diff["amount_cents"]])
+  rescue *row_errors => e
+    entry(daily_usage, status: :failed, error: "#{e.class}: #{e.message}")
+  end
+
+  # What an unexpected payload or a refused write raises. Built at run time: the app is not loaded with the rake files.
+  def row_errors
+    [BaseService::FailedResult, NoMethodError, TypeError, ArgumentError, ActiveRecord::ActiveRecordError]
+  end
+
+  def entry(daily_usage, status:, amounts: nil, error: nil)
+    {
+      daily_usage_id: daily_usage.id,
+      organization_id: daily_usage.organization_id,
+      subscription_id: daily_usage.subscription_id,
+      usage_date: daily_usage.usage_date,
+      status:,
+      amount_cents_before: amounts&.first,
+      amount_cents_after: amounts&.last,
+      error:
+    }
+  end
+
+  # usage_diff is the JSON string "{}" on rows that never got a snapshot, and {} on the first row of a history fill
+  def without_diff?(usage_diff)
+    usage_diff == "{}" || usage_diff == {}
+  end
+
+  # The previous row is the one ComputeDiffService diffs against: the latest row of the subscription with the same
+  # start and an earlier usage_date. The (subscription_id, usage_date) index serves the lookup by subscription.
+  def candidates(subscription_ids)
+    ids = DailyUsage.connection.select_values(DailyUsage.sanitize_sql([<<~SQL.squish, subscription_ids:]))
+      SELECT id FROM (
+        SELECT
+          id,
+          LAG(to_datetime) OVER (PARTITION BY subscription_id, from_datetime ORDER BY usage_date) AS previous_to_datetime,
+          MIN(to_datetime) OVER (PARTITION BY subscription_id, from_datetime) AS first_to_datetime,
+          MAX(to_datetime) OVER (PARTITION BY subscription_id, from_datetime) AS last_to_datetime
+        FROM daily_usages
+        WHERE subscription_id IN (:subscription_ids) AND usage_date IS NOT NULL
+      ) periods
+      WHERE previous_to_datetime IS NOT NULL
+        AND first_to_datetime <> last_to_datetime
+        AND previous_to_datetime = date_trunc('second', previous_to_datetime)
+    SQL
+
+    DailyUsage.where(id: ids).includes(:subscription).order(:subscription_id, :from_datetime, :usage_date, :id)
   end
 end
 
 namespace :migrations do
-  desc "Recompute the usage_diff of the subscription daily usages whose previous row in the period ends at another " \
-    "time, such as the row written at a termination. Usage: rake migrations:rechain_daily_usage_diffs[organization_id] " \
+  desc "Recompute the usage_diff of the subscription daily usages of the periods whose rows end at several times, " \
+    "such as the row written at a termination. Usage: rake migrations:rechain_daily_usage_diffs[organization_id] " \
     "(omit organization_id to run for every organization). Dry run unless DRY_RUN=false."
   task :rechain_daily_usage_diffs, [:organization_id] => :environment do |_task, args|
     organization_id = args[:organization_id].presence
@@ -83,20 +117,24 @@ namespace :migrations do
     dry_run = ENV.fetch("DRY_RUN", "true") != "false"
     mode = dry_run ? "DRY RUN" : "LIVE"
     count = 0
+    failed = 0
 
     puts "Rechaining daily usage diffs [#{mode}] (organization: #{organization_id || "all"})..."
 
-    begin
-      RechainDailyUsageDiffs.call(organization_id:, dry_run:) do |entry|
+    RechainDailyUsageDiffs.call(organization_id:, dry_run:) do |entry|
+      line = "  daily_usage=#{entry[:daily_usage_id]} organization=#{entry[:organization_id]} " \
+        "subscription=#{entry[:subscription_id]} usage_date=#{entry[:usage_date].iso8601} status=#{entry[:status]}"
+
+      if entry[:status] == :failed
+        failed += 1
+        puts "#{line} error=#{entry[:error]}"
+      else
         count += 1
-        puts "  daily_usage=#{entry[:daily_usage_id]} organization=#{entry[:organization_id]} " \
-          "subscription=#{entry[:subscription_id]} usage_date=#{entry[:usage_date].iso8601} status=#{entry[:status]} " \
-          "amount_cents=#{entry[:amount_cents_before]}->#{entry[:amount_cents_after]}"
+        puts "#{line} amount_cents=#{entry[:amount_cents_before]}->#{entry[:amount_cents_after]}"
       end
-    rescue RechainDailyUsageDiffs::Error => e
-      abort "Stopped [#{mode}] after #{count} row(s). Failed on #{e.message}. Run the task again to resume."
     end
 
-    puts "Done [#{mode}]. Rows #{dry_run ? "to recompute" : "recomputed"}: #{count}."
+    puts "Done [#{mode}]. Rows #{dry_run ? "to recompute" : "recomputed"}: #{count}. Rows failed: #{failed}."
+    abort "#{failed} row(s) could not be diffed: fix them, then run the task again." if failed.positive?
   end
 end

@@ -54,4 +54,31 @@ describe "Daily Usages: subscription terminated mid-period", :premium do
       [Date.new(2025, 2, 3), Time.zone.parse("2025-02-03T15:00:00Z"), 3000, 1000]
     ])
   end
+
+  it "diffs the termination row again when the daily job of the day before runs after it" do
+    send_event(1)
+    compute_daily_usage(1)
+    send_event(2)
+    travel_to(DateTime.new(2025, 2, 3, 0, 2)) do
+      create_event({code: billable_metric.code, external_subscription_id: subscription.external_id, properties: {ops_count: 1}})
+    end
+    travel_to(DateTime.new(2025, 2, 3, 0, 5)) { terminate_subscription(subscription) }
+
+    # The job scheduled at midnight for Feb 2 runs after the termination row is written, and reads up to the termination
+    travel_to(DateTime.new(2025, 2, 3, 0, 20)) do
+      DailyUsages::ComputeJob.perform_later(subscription, timestamp: DateTime.new(2025, 2, 3))
+      perform_all_enqueued_jobs
+    end
+
+    rows = subscription.daily_usages.order(:usage_date).map do |daily_usage|
+      [daily_usage.usage_date, daily_usage.usage["amount_cents"], daily_usage.usage_diff["amount_cents"]]
+    end
+
+    # The diffs add up to the 3000 cents of the period: the late row holds the events of Feb 2 and Feb 3
+    expect(rows).to eq([
+      [Date.new(2025, 2, 1), 1000, 1000],
+      [Date.new(2025, 2, 2), 3000, 2000], # 3000 up to the termination - 1000 on Feb 1
+      [Date.new(2025, 2, 3), 3000, 0] # 3000 at the termination - 3000 in the late row of Feb 2
+    ])
+  end
 end

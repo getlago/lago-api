@@ -109,6 +109,72 @@ RSpec.describe DailyUsages::ComputeService do
         end
       end
 
+      context "when the row of a later day of the period is already written" do
+        # The termination row, written before this job ran late: it was diffed without the day computed here
+        let(:termination_row) do
+          create(
+            :daily_usage,
+            subscription:,
+            organization:,
+            customer:,
+            from_datetime: timestamp.beginning_of_month,
+            to_datetime: timestamp + 10.hours,
+            usage_date: usage_date + 1.day,
+            usage: later_usage,
+            usage_diff: later_usage
+          )
+        end
+
+        let(:later_usage) do
+          {
+            "amount_cents" => 30_000,
+            "taxes_amount_cents" => 0,
+            "charges_usage" => [
+              {
+                "charge" => {"lago_id" => charge.id},
+                "units" => "3.0",
+                "events_count" => 3,
+                "amount_cents" => 30_000,
+                "filters" => [],
+                "grouped_usage" => []
+              }
+            ]
+          }
+        end
+
+        before { termination_row }
+
+        it "diffs the later row against the new one" do
+          travel_to(timestamp) { compute_service.call }
+
+          diff = termination_row.reload.usage_diff
+          expect(diff["amount_cents"]).to eq(20_000) # 30000 at the termination - 10000 (1 event at 100 EUR) on Oct 21
+          expect(diff["charges_usage"].sole).to include("units" => "2.0", "events_count" => 2) # 3 - 1 event on Oct 21
+        end
+      end
+
+      context "when no later row of the period is written" do
+        let(:next_period_row) do
+          create(
+            :daily_usage,
+            subscription:,
+            organization:,
+            customer:,
+            from_datetime: timestamp.next_month.beginning_of_month,
+            to_datetime: timestamp.next_month.end_of_month,
+            usage_date: usage_date + 1.month,
+            usage: {"amount_cents" => 1},
+            usage_diff: {"amount_cents" => 1}
+          )
+        end
+
+        before { next_period_row }
+
+        it "leaves the rows of other periods" do
+          expect { travel_to(timestamp) { compute_service.call } }.not_to change { next_period_row.reload.usage_diff }
+        end
+      end
+
       context "when charges contains presentation group keys" do
         let(:presentation_group_keys) do
           {"presentation_group_keys" => [{"value" => "region"}]}

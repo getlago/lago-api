@@ -818,6 +818,7 @@ RSpec.describe DailyUsages::ComputeDiffService do
         diff = diff_service.call.usage_diff
 
         expect(diff["amount_cents"]).to eq(50) # 150 at the termination - 100 on 2022-07-14
+        # 1.5 units and 8 events at the termination - 1.0 unit and 5 events on 2022-07-14
         expect(diff["charges_usage"].sole).to include("amount_cents" => 50, "units" => "0.5", "events_count" => 3)
       end
     end

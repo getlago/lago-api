@@ -76,9 +76,11 @@ RSpec.describe "migrations:rechain_daily_usage_diffs" do # rubocop:disable RSpec
     )
   end
 
-  def entry_line(daily_usage, status:, amounts:)
+  def entry_line(daily_usage, status:, amounts: nil, error: nil)
+    detail = error ? "error=#{error}" : "amount_cents=#{amounts}"
+
     "daily_usage=#{daily_usage.id} organization=#{daily_usage.organization_id} subscription=#{daily_usage.subscription_id} " \
-      "usage_date=#{daily_usage.usage_date.iso8601} status=#{status} amount_cents=#{amounts}"
+      "usage_date=#{daily_usage.usage_date.iso8601} status=#{status} #{detail}"
   end
 
   context "without DRY_RUN" do
@@ -87,6 +89,7 @@ RSpec.describe "migrations:rechain_daily_usage_diffs" do # rubocop:disable RSpec
         .to output(
           a_string_including(
             "[DRY RUN] (organization: all)",
+            # 3000 at the termination - 2000 on Feb 2
             entry_line(termination_row, status: :would_recompute, amounts: "3000->1000"),
             "Done [DRY RUN]. Rows to recompute: 1."
           )
@@ -108,6 +111,7 @@ RSpec.describe "migrations:rechain_daily_usage_diffs" do # rubocop:disable RSpec
         .to output(
           a_string_including(
             "[LIVE]",
+            # 3000 at the termination - 2000 on Feb 2
             entry_line(termination_row, status: :recomputed, amounts: "3000->1000"),
             "Done [LIVE]. Rows recomputed: 1."
           )
@@ -136,6 +140,7 @@ RSpec.describe "migrations:rechain_daily_usage_diffs" do # rubocop:disable RSpec
         expect { task.invoke }
           .to output(
             a_string_including(
+              # 2000 on Feb 2 - 1000 on Feb 1
               entry_line(second_day, status: :recomputed, amounts: "2000->1000"),
               "Done [LIVE]. Rows recomputed: 1."
             )
@@ -143,6 +148,60 @@ RSpec.describe "migrations:rechain_daily_usage_diffs" do # rubocop:disable RSpec
           .and not_change { termination_row.reload.usage_diff }
 
         expect(second_day.reload.usage_diff).to eq(usage(1000)) # 2000 on Feb 2 - 1000 on Feb 1
+      end
+    end
+
+    context "when the termination row was written before the row of the day before" do
+      # The daily job of Feb 2, run after the termination, wrote its row after the termination row: neither found
+      # an earlier row ending at the termination, so both hold their whole usage
+      let(:second_day_end) { terminated_at }
+      let(:second_day_diff) { usage(2000) }
+      let(:termination_diff) { usage(3000) }
+
+      it "recomputes both rows" do
+        expect { task.invoke }
+          .to output(
+            a_string_including(
+              entry_line(second_day, status: :recomputed, amounts: "2000->1000"), # 2000 on Feb 2 - 1000 on Feb 1
+              entry_line(termination_row, status: :recomputed, amounts: "3000->1000"), # 3000 - 2000 on Feb 2
+              "Done [LIVE]. Rows recomputed: 2."
+            )
+          ).to_stdout
+
+        expect([second_day.reload.usage_diff, termination_row.reload.usage_diff]).to eq([usage(1000), usage(1000)])
+      end
+    end
+
+    context "when the row before is an invoice row ending at a fraction of a second" do
+      # Before mid-2025, the periodic invoice of a pay-in-advance plan wrote the usage of January under the start
+      # and the end of February, at 23:59:59.999999
+      let(:advance_subscription) { create(:subscription, organization:, customer:) }
+      let(:first_february_day) do
+        create_daily_usage(advance_subscription, Date.new(2025, 2, 1), period_end, usage(1000))
+      end
+
+      before do
+        create_daily_usage(
+          advance_subscription, Date.new(2025, 1, 31), Time.zone.parse("2025-02-28T23:59:59.999999Z"), usage(50_000)
+        )
+        first_february_day
+      end
+
+      it "leaves the row after it" do
+        expect { task.invoke }
+          .to output(a_string_including("Done [LIVE]. Rows recomputed: 1.")).to_stdout
+          .and not_change { first_february_day.reload.usage_diff }
+      end
+    end
+
+    context "when the row has no stored diff" do
+      # The first row of a history fill keeps an empty diff
+      let(:termination_diff) { {} }
+
+      it "leaves it" do
+        expect { task.invoke }
+          .to output(a_string_including("Done [LIVE]. Rows recomputed: 0.")).to_stdout
+          .and not_change { termination_row.reload.usage_diff }
       end
     end
   end
@@ -167,6 +226,7 @@ RSpec.describe "migrations:rechain_daily_usage_diffs" do # rubocop:disable RSpec
         .to output(
           a_string_including(
             "(organization: #{organization.id})",
+            # 3000 at the termination - 2000 on Feb 2
             entry_line(termination_row, status: :would_recompute, amounts: "3000->1000"),
             "Rows to recompute: 1."
           )
@@ -181,15 +241,31 @@ RSpec.describe "migrations:rechain_daily_usage_diffs" do # rubocop:disable RSpec
   end
 
   context "when the diff of a row fails" do
-    before do
-      allow(DailyUsages::ComputeDiffService).to receive(:call!).and_raise(StandardError, "unexpected usage")
+    let(:other_subscription) { create(:subscription, :terminated, organization:, customer:, terminated_at:) }
+    let(:other_termination_row) do
+      create_daily_usage(other_subscription, Date.new(2025, 2, 3), terminated_at, usage(3000), usage_diff: usage(3000))
     end
 
-    it "stops and names the row" do
+    before do
+      create_daily_usage(other_subscription, Date.new(2025, 2, 2), period_end, usage(2000))
+      other_termination_row
+
+      allow(DailyUsages::ComputeDiffService).to receive(:call!).and_call_original
+      allow(DailyUsages::ComputeDiffService).to receive(:call!).with(daily_usage: termination_row)
+        .and_raise(NoMethodError, "undefined method 'each' for nil")
+    end
+
+    it "reports the row, goes on with the others and fails at the end" do
       expect { task.invoke }
         .to raise_error(SystemExit)
-        .and output(a_string_including("Failed on daily usage #{termination_row.id}: StandardError: unexpected usage")).to_stderr
-        .and output(a_string_including("[DRY RUN]")).to_stdout
+        .and output(a_string_including("1 row(s) could not be diffed")).to_stderr
+        .and output(
+          a_string_including(
+            entry_line(termination_row, status: :failed, error: "NoMethodError: undefined method 'each' for nil"),
+            entry_line(other_termination_row, status: :would_recompute, amounts: "3000->1000"), # 3000 - 2000 on Feb 2
+            "Rows to recompute: 1. Rows failed: 1."
+          )
+        ).to_stdout
     end
   end
 end
