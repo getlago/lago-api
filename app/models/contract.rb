@@ -65,6 +65,9 @@ class Contract < ApplicationRecord
   # active contract. Terminated and canceled siblings are history.
   scope :live, -> { where(status: LIVE_STATUSES) }
 
+  # Terminated contracts can still owe coverage until their final operation is processed.
+  scope :eligible_for_billing, ->(timestamp) { where(status: %w[active terminated], started_at: ..timestamp) }
+
   # Pending contracts whose start has arrived, compared as an instant: the rule
   # creation uses to choose pending or active. A start given as a date is the
   # customer's local midnight, so it activates on the customer's day. No

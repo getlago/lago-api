@@ -7,7 +7,10 @@ RSpec.describe BillingOperations::Schedule::PlannedOperation do
   let(:billing_at) { Time.utc(2026, 11, 10, 8) }
   let(:termination_billing_at) { nil }
   let(:cycle) { instance_double(Billing::Cycle, started_at: cycle_started_at) }
-  let(:obligation) { Billing::Obligation.new(cycle:, segments: [], billing_at:, terms: nil, termination_billing_at:) }
+  let(:coverage_started_at) { cycle_started_at }
+  let(:coverage_ended_at) { Time.utc(2026, 12, 1, 8) }
+  let(:segment) { double(started_at: coverage_started_at, ended_at: coverage_ended_at) }
+  let(:obligation) { Billing::Obligation.new(cycle:, segments: [segment], billing_at:, terms: nil, termination_billing_at:) }
 
   describe ".from_obligation" do
     subject(:plan) { described_class.from_obligation(obligation, after:) }
@@ -15,7 +18,8 @@ RSpec.describe BillingOperations::Schedule::PlannedOperation do
     let(:after) { nil }
 
     it "uses the natural cycle and billing date without changing the obligation" do
-      expect(plan).to have_attributes(cycle_started_at:, billing_at:)
+      expect(plan).to have_attributes(cycle_started_at:, billing_at:, coverage_started_at:, coverage_ended_at:, obligation:)
+      expect(plan.with(billing_at: billing_at + 1.day).obligation).to equal(obligation)
       expect(obligation.billing_at).to eq(billing_at)
     end
 
@@ -51,27 +55,6 @@ RSpec.describe BillingOperations::Schedule::PlannedOperation do
           expect(plan.billing_at).to eq(billing_at)
         end
       end
-    end
-  end
-
-  describe "#due_by?" do
-    subject(:plan) { described_class.new(obligation:, billing_at:) }
-
-    it "is due at the inclusive cutoff without an upper bound" do
-      expect(plan.due_by?(billing_at)).to be(true)
-      expect(plan.due_by?(billing_at, before: nil)).to be(true)
-    end
-
-    it "is not due before its billing date" do
-      expect(plan.due_by?(billing_at - 1.second)).to be(false)
-    end
-
-    it "excludes the upper bound itself" do
-      expect(plan.due_by?(billing_at, before: billing_at)).to be(false)
-    end
-
-    it "is due before the upper bound when at the cutoff" do
-      expect(plan.due_by?(billing_at, before: billing_at + 1.second)).to be(true)
     end
   end
 end

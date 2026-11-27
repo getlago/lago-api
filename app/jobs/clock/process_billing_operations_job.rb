@@ -11,8 +11,7 @@ module Clock
     private
 
     def due_customer_ids
-      ContractRateCard.due_for_billing(Time.current)
-        .joins(contract: :customer).where(customers: {deleted_at: nil}).distinct.pluck("contracts.customer_id")
+      Customer.with_due_periodic_operations(Time.current).order(:id).ids
     end
   end
 end

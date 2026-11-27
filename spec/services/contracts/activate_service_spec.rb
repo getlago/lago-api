@@ -30,10 +30,6 @@ RSpec.describe Contracts::ActivateService do
     expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.started").once
   end
 
-  it "enqueues the customer's billing directly after activation commits" do
-    expect { result }.to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
-  end
-
   context "when the billing schedule is locked" do
     before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
 
@@ -128,31 +124,39 @@ RSpec.describe Contracts::ActivateService do
       create(:rate_card_rate, organization:, rate_card:, effective_from: rate_effective_from, billing_interval_count: 1, billing_interval_unit: "month")
     end
 
-    it "persists the initial operation with its planned coverage and advances the cursor to its billing date" do
-      expect { result }.to change(BillingOperation, :count).by(1)
+    it "sets the future close date without creating an operation" do
+      expect { result }.not_to change(BillingOperation, :count)
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
-      expect(contract_rate_card.billing_operations.sole).to have_attributes(
-        action_type: "close_fixed_arrears", reason: "contract_activation",
-        billing_at: Time.utc(2026, 10, 30), target_cycle_started_at: started_at,
-        coverage_started_at: started_at, coverage_ended_at: Time.utc(2026, 10, 30)
-      )
-      expect(contract_rate_card.billing_operations.sole.segments.sole).to have_attributes(started_at:, ended_at: Time.utc(2026, 10, 30))
-      expect(LegacyBillingSegment.count).to eq(0)
+      expect(BillingOperations::ProcessJob).not_to have_been_enqueued
     end
 
-    it "builds one schedule for resetting the cursor and planning the operation" do
+    it "builds one schedule for resetting the cursor" do
       allow(Billing::RateCards::BuildScheduleService).to receive(:call).and_call_original
 
       result
 
       expect(Billing::RateCards::BuildScheduleService).to have_received(:call).once
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
-      expect(contract_rate_card.billing_operations.sole).to have_attributes(
-        action_type: "close_fixed_arrears", billing_at: Time.utc(2026, 10, 30), target_cycle_started_at: started_at
-      )
     end
 
-    context "when a rate card schedule cannot be built" do
+    context "with a second priced card" do
+      let(:other_rate) { create(:rate_card_rate, organization:, rate_card: create(:rate_card, organization:, product:, billing_timing: "arrears"), effective_from: started_at) }
+      let(:other_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card: other_rate.rate_card,
+          effective_date: started_at.to_date, billing_anchor_date: started_at.to_date)
+      end
+
+      before { other_card }
+
+      it "plans both cards with one pending and one completed history lookup" do
+        queries = capture_sql { expect(result).to be_success }.grep(/SELECT DISTINCT ON .*FROM "billing_operations"/)
+        expect(queries.grep(/"processed_at" IS NULL/).size).to eq(1)
+        expect(queries.grep(/"processed_at" IS NOT NULL/).size).to eq(1)
+        expect([contract_rate_card, other_card].map { it.reload.next_billing_at }).to eq([started_at + 1.month] * 2)
+      end
+    end
+
+    context "when a rate card has no rates" do
       let(:failed_product) { create(:product, :fixed, organization:) }
       let(:failed_rate_card) { create(:rate_card, organization:, product: failed_product, billing_timing: "advance") }
       let(:failed_card) do
@@ -162,26 +166,15 @@ RSpec.describe Contracts::ActivateService do
           next_billing_at: Time.utc(2026, 11, 30)
         )
       end
-      let(:schedule_failure) { BaseService::Result.new.single_validation_failure!(field: :base, error_code: "cannot_schedule") }
 
-      before do
-        failed_card
-        create(:rate_card_rate, organization:, rate_card: failed_rate_card, effective_from: started_at, billing_interval_count: 1, billing_interval_unit: "month")
-        allow(Billing::RateCards::BuildScheduleService).to receive(:call).and_wrap_original do |original, **attributes|
-          if attributes.fetch(:contract_rate_card).id == failed_card.id
-            schedule_failure
-          else
-            original.call(**attributes)
-          end
-        end
-      end
+      before { failed_card }
 
       it "skips the card while activating and scheduling other cards" do
         expect(result).to be_success
         expect(contract.reload).to be_active
-        expect(failed_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 30))
+        expect(failed_card.reload.next_billing_at).to be_nil
         expect(failed_card.billing_operations).to be_empty
-        expect(contract_rate_card.billing_operations.sole).to have_attributes(reason: "contract_activation")
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
       end
     end
 
@@ -191,9 +184,7 @@ RSpec.describe Contracts::ActivateService do
       it "plans from the start of the effective day" do
         result
 
-        expect(contract_rate_card.billing_operations.sole).to have_attributes(
-          billing_at: Time.utc(2026, 10, 30), target_cycle_started_at: Time.utc(2026, 9, 30)
-        )
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
       end
     end
 
@@ -203,10 +194,7 @@ RSpec.describe Contracts::ActivateService do
       it "targets the first priced cycle and its billing date" do
         result
 
-        expect(contract_rate_card.billing_operations.sole).to have_attributes(
-          reason: "contract_activation", billing_at: Time.utc(2026, 10, 30),
-          target_cycle_started_at: started_at
-        )
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
       end
     end
 
@@ -216,14 +204,14 @@ RSpec.describe Contracts::ActivateService do
 
       expect(described_class.call(contract:, timestamp:)).to be_success
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 11, 30))
-      expect(contract_rate_card.billing_operations.count).to eq(1)
+      expect(contract_rate_card.billing_operations).to be_empty
     end
 
     context "when the card bills in advance" do
       let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance") }
 
       it "persists an operation for the current cycle at activation" do
-        expect { result }.to change(BillingOperation, :count).by(1)
+        expect { result }.to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
 
         expect(contract_rate_card.billing_operations.sole).to have_attributes(
           action_type: "renew_fixed_advance", reason: "contract_activation",
@@ -241,17 +229,17 @@ RSpec.describe Contracts::ActivateService do
         create(:rate_card, organization:, product:, billing_timing: "advance", regroup_paid_fees: "invoice", display_on_invoice: false)
       end
 
-      it "aligns the initial operation and cursor with the end of the first service segment" do
+      it "sets the regrouping date to the end of the first service segment" do
         result
 
-        expect(contract_rate_card.billing_operations.sole).to have_attributes(
-          action_type: "regroup_paid_fees", billing_at: Time.utc(2026, 10, 30), target_cycle_started_at: started_at
-        )
+        expect(contract_rate_card.billing_operations).to be_empty
         expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
       end
     end
 
     context "when operation persistence fails" do
+      let(:timestamp) { Time.utc(2026, 10, 30) }
+
       before do
         contract_rate_card
         allow(BillingOperation).to receive(:new).and_wrap_original do |original, *args, **kwargs, &block|
@@ -366,6 +354,7 @@ RSpec.describe Contracts::ActivateService do
 
   context "with a card whose cadence changed while the contract was pending" do
     let(:rate_card) { create(:rate_card, organization:) }
+    let(:timestamp) { Time.current }
     # The target cycle is resolved again from the current cadence at activation.
     let(:contract_rate_card) do
       create(

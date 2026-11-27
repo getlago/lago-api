@@ -381,6 +381,24 @@ RSpec.describe Contract do
   end
 
   describe "Scopes" do
+    describe ".eligible_for_billing" do
+      let(:timestamp) { Time.utc(2026, 11, 15) }
+      let(:active) { create(:contract, started_at: timestamp) }
+      let(:terminated) { create(:contract, :terminated, started_at: timestamp - 1.month, terminated_at: timestamp) }
+
+      before do
+        active
+        terminated
+        create(:contract, started_at: timestamp + 1.second)
+        create(:contract, :pending, started_at: timestamp)
+        create(:contract, :canceled, started_at: timestamp)
+      end
+
+      it "includes started active and terminated contracts" do
+        expect(described_class.eligible_for_billing(timestamp)).to contain_exactly(active, terminated)
+      end
+    end
+
     describe ".due_for_activation" do
       let(:timestamp) { Time.zone.parse("2026-09-30T00:00:00Z") }
       let(:due) { create(:contract, :pending, started_at: timestamp) }

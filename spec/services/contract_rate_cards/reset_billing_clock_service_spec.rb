@@ -24,7 +24,8 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
 
   def complete_close(billing_at:, cycle_started_at:)
     create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_metered_arrears",
-      billing_at:, target_cycle_started_at: cycle_started_at, processed_at: billing_at)
+      billing_at:, target_cycle_started_at: cycle_started_at, coverage_started_at: cycle_started_at,
+      coverage_ended_at: billing_at, processed_at: billing_at)
   end
 
   before do
@@ -40,32 +41,25 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
     expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
   end
 
-  context "with a supplied schedule" do
-    let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule }
-
+  context "with several pending operations" do
     before do
-      schedule
-      allow(Billing::RateCards::BuildScheduleService).to receive(:call).and_raise("unexpected schedule build")
+      [9, 8].each do |day|
+        create(:billing_operation, organization:, customer:, contract_rate_card:, billing_at: Time.utc(2026, 10, day))
+      end
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
+        billing_at: Time.utc(2026, 10, 6))
     end
 
-    it "uses it without rebuilding" do
-      result = described_class.call!(contract_rate_card:, schedule:)
-
-      expect(result.contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
-    end
-  end
-
-  context "with an explicitly nil schedule" do
-    before do
-      allow(Billing::RateCards::BuildScheduleService).to receive(:call).and_raise("unexpected schedule build")
-    end
-
-    it "keeps the cursor without rebuilding" do
-      result = described_class.call!(contract_rate_card:, schedule: nil)
-
+    it "projects the earliest due periodic date without returning a new plan" do
+      result = described_class.call!(contract_rate_card:, timestamp: Time.utc(2026, 10, 9))
       expect(result).to be_success
       expect(result.planned_operation).to be_nil
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-30"))
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 8))
+    end
+
+    it "uses the schedule when the pending periodic operations are still in the future" do
+      result = described_class.call!(contract_rate_card:, timestamp: Time.utc(2026, 10, 7))
+      expect(result.planned_operation.billing_at).to eq(Time.zone.parse("2026-10-07"))
     end
   end
 
@@ -74,9 +68,9 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
 
     before { RateCardRate.where(rate_card:).delete_all }
 
-    it "keeps the clock" do
+    it "clears the clock" do
       expect(result).to be_success
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-30"))
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
     end
   end
 
@@ -124,6 +118,60 @@ RSpec.describe ContractRateCards::ResetBillingClockService do
 
       it "plans from the last completed billing only" do
         expect(result.planned_operation.billing_at).to eq(Time.zone.parse("2026-10-14"))
+      end
+    end
+
+    context "when a different action completed later" do
+      before do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
+          billing_at: Time.zone.parse("2026-10-14"), processed_at: Time.zone.parse("2026-10-14"))
+      end
+
+      it "continues from the completed operation for the current periodic action" do
+        expect(result.planned_operation.billing_at).to eq(Time.zone.parse("2026-10-14"))
+      end
+    end
+  end
+
+  context "when a fixed advance rate changes after coverage was completed" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:contract) { create(:contract, :pending, organization:, customer:, started_at: Time.utc(2026, 9, 30)) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "advance") }
+    let(:billing_scope) { "segment" }
+    let(:coverage_ended_at) { Time.utc(2026, 10, 7) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
+        effective_date: Date.new(2026, 9, 30), billing_anchor_date: Date.new(2026, 9, 30))
+    end
+
+    before do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
+        billing_at: Time.utc(2026, 9, 30), target_cycle_started_at: Time.utc(2026, 9, 30),
+        coverage_started_at: Time.utc(2026, 9, 30), coverage_ended_at:, processed_at: Time.utc(2026, 9, 30))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 10, 3),
+        billing_interval_unit: "week")
+    end
+
+    it "keeps the clock at the end of the completed coverage" do
+      expect(result.planned_operation.billing_at).to eq(Time.utc(2026, 10, 7))
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 7))
+    end
+
+    context "with cycle scope" do
+      let(:billing_scope) { "cycle" }
+
+      it "keeps the next cycle boundary" do
+        expect(result.planned_operation.billing_at).to eq(Time.utc(2026, 10, 7))
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 7))
+      end
+    end
+
+    context "when only the first segment was covered" do
+      let(:coverage_ended_at) { Time.utc(2026, 10, 3) }
+
+      it "plans the next segment at the inclusive boundary" do
+        expect(result.planned_operation.billing_at).to eq(Time.utc(2026, 10, 3))
       end
     end
   end

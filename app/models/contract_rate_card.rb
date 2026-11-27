@@ -26,6 +26,12 @@ class ContractRateCard < ApplicationRecord
   has_many :rate_phases, -> { order(:position) }
   has_many :terms, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardTerm", inverse_of: :contract_rate_card
   has_many :billing_operations
+  has_one :earliest_pending_periodic_operation, ->(card) {
+    periodic.pending.where(organization_id: card.organization_id).earliest_per_contract_rate_card
+  }, class_name: "BillingOperation"
+  has_one :latest_completed_periodic_operation, ->(card) {
+    latest_periodic_per_card(organization_id: card.organization_id, action_type: card.periodic_billing_action).completed
+  }, class_name: "BillingOperation"
   has_many :daily_usages
   has_many :fees
 
@@ -54,10 +60,8 @@ class ContractRateCard < ApplicationRecord
   scope :due_for_billing, ->(timestamp) {
     priced
       .starting_before_contract_end
-      .joins(contract: {customer: :billing_entity})
       .where(next_billing_at: ..timestamp)
-      # Terminated contracts can still owe coverage until their final operation is processed.
-      .where(contracts: {status: %w[active terminated], started_at: ..timestamp})
+      .merge(Contract.eligible_for_billing(timestamp))
       .where(customers: {deleted_at: nil})
   }
 

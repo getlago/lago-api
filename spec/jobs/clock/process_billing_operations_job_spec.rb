@@ -32,7 +32,7 @@ describe Clock::ProcessBillingOperationsJob, job: true do
     end
   end
 
-  context "with periodic cursors" do
+  context "with saved periodic work" do
     let(:customer) { create(:customer, organization:) }
     let(:future_customer) { create(:customer, organization:) }
     let(:pending_customer) { create(:customer, organization:) }
@@ -48,9 +48,9 @@ describe Clock::ProcessBillingOperationsJob, job: true do
         [future_contract, 1.day.from_now],
         [pending_contract, 1.day.ago],
         [deleted_contract, 1.day.ago]
-      ].each do |contract, next_billing_at|
-        card = create(:contract_rate_card, organization:, contract:, next_billing_at:, effective_date: 1.month.ago.to_date)
-        create(:rate_card_rate, organization:, rate_card: card.rate_card)
+      ].each do |contract, billing_at|
+        card = create(:contract_rate_card, organization:, contract:, next_billing_at: 1.month.from_now)
+        create(:billing_operation, organization:, customer: contract.customer, contract_rate_card: card, billing_at:)
       end
     end
 
@@ -72,7 +72,7 @@ describe Clock::ProcessBillingOperationsJob, job: true do
       create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:, processed_at: Time.current)
     end
 
-    it "does not dispatch completed billing without a due cursor" do
+    it "does not wake the processor solely for a linked generating invoice" do
       expect { perform_job }.not_to have_enqueued_job(BillingOperations::ProcessJob)
       expect(invoice.reload).to be_generating
     end

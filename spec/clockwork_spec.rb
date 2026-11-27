@@ -741,5 +741,63 @@ describe Clockwork do
       Clockwork::Test.block_for(job).call
       expect(Clock::ScheduleBillingOperationsJob).to have_been_enqueued
     end
+
+    context "with a saved due renewal" do
+      let(:timestamp) { Time.utc(2026, 11, 15) }
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, timezone: "UTC") }
+      let(:contract) { create(:contract, organization:, customer:, started_at: timestamp) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product: create(:product, :fixed, organization:)) }
+      let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: timestamp) }
+      let(:card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: timestamp.to_date,
+          billing_anchor_date: timestamp.to_date, next_billing_at: timestamp + 1.month)
+      end
+      let(:operation) { create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card: card, billing_at: timestamp, coverage_started_at: timestamp) }
+
+      around { |example| travel_to(timestamp + 17.minutes) { example.run } }
+
+      before do
+        Clockwork::Test.run(file: clock_file, start_time:, end_time:, tick_speed: 1.second)
+        rate
+        operation
+      end
+
+      shared_examples "processing the saved renewal" do
+        it "processes the saved coverage exactly once across two registered ticks" do
+          segments = operation.segments.map(&:attributes)
+          BillingOperations::ApplyRateChangeJob.perform_now(customer.id, rate.id)
+          expect(card.reload.next_billing_at).to eq(timestamp)
+
+          2.times do
+            perform_enqueued_jobs(only: [Clock::ScheduleBillingOperationsJob, BillingOperations::ScheduleJob, BillingOperations::ProcessJob]) do
+              Clockwork::Test.block_for(job).call
+            end
+          end
+
+          expect(card.billing_operations.periodic.sole).to eq(operation)
+          expect(operation.reload.processed_at).to be_present
+          expect(operation.segments.map(&:attributes)).to eq(segments)
+          expect(customer.invoices.sole.id).to eq(operation.invoice_id)
+          expect(card.reload.next_billing_at).to eq(next_wake)
+        end
+      end
+
+      context "when the live rate moves later" do
+        let(:next_wake) { timestamp + 1.month }
+
+        before { rate.update!(effective_from: timestamp + 2.days) }
+
+        include_examples "processing the saved renewal"
+      end
+
+      context "when the last rate was discarded" do
+        let(:next_wake) { nil }
+
+        before { rate.discard! }
+
+        include_examples "processing the saved renewal"
+      end
+    end
   end
 end

@@ -166,7 +166,7 @@ module Contracts
     def rate_card_usage(card, obligation)
       segments = obligation.segments.map do |segment|
         billing_segment = BillingSegments::BuildService.call!(
-          contract_rate_card: card, obligation:, segment:, pricing_units_by_code: @pricing_units_by_code
+          contract_rate_card: card, **obligation.pricing_inputs_for(segment), pricing_units_by_code: @pricing_units_by_code
         ).billing_segment
         RateCardUsageSegment.new(billing_segment:, fees: compute_fees(billing_segment))
       end

@@ -155,6 +155,15 @@ class Customer < ApplicationRecord
   }
   scope :with_active_wallets, -> { joins(:wallets).where(wallets: {status: :active}) }
 
+  scope :with_due_periodic_operations, ->(timestamp) {
+    joins(contracts: {applied_rate_cards: :billing_operations})
+      .merge(BillingOperation.due_for_processing(timestamp).where(action_type: BillingOperation::PERIODIC_ACTIONS.keys))
+      .merge(Contract.eligible_for_billing(timestamp))
+      .where("contracts.organization_id = customers.organization_id AND contract_rate_cards.organization_id = customers.organization_id")
+      .where("billing_operations.organization_id = customers.organization_id AND billing_operations.customer_id = customers.id")
+      .distinct
+  }
+
   scope :falling_back_to_default_dunning_campaign, -> {
     where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
   }

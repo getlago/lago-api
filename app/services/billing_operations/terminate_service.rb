@@ -15,7 +15,7 @@ module BillingOperations
 
     def call
       contract.applied_rate_cards.with_discarded.includes(:rate_card, contract: :customer).find_each do |contract_rate_card|
-        cancel_future_operations!(contract_rate_card)
+        renewal_cancelled = cancel_pending_operations!(contract_rate_card)
         next if contract_rate_card.discarded?
 
         if contract_rate_card.requires_termination_billing?(timestamp:)
@@ -24,7 +24,8 @@ module BillingOperations
         end
         # The termination can end coverage early. Replanning from the billing history keeps
         # overdue work and clears a clock with nothing left to bill, such as a later renewal.
-        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
+        clock = ContractRateCards::ResetBillingClockService.call!(contract_rate_card:, timestamp:)
+        schedule_due_renewals(contract_rate_card, clock.schedule) if renewal_cancelled && clock.schedule
       end
       result.billing_operations = billing_operations
       result
@@ -38,13 +39,24 @@ module BillingOperations
 
     attr_reader :contract, :timestamp, :billing_operations
 
-    def cancel_future_operations!(contract_rate_card)
-      contract_rate_card.billing_operations.pending.where("billing_at > ?", timestamp).find_each do |operation|
+    def cancel_pending_operations!(contract_rate_card)
+      due_renewal_cancelled = false
+      contract_rate_card.billing_operations.to_cancel_on_termination(
+        timestamp:, effective_end:, include_renewals: !contract_rate_card.discarded?
+      ).find_each do |operation|
         operation.update!(
           cancelled_at: timestamp,
           cancellation_reason: BillingOperation::CANCELLATION_REASONS.fetch(:contract_termination)
         )
+        due_renewal_cancelled ||= operation.billing_at <= timestamp
       end
+      due_renewal_cancelled
+    end
+
+    def schedule_due_renewals(contract_rate_card, schedule)
+      history = BillingOperation.latest_periodic_by_card([contract_rate_card], organization_id: contract.organization_id, through: timestamp)
+      due = Schedule::DueOperationsService.call!(contract_rate_card:, schedule:, timestamp:, previous_operation: history[contract_rate_card.id])
+      billing_operations.concat(due.billing_operations)
     end
 
     def schedule_final_operation(contract_rate_card)

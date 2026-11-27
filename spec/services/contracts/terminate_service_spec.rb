@@ -176,12 +176,13 @@ RSpec.describe Contracts::TerminateService do
     let(:terminated_at) { Time.utc(2026, 1, 10) }
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at:) }
     let(:product) { create(:product, :fixed, organization:) }
-    let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+    let(:proration) { false }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, proration:, currency: "USD") }
     let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:segment) }
     let(:expected_cursor) { Time.utc(2026, 1, 15) }
     let(:contract_rate_card) do
       create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
-        effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+        effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1), units: 1)
     end
 
     before do
@@ -195,10 +196,11 @@ RSpec.describe Contracts::TerminateService do
       contract.applied_rate_cards.find_each do |card|
         ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card)
       end
-      bill(started_at)
     end
 
     shared_examples "a completed advance obligation" do
+      before { bill(started_at) }
+
       it "clears the future renewal cursor without changing the issued invoice" do
         invoice = Invoice.where(customer:).sole
         invoice_attributes = invoice.attributes
@@ -226,6 +228,117 @@ RSpec.describe Contracts::TerminateService do
       let(:expected_cursor) { Time.utc(2026, 2, 1) }
 
       it_behaves_like "a completed advance obligation"
+    end
+
+    context "when the cycle renewal was scheduled but not processed" do
+      let(:billing_scope) { "cycle" }
+      let(:expected_fees) { [1000, 3100] } # Both prices bill in full without proration.
+      let(:expected_segments) { [[original.segments.first.rate_card_rate_id, added_rate.effective_from], [added_rate.id, terminated_at]] }
+      let(:original) { BillingOperations::ScheduleService.call!(customer:, timestamp: started_at).billing_operations.sole }
+      let(:added_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 5), rate_properties: {"amount" => "31"}) }
+
+      before do
+        travel_to(started_at)
+        original
+        added_rate
+      end
+
+      shared_examples "a replanned renewal" do
+        it "replaces only the outstanding coverage and bills it once at the original due date" do
+          expect { travel_to(terminated_at) { result } }
+            .to have_enqueued_job_after_commit(BillingOperations::ProcessJob).with(customer.id)
+          expect(original.reload).to have_attributes(cancelled_at: terminated_at, cancellation_reason: "contract_termination",
+            coverage_ended_at: Time.utc(2026, 2, 1))
+          replacement = contract_rate_card.billing_operations.pending.sole
+          expect(replacement).to have_attributes(billing_at: started_at, target_cycle_started_at: started_at,
+            coverage_started_at: started_at, coverage_ended_at: terminated_at)
+          expect(replacement.segments.pluck(:rate_card_rate_id, :ended_at)).to eq(expected_segments)
+          expect(contract_rate_card.reload.next_billing_at).to eq(started_at)
+          invoice = bill(terminated_at).invoices.sole
+          expect(invoice.fees.order(:amount_cents).pluck(:amount_cents)).to eq(expected_fees)
+          expect(invoice.billing_operations.sole).to eq(replacement)
+          expect(contract_rate_card.reload.next_billing_at).to be_nil
+          expect(bill(terminated_at).invoices).to be_empty
+        end
+      end
+
+      it_behaves_like "a replanned renewal"
+
+      context "when the card prorates and all three prices applied" do
+        let(:proration) { true }
+        let(:terminated_at) { Time.utc(2026, 1, 22) }
+        let(:expected_fees) { [129, 452, 1000] } # $10 × 4/31, $20 × 7/31 and $31 × 10/31, sorted by amount.
+        let(:expected_segments) do
+          [[original.segments.first.rate_card_rate_id, added_rate.effective_from],
+            [added_rate.id, Time.utc(2026, 1, 15)], [original.segments.last.rate_card_rate_id, terminated_at]]
+        end
+
+        it_behaves_like "a replanned renewal"
+      end
+
+      context "when scheduling the replacement fails" do
+        before do
+          allow(BillingOperations::Schedule::DueOperationsService).to receive(:call!)
+            .and_raise(BaseService::ValidationFailure.new(BaseResult.new, messages: {billing_operation: ["value_is_invalid"]}))
+        end
+
+        it "rolls back the termination and preserves the pending renewal inside an outer transaction" do
+          Contract.transaction do
+            expect(travel_to(terminated_at) { result }).not_to be_success
+            expect(contract.reload).to be_active
+            expect(contract_rate_card.billing_operations.sole).to eq(original)
+            expect(original.reload.cancelled_at).to be_nil
+          end
+        end
+      end
+
+      context "with recurring metered advance billing" do
+        let(:metric) { create(:sum_billable_metric, organization:, recurring: true) }
+        let(:product) { create(:product, organization:, billable_metric: metric) }
+
+        it "persists the new usage windows before processing" do
+          expect(travel_to(terminated_at) { result }).to be_success
+          renewal = contract_rate_card.billing_operations.pending.sole
+          expect(renewal).to have_attributes(action_type: "renew_recurring_metered_advance", billing_at: started_at)
+          expect(renewal.segments.pluck(:started_at, :ended_at)).to eq([[started_at, added_rate.effective_from], [added_rate.effective_from, terminated_at]])
+        end
+      end
+    end
+
+    context "when a pending segment renewal starts exactly at termination" do
+      let(:terminated_at) { Time.utc(2026, 1, 15) }
+
+      before { BillingOperations::ScheduleService.call!(customer:, timestamp: terminated_at) }
+
+      it "cancels it without replacing it and keeps the preceding overdue renewal" do
+        previous, successor = contract_rate_card.billing_operations.pending.order(:billing_at)
+        expect(travel_to(terminated_at) { result }).to be_success
+        expect(successor.reload.cancelled_at).to eq(terminated_at)
+        expect(contract_rate_card.billing_operations.pending.sole).to eq(previous)
+        expect(bill(terminated_at).invoices.sole.total_amount_cents).to eq(1000)
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+      end
+    end
+
+    context "when a new price splits a pending segment renewal before termination" do
+      before do
+        travel_to(started_at)
+        BillingOperations::ScheduleService.call!(customer:, timestamp: started_at)
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 5), rate_properties: {"amount" => "31"})
+      end
+
+      it "persists both due replacements and bills each once" do
+        original = contract_rate_card.billing_operations.pending.sole
+        expect(travel_to(terminated_at) { result }).to be_success
+        expect(original.reload.cancelled_at).to eq(terminated_at)
+        price_change = Time.utc(2026, 1, 5)
+        expect(contract_rate_card.billing_operations.pending.order(:billing_at).pluck(:coverage_started_at, :coverage_ended_at))
+          .to eq([[started_at, price_change], [price_change, terminated_at]])
+        expect(bill(terminated_at).invoices.sole.total_amount_cents).to eq(1000)
+        expect(bill(terminated_at).invoices.sole.total_amount_cents).to eq(3100)
+        expect(bill(terminated_at).invoices).to be_empty
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+      end
     end
   end
 

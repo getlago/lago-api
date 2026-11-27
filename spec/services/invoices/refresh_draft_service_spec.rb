@@ -340,7 +340,7 @@ RSpec.describe Invoices::RefreshDraftService do
         BillingOperations::ResolveSegmentsService.call!(operation:).billing_segments.sole
       end
       let(:operation) do
-        create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,
+        create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, invoice:,
           action_type: (rate_card.billing_timing == "advance") ? "renew_fixed_advance" : "close_fixed_arrears",
           reason: :periodic_continuation, billing_at: timestamp,
           target_cycle_started_at: (rate_card.billing_timing == "advance") ? timestamp : timestamp - 1.month,
@@ -391,7 +391,7 @@ RSpec.describe Invoices::RefreshDraftService do
 
         before do
           second_seed_fee
-          create(:billing_operation, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
+          create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card: second_contract_rate_card, invoice:,
             action_type: "close_fixed_arrears", reason: :periodic_continuation, billing_at: timestamp,
             target_cycle_started_at: timestamp - 1.month, processed_at: timestamp)
         end

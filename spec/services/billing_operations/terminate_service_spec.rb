@@ -118,8 +118,9 @@ RSpec.describe BillingOperations::TerminateService do
       let(:ended_at) { Time.utc(2026, 1, 10) }
 
       it "retains the overdue natural-end obligation and does not extend coverage" do
-        result
-        expect(contract_rate_card.reload.next_billing_at).to eq(ended_at)
+        expect(result.billing_operations.sole).to have_attributes(billing_at: timestamp,
+          coverage_started_at: started_at, coverage_ended_at: ended_at)
+        expect(contract_rate_card.reload.next_billing_at).to eq(timestamp)
         BillingOperations::ScheduleService.call!(customer:, timestamp:)
         invoice = BillingOperations::ProcessService.call!(customer:, timestamp:).invoices.sole
         expect(invoice.total_amount_cents).to eq(871) # $30 * 9 / 31 days.

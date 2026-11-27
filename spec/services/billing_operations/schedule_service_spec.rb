@@ -70,12 +70,33 @@ RSpec.describe BillingOperations::ScheduleService do
     end
   end
 
+  context "when a fixed advance clock falls inside completed coverage" do
+    let(:started_at) { Time.utc(2026, 11, 1) }
+    let(:cursor) { Time.utc(2026, 11, 15) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+    let(:completed_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: BillingOperation::ACTION_TYPES.fetch(:renew_fixed_advance),
+        billing_at: started_at, target_cycle_started_at: started_at, processed_at: started_at,
+        coverage_started_at: started_at, coverage_ended_at: Time.utc(2026, 12, 1))
+    end
+
+    before { completed_operation }
+
+    it "resets the clock without creating operations" do
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+      expect(contract_rate_card.billing_operations.pluck(:id)).to eq([completed_operation.id])
+    end
+  end
+
   context "with a completed operation in the current cycle" do
     let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:segment) }
     let(:completed_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
         reason: "contract_activation", billing_at: Time.utc(2026, 1, 15),
-        target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 1, 15))
+        target_cycle_started_at: Time.utc(2026, 1, 1), processed_at: Time.utc(2026, 1, 15),
+        coverage_started_at: Time.utc(2026, 1, 1), coverage_ended_at: Time.utc(2026, 1, 15))
     end
 
     before do
@@ -144,12 +165,15 @@ RSpec.describe BillingOperations::ScheduleService do
   end
 
   context "when the schedule cannot be built" do
+    let(:failure) { BaseService::Result.new.service_failure!(code: "invalid_billing_schedule", message: "Invalid interval") }
+
     before do
       allow(Billing::RateCards::BuildScheduleService).to receive(:call!)
-        .and_return(Billing::RateCards::BuildScheduleService::Result.new)
+        .and_raise(failure.error)
     end
 
     it "keeps the existing cursor without creating operations" do
+      expect(result.error).to eq(failure.error)
       expect(result.billing_operations).to be_empty
       expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
     end
@@ -220,9 +244,11 @@ RSpec.describe BillingOperations::ScheduleService do
     let(:anchor_cycle) { started_at }
     let(:anchor_action) { "close_fixed_arrears" }
     let(:anchor_processed_at) { anchor_at }
+    let(:anchor_coverage_end) { anchor_at }
     let(:anchor) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
-        billing_at: anchor_at, target_cycle_started_at: anchor_cycle, processed_at: anchor_processed_at)
+        billing_at: anchor_at, target_cycle_started_at: anchor_cycle, processed_at: anchor_processed_at,
+        coverage_started_at: anchor_cycle, coverage_ended_at: anchor_coverage_end)
     end
 
     before { anchor }
@@ -243,10 +269,55 @@ RSpec.describe BillingOperations::ScheduleService do
       end
     end
 
+    context "with a second card whose checkpoint differs" do
+      let(:other_contract) { create(:contract, organization:, customer:, started_at:) }
+      let(:other_card) do
+        create(:contract_rate_card, organization:, contract: other_contract, rate_card:, billing_scope:, next_billing_at: cursor,
+          effective_date:, billing_anchor_date: effective_date)
+      end
+
+      before do
+        create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: anchor_action,
+          billing_at: anchor_at, target_cycle_started_at: anchor_cycle, coverage_ended_at: anchor_at)
+        create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: anchor_action,
+          billing_at: Time.utc(2026, 11, 10), target_cycle_started_at: Time.utc(2026, 11, 9),
+          coverage_ended_at: Time.utc(2026, 11, 10))
+      end
+
+      it "loads the continuation checkpoints once for both cards and resumes from the latest eligible operation" do
+        queries = capture_sql { expect(result).to be_success }
+        expect(queries.grep(/SELECT .*FROM "billing_operations"/).size).to eq(3) # pending wake, completed coverage, latest through cutoff
+        operations = result.billing_operations.group_by(&:contract_rate_card_id)
+        expect(operations.fetch(contract_rate_card.id).map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
+        expect(operations.fetch(other_card.id).map(&:billing_at)).to eq((11..19).map { Time.utc(2026, 11, it) })
+      end
+
+      context "when the second card bills in advance" do
+        let(:advance_card) { create(:rate_card, :advance, organization:, product:) }
+        let(:other_card) do
+          create(:contract_rate_card, organization:, contract: other_contract, rate_card: advance_card, next_billing_at: cursor,
+            effective_date:, billing_anchor_date: effective_date)
+        end
+
+        before do
+          create(:rate_card_rate, organization:, rate_card: advance_card, effective_from: started_at, billing_interval_unit: "day")
+          create(:billing_operation, organization:, customer:, contract_rate_card: other_card, action_type: "renew_fixed_advance",
+            billing_at: anchor_at, target_cycle_started_at: anchor_cycle, coverage_started_at: anchor_at, coverage_ended_at: anchor_at + 1.day)
+        end
+
+        it "ignores the second card's later checkpoint for the wrong action" do
+          operations = result.billing_operations.group_by(&:contract_rate_card_id)
+          expect(operations.fetch(contract_rate_card.id).map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
+          expect(operations.fetch(other_card.id).map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
+        end
+      end
+    end
+
     context "with advance billing" do
       let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
       let(:anchor_action) { "renew_fixed_advance" }
       let(:anchor_cycle) { anchor_at }
+      let(:anchor_coverage_end) { Time.utc(2026, 11, 2) }
 
       it "persists all missing renewals through the cutoff" do
         expect(result.billing_operations.map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
@@ -440,6 +511,24 @@ RSpec.describe BillingOperations::ScheduleService do
       expect(BillingOperation.where(customer:)).to be_empty
       expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
       expect(other_card.reload.next_billing_at).to eq(cursor)
+    end
+
+    context "when called inside an outer transaction" do
+      let(:cursor) { Time.utc(2026, 1, 15) }
+      let(:timestamp) { Time.utc(2026, 2, 1) }
+
+      it "rolls back all cards while allowing the caller to commit other work" do
+        ApplicationRecord.transaction(requires_new: true) do
+          expect(result).to be_failure
+          expect(result.billing_operations).to be_empty
+          contract.update!(purchase_order_number: "committed")
+        end
+
+        expect(contract.reload.purchase_order_number).to eq("committed")
+        expect(BillingOperation.where(customer:)).to be_empty
+        expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+        expect(other_card.reload.next_billing_at).to eq(cursor)
+      end
     end
   end
 

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe BillingSegments::BuildService do
-  subject(:result) { described_class.call(contract_rate_card:, obligation:, segment:, pricing_units_by_code:) }
+  subject(:result) { described_class.call(contract_rate_card:, **obligation.pricing_inputs_for(segment), pricing_units_by_code:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, timezone:) }

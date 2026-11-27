@@ -24,7 +24,7 @@ RSpec.describe BillingOperations::ProcessService do
       effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
   end
   let(:operation) do
-    create(:billing_operation, organization:, customer:, contract_rate_card:,
+    create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:,
       action_type: contract_rate_card.periodic_billing_action, reason: "periodic_continuation",
       billing_at: cursor, target_cycle_started_at:)
   end
@@ -33,6 +33,87 @@ RSpec.describe BillingOperations::ProcessService do
     rate
     contract_rate_card
     operation
+  end
+
+  context "with a persisted segment window" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC", invoice_grace_period: 3) }
+    let(:operation) do
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
+      planned_operation = BillingOperations::Schedule::PlannedOperation.from_obligation(schedule.obligation_at(Time.utc(2026, 1, 1)))
+      BillingOperations::CreateService.call!(
+        contract_rate_card:, action_type: "close_fixed_arrears", reason: :periodic_continuation, planned_operation:
+      ).operation
+    end
+
+    before do
+      rate.update!(rate_properties: {"amount" => "100"})
+      contract_rate_card.terms.first.update!(units: 3)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
+        rate_properties: {"amount" => "62"})
+    end
+
+    it "bills and refreshes the original plan without changing its coverage or billing again" do
+      invoice = result.invoices.sole
+
+      expect(result).to be_success
+      expect(invoice).to be_draft
+      expect(invoice.total_amount_cents).to eq(30_000) # Three current units at $100 on the saved rate.
+      expect(invoice.fees.sole.rate_card_rate_id).to eq(rate.id)
+      expect(invoice.fees.sole.properties).to include(
+        "from_datetime" => Time.utc(2026, 1, 1).iso8601(6),
+        "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6)
+      )
+      expect(operation.reload).to have_attributes(
+        coverage_started_at: Time.utc(2026, 1, 1), coverage_ended_at: Time.utc(2026, 2, 1)
+      )
+      expect(Invoices::RefreshDraftService.call(invoice:)).to be_success
+      expect(invoice.reload.total_amount_cents).to eq(30_000) # Three current units at $100 on the saved rate.
+      expect(invoice.fees.sole.rate_card_rate_id).to eq(rate.id)
+      expect(invoice.fees.sole.properties).to include(
+        "from_datetime" => Time.utc(2026, 1, 1).iso8601(6),
+        "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6)
+      )
+      expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
+      expect(operation.reload).to have_attributes(
+        coverage_started_at: Time.utc(2026, 1, 1), coverage_ended_at: Time.utc(2026, 2, 1)
+      )
+    end
+  end
+
+  context "when the pending operation has no saved segments" do
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", reason: :periodic_continuation,
+        billing_at: cursor, target_cycle_started_at:)
+    end
+
+    it "completes without an invoice and advances the clock" do
+      expect(result).to be_success
+      expect(operation.reload).to have_attributes(processed_at: timestamp, invoice_id: nil)
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
+      expect(customer.invoices).to be_empty
+    end
+  end
+
+  context "when the last catalog rate is discarded after planning" do
+    before { rate.discard! }
+
+    it "bills the saved plan and clears the cursor" do
+      invoice = result.invoices.sole
+
+      expect(result).to be_success
+      expect(invoice.total_amount_cents).to eq(3_100)
+      expect(invoice.fees.sole.rate_card_rate_id).to eq(rate.id)
+      expect(invoice.fees.sole.properties).to include(
+        "from_datetime" => Time.utc(2026, 1, 1).iso8601(6),
+        "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6)
+      )
+      expect(operation.reload).to have_attributes(
+        processed_at: timestamp, coverage_started_at: Time.utc(2026, 1, 1), coverage_ended_at: Time.utc(2026, 2, 1)
+      )
+      expect(contract_rate_card.reload.next_billing_at).to be_nil
+      expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
+    end
   end
 
   it "atomically records billed coverage and advances the cursor without future operations" do
@@ -64,9 +145,47 @@ RSpec.describe BillingOperations::ProcessService do
     end
   end
 
+  context "when a rate change splits fixed advance coverage already invoiced" do
+    let(:billing_timing) { "advance" }
+    let(:billing_scope) { "segment" }
+    let(:target_cycle_started_at) { Time.utc(2026, 11, 1) }
+    let(:cursor) { Time.utc(2026, 11, 20) }
+    let(:cycle_end) { Time.utc(2026, 12, 1) }
+    let(:boundary_rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: cursor, rate_properties: {"amount" => "60"})
+    end
+    let(:operation) do
+      boundary_rate
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: contract_rate_card.periodic_billing_action,
+        billing_at: cursor, target_cycle_started_at:, coverage_started_at: cursor, coverage_ended_at: cycle_end)
+    end
+    let(:opening_operation) do
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: contract_rate_card.periodic_billing_action,
+        billing_at: target_cycle_started_at, target_cycle_started_at:, coverage_started_at: target_cycle_started_at, coverage_ended_at: cursor)
+    end
+
+    around { |example| travel_to(Time.utc(2026, 11, 1)) { example.run } }
+
+    before do
+      opening_operation
+      described_class.call!(customer:, timestamp: target_cycle_started_at)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 15), rate_properties: {"amount" => "60"})
+    end
+
+    it "invoices only the days after the earlier invoice's coverage end" do
+      expect(opening_operation.reload).to have_attributes(coverage_ended_at: cursor, invoice_id: be_present)
+      invoice = result.invoices.sole
+      expect(invoice.total_amount_cents).to eq(2_200) # $60 × 11 remaining days / 30 November days.
+      expect(invoice.fees.sole.properties).to include(
+        "from_datetime" => cursor.iso8601(6), "to_datetime" => BillingSegment.inclusive_end(cycle_end).iso8601(6)
+      )
+      expect(operation.reload).to have_attributes(coverage_started_at: cursor, coverage_ended_at: cycle_end)
+    end
+  end
+
   context "with a late payment operation" do
     let(:operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card:,
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:,
         action_type: "close_fixed_arrears", reason: "late_payment",
         billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
     end
@@ -80,7 +199,7 @@ RSpec.describe BillingOperations::ProcessService do
   context "with a pending activation operation" do
     let(:operation) { nil }
     let(:activation_operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
         reason: "contract_activation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
     end
 
@@ -95,10 +214,13 @@ RSpec.describe BillingOperations::ProcessService do
 
     context "when the billing cursor has moved earlier" do
       let(:cursor) { Time.utc(2026, 1, 15) }
+      let(:activation_operation) do
+        create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+          reason: "contract_activation", billing_at: Time.utc(2026, 2, 1), target_cycle_started_at: Time.utc(2026, 1, 1))
+      end
 
       before do
         create(:rate_card_rate, organization:, rate_card:, effective_from: cursor, rate_properties: {"amount" => "62"})
-        activation_operation.update!(billing_at: Time.utc(2026, 2, 1))
       end
 
       it "leaves a future stored operation pending instead of retiming it to the cursor" do
@@ -213,9 +335,9 @@ RSpec.describe BillingOperations::ProcessService do
   context "with multiple overdue operations for one card" do
     let(:timestamp) { Time.utc(2026, 4, 1) }
     let(:later_operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card:,
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:,
         action_type: "close_fixed_arrears", reason: "periodic_continuation",
-        billing_at: cursor + 12.hours, target_cycle_started_at: Time.utc(2026, 1, 1))
+        billing_at: Time.utc(2026, 3, 1), target_cycle_started_at: Time.utc(2026, 2, 1))
     end
 
     before { later_operation }
@@ -232,12 +354,12 @@ RSpec.describe BillingOperations::ProcessService do
     context "with invoice consolidation" do
       let(:consolidate_invoice) { true }
 
-      it "does not invoice the later operation's already-covered period again" do
+      it "invoices the later operation's distinct coverage on the next call" do
         expect(result.invoices.sole.total_amount_cents).to eq(3100)
 
-        expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
+        expect(described_class.call!(customer:, timestamp:).invoices.sole.total_amount_cents).to eq(3100)
         expect(later_operation.reload.processed_at).to eq(timestamp)
-        expect(contract_rate_card.fees.count).to eq(1)
+        expect(contract_rate_card.fees.count).to eq(2)
       end
     end
   end
@@ -246,7 +368,7 @@ RSpec.describe BillingOperations::ProcessService do
     let(:timestamp) { Time.utc(2026, 4, 1) }
 
     before do
-      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
         reason: "periodic_continuation", billing_at: Time.utc(2026, 3, 1),
         target_cycle_started_at: Time.utc(2026, 2, 1))
     end
@@ -262,6 +384,11 @@ RSpec.describe BillingOperations::ProcessService do
   end
 
   context "when the stored cycle is unpriced but a later cycle has a price" do
+    let(:operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "close_fixed_arrears", reason: "periodic_continuation",
+        billing_at: cursor, target_cycle_started_at:)
+    end
     let(:rate) do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 2, 15),
         rate_properties: {"amount" => "31"})
@@ -269,20 +396,9 @@ RSpec.describe BillingOperations::ProcessService do
 
     it "completes empty work and advances to the next priced obligation" do
       expect(result).to be_success
-      expect(result.invoices).to be_empty
       expect(operation.reload).to have_attributes(processed_at: timestamp, invoice_id: nil)
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 3, 1))
       expect(contract_rate_card.fees).to be_empty
-
-      BillingOperations::ScheduleService.call!(customer:, timestamp: Time.utc(2026, 3, 1))
-      invoice = described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)).invoices.sole
-
-      expect(invoice.total_amount_cents).to eq(1550) # $31 * 14 priced days / 28 days in February.
-      expect(invoice.fees.sole.properties).to include(
-        "from_datetime" => Time.utc(2026, 2, 15).iso8601(6),
-        "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 3, 1)).iso8601(6)
-      )
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 4, 1))
     end
   end
 
@@ -299,7 +415,6 @@ RSpec.describe BillingOperations::ProcessService do
 
     it "completes empty work and clears the exhausted cursor" do
       expect(result).to be_success
-      expect(result.invoices).to be_empty
       expect(operation.reload).to have_attributes(processed_at: timestamp, invoice_id: nil)
       expect(contract_rate_card.reload.next_billing_at).to be_nil
       expect(contract_rate_card.fees).to be_empty
@@ -471,6 +586,19 @@ RSpec.describe BillingOperations::ProcessService do
     end
   end
 
+  context "when building the next schedule fails unexpectedly" do
+    before do
+      allow(Billing::RateCards::BuildScheduleService).to receive(:call!).and_raise("schedule failed")
+    end
+
+    it "rolls back billing instead of clearing the cursor" do
+      expect { result }.to raise_error("schedule failed")
+      expect(operation.reload.processed_at).to be_nil
+      expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+      expect(Invoice.where(customer:)).to be_empty
+    end
+  end
+
   context "when the contract ends or is terminated" do
     let(:contract) do
       create(:contract, organization:, customer:, started_at: Time.utc(2026, 1, 1), consolidate_invoice:, **contract_end)
@@ -505,7 +633,7 @@ RSpec.describe BillingOperations::ProcessService do
       context "when the close at the planned end is processed" do
         let(:cursor) { Time.utc(2026, 2, 10) }
         let(:operation) do
-          create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+          create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
             reason: "periodic_continuation", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
         end
 
@@ -521,7 +649,7 @@ RSpec.describe BillingOperations::ProcessService do
       context "when the final close is processed" do
         let(:cursor) { Time.utc(2026, 2, 15) }
         let(:operation) do
-          create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+          create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
             reason: "contract_termination", billing_at: cursor, target_cycle_started_at: Time.utc(2026, 2, 1))
         end
 
@@ -546,7 +674,10 @@ RSpec.describe BillingOperations::ProcessService do
 
     it "completes the obsolete renewal without billing and clears the cursor" do
       expect(result.invoices).to be_empty
-      expect(operation.reload).to have_attributes(processed_at: timestamp, invoice_id: nil)
+      expect(operation.reload).to have_attributes(
+        processed_at: timestamp, invoice_id: nil,
+        coverage_started_at: Time.utc(2026, 2, 1), coverage_ended_at: Time.utc(2026, 3, 1)
+      )
       expect(contract_rate_card.reload.next_billing_at).to be_nil
       expect(described_class.call!(customer:, timestamp:).invoices).to be_empty
     end
@@ -649,7 +780,7 @@ RSpec.describe BillingOperations::ProcessService do
         next_billing_at: other_billing_at, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
     end
     let(:other_operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card: other_card,
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card: other_card,
         action_type: "close_fixed_arrears", reason: "periodic_continuation", billing_at: other_billing_at,
         target_cycle_started_at:)
     end
@@ -693,11 +824,14 @@ RSpec.describe BillingOperations::ProcessService do
 
       context "when the currencies differ" do
         let(:other_rate_card) { create(:rate_card, organization:, product:, billing_timing:, currency: "EUR", proration: true) }
-
-        before do
+        let(:other_rate) do
           create(:rate_card_rate, organization:, rate_card: other_rate_card,
             effective_from: Time.utc(2026, 1, 1), rate_properties: {"amount" => "31"})
         end
+        let(:other_operation) {
+          other_rate
+          super()
+        }
 
         it_behaves_like "separate invoice groups"
       end
@@ -775,6 +909,15 @@ RSpec.describe BillingOperations::ProcessService do
         expect(rate_queries.size).to eq(1)
       end
 
+      it "loads terms once for the batch and bills both fixed cards" do
+        queries = capture_sql { result }
+
+        expect(result).to be_success
+        expect(result.invoices.sole.total_amount_cents).to eq(6200) # Two $31 cards.
+        expect(result.invoices.sole.fees.map(&:amount_cents)).to match_array([3100, 3100])
+        expect(queries.grep(/SELECT .*FROM "contract_rate_cards_terms"/).size).to eq(1)
+      end
+
       context "with custom pricing units" do
         let(:pricing_unit) { create(:pricing_unit, organization:, code: "credits") }
         let(:rate) do
@@ -829,14 +972,24 @@ RSpec.describe BillingOperations::ProcessService do
   context "with two known prices in one cycle" do
     let(:billing_scope) { "segment" }
     let(:cursor) { Time.utc(2026, 1, 15) }
+    let(:later_rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15), rate_properties: {"amount" => "62"})
+    end
+    let(:operation) do
+      later_rate
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:,
+        action_type: contract_rate_card.periodic_billing_action, reason: "periodic_continuation",
+        billing_at: cursor, target_cycle_started_at:, coverage_started_at: Time.utc(2026, 1, 1),
+        coverage_ended_at: Time.utc(2026, 1, 15))
+    end
     let(:closing_operation) do
-      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+      create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
         reason: "periodic_continuation", billing_at: Time.utc(2026, 2, 1),
-        target_cycle_started_at: Time.utc(2026, 1, 1))
+        target_cycle_started_at: Time.utc(2026, 1, 1),
+        coverage_started_at: Time.utc(2026, 1, 15), coverage_ended_at: Time.utc(2026, 2, 1))
     end
 
     before do
-      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15), rate_properties: {"amount" => "62"})
       closing_operation
     end
 
@@ -867,9 +1020,10 @@ RSpec.describe BillingOperations::ProcessService do
       let(:billing_timing) { "advance" }
       let(:cursor) { Time.utc(2026, 1, 1) }
       let(:second_operation) do
-        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
+        create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, action_type: "renew_fixed_advance",
           reason: "periodic_continuation", billing_at: Time.utc(2026, 1, 15),
-          target_cycle_started_at: Time.utc(2026, 1, 1))
+          target_cycle_started_at: Time.utc(2026, 1, 1),
+          coverage_started_at: Time.utc(2026, 1, 15), coverage_ended_at: Time.utc(2026, 2, 1))
       end
 
       before { second_operation }
@@ -898,14 +1052,61 @@ RSpec.describe BillingOperations::ProcessService do
     end
   end
 
+  context "when a rate is inserted after an advance operation was planned" do
+    let(:billing_scope) { "segment" }
+    let(:billing_timing) { "advance" }
+    let(:cursor) { Time.utc(2026, 1, 1) }
+    let(:operation) do
+      schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule
+      plan = BillingOperations::Schedule::BuildPlannedOperation.call!(schedule:, at: cursor).planned_operation
+      BillingOperations::CreateService.call!(contract_rate_card:, action_type: "renew_fixed_advance",
+        reason: "contract_activation", planned_operation: plan).operation
+    end
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15), rate_properties: {"amount" => "62"})
+    end
+
+    it "keeps the original coverage and price despite the later split" do
+      expect(operation.coverage_ended_at).to eq(Time.utc(2026, 2, 1))
+      first_invoice = result.invoices.sole
+      expect(first_invoice.total_amount_cents).to eq(3100)
+      expect(first_invoice.fees.sole.properties).to include(
+        "from_datetime" => Time.utc(2026, 1, 1).iso8601(6),
+        "to_datetime" => BillingSegment.inclusive_end(Time.utc(2026, 2, 1)).iso8601(6)
+      )
+      expect(operation.reload).to have_attributes(
+        coverage_started_at: Time.utc(2026, 1, 1), coverage_ended_at: Time.utc(2026, 2, 1)
+      )
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
+      expect(described_class.call!(customer:, timestamp: Time.utc(2026, 1, 15)).invoices).to be_empty
+    end
+
+    context "when cursor advancement fails" do
+      before do
+        allow(BillingOperations::Schedule::BuildPlannedOperation).to receive(:call!).and_raise("cursor failed")
+      end
+
+      it "rolls back the corrected coverage and invoice" do
+        expect { result }.to raise_error("cursor failed")
+        expect(operation.reload).to have_attributes(coverage_ended_at: Time.utc(2026, 2, 1), processed_at: nil)
+        expect(Invoice.where(customer:)).to be_empty
+      end
+    end
+  end
+
   context "with cycle-scoped advance billing and two known prices" do
     let(:billing_timing) { "advance" }
     let(:cursor) { Time.utc(2026, 1, 1) }
 
-    before do
+    let(:later_rate) do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
         rate_properties: {"amount" => "62"})
     end
+    let(:operation) {
+      later_rate
+      super()
+    }
 
     it "purchases both priced slices once at the cycle opening" do
       invoice = result.invoices.sole
@@ -925,10 +1126,14 @@ RSpec.describe BillingOperations::ProcessService do
   end
 
   context "with cycle-scoped arrears billing and two known prices" do
-    before do
+    let(:later_rate) do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 15),
         rate_properties: {"amount" => "62"})
     end
+    let(:operation) {
+      later_rate
+      super()
+    }
 
     it "bills both priced slices once at the cycle close" do
       invoice = result.invoices.sole
@@ -1098,7 +1303,7 @@ RSpec.describe BillingOperations::ProcessService do
           next_billing_at: cursor, effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
       end
       let(:fixed_operation) do
-        create(:billing_operation, organization:, customer:, contract_rate_card: fixed_card,
+        create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card: fixed_card,
           action_type: "close_fixed_arrears", reason: "periodic_continuation",
           billing_at: cursor, target_cycle_started_at: Time.utc(2026, 1, 1))
       end

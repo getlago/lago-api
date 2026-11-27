@@ -29,33 +29,30 @@ module Billing
         end
       end
 
-      # Delayed operations can own several natural obligations, but never another cycle.
-      def obligation_for_operation(cycle_started_at:, billing_at:, after: nil)
-        cycle = walker.resume(cycle_started_at)
-        return unless cycle&.started_at == cycle_started_at
-
-        segments = obligations_for(cycle)
-          .select { it.billing_at <= billing_at && (after.nil? || it.billing_at > after) }
-          .flat_map(&:segments)
-        return if segments.empty?
-
-        Obligation.new(cycle:, segments:, billing_at:, terms:, termination_billing_at: termination_date_for(billing_at))
+      def next_obligation(from:)
+        obligations(from:).find { it.starts_on_or_after?(from) }
       end
 
-      # `from` names the target cycle when billing belongs to an earlier cycle than its instant.
-      def next_obligation(from:, after: nil)
-        obligations(from:).find { it.selectable_from?(from, after:) }
+      def obligations_for_cycle(cycle_started_at)
+        cycle = walker.resume(cycle_started_at)
+        return [] unless cycle&.started_at == cycle_started_at
+
+        obligations_for(cycle)
       end
 
       def obligations_due_by(timestamp, from:, after: nil)
-        due = []
-        obligations(from:).each do |obligation|
-          billing_at = obligation.operation_billing_at(after: after || due.first&.billing_at)
-          break if billing_at > timestamp
+        Enumerator.new do |yielder|
+          billing_at = after
+          obligations(from:).each do |obligation|
+            next if after && !obligation.starts_on_or_after?(from)
+            next unless obligation.segments.last.ended_at > from || obligation.billing_at == from
 
-          due << obligation if obligation.selectable_from?(from, after:)
+            billing_at = obligation.operation_billing_at(after: billing_at)
+            break if billing_at > timestamp
+
+            yielder.yield(obligation, billing_at)
+          end
         end
-        due
       end
 
       private

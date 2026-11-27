@@ -43,7 +43,7 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
     travel_to(period_ended_at + 5.minutes) do
       delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}")
       perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
-      perform_enqueued_jobs { BillingOperations::ProcessJob.perform_now(customer.id) }
+      perform_enqueued_jobs { Clock::ScheduleBillingOperationsJob.perform_now }
     end
 
     operation = BillingOperation.where(customer:, target_cycle_started_at: period_started_at,
@@ -117,20 +117,7 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
       "charges_to_datetime" => BillingSegment.inclusive_end(period_ended_at).iso8601(6)
     )
     expect(timeline.fetch(:active_period).fetch(:next_billing_at)).to eq(period_ended_at)
-    expect(timeline.fetch(:active_period).fetch(:operations).sole).to have_attributes(
-      id: timeline.fetch(:operation).id,
-      organization_id: organization.id,
-      customer_id: customer.id,
-      contract_rate_card_id: contract.applied_rate_cards.sole.id,
-      action_type: "regroup_paid_fees",
-      reason: "contract_activation",
-      target_cycle_started_at: period_started_at,
-      billing_at: period_ended_at,
-      processed_at: nil,
-      cancelled_at: nil,
-      cancellation_reason: nil,
-      invoice_id: nil
-    )
+    expect(timeline.fetch(:active_period).fetch(:operations)).to be_empty
     expect(timeline.fetch(:active_period).fetch(:invoices)).to be_empty
     expect(timeline.fetch(:operation)).to have_attributes(processed_at: period_ended_at + 5.minutes, invoice_id: invoice.id)
     expect(LegacyBillingSegment.where(customer_id: customer.id)).to be_empty

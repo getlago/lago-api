@@ -34,18 +34,15 @@ module BillingOperations
     attr_reader :customer, :timestamp
 
     def due_operations
-      customer_contracts = customer.contracts.where(organization_id: customer.organization_id)
+      customer_contracts = customer.contracts.where(organization_id: customer.organization_id).eligible_for_billing(timestamp)
       operations = customer.billing_operations.due_for_processing(timestamp)
         .where(organization_id: customer.organization_id, action_type: BillingOperation::PERIODIC_ACTIONS.keys)
-        .joins(:contract_rate_card)
-        .merge(ContractRateCard.kept.where(
-          organization_id: customer.organization_id,
-          contract_id: customer_contracts.select(:id)
-        ))
+        .joins(:customer, :contract_rate_card).where(customers: {deleted_at: nil, organization_id: customer.organization_id})
+        .merge(ContractRateCard.kept.where(organization_id: customer.organization_id, contract_id: customer_contracts.select(:id)))
         .earliest_per_contract_rate_card
 
       BillingOperation.from(operations, :billing_operations)
-        .includes(contract_rate_card: [:terms, {contract: :customer}, {rate_card: {product: :billable_metric}}])
+        .includes(contract_rate_card: {contract: :customer, rate_card: {product: :billable_metric}})
         .order(:billing_at, :contract_rate_card_id, :created_at, :id)
     end
 
@@ -95,55 +92,53 @@ module BillingOperations
         end
         next if operations.empty?
 
-        preload_schedule_inputs(operations)
-        operation_resolutions = operations.index_with { |operation| resolve_operation(operation) }
-        billing_segments = operation_resolutions.values.flat_map(&:billing_segments)
+        preload_billing_inputs(operations)
+        segments_by_operation = operations.index_with { |operation| resolve_segments(operation) }
+        billing_segments = segments_by_operation.values.flatten(1)
         invoice = if billing_segments.any?
-          if regroup_batch?(operations)
-            regroup_paid_fees(operations, billing_segments, operation_resolutions)
+          if invoice_kind(operations.first) == :advance_charges
+            regroup_paid_fees(operations, billing_segments, segments_by_operation)
           else
-            create_contract_invoice(billing_segments, operation_resolutions)
+            create_contract_invoice(billing_segments, segments_by_operation)
           end
         end
-        complete_operations(operation_resolutions)
+        complete_operations(operations)
       end
       invoice
     end
 
     # Locking reloads each operation and its card, which drops what was preloaded with them.
-    # Every schedule of the batch reads these records, so they are loaded once here.
-    def preload_schedule_inputs(operations)
+    def preload_billing_inputs(operations)
       ActiveRecord::Associations::Preloader.new(
-        records: operations.map(&:contract_rate_card),
-        associations: [
+        records: operations,
+        associations: {segments: [:rate_card_rate, :rate_override], contract_rate_card: [
           :organization,
+          :terms,
           {product: [:billable_metric, {filters: {values: :billable_metric_filter}}]},
           {rate_card: [:rates, {product: :billable_metric}]},
           {rate_phases: :rate_override},
           {contract: :customer}
-        ]
+        ]}
       ).call
       codes = operations.filter_map { it.contract_rate_card.rate_card.applied_pricing_unit_code }.uniq
       @pricing_units_by_code = codes.any? ? customer.organization.pricing_units.where(code: codes).index_by(&:code) : {}
     end
 
     # An obsolete terminal renewal bills nothing, but still completes and clears its clock.
-    def resolve_operation(operation)
-      if obsolete_terminal_renewal?(operation)
-        ResolveSegmentsService::Result.new.tap { it.billing_segments = [] }
-      else
-        ResolveSegmentsService.call!(operation:, pricing_units_by_code: @pricing_units_by_code)
-      end
+    def resolve_segments(operation)
+      return [] if obsolete_terminal_renewal?(operation)
+
+      ResolveSegmentsService.call!(operation:, pricing_units_by_code: @pricing_units_by_code).billing_segments
     end
 
     def obsolete_terminal_renewal?(operation)
-      return false unless operation.action_type.in?(%w[renew_fixed_advance renew_recurring_metered_advance])
+      return false unless operation.action_type.in?(BillingOperation::ADVANCE_RENEWALS)
 
       ended_at = operation.contract_rate_card.contract.billing_ends_at
       ended_at && ended_at <= operation.target_cycle_started_at
     end
 
-    def create_contract_invoice(segments, operation_resolutions)
+    def create_contract_invoice(segments, segments_by_operation)
       contract = segments.first.contract
       invoice = nil
       outputs = {}
@@ -176,17 +171,13 @@ module BillingOperations
       else
         outputs.filter_map { |segment, fees| segment if fees.any? }
       end
-      operations_with_billed_segments(billed_segments, operation_resolutions).each { |operation| operation.invoice = invoice }
+      operations_with_billed_segments(billed_segments, segments_by_operation).each { |operation| operation.invoice = invoice }
       invoice
     rescue EmptyInvoice
       nil
     end
 
-    def regroup_batch?(operations)
-      operations.all? { |operation| operation.action_type == "regroup_paid_fees" }
-    end
-
-    def regroup_paid_fees(operations, segments, operation_resolutions)
+    def regroup_paid_fees(operations, segments, segments_by_operation)
       contract = segments.first.contract
       invoice = nil
       ActiveRecord::Base.transaction(requires_new: true) do
@@ -212,7 +203,7 @@ module BillingOperations
           end
         )
         invoice.update!(payment_status: :succeeded)
-        operations_with_billed_segments(invoiced_segments, operation_resolutions).each { |operation| operation.invoice = invoice }
+        operations_with_billed_segments(invoiced_segments, segments_by_operation).each { |operation| operation.invoice = invoice }
       end
       invoice
     rescue EmptyInvoice
@@ -220,26 +211,28 @@ module BillingOperations
     end
 
     # Operations with no billed segments must not inherit another operation's invoice in a consolidated batch.
-    def operations_with_billed_segments(segments, operation_resolutions)
-      operation_resolutions.filter_map do |operation, resolution|
-        operation if (resolution.billing_segments & segments).any?
+    def operations_with_billed_segments(billed_segments, segments_by_operation)
+      segments_by_operation.filter_map do |operation, segments|
+        operation if segments.intersect?(billed_segments)
       end
     end
 
     # The clock moves to the obligation after this one, in the same transaction as the billing.
-    def complete_operations(operation_resolutions)
-      operation_resolutions.each do |operation, resolution|
+    def complete_operations(operations)
+      operations.each do |operation|
         operation.update!(processed_at: timestamp)
-        operation.contract_rate_card.update!(next_billing_at: next_planned_operation(operation, resolution)&.billing_at)
+        operation.contract_rate_card.update!(next_billing_at: next_planned_operation(operation)&.billing_at)
       end
     end
 
-    # Reconciliation and obsolete renewals do not build a schedule to continue.
-    def next_planned_operation(operation, resolution)
-      return unless resolution.schedule
+    def next_planned_operation(operation)
+      return if obsolete_terminal_renewal?(operation)
+
+      card = operation.contract_rate_card
+      return if card.rate_card.rates.empty?
 
       Schedule::BuildPlannedOperation.call!(
-        schedule: resolution.schedule,
+        schedule: Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule,
         after_operation: operation
       ).planned_operation
     end

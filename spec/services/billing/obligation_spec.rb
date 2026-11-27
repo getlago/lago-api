@@ -29,34 +29,25 @@ RSpec.describe Billing::Obligation do
   let(:segment) { Billing::Segments::Segment.new(started_at:, ended_at:, rate: base_rate) }
   let(:obligation) { described_class.new(cycle:, segments: [segment], billing_at: cycle_ended_at, terms:) }
 
-  describe "#selectable_from?" do
-    it "selects coverage ending after the timestamp, even when it has not started" do
-      expect(obligation.selectable_from?(cycle_started_at - 1.day)).to be(true)
+  describe "coverage bounds" do
+    let(:started_at) { cycle_started_at + 1.day }
+    let(:ended_at) { cycle_ended_at - 2.days }
+    let(:last_segment) { segment.with(started_at: ended_at, ended_at: cycle_ended_at - 1.day) }
+    let(:obligation) { super().with(segments: [segment, last_segment]) }
+
+    it "uses the first and last priced segments rather than the cycle bounds" do
+      expect(obligation.coverage_started_at).to eq(started_at)
+      expect(obligation.coverage_ended_at).to eq(cycle_ended_at - 1.day)
     end
+  end
 
-    it "selects ended coverage at its exact billing timestamp" do
-      expect(obligation.selectable_from?(cycle_ended_at)).to be(true)
-    end
+  describe "#starts_on_or_after?" do
+    let(:started_at) { cycle_started_at + 1.day }
 
-    it "does not select ended coverage at a different timestamp" do
-      expect(obligation.selectable_from?(cycle_ended_at + 1.day)).to be(false)
-    end
-
-    it "selects a later billing date even when the timestamp is outside coverage" do
-      expect(obligation.selectable_from?(cycle_ended_at + 1.day, after: cycle_started_at)).to be(true)
-    end
-
-    it "excludes a billing date equal to the previous billing date" do
-      expect(obligation.selectable_from?(cycle_started_at, after: cycle_ended_at)).to be(false)
-    end
-
-    context "with delayed termination" do
-      let(:termination_at) { Time.utc(2026, 3, 5) }
-      let(:terminated_obligation) { obligation.with(termination_billing_at: termination_at) }
-
-      it "does not select coverage already billed at its natural end" do
-        expect(terminated_obligation.selectable_from?(cycle_started_at, after: cycle_ended_at)).to be(false)
-      end
+    it "compares the first priced segment's start, inclusively" do
+      expect(obligation.starts_on_or_after?(cycle_started_at)).to be(true)
+      expect(obligation.starts_on_or_after?(started_at)).to be(true)
+      expect(obligation.starts_on_or_after?(started_at + 1.second)).to be(false)
     end
   end
 

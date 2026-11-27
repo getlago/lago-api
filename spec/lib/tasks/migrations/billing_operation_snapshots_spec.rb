@@ -40,7 +40,8 @@ RSpec.describe "migrations:billing_operation_snapshots" do # rubocop:disable RSp
     allow(ENV).to receive(:fetch).and_call_original
     allow(ENV).to receive(:fetch).with("DRY_RUN", "true").and_return(dry_run)
     rate
-    operation
+    # These rows predate the model's coverage validations.
+    operation.update_columns(coverage_started_at: nil, coverage_ended_at: nil) # rubocop:disable Rails/SkipsModelValidations
   end
 
   it "saves exclusive coverage and ordered segments without changing billing state" do
@@ -89,7 +90,7 @@ RSpec.describe "migrations:billing_operation_snapshots" do # rubocop:disable RSp
     end
 
     before do
-      blocked_operation
+      blocked_operation.update_columns(coverage_started_at: nil, coverage_ended_at: nil) # rubocop:disable Rails/SkipsModelValidations
       first_attempt = true
       allow(Customers::LockService).to receive(:call!).and_wrap_original do |original, **args, &block|
         if first_attempt
@@ -195,7 +196,7 @@ RSpec.describe "migrations:billing_operation_snapshots" do # rubocop:disable RSp
   end
 
   context "when the operation is cancelled" do
-    before { operation.update!(cancelled_at: Time.current, cancellation_reason: :rate_change) }
+    before { operation.update_columns(cancelled_at: Time.current, cancellation_reason: :rate_change) } # rubocop:disable Rails/SkipsModelValidations
 
     it "reports cancelled legacy rows that would block a non-null constraint" do
       expect { expect { run_task }.to raise_error(BillingOperationSnapshotsBackfill::UnverifiableOperation) }
@@ -207,7 +208,7 @@ RSpec.describe "migrations:billing_operation_snapshots" do # rubocop:disable RSp
   end
 
   context "with a partial snapshot" do
-    before { operation.update!(coverage_started_at: Time.utc(2026, 1, 1)) }
+    before { operation.update_column(:coverage_started_at, Time.utc(2026, 1, 1)) } # rubocop:disable Rails/SkipsModelValidations
 
     it "reports a failure without overwriting existing data" do
       expect { expect { run_task }.to raise_error(BillingOperationSnapshotsBackfill::UnverifiableOperation, /1 operations/) }
@@ -236,7 +237,7 @@ RSpec.describe "migrations:billing_operation_snapshots" do # rubocop:disable RSp
   end
 
   context "with a reconciliation operation" do
-    before { operation.update!(action_type: "reconcile_advance_coverage", reason: :rate_change) }
+    before { operation.update_columns(action_type: "reconcile_advance_coverage", reason: :rate_change) } # rubocop:disable Rails/SkipsModelValidations
 
     it "does not fabricate historical coverage" do
       expect { expect { run_task }.to raise_error(BillingOperationSnapshotsBackfill::UnverifiableOperation) }
@@ -259,7 +260,7 @@ RSpec.describe "migrations:billing_operation_snapshots" do # rubocop:disable RSp
   end
 
   context "when no segment is due" do
-    before { operation.update!(billing_at: Time.utc(2026, 1, 20)) }
+    before { operation.update_column(:billing_at, Time.utc(2026, 1, 20)) } # rubocop:disable Rails/SkipsModelValidations
 
     it "reports the missing coverage instead of marking the operation as migrated" do
       expect { expect { run_task }.to raise_error(BillingOperationSnapshotsBackfill::UnverifiableOperation) }

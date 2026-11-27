@@ -6,6 +6,10 @@ module Billing
       super
     end
 
+    def coverage_started_at = segments.first.started_at
+
+    def coverage_ended_at = segments.last.ended_at
+
     def operation_billing_at(after: nil)
       if after && billing_at > after
         termination_billing_at || billing_at
@@ -14,12 +18,16 @@ module Billing
       end
     end
 
-    def selectable_from?(timestamp, after: nil)
-      if after
-        operation_billing_at(after:) > after
-      else
-        segments.last.ended_at > timestamp || billing_at == timestamp
-      end
+    def starts_on_or_after?(timestamp)
+      coverage_started_at >= timestamp
+    end
+
+    def pricing_inputs_for(segment)
+      {
+        rate_card_rate: segment.rate, rate_override: cycle.phase.rate_override,
+        started_at: segment.started_at, ended_at: segment.ended_at, cycle_started_at: cycle.started_at,
+        billing_at: terms.pricing_anchor_for(segment), proration_ratio: proration_ratio_for(segment)
+      }
     end
 
     def proration_ratio_for(segment)

@@ -46,7 +46,7 @@ class BillingOperationSnapshotsBackfill
     end
 
     # Legacy operations were billed from schedule slices rather than saved snapshots.
-    segments = BillingOperations::ResolveSegmentsService.call!(operation:).billing_segments
+    segments = legacy_segments(operation)
     raise UnverifiableOperation, "legacy resolver returned no coverage" if segments.empty?
 
     verify_completed_history!(operation, segments) if operation.processed_at?
@@ -67,6 +67,23 @@ class BillingOperationSnapshotsBackfill
       BillingOperationSegment.insert_all!(attributes) # rubocop:disable Rails/SkipsModelValidations
       BillingOperation.where(organization_id: operation.organization_id, id: operation.id)
         .update_all(**coverage, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    end
+  end
+
+  def legacy_segments(operation)
+    card = operation.contract_rate_card
+    schedule = Billing::RateCards::BuildScheduleService.call!(contract_rate_card: card).schedule
+    previous_billing_at = card.billing_operations.completed.where(
+      organization_id: operation.organization_id, cancelled_at: nil, action_type: operation.action_type,
+      target_cycle_started_at: operation.target_cycle_started_at, billing_at: ...operation.billing_at
+    ).maximum(:billing_at)
+
+    schedule.obligations_for_cycle(operation.target_cycle_started_at).select do |obligation|
+      obligation.billing_at <= operation.billing_at && (!previous_billing_at || obligation.billing_at > previous_billing_at)
+    end.flat_map do |obligation|
+      obligation.segments.map do |segment|
+        BillingSegments::BuildService.call!(contract_rate_card: card, **obligation.pricing_inputs_for(segment)).billing_segment
+      end
     end
   end
 

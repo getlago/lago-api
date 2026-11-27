@@ -68,7 +68,7 @@ RSpec.describe Billing::RateCards::Schedule do
     obligation = schedule.next_obligation(from: cycle.started_at)
     while obligation && obligation.cycle.started_at == cycle.started_at && obligation.billing_at <= asked_at
       segments.concat(obligation.segments.map { |segment| [obligation, segment] })
-      obligation = schedule.next_obligation(from: cycle.started_at, after: obligation.billing_at)
+      obligation = schedule.next_obligation(from: obligation.segments.last.ended_at)
     end
     segments
   end

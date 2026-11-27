@@ -60,7 +60,7 @@ describe "A contract terminates at its planned end", :premium do
     travel_to(ended_at + 5.minutes) do
       clock_job do
         Clock::TerminateEndedContractsJob.perform_later
-        Clock::ProcessBillingOperationsJob.perform_later
+        Clock::ScheduleBillingOperationsJob.perform_later
       end
     end
   end

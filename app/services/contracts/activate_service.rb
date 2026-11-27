@@ -33,8 +33,7 @@ module Contracts
           reseed_stale_rate_cards
 
           contract.update!(status: :active)
-          reset_billing_clocks
-          BillingOperations::ProcessJob.perform_after_commit(contract.customer_id)
+          schedule_initial_billing
           SendWebhookJob.perform_after_commit("contract.started", contract)
           Utils::ActivityLog.produce_after_commit(contract, "contract.started")
         end
@@ -69,7 +68,7 @@ module Contracts
     def reseed_stale_rate_cards
       start_day = contract.default_rate_card_lifecycle[:effective_date]
 
-      contract.applied_rate_cards.where.not(effective_date: start_day).find_each do |card|
+      cards_for_activation.where.not(effective_date: start_day).find_each do |card|
         own_anchor = card.inherited_billing_anchor?(contract.billing_anchor_date) ? nil : card.billing_anchor_date
         ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
       end
@@ -79,26 +78,27 @@ module Contracts
     # rates edited while the contract was pending can change the cadence since.
     # A card never billed yet waits for its first billing date, so a late
     # activation still bills the periods elapsed since the start.
-    def reset_billing_clocks
-      contract.applied_rate_cards.find_each do |card|
-        build = Billing::RateCards::BuildScheduleService.call(contract_rate_card: card)
-        next if build.failure?
-
-        schedule = build.schedule
-
-        planned_operation = ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, schedule:)
-          .planned_operation
-        action = card.periodic_billing_action
-        # Event-only advance usage is billed by usage events, not periodic operations.
-        next unless action && planned_operation
+    def schedule_initial_billing
+      created_operation = false
+      cards_for_activation.find_each do |card|
+        planned_operation = ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp:).planned_operation
+        next unless planned_operation && planned_operation.billing_at <= timestamp
 
         BillingOperations::CreateService.call!(
           contract_rate_card: card,
-          action_type: action,
+          action_type: card.periodic_billing_action,
           reason: BillingOperation::REASONS.fetch(:contract_activation),
           planned_operation:
         )
+        created_operation = true
       end
+      BillingOperations::ProcessJob.perform_after_commit(contract.customer_id) if created_operation
+    end
+
+    def cards_for_activation
+      contract.applied_rate_cards
+        .preload(rate_card: [:rates, {product: :billable_metric}], rate_phases: :rate_override)
+        .preload(:earliest_pending_periodic_operation, :latest_completed_periodic_operation)
     end
 
     def active_sibling?
