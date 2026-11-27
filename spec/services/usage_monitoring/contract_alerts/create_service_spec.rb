@@ -16,8 +16,7 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
       alert_type: "usage_units",
       code: "opus_tokens",
       name: "Opus tokens",
-      product_code: product.code,
-      product_filter_code: product_filter.code,
+      scope:,
       thresholds: [
         {code: "warn", value: "1000000"},
         {code: "high", value: "2000000", notify_on: %w[triggered resolved]},
@@ -25,6 +24,8 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
       ]
     }
   end
+  let(:scope) { [entry] }
+  let(:entry) { {type: "contract", product_code: product.code, product_filter_codes: [product_filter.code]} }
 
   def price_on(contract, product, product_filter: nil)
     rate_card = create(:rate_card, organization: contract.organization, product:, product_filter:)
@@ -73,225 +74,157 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
     expect(UsageMonitoring::ContractActivity.sole).to have_attributes(organization_id: organization.id, contract_id: contract.id, enqueued: false)
   end
 
-  context "with the product and the filter given by id" do
-    let(:params) do
-      {alert_type: "usage_units", code: "opus_tokens", product_id: product.id, product_filter_id: product_filter.id, thresholds: [{value: 10}]}
-    end
-
-    it "creates the alert on them" do
-      expect(result).to be_success
-      expect(result.alert).to have_attributes(product:, product_filter:)
-    end
-  end
-
   context "with an amount alert on the whole contract" do
-    let(:params) { {alert_type: "usage_amount", code: "spend", thresholds: [{value: 10_000_00}]} }
+    let(:params) { super().merge(alert_type: "usage_amount") }
+    let(:scope) { [] }
 
     it "creates the alert without a product" do
       expect(result).to be_success
       expect(result.alert).to be_a(UsageMonitoring::ContractUsageAmountAlert)
-      expect(result.alert).to have_attributes(alert_type: "usage_amount", product: nil, product_filter: nil)
+      expect(result.alert).to have_attributes(alert_type: "usage_amount", product: nil, product_filter: nil, with_product_filters: false)
     end
   end
 
-  context "with an amount alert on a product" do
-    let(:params) { {alert_type: "usage_amount", code: "spend", product_code: product.code, thresholds: [{value: 10_000_00}]} }
+  context "with the product only" do
+    let(:entry) { {type: "contract", product_code: product.code} }
 
     it "creates the alert on the product's own fees" do
       expect(result).to be_success
       expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: false)
     end
+  end
 
-    context "with with_product_filters" do
-      before { params[:with_product_filters] = true }
+  [true, false].each do |flag|
+    context "with with_product_filters #{flag}" do
+      let(:entry) { {type: "contract", product_code: product.code, with_product_filters: flag} }
 
-      it "creates the alert on the product and its filters" do
+      it "creates the alert on the product, and on its filters when true" do
         expect(result).to be_success
-        expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: true)
+        expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: flag)
       end
     end
   end
 
-  context "with with_product_filters on a product filter" do
-    before { params[:with_product_filters] = true }
+  context "without a scope" do
+    let(:scope) { nil }
 
-    it "returns a validation failure on with_product_filters" do
-      expect(result.error.messages).to eq({with_product_filters: ["value_is_invalid"]})
+    it "returns a validation failure on scope" do
+      expect(result.error.messages).to eq({scope: ["value_is_mandatory"]})
+      expect(organization.contract_alerts).to be_empty
     end
   end
 
-  context "with with_product_filters on the whole contract" do
-    let(:params) { {alert_type: "usage_amount", code: "spend", with_product_filters: true, thresholds: [{value: 10_000_00}]} }
+  context "with usage units and an empty scope" do
+    let(:scope) { [] }
 
-    it "returns a validation failure on with_product_filters" do
-      expect(result.error.messages).to eq({with_product_filters: ["value_is_invalid"]})
+    it "returns product_required_for_units on scope" do
+      expect(result.error.messages).to eq({scope: ["product_required_for_units"]})
     end
   end
 
-  ["no", "true", 2].each do |value|
-    context "with with_product_filters #{value.inspect}" do
-      before do
-        params.delete(:product_filter_code)
-        params[:with_product_filters] = value
+  context "with a scope that is not a list" do
+    let(:scope) { entry }
+
+    it "returns a validation failure on scope" do
+      expect(result.error.messages).to eq({scope: ["value_is_invalid"]})
+    end
+  end
+
+  context "with two entries" do
+    let(:scope) { [entry, {type: "contract", product_code: product.code}] }
+
+    it "returns a validation failure on scope with its limit" do
+      expect(result.error.messages).to eq({scope: ["value_is_invalid"]})
+      expect(result.error.meta).to eq({scope: {max_items: 1}})
+    end
+  end
+
+  context "with an entry that is not an object" do
+    let(:params) { super().merge(alert_type: "usage_amount") }
+    let(:scope) { ["contract"] }
+
+    it "returns a validation failure on the entry rather than creating an alert on the whole contract" do
+      expect(result.error.messages).to eq({"scope[0]": ["value_is_invalid"]})
+      expect(organization.contract_alerts).to be_empty
+    end
+  end
+
+  context "with an unknown field in the entry" do
+    let(:entry) { {type: "contract", product_code: product.code, product_filter_code: product_filter.code} }
+
+    it "returns a validation failure on that field rather than creating an alert on the whole product" do
+      expect(result.error.messages).to eq({"scope[0].product_filter_code": ["value_is_invalid"]})
+      expect(organization.contract_alerts).to be_empty
+    end
+  end
+
+  [nil, "plan"].each do |type|
+    context "with type #{type.inspect}" do
+      let(:entry) { super().merge(type:) }
+
+      it "returns a validation failure on the type, with the types allowed" do
+        expect(result.error.messages).to eq({"scope[0].type": ["value_is_invalid"]})
+        expect(result.error.meta).to eq({"scope[0].type": {allowed_values: ["contract"]}})
       end
+    end
+  end
+
+  [{product_filter_codes: ["opus"]}, {with_product_filters: false}, {}].each do |fields|
+    context "with #{fields.inspect} and no product code" do
+      let(:entry) { {type: "contract", **fields} }
+
+      it "returns a validation failure on the product code" do
+        expect(result.error.messages).to eq({"scope[0].product_code": ["value_is_mandatory"]})
+      end
+    end
+  end
+
+  context "with a product code that is not a string" do
+    let(:entry) { {type: "contract", product_code: [product.code]} }
+
+    it "returns a validation failure on the product code" do
+      expect(result.error.messages).to eq({"scope[0].product_code": ["value_is_invalid"]})
+    end
+  end
+
+  [true, false, nil].each do |flag|
+    context "with with_product_filters #{flag.inspect} next to product_filter_codes" do
+      let(:entry) { super().merge(with_product_filters: flag) }
+
+      it "returns a validation failure on with_product_filters, as the two exclude each other" do
+        expect(result.error.messages).to eq({"scope[0].with_product_filters": ["value_is_invalid"]})
+      end
+    end
+  end
+
+  ["no", "true", 2].each do |flag|
+    context "with with_product_filters #{flag.inspect}" do
+      let(:entry) { {type: "contract", product_code: product.code, with_product_filters: flag} }
 
       it "returns a validation failure on with_product_filters rather than widening the scope" do
-        expect(result.error.messages).to eq({with_product_filters: ["value_is_invalid"]})
+        expect(result.error.messages).to eq({"scope[0].with_product_filters": ["value_is_invalid"]})
         expect(organization.contract_alerts).to be_empty
       end
     end
   end
 
-  context "with a scope, as the v2 API names the target" do
-    let(:params) { {alert_type: "usage_units", code: "opus_tokens", scope:, thresholds: [{value: 10}]} }
-    let(:scope) { [entry] }
-    let(:entry) { {type: "contract", product_code: product.code, product_filter_codes: [product_filter.code]} }
+  [[], "opus", [nil], [""], [1]].each do |codes|
+    context "with product_filter_codes #{codes.inspect}" do
+      let(:entry) { super().merge(product_filter_codes: codes) }
 
-    it "creates the alert on the filter" do
-      expect(result).to be_success
-      expect(result.alert).to have_attributes(product:, product_filter:, with_product_filters: false)
-    end
-
-    context "with the product only" do
-      let(:entry) { {type: "contract", product_code: product.code} }
-
-      it "creates the alert on the product's own fees" do
-        expect(result).to be_success
-        expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: false)
-      end
-    end
-
-    [true, false].each do |flag|
-      context "with with_product_filters #{flag}" do
-        let(:entry) { {type: "contract", product_code: product.code, with_product_filters: flag} }
-
-        it "creates the alert on the product, and on its filters when true" do
-          expect(result).to be_success
-          expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: flag)
-        end
-      end
-    end
-
-    context "without a scope" do
-      let(:scope) { nil }
-
-      it "returns a validation failure on scope" do
-        expect(result.error.messages).to eq({scope: ["value_is_mandatory"]})
+      it "returns a validation failure on product_filter_codes rather than creating an alert on the whole product" do
+        expect(result.error.messages).to eq({"scope[0].product_filter_codes": ["value_is_invalid"]})
         expect(organization.contract_alerts).to be_empty
       end
     end
+  end
 
-    context "with an empty scope on an amount alert" do
-      let(:params) { super().merge(alert_type: "usage_amount") }
-      let(:scope) { [] }
+  context "with two product filter codes" do
+    let(:entry) { super().merge(product_filter_codes: [product_filter.code, "other"]) }
 
-      it "creates the alert on the whole contract" do
-        expect(result).to be_success
-        expect(result.alert).to have_attributes(product: nil, product_filter: nil, with_product_filters: false)
-      end
-    end
-
-    context "with an empty scope on a units alert" do
-      let(:scope) { [] }
-
-      it "returns product_required_for_units on scope" do
-        expect(result.error.messages).to eq({scope: ["product_required_for_units"]})
-      end
-    end
-
-    context "with a scope that is not a list" do
-      let(:scope) { entry }
-
-      it "returns a validation failure on scope" do
-        expect(result.error.messages).to eq({scope: ["value_is_invalid"]})
-      end
-    end
-
-    context "with two entries" do
-      let(:scope) { [entry, {type: "contract", product_code: product.code}] }
-
-      it "returns a validation failure on scope with its limit" do
-        expect(result.error.messages).to eq({scope: ["value_is_invalid"]})
-        expect(result.error.meta).to eq({scope: {max_items: 1}})
-      end
-    end
-
-    [nil, "plan"].each do |type|
-      context "with type #{type.inspect}" do
-        let(:entry) { super().merge(type:) }
-
-        it "returns a validation failure on the type, with the types allowed" do
-          expect(result.error.messages).to eq({"scope[0].type": ["value_is_invalid"]})
-          expect(result.error.meta).to eq({"scope[0].type": {allowed_values: ["contract"]}})
-        end
-      end
-    end
-
-    [{product_filter_codes: ["opus"]}, {with_product_filters: false}, {}].each do |fields|
-      context "with #{fields.inspect} and no product code" do
-        let(:entry) { {type: "contract", **fields} }
-
-        it "returns a validation failure on the product code" do
-          expect(result.error.messages).to eq({"scope[0].product_code": ["value_is_mandatory"]})
-        end
-      end
-    end
-
-    [true, false, nil].each do |flag|
-      context "with with_product_filters #{flag.inspect} next to product_filter_codes" do
-        let(:entry) { super().merge(with_product_filters: flag) }
-
-        it "returns a validation failure on with_product_filters, as the two exclude each other" do
-          expect(result.error.messages).to eq({"scope[0].with_product_filters": ["value_is_invalid"]})
-        end
-      end
-    end
-
-    ["no", 2].each do |flag|
-      context "with with_product_filters #{flag.inspect}" do
-        let(:entry) { {type: "contract", product_code: product.code, with_product_filters: flag} }
-
-        it "returns a validation failure on with_product_filters" do
-          expect(result.error.messages).to eq({"scope[0].with_product_filters": ["value_is_invalid"]})
-        end
-      end
-    end
-
-    context "with no product filter code" do
-      let(:entry) { super().merge(product_filter_codes: []) }
-
-      it "returns a validation failure on product_filter_codes" do
-        expect(result.error.messages).to eq({"scope[0].product_filter_codes": ["value_is_invalid"]})
-      end
-    end
-
-    context "with two product filter codes" do
-      let(:entry) { super().merge(product_filter_codes: [product_filter.code, "other"]) }
-
-      it "returns a validation failure on product_filter_codes with its limit" do
-        expect(result.error.messages).to eq({"scope[0].product_filter_codes": ["value_is_invalid"]})
-        expect(result.error.meta).to eq({"scope[0].product_filter_codes": {max_items: 1}})
-      end
-    end
-
-    context "with a fixed product" do
-      let(:fixed_product) { create(:product, :fixed, organization:) }
-      let(:entry) { {type: "contract", product_code: fixed_product.code} }
-
-      before { price_on(contract, fixed_product) }
-
-      it "returns a validation failure on the product code of the entry" do
-        expect(result.error.messages).to eq({"scope[0].product_code": ["value_is_invalid"]})
-      end
-    end
-
-    context "with a filter that the contract does not price" do
-      let(:entry) { super().merge(product_filter_codes: [create(:product_filter, organization:, product:).code]) }
-
-      it "returns a not found failure" do
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.resource).to eq("product_filter")
-      end
+    it "returns a validation failure on product_filter_codes with its limit" do
+      expect(result.error.messages).to eq({"scope[0].product_filter_codes": ["value_is_invalid"]})
+      expect(result.error.meta).to eq({"scope[0].product_filter_codes": {max_items: 1}})
     end
   end
 
@@ -411,30 +344,8 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
     end
   end
 
-  context "with usage units and no product" do
-    before { params.except!(:product_code, :product_filter_code) }
-
-    it "returns product_required_for_units" do
-      expect(result.error.messages).to eq({product_code: ["product_required_for_units"]})
-    end
-  end
-
-  context "with a filter and no product" do
-    before do
-      params[:alert_type] = "usage_amount"
-      params.delete(:product_code)
-    end
-
-    it "returns a validation failure on product_code" do
-      expect(result.error.messages).to eq({product_code: ["value_is_mandatory"]})
-    end
-  end
-
   context "with a product that the contract does not price" do
-    before do
-      params[:product_code] = create(:product, organization:).code
-      params.delete(:product_filter_code)
-    end
+    let(:entry) { {type: "contract", product_code: create(:product, organization:).code} }
 
     it "returns a not found failure" do
       expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -443,12 +354,13 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
   end
 
   context "with a product of another organization" do
+    let(:entry) { {type: "contract", product_code: "shared_code"} }
+
     before do
       other_organization = create(:organization)
       other_product = create(:product, organization: other_organization, code: "shared_code")
       other_contract = create(:contract, customer: create(:customer, organization: other_organization), external_id: contract.external_id)
       price_on(other_contract, other_product)
-      params.merge!(product_code: "shared_code").delete(:product_filter_code)
     end
 
     it "returns a not found failure" do
@@ -459,11 +371,9 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
 
   context "with a product that only a terminated contract on the external id priced" do
     let(:other_product) { create(:product, organization:) }
+    let(:entry) { {type: "contract", product_code: other_product.code} }
 
-    before do
-      price_on(create(:contract, :terminated, organization:, customer:, external_id: contract.external_id), other_product)
-      params.merge!(product_code: other_product.code).delete(:product_filter_code)
-    end
+    before { price_on(create(:contract, :terminated, organization:, customer:, external_id: contract.external_id), other_product) }
 
     it "returns a not found failure" do
       expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -473,11 +383,9 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
 
   context "with a product that the pending replacement on the external id prices" do
     let(:other_product) { create(:product, organization:) }
+    let(:entry) { {type: "contract", product_code: other_product.code} }
 
-    before do
-      price_on(create(:contract, :pending, organization:, customer:, external_id: contract.external_id), other_product)
-      params.merge!(product_code: other_product.code).delete(:product_filter_code)
-    end
+    before { price_on(create(:contract, :pending, organization:, customer:, external_id: contract.external_id), other_product) }
 
     it "creates the alert on it" do
       expect(result).to be_success
@@ -487,19 +395,18 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
 
   context "with a fixed product" do
     let(:fixed_product) { create(:product, :fixed, organization:) }
+    let(:params) { super().merge(alert_type: "usage_amount") }
+    let(:entry) { {type: "contract", product_code: fixed_product.code} }
 
-    before do
-      price_on(contract, fixed_product)
-      params.merge!(alert_type: "usage_amount", product_code: fixed_product.code).delete(:product_filter_code)
-    end
+    before { price_on(contract, fixed_product) }
 
-    it "returns a validation failure on product_code" do
-      expect(result.error.messages).to eq({product_code: ["value_is_invalid"]})
+    it "returns a validation failure on the product code" do
+      expect(result.error.messages).to eq({"scope[0].product_code": ["value_is_invalid"]})
     end
   end
 
   context "with a filter of the product that the contract does not price" do
-    before { params[:product_filter_code] = create(:product_filter, organization:, product:).code }
+    let(:entry) { super().merge(product_filter_codes: [create(:product_filter, organization:, product:).code]) }
 
     it "returns a not found failure" do
       expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -510,11 +417,9 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
   context "with a filter of another product" do
     let(:other_product) { create(:product, organization:) }
     let(:other_filter) { create(:product_filter, organization:, product: other_product) }
+    let(:entry) { super().merge(product_filter_codes: [other_filter.code]) }
 
-    before do
-      price_on(contract, other_product, product_filter: other_filter)
-      params[:product_filter_code] = other_filter.code
-    end
+    before { price_on(contract, other_product, product_filter: other_filter) }
 
     it "returns a not found failure" do
       expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -575,10 +480,9 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
 
   context "when the product already has an alert of this type" do
     let(:existing_with_product_filters) { false }
+    let(:entry) { {type: "contract", product_code: product.code, with_product_filters: true} }
 
     before do
-      params.delete(:product_filter_code)
-      params[:with_product_filters] = true
       create(
         :contract_usage_units_alert,
         organization:,
@@ -603,10 +507,10 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
   end
 
   context "when the whole contract already has an alert of this type" do
-    before do
-      params.merge!(alert_type: "usage_amount").except!(:product_code, :product_filter_code)
-      create(:contract_usage_amount_alert, organization:, contract_external_id: contract.external_id)
-    end
+    let(:params) { super().merge(alert_type: "usage_amount") }
+    let(:scope) { [] }
+
+    before { create(:contract_usage_amount_alert, organization:, contract_external_id: contract.external_id) }
 
     it "returns alert_already_exists on base" do
       expect(result.error.messages).to eq({base: ["alert_already_exists"]})
@@ -614,10 +518,10 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
   end
 
   context "when the whole contract already has an alert of the other type" do
-    before do
-      params.merge!(alert_type: "usage_amount").except!(:product_code, :product_filter_code)
-      create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id, product:)
-    end
+    let(:params) { super().merge(alert_type: "usage_amount") }
+    let(:scope) { [] }
+
+    before { create(:contract_usage_units_alert, organization:, contract_external_id: contract.external_id, product:) }
 
     it "creates the alert" do
       expect(result).to be_success

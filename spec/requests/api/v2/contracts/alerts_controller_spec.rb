@@ -224,6 +224,25 @@ RSpec.describe Api::V2::Contracts::AlertsController do
       end
     end
 
+    {
+      "the product_filter_code of the previous shape" => [{type: "contract", product_code: "llm_tokens", product_filter_code: "opus"}, "scope[0].product_filter_code"],
+      "product_filter_codes that is not a list" => [{type: "contract", product_code: "llm_tokens", product_filter_codes: "opus"}, "scope[0].product_filter_codes"],
+      "a blank product filter code" => [{type: "contract", product_code: "llm_tokens", product_filter_codes: [""]}, "scope[0].product_filter_codes"],
+      "an entry that is not an object" => ["contract", "scope[0]"]
+    }.each do |description, (entry, field)|
+      context "with #{description}" do
+        let(:create_params) { super().merge(alert_type: "usage_amount", scope: [entry]) }
+
+        it "returns a validation error on #{field} rather than creating an alert on a wider scope" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field:, meta: {}}])
+          expect(organization.contract_alerts).to be_empty
+        end
+      end
+    end
+
     context "with two product filter codes" do
       let(:create_params) do
         super().merge(scope: [{type: "contract", product_code: "llm_tokens", product_filter_codes: %w[opus sonnet]}])

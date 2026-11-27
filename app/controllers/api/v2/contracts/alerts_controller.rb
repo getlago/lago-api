@@ -5,7 +5,6 @@ module Api
     module Contracts
       class AlertsController < Api::V2::BaseController
         THRESHOLD_PARAMS = [:code, :value, :recurring, :notify_on, {notify_on: []}].freeze
-        SCOPE_PARAMS = [:type, :product_code, :with_product_filters, {product_filter_codes: []}].freeze
 
         cursor_paginated_index(UsageMonitoring::ContractAlert)
         date_range_filtered_index(:created_at)
@@ -39,7 +38,7 @@ module Api
           result = ::UsageMonitoring::ContractAlerts::CreateService.call(
             organization: current_organization,
             contract:,
-            params: input_params.to_h.with_defaults(scope: nil)
+            params: input_params.with_defaults(scope: nil)
           )
 
           if result.success?
@@ -50,7 +49,7 @@ module Api
         end
 
         def update
-          result = ::UsageMonitoring::ContractAlerts::UpdateService.call(alert:, params: input_params.to_h)
+          result = ::UsageMonitoring::ContractAlerts::UpdateService.call(alert:, params: input_params)
 
           if result.success?
             render_alert(result.alert)
@@ -89,13 +88,10 @@ module Api
         end
 
         def input_params
-          params.require(:alert).permit(
-            :alert_type,
-            :code,
-            :name,
-            scope: SCOPE_PARAMS,
-            thresholds: THRESHOLD_PARAMS
-          )
+          alert = params.require(:alert)
+          input = alert.permit(:alert_type, :code, :name, thresholds: THRESHOLD_PARAMS).to_h
+          input[:scope] = alert.to_unsafe_h[:scope] if alert.key?(:scope)
+          input
         end
 
         def resource_name

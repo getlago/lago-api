@@ -83,11 +83,6 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
   {
     code: "new_code",
     alert_type: "usage_units",
-    product_code: "llm_tokens",
-    product_filter_code: "opus",
-    product_id: SecureRandom.uuid,
-    product_filter_id: SecureRandom.uuid,
-    with_product_filters: true,
     scope: [{type: "contract", product_code: "llm_tokens"}]
   }.each do |field, value|
     context "with #{field}" do
@@ -102,13 +97,13 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
   end
 
   context "with several fields that cannot be changed" do
-    let(:params) { {code: "new_code", alert_type: "usage_units", product_code: "llm_tokens"} }
+    let(:params) { {code: "new_code", alert_type: "usage_units", scope: []} }
 
     it "returns value_cannot_be_changed on each" do
       expect(result.error.messages).to eq({
         code: ["value_cannot_be_changed"],
         alert_type: ["value_cannot_be_changed"],
-        product_code: ["value_cannot_be_changed"]
+        scope: ["value_cannot_be_changed"]
       })
     end
   end

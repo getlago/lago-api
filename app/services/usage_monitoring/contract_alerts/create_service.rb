@@ -7,6 +7,8 @@ module UsageMonitoring
 
       Result = BaseResult[:alert]
 
+      SCOPE_FIELDS = %w[type product_code product_filter_codes with_product_filters].freeze
+
       def initialize(organization:, contract:, params:)
         @organization = organization
         @contract = contract
@@ -27,22 +29,16 @@ module UsageMonitoring
           return result.single_validation_failure!(field: :alert_type, error_code: "invalid_type")
         end
 
-        if params.key?(:scope)
-          read_scope
-          return result unless result.success?
-        end
-
-        unless [nil, true, false].include?(params[:with_product_filters])
-          return validation_error(request_field(:with_product_filters), "value_is_invalid")
-        end
+        entry = read_scope
+        return result unless result.success?
 
         thresholds_result = UsageMonitoring::Thresholds::ValidateService.call(thresholds: params[:thresholds])
         return result.fail_with_error!(thresholds_result.error) unless thresholds_result.success?
 
-        product = find_product
+        product = find_product(entry)
         return result unless result.success?
 
-        product_filter = find_product_filter(product)
+        product_filter = find_product_filter(product, entry&.dig(:product_filter_codes)&.first)
         return result unless result.success?
 
         ActiveRecord::Base.transaction do
@@ -54,7 +50,7 @@ module UsageMonitoring
             name: params[:name],
             product:,
             product_filter:,
-            with_product_filters: params[:with_product_filters] == true
+            with_product_filters: entry&.dig(:with_product_filters) == true
           )
           alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
           seed_alarms_already_past(alert, contract)
@@ -88,78 +84,63 @@ module UsageMonitoring
         return if scope.empty?
 
         entry = scope.first
-        return validation_error(request_field(:type), "value_is_invalid", allowed_values: ["contract"]) unless entry[:type] == "contract"
-        return validation_error(request_field(:product_code), "value_is_mandatory") if entry[:product_code].blank?
+        return validation_error(scope_field(:base), "value_is_invalid") unless entry.is_a?(Hash)
+
+        unknown = entry.keys - SCOPE_FIELDS
+        return validation_error(scope_field(unknown.first), "value_is_invalid") if unknown.any?
+        return validation_error(scope_field(:type), "value_is_invalid", allowed_values: ["contract"]) unless entry[:type] == "contract"
+        return validation_error(scope_field(:product_code), "value_is_mandatory") if entry[:product_code].blank?
+        return validation_error(scope_field(:product_code), "value_is_invalid") unless entry[:product_code].is_a?(String)
 
         codes = entry[:product_filter_codes]
-        if codes
-          return validation_error(request_field(:with_product_filters), "value_is_invalid") if entry.key?(:with_product_filters)
-          return validation_error(request_field(:product_filter_codes), "value_is_invalid") if codes.empty?
-          return validation_error(request_field(:product_filter_codes), "value_is_invalid", max_items: 1) if codes.many?
+        if (codes && entry.key?(:with_product_filters)) || [nil, true, false].exclude?(entry[:with_product_filters])
+          return validation_error(scope_field(:with_product_filters), "value_is_invalid")
         end
 
-        params.merge!(product_code: entry[:product_code], product_filter_code: codes&.first, with_product_filters: entry[:with_product_filters])
+        if codes
+          return validation_error(scope_field(:product_filter_codes), "value_is_invalid", max_items: 1) if codes.is_a?(Array) && codes.many?
+          return validation_error(scope_field(:product_filter_codes), "value_is_invalid") unless codes.is_a?(Array) && codes.first.is_a?(String) && codes.first.present?
+        end
+
+        entry
       end
 
-      def request_field(name)
-        if !params.key?(:scope)
-          name
-        elsif params[:scope].empty?
-          :scope
-        else
-          ValidationFailure.item_field(:scope, 0, name)
-        end
+      def scope_field(name)
+        ValidationFailure.item_field(:scope, 0, name)
       end
 
       def validation_error(field, error_code, **meta)
         result.single_validation_failure!(field:, error_code:, meta:)
       end
 
-      def find_product
-        if product_param.blank?
-          if params[:alert_type].to_s == "usage_units"
-            validation_error(request_field(:product_code), "product_required_for_units")
-          elsif product_filter_param.present?
-            validation_error(request_field(:product_code), "value_is_mandatory")
-          end
-
+      def find_product(entry)
+        if entry.nil?
+          validation_error(:scope, "product_required_for_units") if params[:alert_type].to_s == "usage_units"
           return
         end
 
-        products = organization.products.where(id: priced_rate_cards.select(:product_id))
-        product = params[:product_id].present? ? products.find_by(id: product_param) : products.find_by(code: product_param)
+        product = organization.products.where(id: priced_rate_cards.select(:product_id)).find_by(code: entry[:product_code])
 
         if product.nil?
           result.not_found_failure!(resource: "product")
           nil
         elsif product.fixed?
-          validation_error(request_field(:product_code), "value_is_invalid")
+          validation_error(scope_field(:product_code), "value_is_invalid")
           nil
         else
           product
         end
       end
 
-      def find_product_filter(product)
-        return if product_filter_param.blank?
+      def find_product_filter(product, code)
+        return if code.nil?
 
-        filters = product.filters.where(id: priced_rate_cards.where(product_id: product.id).select(:product_filter_id))
-        product_filter = if params[:product_filter_id].present?
-          filters.find_by(id: product_filter_param)
-        else
-          filters.find_by(code: product_filter_param)
-        end
+        product_filter = product.filters
+          .where(id: priced_rate_cards.where(product_id: product.id).select(:product_filter_id))
+          .find_by(code:)
 
         result.not_found_failure!(resource: "product_filter") unless product_filter
         product_filter
-      end
-
-      def product_param
-        params[:product_id].presence || params[:product_code].presence
-      end
-
-      def product_filter_param
-        params[:product_filter_id].presence || params[:product_filter_code].presence
       end
 
       def priced_rate_cards
