@@ -96,16 +96,16 @@ module BillingOperations
         next if operations.empty?
 
         preload_schedule_inputs(operations)
-        operation_segments = operations.index_with { |operation| resolve_operation(operation) }
-        segments = operation_segments.values.flat_map(&:segments)
-        invoice = if segments.any?
+        operation_resolutions = operations.index_with { |operation| resolve_operation(operation) }
+        billing_segments = operation_resolutions.values.flat_map(&:billing_segments)
+        invoice = if billing_segments.any?
           if regroup_batch?(operations)
-            regroup_paid_fees(operations, segments, operation_segments)
+            regroup_paid_fees(operations, billing_segments, operation_resolutions)
           else
-            create_contract_invoice(segments, operation_segments)
+            create_contract_invoice(billing_segments, operation_resolutions)
           end
         end
-        complete_operations(operation_segments)
+        complete_operations(operation_resolutions)
       end
       invoice
     end
@@ -130,7 +130,7 @@ module BillingOperations
     # An obsolete terminal renewal bills nothing, but still completes and clears its clock.
     def resolve_operation(operation)
       if obsolete_terminal_renewal?(operation)
-        ResolveSegmentsService::Result.new.tap { it.segments = [] }
+        ResolveSegmentsService::Result.new.tap { it.billing_segments = [] }
       else
         ResolveSegmentsService.call!(operation:, pricing_units_by_code: @pricing_units_by_code)
       end
@@ -143,7 +143,7 @@ module BillingOperations
       ended_at && ended_at <= operation.target_cycle_started_at
     end
 
-    def create_contract_invoice(segments, operation_segments)
+    def create_contract_invoice(segments, operation_resolutions)
       contract = segments.first.contract
       invoice = nil
       outputs = {}
@@ -176,7 +176,7 @@ module BillingOperations
       else
         outputs.filter_map { |segment, fees| segment if fees.any? }
       end
-      operations_with_billed_segments(billed_segments, operation_segments).each { |operation| operation.invoice = invoice }
+      operations_with_billed_segments(billed_segments, operation_resolutions).each { |operation| operation.invoice = invoice }
       invoice
     rescue EmptyInvoice
       nil
@@ -186,7 +186,7 @@ module BillingOperations
       operations.all? { |operation| operation.action_type == "regroup_paid_fees" }
     end
 
-    def regroup_paid_fees(operations, segments, operation_segments)
+    def regroup_paid_fees(operations, segments, operation_resolutions)
       contract = segments.first.contract
       invoice = nil
       ActiveRecord::Base.transaction(requires_new: true) do
@@ -212,7 +212,7 @@ module BillingOperations
           end
         )
         invoice.update!(payment_status: :succeeded)
-        operations_with_billed_segments(invoiced_segments, operation_segments).each { |operation| operation.invoice = invoice }
+        operations_with_billed_segments(invoiced_segments, operation_resolutions).each { |operation| operation.invoice = invoice }
       end
       invoice
     rescue EmptyInvoice
@@ -220,23 +220,23 @@ module BillingOperations
     end
 
     # Operations with no billed segments must not inherit another operation's invoice in a consolidated batch.
-    def operations_with_billed_segments(segments, operation_segments)
-      operation_segments.filter_map do |operation, resolution|
-        operation if (resolution.segments & segments).any?
+    def operations_with_billed_segments(segments, operation_resolutions)
+      operation_resolutions.filter_map do |operation, resolution|
+        operation if (resolution.billing_segments & segments).any?
       end
     end
 
     # The clock moves to the obligation after this one, in the same transaction as the billing.
-    def complete_operations(operation_segments)
-      operation_segments.each do |operation, resolution|
+    def complete_operations(operation_resolutions)
+      operation_resolutions.each do |operation, resolution|
         operation.update!(processed_at: timestamp)
         operation.contract_rate_card.update!(next_billing_at: next_planned_operation(operation, resolution)&.billing_at)
       end
     end
 
-    # Nothing follows an operation whose cycle the schedule no longer has.
+    # Reconciliation and obsolete renewals do not build a schedule to continue.
     def next_planned_operation(operation, resolution)
-      return unless resolution.cycle
+      return unless resolution.schedule
 
       Schedule::BuildPlannedOperation.call!(
         schedule: resolution.schedule,

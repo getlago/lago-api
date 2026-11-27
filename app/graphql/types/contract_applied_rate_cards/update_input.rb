@@ -9,6 +9,7 @@ module Types
       argument :id, ID, required: true
 
       argument :billing_anchor_date, GraphQL::Types::ISO8601Date, required: false
+      argument :billing_scope, BillingScopeEnum, required: false
       argument :units, GraphQL::Types::Float, required: false
     end
   end

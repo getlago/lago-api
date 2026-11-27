@@ -21,19 +21,18 @@ module V2
         rate_phase_code: model.rate_phase&.code,
         rate_phase_name: model.rate_phase&.name,
         rate_source: model.rate_source,
-        rate_model: model.billing_segment.rate.rate_model,
-        rate_properties: model.billing_segment.rate_properties,
         units: model.units.to_s,
         events_count: model.events_count,
-        amount_cents: model.amount_cents
+        amount_cents: model.amount_cents,
+        segments: model.segments.map { |segment| ::V2::RateCardUsageSegmentSerializer.new(segment, nested_options).serialize }
       }
     end
 
     private
 
-    def from_datetime = model.billing_segment.started_at
+    def from_datetime = model.started_at
 
-    def to_datetime = model.billing_segment.ended_at
+    def to_datetime = model.ended_at
 
     def rate_card
       model.contract_rate_card.rate_card

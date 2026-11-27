@@ -18,8 +18,9 @@ RSpec.describe BillingOperations::ScheduleService do
   let(:rate_effective_from) { started_at }
   let(:effective_date) { started_at.to_date }
   let(:cursor) { Time.utc(2026, 2, 1) }
+  let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:cycle) }
   let(:contract_rate_card) do
-    create(:contract_rate_card, organization:, contract:, rate_card:, next_billing_at: cursor,
+    create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:, next_billing_at: cursor,
       effective_date:, billing_anchor_date: effective_date)
   end
   let(:timestamp) { cursor }
@@ -70,6 +71,7 @@ RSpec.describe BillingOperations::ScheduleService do
   end
 
   context "with a completed operation in the current cycle" do
+    let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:segment) }
     let(:completed_operation) do
       create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
         reason: "contract_activation", billing_at: Time.utc(2026, 1, 15),
@@ -142,6 +144,7 @@ RSpec.describe BillingOperations::ScheduleService do
   end
 
   context "with a future activation and a new rate in the current cycle" do
+    let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:segment) }
     let(:started_at) { Time.utc(2026, 11, 1) }
     let(:effective_date) { Date.new(2026, 11, 1) }
     let(:cursor) { Time.utc(2026, 11, 15) }
@@ -164,6 +167,19 @@ RSpec.describe BillingOperations::ScheduleService do
       expect(pending_activation.reload).to have_attributes(
         billing_at: Time.utc(2026, 12, 1), processed_at: nil, reason: "contract_activation"
       )
+    end
+
+    context "when the scope covers the cycle" do
+      let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:cycle) }
+
+      it "keeps the activation and does not schedule an intermediate close" do
+        expect(result.billing_operations).to be_empty
+        expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 12, 1))
+        expect(contract_rate_card.billing_operations.sole).to have_attributes(
+          id: pending_activation.id, billing_at: Time.utc(2026, 12, 1),
+          processed_at: nil, reason: "contract_activation"
+        )
+      end
     end
   end
 

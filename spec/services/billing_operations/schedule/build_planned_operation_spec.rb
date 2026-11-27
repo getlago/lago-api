@@ -13,18 +13,20 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   let(:product) { create(:product, :fixed, organization:) }
   let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:) }
   let(:billing_timing) { "advance" }
+  let(:billing_scope) { "cycle" }
   let(:contract_rate_card) do
     create(
-      :contract_rate_card, organization:, contract:, rate_card:,
+      :contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
       effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1)
     )
   end
   let(:schedule) { Billing::RateCards::BuildScheduleService.call!(contract_rate_card:).schedule }
   let(:timestamp) { Time.utc(2026, 11, 1) }
   let(:after) { nil }
+  let(:target_cycle_started_at) { Time.utc(2026, 11, 1, 7) }
   let(:after_operation) do
     build_stubbed(:billing_operation, organization:, customer:, contract_rate_card:,
-      billing_at: after, target_cycle_started_at: timestamp)
+      billing_at: after, target_cycle_started_at:)
   end
   let(:planning) { after ? {after_operation:} : {at: timestamp} }
   let(:rate_effective_from) { Time.utc(2026, 11, 1) }
@@ -33,7 +35,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     create(:rate_card_rate, organization:, rate_card:, effective_from: rate_effective_from, billing_interval_count: 1, billing_interval_unit: "month")
   end
 
-  it "returns the first planned segment using the customer's timezone" do
+  it "returns the first planned obligation using the customer's timezone" do
     expect(result).to be_success
     expect(result.planned_operation).to have_attributes(
       cycle_started_at: Time.utc(2026, 11, 1, 7),
@@ -54,6 +56,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   end
 
   context "when a rate changes at a mid-cycle billing boundary" do
+    let(:billing_scope) { "segment" }
     let(:timestamp) { Time.utc(2026, 11, 15) }
     let(:rate_effective_from) { Time.utc(2026, 11, 1) }
 
@@ -71,6 +74,16 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
           billing_at: timestamp
         )
       end
+
+      context "when the scope covers the cycle" do
+        let(:billing_scope) { "cycle" }
+
+        it "waits until the cycle closes" do
+          expect(result.planned_operation).to have_attributes(
+            cycle_started_at: target_cycle_started_at, billing_at: Time.utc(2026, 12, 1, 8)
+          )
+        end
+      end
     end
 
     context "when billing in advance" do
@@ -79,6 +92,16 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
           cycle_started_at: Time.utc(2026, 11, 1, 7),
           billing_at: timestamp
         )
+      end
+
+      context "when the scope covers the cycle" do
+        let(:billing_scope) { "cycle" }
+
+        it "keeps the opening obligation instead of creating a rate-change obligation" do
+          expect(result.planned_operation).to have_attributes(
+            cycle_started_at: target_cycle_started_at, billing_at: target_cycle_started_at
+          )
+        end
       end
     end
 
@@ -93,6 +116,16 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
           cycle_started_at: Time.utc(2026, 11, 1, 7),
           billing_at: timestamp
         )
+      end
+
+      context "when the scope covers the cycle" do
+        let(:billing_scope) { "cycle" }
+
+        it "regroups at the cycle close rather than the rate change" do
+          expect(result.planned_operation).to have_attributes(
+            cycle_started_at: target_cycle_started_at, billing_at: Time.utc(2026, 12, 1, 8)
+          )
+        end
       end
     end
 
@@ -123,6 +156,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
     end
 
     context "when selecting after a completed segment" do
+      let(:billing_scope) { "segment" }
       let(:timestamp) { Time.utc(2026, 11, 1, 7) }
       let(:after) { Time.utc(2026, 11, 15) }
 
@@ -151,6 +185,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   end
 
   context "when selecting an operation strictly after a completed billing instant" do
+    let(:billing_scope) { "segment" }
     let(:timestamp) { Time.utc(2026, 11, 1, 7) }
     let(:after) { Time.utc(2026, 11, 1, 7) }
 
@@ -163,6 +198,16 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
         cycle_started_at: Time.utc(2026, 11, 1, 7),
         billing_at: Time.utc(2026, 11, 15)
       )
+    end
+
+    context "when the scope covers the cycle" do
+      let(:billing_scope) { "cycle" }
+
+      it "advances to the next cycle without billing again at the rate change" do
+        expect(result.planned_operation).to have_attributes(
+          cycle_started_at: Time.utc(2026, 12, 1, 8), billing_at: Time.utc(2026, 12, 1, 8)
+        )
+      end
     end
   end
 
@@ -179,6 +224,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   end
 
   context "when billing in arrears after a completed mid-cycle segment" do
+    let(:billing_scope) { "segment" }
     let(:billing_timing) { "arrears" }
     let(:timestamp) { Time.utc(2026, 11, 1, 7) }
     let(:after) { Time.utc(2026, 11, 15) }
@@ -239,7 +285,7 @@ RSpec.describe BillingOperations::Schedule::BuildPlannedOperation do
   end
 
   context "with an exhausted schedule" do
-    let(:schedule) { instance_double(Billing::RateCards::Schedule, first_obligation: nil) }
+    let(:schedule) { instance_double(Billing::RateCards::Schedule, next_obligation: nil) }
 
     it "returns no planned operation" do
       expect(result).to be_success

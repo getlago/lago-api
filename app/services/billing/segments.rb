@@ -2,6 +2,7 @@
 
 module Billing
   module Segments
+    # Half-open coverage with the base catalog rate; phase overrides belong to the parent cycle.
     Segment = Data.define(:started_at, :ended_at, :rate)
 
     # Split the half-open window at each rate change, keeping unpriced periods with rate: nil.

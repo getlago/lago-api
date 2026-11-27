@@ -66,9 +66,7 @@ module Resolvers
     end
 
     def window(usages)
-      billing_segments = usages.map(&:billing_segment)
-
-      {from_datetime: billing_segments.map(&:started_at).min, to_datetime: billing_segments.map(&:ended_at).max}
+      {from_datetime: usages.map(&:started_at).min, to_datetime: usages.map(&:ended_at).max}
     end
   end
 end

@@ -8,10 +8,10 @@ module V1
     class RateCardUsageSerializer < ModelSerializer
       def serialize
         {
-          from_datetime: billing_segment.started_at,
-          to_datetime: billing_segment.ended_at,
-          issuing_date: billing_segment.billing_at.in_time_zone(customer.applicable_timezone).to_date.iso8601,
-          currency: billing_segment.currency,
+          from_datetime: model.started_at,
+          to_datetime: model.ended_at,
+          issuing_date: model.obligation.billing_at.in_time_zone(customer.applicable_timezone).to_date.iso8601,
+          currency: rate_card.currency,
           amount_cents: model.amount_cents,
           total_amount_cents: model.amount_cents + model.taxes_amount_cents,
           taxes_amount_cents: model.taxes_amount_cents,
@@ -22,20 +22,22 @@ module V1
 
       private
 
-      delegate :billing_segment, :contract_rate_card, to: :model
-      delegate :customer, to: :billing_segment
+      delegate :contract_rate_card, to: :model
       delegate :rate_card, to: :contract_rate_card
+      delegate :customer, to: :contract
+      delegate :contract, to: :contract_rate_card
       delegate :product, :product_filter, to: :rate_card
 
       def charge_usage
         {
           **usage_data(model.fees),
-          amount_currency: billing_segment.currency,
+          amount_currency: rate_card.currency,
           contract_rate_card: {lago_id: contract_rate_card.id},
           rate_card: {
             lago_id: rate_card.id,
             code: rate_card.code,
-            rate_model: billing_segment.rate.rate_model
+            # The latest rate that priced the window: the caller keeps the segments holding usage.
+            rate_model: model.segments.last.rate_model
           },
           product: {lago_id: product.id, code: product.code},
           product_filter: product_filter_data,

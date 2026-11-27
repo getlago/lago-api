@@ -9,20 +9,26 @@ RSpec.describe BillingOperations::CreateService do
   let(:customer) { create(:customer, organization:) }
   let(:contract) { create(:contract, organization:, customer:) }
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
-  let(:started_at) { Time.zone.parse("2026-10-01") }
+  let(:started_at) { Time.utc(2026, 6, 6) }
   let(:cycle_started_at) { started_at - 5.days }
-  let(:ended_at) { started_at + 5.days }
-  let(:rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
+  let(:ended_at) { started_at + 15.days }
+  let(:rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card, effective_from: started_at) }
   let(:override) { create(:rate_override, organization:) }
-  let(:segment) do
-    Billing::BillableSegment.new(
-      cycle_index: 0, cycle_started_at:, started_at:, ended_at:, billing_at: started_at,
-      rate:, rate_override: override, proration_ratio: BigDecimal("0.5"), rate_phase_code: "intro"
+  let(:calendar) do
+    Billing::Calendar.new(anchor_date: Date.new(2026, 6, 1), interval: Billing::Interval.new(count: 1, unit: :month), timezone: "UTC")
+  end
+  let(:cycle) do
+    Billing::Cycle.new(
+      index: 0, started_at: cycle_started_at, ended_at: Time.utc(2026, 7, 1), calendar:,
+      phase: Billing::Phase.new(code: "intro", billing_interval_cycle_count: 1, rate_override: override)
     )
   end
+  let(:segments) { [Billing::Segments::Segment.new(started_at:, ended_at:, rate:)] }
+  let(:terms) { Billing::Terms.new(timing: :advance, prorated: true) }
+  let(:obligation) { Billing::Obligation.new(cycle:, segments:, billing_at: started_at, terms:) }
   let(:planned_operation) do
     BillingOperations::Schedule::BuildPlannedOperation::PlannedOperation.new(
-      segment:, billing_at: started_at
+      obligation:, billing_at: started_at
     )
   end
   let(:attributes) do
@@ -42,8 +48,32 @@ RSpec.describe BillingOperations::CreateService do
       target_cycle_started_at: cycle_started_at, processed_at: nil, coverage_started_at: started_at, coverage_ended_at: ended_at
     )
     expect(result.operation.segments.sole).to have_attributes(
-      organization:, position: 0, started_at:, ended_at:, rate_card_rate: rate, rate_override: override, proration_ratio: BigDecimal("0.5")
+      organization:, position: 0, started_at:, ended_at:, rate_card_rate: rate, rate_override: override,
+      proration_ratio: BigDecimal("0.5") # 15 priced days out of 30 in June
     )
+  end
+
+  context "when the obligation spans a rate change" do
+    let(:next_ended_at) { ended_at + 6.days }
+    let(:next_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card, effective_from: ended_at) }
+    let(:segments) do
+      super() + [Billing::Segments::Segment.new(started_at: ended_at, ended_at: next_ended_at, rate: next_rate)]
+    end
+
+    it "saves one operation covering both segments and snapshots each in coverage order" do
+      expect(result).to be_success
+      expect(result.operation.reload).to have_attributes(coverage_started_at: started_at, coverage_ended_at: next_ended_at)
+      expect(result.operation.segments).to match([
+        have_attributes(
+          organization:, position: 0, started_at:, ended_at:, rate_card_rate: rate, rate_override: override,
+          proration_ratio: BigDecimal("0.5") # 15 priced days out of 30 in June
+        ),
+        have_attributes(
+          organization:, position: 1, started_at: ended_at, ended_at: next_ended_at, rate_card_rate: next_rate, rate_override: override,
+          proration_ratio: BigDecimal("0.2") # 6 priced days out of 30 in June
+        )
+      ])
+    end
   end
 
   it "allows duplicate operations to be created" do

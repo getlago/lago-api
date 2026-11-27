@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# An in-memory priced slice of a contract rate card billing cycle.
+# An in-memory pricing input for a contract rate card segment, with an inclusive ended_at.
 class BillingSegment
   include Currencies
 
@@ -64,6 +64,7 @@ class BillingSegment
     ATTRIBUTES.index_with { |name| public_send(name) }
   end
 
+  # The effective pricing rate, unlike a raw segment's base catalog rate.
   def rate
     rate_override || rate_card_rate
   end

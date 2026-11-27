@@ -714,12 +714,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
 
       def card_usage(contract_rate_card, started_at, units, amount_cents: 0)
-        RateCardUsage.new(
-          contract_rate_card:,
-          billing_segment: BillingSegment.new(contract_rate_card:, started_at: Time.zone.parse(started_at)),
-          rate_phase: nil,
-          fees: [Fee.new(units:, amount_cents:)]
-        )
+        instance_double(RateCardUsage, contract_rate_card:, started_at: Time.zone.parse(started_at), units: BigDecimal(units), amount_cents:)
       end
 
       def evaluate(*rate_card_usages, measured_at: nil)

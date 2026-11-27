@@ -163,7 +163,7 @@ module Invoices
 
       pricing_units = pricing_units_by_code(operations.map(&:contract_rate_card))
       @billing_segments = operations.flat_map do |operation|
-        BillingOperations::ResolveSegmentsService.call!(operation:, pricing_units_by_code: pricing_units).segments
+        BillingOperations::ResolveSegmentsService.call!(operation:, pricing_units_by_code: pricing_units).billing_segments
       end
     end
 

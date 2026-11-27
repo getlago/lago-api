@@ -8,7 +8,7 @@ RSpec.describe ContractRateCards::UpdateService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:contract) { create(:contract, :pending, organization:, customer:) }
-  let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, units: 5) }
+  let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, units: 5, billing_scope: "segment") }
   let(:params) { {units: "20"} }
 
   before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
@@ -16,6 +16,7 @@ RSpec.describe ContractRateCards::UpdateService do
   it "replaces all unit rows while the contract is pending" do
     expect(result).to be_success
     expect(result.contract_rate_card.reload.terms.map { |unit| [unit.units, unit.effective_date] }).to eq([[20, contract_rate_card.effective_date]])
+    expect(result.contract_rate_card.billing_scope).to eq("segment")
   end
 
   context "when the units change after the card was last updated" do
@@ -141,6 +142,21 @@ RSpec.describe ContractRateCards::UpdateService do
     it "bills the stub up to the new anchor instead of the old one" do
       expect(result).to be_success
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-11-15"))
+    end
+
+    context "when only the billing scope changes" do
+      let(:params) { {billing_scope: "segment"} }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 11, 10))
+        ContractRateCards::SeedLifecycleService.call!(contract_rate_card:)
+      end
+
+      it "moves the first arrears obligation from the cycle close to the rate change" do
+        expect { result }.to change { contract_rate_card.reload.next_billing_at }
+          .from(Time.utc(2026, 12, 1)).to(Time.utc(2026, 11, 10))
+        expect(result).to be_success
+      end
     end
   end
 
