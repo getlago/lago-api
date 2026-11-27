@@ -230,10 +230,6 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
   end
 
   context "when the customer has a tax provider", :premium do
-    let(:nango_action_endpoint) { "https://api.nango.dev/action/trigger" }
-
-    before { stub_tax_provider_taxes }
-
     it "computes the taxes without committing them at the provider and charges the payment provider" do
       advance_charges_invoice = create_advance_charges_invoice
       subscription = customer.subscriptions.sole
@@ -243,7 +239,7 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       expect(advance_charges_invoice).to be_voided
 
       # The tax provider and the payment provider are connected after the original invoice is voided.
-      create(:anrok_customer, integration: create(:anrok_integration, organization:), customer:)
+      anrok_customer = create(:anrok_customer, integration: create(:anrok_integration, organization:), customer:)
       customer.update!(payment_provider: "stripe")
 
       result = Invoices::RegenerateFromVoidedService.call(
@@ -256,15 +252,22 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       expect(regenerated_invoice).to have_attributes(status: "pending", tax_status: "pending")
       expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice: regenerated_invoice)
 
+      # No action other than this estimate is answered.
+      regenerated_fee = regenerated_invoice.fees.sole
+      anrok_estimate = stub_anrok_taxes(
+        "anrok-create-ephemeral-transaction",
+        integration_customer: anrok_customer,
+        invoice: regenerated_invoice,
+        fees: [{"item_key" => regenerated_fee.item_key, "item_id" => regenerated_fee.id, "item_code" => nil, "amount_cents" => 10_000}]
+      )
+
       expect do
         perform_all_enqueued_jobs(only: [Invoices::ProviderTaxes::PullTaxesAndApplyJob])
       end.to have_enqueued_job(Invoices::Payments::CreateJob)
         .with(invoice: regenerated_invoice, payment_provider: :stripe, payment_method_params: {})
 
-      expect(a_request(:post, nango_action_endpoint).with(body: hash_including(action_name: "anrok-create-ephemeral-transaction")))
-        .to have_been_made.once
-      expect(a_request(:post, nango_action_endpoint).with(body: hash_including(action_name: "anrok-create-or-update-transaction")))
-        .not_to have_been_made
+      expect(anrok_estimate).to have_been_requested.once
+      expect(a_request(:post, AnrokHelper::NANGO_ACTION_ENDPOINT)).to have_been_made.once # nothing committed at Anrok
       expect(regenerated_invoice.reload).to have_attributes(
         invoice_type: "advance_charges",
         status: "finalized",
@@ -375,7 +378,7 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       update_billing_entity(customer.billing_entity, {country: "FR", eu_tax_management: true})
 
       # VIES is unavailable when the customer gives its VAT number: the check stays pending.
-      mock_vies_check_unavailable!
+      mock_vies_check_unavailable!(vat_number)
       create_or_update_customer(
         {external_id: customer.external_id, country: "IT", zipcode: "00146", tax_identification_number: vat_number},
         perform_jobs: false

@@ -118,7 +118,7 @@ describe "Add customer-specific taxes" do
 
       webhooks_sent.clear
       vat_number = "FR12345678901"
-      mock_vies_check_unavailable!("GLOBAL_MAX_CONCURRENT_REQ")
+      mock_vies_check_unavailable!(vat_number, fault: "GLOBAL_MAX_CONCURRENT_REQ")
 
       # Perform the failing VIES check without draining the delayed retry it schedules,
       # since performing the retry would fail VIES again and re-enqueue forever.
@@ -150,7 +150,7 @@ describe "Add customer-specific taxes" do
       expect(customer.taxes.sole.code).to eq "lago_eu_it_standard"
 
       # Update with VAT number - VIES fails
-      mock_vies_check_unavailable!("GLOBAL_MAX_CONCURRENT_REQ")
+      mock_vies_check_unavailable!(vat_number, fault: "GLOBAL_MAX_CONCURRENT_REQ")
 
       # Perform the failing VIES check without draining the delayed retry it schedules,
       # since performing the retry would fail VIES again and re-enqueue forever.

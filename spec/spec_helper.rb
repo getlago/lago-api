@@ -94,6 +94,8 @@ RSpec.configure do |config|
   config.include StripeHelper
   config.include GocardlessHelper
   config.include AdyenHelper
+  config.include AnrokHelper
+  config.include ViesHelper
   config.include QueuesHelper
   config.include XMLHelper
   config.include AdvisoryLockHelper
