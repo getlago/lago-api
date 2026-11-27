@@ -98,6 +98,11 @@ enum ActivityTypeEnum {
   applied_coupon_deleted
 
   """
+  billable_metric.copied_to_production
+  """
+  billable_metric_copied_to_production
+
+  """
   billable_metric.created
   """
   billable_metric_created
@@ -106,11 +111,6 @@ enum ActivityTypeEnum {
   billable_metric.deleted
   """
   billable_metric_deleted
-
-  """
-  billable_metric.copied_to_production
-  """
-  billable_metric_copied_to_production
 
   """
   billable_metric.updated
@@ -2245,6 +2245,39 @@ enum ContractStatusEnum {
   draft
   pending
   terminated
+}
+
+"""
+Copy to production input arguments
+"""
+input CopyToProductionInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  ID of the item in the sandbox
+  """
+  id: ID!
+  itemType: CopyToProductionItemTypeEnum!
+}
+
+"""
+A production item created by Copy to production
+"""
+type CopyToProductionItem {
+  code: String
+  id: ID!
+  itemType: CopyToProductionItemTypeEnum!
+  name: String
+}
+
+"""
+Item types a sandbox can move to its production organization
+"""
+enum CopyToProductionItemTypeEnum {
+  billable_metric
 }
 
 enum CountryCode {
@@ -9196,39 +9229,6 @@ type MoneyhashProvider {
   successRedirectUrl: String
 }
 
-"""
-A production item created by Copy to production
-"""
-type CopyToProductionItem {
-  code: String
-  id: ID!
-  itemType: CopyToProductionItemTypeEnum!
-  name: String
-}
-
-"""
-Item types a sandbox can move to its production organization
-"""
-enum CopyToProductionItemTypeEnum {
-  billable_metric
-}
-
-"""
-Copy to production input arguments
-"""
-input CopyToProductionInput {
-  """
-  A unique identifier for the client performing the mutation.
-  """
-  clientMutationId: String
-
-  """
-  ID of the item in the sandbox
-  """
-  id: ID!
-  itemType: CopyToProductionItemTypeEnum!
-}
-
 type Mrr {
   amountCents: BigInt
   currency: CurrencyEnum
@@ -9432,6 +9432,16 @@ type Mutation {
     """
     input: ConfirmSignupEmailInput!
   ): LoginUser
+
+  """
+  Copies a sandbox item, with the items it references, to the sandbox's production organization
+  """
+  copyToProduction(
+    """
+    Parameters for CopyToProduction
+    """
+    input: CopyToProductionInput!
+  ): CopyToProductionItem
 
   """
   Creates a new add-on
@@ -10804,16 +10814,6 @@ type Mutation {
     """
     input: MarkOrderFormAsSignedInput!
   ): OrderForm
-
-  """
-  Copies a sandbox item, with the items it references, to the sandbox's production organization
-  """
-  copyToProduction(
-    """
-    Parameters for CopyToProduction
-    """
-    input: CopyToProductionInput!
-  ): CopyToProductionItem
 
   """
   Accepts a membership invite with Okta Oauth
@@ -12462,6 +12462,7 @@ enum PermissionEnum {
   contracts_terminate
   contracts_update
   contracts_view
+  copy_to_production_create
   coupons_attach
   coupons_create
   coupons_delete
@@ -12500,7 +12501,6 @@ enum PermissionEnum {
   invoices_update
   invoices_view
   invoices_void
-  copy_to_production_create
   order_forms_sign
   order_forms_view
   order_forms_void
@@ -12600,6 +12600,7 @@ type Permissions {
   contractsTerminate: Boolean!
   contractsUpdate: Boolean!
   contractsView: Boolean!
+  copyToProductionCreate: Boolean!
   couponsAttach: Boolean!
   couponsCreate: Boolean!
   couponsDelete: Boolean!
@@ -12638,7 +12639,6 @@ type Permissions {
   invoicesUpdate: Boolean!
   invoicesView: Boolean!
   invoicesVoid: Boolean!
-  copyToProductionCreate: Boolean!
   orderFormsSign: Boolean!
   orderFormsView: Boolean!
   orderFormsVoid: Boolean!
