@@ -44,7 +44,7 @@ module ContractWallets
         contract_wallet.updated_at = Time.current if RELATED_PARAMS.any? { params.key?(it) }
         contract_wallet.save!
 
-        replace_metadata!(contract_wallet) if params.key?(:metadata)
+        replace_metadata!(contract_wallet, params[:metadata]) if params.key?(:metadata)
         replace_taxes_and_scope!(contract_wallet)
       end
 

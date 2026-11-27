@@ -216,6 +216,141 @@ RSpec.describe Api::V2::PlansController do
         expect(response).to be_v2_not_found_error("plan")
       end
     end
+
+    context "when the plan wrapper is not an object" do
+      subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}", {plan: "abc"}) }
+
+      let(:catalog_plan) { create(:catalog_plan, organization:, name: "Before") }
+
+      it "returns the missing parameter error and leaves the plan unchanged" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "plan", meta: {}}])
+        expect(catalog_plan.reload.name).to eq("Before")
+      end
+    end
+
+    context "with metadata" do
+      subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}", {plan: update_params}) }
+
+      let(:update_params) { {metadata: {tier: "silver"}} }
+
+      before { create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123"}) }
+
+      it "replaces it and returns the plan without it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan].keys).to eq(plan_keys)
+
+        get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}", {expands: %w[metadata]})
+        expect(json[:plan][:metadata]).to eq(tier: "silver")
+      end
+
+      it "sends one plan.updated carrying the new metadata" do
+        perform_enqueued_jobs(only: SendWebhookJob) { subject }
+
+        expect(Webhook.where(webhook_type: "plan.updated").sole.payload.dig("plan", "metadata")).to eq("tier" => "silver")
+      end
+
+      context "when it is sent with PATCH" do
+        subject { patch_with_token(organization, "/api/v2/plans/#{catalog_plan.code}", {plan: update_params}) }
+
+        it "replaces it rather than merging it" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(catalog_plan.reload.metadata.value).to eq("tier" => "silver")
+        end
+      end
+
+      context "when it is omitted" do
+        let(:update_params) { {name: "Renamed"} }
+
+        it "keeps it" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(catalog_plan.reload.metadata.value).to eq("crm_id" => "123")
+        end
+      end
+
+      context "when it is empty" do
+        let(:update_params) { {metadata: {}} }
+
+        it "stores an empty object" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(catalog_plan.reload.metadata.value).to eq({})
+        end
+      end
+
+      context "when it is null" do
+        let(:update_params) { {metadata: nil} }
+
+        it "removes it" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(catalog_plan.reload.metadata).to be_nil
+        end
+      end
+
+      {
+        "a string" => "abc",
+        "an array" => %w[crm_id 123],
+        "a number value" => {a: 1}
+      }.each do |description, metadata|
+        context "with #{description} as metadata next to a name" do
+          let(:update_params) { {name: "Renamed", metadata:} }
+
+          it "refuses the metadata and changes nothing" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:details]).to eq([{code: "value_is_invalid", field: "metadata", meta: {}}])
+            expect(catalog_plan.reload.name).not_to eq("Renamed")
+            expect(catalog_plan.metadata.value).to eq("crm_id" => "123")
+            expect(SendWebhookJob).not_to have_been_enqueued
+          end
+        end
+      end
+
+      context "when the plan is attached to a contract" do
+        before { create(:contract, organization:, customer: create(:customer, organization:), catalog_plan:) }
+
+        it "replaces it" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(catalog_plan.reload.metadata.value).to eq("tier" => "silver")
+        end
+
+        context "with a currency change" do
+          let(:update_params) { {currency: "USD", metadata: {tier: "silver"}} }
+
+          it "refuses it as plan_locked and keeps the metadata" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:details]).to eq([{code: "plan_locked", field: "plan", meta: {}}])
+            expect(catalog_plan.reload.metadata.value).to eq("crm_id" => "123")
+          end
+        end
+      end
+
+      context "when the plan was deleted before the request" do
+        before { catalog_plan.discard! }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_v2_not_found_error("plan")
+        end
+      end
+    end
   end
 
   describe "GET /api/v2/plans/:code" do
