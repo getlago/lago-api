@@ -188,80 +188,6 @@ RSpec.describe CopyToProduction::CopyService do
     end
   end
 
-  context "with an item type that has a parent and dependencies" do
-    let(:item_type) { "child_item" }
-    let(:refusals) { {} }
-    let(:child_item_class) do
-      refused_codes = refusals
-
-      Class.new(CopyToProduction::Items::BillableMetricItem) do
-        def self.name = "CopyToProduction::Items::ChildItem"
-
-        def find_source(id) = sandbox.billable_metrics.find_by(id:)
-
-        def find_existing(source) = production.billable_metrics.find_by(code: source.code)
-
-        def parent(source)
-          ["billable_metric", sandbox.billable_metrics.find_by(code: "#{source.code}_parent")]
-        end
-
-        def dependencies(source)
-          sandbox.billable_metrics.where(code: ["#{source.code}_reused", "#{source.code}_copied"]).order(:code)
-            .map { ["billable_metric", it] }
-        end
-
-        define_method(:refusal) { |source| refused_codes[source.code] }
-      end
-    end
-
-    let(:live_parent) { create(:billable_metric, organization: production, code: "api_calls_parent") }
-    let(:live_dependency) { create(:billable_metric, organization: production, code: "api_calls_reused") }
-
-    before do
-      stub_const("CopyToProduction::Items::ChildItem", child_item_class)
-      stub_const("CopyToProduction::Items::TYPES", CopyToProduction::Items::TYPES.merge("child_item" => "CopyToProduction::Items::ChildItem"))
-
-      create(:billable_metric, organization: sandbox, code: "api_calls_parent")
-      create(:billable_metric, organization: sandbox, code: "api_calls_reused")
-      create(:billable_metric, organization: sandbox, code: "api_calls_copied")
-      live_parent
-      live_dependency
-    end
-
-    it "copies the missing dependency before the item and reuses the others" do
-      expect { result }.to change { production.billable_metrics.count }.by(2)
-
-      expect(result.item.record).to eq(production.billable_metrics.find_by(code: "api_calls"))
-      expect(production.billable_metrics.where(code: "api_calls_copied")).to exist
-    end
-
-    context "when an item to copy refuses the copy" do
-      let(:refusals) { {"api_calls" => "copy_to_production_target_deleted"} }
-
-      it "copies nothing" do
-        expect { result }.not_to change { production.billable_metrics.count }
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_target_deleted")
-      end
-    end
-
-    context "when the parent is not live" do
-      let(:live_parent) { nil }
-
-      it "refuses the copy" do
-        expect { result }.not_to change(BillableMetric, :count)
-
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-        expect(result.error.code).to eq("copy_to_production_parent_missing")
-        expect(result.missing_parent.item_type).to eq("billable_metric")
-        expect(result.missing_parent.record).to eq(sandbox.billable_metrics.find_by(code: "api_calls_parent"))
-      end
-    end
-  end
-
   context "with a feature" do
     let(:item_type) { "feature" }
     let(:id) { feature.id }
@@ -405,6 +331,292 @@ RSpec.describe CopyToProduction::CopyService do
         expect(result.item.record.limited_billable_metrics).to be(true)
         expect(result.item.record.coupon_targets.map(&:billable_metric_id)).to eq([live_metric.id])
       end
+    end
+  end
+
+  context "with a product category" do
+    let(:item_type) { "product_category" }
+    let(:id) { category.id }
+    let(:category) { create(:product_category, organization: sandbox, code: "compute", name: "Compute") }
+    let(:api) do
+      create(:product, organization: sandbox, product_category: category, billable_metric: metric, code: "api", name: "API")
+    end
+    let(:seat) { create(:product, :fixed, organization: sandbox, product_category: category, code: "seat", name: "Seat") }
+    let(:filter) { create(:product_filter, organization: sandbox, product: api, code: "eu_only", name: "EU only") }
+    let(:api_card) { create(:rate_card, organization: sandbox, product: api, product_filter: filter, code: "api_eur") }
+    let(:seat_card) { create(:rate_card, organization: sandbox, product: seat, code: "seat_eur") }
+    let(:tax) { create(:tax, organization: sandbox, code: "vat_fr", name: "VAT FR", rate: 20) }
+
+    around { |test| travel_to(Time.zone.parse("2026-11-23 10:30:00")) { test.run } }
+
+    before do
+      create(
+        :product_filter_value,
+        organization: sandbox,
+        product_filter: filter,
+        billable_metric_filter: metric.filters.find_by(key: "region"),
+        value: "eu"
+      )
+      create(:rate_card_rate, organization: sandbox, rate_card: api_card, code: "launch", effective_from: 3.months.ago.beginning_of_day)
+      create(
+        :rate_card_rate,
+        organization: sandbox,
+        rate_card: api_card,
+        code: "current",
+        effective_from: 1.month.ago.beginning_of_day,
+        rate_properties: {"amount" => "12"}
+      )
+      create(
+        :rate_card_rate,
+        organization: sandbox,
+        rate_card: api_card,
+        code: "next",
+        effective_from: 1.month.from_now.beginning_of_day,
+        rate_properties: {"amount" => "15"}
+      )
+      create(:rate_card_rate, organization: sandbox, rate_card: seat_card, code: "seat_rate", effective_from: 1.week.ago.beginning_of_day)
+      create(:rate_card_applied_tax, rate_card: seat_card, tax:)
+    end
+
+    it "copies the category with its products, their rate cards and what they reference" do
+      expect(result).to be_success
+
+      live_category = production.product_categories.find_by!(code: "compute")
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "product_category", record: live_category))
+      expect(live_category).to have_attributes(name: "Compute", description: category.description)
+
+      live_api = production.products.find_by!(code: "api")
+      expect(live_api).to have_attributes(
+        name: "API",
+        product_type: "metered",
+        product_category: live_category,
+        billable_metric: production.billable_metrics.find_by!(code: "api_calls")
+      )
+      expect(live_api.filters.map { [it.code, it.name] }).to eq([%w[eu_only EU\ only]])
+      expect(live_api.filters.first.values.map { [it.billable_metric_filter.key, it.billable_metric_filter.organization_id, it.value] })
+        .to eq([["region", production.id, "eu"]])
+      expect(production.products.find_by!(code: "seat")).to have_attributes(product_type: "fixed", billable_metric: nil)
+
+      live_api_card = production.rate_cards.find_by!(code: "api_eur")
+      expect(live_api_card).to have_attributes(product: live_api, product_filter: live_api.filters.first, currency: "EUR")
+      # The superseded launch rate stays in the sandbox; the current rate applies from the copy on.
+      expect(live_api_card.rates.order(:effective_from).map { [it.code, it.effective_from, it.rate_properties] }).to eq(
+        [
+          ["current", Time.zone.parse("2026-11-23"), {"amount" => "12"}],
+          ["next", Time.zone.parse("2026-12-23"), {"amount" => "15"}]
+        ]
+      )
+
+      live_tax = production.taxes.find_by!(code: "vat_fr")
+      expect(live_tax).to have_attributes(name: "VAT FR", rate: 20, applied_to_organization: false)
+      expect(production.rate_cards.find_by!(code: "seat_eur").taxes).to eq([live_tax])
+    end
+
+    context "with activity logs", :capture_kafka_messages do
+      let(:activity_log_env) do
+        {
+          "LAGO_CLICKHOUSE_ENABLED" => "true",
+          "LAGO_KAFKA_BOOTSTRAP_SERVERS" => "kafka",
+          "LAGO_KAFKA_ACTIVITY_LOGS_TOPIC" => "activity_logs"
+        }
+      end
+
+      before { stub_const("ENV", ENV.to_h.merge(activity_log_env)) }
+
+      it "logs the copy of each copied item but the tax" do
+        result
+
+        copies = kafka_messages.map { JSON.parse(it[:payload]) }.select { it["activity_type"].end_with?(".copied_to_production") }
+        expect(copies.map { [it["activity_type"], it["organization_id"]] }).to eq(
+          %w[product_category billable_metric product rate_card product rate_card].map { ["#{it}.copied_to_production", production.id] }
+        )
+      end
+    end
+
+    context "when a product of the category bills a deleted metric" do
+      before do
+        api_card
+        metric.discard!
+      end
+
+      it "refuses the whole category" do
+        expect { result }.not_to change { [ProductCategory.count, Product.count, BillableMetric.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_target_deleted")
+      end
+    end
+
+    context "when production holds the code of one of its products in another category" do
+      before do
+        other = create(:product_category, organization: production, code: "other")
+        create(:product, :fixed, organization: production, product_category: other, code: "api")
+      end
+
+      it "answers the create service's error and rolls the category back" do
+        expect { result }.not_to change { [production.product_categories.count, production.billable_metrics.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(code: ["value_already_exist"])
+      end
+    end
+
+    context "when production has metrics and taxes with the same codes" do
+      let(:live_metric) { create(:billable_metric, organization: production, code: "api_calls") }
+      let(:live_tax) { create(:tax, organization: production, code: "vat_fr") }
+
+      before do
+        create(:billable_metric_filter, billable_metric: live_metric, key: "region", values: %w[eu us])
+        live_tax
+      end
+
+      it "reuses them without changing them" do
+        expect { result }.not_to change { live_metric.reload.attributes }
+
+        expect(result).to be_success
+        expect(production.products.find_by!(code: "api").billable_metric).to eq(live_metric)
+        expect(production.rate_cards.find_by!(code: "seat_eur").taxes).to eq([live_tax])
+        expect(production.billable_metrics.count).to eq(1)
+        expect(production.taxes.count).to eq(1)
+      end
+    end
+
+    context "when a rate card is priced in a pricing unit", :premium do
+      let(:pricing_unit) { create(:pricing_unit, organization: sandbox, code: "credits", name: "Credits", short_name: "CR") }
+
+      before do
+        seat_card.update!(applied_pricing_unit_code: pricing_unit.code)
+        seat_card.rates.update_all(applied_pricing_unit_conversion_rate: 0.5, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      it "copies the pricing unit before the rate card" do
+        expect(result).to be_success
+
+        expect(production.pricing_units.find_by!(code: "credits")).to have_attributes(name: "Credits", short_name: "CR")
+        expect(production.rate_cards.find_by!(code: "seat_eur").rates.pluck(:applied_pricing_unit_conversion_rate)).to eq([0.5])
+      end
+    end
+  end
+
+  context "with a product" do
+    let(:item_type) { "product" }
+    let(:id) { product.id }
+    let(:category) { create(:product_category, organization: sandbox, code: "compute") }
+    let(:product) { create(:product, organization: sandbox, product_category: category, billable_metric: metric, code: "api") }
+
+    before { create(:rate_card_rate, organization: sandbox, rate_card: create(:rate_card, organization: sandbox, product:, code: "api_eur")) }
+
+    context "when its category is not live" do
+      it "refuses the copy" do
+        expect { result }.not_to change(Product, :count)
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_parent_missing")
+        expect(result.missing_parent).to eq(CopyToProduction::CopyService::Entry.new(item_type: "product_category", record: category))
+      end
+    end
+
+    context "when its category is live" do
+      let(:live_category) { create(:product_category, organization: production, code: "compute") }
+
+      before { live_category }
+
+      it "copies the product into it with its metric and rate cards" do
+        expect(result).to be_success
+
+        live_product = production.products.find_by!(code: "api")
+        expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "product", record: live_product))
+        expect(live_product.product_category).to eq(live_category)
+        expect(live_product.rate_cards.sole.rates.count).to eq(1)
+      end
+
+      context "with a tiered rate" do
+        # Stored as the create service saves it: each tier with the lower bound it starts at.
+        let(:graduated_ranges) do
+          [
+            {"from_value" => 0, "to_value" => 10, "flat_amount" => "0", "per_unit_amount" => "1"},
+            {"from_value" => 10, "to_value" => nil, "flat_amount" => "0", "per_unit_amount" => "0.5"}
+          ]
+        end
+
+        before do
+          create(:rate_card_rate, organization: sandbox, rate_model: "graduated",
+            rate_properties: {"graduated_ranges" => graduated_ranges},
+            rate_card: create(:rate_card, organization: sandbox, product:, code: "api_tiers"))
+        end
+
+        it "copies its tiers" do
+          expect(result).to be_success
+
+          live_rate = production.rate_cards.find_by!(code: "api_tiers").rates.sole
+          expect(live_rate.rate_properties["graduated_ranges"]).to eq(graduated_ranges)
+        end
+      end
+
+      context "with filters whose codes do not follow their creation order" do
+        before do
+          {"zone_b" => "us", "zone_a" => "eu"}.each do |code, value|
+            filter = create(:product_filter, organization: sandbox, product:, code:)
+            create(
+              :product_filter_value,
+              organization: sandbox,
+              product_filter: filter,
+              billable_metric_filter: metric.filters.find_by(key: "region"),
+              value:
+            )
+          end
+        end
+
+        it "creates them in production in creation order, which filter precedence reads" do
+          expect(result).to be_success
+
+          live_filters = production.products.find_by!(code: "api").filters
+          expect(live_filters.order(:created_at, :id).pluck(:code)).to eq(%w[zone_b zone_a])
+        end
+      end
+    end
+
+    context "when its category is live and its metric is deleted" do
+      before do
+        create(:product_category, organization: production, code: "compute")
+        metric.discard!
+      end
+
+      it "refuses the copy without bringing the metric back" do
+        expect { result }.not_to change { [Product.count, BillableMetric.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_target_deleted")
+      end
+    end
+
+    context "without a category" do
+      let(:product) { create(:product, :standalone, organization: sandbox, billable_metric: metric, code: "api") }
+
+      it "copies the product" do
+        expect(result).to be_success
+
+        expect(production.products.find_by!(code: "api").product_category).to be_nil
+      end
+    end
+  end
+
+  context "with an internal item type" do
+    let(:item_type) { "tax" }
+    let(:tax) { create(:tax, organization: sandbox) }
+    let(:id) { tax.id }
+
+    before { tax }
+
+    it "answers not found" do
+      expect { result }.not_to change(Tax, :count)
+
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
     end
   end
 end

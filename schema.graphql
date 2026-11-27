@@ -448,6 +448,11 @@ enum ActivityTypeEnum {
   plan_wallet_updated
 
   """
+  product_category.copied_to_production
+  """
+  product_category_copied_to_production
+
+  """
   product_category.created
   """
   product_category_created
@@ -461,6 +466,11 @@ enum ActivityTypeEnum {
   product_category.updated
   """
   product_category_updated
+
+  """
+  product.copied_to_production
+  """
+  product_copied_to_production
 
   """
   product.created
@@ -516,6 +526,11 @@ enum ActivityTypeEnum {
   quote.voided
   """
   quote_voided
+
+  """
+  rate_card.copied_to_production
+  """
+  rate_card_copied_to_production
 
   """
   rate_card.created
@@ -2296,12 +2311,14 @@ type CopyToProductionItem {
 }
 
 """
-Item types a sandbox can move to its production organization
+Item types a user can copy from a sandbox to its production organization
 """
 enum CopyToProductionItemTypeEnum {
   billable_metric
   coupon
   feature
+  product
+  product_category
 }
 
 enum CountryCode {

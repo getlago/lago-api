@@ -30,6 +30,12 @@ module CopyToProduction
         []
       end
 
+      # The sandbox records that belong to the source, as [item_type, record] pairs. Each one is reused when production
+      # has its code, and copied along after the source otherwise.
+      def children(_source)
+        []
+      end
+
       # The sandbox record the source belongs to, as an [item_type, record] pair, or nil. The copy is refused until it
       # is live.
       def parent(_source)
@@ -48,6 +54,7 @@ module CopyToProduction
         raise NotImplementedError
       end
 
+      # nil for an item type that is not a resource of the activity log.
       def activity_type
         "#{item_type}.copied_to_production"
       end
