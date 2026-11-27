@@ -16,6 +16,8 @@ RSpec.describe BillingEngineMigrations::CopyCustomerSubscriptionsJob do
 
   it_behaves_like "a unique job" do
     let(:job_args) { [migration, subscription_ids] }
+
+    before { job_args }
   end
 
   it "copies the subscriptions of the migrated organization one by one, oldest first" do

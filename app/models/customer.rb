@@ -61,6 +61,9 @@ class Customer < ApplicationRecord
 
   before_validation :normalize_x402_agent_address, on: :create
   before_save :ensure_slug
+  after_save :mark_shadow_copy_pending
+  after_commit :enqueue_shadow_copy
+  after_rollback :clear_shadow_copy_pending
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -439,6 +442,27 @@ class Customer < ApplicationRecord
   end
 
   private
+
+  # Collected on every save: a later save or a reload in the same transaction clears saved_changes.
+  def mark_shadow_copy_pending
+    @shadow_copy_pending ||= previously_new_record? ||
+      saved_changes.keys.intersect?(BillingEngineMigrations::CopyCustomerService::COPIED_COLUMNS)
+  end
+
+  # The row is already committed: raising here would answer an error for a write that succeeded.
+  def enqueue_shadow_copy
+    return unless @shadow_copy_pending
+
+    clear_shadow_copy_pending
+    migration = BillingEngineMigrations::Lookup.for_source(organization_id)
+    BillingEngineMigrations::CopyCustomerJob.perform_later(migration.id, id) if migration
+  rescue RedisClient::Error, Redlock::LockError, ActiveRecord::ActiveRecordError => e
+    Sentry.capture_exception(e, extra: {customer_id: id})
+  end
+
+  def clear_shadow_copy_pending
+    @shadow_copy_pending = false
+  end
 
   def ensure_slug
     return if slug.present?

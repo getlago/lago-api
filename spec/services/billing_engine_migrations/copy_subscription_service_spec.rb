@@ -109,14 +109,21 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
   end
 
   context "when the shadow organization already has the customer" do
-    let(:shadow_customer) { create(:customer, organization: shadow_organization, external_id: customer.external_id) }
+    let(:shadow_customer) do
+      create(:customer, organization: shadow_organization, external_id: customer.external_id, name: "Shadow name")
+    end
 
-    before { shadow_customer }
+    before do
+      shadow_customer
+      allow(Customers::LockService).to receive(:call).and_call_original
+    end
 
-    it "reuses it" do
+    it "reuses it as it is, leaving its updates to the customer copy" do
       expect { result }.not_to change { shadow_organization.customers.count }
 
       expect(result.contract.customer).to eq(shadow_customer)
+      expect(shadow_customer.reload.name).to eq("Shadow name")
+      expect(Customers::LockService).not_to have_received(:call).with(hash_including(scope: :shadow_copy))
     end
   end
 

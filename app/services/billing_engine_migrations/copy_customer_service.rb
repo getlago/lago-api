@@ -18,9 +18,12 @@ module BillingEngineMigrations
       country: :shipping_country
     }.freeze
 
-    def initialize(migration:, customer:)
+    COPIED_COLUMNS = [*CUSTOMER_ATTRIBUTES, *SHIPPING_ATTRIBUTES.values, :timezone, :billing_entity_id].map(&:to_s).freeze
+
+    def initialize(migration:, customer:, update_existing: true)
       @migration = migration
       @customer = customer
+      @update_existing = update_existing
       super
     end
 
@@ -28,7 +31,8 @@ module BillingEngineMigrations
       return result unless copyable?
       return shadow_organization_not_isolated_failure unless migration.shadow_organization_isolated?
 
-      result.customer = find_shadow_customer || create_shadow_customer!
+      result.customer = find_shadow_customer unless update_existing
+      copy_latest_customer_under_lock unless result.customer
       result
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
@@ -36,7 +40,7 @@ module BillingEngineMigrations
 
     private
 
-    attr_reader :migration, :customer
+    attr_reader :migration, :customer, :update_existing
 
     delegate :shadow_organization, to: :migration
 
@@ -51,28 +55,72 @@ module BillingEngineMigrations
       )
     end
 
+    # A session lock: inside a transaction, the unique violation of a concurrent create would abort it.
+    def copy_latest_customer_under_lock
+      Customers::LockService.call(customer:, scope: :shadow_copy, transaction: false) { copy_latest_customer! }
+    end
+
+    def copy_latest_customer!
+      @customer = Customer.find_by(id: customer.id, organization_id: migration.organization_id)
+
+      if customer
+        result.customer = copy_to_shadow_customer!
+      else
+        result.not_found_failure!(resource: "customer")
+      end
+    end
+
+    def copy_to_shadow_customer!
+      shadow_customer = find_shadow_customer
+      shadow_customer ? update_shadow_customer!(shadow_customer) : create_shadow_customer!
+    end
+
     def find_shadow_customer
       shadow_organization.customers.find_by(external_id: customer.external_id)
     end
 
     def create_shadow_customer!
-      creation = Customers::CreateService.call(**customer_input, organization_id: shadow_organization.id)
+      creation = Customers::CreateService.call(**creation_input, organization_id: shadow_organization.id)
       return creation.customer if creation.success?
 
       concurrent_customer = find_shadow_customer if external_id_taken?(creation.error)
-      concurrent_customer || raise(creation.error)
+      concurrent_customer ? update_shadow_customer!(concurrent_customer) : raise(creation.error)
+    end
+
+    def update_shadow_customer!(shadow_customer)
+      changes = changed_input(shadow_customer)
+
+      if changes.empty?
+        shadow_customer
+      else
+        Customers::UpdateService.call!(customer: shadow_customer, args: changes).customer
+      end
     end
 
     def external_id_taken?(error)
       error.is_a?(BaseService::ValidationFailure) && error.messages[:external_id]&.include?("value_already_exist")
     end
 
-    def customer_input
-      input = customer.slice(*CUSTOMER_ATTRIBUTES).symbolize_keys.compact_blank
-      input[:timezone] = customer.applicable_timezone
-      input[:billing_entity_code] = shadow_billing_entity_code
-      input[:shipping_address] = shipping_address if shipping_address.any?
+    def creation_input
+      input = source_attributes.compact
+      shipping = shipping_address(customer).compact
+      input[:shipping_address] = shipping if shipping.any?
       input
+    end
+
+    def changed_input(shadow_customer)
+      current = copied_attributes(shadow_customer, timezone: shadow_customer.timezone)
+      input = source_attributes.reject { |key, value| current[key] == value }
+
+      current_shipping = shipping_address(shadow_customer)
+      shipping = shipping_address(customer).reject { |key, value| current_shipping[key] == value }
+      input[:shipping_address] = shipping if shipping.any?
+      input
+    end
+
+    def source_attributes
+      @source_attributes ||= copied_attributes(customer, timezone: customer.applicable_timezone)
+        .merge(billing_entity_code: shadow_billing_entity_code)
     end
 
     # Each organization's default billing entity has its own code: a customer of the V1 default goes on the shadow
@@ -91,8 +139,21 @@ module BillingEngineMigrations
       customer.billing_entity_id == BillingEntity.active.where(organization_id: migration.organization_id).order(:created_at).pick(:id)
     end
 
-    def shipping_address
-      @shipping_address ||= SHIPPING_ATTRIBUTES.transform_values { |column| customer.public_send(column) }.compact_blank
+    def copied_attributes(record, timezone:)
+      attributes = CUSTOMER_ATTRIBUTES.index_with { |name| comparable_value(record, name) }
+      attributes[:billing_entity_code] = record.billing_entity&.code
+      # The customer services ignore timezone without a premium license: comparing it would rewrite every copy.
+      attributes[:timezone] = timezone.presence if License.premium?
+      attributes
+    end
+
+    def shipping_address(record)
+      SHIPPING_ATTRIBUTES.transform_values { |column| comparable_value(record, column) }
+    end
+
+    # Rows saved before a normalizer existed keep their raw value, and blank equals nil, so neither causes a rewrite.
+    def comparable_value(record, column)
+      Customer.normalize_value_for(column, record.public_send(column)).presence
     end
   end
 end
