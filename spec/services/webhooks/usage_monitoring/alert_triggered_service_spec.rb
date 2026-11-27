@@ -74,10 +74,7 @@ RSpec.describe Webhooks::UsageMonitoring::AlertTriggeredService do
             "external_customer_id" => "acme",
             "current_value" => "1500.0",
             "previous_value" => "1000.0",
-            "product_code" => "llm_tokens",
-            "product_filter_code" => nil,
-            "with_product_filters" => false,
-            "applies_to" => {"type" => "contract"},
+            "scope" => [{"type" => "contract", "product_code" => "llm_tokens", "with_product_filters" => false}],
             "crossed_thresholds" => [{"code" => "warn", "value" => "1200.0", "recurring" => false}],
             "triggered_at" => "2026-11-22T12:00:00Z"
           }

@@ -6,17 +6,12 @@ module Types
       class Object < Types::BaseObject
         graphql_name "ContractAlert"
 
-        dataload_association :product, :product_filter
-
         field :id, ID, null: false
 
         field :alert_type, AlertTypeEnum, null: false
         field :contract_external_id, String, null: false
         field :direction, Types::UsageMonitoring::Alerts::DirectionEnum, null: false
-        field :product, Types::Products::Object
-        field :product_filter, Types::ProductFilters::Object
-        field :with_product_filters, Boolean, null: false,
-          description: "On a product scope, whether the usage of the product's filters counts too. False counts the product's own fees only."
+        field :scope, [ScopeObject], null: false
 
         field :code, String, null: false
         field :name, String
@@ -31,6 +26,16 @@ module Types
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false
         field :deleted_at, GraphQL::Types::ISO8601DateTime
         field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+        def scope
+          product = dataloader.with(Sources::ActiveRecordAssociation, :product).load(object)
+          product_filter = dataloader.with(Sources::ActiveRecordAssociation, :product_filter).load(object)
+          return [] unless product
+
+          target = product_filter ? {product_filters: [product_filter]} : {with_product_filters: object.with_product_filters}
+
+          [{type: "contract", product:, **target}]
+        end
 
         # Same order as the REST serializer: one-time thresholds by value, then the recurring one
         def thresholds

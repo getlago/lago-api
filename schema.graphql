@@ -2102,15 +2102,9 @@ type ContractAlert {
   Last observed value, judged against the threshold values and carrying the same scale.
   """
   previousValue: String!
-  product: Product
-  productFilter: ProductFilter
+  scope: [ContractAlertScope!]!
   thresholds: [AlertThreshold!]!
   updatedAt: ISO8601DateTime!
-
-  """
-  On a product scope, whether the usage of the product's filters counts too. False counts the product's own fees only.
-  """
-  withProductFilters: Boolean!
 }
 
 """
@@ -2126,6 +2120,24 @@ type ContractAlertCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type ContractAlertScope {
+  product: Product!
+  productFilters: [ProductFilter!]
+  type: ContractAlertScopeTypeEnum!
+  withProductFilters: Boolean
+}
+
+input ContractAlertScopeInput {
+  productCode: String!
+  productFilterCodes: [String!]
+  type: ContractAlertScopeTypeEnum!
+  withProductFilters: Boolean
+}
+
+enum ContractAlertScopeTypeEnum {
+  contract
 }
 
 enum ContractAlertTypeEnum {
@@ -3778,10 +3790,8 @@ input CreateContractAlertInput {
   code: String!
   contractId: ID!
   name: String
-  productFilterId: ID
-  productId: ID
+  scope: [ContractAlertScopeInput!]!
   thresholds: [ThresholdInput!]!
-  withProductFilters: Boolean
 }
 
 """
