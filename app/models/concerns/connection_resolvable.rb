@@ -19,7 +19,7 @@ module ConnectionResolvable
   INHERIT_BEHAVIOR = "inherit"
   ROUTING_BEHAVIORS = (BillingObjectConnection::BEHAVIORS.values + [INHERIT_BEHAVIOR]).freeze
 
-  Routing = Data.define(:category, :behavior, :code)
+  Routing = Data.define(:category, :behavior, :code, :connection_id)
 
   def effective_payment_connection
     effective_connection(CATEGORIES[:payment])
@@ -58,7 +58,8 @@ module ConnectionResolvable
       Routing.new(
         category: category,
         behavior: override&.behavior || INHERIT_BEHAVIOR,
-        code: connection&.code
+        code: connection&.code,
+        connection_id: connection&.id
       )
     end
   end
