@@ -16,7 +16,7 @@ RSpec.describe BillingEntities::Taxes::RefreshDraftInvoicesJob do
     described_class.perform_now(billing_entity.id)
 
     expect(draft_invoice.reload.ready_to_be_refreshed).to be true
-    expect(draft_invoice.updated_at).to eq(Time.current)
+    expect(draft_invoice.updated_at).to eq(1.day.ago)
     expect(finalized_invoice.reload.ready_to_be_refreshed).to be false
     expect(other_draft_invoice.reload.ready_to_be_refreshed).to be false
   end

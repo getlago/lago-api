@@ -86,7 +86,7 @@ namespace :migrations do
 
     flagged = 0
     scope.in_batches(of: batch_size) do |batch|
-      flagged += batch.update_all(recalculate_invoiced_usage: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      flagged += batch.update_all(recalculate_invoiced_usage: true) # rubocop:disable Rails/SkipsModelValidations, Lago/UpdateAllUpdatedAt -- refresh flag, the job that clears it writes the change
       puts "  -> #{flagged}/#{pending} flagged"
     end
 

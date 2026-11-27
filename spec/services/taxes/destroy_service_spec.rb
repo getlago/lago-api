@@ -21,7 +21,7 @@ RSpec.describe Taxes::DestroyService do
       draft_invoice = create(:invoice, :draft, organization:, customer:)
 
       expect { destroy_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
-        .and change(draft_invoice, :updated_at)
+        .and not_change(draft_invoice, :updated_at)
     end
 
     context "when the tax is applied only to a Rate Card" do
@@ -38,7 +38,7 @@ RSpec.describe Taxes::DestroyService do
 
       it "marks the draft invoice as ready to be refreshed" do
         expect { destroy_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
-          .and change(draft_invoice, :updated_at)
+          .and not_change(draft_invoice, :updated_at)
       end
     end
 

@@ -123,8 +123,8 @@ module Plans
         .joins(matching_subscription_join)
         .select(:id)
 
-      Invoice.where(id: invoice_ids)
-        .update_all(ready_to_be_refreshed: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      Invoice.where(id: invoice_ids) # rubocop:disable Lago/UpdateAllUpdatedAt -- refresh flag, the job that clears it writes the change
+        .update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def update_metadata!

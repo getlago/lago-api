@@ -5,6 +5,12 @@ require "rubocop"
 module Cops
   # `update_all` skips callbacks, so it does not touch `updated_at`. Set it in the same call.
   #
+  # A call that leaves the record as clients see it disables the cop inline with the reason, so
+  # that `updated_at` does not report a change that no API payload or webhook shows:
+  # - a backfill of a value derived from data the row already has;
+  # - an internal derived column, such as `search_terms`;
+  # - a refresh flag that a job clears, as the job writes the change and sets `updated_at` then.
+  #
   # Checks the attributes written in the call: a hash, an SQL string, or an array whose first
   # element is an SQL string. A variable or a hash with a `**` splat is not checked.
   #
@@ -13,7 +19,7 @@ module Cops
   class UpdateAllUpdatedAtCop < ::RuboCop::Cop::Base
     extend ::RuboCop::Cop::AutoCorrector
 
-    MSG = "Set `updated_at` in `update_all`, as it skips callbacks."
+    MSG = "Set `updated_at` in `update_all`, as it skips callbacks. Disable this cop with the reason when the record does not change."
     RESTRICT_ON_SEND = %i[update_all].freeze
     UPDATED_AT_SQL = /\bupdated_at\b/
 

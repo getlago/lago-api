@@ -28,8 +28,8 @@ module Taxes
 
       customer_ids = (customer_ids + tax.reload.applicable_customers.select(:id)).uniq
       draft_invoice_ids |= tax.organization.invoices.where(customer_id: customer_ids).draft.pluck(:id)
-      tax.organization.invoices.where(id: draft_invoice_ids)
-        .update_all(ready_to_be_refreshed: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      tax.organization.invoices.where(id: draft_invoice_ids) # rubocop:disable Lago/UpdateAllUpdatedAt -- refresh flag, the job that clears it writes the change
+        .update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
       result.tax = tax
       result

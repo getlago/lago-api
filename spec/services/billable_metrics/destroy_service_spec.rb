@@ -57,7 +57,7 @@ RSpec.describe BillableMetrics::DestroyService do
       create(:invoice_subscription, subscription:, invoice:)
 
       expect { destroy_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
-        .and change(invoice, :updated_at)
+        .and not_change(invoice, :updated_at)
     end
 
     context "when billable metric is not found" do

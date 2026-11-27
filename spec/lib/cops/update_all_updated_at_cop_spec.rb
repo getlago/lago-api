@@ -6,7 +6,7 @@ RSpec.describe Cops::UpdateAllUpdatedAtCop, :config do
   it "registers an offense and adds updated_at to a hash without it" do
     expect_offense(<<~RUBY)
       invoices.update_all(status: :finalized)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks. Disable this cop with the reason when the record does not change.
     RUBY
 
     expect_correction(<<~RUBY)
@@ -17,7 +17,7 @@ RSpec.describe Cops::UpdateAllUpdatedAtCop, :config do
   it "registers an offense on a safe navigation call" do
     expect_offense(<<~RUBY)
       invoices&.update_all(status: :finalized)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks. Disable this cop with the reason when the record does not change.
     RUBY
 
     expect_correction(<<~RUBY)
@@ -28,7 +28,7 @@ RSpec.describe Cops::UpdateAllUpdatedAtCop, :config do
   it "adds updated_at on its own line to a multi-line hash" do
     expect_offense(<<~RUBY)
       invoices.update_all(
-      ^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks.
+      ^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks. Disable this cop with the reason when the record does not change.
         status: :finalized,
         ready_to_be_refreshed: false
       )
@@ -46,7 +46,7 @@ RSpec.describe Cops::UpdateAllUpdatedAtCop, :config do
   it "adds updated_at inside the braces of a hash literal" do
     expect_offense(<<~RUBY)
       invoices.update_all({status: :finalized})
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks. Disable this cop with the reason when the record does not change.
     RUBY
 
     expect_correction(<<~RUBY)
@@ -57,7 +57,7 @@ RSpec.describe Cops::UpdateAllUpdatedAtCop, :config do
   it "registers an offense on an SQL string without updated_at" do
     expect_offense(<<~RUBY)
       invoices.update_all("search_terms = \#{SQL}")
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks. Disable this cop with the reason when the record does not change.
     RUBY
 
     expect_no_corrections
@@ -66,7 +66,7 @@ RSpec.describe Cops::UpdateAllUpdatedAtCop, :config do
   it "registers an offense on an SQL array without updated_at" do
     expect_offense(<<~RUBY)
       invoices.update_all(["total = ?", 10])
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks. Disable this cop with the reason when the record does not change.
     RUBY
 
     expect_no_corrections
@@ -75,7 +75,7 @@ RSpec.describe Cops::UpdateAllUpdatedAtCop, :config do
   it "registers an offense on an SQL heredoc without updated_at" do
     expect_offense(<<~RUBY)
       invoices.update_all(<<~SQL)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks. Disable this cop with the reason when the record does not change.
         status = 1
       SQL
     RUBY

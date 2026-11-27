@@ -292,7 +292,7 @@ class WalletMigration
                 backfill_wallet_transactions(wallet)
               end
 
-              Wallet.where(id: wallets.map(&:id)).update_all(traceable: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+              Wallet.where(id: wallets.map(&:id)).update_all(traceable: true) # rubocop:disable Rails/SkipsModelValidations, Lago/UpdateAllUpdatedAt -- backfill of a derived column, the record does not change
 
               mutex.synchronize do
                 wallets_processed += wallets.size

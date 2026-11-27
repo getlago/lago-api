@@ -20,7 +20,7 @@ RSpec.describe Customers::ApplyTaxesService do
       invoice = create(:invoice, :draft, customer:)
 
       expect { apply_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
-        .and change(invoice, :updated_at)
+        .and not_change(invoice, :updated_at)
     end
 
     it "returns applied taxes" do

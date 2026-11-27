@@ -22,13 +22,11 @@ RSpec.describe "invoices:fill_expected_finalization_date" do # rubocop:disable R
     task.reenable
   end
 
-  it "fills the missing expected finalization dates from the issuing date" do
-    freeze_time do
-      dated_invoice_updated_at = invoice_with_date.updated_at
-      task.invoke
+  it "fills the missing expected finalization dates from the issuing date and leaves updated_at unchanged" do
+    expect { task.invoke }.to not_change { invoice_without_date.reload.updated_at }
+      .and not_change { invoice_with_date.reload.updated_at }
 
-      expect(invoice_without_date.reload).to have_attributes(expected_finalization_date: Date.new(2026, 10, 1), updated_at: Time.current)
-      expect(invoice_with_date.reload).to have_attributes(expected_finalization_date: Date.new(2026, 10, 5), updated_at: dated_invoice_updated_at)
-    end
+    expect(invoice_without_date.expected_finalization_date).to eq(Date.new(2026, 10, 1))
+    expect(invoice_with_date.expected_finalization_date).to eq(Date.new(2026, 10, 5))
   end
 end

@@ -13,7 +13,7 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
 
-      Invoice.where(id: invoice.id).update_all(["search_terms = #{Invoice::SearchTerms::SQL}, updated_at = ?", Time.current]) # rubocop:disable Rails/SkipsModelValidations
+      Invoice.where(id: invoice.id).update_all("search_terms = #{Invoice::SearchTerms::SQL}") # rubocop:disable Rails/SkipsModelValidations, Lago/UpdateAllUpdatedAt -- search_terms is an internal index, the invoice does not change
 
       result.invoice = invoice
       result
