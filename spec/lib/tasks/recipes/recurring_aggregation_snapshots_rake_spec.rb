@@ -27,9 +27,9 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     RecurringAggregationSnapshots::ComparePayInAdvanceService::Row.new(
       event_transaction_id: "tr_1",
       event_timestamp: Time.zone.parse("2022-05-10"),
-      item_id: charge.id,
+      charge_id: charge.id,
       billable_metric_code: billable_metric.code,
-      filter_id: nil,
+      charge_filter_id: nil,
       grouped_by: {},
       snapshot_read:,
       snapshot: aggregation.new(aggregation: snapshot_aggregation, **values),
@@ -37,11 +37,11 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     )
   end
 
-  def pay_in_advance_result(rows:, compared_items_count: 1)
+  def pay_in_advance_result(rows:, compared_charges_count: 1)
     RecurringAggregationSnapshots::ComparePayInAdvanceService::Result.new.tap do
       it.rows = rows
       it.differences = rows.select(&:different?)
-      it.compared_items_count = compared_items_count
+      it.compared_charges_count = compared_charges_count
       it.compared_events_count = rows.size
       it.rechecked = false
     end
@@ -137,7 +137,6 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       expect(pay_in_advance_csv.first).to eq(RECURRING_SNAPSHOTS_PAY_IN_ADVANCE_CSV_HEADERS)
       expect(pay_in_advance_csv.second).to eq(
         [
-          "subscription",
           subscription.id,
           subscription.external_id,
           "tr_1",
@@ -195,7 +194,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       end
 
       context "without a pay in advance charge" do
-        let(:pay_in_advance_comparison) { pay_in_advance_result(rows: [], compared_items_count: 0) }
+        let(:pay_in_advance_comparison) { pay_in_advance_result(rows: [], compared_charges_count: 0) }
 
         it "reports no mismatch" do
           expect { task.invoke }.to output(/No mismatch over the items and events read from a snapshot/).to_stdout
@@ -300,16 +299,16 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     context "with a listed contract" do
       before { stub_stdin(organization.id, "y", subscription.id, contract.id, csv_path) }
 
-      it "compares the contract after the subscriptions, in the same CSVs" do
+      it "compares the contract usage after the subscriptions, in the same CSV, and no contract pay in advance" do
         expect { task.invoke }.to output(
           a_string_including("Contract #{contract.id} (#{contract.external_id}): 1/1 products read from a snapshot")
         ).to_stdout
 
         expect(RecurringAggregationSnapshots::CompareContractUsageService).to have_received(:call).with(contract:)
-        expect(RecurringAggregationSnapshots::ComparePayInAdvanceService).to have_received(:call).with(contract:)
+        expect(RecurringAggregationSnapshots::ComparePayInAdvanceService).to have_received(:call).once.with(subscription:)
         expect(CSV.read(csv_path).map(&:first)).to eq(["owner_type", "subscription", "contract"])
         expect(CSV.read(csv_path).last.first(6)).to eq(["contract", contract.id, contract.external_id, product.id, billable_metric.code, nil])
-        expect(CSV.read(pay_in_advance_csv_path).last.first(3)).to eq(["contract", contract.id, contract.external_id])
+        expect(CSV.read(pay_in_advance_csv_path).drop(1).map(&:first)).to eq([subscription.id])
       end
     end
 
@@ -375,7 +374,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     end
 
     it "aborts before asking for a sample size" do
-      expect { task.invoke }.to raise_error(SystemExit, "No subscription to compare.")
+      expect { task.invoke }.to raise_error(SystemExit, "No subscription or contract to compare.")
         .and output(/0 of them have a recurring charge and an invoiced period/).to_stdout
     end
   end

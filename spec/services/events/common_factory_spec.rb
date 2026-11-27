@@ -108,23 +108,5 @@ RSpec.describe Events::CommonFactory do
         expect(new_instance.created_at).to eq(source.created_at)
       end
     end
-
-    context "when source is an instance of Clickhouse::ProductEventsRaw", clickhouse: true do
-      let(:source) { create(:clickhouse_product_events_raw, external_contract_id: "contract-1", precise_total_amount_cents: 12.5) }
-
-      it "returns a new instance of Events::Common keyed by the contract" do
-        new_instance = described_class.new_instance(source:)
-
-        expect(new_instance.id).to be_nil
-        expect(new_instance.organization_id).to eq(source.organization_id)
-        expect(new_instance.transaction_id).to eq(source.transaction_id)
-        expect(new_instance.external_subscription_id).to eq("contract-1")
-        expect(new_instance.timestamp).to eq(source.timestamp)
-        expect(new_instance.code).to eq(source.code)
-        expect(new_instance.properties).to eq(source.properties)
-        expect(new_instance.precise_total_amount_cents).to eq(12.5)
-        expect(new_instance.created_at).to eq(source.ingested_at)
-      end
-    end
   end
 end

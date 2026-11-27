@@ -37,14 +37,13 @@ RECURRING_SNAPSHOTS_PAY_IN_ADVANCE_AGGREGATION_FIELDS = %i[
 ].freeze
 
 RECURRING_SNAPSHOTS_PAY_IN_ADVANCE_CSV_HEADERS = [
-  "owner_type",
-  "owner_id",
-  "external_id",
+  "subscription_id",
+  "external_subscription_id",
   "event_transaction_id",
   "event_timestamp",
-  "item_id",
+  "charge_id",
   "billable_metric_code",
-  "filter_id",
+  "charge_filter_id",
   "grouped_by",
   "snapshot_read",
   *RECURRING_SNAPSHOTS_PAY_IN_ADVANCE_AGGREGATION_FIELDS.flat_map { ["snapshot_#{it}", "full_scan_#{it}"] }
@@ -105,21 +104,28 @@ namespace :recipes do
         recurring_snapshots_print_comparison(owner_type, owner, comparison)
 
         compared += 1
-        pay_in_advance = RecurringAggregationSnapshots::ComparePayInAdvanceService.call(owner_type => owner)
+        pay_in_advance_rows = []
+        pay_in_advance_compared = true
 
-        if pay_in_advance.success?
-          pay_in_advance_charges += pay_in_advance.compared_items_count
-          pay_in_advance_events += pay_in_advance.compared_events_count
-          pay_in_advance_snapshot_buckets += pay_in_advance.rows.count(&:snapshot_read)
-          pay_in_advance_csv_rows.concat(recurring_snapshots_pay_in_advance_csv_rows(owner_type, owner, pay_in_advance))
-          recurring_snapshots_print_pay_in_advance_comparison(pay_in_advance)
-        else
-          pay_in_advance_failed += 1
-          puts "      pay in advance: FAILED (#{pay_in_advance.error})"
+        # Contract pay in advance only runs on advance cards, which never read a snapshot
+        if owner_type == :subscription
+          pay_in_advance = RecurringAggregationSnapshots::ComparePayInAdvanceService.call(subscription: owner)
+          pay_in_advance_compared = pay_in_advance.success?
+
+          if pay_in_advance.success?
+            pay_in_advance_rows = pay_in_advance.rows
+            pay_in_advance_charges += pay_in_advance.compared_charges_count
+            pay_in_advance_events += pay_in_advance.compared_events_count
+            pay_in_advance_snapshot_buckets += pay_in_advance_rows.count(&:snapshot_read)
+            pay_in_advance_csv_rows.concat(recurring_snapshots_pay_in_advance_csv_rows(owner, pay_in_advance))
+            recurring_snapshots_print_pay_in_advance_comparison(pay_in_advance)
+          else
+            pay_in_advance_failed += 1
+            puts "      pay in advance: FAILED (#{pay_in_advance.error})"
+          end
         end
 
-        pay_in_advance_rows = pay_in_advance.success? ? pay_in_advance.rows : []
-        if pay_in_advance.success? && comparison.snapshot_items_count.zero? && pay_in_advance_rows.none?(&:snapshot_read)
+        if pay_in_advance_compared && comparison.snapshot_items_count.zero? && pay_in_advance_rows.none?(&:snapshot_read)
           without_snapshot += 1
         end
         mismatching += 1 if comparison.differences.any? || pay_in_advance_rows.any?(&:different?)
@@ -240,28 +246,27 @@ def recurring_snapshots_breakdowns_json(totals)
 end
 
 def recurring_snapshots_print_pay_in_advance_comparison(comparison)
-  return if comparison.compared_items_count.zero?
+  return if comparison.compared_charges_count.zero?
 
   puts "      pay in advance: #{comparison.compared_events_count} event(s) replayed, " \
        "#{comparison.rows.count(&:snapshot_read)} bucket(s) read from a snapshot, " \
        "#{comparison.differences.size} mismatching"
 
-  comparison.differences.group_by(&:item_id).each do |item_id, rows|
-    puts "      #{rows.first.billable_metric_code} (#{item_id}): #{rows.size} mismatching event bucket(s), see the CSV"
+  comparison.differences.group_by(&:charge_id).each do |charge_id, rows|
+    puts "      charge #{rows.first.billable_metric_code} (#{charge_id}): #{rows.size} mismatching event bucket(s), see the CSV"
   end
 end
 
-def recurring_snapshots_pay_in_advance_csv_rows(owner_type, owner, comparison)
+def recurring_snapshots_pay_in_advance_csv_rows(subscription, comparison)
   comparison.rows.map do |row|
     [
-      owner_type,
-      owner.id,
-      owner.external_id,
+      subscription.id,
+      subscription.external_id,
       row.event_transaction_id,
       row.event_timestamp.iso8601(3),
-      row.item_id,
+      row.charge_id,
       row.billable_metric_code,
-      row.filter_id,
+      row.charge_filter_id,
       row.grouped_by.to_json,
       row.snapshot_read,
       *RECURRING_SNAPSHOTS_PAY_IN_ADVANCE_AGGREGATION_FIELDS.flat_map do |field|

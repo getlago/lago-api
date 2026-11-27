@@ -35,7 +35,7 @@ module Events
           precise_total_amount_cents: source.precise_total_amount_cents,
           created_at: source.created_at
         )
-      when "Clickhouse::EventsRaw", "Clickhouse::ProductEventsRaw"
+      when "Clickhouse::EventsRaw"
         Events::Common.new(
           id: nil,
           organization_id: source.organization_id,
