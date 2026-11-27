@@ -205,4 +205,296 @@ describe "Invoice Preview Scenarios", :premium do
       end
     end
   end
+
+  context "when an active and a pending subscription are previewed together" do
+    let(:customer) { create(:customer, organization:) }
+    let(:active_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 10_000)
+    end
+    let(:pending_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 1_000)
+    end
+
+    it "returns the fees of both subscriptions", transaction: false do
+      travel_to(DateTime.parse("2026-10-01T00:00:00Z")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "active-sub",
+            plan_code: active_plan.code,
+            billing_time: "calendar"
+          }
+        )
+      end
+
+      travel_to(DateTime.parse("2026-11-24T10:00:00Z")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "pending-sub",
+            plan_code: pending_plan.code,
+            billing_time: "calendar",
+            subscription_at: "2026-12-01T00:00:00Z",
+            plan_overrides: {amount_cents: 300_000}
+          }
+        )
+        expect(customer.subscriptions.find_by(external_id: "pending-sub")).to be_pending
+
+        post_with_token(
+          organization,
+          "/api/v1/invoices/preview",
+          {
+            customer: {external_id: customer.external_id},
+            subscriptions: {external_ids: ["active-sub", "pending-sub"]}
+          }
+        )
+
+        expect(response).to have_http_status(:success)
+
+        subscription_fees = json[:invoice][:fees]
+          .select { |fee| fee[:item][:type] == "subscription" }
+          .map { |fee| [fee[:external_subscription_id], fee[:amount_cents], fee[:from_date], fee[:to_date]] }
+        expect(subscription_fees).to match_array(
+          [
+            ["active-sub", 10_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"],
+            # overridden price, 31 of 31 days of December
+            ["pending-sub", 300_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]
+          ]
+        )
+        expect(json[:invoice]).to include(
+          fees_amount_cents: 310_000, # 10_000 (active) + 300_000 (pending)
+          issuing_date: "2026-12-01"
+        )
+        expect(json[:invoice][:subscriptions].map { |s| s[:external_id] })
+          .to match_array(["active-sub", "pending-sub"])
+      end
+    end
+  end
+
+  context "when an active subscription is previewed with other pending subscriptions" do
+    let(:customer) { create(:customer, organization:) }
+    let(:active_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 10_000)
+    end
+    let(:pending_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: pending_pay_in_advance, amount_cents: 1_000)
+    end
+    let(:pending_pay_in_advance) { true }
+    let(:pending_subscription_at) { "2026-12-01T00:00:00Z" }
+
+    def preview_active_and_pending
+      travel_to(DateTime.parse("2026-10-01T00:00:00Z")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "active-sub",
+            plan_code: active_plan.code,
+            billing_time: "calendar"
+          }
+        )
+      end
+
+      travel_to(DateTime.parse("2026-11-24T10:00:00Z")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "pending-sub",
+            plan_code: pending_plan.code,
+            billing_time: "calendar",
+            subscription_at: pending_subscription_at,
+            plan_overrides: {amount_cents: 300_000}
+          }
+        )
+        expect(customer.subscriptions.find_by(external_id: "pending-sub")).to be_pending
+
+        post_with_token(
+          organization,
+          "/api/v1/invoices/preview",
+          {
+            customer: {external_id: customer.external_id},
+            subscriptions: {external_ids: ["pending-sub", "active-sub"]}
+          }
+        )
+      end
+    end
+
+    def subscription_fees
+      json[:invoice][:fees]
+        .select { |fee| fee[:item][:type] == "subscription" }
+        .map { |fee| [fee[:external_subscription_id], fee[:amount_cents], fee[:from_date], fee[:to_date]] }
+    end
+
+    context "when the customer has an invoice grace period" do
+      # keep_anchor makes the recurring rule (2026-12-01) differ from the grace period (2026-12-04)
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          invoice_grace_period: 3,
+          subscription_invoice_issuing_date_anchor: "next_period_start",
+          subscription_invoice_issuing_date_adjustment: "keep_anchor"
+        )
+      end
+
+      it "issues the invoice with the recurring rule of the active subscription", transaction: false do
+        preview_active_and_pending
+
+        expect(response).to have_http_status(:success)
+        expect(subscription_fees).to match_array(
+          [
+            ["active-sub", 10_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"],
+            ["pending-sub", 300_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]
+          ]
+        )
+        expect(json[:invoice]).to include(
+          fees_amount_cents: 310_000, # 10_000 (active) + 300_000 (pending)
+          issuing_date: "2026-12-01"
+        )
+      end
+    end
+
+    context "when the pending subscription is paid in arrears and starts on the billing date" do
+      let(:pending_pay_in_advance) { false }
+
+      it "returns only the fee of the active subscription", transaction: false do
+        preview_active_and_pending
+
+        expect(response).to have_http_status(:success)
+        expect(subscription_fees).to eq(
+          [["active-sub", 10_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]]
+        )
+        expect(json[:invoice]).to include(fees_amount_cents: 10_000, issuing_date: "2026-12-01")
+        expect(json[:invoice][:subscriptions].map { |s| s[:external_id] }).to eq(["active-sub"])
+      end
+    end
+
+    context "when the pending subscription starts after the billing date" do
+      let(:pending_subscription_at) { "2027-01-15T00:00:00Z" }
+
+      it "returns only the fee of the active subscription", transaction: false do
+        preview_active_and_pending
+
+        expect(response).to have_http_status(:success)
+        expect(subscription_fees).to eq(
+          [["active-sub", 10_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]]
+        )
+        expect(json[:invoice]).to include(fees_amount_cents: 10_000, issuing_date: "2026-12-01")
+        expect(json[:invoice][:subscriptions].map { |s| s[:external_id] }).to eq(["active-sub"])
+      end
+    end
+  end
+
+  context "when several pending subscriptions are previewed together" do
+    let(:customer) { create(:customer, organization:) }
+    let(:advance_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 300_000)
+    end
+    let(:other_advance_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_cents: 5_000)
+    end
+    let(:arrears_plan) do
+      create(:plan, organization:, interval: "monthly", pay_in_advance: false, amount_cents: 5_000)
+    end
+
+    # Creates the subscriptions in the given order (one minute apart), then previews them.
+    def preview_pending(subscriptions)
+      subscriptions.each_with_index do |(external_id, plan), index|
+        travel_to(DateTime.parse("2026-11-24T10:00:00Z") + index.minutes) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id:,
+              plan_code: plan.code,
+              billing_time: "calendar",
+              subscription_at: "2026-12-01T00:00:00Z"
+            }
+          )
+        end
+      end
+
+      travel_to(DateTime.parse("2026-11-24T11:00:00Z")) do
+        post_with_token(
+          organization,
+          "/api/v1/invoices/preview",
+          {
+            customer: {external_id: customer.external_id},
+            subscriptions: {external_ids: subscriptions.map(&:first)}
+          }
+        )
+      end
+    end
+
+    def subscription_fees
+      json[:invoice][:fees]
+        .select { |fee| fee[:item][:type] == "subscription" }
+        .map { |fee| [fee[:external_subscription_id], fee[:amount_cents], fee[:from_date], fee[:to_date]] }
+    end
+
+    context "when both are paid in advance" do
+      it "returns the fee of each subscription", transaction: false do
+        preview_pending([["pending-b", advance_plan], ["pending-c", other_advance_plan]])
+
+        expect(response).to have_http_status(:success)
+        expect(subscription_fees).to match_array(
+          [
+            ["pending-b", 300_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"],
+            ["pending-c", 5_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]
+          ]
+        )
+        expect(json[:invoice]).to include(
+          fees_amount_cents: 305_000, # 300_000 (B) + 5_000 (C)
+          issuing_date: "2026-12-01"
+        )
+        expect(json[:invoice][:subscriptions].map { |s| s[:external_id] })
+          .to match_array(["pending-b", "pending-c"])
+        expect(customer.subscriptions.where(external_id: ["pending-b", "pending-c"]))
+          .to all(have_attributes(status: "pending", started_at: nil))
+      end
+    end
+
+    context "when both are paid in arrears" do
+      it "bills each of them for December on 2027-01-01", transaction: false do
+        preview_pending([["pending-d", arrears_plan], ["pending-e", arrears_plan]])
+
+        expect(response).to have_http_status(:success)
+        expect(subscription_fees).to match_array(
+          [
+            ["pending-d", 5_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"],
+            ["pending-e", 5_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]
+          ]
+        )
+        expect(json[:invoice]).to include(
+          fees_amount_cents: 10_000, # 5_000 (D) + 5_000 (E)
+          issuing_date: "2027-01-01" # end of the first period (2026-12-31) + 1 day
+        )
+      end
+    end
+
+    context "when one is paid in advance and the other in arrears" do
+      shared_examples "a preview of the pay in advance subscription only" do
+        it "bills the pay in advance subscription on its start date and leaves the other out", transaction: false do
+          preview_pending(subscriptions)
+
+          expect(response).to have_http_status(:success)
+          expect(subscription_fees).to eq(
+            [["pending-b", 300_000, "2026-12-01T00:00:00+00:00", "2026-12-31T23:59:59+00:00"]]
+          )
+          expect(json[:invoice]).to include(fees_amount_cents: 300_000, issuing_date: "2026-12-01")
+          expect(json[:invoice][:subscriptions].map { |s| s[:external_id] }).to eq(["pending-b"])
+        end
+      end
+
+      context "when the pay in advance subscription is created first" do
+        let(:subscriptions) { [["pending-b", advance_plan], ["pending-d", arrears_plan]] }
+
+        it_behaves_like "a preview of the pay in advance subscription only"
+      end
+
+      context "when the pay in arrears subscription is created first" do
+        let(:subscriptions) { [["pending-d", arrears_plan], ["pending-b", advance_plan]] }
+
+        it_behaves_like "a preview of the pay in advance subscription only"
+      end
+    end
+  end
 end

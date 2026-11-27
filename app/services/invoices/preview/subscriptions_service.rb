@@ -53,7 +53,7 @@ module Invoices
           )
         when :projection
           FindSubscriptionsService.call(
-            subscriptions: customer_subscriptions
+            subscriptions: projection_subscriptions
           )
         end
       end
@@ -88,6 +88,19 @@ module Invoices
         end
 
         @customer_subscriptions = scope.active
+      end
+
+      # Per external_id: its active subscription, else its only subscription when it is
+      # a standalone pending one starting in the future.
+      def projection_subscriptions
+        return @projection_subscriptions if defined?(@projection_subscriptions)
+
+        scope = customer.subscriptions.where(external_id: external_ids)
+        pending_ids = scope.group_by(&:external_id).values.filter_map do |rows|
+          rows.first.id if rows.one? && subscription_starting_in_future?(rows.first)
+        end
+
+        @projection_subscriptions = scope.active.or(scope.where(id: pending_ids)).order(:created_at, :id)
       end
 
       def current_subscription
