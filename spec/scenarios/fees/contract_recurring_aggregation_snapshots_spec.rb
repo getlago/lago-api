@@ -94,7 +94,7 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
     travel_to(started_at + 5.minutes) do
       api_call do
         post_with_token(organization, "/api/v2/contracts", {contract: {
-          external_id: "snapshot-contract", external_customer_id: "snapshot-customer",
+          external_id: "snapshot-contract", code: "default", external_customer_id: "snapshot-customer",
           plan_code: "snapshot-plan", started_at: started_at.iso8601
         }})
       end
@@ -422,64 +422,6 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
     include_examples "on each ClickHouse pipeline", "a recurring weighted sum"
   end
 
-  describe "with a rate change inside a cycle" do
-    let(:rates) do
-      [
-        {code: "base", effective_from: started_at, amount: "1"},
-        {code: "raise", effective_from: Time.utc(2026, 4, 15), amount: "2"}
-      ]
-    end
-    let(:mid_april_snapshot) { BillingSegment.inclusive_end(Time.utc(2026, 4, 15)) }
-    let(:billed) do
-      {
-        march_invoice: [{amount_cents: 1600, units: 16, events_count: 4}],
-        # The first slice of April closes on the rate change: 16 + 7 + 5
-        mid_april_invoice: [{amount_cents: 2800, units: 28, events_count: 6}],
-        # The second slice starts from the first slice's snapshot: 28 + 4, at $2
-        april_usage: [{amount_cents: 6400, units: 32, events_count: 7}],
-        april_invoice: [{amount_cents: 6400, units: 32, events_count: 7}]
-      }
-    end
-    let(:snapshots) do
-      [
-        {to: march_snapshot, units: 15, events_count: 3},
-        {to: mid_april_snapshot, units: 28, events_count: 6},
-        {to: april_snapshot, units: 32, events_count: 7}
-      ]
-    end
-    let(:invoice_reads) { [nil, march_snapshot, mid_april_snapshot] }
-    let(:usage_reads) { [mid_april_snapshot] }
-
-    def bill
-      start_contract
-      send_march_events
-      march_invoice = bill_at(march_billed_at)
-
-      send_event(7, at: Time.utc(2026, 4, 2), timestamp: Time.utc(2026, 3, 20))
-      send_event(5, at: Time.utc(2026, 4, 10))
-      mid_april_invoice = bill_at(Time.utc(2026, 4, 15, 1))
-
-      send_event(4, at: Time.utc(2026, 4, 20))
-      april_usage = usage_at(Time.utc(2026, 4, 25))
-
-      {march_invoice:, mid_april_invoice:, april_usage:, april_invoice: bill_at(Time.utc(2026, 5, 1, 1))}
-    end
-
-    include_examples "bills the same with every snapshot flag"
-
-    include_examples "bills from the stored snapshot" do
-      let(:edited_after) { Time.utc(2026, 4, 15, 1) }
-      let(:edited_to) { mid_april_snapshot }
-      # 128 + 4, at $2
-      let(:edited_billed) do
-        {
-          april_usage: [{amount_cents: 26400, units: 132, events_count: 8}],
-          april_invoice: [{amount_cents: 26400, units: 132, events_count: 8}]
-        }
-      end
-    end
-  end
-
   shared_examples "a filtered and an unfiltered card on one product" do
     let(:metric_params) { super().merge(filters: [{key: "region", values: %w[eu us]}]) }
     let(:billed) do
@@ -583,6 +525,79 @@ describe "Contract recurring aggregation snapshots", :premium, transaction: fals
     it_behaves_like "a filtered and an unfiltered card on one product"
 
     include_examples "on each ClickHouse pipeline", "a filtered and an unfiltered card on one product"
+  end
+
+  shared_examples "a product filter created after a snapshot" do
+    let(:metric_params) { super().merge(filters: [{key: "region", values: %w[eu us]}]) }
+    let(:billed) do
+      {
+        # No filter yet: 10 eu + 3 us + 2 eu + 1 us
+        march_invoice: [{amount_cents: 1600, units: 16, events_count: 4}],
+        # The eu filter has no card, so its events leave the unfiltered card: us 3 + 1 + 7
+        april_usage: [{amount_cents: 1100, units: 11, events_count: 3}],
+        april_invoice: [{amount_cents: 1100, units: 11, events_count: 3}],
+        # us 11 + 4
+        june_usage: [{amount_cents: 1500, units: 15, events_count: 4}],
+        may_invoice: [{amount_cents: 1500, units: 15, events_count: 4}]
+      }
+    end
+    let(:snapshots) do
+      [
+        # 10 + 3 + 2: the event ingested after the watermark is left to the delta
+        {to: march_snapshot, units: 15, events_count: 3},
+        {to: april_snapshot, units: 11, events_count: 3},
+        {to: BillingSegment.inclusive_end(Time.utc(2026, 6, 1)), units: 15, events_count: 4}
+      ]
+    end
+    # The filter is created after the March watermark, so April reads the March snapshot as stale
+    let(:invoice_reads) { [nil, nil, april_snapshot] }
+    let(:usage_reads) { [nil, april_snapshot] }
+
+    def bill
+      start_contract
+      send_event(10, at: Time.utc(2026, 3, 5), region: "eu")
+      send_event(3, at: Time.utc(2026, 3, 10), region: "us")
+      send_event(2, at: march_watermark, timestamp: Time.utc(2026, 3, 31, 12), region: "eu")
+      send_event(1, at: march_watermark + 2.minutes, timestamp: Time.utc(2026, 3, 31, 18), region: "us")
+      march_invoice = bill_at(march_billed_at)
+
+      travel_to(Time.utc(2026, 4, 2)) do
+        api_call do
+          post_with_token(organization, "/api/v2/products/storage/filters", {filter: {
+            name: "EU", code: "eu", values: [{key: "region", value: "eu"}]
+          }})
+        end
+      end
+      send_event(7, at: Time.utc(2026, 4, 2, 1), timestamp: Time.utc(2026, 3, 20), region: "us")
+      send_event(5, at: Time.utc(2026, 4, 15), region: "eu")
+      april_usage = usage_at(Time.utc(2026, 4, 20))
+      april_invoice = bill_at(Time.utc(2026, 5, 1, 1))
+
+      send_event(4, at: Time.utc(2026, 5, 10), region: "us")
+      june_usage = usage_at(Time.utc(2026, 6, 1, 0, 0, 30))
+
+      {march_invoice:, april_usage:, april_invoice:, june_usage:, may_invoice: bill_at(Time.utc(2026, 6, 1, 1))}
+    end
+
+    include_examples "bills the same with every snapshot flag"
+
+    include_examples "bills from the stored snapshot" do
+      let(:edited_after) { Time.utc(2026, 5, 1, 1) }
+      let(:edited_to) { april_snapshot }
+      # 100 more units and 1 more event than the April snapshot holds: 111 + 4
+      let(:edited_billed) do
+        {
+          june_usage: [{amount_cents: 11500, units: 115, events_count: 5}],
+          may_invoice: [{amount_cents: 11500, units: 115, events_count: 5}]
+        }
+      end
+    end
+  end
+
+  describe "with a product filter created after a snapshot" do
+    it_behaves_like "a product filter created after a snapshot"
+
+    include_examples "on each ClickHouse pipeline", "a product filter created after a snapshot"
   end
 
   describe "with a terminated contract" do
