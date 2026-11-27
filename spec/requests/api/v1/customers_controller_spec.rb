@@ -1468,6 +1468,17 @@ RSpec.describe Api::V1::CustomersController do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context "when the organization is the shadow of a migration" do
+      before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+      it "discards the customer and enqueues the relations termination" do
+        expect { subject }.to have_enqueued_job(Customers::TerminateRelationsJob)
+
+        expect(response).to have_http_status(:success)
+        expect(customer.reload).to be_discarded
+      end
+    end
   end
 
   describe "POST /api/v1/customers/:external_customer_id/checkout_url" do

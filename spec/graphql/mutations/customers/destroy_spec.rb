@@ -31,4 +31,19 @@ RSpec.describe Mutations::Customers::Destroy do
     data = result["data"]["destroyCustomer"]
     expect(data["id"]).to eq(customer.id)
   end
+
+  context "when the organization is the shadow of a migration" do
+    before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+    it "deletes the customer" do
+      result = execute_query(
+        query: mutation,
+        input: {id: customer.id}
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["destroyCustomer"]["id"]).to eq(customer.id)
+      expect(customer.reload).to be_discarded
+    end
+  end
 end
