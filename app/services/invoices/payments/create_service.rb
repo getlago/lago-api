@@ -57,49 +57,13 @@ module Invoices
 
         result.payment = payment
 
-        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
-          provider: current_provider_type,
-          payment:,
-          reference: payment_reference,
-          metadata: {
-            lago_invoice_id: invoice.id,
-            lago_customer_id: invoice.customer_id,
-            invoice_issuing_date: invoice.issuing_date.iso8601,
-            invoice_type: invoice.invoice_type
-          }
-        ).call!
+        payment_result = create_provider_payment(payment)
+        return result unless payment_result
 
         payment_status = payment_result.payment.payable_payment_status
         update_invoice_payment_status(payment_status:)
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment.should_sync_payment?
-
-        result
-      rescue Invoices::Payments::AlreadyPaidError
-        # NOTE: The invoice was settled by another payment so we can drop the unused pending payment.
-        #
-        # Reload from the DB before destroying: a concurrent attempt shares this same row (only one
-        # pending/processing provider payment exists per payable) and may have already advanced it by
-        # setting a provider_payment_id or marking it succeeded. `result.payment` here is a stale
-        # in-memory copy, so relying on it can destroy a payment that maps to a real provider charge
-        # and orphan the PaymentReceipts::CreateJob already enqueued for it.
-        persisted_payment = result.payment && Payment.find_by(id: result.payment.id)
-        if persisted_payment && persisted_payment.provider_payment_id.nil? && persisted_payment.payable_payment_status != "succeeded"
-          persisted_payment.destroy
-        end
-        result.payment = nil
-        result
-      rescue BaseService::ServiceFailure => e
-        result.payment = e.result.payment
-
-        deliver_error_webhook(e) unless skip_error_webhook?(e)
-
-        update_invoice_payment_status(payment_status: invoice_payment_status_after(e))
-
-        raise RetriableError if e.result.should_retry
-
-        # Some errors should be investigated and need to be raised
-        raise if e.result.reraise
 
         result
       end
@@ -190,12 +154,61 @@ module Invoices
           current_payment_provider_customer.payment_methods.with_discarded.where(provider_method_id: legacy_id).none?
       end
 
+      # Returns nil when the provider call ended the attempt (already paid, or a payment failure).
+      def create_provider_payment(payment)
+        ::PaymentProviders::CreatePaymentFactory.new_instance(
+          provider: current_provider_type,
+          payment:,
+          reference: payment_reference,
+          metadata: {
+            lago_invoice_id: invoice.id,
+            lago_customer_id: invoice.customer_id,
+            invoice_issuing_date: invoice.issuing_date.iso8601,
+            invoice_type: invoice.invoice_type
+          }
+        ).call!
+      rescue Invoices::Payments::AlreadyPaidError
+        drop_unused_pending_payment
+        nil
+      rescue BaseService::ServiceFailure => e
+        handle_payment_failure(e)
+        nil
+      end
+
+      # NOTE: The invoice was settled by another payment so we can drop the unused pending payment.
+      #
+      # Reload from the DB before destroying: a concurrent attempt shares this same row (only one
+      # pending/processing provider payment exists per payable) and may have already advanced it by
+      # setting a provider_payment_id or marking it succeeded. `result.payment` here is a stale
+      # in-memory copy, so relying on it can destroy a payment that maps to a real provider charge
+      # and orphan the PaymentReceipts::CreateJob already enqueued for it.
+      def drop_unused_pending_payment
+        persisted_payment = Payment.find_by(id: result.payment.id)
+        if persisted_payment && persisted_payment.provider_payment_id.nil? && persisted_payment.payable_payment_status != "succeeded"
+          persisted_payment.destroy
+        end
+        result.payment = nil
+      end
+
+      def handle_payment_failure(failure)
+        result.payment = failure.result.payment
+
+        deliver_error_webhook(failure) unless skip_error_webhook?(failure)
+
+        update_invoice_payment_status(payment_status: invoice_payment_status_after(failure))
+
+        raise RetriableError if failure.result.should_retry
+
+        # Some errors should be investigated and need to be raised
+        raise failure if failure.result.reraise
+      end
+
       def current_payment_provider
         @current_payment_provider ||= payment_provider(customer)
       end
 
       # Unlike `provider`, which can be the type named by the job when it was enqueued, this is the type
-      # of the provider the payment is charged through, set even when `customer.payment_provider` is nil.
+      # of the provider the payment is charged through.
       def current_provider_type
         current_payment_provider.payment_type.to_sym
       end

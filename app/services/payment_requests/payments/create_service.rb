@@ -56,16 +56,8 @@ module PaymentRequests
 
         result.payment = payment
 
-        payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
-          provider: current_provider_type,
-          payment:,
-          reference: payment_reference,
-          metadata: {
-            lago_customer_id: payable.customer_id,
-            lago_payable_id: payable.id,
-            lago_payable_type: payable.class.name
-          }
-        ).call!
+        payment_result = create_provider_payment(payment)
+        return result unless payment_result
 
         update_payable_payment_status(payment_status: payment_result.payment.payable_payment_status)
         update_invoices_payment_status(payment_status: payment_result.payment.payable_payment_status)
@@ -74,30 +66,6 @@ module PaymentRequests
         PaymentReceipts::CreateJob.perform_later(payment) if payment.payable.organization.issue_receipts_enabled?
 
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later if payable.payment_failed?
-
-        result
-      rescue Invoices::Payments::AlreadyPaidError
-        # The payment request was settled by another payment so we can drop the unused pending payment.
-        #
-        # Reload from the DB before destroying: a concurrent attempt shares this same row (only one
-        # pending/processing provider payment exists per payable) and may have already advanced it by
-        # setting a provider_payment_id or marking it succeeded. `result.payment` here is a stale
-        # in-memory copy, so relying on it can destroy a payment that maps to a real provider charge
-        # and orphan the PaymentReceipts::CreateJob already enqueued for it.
-        persisted_payment = result.payment && Payment.find_by(id: result.payment.id)
-        if persisted_payment && persisted_payment.provider_payment_id.nil? && persisted_payment.payable_payment_status != "succeeded"
-          persisted_payment.destroy
-        end
-        result.payment = nil
-        result
-      rescue BaseService::ServiceFailure => e
-        PaymentRequestMailer.with(payment_request: payable).requested.deliver_later
-        result.payment = e.result.payment
-        deliver_error_webhook(e.result)
-        update_payable_payment_status(payment_status: e.result.payment.payable_payment_status)
-
-        # Some errors should be investigated and need to be raised
-        raise if e.result.reraise
 
         result
       end
@@ -129,12 +97,66 @@ module PaymentRequests
         payable.invoices.all?(&:ready_for_payment_processing)
       end
 
+      # Returns nil when the provider call ended the attempt (already paid, or a payment failure).
+      def create_provider_payment(payment)
+        ::PaymentProviders::CreatePaymentFactory.new_instance(
+          provider: current_provider_type,
+          payment:,
+          reference: payment_reference,
+          metadata: {
+            lago_customer_id: payable.customer_id,
+            lago_payable_id: payable.id,
+            lago_payable_type: payable.class.name
+          }
+        ).call!
+      rescue Invoices::Payments::AlreadyPaidError
+        drop_unused_pending_payment
+        nil
+      rescue BaseService::ServiceFailure => e
+        handle_payment_failure(e)
+        nil
+      end
+
+      # The payment request was settled by another payment so we can drop the unused pending payment.
+      #
+      # Reload from the DB before destroying: a concurrent attempt shares this same row (only one
+      # pending/processing provider payment exists per payable) and may have already advanced it by
+      # setting a provider_payment_id or marking it succeeded. `result.payment` here is a stale
+      # in-memory copy, so relying on it can destroy a payment that maps to a real provider charge
+      # and orphan the PaymentReceipts::CreateJob already enqueued for it.
+      def drop_unused_pending_payment
+        persisted_payment = Payment.find_by(id: result.payment.id)
+        if persisted_payment && persisted_payment.provider_payment_id.nil? && persisted_payment.payable_payment_status != "succeeded"
+          persisted_payment.destroy
+        end
+        result.payment = nil
+      end
+
+      def handle_payment_failure(failure)
+        send_requested_email
+        result.payment = failure.result.payment
+        deliver_error_webhook(failure.result)
+        update_payable_payment_status(payment_status: failure.result.payment.payable_payment_status)
+
+        # Some errors should be investigated and need to be raised
+        raise failure if failure.result.reraise
+      end
+
+      # The customer is still asked to pay when the provider cannot be found (payment_provider_code_missing),
+      # but no payment failure webhook is sent, as no payment was attempted.
       def current_payment_provider
         @current_payment_provider ||= payment_provider(customer)
+      rescue BaseService::ServiceFailure
+        send_requested_email
+        raise
+      end
+
+      def send_requested_email
+        PaymentRequestMailer.with(payment_request: payable).requested.deliver_later
       end
 
       # Unlike `provider`, which can be the type named by the job when it was enqueued, this is the type
-      # of the provider the payment is charged through, set even when `customer.payment_provider` is nil.
+      # of the provider the payment is charged through.
       def current_provider_type
         current_payment_provider.payment_type.to_sym
       end
