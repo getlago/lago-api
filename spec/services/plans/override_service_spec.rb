@@ -21,6 +21,65 @@ RSpec.describe Plans::OverrideService do
     end
   end
 
+  describe "stored negative values", :premium do
+    let(:organization) { create(:organization) }
+    let(:parent_plan) { create(:plan, organization:) }
+
+    it "keeps a stored negative amount when the override does not send one" do
+      parent_plan.amount_cents = -100
+      parent_plan.save!(validate: false)
+
+      result = described_class.call(plan: parent_plan, params: {name: "Override"})
+
+      expect(result).to be_success
+      expect(result.plan).to have_attributes(name: "Override", amount_cents: -100)
+    end
+
+    it "keeps a stored negative trial period when the override does not send one" do
+      parent_plan.trial_period = -30
+      parent_plan.save!(validate: false)
+
+      result = described_class.call(plan: parent_plan, params: {name: "Override"})
+
+      expect(result).to be_success
+      expect(result.plan).to have_attributes(name: "Override", trial_period: -30)
+    end
+
+    it "rejects a negative amount sent on the override" do
+      result = described_class.call(plan: parent_plan, params: {amount_cents: -100})
+
+      expect(result).to be_failure
+      expect(result.error.messages[:amount_cents]).to eq(["value_is_out_of_range"])
+    end
+
+    it "rejects a negative trial period sent on the override" do
+      result = described_class.call(plan: parent_plan, params: {trial_period: -30})
+
+      expect(result).to be_failure
+      expect(result.error.messages[:trial_period]).to eq(["value_is_out_of_range"])
+    end
+
+    it "rejects a negative amount sent again from a parent that already stores it" do
+      parent_plan.amount_cents = -100
+      parent_plan.save!(validate: false)
+
+      result = described_class.call(plan: parent_plan, params: {amount_cents: -100})
+
+      expect(result).to be_failure
+      expect(result.error.messages[:amount_cents]).to eq(["value_is_out_of_range"])
+    end
+
+    it "rejects a negative trial period sent again from a parent that already stores it" do
+      parent_plan.trial_period = -30
+      parent_plan.save!(validate: false)
+
+      result = described_class.call(plan: parent_plan, params: {trial_period: -30})
+
+      expect(result).to be_failure
+      expect(result.error.messages[:trial_period]).to eq(["value_is_out_of_range"])
+    end
+  end
+
   describe "#call", :premium do
     let_it_be(:parent_plan, refind: true) { create(:plan, organization:) }
     let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }

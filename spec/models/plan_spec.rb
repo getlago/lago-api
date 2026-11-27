@@ -58,6 +58,34 @@ RSpec.describe Plan do
         expect(plan.errors.messages[:amount_cents]).to eq(["value_is_mandatory"])
       end
     end
+
+    it "rejects a negative amount and accepts zero" do
+      plan.amount_cents = -100
+      expect(plan).not_to be_valid
+      expect(plan.errors.messages[:amount_cents]).to eq(["value_is_out_of_range"])
+
+      plan.amount_cents = 0
+      expect(plan).to be_valid
+    end
+
+    it "rejects a negative trial period and accepts zero" do
+      plan.trial_period = -30
+      expect(plan).not_to be_valid
+      expect(plan.errors.messages[:trial_period]).to eq(["value_is_out_of_range"])
+
+      plan.trial_period = 0
+      expect(plan).to be_valid
+    end
+
+    it "keeps a stored negative amount and trial period when those fields are not changed" do
+      plan.amount_cents = -100
+      plan.trial_period = -30
+      plan.save!(validate: false)
+
+      plan.name = "Renamed"
+
+      expect(plan).to be_valid
+    end
   end
 
   describe "#is_parent? and #is_child?" do
