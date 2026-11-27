@@ -16,7 +16,7 @@ module DatabaseMigrations
       return finalize if ids.empty?
 
       pending_customers.where(id: ids)
-        .update_all("payment_term = jsonb_build_object('term_type', 'net', 'days', net_payment_term), updated_at = NOW()") # rubocop:disable Rails/SkipsModelValidations
+        .update_all("payment_term = jsonb_build_object('term_type', 'net', 'days', net_payment_term)") # rubocop:disable Rails/SkipsModelValidations
 
       return self.class.perform_later(ids.last) if ids.size == BATCH_SIZE
 

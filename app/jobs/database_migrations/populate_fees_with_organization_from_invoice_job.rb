@@ -15,7 +15,7 @@ module DatabaseMigrations
         # rubocop:disable Rails/SkipsModelValidations
         batch.update_all(
           "organization_id = (SELECT organization_id FROM invoices WHERE invoices.id = fees.invoice_id),
-           billing_entity_id = (SELECT organization_id FROM invoices WHERE invoices.id = fees.invoice_id), updated_at = NOW()"
+           billing_entity_id = (SELECT organization_id FROM invoices WHERE invoices.id = fees.invoice_id)"
         )
         # rubocop:enable Rails/SkipsModelValidations
 

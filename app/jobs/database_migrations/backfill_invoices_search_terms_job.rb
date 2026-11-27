@@ -18,7 +18,7 @@ module DatabaseMigrations
 
       Invoice.where(id: ids)
         .where("invoices.search_terms IS DISTINCT FROM (#{Invoice::SearchTerms::SQL})")
-        .update_all("search_terms = #{Invoice::SearchTerms::SQL}, updated_at = NOW()") # rubocop:disable Rails/SkipsModelValidations
+        .update_all("search_terms = #{Invoice::SearchTerms::SQL}") # rubocop:disable Rails/SkipsModelValidations
 
       return self.class.perform_later(ids.last, pass) if ids.size == BATCH_SIZE
 
