@@ -303,16 +303,18 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
 
     before do
       other_subscription
+      create(:recurring_aggregation_snapshot, organization:, subscription:, charge:)
       create(:subscription, customer: create(:customer))
-      stub_stdin(organization.id, "y", "", "1", csv_path)
+      stub_stdin(organization.id, "y", "", "2", csv_path)
     end
 
-    it "samples the active subscriptions of the organization" do
-      expect { task.invoke }.to output(/Organization has 2 active subscription\(s\)/).to_stdout
+    it "samples only the active subscriptions of the organization with a snapshot" do
+      expect { task.invoke }.to output(
+        /Organization has 2 active subscription\(s\)\.\n1 of them have a recurring snapshot, sampled among those\./
+      ).to_stdout
 
       expect(RecurringAggregationSnapshots::CompareUsageService).to have_received(:call).once
-      expect(RecurringAggregationSnapshots::CompareUsageService).to have_received(:call)
-        .with(subscription: satisfy { [subscription, other_subscription].include?(it) })
+      expect(RecurringAggregationSnapshots::CompareUsageService).to have_received(:call).with(subscription:)
     end
   end
 end

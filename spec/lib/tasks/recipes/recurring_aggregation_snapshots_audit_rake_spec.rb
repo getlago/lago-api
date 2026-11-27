@@ -58,22 +58,39 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
     end
   end
 
+  context "with a listed subscription without snapshot" do
+    let(:other_subscription) { create(:subscription, organization:, customer:) }
+
+    before do
+      stub_stdin(organization.id, "y", other_subscription.id, csv_path)
+      allow(RecurringAggregationSnapshots::AuditService).to receive(:call!).and_call_original
+    end
+
+    it "audits it" do
+      expect { task.invoke }.to output(/Auditing 1 subscription\(s\)/).to_stdout
+
+      expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).once
+      expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).with(subscription: other_subscription)
+    end
+  end
+
   context "without listed subscriptions" do
     let(:other_subscription) { create(:subscription, organization:, customer:) }
 
     before do
       other_subscription
       create(:subscription, customer: create(:customer))
-      stub_stdin(organization.id, "y", "", "1", csv_path)
+      stub_stdin(organization.id, "y", "", "2", csv_path)
       allow(RecurringAggregationSnapshots::AuditService).to receive(:call!).and_call_original
     end
 
-    it "samples the active subscriptions of the organization" do
-      expect { task.invoke }.to output(/Organization has 2 active subscription\(s\)/).to_stdout
+    it "samples only the active subscriptions of the organization with a snapshot" do
+      expect { task.invoke }.to output(
+        /Organization has 2 active subscription\(s\)\.\n1 of them have a recurring snapshot, sampled among those\./
+      ).to_stdout
 
       expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).once
-      expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!)
-        .with(subscription: satisfy { [subscription, other_subscription].include?(it) })
+      expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).with(subscription:)
     end
   end
 

@@ -24,7 +24,16 @@ namespace :recipes do
 
       organization = TaskPrompt.ask_for_organization
 
-      subscriptions = TaskPrompt.ask_for_sampled_subscriptions(organization)
+      subscriptions = TaskPrompt.ask_for_sampled_subscriptions(
+        organization,
+        scope: Subscription.where(
+          RecurringAggregationSnapshot
+          .where(organization_id: organization.id)
+          .where("recurring_aggregation_snapshots.subscription_id = subscriptions.id")
+          .arel.exists
+        ),
+        scope_label: "have a recurring snapshot"
+      )
       abort "No subscription to audit." if subscriptions.empty?
 
       default_path = Rails.root.join("tmp", "recurring_snapshots_audit_#{organization.id}_#{Time.current.to_i}.csv").to_s
