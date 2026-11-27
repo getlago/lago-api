@@ -1,0 +1,25 @@
+---
+sk:
+  signup:
+    account_exists:
+      email_info: 'Tento e-mail ste dostali, pretože sa niekto pokúsil zaregistrovať do Lago s touto adresou. Prečítajte si naše '
+      fallback_text: 'Zabudli ste heslo? Zmeňte si ho tu: '
+      greetings: Dobrý deň,
+      intro: 'Účet Lago už máte. Prihláste sa tu:'
+      lago_team: Tím Lago
+      main_cta_label: Prihlásiť sa do Lago
+      privacy_policy: Zásady ochrany osobných údajov
+      safety: Nepokúšali ste sa zaregistrovať? Tento e-mail môžete ignorovať. Váš účet zostal bez zmeny.
+      thanks: Ďakujeme,
+    verification:
+      email_info: 'Tento e-mail ste dostali, pretože ste sa zaregistrovali do Lago. Prečítajte si naše '
+      expiry: Platnosť tohto odkazu vyprší o 24 hodín a možno ho použiť iba raz.
+      fallback_text: 'Tlačidlo nefunguje? Skopírujte tento odkaz do prehliadača: '
+      greetings: Dobrý deň,
+      intro: Ďakujeme za registráciu do Lago. Na vytvorenie organizácie potvrďte, že táto e-mailová adresa patrí vám.
+      lago_team: Tím Lago
+      main_cta_label: Overiť e-mailovú adresu
+      preview: Stačí jedno kliknutie a môžete začať.
+      privacy_policy: Zásady ochrany osobných údajov
+      safety: Neregistrovali ste sa do Lago? Tento e-mail ignorujte. Kým na odkaz nekliknete, nič sa nevytvorí.
+      thanks: Ďakujeme,

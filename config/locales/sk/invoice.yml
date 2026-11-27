@@ -1,0 +1,171 @@
+---
+sk:
+  invoice:
+    account_holder_name: Meno majiteľa účtu
+    account_number: Číslo účtu
+    account_type: Typ účtu
+    all_subscriptions: Všetky predplatné
+    all_usage_based_fees: Všetky poplatky za spotrebu
+    already_paid: Už uhradené
+    amount: Suma
+    amount_with_tax: Suma (s daňou)
+    amount_without_tax: Suma (bez dane)
+    bank_code: Kód banky
+    bank_name: Názov banky
+    bank_transfer_info: Spracovanie bankového prevodu môže trvať niekoľko pracovných dní. Pri platbe bankovým prevodom použite nasledujúce bankové údaje.
+    bic: BIC
+    bill_from: Dodávateľ
+    bill_to: Odberateľ
+    branch_code: Kód pobočky
+    branch_name: Názov pobočky
+    breakdown: Rozpis
+    breakdown_for_days: 'Využité dni: %{breakdown_duration} z %{breakdown_total_duration}'
+    breakdown_of: 'Rozpis: %{fee_filter_display_name}'
+    charges_paid_in_advance: Poplatky uhradené vopred
+    clabe: CLABE
+    conversion_rate: Výmenný kurz
+    country: Krajina
+    coupons: Kupóny
+    credit_notes: Dobropisy
+    date_from: Od
+    date_to: do
+    description: Popis
+    details: 'Podrobnosti: %{resource}'
+    details_title: Podrobnosti
+    document_name: Faktúra
+    document_tax_name: Daňový doklad
+    due_date: 'Splatnosť: %{date}'
+    e_invoicing:
+      credit_card: Platba kartou
+      credit_card_information: Platba kartou prijatá dňa %{date}
+      discount_reason: Zľava na časť so sadzbou dane %{tax_rate}
+      payment_information: 'Započítaná platba: %{payment_label} vo výške %{amount} %{currency}'
+      standard_payment: Štandardná platba
+    fee_prorated: Poplatok je pomerne vypočítaný za dané obdobie; zobrazená jednotková cena je priemerná.
+    fees_from_to_date: Poplatky od %{from_date} do %{to_date}
+    free_credits: Bezplatné kredity
+    from_to_date: Od %{from_date} do %{to_date}
+    graduated:
+      fee_per_unit_for_the_first: Poplatok za jednotku v prvom pásme (do %{to})
+      fee_per_unit_for_the_last: Poplatok za jednotku v pásme od %{from} vrátane
+      fee_per_unit_for_the_next: Poplatok za jednotku v ďalšom pásme (%{from} až %{to})
+      flat_fee_for_the_first: Paušálny poplatok za prvé pásmo (do %{to})
+      flat_fee_for_the_last: Paušálny poplatok za pásmo od %{from} vrátane
+      flat_fee_for_the_next: Paušálny poplatok za ďalšie pásmo (%{from} až %{to})
+    half_year: polrok
+    iban: IBAN
+    invoice_number: Číslo faktúry
+    issue_date: Dátum vystavenia
+    item: Položka
+    list_of_charges: Zoznam poplatkov za spotrebu od %{from} do %{to}
+    month: mesiac
+    monthly: Mesačne
+    notice_full: Bez ohľadu na čas prijatia udalosti účtujeme za jednotku plnú cenu bez pomerného krátenia.
+    notice_prorated: Ak sa jednotka pridá alebo odoberie počas mesačného fakturačného obdobia, vypočítame pomernú cenu podľa pomeru zostávajúcich alebo využitých dní k celkovému počtu dní v období. Ak napríklad v období s počtom dní %{days_in_month} zostáva 15 dní, účtujeme 15/%{days_in_month} z ceny za obdobie. Ak sa jednotka využívala 10 dní, účtujeme 10/%{days_in_month} z ceny za obdobie.
+    package:
+      fee_per_package: Poplatok za balík
+      fee_per_package_unit_price: "%{amount} za balík (počet jednotiek: %{package_size})"
+      free_units_for_the_first: Bezplatné jednotky do počtu %{count}
+    paid_invoice: Uhradená faktúra
+    paid_tax_invoice: Uhradený daňový doklad
+    pay_with_bank_transfer: Zaplatiť bankovým prevodom
+    payment_due_date: Dátum splatnosti
+    payment_term: Platobná podmienka
+    payment_terms:
+      day_of_month:
+        following_month: Splatné %{day}. deň nasledujúceho mesiaca
+        months_after: 'Splatné %{day}. deň mesiaca; počet mesiacov od vystavenia faktúry: %{months}'
+        same_month: Splatné %{day}. deň tohto mesiaca
+      days_end_of_month:
+        few: Splatné na konci mesiaca po uplynutí %{days} dní
+        one: Splatné na konci mesiaca po uplynutí %{days} dňa
+        other: Splatné na konci mesiaca po uplynutí %{days} dní
+      due_on_receipt: Splatné pri doručení
+      end_of_month: Splatné na konci mesiaca
+      net:
+        few: Splatné do %{days} dní
+        one: Splatné do %{days} dňa
+        other: Splatné do %{days} dní
+      net_end_of_month:
+        few: Splatné %{days} dni po skončení mesiaca
+        one: Splatné %{days} deň po skončení mesiaca
+        other: Splatné %{days} dní po skončení mesiaca
+    percentage:
+      adjustment_per_transaction: Úprava podľa minima/maxima na transakciu
+      fee_per_transaction: Pevný poplatok za transakciu
+      free_units_per_transaction:
+        few: Bezplatné jednotky na %{count} transakcie
+        one: Bezplatné jednotky na 1 transakciu
+        other: Bezplatné jednotky na %{count} transakcií
+      percentage_rate_on_amount: Percentuálna sadzba zo sumy
+    powered_by: Využíva technológiu
+    prepaid_credit_invoice: Zálohová faktúra
+    prepaid_credits: Predplatené kredity
+    prepaid_credits_with_value: Predplatené kredity – %{wallet_name}
+    progressive_billing_credit: Už vyfakturovaná spotreba
+    purchase_order_number: Číslo objednávky
+    quantity: Množstvo
+    quarter: štvrťrok
+    quarterly: Štvrťročne
+    reached_usage_threshold: Táto priebežná fakturácia bola vytvorená, pretože vaša celková spotreba dosiahla %{usage_amount} a prekročila hranicu %{threshold_amount}.
+    routing_number: Smerovací kód banky
+    see_breakdown: Pozrite si rozpis celkového počtu jednotiek
+    self_billed:
+      document_name: Faktúra vystavená odberateľom
+      footer: Túto faktúru vystavil odberateľ v mene partnera a s jeho súhlasom. Partner súhlasil, že za túto transakciu nevystaví vlastnú faktúru.
+    semiannual: Polročne
+    sort_code: Triediaci kód banky (sort code)
+    sub_total: Medzisúčet
+    sub_total_with_tax: Medzisúčet (s daňou)
+    sub_total_without_tax: Medzisúčet (bez dane)
+    subscription: Predplatné
+    subscription_interval: Predplatné (%{plan_interval}) – %{plan_name}
+    swift_code: Kód SWIFT
+    tax: Daň
+    tax_identification_number: 'Daňové identifikačné číslo: %{tax_identification_number}'
+    tax_name: "%{name} (%{rate} % zo sumy %{amount})"
+    tax_name_only:
+      customer_exempt: Zákazník je oslobodený od dane
+      juris_has_no_tax: Bez dane
+      juris_not_taxed: Bez dane
+      not_collecting: Bez dane
+      reverse_charge: Prenesenie daňovej povinnosti na zákazníka
+      transaction_exempt: Zákazník je oslobodený od dane
+      unknown_taxation: Neznáme
+    tax_name_with_details: "%{name} (%{rate} %)"
+    tax_rate: Sadzba dane
+    taxes:
+      fr_tax_exempt: Zákazník je oslobodený od dane podľa článku 259-1 francúzskeho všeobecného daňového zákonníka.
+      reverse_charge: Prenesenie daňovej povinnosti na zákazníka.
+      tax_exempt: Zákazník je oslobodený od dane.
+    tiers:
+      fee_for_first: Poplatok za prvé jednotky (do %{up_to})
+      fee_for_next: Poplatok za jednotky do počtu %{up_to}
+      fee_for_remaining: Poplatok za zostávajúce jednotky
+      flat_fee_for_first: Paušálny poplatok za prvé jednotky (do %{up_to})
+      flat_fee_for_next: Paušálny poplatok za jednotky do počtu %{up_to}
+      flat_fee_for_remaining: Paušálny poplatok za zostávajúce jednotky
+    total: Celkom
+    total_credits: Kredity celkom
+    total_credits_with_value: 'Kredity celkom: %{credit_amount}'
+    total_due: Celkom na úhradu
+    total_due_amount: Suma na úhradu
+    total_events: 'Počet udalostí: %{count}'
+    total_paid_amount: Uhradená suma
+    total_unit: 'Počet jednotiek: %{units}'
+    total_unit_interval: 'Počet jednotiek: %{units}, počet udalostí: %{events_count}'
+    true_up_details: Minimálna suma %{min_amount} pomerne vypočítaná podľa počtu dní využívania
+    true_up_metric: "%{metric} – Dorovnanie"
+    unit: Jednotka
+    unit_price: Jednotková cena
+    units: Jednotky
+    units_prorated_per_period: 'Jednotky pomerne prepočítané na sekundy za obdobie: %{period}'
+    usage_based_fees: Poplatky za spotrebu
+    usage_breakdown_by: Rozpis spotreby podľa %{keys}
+    volume:
+      fee_per_unit: Poplatok za jednotku
+      flat_fee_for_all_units: Paušálny poplatok za všetky jednotky
+    week: týždeň
+    weekly: Týždenne
+    year: rok
+    yearly: Ročne

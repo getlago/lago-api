@@ -1,0 +1,4 @@
+---
+sk:
+  document:
+    page_numbering: Strana %{current} z %{total}

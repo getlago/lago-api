@@ -1,0 +1,18 @@
+---
+sk:
+  quote_version:
+    mention_variables:
+      payment_terms: 'Splatnosť (počet dní): %{count}'
+      term_duration:
+        days:
+          few: "%{count} dni"
+          one: 1 deň
+          other: "%{count} dní"
+        months:
+          few: "%{count} mesiace"
+          one: 1 mesiac
+          other: "%{count} mesiacov"
+        years:
+          few: "%{count} roky"
+          one: 1 rok
+          other: "%{count} rokov"

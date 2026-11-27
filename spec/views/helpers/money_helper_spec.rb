@@ -13,6 +13,25 @@ RSpec.describe MoneyHelper do
       expect(helper.format(amount)).to eq("$1.00")
     end
 
+    context "with the Slovak locale" do
+      let(:currency) { "EUR" }
+      let(:amount) { Money.new(123456, currency) }
+
+      around { |example| I18n.with_locale(:sk) { example.run } }
+
+      it "places the currency after the amount and uses Slovak separators" do
+        expect(helper.format(amount)).to eq("1 234,56 €")
+      end
+
+      context "when currency does not use a well known symbol" do
+        let(:currency) { "BHD" }
+
+        it "places the ISO code after the amount" do
+          expect(helper.format(amount)).to eq("123,456 BHD")
+        end
+      end
+    end
+
     context "when currency does not use a well known symbol" do
       let(:currency) { "BHD" }
 

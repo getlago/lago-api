@@ -87,6 +87,15 @@ RSpec.describe "templates/invoices/v4.slim" do
     I18n.locale = :en
   end
 
+  context "with the Slovak locale" do
+    it "renders the translated invoice with Slovak date and money formats" do
+      I18n.with_locale(:sk) do
+        expect(rendered_template).to include("Číslo faktúry", "Dátum vystavenia", "4. 9. 2025", "10,50 $")
+        expect(rendered_template).not_to include("Translation missing", "Invoice Number", "Issue Date")
+      end
+    end
+  end
+
   context "when invoice_type is credit" do
     context "with a purchase order number" do
       let(:invoice) do

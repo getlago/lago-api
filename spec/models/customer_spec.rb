@@ -148,6 +148,9 @@ RSpec.describe Customer do
       customer.document_locale = "en"
       expect(customer).to be_valid
 
+      customer.document_locale = "sk"
+      expect(customer).to be_valid
+
       customer.document_locale = "foo"
       expect(customer).not_to be_valid
 

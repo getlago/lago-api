@@ -157,6 +157,9 @@ RSpec.describe Organization do
       organization.document_locale = "en"
       expect(organization).to be_valid
 
+      organization.document_locale = "sk"
+      expect(organization).to be_valid
+
       organization.document_locale = "foo"
       expect(organization).not_to be_valid
 
