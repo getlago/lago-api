@@ -26,13 +26,8 @@ namespace :recipes do
 
       subscriptions = TaskPrompt.ask_for_sampled_subscriptions(
         organization,
-        scope: Subscription.where(
-          RecurringAggregationSnapshot
-          .where(organization_id: organization.id)
-          .where("recurring_aggregation_snapshots.subscription_id = subscriptions.id")
-          .arel.exists
-        ),
-        scope_label: "have a recurring snapshot"
+        scope: RecurringAggregationSnapshots::BackfillService.backfillable_subscriptions(organization),
+        scope_label: "have a recurring charge and an invoiced period"
       )
       abort "No subscription to audit." if subscriptions.empty?
 
@@ -48,6 +43,11 @@ namespace :recipes do
       watermark_gap_rows = 0
       periods_without_invoice = 0
       periods_without_marker = 0
+      subscription_ids_with_snapshot = RecurringAggregationSnapshot
+        .where(organization_id: organization.id, subscription_id: subscriptions.map(&:id))
+        .distinct
+        .pluck(:subscription_id)
+      subscriptions_without_snapshot = subscriptions.reject { subscription_ids_with_snapshot.include?(it.id) }
 
       CSV.open(csv_path, "w") do |csv|
         csv << RECURRING_SNAPSHOTS_AUDIT_CSV_HEADERS
@@ -88,6 +88,8 @@ namespace :recipes do
       puts "Differing leaves: #{differences}, adjusted leaves: #{adjusted_rows}, " \
            "leaves explained by events ingested after the watermark: #{watermark_gap_rows}, " \
            "periods without invoice: #{periods_without_invoice}, periods without marker: #{periods_without_marker}"
+      puts "Subscriptions without snapshot, nothing audited: #{subscriptions_without_snapshot.size}"
+      subscriptions_without_snapshot.each { puts "  #{it.id} (#{it.external_id})" }
       puts "Differences: #{csv_path}"
     end
   end

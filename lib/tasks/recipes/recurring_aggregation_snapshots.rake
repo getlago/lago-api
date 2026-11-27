@@ -61,13 +61,8 @@ namespace :recipes do
 
       subscriptions = TaskPrompt.ask_for_sampled_subscriptions(
         organization,
-        scope: Subscription.where(
-          RecurringAggregationSnapshot
-          .where(organization_id: organization.id)
-          .where("recurring_aggregation_snapshots.subscription_id = subscriptions.id")
-          .arel.exists
-        ),
-        scope_label: "have a recurring snapshot"
+        scope: RecurringAggregationSnapshots::BackfillService.backfillable_subscriptions(organization),
+        scope_label: "have a recurring charge and an invoiced period"
       )
       abort "No subscription to compare." if subscriptions.empty?
 

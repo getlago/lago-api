@@ -32,7 +32,7 @@ module TaskPrompt
   end
 
   # The listed subscriptions of the organization, or a random sample of its active ones within `scope`
-  def self.ask_for_sampled_subscriptions(organization, scope: nil, scope_label: nil)
+  def self.ask_for_sampled_subscriptions(organization, scope: nil, scope_label: "match the scope")
     subscription_ids = ask_for_subscription_ids
     if subscription_ids.any?
       subscriptions = Subscription.where(organization_id: organization.id, id: subscription_ids).to_a

@@ -20,12 +20,24 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
     allow($stdin).to receive(:gets).and_return(*responses.map { "#{it}\n" })
   end
 
+  def create_invoiced_period(subscription)
+    create(:invoice_subscription, :boundaries, subscription:, invoice: create(:invoice, organization: subscription.organization), invoicing_reason: :subscription_periodic)
+  end
+
   before do
     Rake.application.rake_require("tasks/recipes/recurring_aggregation_snapshots_audit")
     Rake::Task.define_task(:environment)
     task.reenable
 
-    create(:invoice_subscription, subscription:, invoice:, charges_to_datetime: to_datetime, invoicing_reason: :subscription_periodic)
+    create(
+      :invoice_subscription,
+      subscription:,
+      invoice:,
+      timestamp: to_datetime,
+      charges_from_datetime: to_datetime.beginning_of_month,
+      charges_to_datetime: to_datetime,
+      invoicing_reason: :subscription_periodic
+    )
     create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:, units: 10, events_count: 4)
     create(:charge_fee, organization:, invoice:, subscription:, charge:, total_aggregated_units: 12, events_count: 4)
   end
@@ -75,26 +87,31 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
   end
 
   context "without listed subscriptions" do
-    let(:other_subscription) { create(:subscription, organization:, customer:) }
+    let(:subscription_without_snapshot) { create(:subscription, organization:, customer:, plan: subscription.plan) }
 
     before do
-      other_subscription
-      create(:subscription, customer: create(:customer))
-      stub_stdin(organization.id, "y", "", "2", csv_path)
+      create_invoiced_period(subscription_without_snapshot)
+      create_invoiced_period(create(:subscription, organization:, customer:))
+      create_invoiced_period(create(:subscription))
+      stub_stdin(organization.id, "y", "", "5", csv_path)
       allow(RecurringAggregationSnapshots::AuditService).to receive(:call!).and_call_original
     end
 
-    it "samples only the active subscriptions of the organization with a snapshot" do
+    it "samples the active subscriptions of the organization with a recurring charge and an invoiced period" do
       expect { task.invoke }.to output(
-        /Organization has 2 active subscription\(s\)\.\n1 of them have a recurring snapshot, sampled among those\./
+        a_string_including(
+          "Organization has 3 active subscription(s).\n2 of them have a recurring charge and an invoiced period, sampled among those.",
+          "Subscriptions without snapshot, nothing audited: 1\n  #{subscription_without_snapshot.id} (#{subscription_without_snapshot.external_id})"
+        )
       ).to_stdout
 
-      expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).once
+      expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).twice
       expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).with(subscription:)
+      expect(RecurringAggregationSnapshots::AuditService).to have_received(:call!).with(subscription: subscription_without_snapshot)
     end
   end
 
-  context "when no active subscription of the organization has a snapshot" do
+  context "when no active subscription of the organization has a recurring charge and an invoiced period" do
     let(:other_organization) { create(:organization) }
 
     before do
@@ -104,7 +121,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
 
     it "aborts before asking for a sample size" do
       expect { task.invoke }.to raise_error(SystemExit, "No subscription to audit.")
-        .and output(/0 of them have a recurring snapshot/).to_stdout
+        .and output(/0 of them have a recurring charge and an invoiced period/).to_stdout
     end
   end
 
@@ -112,7 +129,8 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
     before { stub_stdin(organization.id, "y", "", "abc") }
 
     it "aborts" do
-      expect { task.invoke }.to raise_error(SystemExit).and output(/Organization has/).to_stdout
+      expect { task.invoke }.to raise_error(SystemExit, "Invalid sample size: expected a positive integer.")
+        .and output(/1 of them have a recurring charge and an invoiced period/).to_stdout
     end
   end
 end
