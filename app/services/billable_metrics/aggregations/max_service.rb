@@ -53,17 +53,17 @@ module BillableMetrics
       end
 
       # Note: include_event_value is ignored as the model does not support in advance billing
-      def compute_per_event_aggregation(exclude_event:, include_event_value:)
+      def compute_per_event_aggregation(exclude_event:, include_event_value:, closing_units: nil)
         max_value = event_store.max(with_count: false).value
         event_values = event_store.events_values
         max_value_seen = false
 
-        # NOTE: returns the first max value, 0 for all other events
+        # Keep the closing value on the actual maximum's event, including when that maximum is zero.
         event_values.map do |value|
           if !max_value_seen && value == max_value
             max_value_seen = true
 
-            next value
+            next closing_units || value
           end
 
           0

@@ -3,12 +3,10 @@
 module ChargeModels
   module AmountDetails
     class RangeGraduatedService < ::BaseService
-      def initialize(range:, total_units:, adjacent_model: false, proration_ratio: 1)
+      def initialize(range:, units:)
         super
         @range = range
-        @total_units = total_units
-        @adjacent_model = adjacent_model
-        @proration_ratio = proration_ratio
+        @units = units
       end
 
       def call
@@ -23,9 +21,9 @@ module ChargeModels
         }
       end
 
-      protected
+      private
 
-      attr_reader :range, :total_units, :proration_ratio
+      attr_reader :range, :units
 
       def from_value
         @from_value ||= range[:from_value]
@@ -49,20 +47,6 @@ module ChargeModels
 
       def total_with_flat_amount
         @total_with_flat_amount ||= per_unit_total_amount + flat_unit_amount
-      end
-
-      # NOTE: compute how many units to bill in the range
-      def units
-        effective_total = if to_value && BigDecimal(total_units.to_s) >= BigDecimal(to_value.to_s)
-          BigDecimal(to_value.to_s)
-        else
-          BigDecimal(total_units.to_s)
-        end
-
-        return effective_total * proration_ratio if BigDecimal(from_value.to_s).zero?
-
-        diff = effective_total - BigDecimal(from_value.to_s)
-        (@adjacent_model ? diff : diff + 1) * proration_ratio
       end
     end
   end

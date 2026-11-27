@@ -152,7 +152,7 @@ module BillingOperations
         ).invoice
         context = customer.applicable_invoice_grace_period(billing_entity: invoice.billing_entity).positive? ? :draft : :finalize
         outputs = BillingOperations::ComputeInvoiceService.call!(
-          invoice:, billing_segments: segments, context:
+          invoice:, segments_by_operation:, context:
         ).outputs
         raise EmptyInvoice if context == :finalize && invoice.fees.reload.empty?
 

@@ -57,6 +57,10 @@ class BillingPeriodBoundaries
     @max_timestamp = max_timestamp
   end
 
+  def aggregation_boundaries
+    {from_datetime: charges_from_datetime, to_datetime: charges_to_datetime, charges_duration:, max_timestamp:}
+  end
+
   def to_h
     h = {
       "from_datetime" => from_datetime,

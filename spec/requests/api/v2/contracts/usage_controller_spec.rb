@@ -12,6 +12,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
     let(:external_id) { contract.external_id }
     let(:params) { {} }
     let(:billing_scope) { "cycle" }
+    let(:first_rate_at) { Time.utc(2027, 1, 1) }
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
     let(:product_category) { create(:product_category, organization:) }
     let(:metered_product) { create(:product, organization:, billable_metric:, product_category:) }
@@ -21,13 +22,15 @@ RSpec.describe Api::V2::Contracts::UsageController do
     end
     let(:rate_card_entries) { json[:current_usage][:rate_cards].index_by { |entry| entry[:rate_card_code] } }
 
-    around { |example| travel_to(Time.zone.parse("2027-02-10 12:00:00")) { example.run } }
+    let(:usage_at) { Time.zone.parse("2027-02-10 12:00:00") }
+
+    around { |example| travel_to(usage_at) { example.run } }
 
     before do
       [[metered_rate_card, nil, "2"], [fixed_rate_card, 3, "10"]].each do |rate_card, units, amount|
         create(:contract_rate_card, organization:, contract:, rate_card:, units:,
           effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1), billing_scope:)
-        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-01-01"),
+        create(:rate_card_rate, organization:, rate_card:, effective_from: first_rate_at,
           rate_properties: {"amount" => amount})
       end
       create(:event, organization:, customer:, external_subscription_id: contract.external_id,
@@ -174,6 +177,86 @@ RSpec.describe Api::V2::Contracts::UsageController do
         end
 
         include_examples "returns the selected obligation"
+      end
+    end
+
+    context "when a future volume rate takes effect during the cycle" do
+      let(:params) { {apply_taxes: false} }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card: metered_rate_card, effective_from: Time.utc(2027, 2, 7),
+          rate_model: :volume, rate_properties: {volume_ranges: [
+            {from_value: 0, to_value: 1, per_unit_amount: "5", flat_amount: "0"},
+            {from_value: 1, to_value: nil, per_unit_amount: "3", flat_amount: "1"}
+          ]})
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.utc(2027, 2, 7))
+      end
+
+      it "counts the switch event once and selects the volume tier from both segments" do
+        subject
+        expect(rate_card_entries.fetch(metered_rate_card.code).fetch(:segments).pluck(:units, :events_count, :amount_cents))
+          .to eq([["1.0", 1, 200], ["1.0", 1, 400]]) # R2: one event at €3 + €1 flat.
+      end
+
+      context "when the first rate starts after the cycle begins" do
+        let(:first_rate_at) { Time.utc(2027, 2, 5) }
+
+        before do
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: first_rate_at - 1.second)
+        end
+
+        it "reports coverage from the first priced event boundary and carries only priced events into volume" do
+          subject
+
+          card = rate_card_entries.fetch(metered_rate_card.code)
+          expect(card.fetch(:from_datetime)).to eq(first_rate_at.iso8601(6))
+          expect(card.fetch(:segments).pluck(:events_count, :units, :amount_cents))
+            .to eq([[1, "1.0", 200], [1, "1.0", 400]]) # One €2 event, then one €3 event plus €1 flat.
+        end
+      end
+
+      context "with segment scope" do
+        let(:billing_scope) { "segment" }
+
+        it "starts the volume tiers over" do
+          subject
+          expect(rate_card_entries.fetch(metered_rate_card.code).fetch(:segments).pluck(:units, :events_count, :amount_cents))
+            .to eq([["1.0", 1, 500]])
+        end
+      end
+    end
+
+    context "when regional pricing starts in the third week of a cycle" do
+      let(:usage_at) { Time.utc(2027, 2, 28, 12) }
+      let(:params) { {apply_taxes: false} }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card: metered_rate_card, effective_from: Time.utc(2027, 2, 8),
+          rate_properties: {amount: "3"})
+        create(:rate_card_rate, organization:, rate_card: metered_rate_card, effective_from: Time.utc(2027, 2, 15),
+          rate_model: :graduated, rate_properties: {pricing_group_keys: ["region"], graduated_ranges: [
+            {from_value: 0, to_value: 1, per_unit_amount: "4", flat_amount: "0"},
+            {from_value: 1, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
+          ]})
+        create(:rate_card_rate, organization:, rate_card: metered_rate_card, effective_from: Time.utc(2027, 2, 22),
+          rate_model: :volume, rate_properties: {pricing_group_keys: ["region"], volume_ranges: [
+            {from_value: 0, to_value: 1, per_unit_amount: "6", flat_amount: "0"},
+            {from_value: 1, to_value: nil, per_unit_amount: "2", flat_amount: "0"}
+          ]})
+        [8, 15, 22].each do |day|
+          create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+            code: billable_metric.code, timestamp: Time.utc(2027, 2, day), properties: {region: "eu"})
+        end
+      end
+
+      it "starts the regional balance at zero and uses it at the next model switch" do
+        subject
+
+        # Week three prices its first EU unit at €4; week four closes at two EU units and bills one at €2.
+        expect(rate_card_entries.fetch(metered_rate_card.code).fetch(:segments).pluck(:units, :amount_cents))
+          .to eq([["1.0", 200], ["1.0", 300], ["1.0", 400], ["1.0", 200]])
       end
     end
 

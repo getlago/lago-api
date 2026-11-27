@@ -83,6 +83,8 @@ class BillingOperation < ApplicationRecord
     processed_at.nil? && cancelled_at.nil? && billing_at <= timestamp
   end
 
+  def cycle_coverage_window = coverage_started_at...coverage_ended_at
+
   private
 
   def validate_identity

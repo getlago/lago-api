@@ -34,7 +34,7 @@ module ChargeModels
     end
 
     def apply
-      result.units = aggregation_result.aggregation
+      result.units = aggregation_result.billable_units
       result.current_usage_units = aggregation_result.current_usage_units
       result.full_units_number = aggregation_result.full_units_number
       result.count = aggregation_result.count
@@ -64,6 +64,12 @@ module ChargeModels
 
     def properties
       pricing_structure.properties
+    end
+
+    def carryover_units
+      return 0 unless pricing_structure.product_catalog
+
+      aggregation_result.carryover_units || 0
     end
 
     def projected_units

@@ -164,11 +164,14 @@ module Contracts
     end
 
     def rate_card_usage(card, obligation)
-      segments = obligation.segments.map do |segment|
-        billing_segment = BillingSegments::BuildService.call!(
+      billing_segments = obligation.segments.map do |segment|
+        BillingSegments::BuildService.call!(
           contract_rate_card: card, **obligation.pricing_inputs_for(segment), pricing_units_by_code: @pricing_units_by_code
         ).billing_segment
-        RateCardUsageSegment.new(billing_segment:, fees: compute_fees(billing_segment))
+      end
+      cycle_usage_tracker = BillingSegments::BuildCycleUsageTrackerService.call!(segments: billing_segments, obligation:).cycle_usage_tracker
+      segments = billing_segments.map do |billing_segment|
+        RateCardUsageSegment.new(billing_segment:, fees: compute_fees(billing_segment, cycle_usage_tracker, obligation.cycle_coverage_window))
       end
       RateCardUsage.new(
         contract_rate_card: card,
@@ -183,14 +186,15 @@ module Contracts
       [usage.started_at, usage.ended_at, usage.contract_rate_card.rate_card.code]
     end
 
-    def compute_fees(billing_segment)
+    def compute_fees(billing_segment, cycle_usage_tracker, cycle_coverage_window)
       if billing_segment.contract_rate_card.rate_card.product.metered?
         return [] if billing_segment.started_at > timestamp
 
         Fees::ChargeService.call!(
           invoice: nil,
+          cycle_usage_tracker:,
           metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(
-            billing_segment:, max_timestamp: [timestamp, billing_segment.ended_at].min
+            billing_segment:, cycle_coverage_window:, max_timestamp: [timestamp, billing_segment.ended_at].min
           ),
           billing_context:,
           options: Fees::ChargeService::Options.new(context: :current_usage)

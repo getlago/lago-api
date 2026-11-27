@@ -30,6 +30,7 @@ module ActiveJob
           "source_type" => "billing_segment",
           "billing_segment" => source.billing_segment.attributes,
           "product_filter" => source.product_filter,
+          "cycle_coverage_window" => source.cycle_coverage_window,
           "max_timestamp" => source.max_timestamp
         }
       else
@@ -49,6 +50,7 @@ module ActiveJob
         Fees::ChargeService::MeteredItem.from_billing_segment(
           billing_segment: BillingSegment.from_attributes(payload.fetch("billing_segment")),
           product_filter: payload["product_filter"],
+          cycle_coverage_window: payload.fetch("cycle_coverage_window", nil),
           max_timestamp: payload["max_timestamp"],
           event:
         )

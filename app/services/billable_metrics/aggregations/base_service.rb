@@ -3,10 +3,13 @@
 module BillableMetrics
   module Aggregations
     class BaseService < ::BaseService
-      Result = BaseResult[
+      class Result < BaseResult[
         :aggregator, # Aggregator instance, used in some charge models
         :aggregations, # Array of aggregation result when in a grouped by scenario
         :aggregation, # Aggregation result computed using the event store
+        :closing_units, # Max/Latest units to bill at segment close; nil uses the local aggregation
+        :carryover_units, # Earlier segments' units after metric rounding, used only to price this group's tiers
+        :carryover_variation, # Unrounded quantity entering this weighted segment from earlier segments of the obligation
         :breakdowns, # Array of breakdowns when presentation_by is used
         :grouped_by, # Pricing group keys applied to this aggregation result
         :current_usage_units, # Number of aggregated units when computing the current usage
@@ -38,6 +41,9 @@ module BillableMetrics
         :recurring_events_count, # Number of events behind recurring_units, only set for a sum
         :recurring_breakdowns # Units of each presentation group at the end of the period, only set for a weighted sum
       ]
+        def billable_units = closing_units || aggregation
+      end
+
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
       def self.null_result(result, grouped_by_keys: nil, apply_aggregation: false)
@@ -82,22 +88,30 @@ module BillableMetrics
         result.pay_in_advance_event = event if event
       end
 
-      def aggregate(options: {})
+      def aggregate(options: {}, cycle_usage_tracker: BillingSegments::EMPTY_CYCLE_USAGE_TRACKER)
+        @carryover_variations = if cycle_usage_tracker.carryover_variation?
+          cycle_usage_tracker.opening_variations(metered_item:)
+        end
+
         if grouped_by.present?
           compute_grouped_by_aggregation(options:)
           if metered_item.dynamic?
             compute_grouped_by_precise_total_amount_cents(options:)
           end
-
-          result.aggregations.each { apply_rounding(it) }
         else
           compute_aggregation(options:)
           if metered_item.dynamic?
             compute_precise_total_amount_cents(options:)
           end
-
-          apply_rounding(result)
         end
+
+        return result if result.failure?
+
+        groups = result.aggregations || [result]
+        apply_carryover_variation(groups, cycle_usage_tracker) if cycle_usage_tracker.carryover_variation?
+        apply_closing_values(groups, cycle_usage_tracker) if cycle_usage_tracker.apply_closing_values?(groups:)
+        groups.each { apply_rounding(it) }
+        apply_carryover_units(groups, cycle_usage_tracker) if cycle_usage_tracker.apply_carry_over?
         result
       end
 
@@ -122,13 +136,13 @@ module BillableMetrics
       #   Used only for estimate_fees.
       # - With exclude_event: true, the current event (persisted) will be excluded from the list of event values
       #   Used only for in advance billing
-      def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil)
+      def per_event_aggregation(exclude_event: false, include_event_value: false, grouped_by_values: nil, **options)
         PerEventAggregationResult.new.tap do |result|
           result.event_aggregation = if should_bypass_aggregation?
             []
           else
             event_store.with_grouped_by_values(grouped_by_values) do
-              compute_per_event_aggregation(exclude_event:, include_event_value:)
+              compute_per_event_aggregation(exclude_event:, include_event_value:, **options)
             end
           end
         end
@@ -144,6 +158,8 @@ module BillableMetrics
       delegate :precomputed?, to: :event_store
 
       protected
+
+      attr_reader :carryover_variations
 
       def snapshot_read_error?(error)
         error.equal?(@snapshot_read_error)
@@ -224,6 +240,7 @@ module BillableMetrics
 
       def should_bypass_aggregation?
         return false if billable_metric.recurring?
+        return false if carryover_variations.present?
         return false if precomputed?
 
         bypass_aggregation
@@ -252,25 +269,47 @@ module BillableMetrics
         query.first
       end
 
+      def apply_carryover_units(groups, usage_carryover)
+        groups = [] if should_bypass_aggregation?
+        usage_carryover.each_opening_balance(metered_item:, groups:) { |group, units| group.carryover_units = units }
+      end
+
+      def apply_carryover_variation(groups, usage_carryover)
+        groups = groups.reject { it.variation.nil? }
+        usage_carryover.each_opening_balance(metered_item:, groups:) { |group, variation| group.carryover_variation = variation }
+      end
+
+      def apply_closing_values(groups, closing_values)
+        priced_groups = []
+        closing_values.each_closing_value(metered_item:, groups:) do |group, value, key|
+          group ||= carried_group(key)
+          group.closing_units = value
+          priced_groups << group
+        end
+        groups.replace(priced_groups) unless priced_groups.empty?
+      end
+
+      def carried_group(key)
+        group = Result.new
+        group.grouped_by = key
+        group.aggregation = 0
+        group.count = 0
+        group.options = {}
+        group
+      end
+
       def apply_rounding(result)
         return if billable_metric.rounding_function.blank?
         return if event.present? # Rouding does not apply to the in advance billing
 
-        result.aggregation = BillableMetrics::Aggregations::ApplyRoundingService
-          .call(billable_metric:, units: result.aggregation)
-          .units
+        result.aggregation = rounded_units(result.aggregation)
+        result.closing_units = rounded_units(result.closing_units) unless result.closing_units.nil?
+        result.full_units_number = rounded_units(result.full_units_number) if result.full_units_number.present?
+        result.current_usage_units = rounded_units(result.current_usage_units) if result.current_usage_units.present?
+      end
 
-        if result.full_units_number.present?
-          result.full_units_number = BillableMetrics::Aggregations::ApplyRoundingService
-            .call(billable_metric:, units: result.full_units_number)
-            .units
-        end
-
-        if result.current_usage_units.present?
-          result.current_usage_units = BillableMetrics::Aggregations::ApplyRoundingService
-            .call(billable_metric:, units: result.current_usage_units)
-            .units
-        end
+      def rounded_units(units)
+        ApplyRoundingService.call(billable_metric:, units:).units
       end
 
       def load_initial_snapshots

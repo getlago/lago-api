@@ -330,17 +330,16 @@ module Events
 
         def grouped_period_ratio_sql
           <<-SQL
+            -- Historical intervals ending before this window must not gain a removal day.
             CASE WHEN operation_type = 'add'
+              AND LEAD(timestamp, 1, :to_datetime) OVER
+                (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) >= :from_datetime
             THEN
               -- NOTE: duration in seconds between current event and next one - using end of period as final boundaries
               (
                 (
                   DATE((
-                    -- NOTE: if following event is older than the start of the period, we use the start of the period as the reference
-                    CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp)) < :from_datetime
-                    THEN :from_datetime
-                    ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp)
-                    END
+                    LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp)
                   )::timestamptz AT TIME ZONE :timezone)
                   - DATE((
                     -- NOTE: if events is older than the start of the period, we use the start of the period as the reference

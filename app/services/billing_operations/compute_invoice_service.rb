@@ -4,22 +4,23 @@ module BillingOperations
   class ComputeInvoiceService < BaseService
     Result = BaseResult[:invoice, :outputs]
 
-    def initialize(invoice:, billing_segments:, context:)
+    def initialize(invoice:, segments_by_operation:, context:)
       @invoice = invoice
-      @billing_segments = billing_segments
+      @segments_by_operation = segments_by_operation
       @context = context
       super
     end
 
     def call
       @outputs = {}
-      grouped = billing_segments.group_by { |segment| segment.contract_rate_card.product.product_type }
-      metered_segments = grouped[Product::PRODUCT_TYPES[:metered]] || []
-      fixed_segments = grouped[Product::PRODUCT_TYPES[:fixed]] || []
-      filtered_aggregations = event_filters(metered_segments)
+      metered, fixed = segments_by_operation.partition { |operation, _| operation.contract_rate_card.product.metered? }
+      filtered_aggregations = event_filters(metered.flat_map(&:last))
 
-      attach_fixed_fees(fixed_segments)
-      attach_metered_fees(metered_segments, filtered_aggregations)
+      fixed.each { |_, segments| attach_fixed_fees(segments) }
+      # A consolidated invoice can span multiple operations; tier usage starts fresh for each one.
+      metered.each do |operation, segments|
+        attach_metered_fees(operation, segments, filtered_aggregations)
+      end
 
       invoice.fees.reload
       totals_result = compute_taxes_and_totals
@@ -35,7 +36,7 @@ module BillingOperations
 
     private
 
-    attr_reader :invoice, :billing_segments, :context, :outputs
+    attr_reader :invoice, :segments_by_operation, :context, :outputs
 
     def attach_fixed_fees(segments)
       segments.each do |segment|
@@ -50,9 +51,10 @@ module BillingOperations
       end
     end
 
-    def attach_metered_fees(segments, filtered_aggregations)
+    def attach_metered_fees(operation, segments, filtered_aggregations)
+      cycle_usage_tracker = BillingSegments::BuildCycleUsageTrackerService.call!(segments:, obligation: operation).cycle_usage_tracker
       segments.each do |segment|
-        fees = compute_metered_fees(segment, filtered_aggregations)
+        fees = compute_metered_fees(segment, filtered_aggregations, cycle_usage_tracker, operation.cycle_coverage_window)
         outputs[segment] = fees
       end
     end
@@ -62,10 +64,11 @@ module BillingOperations
       [fee_result.fee, fee_result.true_up_fee].compact
     end
 
-    def compute_metered_fees(segment, filtered_aggregations)
+    def compute_metered_fees(segment, filtered_aggregations, cycle_usage_tracker, cycle_coverage_window)
       fees_result = ::Fees::ChargeService.call!(
         invoice:,
-        metered_item: build_metered_item(segment),
+        cycle_usage_tracker:,
+        metered_item: build_metered_item(segment, cycle_coverage_window),
         billing_context: Billing::Context.from(contract: segment.contract),
         options: ::Fees::ChargeService::Options.new(
           context: charge_service_context(segment),
@@ -115,12 +118,12 @@ module BillingOperations
       @customer_provider_taxation = invoice.customer.tax_customer.present?
     end
 
-    def build_metered_item(segment)
+    def build_metered_item(segment, cycle_coverage_window)
       max_timestamp = if segment.recurring_advance_invoiceable?
         ::BillingSegment.inclusive_end(segment.started_at)
       end
 
-      ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment, max_timestamp:)
+      ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment, max_timestamp:, cycle_coverage_window:)
     end
 
     def charge_service_context(segment)

@@ -6,10 +6,6 @@ module Billing
       super
     end
 
-    def coverage_started_at = segments.first.started_at
-
-    def coverage_ended_at = segments.last.ended_at
-
     def operation_billing_at(after: nil)
       if after && billing_at > after
         termination_billing_at || billing_at
@@ -17,6 +13,14 @@ module Billing
         billing_at
       end
     end
+
+    # Coverage starts when a rate first applies within this obligation. If the cycle starts
+    # on January 1 but the first rate takes effect on January 5, coverage starts on January 5.
+    def coverage_started_at = segments.first.started_at
+
+    def coverage_ended_at = segments.last.ended_at
+
+    def cycle_coverage_window = coverage_started_at...coverage_ended_at
 
     def starts_on_or_after?(timestamp)
       coverage_started_at >= timestamp

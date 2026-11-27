@@ -5,9 +5,9 @@ module ChargeModels
     protected
 
     def compute_amount
-      # NOTE: if min/max per transacton are applied, we have to compute amount on a per transaction basis.
-      #       In the future, this logic could also be applied for the free units / amount without min/max
-      return compute_amount_with_transaction_min_max if should_apply_min_max?
+      # Max aggregation does not provide running totals for free units.
+      # Use per-event aggregation for its free units, even without transaction min/max amounts.
+      return transaction_pricing[:amount] if should_apply_min_max? || closing_maximum_pricing?
 
       compute_percentage_amount + compute_fixed_amount
     end
@@ -22,7 +22,6 @@ module ChargeModels
     def amount_details
       paid_units = units - free_units_value
       paid_units = 0 if paid_units.negative?
-      paid_units.zero? ? BigDecimal(0) : compute_percentage_amount.fdiv(paid_units)
       free_events = if aggregation_result.count >= free_units_count
         free_units_count
       else
@@ -58,6 +57,10 @@ module ChargeModels
     end
 
     def compute_fixed_amount
+      if closing_maximum_pricing?
+        return (aggregation_result.count - free_units_count) * fixed_amount
+      end
+
       return 0.0 if units.zero?
       return 0.0 if fixed_amount.nil?
       return 0.0 if free_units_count >= aggregation_result.count
@@ -68,6 +71,8 @@ module ChargeModels
     # TODO: add memoization as this method is being called 4 times in the class
     # TODO: resect properties[:exclude_event] flag
     def free_units_value
+      return transaction_pricing[:free_units] if closing_maximum_pricing?
+
       return 0 if last_running_total.zero?
       if free_units_per_events > 0 && free_units_per_events < (aggregation_result.options[:running_total]&.count || 0)
         return aggregation_result.options[:running_total][free_units_per_events - 1]
@@ -79,6 +84,8 @@ module ChargeModels
     end
 
     def free_units_count
+      return transaction_pricing[:free_events] if closing_maximum_pricing?
+
       [
         free_units_per_events,
         aggregation_result.options[:running_total]&.count { |e| e < free_units_per_total_aggregation } || 0
@@ -128,57 +135,80 @@ module ChargeModels
       per_transaction_max_amount? || per_transaction_min_amount?
     end
 
+    def closing_maximum?
+      !aggregation_result.closing_units.nil?
+    end
+
+    def closing_maximum_pricing?
+      # Without free units or transaction min/max amounts, closing units can be priced directly.
+      closing_maximum? &&
+        (should_apply_min_max? || free_units_per_events.positive? || free_units_per_total_aggregation.positive?)
+    end
+
     def events_values
       # NOTE: when performing aggregation for pay in advance, we have to ignore the current event
       #       for computing the diff between event included and excluded
       #       see app/services/charges/apply_pay_in_advance_charge_model_service.rb:18
-      aggregation_result.aggregator.per_event_aggregation(
+      options = {
         exclude_event: properties[:exclude_event],
         include_event_value: properties[:include_event_value],
         grouped_by_values: grouped_by
-      ).event_aggregation
+      }
+      # Keep the closing units on the event that produced the segment's maximum.
+      # For events [-3, 0] and closing units of 10, per-event aggregation is [0, 10].
+      options[:closing_units] = units if closing_maximum?
+
+      aggregation_result.aggregator.per_event_aggregation(**options).event_aggregation
     end
 
-    def compute_amount_with_transaction_min_max
-      return @compute_amount_with_transaction_min_max if defined?(@compute_amount_with_transaction_min_max)
+    def transaction_pricing
+      # Reuse free_units and free_events in amount_details instead of counting them as min/max adjustments.
+      return @transaction_pricing if defined?(@transaction_pricing)
 
-      remaining_free_events = free_units_per_events
-      remaining_free_amount = free_units_per_total_aggregation
+      pricing = {amount: BigDecimal(0), free_units: BigDecimal(0), free_events: 0}
+      if closing_maximum? && aggregation_result.count.zero?
+        # Apply free units per total aggregation to closing units without adding an event or fixed amount.
+        # For closing units 10, free units 5 and rate 10%, the amount is 0.50.
+        if units.positive?
+          pricing[:free_units] = [units, free_units_per_total_aggregation].min
+          # Keep the same free-unit threshold as per-event pricing.
+          # With 10 closing units, 10 free units still apply the minimum amount; 11 free units charge zero.
+          if free_units_per_total_aggregation <= units
+            pricing[:amount] = apply_min_max((units - pricing[:free_units]) * rate / 100)
+          end
+        end
+      else
+        remaining_free_events = free_units_per_events
+        remaining_free_amount = free_units_per_total_aggregation
 
-      @compute_amount_with_transaction_min_max ||= events_values.reduce(0) do |total_amount, event_value|
-        value = event_value
+        events_values.each do |value|
+          if remaining_free_events.positive? || remaining_free_amount.positive?
+            remaining_free_events -= 1
 
-        # NOTE: apply free events
-        if remaining_free_events.positive? || remaining_free_amount.positive?
-          remaining_free_events -= 1
+            if !remaining_free_amount.positive? || remaining_free_amount > value
+              remaining_free_amount -= value if remaining_free_amount.positive?
+              pricing[:free_units] += value
+              pricing[:free_events] += 1
+              next
+            end
 
-          next 0 unless remaining_free_amount.positive?
-
-          # NOTE: apply free amount
-          if remaining_free_amount > value
-            remaining_free_amount -= value
-            next 0
-          else
+            pricing[:free_units] += remaining_free_amount
             value -= remaining_free_amount
             remaining_free_amount = 0
             remaining_free_events = 0
           end
+
+          pricing[:amount] += apply_min_max(value * rate / 100 + fixed_amount)
         end
-
-        # NOTE: apply rate
-        event_amount = (value * rate) / 100
-
-        # NOTE: apply fixed amount
-        event_amount += fixed_amount
-
-        # NOTE: apply min and max amount per transaction
-        event_amount = apply_min_max(event_amount)
-
-        total_amount + event_amount
       end
+
+      @transaction_pricing = pricing
     end
 
     def apply_min_max(amount)
+      # Free-unit calculations also reach this method when transaction min/max amounts do not apply.
+      return amount unless should_apply_min_max?
+
       return per_transaction_min_amount if per_transaction_min_amount? && amount < per_transaction_min_amount
       return per_transaction_max_amount if per_transaction_max_amount? && amount > per_transaction_max_amount
 
@@ -188,7 +218,7 @@ module ChargeModels
     def min_max_adjustment_total_amount
       return BigDecimal(0) unless should_apply_min_max?
 
-      BigDecimal(compute_amount_with_transaction_min_max - compute_percentage_amount - compute_fixed_amount)
+      BigDecimal(transaction_pricing[:amount] - compute_percentage_amount - compute_fixed_amount)
     end
   end
 end

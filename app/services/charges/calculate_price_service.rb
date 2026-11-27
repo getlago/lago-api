@@ -3,7 +3,14 @@
 module Charges
   class CalculatePriceService < BaseService
     Result = BaseResult[:charge_amount_cents, :subscription_amount_cents, :total_amount_cents]
-    AggregationResult = Struct.new(:grouped_by, :aggregator, :aggregations, :aggregation, :total_aggregated_units, :current_usage_units, :full_units_number, :precise_total_amount_cents, :custom_aggregation, :options)
+    AggregationResult = Struct.new(
+      :grouped_by, :aggregator, :aggregations, :aggregation, :total_aggregated_units, :current_usage_units,
+      :full_units_number, :precise_total_amount_cents, :custom_aggregation, :options, keyword_init: true
+    ) do
+      alias_method :billable_units, :aggregation
+
+      def closing_units = nil
+    end
 
     def initialize(units:, charge:, charge_filter: nil)
       @units = BigDecimal(units || 0)
@@ -47,7 +54,14 @@ module Charges
     end
 
     def aggregation_result
-      AggregationResult.new(nil, nil, nil, units, units, units, units, 0, nil, running_total: [])
+      AggregationResult.new(
+        aggregation: units,
+        total_aggregated_units: units,
+        current_usage_units: units,
+        full_units_number: units,
+        precise_total_amount_cents: 0,
+        options: {running_total: []}
+      )
     end
   end
 end

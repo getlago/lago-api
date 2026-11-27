@@ -11,22 +11,19 @@ module ChargeModels
     end
 
     def amount_details
-      {
-        graduated_percentage_ranges: ranges.each_with_object([]) do |range, amounts|
-          detail = ChargeModels::AmountDetails::RangeGraduatedPercentageService.call(range:, total_units: units, adjacent_model: half_open_ranges?)
+      @amount_details ||= {
+        graduated_percentage_ranges: priced_ranges(units) do |range, range_units|
+          detail = ChargeModels::AmountDetails::RangeGraduatedPercentageService.call(range:, units: range_units)
           # On the first pay-in-advance event: delta = cost(1 unit) - cost(0 units, exclude_event: true).
           # Here we exclude the flat fee from cost(0 units, exclude_event: true).
-          detail = detail.merge(flat_unit_amount: 0, total_with_flat_amount: 0) if units.zero? && properties[:exclude_event]
-          amounts << detail
-          break amounts if range[:to_value].nil? || range[:to_value] >= units
+          (units.zero? && properties[:exclude_event]) ? detail.merge(flat_unit_amount: 0, total_with_flat_amount: 0) : detail
         end
       }
     end
 
-    # v1 charges keep counting touching tiers with a one-unit step, so their
-    # billing does not change; only catalog rates bill them half-open.
-    def half_open_ranges?
-      pricing_structure.product_catalog && adjacent_ranges?
+    # Subscription percentage tiers retain their one-unit step even when the bounds touch.
+    def half_open_ranges?(tiers)
+      pricing_structure.product_catalog && super
     end
 
     def compute_amount
@@ -35,7 +32,7 @@ module ChargeModels
 
     def compute_projected_amount
       current_amount = compute_amount
-      return BigDecimal("0") if current_amount.zero? || period_ratio.nil? || period_ratio.zero?
+      return BigDecimal(0) if current_amount.zero? || period_ratio.nil? || period_ratio.zero?
 
       current_amount / BigDecimal(period_ratio.to_s)
     end

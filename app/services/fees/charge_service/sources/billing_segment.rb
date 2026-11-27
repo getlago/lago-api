@@ -3,8 +3,8 @@
 module Fees
   class ChargeService
     module Sources
-      BillingSegment = Data.define(:billing_segment, :product_filter, :max_timestamp) do
-        def initialize(billing_segment:, product_filter: nil, max_timestamp: nil)
+      BillingSegment = Data.define(:billing_segment, :product_filter, :max_timestamp, :cycle_coverage_window) do
+        def initialize(billing_segment:, product_filter: nil, max_timestamp: nil, cycle_coverage_window: nil)
           unless billing_segment.is_a?(::BillingSegment)
             raise ArgumentError, "billing_segment must be a BillingSegment"
           end
@@ -73,11 +73,11 @@ module Fees
         end
 
         def with_filter(filter)
-          self.class.new(billing_segment:, product_filter: filter, max_timestamp:)
+          with(product_filter: filter)
         end
 
         def boundaries
-          # Each rate segment starts a fresh aggregation window, even within the same cycle.
+          # Fee coverage and billable usage stay segment-local, including when tiers use earlier usage.
           BillingPeriodBoundaries.new(
             from_datetime: billing_segment.started_at,
             to_datetime: billing_segment.ended_at,
@@ -87,6 +87,14 @@ module Fees
             timestamp: billing_segment.billing_at,
             max_timestamp:
           )
+        end
+
+        def aggregation_boundaries
+          window = boundaries.aggregation_boundaries
+          return window unless cycle_weighted_sum?
+
+          cutoff = [max_timestamp, billing_segment.ended_at].min if max_timestamp
+          window.merge(charges_duration: cycle_coverage_days, to_datetime: cutoff || billing_segment.ended_at, max_timestamp: cutoff)
         end
 
         def properties
@@ -149,6 +157,16 @@ module Fees
 
         def rate_card
           billing_segment.contract_rate_card.rate_card
+        end
+
+        def cycle_weighted_sum?
+          return false unless cycle_coverage_window
+
+          billable_metric.weighted_sum_agg? && rate_card.arrears? && contract_rate_card.billing_scope_cycle?
+        end
+
+        def cycle_coverage_days
+          Billing::Days.between(cycle_coverage_window.begin, cycle_coverage_window.end, timezone: billing_segment.customer.applicable_timezone)
         end
 
         def duration_in_days

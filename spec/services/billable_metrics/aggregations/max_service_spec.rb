@@ -97,6 +97,46 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
     expect(result.count).to eq(5)
   end
 
+  context "when the event store fails and the metric uses rounding" do
+    let(:events) { [] }
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: :max_agg, field_name: "total_count", rounding_function: "floor", rounding_precision: 0)
+    end
+
+    before { allow(event_store).to receive(:max).and_raise(ActiveRecord::StatementInvalid, "store unavailable") }
+
+    it "returns the aggregation failure" do
+      result = max_service.aggregate
+
+      expect(result).to be_failure
+      expect(result.error.code).to eq("aggregation_failure")
+    end
+  end
+
+  context "when an earlier segment has a higher peak" do
+    let(:cycle_usage_tracker) { instance_double(Fees::ChargeService::Trackers::CycleClosingUnits, apply_closing_values?: true, apply_carry_over?: false, carryover_variation?: false) }
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: :max_agg, field_name: "total_count", rounding_function: "floor", rounding_precision: 0)
+    end
+    let(:events) do
+      [create(:event, organization_id: organization.id, subscription:, code: billable_metric.code,
+        timestamp: to_datetime - 1.day, properties: {total_count: 3})]
+    end
+
+    before do
+      allow(cycle_usage_tracker).to receive(:each_closing_value) do |groups:, **, &block|
+        block.call(groups.sole, BigDecimal("10.9"), nil)
+      end
+    end
+
+    it "keeps the local maximum and event count while pricing the rounded closing units" do
+      result = max_service.aggregate(cycle_usage_tracker:)
+      expect(result).to have_attributes(aggregation: 3, count: 1, closing_units: 10)
+      price = ChargeModels::StandardService.apply(pricing_structure: metered_item.pricing_structure, aggregation_result: result)
+      expect(price.units).to eq(10)
+    end
+  end
+
   context "when events are out of bounds" do
     let(:to_datetime) { Time.zone.now - 3.days }
 
@@ -266,6 +306,100 @@ RSpec.describe BillableMetrics::Aggregations::MaxService do
         result = max_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
 
         expect(result.event_aggregation).to eq([event.properties["total_count"]])
+      end
+    end
+
+    context "with closing units" do
+      let(:values) { [-3, 0] }
+      let(:events) do
+        values.each_with_index.map do |value, index|
+          create(:event, organization_id: organization.id, code: billable_metric.code, customer:, subscription:,
+            timestamp: to_datetime - 1.day + index.minutes, properties: {total_count: value})
+        end
+      end
+
+      it "keeps the closing value on the zero maximum's event" do
+        expect(max_service.per_event_aggregation(closing_units: 10).event_aggregation).to eq([0, 10])
+        expect(max_service.per_event_aggregation.event_aggregation).to eq([0, 0])
+      end
+
+      context "when the local maximum is negative" do
+        let(:values) { [-3, -5] }
+
+        it "keeps the closing value on the negative maximum's event" do
+          expect(max_service.per_event_aggregation(closing_units: 10).event_aggregation).to eq([10, 0])
+        end
+      end
+
+      context "with duplicate maxima" do
+        let(:values) { [3, 3] }
+
+        it "uses the first maximum only" do
+          expect(max_service.per_event_aggregation(closing_units: 10).event_aggregation).to eq([10, 0])
+        end
+      end
+
+      context "when the closing value is zero" do
+        let(:values) { [3, 5] }
+
+        it "does not fall back to the local maximum" do
+          expect(max_service.per_event_aggregation(closing_units: 0).event_aggregation).to eq([0, 0])
+        end
+      end
+
+      context "without events" do
+        let(:values) { [] }
+
+        it "does not create an event for the closing value" do
+          expect(max_service.per_event_aggregation(closing_units: 10).event_aggregation).to eq([])
+        end
+      end
+
+      context "when aggregation is bypassed" do
+        let(:bypass_aggregation) { true }
+
+        it "keeps the result empty" do
+          expect(max_service.per_event_aggregation(closing_units: 10).event_aggregation).to eq([])
+        end
+      end
+
+      context "with pricing groups" do
+        let(:events) do
+          [[-3, "EU"], [0, "EU"], [4, "US"], [8, "US"]].each_with_index.map do |(value, region), index|
+            create(:event, organization_id: organization.id, code: billable_metric.code, customer:, subscription:,
+              timestamp: to_datetime - 1.day + index.minutes, properties: {total_count: value, region:})
+          end
+        end
+
+        it "does not retain another group's closing value or filter" do
+          expect(max_service.per_event_aggregation(grouped_by_values: {"region" => "EU"}, closing_units: 10).event_aggregation).to eq([0, 10])
+          expect(max_service.per_event_aggregation(grouped_by_values: {"region" => "US"}, closing_units: 20).event_aggregation).to eq([0, 20])
+          expect(max_service.per_event_aggregation(grouped_by_values: {"region" => "EU"}, closing_units: 12).event_aggregation).to eq([0, 12])
+        end
+      end
+
+      context "with ClickHouse events", clickhouse: true do
+        let(:event_store_class) { Events::Stores::ClickhouseStore }
+
+        before do
+          events.each do |event|
+            value = event.properties.fetch("total_count")
+            create(:clickhouse_events_enriched, organization:, subscription:, customer:, billable_metric:,
+              timestamp: event.timestamp, properties: event.properties, value: value.to_s, decimal_value: value)
+          end
+        end
+
+        it "keeps the closing value on the zero maximum's event" do
+          expect(max_service.per_event_aggregation(closing_units: 10).event_aggregation).to eq([0, 10])
+        end
+
+        context "with duplicate maxima" do
+          let(:values) { [3, 3] }
+
+          it "uses the first maximum only" do
+            expect(max_service.per_event_aggregation(closing_units: 10).event_aggregation).to eq([10, 0])
+          end
+        end
       end
     end
   end

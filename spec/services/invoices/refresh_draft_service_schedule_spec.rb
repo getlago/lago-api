@@ -71,6 +71,55 @@ RSpec.describe Invoices::RefreshDraftService do
     end.sort_by(&:first)
   end
 
+  context "when refreshing two metered operations on the same draft" do
+    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+    let(:operation_cycles) { [] }
+    let(:billing_timing) { "arrears" }
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "units", recurring: false, rounding_function: "floor", rounding_precision: 0) }
+    let(:product) { create(:product, organization:, billable_metric:) }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 16),
+        rate_model: "volume", rate_properties: {volume_ranges: [
+          {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
+          {from_value: 100, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
+        ]})
+      [1, 2].each do |month|
+        start = Time.utc(2026, month, 1)
+        create(:billing_operation, :with_plan, organization:, customer:, contract_rate_card:, invoice:,
+          action_type: "close_metered_arrears", reason: :periodic_continuation,
+          target_cycle_started_at: start, billing_at: start + 1.month, processed_at: start + 1.month)
+      end
+      record_units("80.4", Time.utc(2026, 1, 10))
+      record_units("20.7", Time.utc(2026, 1, 16))
+      record_units(1, Time.utc(2026, 2, 1))
+    end
+
+    def record_units(units, timestamp)
+      create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+        code: billable_metric.code, properties: {units:}, timestamp:)
+    end
+
+    it "selects the volume tier from rounded segment units and rebuilds it after a late event" do
+      expect(result).to be_success
+      expect(fee_coverage.map(&:last)).to eq([80 * 1_500, 20 * 200, 1 * 200]) # floor(80.4) + floor(20.7) = 100.
+
+      record_units(1, Time.utc(2026, 1, 15))
+      expect(described_class.call(invoice:)).to be_success
+      expect(fee_coverage.map(&:last)).to eq([81 * 1_500, 20 * 100, 1 * 200]) # January reaches 101; February starts fresh.
+    end
+
+    context "without the product catalog flag" do
+      let(:organization) { create(:organization, feature_flags: []) }
+
+      it "uses segment-local units even when combined usage would reach the next tier" do
+        record_units(1, Time.utc(2026, 1, 15))
+        expect(result).to be_success
+        expect(fee_coverage.map(&:last)).to eq([81 * 1_500, 20 * 200, 1 * 200])
+      end
+    end
+  end
+
   context "when no operations are linked" do
     let(:operation_cycles) { [] }
 
@@ -247,7 +296,7 @@ RSpec.describe Invoices::RefreshDraftService do
           lookup_queries = []
           allow(BillingOperations::ComputeInvoiceService).to receive(:call!).and_wrap_original do |original, **attributes|
             lookup_queries.concat(capture_sql do
-              attributes.fetch(:billing_segments).each do |segment|
+              attributes.fetch(:segments_by_operation).values.flatten(1).each do |segment|
                 target = Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment: segment)
                 target.filters
                 target.filters

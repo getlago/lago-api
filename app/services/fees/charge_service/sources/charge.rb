@@ -19,6 +19,7 @@ module Fees
           to: :charge
 
         delegate :id, to: :charge, prefix: true
+        delegate :aggregation_boundaries, to: :boundaries
 
         def with_filter(charge_filter, properties: nil)
           self.class.new(

@@ -8,6 +8,7 @@ module Fees
       invoice:,
       metered_item:,
       billing_context:,
+      cycle_usage_tracker: BillingSegments::EMPTY_CYCLE_USAGE_TRACKER,
       cache_middleware: nil,
       filtered_aggregations: nil,
       provider: nil,
@@ -25,6 +26,7 @@ module Fees
 
       validate!
 
+      @cycle_usage_tracker = cycle_usage_tracker
       @cache_middleware = if metered_item.billing_segment
         nil
       else
@@ -161,7 +163,8 @@ module Fees
     def compute_fees(selected_metered_item:)
       watermark = recurring_watermark(selected_metered_item)
       aggregation_result = aggregator(selected_metered_item:).aggregate(
-        options: selected_metered_item.aggregation_options(current_usage: options.current_usage?).merge(recurring_watermark: watermark)
+        options: selected_metered_item.aggregation_options(current_usage: options.current_usage?).merge(recurring_watermark: watermark),
+        cycle_usage_tracker: @cycle_usage_tracker
       )
 
       unless aggregation_result.success?
