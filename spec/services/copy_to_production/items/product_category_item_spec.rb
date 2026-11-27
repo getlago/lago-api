@@ -10,6 +10,7 @@ RSpec.describe CopyToProduction::Items::ProductCategoryItem do
   let(:category) { create(:product_category, organization: sandbox, code: "compute") }
 
   it_behaves_like "a copy to production item matched by code", :product_category
+  it_behaves_like "a copy to production item copying every column", ProductCategory
 
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("product_category")

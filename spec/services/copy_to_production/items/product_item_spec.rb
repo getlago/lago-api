@@ -11,6 +11,10 @@ RSpec.describe CopyToProduction::Items::ProductItem do
   let(:metric) { create(:billable_metric, organization: sandbox) }
   let(:product) { create(:product, organization: sandbox, product_category: category, billable_metric: metric, code: "api") }
 
+  # The category and metric are remapped; nothing in the app writes the add-on and the charge.
+  it_behaves_like "a copy to production item copying every column", Product,
+    left_out: %w[add_on_id billable_metric_id charge_id product_category_id]
+
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("product")
     expect(item.activity_type).to eq("product.copied_to_production")

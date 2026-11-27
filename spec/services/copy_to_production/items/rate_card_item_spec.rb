@@ -9,6 +9,10 @@ RSpec.describe CopyToProduction::Items::RateCardItem do
   let(:sandbox) { create(:organization, :sandbox, production_organization: production) }
   let(:rate_card) { create(:rate_card, organization: sandbox, code: "api_eur") }
 
+  # The product and its filter are remapped.
+  it_behaves_like "a copy to production item copying every column", RateCard,
+    left_out: %w[product_filter_id product_id]
+
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("rate_card")
     expect(item.activity_type).to eq("rate_card.copied_to_production")
