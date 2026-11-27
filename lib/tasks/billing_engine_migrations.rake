@@ -220,14 +220,192 @@ class BillingEnginePlanEntitlementsCopy
   end
 end
 
+class BillingEngineUsageParityReport
+  BATCH_SIZE = 100
+
+  MetricUsage = Data.define(:amount_cents, :units) do
+    def +(other)
+      with(amount_cents: amount_cents + other.amount_cents, units: units + other.units)
+    end
+
+    def to_s
+      "#{amount_cents} cents / #{units.to_s("F")} units"
+    end
+  end
+
+  NO_USAGE = MetricUsage.new(amount_cents: 0, units: BigDecimal(0))
+
+  def initialize(migration:, limit:, after_contract: nil)
+    @migration = migration
+    @limit = limit
+    @after_contract = after_contract
+    @examined = 0
+    @matching = 0
+    @mismatching = 0
+    @errors = 0
+    @skipped = Hash.new(0)
+  end
+
+  def run
+    puts "Comparing the current usage of organization #{migration.organization_id} " \
+      "with shadow organization #{migration.shadow_organization_id} (at most #{limit} contract(s))..."
+
+    each_contract_batch do |contracts|
+      subscriptions = v1_subscriptions(contracts)
+      contracts.each { |contract| examine(contract, subscriptions[contract.code]) }
+    end
+
+    puts summary
+    puts "Stopped at #{limit} contract(s): continue with AFTER=#{last_contract.id}" if contracts_left
+  end
+
+  private
+
+  attr_reader :migration, :limit, :after_contract, :examined, :matching, :mismatching, :errors, :skipped,
+    :last_contract, :contracts_left
+
+  def each_contract_batch
+    cursor = after_contract && [after_contract.created_at, after_contract.id]
+
+    loop do
+      batch_size = [BATCH_SIZE, limit - examined].min
+      contracts = contracts_before(cursor).limit(batch_size + 1).to_a
+      @contracts_left = contracts.size > batch_size
+      batch = contracts.first(batch_size)
+
+      yield batch unless batch.empty?
+      break if !contracts_left || limit_reached?
+
+      cursor = [batch.last.created_at, batch.last.id]
+    end
+  end
+
+  def contracts_before(cursor)
+    contracts = migration.shadow_organization.contracts
+      .where(status: :active)
+      .includes(:customer)
+      .order(created_at: :desc, id: :desc)
+
+    cursor ? contracts.where("(contracts.created_at, contracts.id) < (?, ?)", *cursor) : contracts
+  end
+
+  def v1_subscriptions(contracts)
+    migration.organization.subscriptions
+      .where(id: contracts.map(&:code))
+      .includes(:customer, :plan)
+      .index_by(&:id)
+  end
+
+  def examine(contract, subscription)
+    @examined += 1
+    @last_contract = contract
+    reason = skip_reason(contract, subscription)
+
+    if reason
+      skip(contract, reason)
+    else
+      compare(contract, subscription)
+    end
+  rescue BaseService::FailedResult => e
+    report_error(contract, e.message)
+  rescue => e
+    report_error(contract, "#{e.class}: #{e.message}")
+  end
+
+  def report_error(contract, message)
+    @errors += 1
+    puts "  error on contract #{contract.external_id}: #{message}"
+  end
+
+  # The copy sets the status and the end date of a contract from its V1 subscription: when they
+  # differ, V1 changed after the copy and the usage periods no longer line up.
+  def skip_reason(contract, subscription)
+    if subscription.nil?
+      "subscription_not_found"
+    elsif !subscription.active?
+      "subscription_no_longer_active"
+    elsif subscription.ending_at&.to_i != contract.ended_at&.to_i
+      "ending_at_changed"
+    end
+  end
+
+  def skip(contract, reason)
+    skipped[reason] += 1
+    puts "  skipped contract #{contract.external_id} (#{reason})"
+  end
+
+  def compare(contract, subscription)
+    v1_usage = v1_usage_by_metric(subscription)
+    v2_usage = v2_usage_by_metric(contract)
+    mismatched_codes = (v1_usage.keys | v2_usage.keys).sort.reject { |code| v1_usage[code] == v2_usage[code] }
+
+    if mismatched_codes.empty?
+      @matching += 1
+    else
+      @mismatching += 1
+      mismatched_codes.each do |code|
+        puts "  mismatch on contract #{contract.external_id} (subscription #{subscription.id}), " \
+          "metric #{code}: V1 #{v1_usage[code]}, V2 #{v2_usage[code]}"
+      end
+    end
+  end
+
+  def v1_usage_by_metric(subscription)
+    fees = Invoices::CustomerUsageService.call!(
+      customer: subscription.customer,
+      subscription:,
+      apply_taxes: false,
+      use_usage_buckets: true
+    ).usage.fees
+
+    sum_by_metric(fees.map { |fee| [fee.billable_metric.code, MetricUsage.new(amount_cents: fee.amount_cents, units: fee.units)] })
+  end
+
+  def v2_usage_by_metric(contract)
+    rate_card_usages = Contracts::CurrentUsageService.call!(contract:, apply_taxes: false).rate_card_usages
+
+    sum_by_metric(rate_card_usages.filter_map do |usage|
+      metric = usage.contract_rate_card.rate_card.product.billable_metric
+      [metric.code, MetricUsage.new(amount_cents: usage.amount_cents, units: usage.units)] if metric
+    end)
+  end
+
+  def sum_by_metric(usages)
+    usages.each_with_object(Hash.new(NO_USAGE)) { |(code, usage), totals| totals[code] += usage }
+  end
+
+  def limit_reached?
+    examined >= limit
+  end
+
+  def summary
+    "Contracts compared: #{matching + mismatching}, matching: #{matching}, mismatches: #{mismatching}, " \
+      "skipped: #{skipped.values.sum}#{skipped_breakdown}, errors: #{errors}"
+  end
+
+  def skipped_breakdown
+    if skipped.empty?
+      ""
+    else
+      " (#{skipped.sort.map { |reason, count| "#{reason}: #{count}" }.join(", ")})"
+    end
+  end
+end
+
 module BillingEngineMigrationTask
-  def self.shadowing_migration!(task_name, organization_id)
+  def self.migration!(task_name, organization_id)
     if organization_id.blank?
       abort "Missing organization_id argument\n\nUsage: rake billing_engine_migrations:#{task_name}[organization_id]"
     end
 
     migration = BillingEngineMigration.find_by(organization_id:)
     abort "No billing engine migration for organization #{organization_id}" unless migration
+
+    migration
+  end
+
+  def self.shadowing_migration!(task_name, organization_id)
+    migration = migration!(task_name, organization_id)
     abort "Billing engine migration #{migration.id} is #{migration.status}, not shadowing" unless migration.shadowing?
 
     migration
@@ -267,5 +445,21 @@ namespace :billing_engine_migrations do
     BillingEnginePlanEntitlementsCopy.new(migration:, dry_run: ENV.fetch("DRY_RUN", "true") != "false").run
   rescue BaseService::FailedResult => e
     abort "Plan entitlements copy failed: #{e.message}"
+  end
+
+  desc "Compare the current usage of each active shadow contract with its V1 subscription, per billable metric"
+  task :parity, [:organization_id] => :environment do |_task, args|
+    migration = BillingEngineMigrationTask.migration!("parity", args[:organization_id])
+    abort "Billing engine migration #{migration.id} is aborted" if migration.aborted?
+
+    limit = Integer(ENV.fetch("LIMIT", "500"), exception: false)
+    abort "LIMIT must be a positive integer" unless limit&.positive?
+
+    after_contract = ENV["AFTER"].presence && migration.shadow_organization.contracts.find_by(id: ENV["AFTER"])
+    if ENV["AFTER"].present? && after_contract.nil?
+      abort "AFTER must be the id of a contract of shadow organization #{migration.shadow_organization_id}"
+    end
+
+    BillingEngineUsageParityReport.new(migration:, limit:, after_contract:).run
   end
 end
