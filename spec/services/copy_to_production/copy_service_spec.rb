@@ -426,8 +426,8 @@ RSpec.describe CopyToProduction::CopyService do
       it "logs the copy of each copied item but the tax" do
         result
 
-        moves = kafka_messages.map { JSON.parse(it[:payload]) }.select { it["activity_type"].end_with?(".copied_to_production") }
-        expect(moves.map { [it["activity_type"], it["organization_id"]] }).to eq(
+        copies = kafka_messages.map { JSON.parse(it[:payload]) }.select { it["activity_type"].end_with?(".copied_to_production") }
+        expect(copies.map { [it["activity_type"], it["organization_id"]] }).to eq(
           %w[product_category billable_metric product rate_card product rate_card].map { ["#{it}.copied_to_production", production.id] }
         )
       end
