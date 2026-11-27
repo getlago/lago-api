@@ -19,7 +19,7 @@ class UsageThreshold < ApplicationRecord
   validates :amount_cents, numericality: {greater_than: 0}
   validates :amount_cents, uniqueness: {scope: %i[plan_id recurring deleted_at]}, if: -> { deleted_at.nil? && subscription_id.nil? }
   validates :recurring, uniqueness: {scope: %i[plan_id deleted_at]}, if: -> { recurring? && deleted_at.nil? && subscription_id.nil? }
-  validate :exactly_one_parent_present
+  validate :validate_exactly_one_parent_present
 
   scope :recurring, -> { where(recurring: true) }
   scope :not_recurring, -> { where(recurring: false) }
@@ -36,7 +36,7 @@ class UsageThreshold < ApplicationRecord
 
   private
 
-  def exactly_one_parent_present
+  def validate_exactly_one_parent_present
     has_plan = plan_id.present? || plan.present?
     has_subscription = subscription_id.present? || subscription.present?
 

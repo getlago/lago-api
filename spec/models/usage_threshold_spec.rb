@@ -22,7 +22,7 @@ RSpec.describe UsageThreshold do
   describe "validations" do
     it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0) }
 
-    describe "exactly_one_parent_present validation" do
+    describe "validate_exactly_one_parent_present validation" do
       let_it_be(:organization) { create_default(:organization) }
       let_it_be(:plan) { create_default(:plan, organization:) }
       let_it_be(:customer) { create_default(:customer) }

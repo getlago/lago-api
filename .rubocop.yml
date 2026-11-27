@@ -23,6 +23,7 @@ require:
   - ./dev/cops/stub_perform_all_later_cop.rb
   - ./dev/cops/no_expect_receive_on_job_cop.rb
   - ./dev/cops/v2_timestamp_format_cop.rb
+  - ./dev/cops/validate_method_prefix_cop.rb
   - ./dev/cops/service_new_call_cop.rb
 
 inherit_gem:
@@ -51,6 +52,11 @@ Lago/NoExpectReceiveOnJob:
 Lago/V2TimestampFormat:
   Include:
     - "app/serializers/v2/**/*.rb"
+
+Lago/ValidateMethodPrefix:
+  Include:
+    - "app/**/*.rb"
+    - "lib/**/*.rb"
 
 Lago/NoDropColumnOrTable:
   Include:

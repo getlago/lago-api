@@ -24,8 +24,8 @@ class ApiKey < ApplicationRecord
   validates :value, uniqueness: true
   validates :value, presence: true, on: :update
   validates :permissions, presence: true
-  validate :permissions_keys_compliance
-  validate :permissions_values_allowed
+  validate :validate_permissions_keys_compliance
+  validate :validate_permissions_values_allowed
 
   default_scope { active }
 
@@ -59,7 +59,7 @@ class ApiKey < ApplicationRecord
 
   private
 
-  def permissions_keys_compliance
+  def validate_permissions_keys_compliance
     return unless permissions
 
     forbidden_permissions = permissions.keys - RESOURCES
@@ -69,7 +69,7 @@ class ApiKey < ApplicationRecord
     end
   end
 
-  def permissions_values_allowed
+  def validate_permissions_values_allowed
     return unless permissions
 
     forbidden_values = permissions.values.flatten - MODES

@@ -29,9 +29,9 @@ class Payment < ApplicationRecord
   validates :payment_type, presence: true
   validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
   validates :reference, absence: true, if: -> { payment_type_provider? || payment_type_x402? }
-  validate :manual_payment_credit_invoice_amount_cents
-  validate :max_invoice_paid_amount_cents, on: :create
-  validate :payment_request_succeeded, on: :create
+  validate :validate_manual_payment_credit_invoice_amount_cents
+  validate :validate_max_invoice_paid_amount_cents, on: :create
+  validate :validate_payment_request_succeeded, on: :create
 
   enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h, validate: {allow_nil: true}
 
@@ -116,21 +116,21 @@ class Payment < ApplicationRecord
 
   private
 
-  def manual_payment_credit_invoice_amount_cents
+  def validate_manual_payment_credit_invoice_amount_cents
     return if !payable.is_a?(Invoice) || payment_type_provider? || !payable.credit?
     return if amount_cents == payable.total_amount_cents
 
     errors.add(:amount_cents, :invalid_amount)
   end
 
-  def max_invoice_paid_amount_cents
+  def validate_max_invoice_paid_amount_cents
     return if !payable.is_a?(Invoice) || payment_type_provider?
     return if amount_cents <= payable.total_due_amount_cents
 
     errors.add(:amount_cents, :greater_than)
   end
 
-  def payment_request_succeeded
+  def validate_payment_request_succeeded
     return if !payable.is_a?(Invoice) || payment_type_provider?
 
     return unless payable.payment_requests.where(payment_status: "succeeded").exists?

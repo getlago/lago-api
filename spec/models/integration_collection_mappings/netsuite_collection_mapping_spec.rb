@@ -128,7 +128,7 @@ RSpec.describe IntegrationCollectionMappings::NetsuiteCollectionMapping do
     end
   end
 
-  describe "organization_level_only_mapping validation" do
+  describe "validate_organization_level_only_mapping validation" do
     context "when mapping type is currencies" do
       subject(:mapping) do
         build(:netsuite_collection_mapping,

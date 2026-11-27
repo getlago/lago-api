@@ -3,7 +3,7 @@
 module Integrations
   class OktaIntegration < BaseIntegration
     validates :client_secret, :client_id, :domain, :organization_name, presence: true
-    validate :domain_uniqueness
+    validate :validate_domain_uniqueness
     validate :validate_host_format, if: -> { setting_changed?("host") }
     validate :validate_organization_name_format, if: :default_host_changed?
 
@@ -26,7 +26,7 @@ module Integrations
 
     private
 
-    def domain_uniqueness
+    def validate_domain_uniqueness
       return if domain.blank?
 
       okta_integration = ::Integrations::OktaIntegration

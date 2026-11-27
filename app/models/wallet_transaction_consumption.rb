@@ -6,8 +6,8 @@ class WalletTransactionConsumption < ApplicationRecord
   belongs_to :outbound_wallet_transaction, class_name: "WalletTransaction", inverse_of: :fundings
 
   validates :consumed_amount_cents, numericality: {greater_than: 0}
-  validate :inbound_transaction_must_be_inbound
-  validate :outbound_transaction_must_be_outbound
+  validate :validate_inbound_transaction_must_be_inbound
+  validate :validate_outbound_transaction_must_be_outbound
 
   def credit_amount
     wallet = outbound_wallet_transaction.wallet
@@ -17,14 +17,14 @@ class WalletTransactionConsumption < ApplicationRecord
 
   private
 
-  def inbound_transaction_must_be_inbound
+  def validate_inbound_transaction_must_be_inbound
     return if inbound_wallet_transaction.nil?
     return if inbound_wallet_transaction.inbound?
 
     errors.add(:inbound_wallet_transaction, :invalid)
   end
 
-  def outbound_transaction_must_be_outbound
+  def validate_outbound_transaction_must_be_outbound
     return if outbound_wallet_transaction.nil?
     return if outbound_wallet_transaction.outbound?
 

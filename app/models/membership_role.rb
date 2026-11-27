@@ -12,8 +12,8 @@ class MembershipRole < ApplicationRecord
 
   scope :admins, -> { joins(:role).where(roles: {admin: true}) }
 
-  validate :role_belongs_to_organization, on: :create
-  validate :forbid_modification, on: :update
+  validate :validate_role_belongs_to_organization, on: :create
+  validate :validate_forbid_modification, on: :update
 
   # Only communicate errors on last role discard
   before_discard :forbid_last_admin_role_discard
@@ -36,14 +36,14 @@ class MembershipRole < ApplicationRecord
     throw(:abort)
   end
 
-  def role_belongs_to_organization
+  def validate_role_belongs_to_organization
     return if role.nil?
     return if role.organization_id.nil? || role.organization_id == organization_id
 
     errors.add(:role, "invalid_value")
   end
 
-  def forbid_modification
+  def validate_forbid_modification
     return if changes.keys == ["deleted_at"]
 
     errors.add(:base, :modification_not_allowed)

@@ -21,7 +21,7 @@ class Role < ApplicationRecord
   # Only on create or rename, so saving an existing role never rewrites its name.
   before_validation :normalize_name, if: -> { new_record? || name_changed? }
 
-  validate :code_is_not_reserved, if: -> { organization_id && deleted_at.blank? }
+  validate :validate_code_is_not_reserved, if: -> { organization_id && deleted_at.blank? }
   # Only checked when the name is set or changed, so existing roles stay valid.
   validates :name,
     format: {without: RESERVED_NAME_FORMAT, message: :taken},
@@ -57,7 +57,7 @@ class Role < ApplicationRecord
       &.strip
   end
 
-  def code_is_not_reserved
+  def validate_code_is_not_reserved
     errors.add(:code, :taken) if RESERVED_CODES.include?(code)
   end
 end

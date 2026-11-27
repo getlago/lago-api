@@ -9,11 +9,11 @@ class BillingOperationSegment < ApplicationRecord
   validates :position, numericality: {only_integer: true, greater_than_or_equal_to: 0}
   validates :started_at, :ended_at, :proration_ratio, presence: true
   validates :ended_at, comparison: {greater_than: :started_at}, if: -> { started_at.present? && ended_at.present? }
-  validate :tenant_and_source_match
+  validate :validate_tenant_and_source_match
 
   private
 
-  def tenant_and_source_match
+  def validate_tenant_and_source_match
     return unless organization && billing_operation
 
     errors.add(:billing_operation, :invalid) if billing_operation.organization_id != organization_id

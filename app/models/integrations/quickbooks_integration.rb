@@ -9,7 +9,7 @@ module Integrations
     }.freeze
 
     validates :connection_id, presence: true
-    validate :realm_id_uniqueness
+    validate :validate_realm_id_uniqueness
 
     settings_accessors :sync_invoices, :sync_credit_notes, :sync_payments, :realm_id, :sandbox
     secrets_accessors :connection_id
@@ -22,7 +22,7 @@ module Integrations
     private
 
     # Gives the friendly error before the insert. The unique index enforces it under concurrency.
-    def realm_id_uniqueness
+    def validate_realm_id_uniqueness
       return if realm_id.blank?
 
       duplicate = ::Integrations::QuickbooksIntegration

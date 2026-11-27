@@ -16,11 +16,11 @@ class ContractRateCardTerm < ApplicationRecord
   validates :effective_date, presence: true
   validates :effective_date, uniqueness: {scope: :contract_rate_card_id}
   validates :units, numericality: {greater_than_or_equal_to: 0}
-  validate :organization_matches_contract_rate_card
+  validate :validate_organization_matches_contract_rate_card
 
   private
 
-  def organization_matches_contract_rate_card
+  def validate_organization_matches_contract_rate_card
     return if contract_rate_card.nil? || organization_id == contract_rate_card.organization_id
 
     errors.add(:organization, :invalid)

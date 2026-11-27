@@ -7,19 +7,19 @@ class CatalogWalletConsumption < ApplicationRecord
   belongs_to :fee, optional: true
 
   validates :credit_amount_cents, numericality: {only_integer: true, greater_than: 0}
-  validate :inbound_transaction_must_be_inbound
-  validate :outbound_transaction_must_be_outbound
+  validate :validate_inbound_transaction_must_be_inbound
+  validate :validate_outbound_transaction_must_be_outbound
 
   private
 
-  def inbound_transaction_must_be_inbound
+  def validate_inbound_transaction_must_be_inbound
     return if inbound_transaction.nil?
     return if inbound_transaction.inbound?
 
     errors.add(:inbound_transaction, :invalid)
   end
 
-  def outbound_transaction_must_be_outbound
+  def validate_outbound_transaction_must_be_outbound
     return if outbound_transaction.nil?
     return if outbound_transaction.outbound?
 

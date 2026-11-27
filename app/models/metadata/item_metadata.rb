@@ -10,11 +10,11 @@ module Metadata
     belongs_to :owner, polymorphic: true
 
     validates :value, exclusion: {in: [nil], message: :blank}
-    validate :value_correctness
+    validate :validate_value_correctness
 
     private
 
-    def value_correctness
+    def validate_value_correctness
       return if value.blank?
 
       unless value.is_a?(Hash)
