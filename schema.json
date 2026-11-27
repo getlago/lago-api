@@ -597,6 +597,12 @@
               "deprecationReason": null
             },
             {
+              "name": "plan_copied_to_production",
+              "description": "plan.copied_to_production",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "customer_created",
               "description": "customer.created",
               "isDeprecated": false,
@@ -1001,6 +1007,12 @@
             {
               "name": "plan_rate_card_deleted",
               "description": "plan_rate_card.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card_copied_to_production",
+              "description": "plan_rate_card.copied_to_production",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -13033,6 +13045,12 @@
               "deprecationReason": null
             },
             {
+              "name": "catalog_plan",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "coupon",
               "description": null,
               "isDeprecated": false,
@@ -13040,6 +13058,12 @@
             },
             {
               "name": "feature",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

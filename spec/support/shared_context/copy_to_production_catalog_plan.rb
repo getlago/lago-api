@@ -45,9 +45,10 @@ RSpec.shared_context "with a copy to production catalog plan" do
     create(:catalog_wallet_selector, :plan_level, organization: sandbox, plan_wallet: wallet,
       selector_type: "product_category", fee_type: nil, product_category: category)
     create(:plan_wallet_credit_allocation, organization: sandbox, plan_wallet: wallet, product: support, code: "monthly",
-      billing_cycles: 3, credit_amount_cents: 5_000)
+      billing_cycles: 3, credit_amount_cents: 5_000, priority: 5)
+    create(:item_metadata, organization: sandbox, owner: wallet, value: {"tier" => "gold"})
     alert = create(:plan_wallet_alert, organization: sandbox, plan_wallet: wallet, code: "low", name: "Low")
     create(:catalog_wallet_alert_threshold, :template, organization: sandbox, plan_wallet_alert: alert, code: "warn",
-      value: 1_000)
+      value: 1_000, notify_on: %w[triggered resolved])
   end
 end

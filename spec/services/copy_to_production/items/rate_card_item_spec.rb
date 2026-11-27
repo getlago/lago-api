@@ -21,12 +21,29 @@ RSpec.describe CopyToProduction::Items::RateCardItem do
   end
 
   describe "#find_existing" do
-    let(:live_rate_card) { create(:rate_card, organization: production, code: "api_eur") }
+    let(:live_product) { create(:product, organization: production, code: rate_card.product.code) }
+    let(:live_rate_card) { create(:rate_card, organization: production, product: live_product, code: "api_eur") }
 
     before { live_rate_card }
 
-    it "never reuses a production rate card" do
-      expect(item.find_existing(rate_card)).to be_nil
+    it "finds the live card with its code in the live product with the code of its product" do
+      expect(item.find_existing(rate_card)).to eq(live_rate_card)
+    end
+
+    context "when the live card with its code belongs to another product" do
+      let(:live_rate_card) { create(:rate_card, organization: production, code: "api_eur") }
+
+      it "finds nothing" do
+        expect(item.find_existing(rate_card)).to be_nil
+      end
+    end
+
+    context "when the live product is deleted" do
+      before { live_product.discard! }
+
+      it "finds nothing" do
+        expect(item.find_existing(rate_card)).to be_nil
+      end
     end
   end
 

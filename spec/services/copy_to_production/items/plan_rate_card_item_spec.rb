@@ -20,6 +20,12 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
     expect(item.activity_type).to eq("plan_rate_card.copied_to_production")
   end
 
+  # The plan rate card and the override are linked by the copy.
+  it_behaves_like "a copy to production item copying every column", RatePhase,
+    attributes: described_class::PHASE_ATTRIBUTES, left_out: %w[contract_rate_card_id plan_rate_card_id rate_override_id]
+  it_behaves_like "a copy to production item copying every column", RateOverride,
+    attributes: described_class::RATE_OVERRIDE_ATTRIBUTES
+
   describe "#find_source" do
     let(:production_plan_rate_card) { create(:plan_rate_card, organization: production) }
 

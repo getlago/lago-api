@@ -11,6 +11,9 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
 
   it_behaves_like "a copy to production item matched by code", :catalog_plan
   it_behaves_like "a copy to production item copying every column", CatalogPlan
+  # The wallet and the targets are remapped.
+  it_behaves_like "a copy to production item copying every column", PlanWalletCreditAllocation,
+    attributes: described_class::CREDIT_ALLOCATION_ATTRIBUTES, left_out: %w[plan_wallet_id product_filter_id product_id]
 
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("catalog_plan")
