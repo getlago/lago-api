@@ -41,6 +41,12 @@ RSpec.describe PaymentProviders::DestroyService do
         expect(payment_provider_customer.reload.payment_provider_id).to eq(payment_provider.id)
       end
 
+      it "detaches the provider from the customers" do
+        expect { destroy_service.call }
+          .to change { Customer.find(customer.id).updated_at }
+        expect(Customer.find(customer.id)).to have_attributes(payment_provider: nil, payment_provider_code: nil)
+      end
+
       it "bumps updated_at on the payment provider customers" do
         expect { destroy_service.call }
           .to change { payment_provider_customer.reload.updated_at }

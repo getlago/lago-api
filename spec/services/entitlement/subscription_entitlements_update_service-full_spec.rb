@@ -206,6 +206,8 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
         expect(result).to be_success
         expect(existing_entitlement.reload.deleted_at).to be_present
         expect(existing_value.reload.deleted_at).to be_present
+        expect(existing_entitlement.updated_at).to eq(existing_entitlement.deleted_at)
+        expect(existing_value.updated_at).to eq(existing_value.deleted_at)
         expect(Entitlement::SubscriptionFeatureRemoval.where(feature:, subscription:).count).to eq(0)
 
         expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).map(&:code)).to eq([feature2.code])
@@ -290,6 +292,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
           expect(subscription.entitlements).to be_empty
           expect(privilege2_removal.reload).to be_discarded
           expect(privilege3_removal.reload).to be_discarded
+          expect(privilege2_removal.updated_at).to eq(privilege2_removal.deleted_at)
           expect(subscription.entitlement_removals.where(feature: feature2)).to exist
         end
       end

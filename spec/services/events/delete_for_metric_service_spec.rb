@@ -24,6 +24,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
     it "deletes related events" do
       expect { service.call }
         .to change { event.reload.deleted_at }.from(nil).to(billable_metric.deleted_at)
+        .and change(event, :updated_at).to(billable_metric.deleted_at)
 
       expect(not_impacted_event.reload.deleted_at).to be_nil
     end
@@ -34,6 +35,7 @@ RSpec.describe Events::DeleteForMetricService, clickhouse: true, transaction: fa
 
       it "deletes related events" do
         expect { service.call }.to change { event.reload.deleted_at }.from(nil).to(billable_metric.deleted_at)
+          .and change(event, :updated_at).to(billable_metric.deleted_at)
 
         expect(not_impacted_event.reload.deleted_at).to be_nil
       end

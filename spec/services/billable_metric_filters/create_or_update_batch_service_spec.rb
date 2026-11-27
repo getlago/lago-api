@@ -45,6 +45,8 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         expect { service }.to change { BillableMetricFilter.with_discarded.discarded.count }.from(0).to(2)
           .and change { ChargeFilterValue.with_discarded.discarded.count }.from(0).to(1)
           .and change { ChargeFilter.with_discarded.discarded.count }.from(0).to(1)
+        expect(filter_value.reload.updated_at).to eq(filter_value.deleted_at)
+        expect(charge_filter.reload.updated_at).to eq(charge_filter.deleted_at)
       end
 
       context "when a charge_filter has filter_values from multiple billable_metric_filters" do

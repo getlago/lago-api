@@ -69,16 +69,18 @@ RSpec.describe PaymentProviders::StripeService do
       before { stripe_customer }
 
       it "updates payment provider codes of all customers" do
-        result = stripe_service.create_or_update(
-          id: payment_provider.id,
-          organization_id: organization.id,
-          code: new_code,
-          name:,
-          secret_key: "secret"
-        )
+        freeze_time do
+          result = stripe_service.create_or_update(
+            id: payment_provider.id,
+            organization_id: organization.id,
+            code: new_code,
+            name:,
+            secret_key: "secret"
+          )
 
-        expect(result).to be_success
-        expect(result.stripe_provider.customers.first.payment_provider_code).to eq(new_code)
+          expect(result).to be_success
+          expect(result.stripe_provider.customers.first).to have_attributes(payment_provider_code: new_code, updated_at: Time.current)
+        end
       end
 
       it "updates the payment provider code of the agent storefronts using it" do

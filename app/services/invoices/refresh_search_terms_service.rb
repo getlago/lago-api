@@ -13,7 +13,7 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
 
-      Invoice.where(id: invoice.id).update_all("search_terms = #{Invoice::SearchTerms::SQL}, updated_at = NOW()") # rubocop:disable Rails/SkipsModelValidations
+      Invoice.where(id: invoice.id).update_all(["search_terms = #{Invoice::SearchTerms::SQL}, updated_at = ?", Time.current]) # rubocop:disable Rails/SkipsModelValidations
 
       result.invoice = invoice
       result

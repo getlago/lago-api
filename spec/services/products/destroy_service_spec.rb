@@ -60,8 +60,8 @@ RSpec.describe Products::DestroyService, :capture_kafka_messages do
   end
 
   context "when the product has contract alerts" do
-    let(:product_alert) { create(:contract_usage_units_alert, organization:, product:) }
-    let(:filter_alert) { create(:contract_usage_amount_alert, organization:, product:, product_filter: product.filters.first) }
+    let(:product_alert) { create(:contract_usage_units_alert, organization:, product:, updated_at: 1.day.ago) }
+    let(:filter_alert) { create(:contract_usage_amount_alert, organization:, product:, product_filter: product.filters.first, updated_at: 1.day.ago) }
     let(:other_product_alert) { create(:contract_usage_units_alert, organization:, product: create(:product, organization:)) }
     let(:whole_contract_alert) { create(:contract_usage_amount_alert, organization:) }
     let(:triggered_alert) { create(:contract_triggered_alert, alert: product_alert) }

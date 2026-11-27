@@ -64,6 +64,7 @@ RSpec.describe Subscriptions::UpdateUsageThresholdsService, :premium do
 
         it "soft deletes usage thresholds attached to the plan override" do
           expect { service.call }.to change { plan_usage_threshold.reload.deleted_at }.from(nil)
+          expect(plan_usage_threshold.updated_at).to eq(plan_usage_threshold.deleted_at)
         end
       end
 

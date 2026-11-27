@@ -39,12 +39,14 @@ RSpec.describe Charges::DestroyService do
     it "soft deletes all related filters" do
       freeze_time do
         expect { destroy_service.call }.to change { charge_filter.reload.deleted_at }.from(nil).to(Time.current)
+          .and change(charge_filter, :updated_at).to(Time.current)
       end
     end
 
     it "soft deletes all related filter values" do
       freeze_time do
         expect { destroy_service.call }.to change { filter_value.reload.deleted_at }.from(nil).to(Time.current)
+          .and change(filter_value, :updated_at).to(Time.current)
       end
     end
 

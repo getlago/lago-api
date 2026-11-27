@@ -33,6 +33,7 @@ RSpec.describe AddOns::DestroyService do
           .and change { add_on.reload.deleted_at }.from(nil)
           .and change(FixedCharge, :count).by(-2)
           .and change { fixed_charges.map(&:reload).map(&:deleted_at) }.from([nil, nil]).to(all(be_present))
+        expect(fixed_charges.map(&:updated_at)).to eq(fixed_charges.map(&:deleted_at))
       end
 
       context "when failed to discard fixed charges" do

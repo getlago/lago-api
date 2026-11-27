@@ -49,6 +49,19 @@ RSpec.describe Plans::PrepareDestroyService do
       end
     end
 
+    context "when the plan has children" do
+      let(:child) { create(:plan, organization:, parent: plan, updated_at: 1.day.ago) }
+
+      before { child }
+
+      it "marks the children as pending deletion" do
+        freeze_time do
+          expect { prepare_destroy_service.call }.to change { child.reload.pending_deletion }.from(false).to(true)
+            .and change(child, :updated_at).to(Time.current)
+        end
+      end
+    end
+
     context "when plan is not found" do
       let(:plan) { nil }
 

@@ -471,6 +471,9 @@ RSpec.describe ChargeFilters::CascadeService do
 
           expect(child_filter.reload).to be_discarded
           expect(child_filter.values.kept).to be_empty
+          discarded_values = ChargeFilterValue.with_discarded.where(charge_filter: child_filter).to_a
+          expect(discarded_values).to be_present
+          expect(discarded_values.map(&:updated_at)).to eq(discarded_values.map(&:deleted_at))
         end
       end
 

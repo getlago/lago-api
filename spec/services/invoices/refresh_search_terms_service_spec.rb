@@ -35,6 +35,14 @@ RSpec.describe Invoices::RefreshSearchTermsService do
       expect(search_terms).to eq("INV-001 PO-42 Acme Inc Rick Sanchez Acme Incorporated cust-1 rick@acme.test")
     end
 
+    it "refreshes updated_at" do
+      invoice
+
+      freeze_time do
+        expect { refresh_service.call }.to change { invoice.reload.updated_at }.to(Time.current)
+      end
+    end
+
     it "returns the invoice" do
       expect(refresh_service.call.invoice).to eq(invoice)
     end

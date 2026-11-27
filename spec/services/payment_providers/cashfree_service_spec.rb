@@ -60,16 +60,18 @@ RSpec.describe PaymentProviders::CashfreeService do
       before { cashfree_customer }
 
       it "updates payment provider codes of all customers" do
-        result = cashfree_service.create_or_update(
-          id: payment_provider.id,
-          organization:,
-          code: new_code,
-          name:,
-          client_secret: "secret"
-        )
+        freeze_time do
+          result = cashfree_service.create_or_update(
+            id: payment_provider.id,
+            organization:,
+            code: new_code,
+            name:,
+            client_secret: "secret"
+          )
 
-        expect(result).to be_success
-        expect(result.cashfree_provider.customers.first.payment_provider_code).to eq(new_code)
+          expect(result).to be_success
+          expect(result.cashfree_provider.customers.first).to have_attributes(payment_provider_code: new_code, updated_at: Time.current)
+        end
       end
     end
 

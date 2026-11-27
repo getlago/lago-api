@@ -90,6 +90,7 @@ RSpec.describe "recipes:events:delete_in_range" do # rubocop:disable RSpec/Descr
         task.invoke
 
         expect(event_in_range.reload.deleted_at).to be_present
+        expect(event_in_range.updated_at).to eq(event_in_range.deleted_at)
         expect(event_out_of_range.reload.deleted_at).to be_nil
       end
     end

@@ -390,6 +390,7 @@ RSpec.describe Contracts::UpdateService do
 
         expect(old_wallet.reload).to be_discarded
         expect(old_allocation.reload).to be_discarded
+        expect(old_allocation.updated_at).to eq(old_allocation.deleted_at)
       end
 
       it "gives the contract no wallet from the new plan" do

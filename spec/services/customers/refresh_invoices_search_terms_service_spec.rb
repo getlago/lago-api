@@ -27,9 +27,12 @@ RSpec.describe Customers::RefreshInvoicesSearchTermsService do
       end
 
       it "refreshes every invoice of the customer" do
-        refresh_service.call
+        freeze_time do
+          refresh_service.call
 
-        expect(invoice.reload.search_terms).to include("INV-001", "Acme Inc")
+          expect(invoice.reload.search_terms).to include("INV-001", "Acme Inc")
+          expect(invoice.updated_at).to eq(Time.current)
+        end
       end
 
       it "leaves other customers' invoices untouched" do

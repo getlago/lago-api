@@ -77,17 +77,20 @@ RSpec.describe DunningCampaign do
     let(:organization) { dunning_campaign.organization }
 
     it "resets last attempt on customers with the campaign applied explicitly" do
+      freeze_time
       customer = create(
         :customer,
         organization:,
         applied_dunning_campaign: dunning_campaign,
         last_dunning_campaign_attempt: 1,
-        last_dunning_campaign_attempt_at:
+        last_dunning_campaign_attempt_at:,
+        updated_at: 1.day.ago
       )
 
       expect { dunning_campaign.reset_customers_last_attempt }
         .to change { customer.reload.last_dunning_campaign_attempt }.from(1).to(0)
         .and change { customer.last_dunning_campaign_attempt_at }.from(last_dunning_campaign_attempt_at).to(nil)
+        .and change { customer.updated_at }.to(Time.current)
     end
 
     context "when applied to billing entity" do

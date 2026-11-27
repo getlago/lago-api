@@ -71,6 +71,10 @@ RSpec.describe Fees::AdvanceChargesService do
         )
       end
 
+      it "refreshes updated_at on the attached fees" do
+        expect { result }.to change { eligible_fee.reload.updated_at }
+      end
+
       it "attaches the eligible fees in a single database update" do
         statements = capture_sql { result }
 
@@ -208,6 +212,10 @@ RSpec.describe Fees::AdvanceChargesService do
         fee_without_charges_to_datetime
         fees_with_ignored_pricing_attributes
         excluded_fees
+      end
+
+      it "refreshes updated_at on the attached product fees" do
+        expect { result }.to change { eligible_fee.reload.updated_at }
       end
 
       it "attaches only fees matching every product and due-date predicate" do

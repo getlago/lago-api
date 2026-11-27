@@ -43,6 +43,7 @@ RSpec.describe ChargeFilters::DestroyService do
 
       it "soft deletes the charge filter values" do
         expect { service }.to change { filter_value.reload.discarded? }.from(false).to(true)
+        expect(filter_value.updated_at).to eq(filter_value.deleted_at)
       end
 
       it "returns the discarded charge filter" do

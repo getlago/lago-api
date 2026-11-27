@@ -53,6 +53,9 @@ RSpec.describe Roles::SyncSandboxService do
           result
 
           expect(MembershipRole.where(role: copy)).to be_empty
+          removed_links = MembershipRole.with_discarded.where(role: copy).to_a
+          expect(removed_links.size).to eq(2)
+          expect(removed_links.map(&:updated_at)).to eq(removed_links.map(&:deleted_at))
           expect(sandbox.memberships.active.find_by(user: member.user).roles).to eq([finance])
           # Not a member of production: the sync revokes it rather than leave it without a role.
           expect(drifted.reload).to be_revoked

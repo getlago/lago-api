@@ -66,7 +66,7 @@ RSpec.describe ProductFilters::DestroyService, :capture_kafka_messages do
 
   context "when the filter has contract alerts" do
     let(:product) { product_filter.product }
-    let(:filter_alert) { create(:contract_usage_units_alert, organization:, product:, product_filter:) }
+    let(:filter_alert) { create(:contract_usage_units_alert, organization:, product:, product_filter:, updated_at: 1.day.ago) }
     let(:product_alert) { create(:contract_usage_units_alert, organization:, product:) }
     let(:sibling_filter_alert) do
       create(:contract_usage_units_alert, organization:, product:, product_filter: create(:product_filter, organization:, product:))

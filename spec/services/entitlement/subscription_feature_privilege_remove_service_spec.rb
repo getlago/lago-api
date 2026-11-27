@@ -110,6 +110,7 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
 
       it "soft deletes the entitlement values" do
         expect { result }.to change { entitlement_value.reload.deleted_at }.from(nil)
+        expect(entitlement_value.updated_at).to eq(entitlement_value.deleted_at)
       end
 
       it "does not discards the subscription entitlement" do

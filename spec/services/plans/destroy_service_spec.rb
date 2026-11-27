@@ -107,6 +107,8 @@ RSpec.describe Plans::DestroyService do
         destroy_service.call
         expect(entitlement.reload).to be_discarded
         expect(entitlement_value.reload).to be_discarded
+        expect(entitlement.updated_at).to eq(entitlement.deleted_at)
+        expect(entitlement_value.updated_at).to eq(entitlement_value.deleted_at)
       end
     end
 
