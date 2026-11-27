@@ -85,11 +85,13 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
     end
   end
 
-  context "with the product only" do
+  context "with an amount alert on the product only" do
+    let(:params) { super().merge(alert_type: "usage_amount") }
     let(:entry) { {type: "contract", product_code: product.code} }
 
     it "creates the alert on the product's own fees" do
       expect(result).to be_success
+      expect(result.alert).to be_a(UsageMonitoring::ContractUsageAmountAlert)
       expect(result.alert).to have_attributes(product:, product_filter: nil, with_product_filters: false)
     end
   end
