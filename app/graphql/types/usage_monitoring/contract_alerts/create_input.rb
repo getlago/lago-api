@@ -9,9 +9,7 @@ module Types
 
         argument :code, String, required: true
         argument :name, String, required: false
-        argument :product_filter_id, ID, required: false
-        argument :product_id, ID, required: false
-        argument :with_product_filters, Boolean, required: false
+        argument :scope, [Types::UsageMonitoring::ContractAlerts::ScopeInput], required: true
 
         argument :thresholds, [Types::UsageMonitoring::Alerts::ThresholdInput], required: true
       end

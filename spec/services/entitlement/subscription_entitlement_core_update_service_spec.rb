@@ -106,7 +106,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect_entitlement_to_match(privilege_params.merge(seats_signin.code => "okta"))
             expect(subscription.entitlements.count).to eq 1
             expect(max_value.reload.value).to eq "100"
-            expect(reset_value.reload.value).to eq "t"
+            expect(reset_value.reload.value).to eq "true"
             expect(signin_value.reload.value).to eq "okta"
             expect(signin_value).not_to be_discarded
           end
@@ -120,7 +120,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect_entitlement_to_match(privilege_params)
             expect(subscription.entitlements.count).to eq 1
             expect(max_value.reload.value).to eq "100"
-            expect(reset_value.reload.value).to eq "t"
+            expect(reset_value.reload.value).to eq "true"
             expect(signin_value.reload).to be_discarded
           end
         end
@@ -200,7 +200,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect(result).to be_success
             expect_entitlement_to_match(privilege_params.merge(seats_signin.code => "okta"))
             sub_ent = subscription.entitlements.includes(values: :privilege).sole
-            expect(sub_ent.values.map(&:value)).to contain_exactly("100", "t")
+            expect(sub_ent.values.map(&:value)).to contain_exactly("100", "true")
             expect(sub_ent.values.map { it.privilege.code }).to contain_exactly(seats_max.code, seats_reset.code)
           end
         end
@@ -212,7 +212,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect(result).to be_success
             expect_entitlement_to_match(privilege_params)
             sub_ent = subscription.entitlements.includes(values: :privilege).sole
-            expect(sub_ent.values.map(&:value)).to contain_exactly("100", "t")
+            expect(sub_ent.values.map(&:value)).to contain_exactly("100", "true")
             expect(sub_ent.values.map { it.privilege.code }).to contain_exactly(seats_max.code, seats_reset.code)
 
             expect(subscription.entitlement_removals.count).to eq 1
@@ -239,7 +239,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect_entitlement_to_match(privilege_params.merge(seats_signin.code => "password"))
             expect(subscription.entitlements.count).to eq 1
             expect(sub_max_value.reload.value).to eq "100"
-            expect(sub_entitlement.values.map(&:value)).to contain_exactly("100", "t", "password")
+            expect(sub_entitlement.values.map(&:value)).to contain_exactly("100", "true", "password")
             expect(sub_entitlement.values.map { it.privilege.code }).to contain_exactly(seats_max.code, seats_reset.code, seats_signin.code)
           end
         end
@@ -251,7 +251,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect(result).to be_success
             expect_entitlement_to_match(privilege_params)
             sub_ent = subscription.entitlements.includes(values: :privilege).sole
-            expect(sub_ent.values.map(&:value)).to contain_exactly("100", "t")
+            expect(sub_ent.values.map(&:value)).to contain_exactly("100", "true")
             expect(sub_ent.values.map { it.privilege.code }).to contain_exactly(seats_max.code, seats_reset.code)
 
             expect(subscription.entitlement_removals.count).to eq 1
@@ -303,7 +303,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect(subscription.entitlements.count).to eq 1
 
             sub_entitlement = subscription.entitlements.includes(values: :privilege).sole
-            expect(sub_entitlement.values.map(&:value)).to contain_exactly("100", "t")
+            expect(sub_entitlement.values.map(&:value)).to contain_exactly("100", "true")
             expect(sub_entitlement.values.map { it.privilege.code }).to contain_exactly(seats_max.code, seats_reset.code)
 
             expect(max_removal.reload).to be_discarded
@@ -324,7 +324,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect(subscription.entitlements.count).to eq 1
 
             sub_entitlement = subscription.entitlements.includes(values: :privilege).sole
-            expect(sub_entitlement.values.map(&:value)).to contain_exactly("100", "t")
+            expect(sub_entitlement.values.map(&:value)).to contain_exactly("100", "true")
             expect(sub_entitlement.values.map { it.privilege.code }).to contain_exactly(seats_max.code, seats_reset.code)
 
             expect(max_removal.reload).to be_discarded

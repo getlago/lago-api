@@ -17,7 +17,7 @@ module Invoices
 
         invoice.error_details.tax_voiding_error.discard_all # rubocop:disable Lago/DiscardAll
 
-        tax_result = Integrations::Aggregator::Taxes::Invoices::VoidService.new(invoice:).call
+        tax_result = Integrations::Aggregator::Taxes::Invoices::VoidService.call(invoice:)
 
         if frozen_transaction?(tax_result)
           negate_result = perform_invoice_negate
@@ -49,7 +49,7 @@ module Invoices
       delegate :customer, to: :invoice
 
       def perform_invoice_negate
-        negate_result = Integrations::Aggregator::Taxes::Invoices::NegateService.new(invoice:).call
+        negate_result = Integrations::Aggregator::Taxes::Invoices::NegateService.call(invoice:)
 
         create_error_detail(negate_result.error.code) unless negate_result.success?
 
@@ -57,7 +57,7 @@ module Invoices
       end
 
       def perform_invoice_refund
-        refund_result = Integrations::Aggregator::Taxes::Invoices::CreateService.new(invoice:).call
+        refund_result = Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:)
 
         create_error_detail(refund_result.error.code) unless refund_result.success?
 

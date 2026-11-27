@@ -32,13 +32,19 @@ RSpec.describe BillableMetrics::CreateService do
       expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.created", result.billable_metric)
     end
 
-    it "expires the expression cache of the code" do
-      cache_key = BillableMetrics::ExpressionCacheService.new(organization.id, create_args[:code]).cache_key
-      allow(Rails.cache).to receive(:delete)
+    context "with the expression cache of the code" do
+      let(:cache_key) { BillableMetrics::ExpressionCacheService.new(organization.id, create_args[:code]).cache_key }
 
-      described_class.call(create_args)
+      before { allow(Rails.cache).to receive(:delete) }
 
-      expect(Rails.cache).to have_received(:delete).with(cache_key)
+      it "expires it after the commit" do
+        ApplicationRecord.transaction do
+          described_class.call(create_args)
+          expect(Rails.cache).not_to have_received(:delete).with(cache_key)
+        end
+
+        expect(Rails.cache).to have_received(:delete).with(cache_key)
+      end
     end
 
     context "when an event was received for the code before the metric existed", cache: :memory do
@@ -121,19 +127,17 @@ RSpec.describe BillableMetrics::CreateService do
       end
     end
 
-    it "calls SegmentTrackJob" do
-      metric = described_class.call(create_args).billable_metric
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
+    it "calls SegmentTrackJob after the commit" do
+      expect { described_class.call(create_args) }.to have_enqueued_job_after_commit(SegmentTrackJob).with(
         membership_id: CurrentContext.membership,
         event: "billable_metric_created",
         properties: {
-          code: metric.code,
-          name: metric.name,
-          description: metric.description,
-          aggregation_type: metric.aggregation_type,
-          aggregation_property: metric.field_name,
-          organization_id: metric.organization_id
+          code: "new_metric",
+          name: "New Metric",
+          description: "New metric description",
+          aggregation_type: "count_agg",
+          aggregation_property: nil,
+          organization_id: organization.id
         }
       )
     end
@@ -159,6 +163,34 @@ RSpec.describe BillableMetrics::CreateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:code]).to eq(["value_already_exist"])
+      end
+    end
+
+    context "when a concurrent create took the code" do
+      let(:constraint) { "index_billable_metrics_on_organization_id_and_code" }
+      let(:database_result) { instance_double(PG::Result, error_field: constraint) }
+      let(:database_error) { PG::UniqueViolation.new("duplicate value") }
+      let(:write_error) { ActiveRecord::RecordNotUnique.new("duplicate value") }
+
+      before do
+        allow(database_error).to receive(:result).and_return(database_result)
+        allow(BillableMetric).to receive(:create!) { raise write_error, cause: database_error }
+      end
+
+      it "returns value_already_exist on code" do
+        result = described_class.call(create_args)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(code: ["value_already_exist"])
+      end
+
+      context "with another constraint" do
+        let(:constraint) { "billable_metrics_pkey" }
+
+        it "raises the database error" do
+          expect { described_class.call(create_args) }.to raise_error(ActiveRecord::RecordNotUnique)
+        end
       end
     end
 

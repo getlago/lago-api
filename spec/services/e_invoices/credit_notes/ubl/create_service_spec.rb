@@ -16,7 +16,7 @@ RSpec.describe EInvoices::CreditNotes::Ubl::CreateService, type: :service do
         allow(EInvoices::CreditNotes::Ubl::Builder).to receive(:serialize)
           .with(xml: xml_builder_double, credit_note:)
 
-        result = described_class.new(credit_note:).call
+        result = described_class.call(credit_note:)
         expect(result).to be_success
         expect(result.xml).to be(xml_content)
       end
@@ -26,7 +26,7 @@ RSpec.describe EInvoices::CreditNotes::Ubl::CreateService, type: :service do
       let(:credit_note) { nil }
 
       it "returns a failed result" do
-        result = described_class.new(credit_note:).call
+        result = described_class.call(credit_note:)
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.error_code).to eq("credit_note_not_found")

@@ -235,7 +235,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
       it "removes the privilege value" do
         result
         expect(entitlement_value2.reload.deleted_at).to be_present
-        expect(entitlement_value3.reload.value).to eq("f")
+        expect(entitlement_value3.reload.value).to eq("false")
       end
     end
 
@@ -263,7 +263,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
         expect(subscription.entitlement_removals.where(privilege: privilege2)).to exist
 
         sub_ent = subscription.entitlements.where(feature: feature2).sole
-        expect(sub_ent.values.sole.value).to eq("f")
+        expect(sub_ent.values.sole.value).to eq("false")
       end
     end
 

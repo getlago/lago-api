@@ -265,11 +265,11 @@ module Wallets
     end
 
     def create_metadata(wallet, metadata_value)
-      Metadata::UpdateItemService.new(
+      Metadata::UpdateItemService.call(
         owner: wallet,
         value: metadata_value,
         partial: false
-      ).call
+      )
     end
 
     def traceable?

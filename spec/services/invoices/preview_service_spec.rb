@@ -44,7 +44,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
     context "with Lago premium", :premium do
       context "when customer does not exist" do
         it "returns an error" do
-          result = described_class.new(customer: nil, subscriptions: [subscription]).call
+          result = described_class.call(customer: nil, subscriptions: [subscription])
 
           expect(result).not_to be_success
           expect(result.error.error_code).to eq("customer_not_found")
@@ -1798,7 +1798,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
 
           it "creates preview invoice for 2 days with applied coupons" do
             travel_to(timestamp) do
-              result = described_class.new(customer:, subscriptions: [subscription], applied_coupons: [applied_coupon]).call
+              result = described_class.call(customer:, subscriptions: [subscription], applied_coupons: [applied_coupon])
 
               expect(result).to be_success
               expect(result.invoice.organization).to eq(organization)

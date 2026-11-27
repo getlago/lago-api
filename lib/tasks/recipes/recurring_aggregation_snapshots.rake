@@ -59,7 +59,11 @@ namespace :recipes do
 
       organization = TaskPrompt.ask_for_organization
 
-      subscriptions = TaskPrompt.ask_for_sampled_subscriptions(organization)
+      subscriptions = TaskPrompt.ask_for_sampled_subscriptions(
+        organization,
+        scope: RecurringAggregationSnapshots::BackfillService.backfillable_subscriptions(organization),
+        scope_label: "have a recurring charge and an invoiced period"
+      )
       abort "No subscription to compare." if subscriptions.empty?
 
       default_path = Rails.root.join("tmp", "recurring_snapshots_comparison_#{organization.id}_#{Time.current.to_i}.csv").to_s

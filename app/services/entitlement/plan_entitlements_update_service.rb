@@ -118,12 +118,16 @@ module Entitlement
     end
 
     # The stored values of each kept entitlement of the plan, by privilege id, in two queries: enough to
-    # find the entitlements a call changed, without rendering them.
+    # find the entitlements a call changed, without rendering them. A legacy boolean is read as a word, so that the
+    # backfill rewriting it during the call is not a change.
     def stored_values_by_entitlement_id
       values = EntitlementValue.where(entitlement: plan.entitlements)
-        .pluck(:entitlement_entitlement_id, :entitlement_privilege_id, :value)
+        .joins("LEFT JOIN #{Privilege.table_name} ON #{Privilege.table_name}.id = #{EntitlementValue.table_name}.entitlement_privilege_id")
+        .pluck(:entitlement_entitlement_id, :entitlement_privilege_id, :value, "#{Privilege.table_name}.value_type")
         .group_by(&:first)
-        .transform_values { |rows| rows.to_h { |_, privilege_id, value| [privilege_id, value] } }
+        .transform_values do |rows|
+          rows.to_h { |_, privilege_id, value, value_type| [privilege_id, EntitlementValue.read_value(value, value_type)] }
+        end
 
       plan.entitlements.pluck(:id).index_with { values.fetch(it, {}) }
     end
@@ -295,7 +299,10 @@ module Entitlement
 
         save_value_at!(path) do
           if entitlement_value
-            entitlement_value.update!(value:)
+            # A value equal once cast keeps its stored form: rewriting a legacy "t" as "true" would be a change.
+            unless Utils::Entitlement.same_value?(privilege.value_type, entitlement_value.read_attribute(:value), value)
+              entitlement_value.update!(value:)
+            end
           else
             EntitlementValue.create!(organization:, entitlement:, privilege:, value:)
           end

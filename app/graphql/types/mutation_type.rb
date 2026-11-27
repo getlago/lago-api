@@ -92,6 +92,8 @@ module Types
 
     field :mark_order_form_as_signed, mutation: Mutations::OrderForms::MarkAsSigned
 
+    field :copy_to_production, mutation: Mutations::CopyToProduction::Copy
+
     field :create_add_on, mutation: Mutations::AddOns::Create
     field :create_applied_coupon, mutation: Mutations::AppliedCoupons::Create
     field :destroy_add_on, mutation: Mutations::AddOns::Destroy

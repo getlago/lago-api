@@ -44,21 +44,17 @@ RSpec.describe InvoiceMailer do
     end
 
     context "with no pdf file" do
-      let(:pdf_service) { instance_double(Invoices::GeneratePdfService) }
-
       before do
         invoice.file = nil
 
-        allow(Invoices::GeneratePdfService).to receive(:new)
-          .and_return(pdf_service)
-        allow(pdf_service).to receive(:call)
+        allow(Invoices::GeneratePdfService).to receive(:call)
       end
 
       it "calls the invoice pdf generate service" do
         mailer = invoice_mailer.with(invoice:).created
 
         expect(mailer.to).not_to be_nil
-        expect(Invoices::GeneratePdfService).to have_received(:new)
+        expect(Invoices::GeneratePdfService).to have_received(:call).with(invoice:)
       end
     end
 

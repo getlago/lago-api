@@ -1272,11 +1272,9 @@ RSpec.describe Api::V1::InvoicesController do
     let(:payment_params) { {} }
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
-    let(:retry_service) { instance_double(Invoices::Payments::RetryService) }
 
     before do
-      allow(Invoices::Payments::RetryService).to receive(:new).and_return(retry_service)
-      allow(retry_service).to receive(:call).and_return(Invoices::Payments::RetryService::Result.new)
+      allow(Invoices::Payments::RetryService).to receive(:call).and_return(Invoices::Payments::RetryService::Result.new)
     end
 
     include_examples "requires API permission", "invoice", "write"
@@ -1285,7 +1283,7 @@ RSpec.describe Api::V1::InvoicesController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(retry_service).to have_received(:call)
+      expect(Invoices::Payments::RetryService).to have_received(:call).with(hash_including(invoice:))
     end
 
     context "with payment method" do
@@ -1301,7 +1299,7 @@ RSpec.describe Api::V1::InvoicesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(retry_service).to have_received(:call)
+        expect(Invoices::Payments::RetryService).to have_received(:call).with(hash_including(invoice:))
       end
     end
 
@@ -1330,14 +1328,12 @@ RSpec.describe Api::V1::InvoicesController do
 
     let!(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
-    let(:retry_service) { instance_double(Invoices::RetryService) }
     let(:result) { Invoices::RetryService::Result.new }
 
     before do
       result.invoice = invoice
 
-      allow(Invoices::RetryService).to receive(:new).and_return(retry_service)
-      allow(retry_service).to receive(:call).and_return(result)
+      allow(Invoices::RetryService).to receive(:call).and_return(result)
     end
 
     include_examples "requires API permission", "invoice", "write"
@@ -1346,7 +1342,7 @@ RSpec.describe Api::V1::InvoicesController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(retry_service).to have_received(:call)
+      expect(Invoices::RetryService).to have_received(:call).with(invoice:)
     end
 
     context "when invoice does not exist" do

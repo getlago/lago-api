@@ -77,6 +77,8 @@ module BillableMetrics
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, "index_billable_metrics_on_organization_id_and_code" => :code)
     rescue BaseService::FailedResult => e
       e.result
     end

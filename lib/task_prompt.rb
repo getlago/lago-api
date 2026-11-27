@@ -31,8 +31,8 @@ module TaskPrompt
     input.split(/[\s,]+/).reject(&:empty?)
   end
 
-  # The listed subscriptions of the organization, or a random sample of its active ones
-  def self.ask_for_sampled_subscriptions(organization)
+  # The listed subscriptions of the organization, or a random sample of its active ones within `scope`
+  def self.ask_for_sampled_subscriptions(organization, scope: nil, scope_label: "match the scope")
     subscription_ids = ask_for_subscription_ids
     if subscription_ids.any?
       subscriptions = Subscription.where(organization_id: organization.id, id: subscription_ids).to_a
@@ -42,14 +42,22 @@ module TaskPrompt
       return subscriptions
     end
 
-    active_count = Subscription.active.where(organization_id: organization.id).count
-    puts "Organization has #{active_count} active subscription(s)."
+    active_subscriptions = Subscription.active.where(organization_id: organization.id)
+    puts "Organization has #{active_subscriptions.count} active subscription(s)."
+
+    eligible_subscriptions = active_subscriptions
+    if scope
+      eligible_subscriptions = active_subscriptions.merge(scope)
+      eligible_count = eligible_subscriptions.count
+      puts "#{eligible_count} of them #{scope_label}, sampled among those."
+      return [] if eligible_count.zero?
+    end
+
     sample_size = ask("Number of active subscriptions to sample [50]: ")
     sample_size = sample_size.empty? ? 50 : Integer(sample_size, exception: false)
     abort "Invalid sample size: expected a positive integer." unless sample_size&.positive?
 
-    Subscription.active
-      .where(organization_id: organization.id)
+    eligible_subscriptions
       .order(Arel.sql("RANDOM()"))
       .limit(sample_size)
       .to_a

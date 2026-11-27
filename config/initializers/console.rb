@@ -31,13 +31,13 @@ Rails.application.console do
   end
 
   def retry_generating_invoice(invoice)
-    Invoices::SubscriptionService.new(
+    Invoices::SubscriptionService.call(
       subscriptions: invoice.subscriptions,
       timestamp: invoice.invoice_subscriptions.first.timestamp,
       invoicing_reason: :subscription_periodic,
       invoice: invoice,
       skip_charges: invoice.skip_charges
-    ).call
+    )
   end
 
   def deadjobs_summary

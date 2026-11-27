@@ -62,7 +62,7 @@ RSpec.describe Customers::RefreshInvoicesSearchTermsService do
         end
 
         it "rewrites the invoices with the new name" do
-          described_class.new(customer:).call
+          described_class.call(customer:)
 
           expect(invoice.reload.search_terms).to include("Acme Renamed")
         end

@@ -43,15 +43,15 @@ RSpec.describe Auth::EntraId::AuthorizeService do
       end
 
       it "routes each spelling to the integration with the exact domain" do
-        lower_result = described_class.new(email: "foo@example.com").call
-        upper_result = described_class.new(email: "foo@Example.com").call
+        lower_result = described_class.call(email: "foo@example.com")
+        upper_result = described_class.call(email: "foo@Example.com")
 
         expect(lower_result.entra_id_integration).to eq(entra_id_integration)
         expect(upper_result.entra_id_integration).to eq(upper_integration)
       end
 
       it "falls back to the oldest case-insensitive match for another spelling" do
-        result = described_class.new(email: "foo@EXAMPLE.COM").call
+        result = described_class.call(email: "foo@EXAMPLE.COM")
 
         expect(result.entra_id_integration).to eq(upper_integration)
       end
