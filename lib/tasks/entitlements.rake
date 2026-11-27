@@ -106,4 +106,36 @@ namespace :entitlements do
 
     puts "Done. Soft-deleted #{total_deleted} entitlements."
   end
+
+  # Booleans used to be stored as "t" or "f", the cast of a JSON boolean into the string column.
+  desc "Rewrite boolean entitlement values stored as t or f to true or false (DRY_RUN=false applies it)"
+  task :backfill_boolean_values, [:organization_id] => :environment do |_task, args|
+    dry_run = ENV.fetch("DRY_RUN", "true") != "false"
+    mode = dry_run ? "DRY RUN" : "LIVE"
+    words = {"t" => "true", "f" => "false"}
+
+    scope = Entitlement::EntitlementValue.with_discarded
+      .where(privilege: Entitlement::Privilege.with_discarded.where(value_type: "boolean"), value: words.keys)
+    scope = scope.where(organization_id: args[:organization_id]) if args[:organization_id].present?
+
+    puts "Starting boolean entitlement values backfill [#{mode}]..."
+
+    total = 0
+    scope.in_batches do |batch|
+      rows = batch.pluck(:id, :organization_id, :value)
+      rows.each do |id, organization_id, value|
+        puts "  [#{mode}] entitlement_value=#{id} organization=#{organization_id} #{value} -> #{words[value]}"
+      end
+
+      unless dry_run
+        words.each do |stored, word|
+          batch.where(value: stored).update_all(value: word, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
+
+      total += rows.size
+    end
+
+    puts "Done. #{total} values #{dry_run ? "would be" : "were"} rewritten."
+  end
 end
