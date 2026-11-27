@@ -10,6 +10,11 @@ module Types
       argument :currency, Types::CurrencyEnum, required: true
       argument :description, String, required: false
       argument :invoice_display_name, String, required: false
+      argument :metadata,
+        [Types::Metadata::Input],
+        required: false,
+        description: "Omit or null for none, [] to store an empty set.",
+        **Types::Metadata::Input::ARGUMENT_OPTIONS
       argument :name, String, required: true
       argument :tax_codes, [String], required: false
     end

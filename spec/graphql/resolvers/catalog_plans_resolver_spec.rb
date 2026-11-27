@@ -82,6 +82,42 @@ RSpec.describe Resolvers::CatalogPlansResolver do
     )
   end
 
+  context "with metadata on several plans" do
+    let(:query) do
+      <<~GQL
+        query {
+          catalogPlans(limit: 5) { collection { code #{metadata_selection} } }
+        }
+      GQL
+    end
+    let(:metadata_selection) { "metadata { key value }" }
+
+    before do
+      create(:item_metadata, owner: catalog_plan, organization:, value: {"tier" => "gold"})
+      %w[scale enterprise].each do |code|
+        plan = create(:catalog_plan, organization:, code:)
+        create(:item_metadata, owner: plan, organization:, value: {"tier" => code})
+      end
+    end
+
+    it "loads the metadata of every plan in one query" do
+      expect(capture_sql { result }.grep(/FROM "item_metadata"/).size).to eq(1)
+      expect(result["data"]["catalogPlans"]["collection"].to_h { [it["code"], it["metadata"]] }).to eq(
+        "growth" => [{"key" => "tier", "value" => "gold"}],
+        "scale" => [{"key" => "tier", "value" => "scale"}],
+        "enterprise" => [{"key" => "tier", "value" => "enterprise"}]
+      )
+    end
+
+    context "when metadata is not selected" do
+      let(:metadata_selection) { "" }
+
+      it "does not query the metadata" do
+        expect(capture_sql { result }.grep(/"item_metadata"/)).to be_empty
+      end
+    end
+  end
+
   context "with a search term" do
     let(:variables) { {searchTerm: "grow"} }
 

@@ -54,6 +54,77 @@ RSpec.describe Mutations::CatalogPlans::Create do
     end
   end
 
+  context "with metadata" do
+    let(:query) do
+      <<~GQL
+        mutation($input: CreateCatalogPlanInput!) {
+          createCatalogPlan(input: $input) { id metadata { key value } }
+        }
+      GQL
+    end
+    let(:input) { {name: "Growth", code: "growth", currency: "EUR", metadata:} }
+    let(:metadata) { [{key: "crm_id", value: "123"}, {key: "tier", value: nil}] }
+
+    it "stores and returns the pairs" do
+      plan_response = result["data"]["createCatalogPlan"]
+
+      expect(plan_response["metadata"]).to match_array([{"key" => "crm_id", "value" => "123"}, {"key" => "tier", "value" => nil}])
+      expect(Metadata::ItemMetadata.find_by(owner_type: "CatalogPlan", owner_id: plan_response["id"]).value)
+        .to eq({"crm_id" => "123", "tier" => nil})
+    end
+
+    context "when a key is duplicated" do
+      let(:metadata) { [{key: "tier", value: "gold"}, {key: "tier", value: "silver"}] }
+
+      it "returns duplicated_field and writes nothing" do
+        expect(result["errors"].first["message"]).to include("duplicated_field")
+        expect(CatalogPlan.where(code: "growth")).not_to exist
+        expect(Metadata::ItemMetadata.where(owner_type: "CatalogPlan")).not_to exist
+      end
+    end
+
+    context "when metadata is an empty list" do
+      let(:metadata) { [] }
+
+      it "stores an empty value and returns an empty list" do
+        plan_response = result["data"]["createCatalogPlan"]
+
+        expect(plan_response["metadata"]).to eq([])
+        expect(Metadata::ItemMetadata.find_by(owner_type: "CatalogPlan", owner_id: plan_response["id"]).value).to eq({})
+      end
+    end
+
+    context "when metadata is null" do
+      let(:metadata) { nil }
+
+      it "creates the plan without metadata" do
+        plan_response = result["data"]["createCatalogPlan"]
+
+        expect(plan_response["metadata"]).to be_nil
+        expect(Metadata::ItemMetadata.where(owner_type: "CatalogPlan")).not_to exist
+      end
+    end
+
+    [
+      ["more than 50 keys", Array.new(51) { {key: "key_#{it}", value: "v"} }],
+      ["a key longer than 100 characters", [{key: "k" * 101, value: "v"}]],
+      ["a value longer than 255 characters", [{key: "k", value: "v" * 256}]]
+    ].each do |description, invalid_metadata|
+      context "with #{description}" do
+        let(:metadata) { invalid_metadata }
+
+        it "returns value_is_invalid and creates no plan" do
+          expect(result["errors"].first["extensions"]).to include(
+            "status" => 422,
+            "code" => "unprocessable_entity",
+            "details" => {"metadata" => ["value_is_invalid"]}
+          )
+          expect(CatalogPlan.where(code: "growth")).not_to exist
+        end
+      end
+    end
+  end
+
   context "when the organization is not on the product catalog" do
     before { organization.update!(feature_flags: organization.feature_flags - ["product_catalog"]) }
 

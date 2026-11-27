@@ -50,6 +50,14 @@ RSpec.describe Validators::UniqueByFieldValidator do
       end
     end
 
+    context "when the value is nil" do
+      let(:value) { nil }
+
+      it do
+        expect(validator.validate(graphql_object, context, value)).to be_nil
+      end
+    end
+
     context "when there is only one item" do
       let(:value) { [{code: "USD"}] }
 

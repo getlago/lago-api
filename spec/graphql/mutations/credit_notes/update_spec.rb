@@ -108,5 +108,19 @@ RSpec.describe Mutations::CreditNotes::Update do
 
       expect(credit_note.reload.metadata.value).to eq({"existing" => "value"})
     end
+
+    it "deletes metadata when null" do
+      result = execute_query(
+        query: mutation,
+        input: {
+          id: credit_note.id,
+          metadata: nil
+        }
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["updateCreditNote"]["metadata"]).to be_nil
+      expect(Metadata::ItemMetadata.where(owner: credit_note)).not_to exist
+    end
   end
 end

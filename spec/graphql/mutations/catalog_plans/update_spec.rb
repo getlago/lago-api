@@ -51,6 +51,96 @@ RSpec.describe Mutations::CatalogPlans::Update do
     expect(catalog_plan.reload.name).to eq("Renamed")
   end
 
+  context "with metadata" do
+    let(:query) do
+      <<~GQL
+        mutation($input: UpdateCatalogPlanInput!) {
+          updateCatalogPlan(input: $input) { id updatedAt metadata { key value } }
+        }
+      GQL
+    end
+    let(:input) { {id: catalog_plan.id, metadata:} }
+    let(:metadata) { [{key: "tier", value: "gold"}] }
+    let(:stored_metadata) { Metadata::ItemMetadata.where(owner: catalog_plan) }
+    let(:stored_updated_at) { CatalogPlan.find(catalog_plan.id).updated_at }
+
+    before { create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123", "tier" => "silver"}) }
+
+    it "replaces the whole metadata and moves updatedAt" do
+      travel_to(1.minute.from_now) { result }
+
+      plan_response = result["data"]["updateCatalogPlan"]
+      expect(plan_response["metadata"]).to eq([{"key" => "tier", "value" => "gold"}])
+      expect(stored_metadata.sole.value).to eq({"tier" => "gold"})
+      expect(Time.zone.parse(plan_response["updatedAt"])).to be > catalog_plan.updated_at
+    end
+
+    context "without the argument" do
+      let(:input) { {id: catalog_plan.id, name: catalog_plan.name} }
+
+      it "keeps the metadata and updatedAt" do
+        travel_to(1.minute.from_now) { result }
+
+        expect(result["data"]["updateCatalogPlan"]["metadata"])
+          .to match_array([{"key" => "crm_id", "value" => "123"}, {"key" => "tier", "value" => "silver"}])
+        expect(stored_updated_at).to eq(catalog_plan.updated_at)
+      end
+    end
+
+    context "with an empty list" do
+      let(:metadata) { [] }
+
+      it "stores an empty value and returns an empty list" do
+        expect(result["data"]["updateCatalogPlan"]["metadata"]).to eq([])
+        expect(stored_metadata.sole.value).to eq({})
+      end
+    end
+
+    context "with null" do
+      let(:metadata) { nil }
+
+      it "deletes the metadata" do
+        expect(result["errors"]).to be_nil
+        expect(result["data"]["updateCatalogPlan"]["metadata"]).to be_nil
+        expect(stored_metadata).not_to exist
+      end
+    end
+
+    context "with a null value" do
+      let(:metadata) { [{key: "a", value: nil}] }
+
+      it "round-trips the null value" do
+        expect(result["data"]["updateCatalogPlan"]["metadata"]).to eq([{"key" => "a", "value" => nil}])
+        expect(stored_metadata.sole.value).to eq({"a" => nil})
+      end
+    end
+
+    context "with more than 50 keys" do
+      let(:metadata) { Array.new(51) { {key: "key_#{it}", value: "v"} } }
+
+      it "returns value_is_invalid and leaves the plan unchanged" do
+        travel_to(1.minute.from_now) { result }
+
+        expect(result["errors"].first["extensions"]).to include(
+          "status" => 422,
+          "code" => "unprocessable_entity",
+          "details" => {"metadata" => ["value_is_invalid"]}
+        )
+        expect(stored_metadata.sole.value).to eq({"crm_id" => "123", "tier" => "silver"})
+        expect(stored_updated_at).to eq(catalog_plan.updated_at)
+      end
+    end
+
+    context "when a key is duplicated" do
+      let(:metadata) { [{key: "tier", value: "gold"}, {key: "tier", value: "silver"}] }
+
+      it "returns duplicated_field and writes nothing" do
+        expect(result["errors"].first["message"]).to include("duplicated_field")
+        expect(stored_metadata.sole.value).to eq({"crm_id" => "123", "tier" => "silver"})
+      end
+    end
+  end
+
   context "with taxes" do
     let(:tax) { create(:tax, organization:) }
     let(:input) { {id: catalog_plan.id, taxCodes: [tax.code]} }

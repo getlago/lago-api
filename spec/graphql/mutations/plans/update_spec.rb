@@ -909,5 +909,31 @@ RSpec.describe Mutations::Plans::Update do
       result_data = result["data"]["updatePlan"]
       expect(result_data["metadata"]).to eq([{"key" => "new", "value" => "data"}])
     end
+
+    it "deletes metadata when null" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: plan.id,
+            name: "Updated plan",
+            code: plan.code,
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 200,
+            amountCurrency: "EUR",
+            charges: [],
+            metadata: nil
+          }
+        }
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["updatePlan"]["metadata"]).to be_nil
+      expect(Metadata::ItemMetadata.where(owner: plan)).not_to exist
+    end
   end
 end

@@ -10,6 +10,8 @@ module Validators
     end
 
     def validate(object, context, value)
+      return if value.nil?
+
       duplicates = value.map { it[code_key] }.tally.select { |_, count| count > 1 }.keys
 
       if duplicates.any?

@@ -1675,6 +1675,7 @@ type CatalogPlan {
   description: String
   id: ID!
   invoiceDisplayName: String
+  metadata: [ItemMetadata!]
   name: String!
   organization: Organization
   taxes: [Tax!]!
@@ -3773,6 +3774,11 @@ input CreateCatalogPlanInput {
   currency: CurrencyEnum!
   description: String
   invoiceDisplayName: String
+
+  """
+  Omit or null for none, [] to store an empty set.
+  """
+  metadata: [MetadataInput!]
   name: String!
   taxCodes: [String!]
 }
@@ -17227,6 +17233,11 @@ input UpdateCatalogPlanInput {
   description: String
   id: ID!
   invoiceDisplayName: String
+
+  """
+  Replaces all pairs. Omit to keep them, [] to empty, null to remove.
+  """
+  metadata: [MetadataInput!]
   name: String
   taxCodes: [String!]
 }

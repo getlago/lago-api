@@ -170,4 +170,31 @@ RSpec.describe Resolvers::ContractsResolver do
       expect(counts.sum).to eq(2)
     end
   end
+
+  context "when the plan metadata is requested for several contracts" do
+    let(:query) do
+      <<~GQL
+        query {
+          contracts(limit: 10) {
+            collection { id plan { code metadata { key value } } }
+          }
+        }
+      GQL
+    end
+
+    before do
+      2.times do
+        catalog_plan = create(:catalog_plan, organization:)
+        create(:item_metadata, owner: catalog_plan, organization:, value: {"tier" => catalog_plan.code})
+        create(:contract, organization:, customer:, catalog_plan:)
+      end
+    end
+
+    it "loads the metadata in one query, not one per plan" do
+      expect(capture_sql { execution }.grep(/FROM "item_metadata"/).size).to eq(1)
+      plans = execution["data"]["contracts"]["collection"].filter_map { it["plan"] }
+      expect(plans.size).to eq(2)
+      expect(plans.map { it["metadata"] }).to eq(plans.map { [{"key" => "tier", "value" => it["code"]}] })
+    end
+  end
 end

@@ -78,6 +78,14 @@ RSpec.describe Metadata::UpdateItemService do
         expect(owner.reload.metadata).to be_nil
         expect(Metadata::ItemMetadata.find_by(id: existing_metadata.id)).to be_nil
       end
+
+      it "leaves no destroyed metadata on the owner" do
+        result = service.call
+
+        expect(result.metadata).to be_destroyed
+        expect(result.metadata_changed).to be true
+        expect(owner.metadata).to be_nil
+      end
     end
 
     context "with value: {}, partial: true, no existing metadata" do

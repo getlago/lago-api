@@ -695,5 +695,30 @@ RSpec.describe Mutations::Plans::Create, :premium do
         {"key" => "baz", "value" => "qux"}
       ])
     end
+
+    it "creates plan without metadata when null" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            name: "Plan with null metadata",
+            code: "plan_with_null_metadata",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 100,
+            amountCurrency: "USD",
+            charges: [],
+            metadata: nil
+          }
+        }
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["createPlan"]["metadata"]).to be_nil
+      expect(Metadata::ItemMetadata.where(owner_id: result["data"]["createPlan"]["id"])).not_to exist
+    end
   end
 end
