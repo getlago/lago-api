@@ -575,9 +575,9 @@ RSpec.describe Invoices::RefreshDraftService do
 
         before { create(:hubspot_customer, integration:, customer:, organization:) }
 
-        it "enqueues the shared invoice update job" do
+        it "enqueues the shared invoice update job after the commit" do
           expect { refresh_service.call }
-            .to have_enqueued_job(Integrations::Aggregator::Invoices::Hubspot::UpdateJob)
+            .to have_enqueued_job_after_commit(Integrations::Aggregator::Invoices::Hubspot::UpdateJob)
             .with(invoice:)
         end
       end

@@ -16,7 +16,7 @@ module Plans
       ActiveRecord::Base.transaction do
         plan.update!(pending_deletion: true)
         plan.children.update_all(pending_deletion: true) # rubocop:disable Rails/SkipsModelValidations
-        Plans::DestroyJob.perform_later(plan)
+        Plans::DestroyJob.perform_after_commit(plan)
       end
 
       SendWebhookJob.perform_after_commit("plan.deleted", plan)
