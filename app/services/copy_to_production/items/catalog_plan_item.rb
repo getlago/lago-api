@@ -6,10 +6,15 @@ module CopyToProduction
     # reference is reused by code or copied before it.
     class CatalogPlanItem < BaseItem
       ATTRIBUTES = %i[name code description invoice_display_name currency].freeze
+      WALLET_ATTRIBUTES = PlanWallets::CreateService::ATTRIBUTES
+      # Read by `applies_to`, which names the targets by code.
+      SELECTOR_ATTRIBUTES = %i[selector_type fee_type with_product_filters].freeze
       CREDIT_ALLOCATION_ATTRIBUTES = %i[
         code trigger billing_cycles threshold_amount_cents credit_amount_cents purchase_amount_cents priority
         invoice_requires_successful_payment
       ].freeze
+      ALERT_ATTRIBUTES = %i[alert_type code name].freeze
+      THRESHOLD_ATTRIBUTES = %i[value code recurring notify_on].freeze
 
       def dependencies(source)
         dependencies = source.taxes.sort_by(&:code).map { ["tax", it] }
@@ -125,7 +130,7 @@ module CopyToProduction
       def copy_wallet!(wallet, plan, resolved)
         live_wallet = PlanWallets::CreateService.call!(
           catalog_plan: plan,
-          params: wallet.slice(*PlanWallets::CreateService::ATTRIBUTES).symbolize_keys.merge(
+          params: wallet.slice(*WALLET_ATTRIBUTES).symbolize_keys.merge(
             tax_codes: wallet.taxes.map(&:code),
             applies_to: applies_to(wallet),
             metadata: wallet.metadata&.value
@@ -176,10 +181,8 @@ module CopyToProduction
         UsageMonitoring::CatalogWalletAlerts::CreateService.call!(
           plan_wallet: live_wallet,
           params: {
-            alert_type: alert.alert_type,
-            code: alert.code,
-            name: alert.name,
-            thresholds: alert.thresholds.sort_by(&:value).map { it.slice(:value, :code, :recurring, :notify_on).symbolize_keys }
+            **alert.slice(*ALERT_ATTRIBUTES).symbolize_keys,
+            thresholds: alert.thresholds.sort_by(&:value).map { it.slice(*THRESHOLD_ATTRIBUTES).symbolize_keys }
           }
         )
       end

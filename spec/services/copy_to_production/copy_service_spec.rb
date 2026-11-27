@@ -617,28 +617,53 @@ RSpec.describe CopyToProduction::CopyService do
       live_plan = production.catalog_plans.find_by!(code: "pro")
       expect(result).to be_success
       expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "catalog_plan", record: live_plan))
-      expect(live_plan).to have_attributes(name: "Pro", description: "For teams", invoice_display_name: "Pro plan",
+      expect(live_plan).to have_attributes(code: "pro", name: "Pro", description: "For teams", invoice_display_name: "Pro plan",
         currency: "EUR", taxes: [live_vat])
 
       plan_cards = live_plan.applied_rate_cards.includes(:rate_card, rate_phases: :rate_override).sort_by { it.rate_card.code }
       expect(plan_cards.map { [it.rate_card.code, it.rate_card.product.code, it.units] })
         .to eq([["seat_eur", "seat", 2], ["support_eur", "support", nil]])
-      expect(plan_cards.first.rate_phases.map { [it.code, it.position, it.billing_interval_cycle_count] })
-        .to eq([["trial", 1, 1], ["default", 2, nil]])
-      expect(plan_cards.first.rate_phases.first.rate_override)
-        .to have_attributes(organization_id: production.id, rate_model: "standard", rate_properties: {"amount" => "5"})
+      expect(plan_cards.first.rate_phases.map { [it.code, it.name, it.position, it.billing_interval_cycle_count] })
+        .to eq([["trial", "Trial", 1, 1], ["default", nil, 2, nil]])
+      expect(plan_cards.first.rate_phases.first.rate_override).to have_attributes(
+        organization_id: production.id,
+        rate_model: "standard",
+        rate_properties: {"amount" => "5"},
+        min_amount_cents: 300,
+        billing_interval_count: 2,
+        billing_interval_unit: "week",
+        pricing_unit_conversion_rate: nil
+      )
       expect(production.products.find_by!(code: "seat").product_category)
         .to eq(production.product_categories.find_by!(code: "compute"))
 
       live_wallet = live_plan.wallets.sole
-      expect(live_wallet).to have_attributes(code: "credits", name: "Credits", priority: 10,
-        tax_application: "tax_on_purchase", taxes: [production.taxes.find_by!(code: "gst")])
-      expect(live_wallet.selectors.map { [it.selector_type, it.fee_type, it.product_category&.code] })
-        .to contain_exactly(["fee_type", "fixed", nil], ["product_category", nil, "compute"])
+      expect(live_wallet).to have_attributes(
+        code: "credits",
+        name: "Credits",
+        invoice_display_name: "Prepaid credits",
+        currency: "EUR",
+        tax_application: "tax_on_purchase",
+        priority: 10,
+        top_up_min_amount_cents: 1_000,
+        top_up_max_amount_cents: 50_000,
+        taxes: [production.taxes.find_by!(code: "gst")]
+      )
+      expect(live_wallet.selectors.map { [it.selector_type, it.fee_type, it.with_product_filters, it.product_category&.code] })
+        .to contain_exactly(["fee_type", "fixed", false, nil], ["product_category", nil, false, "compute"])
       expect(live_wallet.metadata.value).to eq("tier" => "gold")
-      expect(live_wallet.credit_allocations.map { [it.code, it.product.code, it.billing_cycles, it.credit_amount_cents, it.priority] })
-        .to eq([["monthly", "support", 3, 5_000, 5]])
-      expect(live_wallet.alerts.map { [it.code, it.name, it.alert_type] }).to eq([%w[low Low balance]])
+      expect(live_wallet.credit_allocations.sole).to have_attributes(
+        code: "monthly",
+        trigger: "billing_cycle",
+        billing_cycles: 3,
+        threshold_amount_cents: nil,
+        credit_amount_cents: 5_000,
+        purchase_amount_cents: nil,
+        priority: 5,
+        invoice_requires_successful_payment: nil,
+        product: production.products.find_by!(code: "support")
+      )
+      expect(live_wallet.alerts.sole).to have_attributes(alert_type: "ongoing_balance", code: "low", name: "Low")
       expect(live_wallet.alerts.sole.thresholds.map { [it.code, it.value, it.recurring, it.notify_on] })
         .to eq([["warn", 1_000, false, %w[triggered resolved]]])
 

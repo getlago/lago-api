@@ -20,6 +20,8 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
     expect(item.activity_type).to eq("plan_rate_card.copied_to_production")
   end
 
+  # The plan and the rate card are named by code.
+  it_behaves_like "a copy to production item copying every column", PlanRateCard, left_out: %w[catalog_plan_id rate_card_id]
   # The plan rate card and the override are linked by the copy.
   it_behaves_like "a copy to production item copying every column", RatePhase,
     attributes: described_class::PHASE_ATTRIBUTES, left_out: %w[contract_rate_card_id plan_rate_card_id rate_override_id]
@@ -106,7 +108,7 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
 
     before do
       override = create(:rate_override, organization: sandbox, rate_model: "standard", rate_properties: {"amount" => "4"},
-        min_amount_cents: 0)
+        min_amount_cents: 200, billing_interval_count: 1, billing_interval_unit: "month")
       create(:rate_phase, organization: sandbox, plan_rate_card:, code: "default", position: 2)
       create(:rate_phase, organization: sandbox, plan_rate_card:, code: "intro", name: "Intro", position: 1,
         billing_interval_cycle_count: 3, rate_override: override)
@@ -140,8 +142,32 @@ RSpec.describe CopyToProduction::Items::PlanRateCardItem do
       expect(copy).to have_attributes(catalog_plan: live_plan, rate_card: live_rate_card, units: 5, organization_id: production.id)
       expect(copy.rate_phases.map { [it.code, it.name, it.position, it.billing_interval_cycle_count] })
         .to eq([["intro", "Intro", 1, 3], ["default", nil, 2, nil]])
-      expect(copy.rate_phases.first.rate_override)
-        .to have_attributes(organization_id: production.id, rate_model: "standard", rate_properties: {"amount" => "4"})
+      expect(copy.rate_phases.first.rate_override).to have_attributes(
+        organization_id: production.id,
+        rate_model: "standard",
+        rate_properties: {"amount" => "4"},
+        min_amount_cents: 200,
+        billing_interval_count: 1,
+        billing_interval_unit: "month",
+        pricing_unit_conversion_rate: nil
+      )
+    end
+
+    context "with a rate card priced in a pricing unit", :premium do
+      let(:rate_card) { create(:rate_card, organization: sandbox, product:, code: "seat_eur", applied_pricing_unit_code: "credits") }
+      let(:live_rate_card) do
+        create(:rate_card, organization: production, product: live_product, code: "seat_eur", applied_pricing_unit_code: "credits")
+      end
+
+      before do
+        create(:pricing_unit, organization: sandbox, code: "credits")
+        create(:pricing_unit, organization: production, code: "credits")
+        plan_rate_card.rate_phases.find_by!(code: "intro").rate_override.update!(pricing_unit_conversion_rate: 0.25)
+      end
+
+      it "copies the conversion rate of its overrides" do
+        expect(copy.rate_phases.find_by!(code: "intro").rate_override.pricing_unit_conversion_rate).to eq(0.25)
+      end
     end
   end
 end

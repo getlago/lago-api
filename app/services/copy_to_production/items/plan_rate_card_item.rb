@@ -5,6 +5,7 @@ module CopyToProduction
     # A rate card of a plan, with its phases: copied along with its plan, or on its own into the live plan with its
     # plan's code. It is known in a plan by the code of its rate card, which is reused by code or copied before it.
     class PlanRateCardItem < BaseItem
+      ATTRIBUTES = %i[units].freeze
       PHASE_ATTRIBUTES = %i[code position name billing_interval_cycle_count].freeze
       RATE_OVERRIDE_ATTRIBUTES = %i[
         rate_model rate_properties min_amount_cents billing_interval_count billing_interval_unit
@@ -32,8 +33,8 @@ module CopyToProduction
         PlanRateCards::CreateService.call!(
           catalog_plan: resolved.fetch(["catalog_plan", source.catalog_plan_id]),
           params: {
+            **source.slice(*ATTRIBUTES).symbolize_keys,
             rate_card_code: source.rate_card.code,
-            units: source.units,
             rate_phases: source.rate_phases.sort_by(&:position).map { phase_params(it) }.presence
           }
         ).plan_rate_card

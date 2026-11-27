@@ -14,6 +14,21 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
   # The wallet and the targets are remapped.
   it_behaves_like "a copy to production item copying every column", PlanWalletCreditAllocation,
     attributes: described_class::CREDIT_ALLOCATION_ATTRIBUTES, left_out: %w[plan_wallet_id product_filter_id product_id]
+  it_behaves_like "a copy to production item copying every column", PlanWallet,
+    attributes: described_class::WALLET_ATTRIBUTES, left_out: %w[catalog_plan_id]
+  # The targets are named by code in `applies_to`.
+  it_behaves_like "a copy to production item copying every column", CatalogWalletSelector,
+    attributes: described_class::SELECTOR_ATTRIBUTES,
+    left_out: %w[plan_wallet_id catalog_wallet_id product_category_id product_id product_filter_id]
+  it_behaves_like "a copy to production item copying every column", UsageMonitoring::PlanWalletAlert,
+    attributes: described_class::ALERT_ATTRIBUTES, left_out: %w[plan_wallet_id]
+  it_behaves_like "a copy to production item copying every column", UsageMonitoring::CatalogWalletAlertThreshold,
+    attributes: described_class::THRESHOLD_ATTRIBUTES, left_out: %w[plan_wallet_alert_id catalog_wallet_alert_id]
+  # An entitlement is created by its feature code, and its values by privilege code.
+  it_behaves_like "a copy to production item copying every column", Entitlement::Entitlement,
+    attributes: [], left_out: %w[entitlement_feature_id plan_id catalog_plan_id subscription_id]
+  it_behaves_like "a copy to production item copying every column", Entitlement::EntitlementValue,
+    attributes: %i[value], left_out: %w[entitlement_entitlement_id entitlement_privilege_id]
 
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("catalog_plan")

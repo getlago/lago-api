@@ -19,7 +19,8 @@ RSpec.shared_context "with a copy to production catalog plan" do
   let(:privilege) { create(:privilege, organization: sandbox, feature:, code: "max", value_type: "integer") }
   let(:wallet) do
     create(:plan_wallet, organization: sandbox, catalog_plan: plan, code: "credits", name: "Credits", priority: 10,
-      tax_application: "tax_on_purchase")
+      invoice_display_name: "Prepaid credits", tax_application: "tax_on_purchase", top_up_min_amount_cents: 1_000,
+      top_up_max_amount_cents: 50_000)
   end
   let(:plan_seat) { create(:plan_rate_card, organization: sandbox, catalog_plan: plan, rate_card: seat_card, units: 2) }
 
@@ -31,8 +32,9 @@ RSpec.shared_context "with a copy to production catalog plan" do
     entitlement = create(:entitlement, :catalog_plan, organization: sandbox, catalog_plan: plan, feature:)
     create(:entitlement_value, organization: sandbox, entitlement:, privilege:, value: "10")
 
-    override = create(:rate_override, organization: sandbox, rate_properties: {"amount" => "5"})
-    create(:rate_phase, organization: sandbox, plan_rate_card: plan_seat, code: "trial", position: 1,
+    override = create(:rate_override, organization: sandbox, rate_properties: {"amount" => "5"}, min_amount_cents: 300,
+      billing_interval_count: 2, billing_interval_unit: "week")
+    create(:rate_phase, organization: sandbox, plan_rate_card: plan_seat, code: "trial", name: "Trial", position: 1,
       billing_interval_cycle_count: 1, rate_override: override)
     create(:rate_phase, organization: sandbox, plan_rate_card: plan_seat, code: "default", position: 2)
     create(:rate_phase, organization: sandbox,
@@ -47,7 +49,8 @@ RSpec.shared_context "with a copy to production catalog plan" do
     create(:plan_wallet_credit_allocation, organization: sandbox, plan_wallet: wallet, product: support, code: "monthly",
       billing_cycles: 3, credit_amount_cents: 5_000, priority: 5)
     create(:item_metadata, organization: sandbox, owner: wallet, value: {"tier" => "gold"})
-    alert = create(:plan_wallet_alert, organization: sandbox, plan_wallet: wallet, code: "low", name: "Low")
+    alert = create(:plan_wallet_alert, organization: sandbox, plan_wallet: wallet, alert_type: "ongoing_balance", code: "low",
+      name: "Low")
     create(:catalog_wallet_alert_threshold, :template, organization: sandbox, plan_wallet_alert: alert, code: "warn",
       value: 1_000, notify_on: %w[triggered resolved])
   end
