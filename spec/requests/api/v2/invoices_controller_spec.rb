@@ -94,6 +94,17 @@ RSpec.describe Api::V2::InvoicesController do
         expect(json[:invoices].find { it[:lago_id] == credit_purchase_invoice.id }).to include(invoice_type: "credit_purchase")
       end
 
+      context "with the credit_purchase invoice type filter" do
+        let(:params) { {invoice_type: "credit_purchase"} }
+
+        it "lists the credit purchase invoices only" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices].map { it[:lago_id] }).to eq([credit_purchase_invoice.id])
+        end
+      end
+
       context "when it is hidden" do
         let(:credit_purchase_invoice) { create(:invoice, :credit_purchase, :open, organization:, customer:) }
 
@@ -129,7 +140,7 @@ RSpec.describe Api::V2::InvoicesController do
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json).to eq(
           code: "validation_errors",
-          details: [{code: "value_is_invalid", field: "invoice_type", meta: {allowed_values: %w[contract advance_fees]}}]
+          details: [{code: "value_is_invalid", field: "invoice_type", meta: {allowed_values: %w[contract advance_fees credit_purchase]}}]
         )
       end
     end

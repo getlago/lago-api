@@ -7,7 +7,11 @@ module Api
       extend ActiveSupport::Concern
 
       # Public value => stored enum.
-      INVOICE_TYPES = {"contract" => "contract", "advance_fees" => "advance_charges"}.freeze
+      INVOICE_TYPES = {
+        "contract" => "contract",
+        "advance_fees" => "advance_charges",
+        "credit_purchase" => "credit_purchase"
+      }.freeze
 
       # The order of the v1 lists, which `index_invoices_by_cursor` was built for, except for
       # `id`: it only breaks ties on a microsecond `created_at`, and runs in the same direction
