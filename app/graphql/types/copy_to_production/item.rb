@@ -4,7 +4,7 @@ module Types
   module CopyToProduction
     class Item < Types::BaseObject
       graphql_name "CopyToProductionItem"
-      description "An item of Copy to production, in the sandbox when it is to be copied, in production otherwise"
+      description "A production item created by Copy to production"
 
       field :code, String, null: true
       field :id, ID, null: false

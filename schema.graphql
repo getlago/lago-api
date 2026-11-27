@@ -9197,37 +9197,7 @@ type MoneyhashProvider {
 }
 
 """
-Why production refuses to receive an item: a refusal of the move, or a create service's
-"""
-enum CopyToProductionBlockingReasonEnum {
-  """
-  The user is not an admin of production
-  """
-  copy_to_production_admin_only
-
-  """
-  A create service refuses an item to copy, with the code and field of the move error's details
-  """
-  copy_to_production_item_refused
-
-  """
-  The item's parent must be copied to production first
-  """
-  copy_to_production_parent_missing
-
-  """
-  Production is waiting for a payment method
-  """
-  organization_inactive
-
-  """
-  Production already has an item with this code
-  """
-  value_already_exist
-}
-
-"""
-An item of Copy to production, in the sandbox when it is to be copied, in production otherwise
+A production item created by Copy to production
 """
 type CopyToProductionItem {
   code: String
@@ -9257,43 +9227,6 @@ input CopyToProductionInput {
   """
   id: ID!
   itemType: CopyToProductionItemTypeEnum!
-}
-
-"""
-What moving an item to live mode would copy, reuse or refuse
-"""
-type CopyToProductionPreview {
-  blockingReason: CopyToProductionBlockingReasonEnum
-
-  """
-  Sandbox items to copy, the moved item last
-  """
-  copiedItems: [CopyToProductionItem!]!
-
-  """
-  Sandbox parent to copy to production first
-  """
-  missingParent: CopyToProductionItem
-
-  """
-  With copy_to_production_item_refused, the code in the details of the move's error
-  """
-  refusalCode: String
-
-  """
-  With copy_to_production_item_refused, the key of that code in the details: a field, or a resource
-  """
-  refusalField: String
-
-  """
-  Sandbox item that refuses the move: an item to copy, or the moved item when it is live
-  """
-  refusedItem: CopyToProductionItem
-
-  """
-  Production items reused by code
-  """
-  reusedItems: [CopyToProductionItem!]!
 }
 
 type Mrr {
@@ -14070,17 +14003,6 @@ type Query {
   Query memberships of an organization
   """
   memberships(limit: Int, page: Int, roleIds: [ID!], searchTerm: String): MembershipCollection!
-
-  """
-  Previews moving a sandbox item to the sandbox's production organization
-  """
-  copyToProductionPreview(
-    """
-    ID of the item in the sandbox
-    """
-    id: ID!
-    itemType: CopyToProductionItemTypeEnum!
-  ): CopyToProductionPreview!
 
   """
   Query MRR of an organization

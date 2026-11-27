@@ -2,8 +2,8 @@
 
 module CopyToProduction
   module Items
-    # One item type of Copy to production. CopyToProduction::CopyService and CopyToProduction::PreviewService run the shared flow
-    # (checks, lock, dependencies, activity log) and ask the item type only what is specific to it.
+    # One item type of Copy to production. CopyToProduction::CopyService runs the shared flow (checks, lock, dependencies,
+    # activity log) and asks the item type only what is specific to it.
     class BaseItem
       def initialize(sandbox:, production:)
         @sandbox = sandbox

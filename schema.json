@@ -48216,50 +48216,9 @@
           "possibleTypes": null
         },
         {
-          "kind": "ENUM",
-          "name": "CopyToProductionBlockingReasonEnum",
-          "description": "Why production refuses to receive an item: a refusal of the move, or a create service's",
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": [
-            {
-              "name": "value_already_exist",
-              "description": "Production already has an item with this code",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "organization_inactive",
-              "description": "Production is waiting for a payment method",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "copy_to_production_admin_only",
-              "description": "The user is not an admin of production",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "copy_to_production_parent_missing",
-              "description": "The item's parent must be copied to production first",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "copy_to_production_item_refused",
-              "description": "A create service refuses an item to copy, with the code and field of the move error's details",
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "possibleTypes": null
-        },
-        {
           "kind": "OBJECT",
           "name": "CopyToProductionItem",
-          "description": "An item of Copy to production, in the sandbox when it is to be copied, in production otherwise",
+          "description": "A production item created by Copy to production",
           "fields": [
             {
               "name": "code",
@@ -48392,125 +48351,6 @@
             }
           ],
           "interfaces": null,
-          "enumValues": null,
-          "possibleTypes": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "CopyToProductionPreview",
-          "description": "What moving an item to live mode would copy, reuse or refuse",
-          "fields": [
-            {
-              "name": "blockingReason",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "ENUM",
-                "name": "CopyToProductionBlockingReasonEnum",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "copiedItems",
-              "description": "Sandbox items to copy, the moved item last",
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "CopyToProductionItem",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "missingParent",
-              "description": "Sandbox parent to copy to production first",
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "CopyToProductionItem",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "refusalCode",
-              "description": "With copy_to_production_item_refused, the code in the details of the move's error",
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "refusalField",
-              "description": "With copy_to_production_item_refused, the key of that code in the details: a field, or a resource",
-              "args": [],
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "refusedItem",
-              "description": "Sandbox item that refuses the move: an item to copy, or the moved item when it is live",
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "CopyToProductionItem",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "reusedItems",
-              "description": "Production items reused by code",
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "CopyToProductionItem",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "inputFields": null,
-          "interfaces": [],
           "enumValues": null,
           "possibleTypes": null
         },
@@ -74597,55 +74437,6 @@
                 "ofType": {
                   "kind": "OBJECT",
                   "name": "MembershipCollection",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "copyToProductionPreview",
-              "description": "Previews moving a sandbox item to the sandbox's production organization",
-              "args": [
-                {
-                  "name": "id",
-                  "description": "ID of the item in the sandbox",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "itemType",
-                  "description": null,
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "ENUM",
-                      "name": "CopyToProductionItemTypeEnum",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "CopyToProductionPreview",
                   "ofType": null
                 }
               },

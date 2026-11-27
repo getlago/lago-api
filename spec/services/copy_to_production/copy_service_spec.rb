@@ -40,7 +40,7 @@ RSpec.describe CopyToProduction::CopyService do
 
     copy = production.billable_metrics.find_by(code: "api_calls")
     expect(result).to be_success
-    expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "billable_metric", record: copy))
+    expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "billable_metric", record: copy))
     expect(copy).to have_attributes(
       name: "API calls",
       description: "Calls to the public API",
@@ -251,6 +251,8 @@ RSpec.describe CopyToProduction::CopyService do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("copy_to_production_parent_missing")
+        expect(result.missing_parent.item_type).to eq("billable_metric")
+        expect(result.missing_parent.record).to eq(sandbox.billable_metrics.find_by(code: "api_calls_parent"))
       end
     end
   end

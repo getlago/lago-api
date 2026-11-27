@@ -24,7 +24,17 @@ module Mutations
           id:
         )
 
-        result.success? ? result.item : result_error(result)
+        return result.item if result.success?
+        return result_error(result) unless result.missing_parent
+
+        # Names the parent, so that the message tells which one to copy first.
+        parent = result.missing_parent
+        execution_error(
+          error: "forbidden",
+          status: 403,
+          code: result.error.code,
+          details: {item_type: parent.item_type, code: parent.record.code}
+        )
       end
     end
   end

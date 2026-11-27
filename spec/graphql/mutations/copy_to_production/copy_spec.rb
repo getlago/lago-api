@@ -60,6 +60,28 @@ RSpec.describe Mutations::CopyToProduction::Copy do
     end
   end
 
+  context "when the item's parent is not live" do
+    let(:parent) { create(:billable_metric, organization: sandbox, code: "parent_metric") }
+    let(:service_result) do
+      CopyToProduction::CopyService::Result.new.tap do |result|
+        result.missing_parent = CopyToProduction::CopyService::Entry.new(item_type: "billable_metric", record: parent)
+        result.forbidden_failure!(code: "copy_to_production_parent_missing")
+      end
+    end
+
+    before { allow(CopyToProduction::CopyService).to receive(:call).and_return(service_result) }
+
+    it "returns a forbidden error naming the parent" do
+      error = execution["errors"].first
+
+      expect(error["extensions"]).to eq(
+        "status" => 403,
+        "code" => "copy_to_production_parent_missing",
+        "details" => {"itemType" => "billable_metric", "code" => "parent_metric"}
+      )
+    end
+  end
+
   context "when the user is not an admin of production" do
     let(:production_roles) { %i[finance] }
 
