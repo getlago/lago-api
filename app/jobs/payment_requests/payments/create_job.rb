@@ -16,6 +16,7 @@ module PaymentRequests
       retry_on Faraday::ConnectionFailed, wait: :polynomially_longer, attempts: 6
       retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 6
       retry_on ::Stripe::APIConnectionError, wait: :polynomially_longer, attempts: 6
+      retry_on Invoices::Payments::ConnectionError, wait: :polynomially_longer, attempts: 6
 
       def perform(payable:, payment_provider:, payment_method_params: {})
         PaymentRequests::Payments::CreateService.call!(payable:, payment_provider:, payment_method_params:)
