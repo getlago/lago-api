@@ -313,12 +313,25 @@ RSpec.describe Resolvers::PlanResolver do
       let(:beta_value) { create(:entitlement_value, entitlement:, privilege: beta, value: false) }
 
       it "casts boolean values to strings" do
-        expect(enabled_value.value).to eq("t")
-        expect(beta_value.value).to eq("f")
+        expect(enabled_value.read_attribute(:value)).to eq("t")
+        expect(beta_value.read_attribute(:value)).to eq("f")
 
         result = subject
         feat = result["data"]["plan"]["entitlements"].find { |e| e["code"] == feature.code }
         expect(feat["privileges"].map { |p| p["value"] }).to contain_exactly("10", "true", "false")
+      end
+
+      context "when the values are stored as words" do
+        let(:enabled_value) { create(:entitlement_value, entitlement:, privilege: enabled, value: "true") }
+        let(:beta_value) { create(:entitlement_value, entitlement:, privilege: beta, value: "false") }
+
+        it "returns them as they are" do
+          enabled_value
+          beta_value
+
+          feat = result["data"]["plan"]["entitlements"].find { |e| e["code"] == feature.code }
+          expect(feat["privileges"].map { |p| p["value"] }).to contain_exactly("10", "true", "false")
+        end
       end
     end
 

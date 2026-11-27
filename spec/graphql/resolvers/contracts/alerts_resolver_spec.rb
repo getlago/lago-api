@@ -31,7 +31,7 @@ RSpec.describe Resolvers::Contracts::AlertsResolver do
     <<~GQL
       query($contractId: ID!, $page: Int, $limit: Int) {
         contractAlerts(contractId: $contractId, page: $page, limit: $limit) {
-          collection { id code product { id } productFilter { id } thresholds { value } }
+          collection { id code scope { product { id } productFilters { id } withProductFilters } thresholds { value } }
           metadata { currentPage totalCount }
         }
       }
@@ -53,15 +53,13 @@ RSpec.describe Resolvers::Contracts::AlertsResolver do
       {
         "id" => newer_alert.id,
         "code" => newer_alert.code,
-        "product" => {"id" => newer_alert.product_id},
-        "productFilter" => nil,
+        "scope" => [{"product" => {"id" => newer_alert.product_id}, "productFilters" => nil, "withProductFilters" => false}],
         "thresholds" => [{"value" => "1500.0"}]
       },
       {
         "id" => older_alert.id,
         "code" => older_alert.code,
-        "product" => nil,
-        "productFilter" => nil,
+        "scope" => [],
         "thresholds" => [{"value" => "1500.0"}]
       }
     ])

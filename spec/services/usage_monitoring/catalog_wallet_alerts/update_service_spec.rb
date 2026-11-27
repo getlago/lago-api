@@ -60,7 +60,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
 
     it "fails and keeps the thresholds" do
       expect(result).to be_failure
-      expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+      expect(result.error.messages).to eq({"thresholds[0].value": ["value_is_invalid"]})
       expect(alert.reload.thresholds.pluck(:value)).to eq([10_000])
     end
   end
@@ -90,7 +90,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
 
     it "fails" do
       expect(result).to be_failure
-      expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+      expect(result.error.messages).to eq({"thresholds[0].value": ["value_is_invalid"]})
     end
   end
 
@@ -100,7 +100,7 @@ RSpec.describe UsageMonitoring::CatalogWalletAlerts::UpdateService do
 
     it "fails and keeps the thresholds" do
       expect(result).to be_failure
-      expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+      expect(result.error.messages).to eq({"thresholds[0].value": ["value_is_invalid"]})
       expect(alert.reload.thresholds.pluck(:value)).to eq([10_000])
     end
   end
