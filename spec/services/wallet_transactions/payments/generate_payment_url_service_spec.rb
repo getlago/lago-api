@@ -41,8 +41,11 @@ RSpec.describe WalletTransactions::Payments::GeneratePaymentUrlService do
 
           context "when transaction's invoice is present" do
             let(:wallet_transaction) do
-              create(:wallet_transaction, :with_invoice, status:, transaction_status:, customer:)
+              create(:wallet_transaction, :with_invoice, status:, transaction_status:, customer:, invoice:)
             end
+
+            let(:invoice) { create(:invoice, customer:, organization: customer.organization, status: invoice_status) }
+            let(:invoice_status) { :finalized }
 
             let(:customer) { create(:customer, :with_stripe_payment_provider) }
             let(:checkout_url) { "https://example.com" }
@@ -63,6 +66,27 @@ RSpec.describe WalletTransactions::Payments::GeneratePaymentUrlService do
 
               expect(result).to be_success
               expect(result.payment_url).to eq checkout_url
+            end
+
+            context "when transaction's invoice is open" do
+              let(:invoice_status) { :open }
+
+              it "returns the payment url" do
+                expect(result).to be_success
+                expect(result.payment_url).to eq checkout_url
+                expect(PaymentIntent.where(invoice:).sole.payment_url).to eq checkout_url
+              end
+            end
+
+            context "when transaction's invoice is generating" do
+              let(:invoice_status) { :generating }
+
+              it "fails without creating a payment intent or calling the provider" do
+                expect(result).to be_failure
+                expect(result.error.messages).to match(base: ["invalid_invoice_status_or_payment_status"])
+                expect(PaymentIntent.where(invoice:)).to be_empty
+                expect(::Stripe::Checkout::Session).not_to have_received(:create)
+              end
             end
           end
         end
