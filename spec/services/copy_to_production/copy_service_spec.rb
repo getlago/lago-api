@@ -329,7 +329,7 @@ RSpec.describe CopyToProduction::CopyService do
       copy = production.coupons.find_by(code: "welcome")
       copied_metric = production.billable_metrics.find_by(code: "storage")
       expect(result).to be_success
-      expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "coupon", record: copy))
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "coupon", record: copy))
       expect(copy).to have_attributes(
         name: "Welcome",
         description: "First months off",
