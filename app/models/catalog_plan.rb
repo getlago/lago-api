@@ -23,6 +23,7 @@ class CatalogPlan < ApplicationRecord
   has_many :taxes, through: :applied_taxes
   has_many :entitlements, class_name: "Entitlement::Entitlement", dependent: :destroy
   has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
+  has_one :metadata, class_name: "Metadata::ItemMetadata", as: :owner, dependent: :destroy
 
   validates :name, presence: true
   validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}

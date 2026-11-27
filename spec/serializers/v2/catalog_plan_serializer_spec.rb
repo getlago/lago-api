@@ -64,6 +64,22 @@ RSpec.describe V2::CatalogPlanSerializer do
     end
   end
 
+  context "when metadata is expanded" do
+    let(:options) { {includes: %i[metadata]} }
+
+    it "embeds null when the plan has none" do
+      expect(payload).to eq(flat_payload.merge(metadata: nil))
+    end
+
+    context "when the plan has metadata" do
+      before { create(:item_metadata, owner: catalog_plan, organization: catalog_plan.organization, value: {"crm_id" => "123", "tier" => nil}) }
+
+      it "embeds its value" do
+        expect(payload).to eq(flat_payload.merge(metadata: {"crm_id" => "123", "tier" => nil}))
+      end
+    end
+  end
+
   context "when taxes are expanded" do
     let(:options) { {includes: %i[taxes]} }
     let(:organization) { catalog_plan.organization }

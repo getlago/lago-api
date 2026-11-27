@@ -16,6 +16,10 @@ module CatalogPlans
     )
 
     def call
+      if !args[:metadata].nil? && !args[:metadata].is_a?(Hash)
+        return result.single_validation_failure!(field: :metadata, error_code: "value_is_invalid")
+      end
+
       ActiveRecord::Base.transaction do
         catalog_plan = CatalogPlan.create!(
           organization_id: args[:organization_id],
@@ -27,6 +31,7 @@ module CatalogPlans
         )
 
         apply_taxes(catalog_plan)
+        apply_metadata(catalog_plan)
 
         result.catalog_plan = catalog_plan
       end
@@ -49,6 +54,15 @@ module CatalogPlans
       return unless args.key?(:tax_codes) && !args[:tax_codes].nil?
 
       CatalogPlans::ApplyTaxesService.call!(catalog_plan:, tax_codes: args[:tax_codes])
+    end
+
+    # The metadata record names its errors in sentences, on its own `value` column.
+    def apply_metadata(catalog_plan)
+      return if args[:metadata].nil?
+
+      unless Metadata::UpdateItemService.call(owner: catalog_plan, value: args[:metadata].transform_keys(&:to_s)).success?
+        result.single_validation_failure!(field: :metadata, error_code: "value_is_invalid").raise_if_error!
+      end
     end
   end
 end
