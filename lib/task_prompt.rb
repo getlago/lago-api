@@ -48,7 +48,9 @@ module TaskPrompt
     eligible_subscriptions = active_subscriptions
     if scope
       eligible_subscriptions = active_subscriptions.merge(scope)
-      puts "#{eligible_subscriptions.count} of them #{scope_label}, sampled among those."
+      eligible_count = eligible_subscriptions.count
+      puts "#{eligible_count} of them #{scope_label}, sampled among those."
+      return [] if eligible_count.zero?
     end
 
     sample_size = ask("Number of active subscriptions to sample [50]: ")

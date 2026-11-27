@@ -94,6 +94,20 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
     end
   end
 
+  context "when no active subscription of the organization has a snapshot" do
+    let(:other_organization) { create(:organization) }
+
+    before do
+      create(:subscription, organization: other_organization, customer: create(:customer, organization: other_organization))
+      stub_stdin(other_organization.id, "y", "", "abc")
+    end
+
+    it "aborts before asking for a sample size" do
+      expect { task.invoke }.to raise_error(SystemExit, "No subscription to audit.")
+        .and output(/0 of them have a recurring snapshot/).to_stdout
+    end
+  end
+
   context "with an invalid sample size" do
     before { stub_stdin(organization.id, "y", "", "abc") }
 
