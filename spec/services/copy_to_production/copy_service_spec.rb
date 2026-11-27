@@ -433,6 +433,36 @@ RSpec.describe CopyToProduction::CopyService do
       end
     end
 
+    context "when a product of the category bills a deleted metric" do
+      before do
+        api_card
+        metric.discard!
+      end
+
+      it "refuses the whole category" do
+        expect { result }.not_to change { [ProductCategory.count, Product.count, BillableMetric.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("copy_to_production_target_deleted")
+      end
+    end
+
+    context "when production holds the code of one of its products in another category" do
+      before do
+        other = create(:product_category, organization: production, code: "other")
+        create(:product, :fixed, organization: production, product_category: other, code: "api")
+      end
+
+      it "answers the create service's error and rolls the category back" do
+        expect { result }.not_to change { [production.product_categories.count, production.billable_metrics.count] }
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(code: ["value_already_exist"])
+      end
+    end
+
     context "when production has metrics and taxes with the same codes" do
       let(:live_metric) { create(:billable_metric, organization: production, code: "api_calls") }
       let(:live_tax) { create(:tax, organization: production, code: "vat_fr") }

@@ -12,6 +12,8 @@ RSpec.describe CopyToProduction::Items::RateCardItem do
   # The product and its filter are remapped.
   it_behaves_like "a copy to production item copying every column", RateCard,
     left_out: %w[product_filter_id product_id]
+  it_behaves_like "a copy to production item copying every column", RateCardRate,
+    attributes: described_class::RATE_ATTRIBUTES, left_out: %w[rate_card_id]
 
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("rate_card")

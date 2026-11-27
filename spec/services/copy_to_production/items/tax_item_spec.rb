@@ -11,6 +11,10 @@ RSpec.describe CopyToProduction::Items::TaxItem do
 
   it_behaves_like "a copy to production item matched by code", :tax
 
+  # A copied tax never applies to production as a whole; Lago generates the automatic ones itself.
+  it_behaves_like "a copy to production item copying every column", Tax,
+    left_out: %w[applied_to_organization auto_generated]
+
   it "answers its item type and no activity type" do
     expect(item.item_type).to eq("tax")
     expect(item.activity_type).to be_nil

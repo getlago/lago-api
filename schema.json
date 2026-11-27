@@ -12897,47 +12897,6 @@
           "possibleTypes": null
         },
         {
-          "kind": "ENUM",
-          "name": "CopyToProductionCopyableItemTypeEnum",
-          "description": "Item types a user can copy from a sandbox to its production organization",
-          "fields": null,
-          "inputFields": null,
-          "interfaces": null,
-          "enumValues": [
-            {
-              "name": "billable_metric",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "coupon",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "feature",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "product_category",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "possibleTypes": null
-        },
-        {
           "kind": "INPUT_OBJECT",
           "name": "CopyToProductionInput",
           "description": "Copy to production input arguments",
@@ -12967,7 +12926,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "CopyToProductionCopyableItemTypeEnum",
+                  "name": "CopyToProductionItemTypeEnum",
                   "ofType": null
                 }
               },
@@ -13062,7 +13021,7 @@
         {
           "kind": "ENUM",
           "name": "CopyToProductionItemTypeEnum",
-          "description": "Item types of Copy to production, including those only copied along with another item",
+          "description": "Item types a user can copy from a sandbox to its production organization",
           "fields": null,
           "inputFields": null,
           "interfaces": null,
@@ -13086,12 +13045,6 @@
               "deprecationReason": null
             },
             {
-              "name": "pricing_unit",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "product",
               "description": null,
               "isDeprecated": false,
@@ -13099,18 +13052,6 @@
             },
             {
               "name": "product_category",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "rate_card",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "tax",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

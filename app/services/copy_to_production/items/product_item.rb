@@ -5,6 +5,7 @@ module CopyToProduction
     # A product is copied with its filters and its rate cards, once its category is live.
     class ProductItem < BaseItem
       ATTRIBUTES = %i[name code description invoice_display_name product_type].freeze
+      FILTER_ATTRIBUTES = %i[name code description invoice_display_name].freeze
       # Reused only from the live category with the code of its own: a live product with its code elsewhere refuses
       # the copy.
       def find_existing(source)
@@ -49,7 +50,7 @@ module CopyToProduction
       def copy_filter!(product, filter)
         ProductFilters::CreateService.call!(
           product:,
-          params: filter.slice(:name, :code, :description, :invoice_display_name).merge(
+          params: filter.slice(*FILTER_ATTRIBUTES).merge(
             values: filter.values.map { {key: it.billable_metric_filter.key, value: it.value} }
           )
         )

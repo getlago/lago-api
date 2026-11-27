@@ -14,6 +14,8 @@ RSpec.describe CopyToProduction::Items::ProductItem do
   # The category and metric are remapped; nothing in the app writes the add-on and the charge.
   it_behaves_like "a copy to production item copying every column", Product,
     left_out: %w[add_on_id billable_metric_id charge_id product_category_id]
+  it_behaves_like "a copy to production item copying every column", ProductFilter,
+    attributes: described_class::FILTER_ATTRIBUTES, left_out: %w[product_id]
 
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("product")

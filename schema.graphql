@@ -2273,17 +2273,6 @@ enum ContractStatusEnum {
 }
 
 """
-Item types a user can copy from a sandbox to its production organization
-"""
-enum CopyToProductionCopyableItemTypeEnum {
-  billable_metric
-  coupon
-  feature
-  product
-  product_category
-}
-
-"""
 Copy to production input arguments
 """
 input CopyToProductionInput {
@@ -2296,7 +2285,7 @@ input CopyToProductionInput {
   ID of the item in the sandbox
   """
   id: ID!
-  itemType: CopyToProductionCopyableItemTypeEnum!
+  itemType: CopyToProductionItemTypeEnum!
 }
 
 """
@@ -2310,17 +2299,14 @@ type CopyToProductionItem {
 }
 
 """
-Item types of Copy to production, including those only copied along with another item
+Item types a user can copy from a sandbox to its production organization
 """
 enum CopyToProductionItemTypeEnum {
   billable_metric
   coupon
   feature
-  pricing_unit
   product
   product_category
-  rate_card
-  tax
 }
 
 enum CountryCode {

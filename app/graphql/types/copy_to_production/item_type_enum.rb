@@ -4,10 +4,10 @@ module Types
   module CopyToProduction
     class ItemTypeEnum < Types::BaseEnum
       graphql_name "CopyToProductionItemTypeEnum"
-      description "Item types of Copy to production, including those only copied along with another item"
+      description "Item types a user can copy from a sandbox to its production organization"
 
       ::CopyToProduction::Items::TYPES.each_key do |item_type|
-        value item_type
+        value item_type if ::CopyToProduction::Items.copyable?(item_type)
       end
     end
   end
