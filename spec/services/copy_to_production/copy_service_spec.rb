@@ -261,4 +261,31 @@ RSpec.describe CopyToProduction::CopyService do
       end
     end
   end
+
+  context "with a feature" do
+    let(:item_type) { "feature" }
+    let(:id) { feature.id }
+    let(:feature) { create(:feature, organization: sandbox, code: "seats", name: "Seats", description: "Seats per workspace") }
+
+    before do
+      create(:privilege, feature:, code: "max", name: "Maximum", value_type: "integer", created_at: 2.days.ago)
+      create(:privilege, feature:, code: "tier", value_type: "select", config: {select_options: %w[free pro]}, created_at: 1.day.ago)
+      create(:privilege, feature:, code: "removed").discard!
+    end
+
+    it "copies the feature and its kept privileges to production" do
+      expect { result }.to change { production.features.count }.by(1)
+
+      copy = production.features.find_by(code: "seats")
+      expect(result).to be_success
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "feature", record: copy))
+      expect(copy).to have_attributes(name: "Seats", description: "Seats per workspace")
+      expect(copy.privileges.order(:created_at, :id).map { [it.code, it.name, it.value_type, it.config, it.organization_id] }).to eq(
+        [
+          ["max", "Maximum", "integer", {}, production.id],
+          ["tier", nil, "select", {"select_options" => %w[free pro]}, production.id]
+        ]
+      )
+    end
+  end
 end

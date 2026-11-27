@@ -109,6 +109,7 @@ module Clickhouse
       feature_created: "feature.created",
       feature_deleted: "feature.deleted",
       feature_updated: "feature.updated",
+      feature_copied_to_production: "feature.copied_to_production",
       product_category_created: "product_category.created",
       product_category_updated: "product_category.updated",
       product_category_deleted: "product_category.deleted",

@@ -867,6 +867,12 @@
               "deprecationReason": null
             },
             {
+              "name": "feature_copied_to_production",
+              "description": "feature.copied_to_production",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "product_category_created",
               "description": "product_category.created",
               "isDeprecated": false,
@@ -13149,6 +13155,12 @@
           "enumValues": [
             {
               "name": "billable_metric",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "feature",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

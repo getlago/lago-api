@@ -243,6 +243,11 @@ enum ActivityTypeEnum {
   email_sent
 
   """
+  feature.copied_to_production
+  """
+  feature_copied_to_production
+
+  """
   feature.created
   """
   feature_created
@@ -2290,6 +2295,7 @@ Item types a sandbox can move to its production organization
 """
 enum CopyToProductionItemTypeEnum {
   billable_metric
+  feature
 }
 
 enum CountryCode {
