@@ -123,6 +123,8 @@ module RecurringAggregationSnapshots
     # from its snapshot, or from zero without one. The subscription is the one the event resolves
     # to, which an upgrade can make another one.
     def snapshot_read?(metered_item, billing_context)
+      # Not for segments yet: the fetch below keys on the subscription
+      return false if metered_item.billing_segment
       return false unless RecurringAggregationSnapshot.eligible?(metered_item:, billing_context:)
 
       RecurringAggregationSnapshots::FetchService.call!(
