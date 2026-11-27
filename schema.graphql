@@ -193,6 +193,11 @@ enum ActivityTypeEnum {
   contract_wallet_updated
 
   """
+  coupon.copied_to_production
+  """
+  coupon_copied_to_production
+
+  """
   coupon.created
   """
   coupon_created
@@ -2295,6 +2300,7 @@ Item types a sandbox can move to its production organization
 """
 enum CopyToProductionItemTypeEnum {
   billable_metric
+  coupon
   feature
 }
 

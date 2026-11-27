@@ -288,4 +288,123 @@ RSpec.describe CopyToProduction::CopyService do
       )
     end
   end
+
+  context "with a fixed amount coupon on every metric" do
+    let(:item_type) { "coupon" }
+    let(:id) { coupon.id }
+    let(:coupon) do
+      create(
+        :coupon,
+        organization: sandbox,
+        code: "launch",
+        coupon_type: "fixed_amount",
+        amount_cents: 1000,
+        amount_currency: "EUR",
+        percentage_rate: nil,
+        frequency: "once",
+        expiration: "no_expiration",
+        limited_billable_metrics: false
+      )
+    end
+
+    it "copies its amount and applies it to every metric" do
+      expect { result }.not_to change { production.billable_metrics.count }
+
+      copy = production.coupons.find_by(code: "launch")
+      expect(result).to be_success
+      expect(copy).to have_attributes(
+        coupon_type: "fixed_amount",
+        amount_cents: 1000,
+        amount_currency: "EUR",
+        percentage_rate: nil,
+        frequency: "once",
+        expiration: "no_expiration",
+        limited_billable_metrics: false,
+        limited_plans: false
+      )
+      expect(copy.coupon_targets).to be_empty
+    end
+  end
+
+  context "with a coupon" do
+    let(:item_type) { "coupon" }
+    let(:id) { coupon.id }
+    let(:coupon) do
+      create(
+        :coupon,
+        organization: sandbox,
+        code: "welcome",
+        name: "Welcome",
+        description: "First months off",
+        coupon_type: "percentage",
+        percentage_rate: 12.5,
+        amount_cents: nil,
+        amount_currency: nil,
+        frequency: "recurring",
+        frequency_duration: 3,
+        expiration: "time_limit",
+        expiration_at: 1.month.from_now.beginning_of_day,
+        reusable: false,
+        limited_billable_metrics: true
+      )
+    end
+
+    let(:live_metric) { create(:billable_metric, organization: production, code: "seats") }
+    let(:reused_metric_source) { create(:billable_metric, organization: sandbox, code: "seats") }
+    let(:copied_metric_source) { create(:billable_metric, organization: sandbox, code: "storage") }
+
+    before do
+      create(:coupon_billable_metric, coupon:, billable_metric: reused_metric_source)
+      create(:coupon_billable_metric, coupon:, billable_metric: copied_metric_source)
+      live_metric
+    end
+
+    it "copies the coupon with its metric targets remapped to production" do
+      expect { result }.to change { production.coupons.count }.by(1)
+        .and change { production.billable_metrics.count }.by(1)
+
+      copy = production.coupons.find_by(code: "welcome")
+      copied_metric = production.billable_metrics.find_by(code: "storage")
+      expect(result).to be_success
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "coupon", record: copy))
+      expect(copy).to have_attributes(
+        name: "Welcome",
+        description: "First months off",
+        coupon_type: "percentage",
+        percentage_rate: 12.5,
+        amount_cents: nil,
+        frequency: "recurring",
+        frequency_duration: 3,
+        expiration: "time_limit",
+        expiration_at: coupon.expiration_at,
+        reusable: false,
+        status: "active",
+        limited_billable_metrics: true,
+        limited_plans: false
+      )
+      expect(copy.coupon_targets.map { [it.billable_metric_id, it.organization_id] })
+        .to contain_exactly([live_metric.id, production.id], [copied_metric.id, production.id])
+    end
+
+    context "when a coupon without expiration keeps a past date" do
+      before { coupon.update!(expiration: "no_expiration", expiration_at: 1.day.ago) }
+
+      it "copies the coupon without the date" do
+        expect(result).to be_success
+        expect(result.item.record).to have_attributes(status: "active", expiration: "no_expiration", expiration_at: nil)
+      end
+    end
+
+    context "when one targeted metric is deleted in the sandbox" do
+      before { copied_metric_source.discard! }
+
+      it "copies the coupon limited to the kept metric" do
+        expect { result }.not_to change { production.billable_metrics.count }
+
+        expect(result).to be_success
+        expect(result.item.record.limited_billable_metrics).to be(true)
+        expect(result.item.record.coupon_targets.map(&:billable_metric_id)).to eq([live_metric.id])
+      end
+    end
+  end
 end

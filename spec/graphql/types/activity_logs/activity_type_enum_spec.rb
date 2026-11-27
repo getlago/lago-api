@@ -51,6 +51,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         coupon_created
         coupon_updated
         coupon_deleted
+        coupon_copied_to_production
         applied_coupon_created
         applied_coupon_deleted
         payment_request_created
