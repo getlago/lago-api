@@ -825,6 +825,12 @@
               "deprecationReason": null
             },
             {
+              "name": "coupon_copied_to_production",
+              "description": "coupon.copied_to_production",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "applied_coupon_created",
               "description": "applied_coupon.created",
               "isDeprecated": false,
@@ -13010,6 +13016,12 @@
             },
             {
               "name": "feature",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
