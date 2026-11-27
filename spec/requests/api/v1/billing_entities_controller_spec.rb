@@ -312,7 +312,7 @@ RSpec.describe Api::V1::BillingEntitiesController do
     context "when the organization is the shadow of a migration" do
       let(:update_params) { {billing_entity: {email_settings: ["invoice.finalized"]}} }
 
-      before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+      before { create_migration_shadowed_by(organization) }
 
       it "returns a forbidden error and keeps the email settings" do
         expect { subject }.not_to change { billing_entity1.reload.email_settings }

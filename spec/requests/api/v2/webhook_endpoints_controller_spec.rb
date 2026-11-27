@@ -221,7 +221,7 @@ RSpec.describe Api::V2::WebhookEndpointsController do
     end
 
     context "when the organization is the shadow of a migration" do
-      before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+      before { create_migration_shadowed_by(organization) }
 
       it "returns a forbidden error and creates nothing" do
         expect { request }.not_to change(WebhookEndpoint, :count)

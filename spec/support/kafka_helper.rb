@@ -12,6 +12,7 @@ module KafkaHelper
     allow(Karafka).to receive(:producer).and_return(karafka_producer)
     allow(karafka_producer).to receive(:produce_async) { |args| kafka_messages << args }
     allow(karafka_producer).to receive(:produce_many_async) { |args| kafka_messages.concat(args) }
+    allow(karafka_producer).to receive(:produce_many_sync) { |args| kafka_messages.concat(args) }
   end
 end
 

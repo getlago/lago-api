@@ -224,7 +224,7 @@ RSpec.describe BillingEntities::CreateService do
       end
 
       context "when the organization is the shadow of a migration" do
-        before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+        before { create_migration_shadowed_by(organization) }
 
         it "creates a billing entity that sends nothing out" do
           expect(result).to be_success
