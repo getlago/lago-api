@@ -61,7 +61,7 @@ RSpec.describe "exports_invoices view" do # rubocop:disable RSpec/DescribeClass
   end
 
   describe "invoice types" do
-    %i[subscription add_on credit one_off advance_charges progressive_billing contract].each do |invoice_type|
+    %i[subscription add_on credit one_off advance_charges progressive_billing contract credit_purchase].each do |invoice_type|
       context "when the invoice is #{invoice_type}" do
         let!(:invoice) { create(:invoice, :draft, invoice_type:, organization:, customer:) }
 

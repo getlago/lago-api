@@ -5217,6 +5217,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 4 THEN 'commitment'::text
             WHEN 5 THEN 'fixed_charge'::text
             WHEN 6 THEN 'product'::text
+            WHEN 7 THEN 'credit_purchase'::text
             ELSE 'unknown'::text
         END, 'code',
         CASE f.fee_type
@@ -5225,6 +5226,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.code
             WHEN 6 THEN pr.code
+            WHEN 7 THEN 'credit_purchase'::character varying
             ELSE p.code
         END, 'name',
         CASE f.fee_type
@@ -5233,6 +5235,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.name
             WHEN 6 THEN pr.name
+            WHEN 7 THEN 'credit_purchase'::character varying
             ELSE p.name
         END, 'description',
         CASE f.fee_type
@@ -5241,6 +5244,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN 'credit'::character varying
             WHEN 5 THEN fao.description
             WHEN 6 THEN (pr.description)::character varying
+            WHEN 7 THEN 'credit_purchase'::character varying
             ELSE p.description
         END, 'invoice_display_name', COALESCE(f.invoice_display_name,
         CASE f.fee_type
@@ -5253,6 +5257,7 @@ CREATE VIEW public.exports_fees AS
                 WHEN ((pr.invoice_display_name)::text !~ '^[[:space:]]*$'::text) THEN pr.invoice_display_name
                 ELSE NULL::character varying
             END, pr.name)
+            WHEN 7 THEN 'credit_purchase'::character varying
             ELSE p.invoice_display_name
         END), 'filters', ( SELECT json_agg(json_build_object('id', cf.id, 'charge_id', cf.charge_id, 'properties', cf.properties, 'invoice_display_name', cf.invoice_display_name)) AS json_agg
            FROM public.charge_filters cf
@@ -5263,6 +5268,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN f.invoiceable_id
             WHEN 5 THEN fao.id
             WHEN 6 THEN pr.id
+            WHEN 7 THEN f.invoiceable_id
             ELSE f.subscription_id
         END, 'item_type',
         CASE f.fee_type
@@ -5271,6 +5277,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN 'wallet_transaction'::text
             WHEN 5 THEN 'add_on'::text
             WHEN 6 THEN 'product'::text
+            WHEN 7 THEN 'catalog_wallet_transaction'::text
             ELSE 'subscription'::text
         END, 'grouped_by', f.grouped_by) AS item,
     f.pay_in_advance,
@@ -5537,6 +5544,7 @@ CREATE VIEW public.exports_invoices AS
             WHEN 4 THEN 'advance_charges'::text
             WHEN 5 THEN 'progressive_billing'::text
             WHEN 6 THEN 'contract'::text
+            WHEN 7 THEN 'credit_purchase'::text
             ELSE NULL::text
         END AS invoice_type,
         CASE i.status
@@ -19219,6 +19227,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261127095418'),
+('20261127095413'),
 ('20261126155955'),
 ('20261125113444'),
 ('20261125113441'),
