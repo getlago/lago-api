@@ -59,7 +59,7 @@ RSpec.describe PaymentProviders::GocardlessService do
     end
 
     context "when the organization is the shadow of a migration" do
-      before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+      before { create_migration_shadowed_by(organization) }
 
       it "does not exchange the OAuth code" do
         gocardless_service.create_or_update(organization:, access_code:, code:, name:, success_redirect_url:)

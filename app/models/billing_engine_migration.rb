@@ -14,7 +14,7 @@ class BillingEngineMigration < ApplicationRecord
   validate :plan_mapping_is_valid
   validate :organizations_not_in_another_migration
   validate :events_copy_source_switched_once_paused_everywhere, on: :update
-  validate :raw_topic_copies_readable_by_shadow_organization
+  validate :shadow_organization_on_clickhouse_events_store
 
   after_commit :expire_lookup
   after_rollback :expire_lookup
@@ -54,14 +54,14 @@ class BillingEngineMigration < ApplicationRecord
     status_was == STATUSES[:paused] && updated_at_was <= BillingEngineMigrations::Lookup::REFRESH_INTERVAL.ago
   end
 
-  # Copies from the raw topic only reach ClickHouse, and an organization on the PostgreSQL store reads its usage
-  # from PostgreSQL.
-  def raw_topic_copies_readable_by_shadow_organization
-    return unless events_copied_from_raw_topic?
-    return unless events_copy_source_changed? || shadow_organization_id_changed?
+  # Both copy paths go through the product pipeline, which only writes to ClickHouse, while an
+  # organization on the PostgreSQL store reads its usage from PostgreSQL. Events are copied only while shadowing.
+  def shadow_organization_on_clickhouse_events_store
+    return unless shadowing?
+    return unless status_changed? || events_copy_source_changed? || shadow_organization_id_changed?
     return if shadow_organization.nil? || shadow_organization.clickhouse_events_store?
 
-    errors.add(:events_copy_source, :requires_clickhouse_events_store)
+    errors.add(:shadow_organization, :requires_clickhouse_events_store)
   end
 
   def organizations_not_in_another_migration

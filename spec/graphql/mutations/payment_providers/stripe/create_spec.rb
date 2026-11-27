@@ -77,7 +77,7 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
     end
 
     before do
-      create(:billing_engine_migration, organization: create(:organization), shadow_organization: membership.organization)
+      create_migration_shadowed_by(membership.organization)
     end
 
     it "refuses with shadow_organization_outbound_disabled" do

@@ -514,7 +514,7 @@ RSpec.describe DunningCampaigns::UpdateService do
           end
 
           context "when the organization is the shadow of a migration" do
-            before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+            before { create_migration_shadowed_by(organization) }
 
             it "unassigns dunning_campaign from the default billing entity" do
               expect { result }.to change { organization.default_billing_entity.applied_dunning_campaign_id }

@@ -98,7 +98,7 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, :premium do
     end
 
     before do
-      create(:billing_engine_migration, organization: create(:organization), shadow_organization: membership.organization)
+      create_migration_shadowed_by(membership.organization)
     end
 
     it "refuses with shadow_organization_outbound_disabled" do
