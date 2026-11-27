@@ -146,4 +146,24 @@ RSpec.describe Mutations::WebhookEndpoints::Create do
       end
     end
   end
+
+  context "when the organization is the shadow of a migration" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input:}
+      )
+    end
+
+    before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+    it "refuses with shadow_organization_outbound_disabled" do
+      expect { result }.not_to change(WebhookEndpoint, :count)
+
+      expect_graphql_error(result:, message: "shadow_organization_outbound_disabled")
+    end
+  end
 end

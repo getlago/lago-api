@@ -26,6 +26,10 @@ RSpec.describe PaymentProviders::AdyenService do
       before { adyen_service.create_or_update(organization:, api_key:, code:, name:, merchant_account:, success_redirect_url:) }
     end
 
+    it_behaves_like "refused on a shadow organization", PaymentProviders::AdyenProvider do
+      subject { adyen_service.create_or_update(organization:, api_key:, code:, name:, merchant_account:, success_redirect_url:) }
+    end
+
     context "when code was changed" do
       let(:new_code) { "updated_code_1" }
       let(:adyen_customer) { create(:adyen_customer, payment_provider:, customer:) }

@@ -31,6 +31,10 @@ RSpec.describe PaymentProviders::MoneyhashService do
       before { described_class.new.create_or_update(organization:, code: "test_code", name: "test_name", flow_id: "test_flow_id") }
     end
 
+    it_behaves_like "refused on a shadow organization", PaymentProviders::MoneyhashProvider do
+      subject { described_class.new.create_or_update(organization:, code: "test_code", name: "test_name", flow_id: "test_flow_id") }
+    end
+
     it "updates the existing moneyhash provider but leaves the signature key unchanged" do
       moneyhash_provider.update!(signature_key: "same_signature_key")
       result = described_class.new.create_or_update(organization:, code: moneyhash_provider.code, name: "updated_name", flow_id: "updated_flow_id")

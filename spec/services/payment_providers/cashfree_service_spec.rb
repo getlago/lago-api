@@ -42,6 +42,10 @@ RSpec.describe PaymentProviders::CashfreeService do
       end
     end
 
+    it_behaves_like "refused on a shadow organization", PaymentProviders::CashfreeProvider do
+      subject { cashfree_service.create_or_update(organization:, code:, name:, client_id:, client_secret:, success_redirect_url:) }
+    end
+
     context "when code was changed" do
       let(:new_code) { "updated_code_1" }
       let(:cashfree_customer) { create(:cashfree_customer, payment_provider:, customer:) }

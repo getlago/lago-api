@@ -12,6 +12,8 @@ module Integrations
       end
 
       def call
+        return shadow_outbound_failure if shadow_outbound_refused?(params[:organization_id])
+
         organization = Organization.find_by(id: params[:organization_id])
 
         unless organization.hubspot_enabled?

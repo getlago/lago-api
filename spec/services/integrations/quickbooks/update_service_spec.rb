@@ -113,6 +113,8 @@ RSpec.describe Integrations::Quickbooks::UpdateService do
           it_behaves_like "produces a security log", "integration.updated" do
             before { service_call }
           end
+
+          it_behaves_like "refused on a shadow organization", -> { integration.reload.attributes }
         end
 
         context "when only the name is given" do

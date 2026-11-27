@@ -64,4 +64,26 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create do
     expect(result_data["requireTermsOfServiceConsent"]).to eq(true)
     expect(result_data["sellerProfile"]).to eq("profile_test_123")
   end
+
+  context "when the organization is the shadow of a migration" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: [required_permission, "organization:integrations:view"],
+        query: mutation,
+        variables: {input: {secretKey: secret_key, code:, name:}}
+      )
+    end
+
+    before do
+      create(:billing_engine_migration, organization: create(:organization), shadow_organization: membership.organization)
+    end
+
+    it "refuses with shadow_organization_outbound_disabled" do
+      expect { result }.not_to change(PaymentProviders::StripeProvider, :count)
+
+      expect_graphql_error(result:, message: "shadow_organization_outbound_disabled")
+    end
+  end
 end

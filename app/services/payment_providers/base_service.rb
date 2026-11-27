@@ -2,6 +2,8 @@
 
 module PaymentProviders
   class BaseService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     # Guarantees security logging for payment provider creation and updates.
     # Subclasses are unaware of the logging — the only requirement
     # is that `result.{type}_provider` is set upon the successful `create_or_update`.

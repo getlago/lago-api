@@ -2,6 +2,8 @@
 
 module WebhookEndpoints
   class UpdateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:webhook_endpoint]
 
     def initialize(id:, organization:, params:, signature_algo_rule: nil)
@@ -17,6 +19,7 @@ module WebhookEndpoints
       webhook_endpoint = organization.webhook_endpoints.find_by(id:)
 
       return result.not_found_failure!(resource: "webhook_endpoint") if webhook_endpoint.blank?
+      return shadow_outbound_failure if shadow_outbound_refused?(organization.id)
 
       # Only a change is checked, so an endpoint keeps an algorithm the API no longer offers.
       # The column is NOT NULL, so null is refused like an unknown value.

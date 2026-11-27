@@ -51,6 +51,10 @@ RSpec.describe PaymentProviders::StripeService do
       end
     end
 
+    it_behaves_like "refused on a shadow organization", PaymentProviders::StripeProvider do
+      subject { stripe_service.create_or_update(organization_id: organization.id, secret_key:, code:, name:, success_redirect_url:) }
+    end
+
     context "when code was changed" do
       let(:new_code) { "updated_code_2" }
       let(:stripe_customer) { create(:stripe_customer, payment_provider:, customer:) }

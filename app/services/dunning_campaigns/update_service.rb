@@ -2,6 +2,8 @@
 
 module DunningCampaigns
   class UpdateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:dunning_campaign]
 
     def initialize(organization:, dunning_campaign:, params:)
@@ -16,6 +18,7 @@ module DunningCampaigns
     def call
       return result.forbidden_failure! unless organization.auto_dunning_enabled?
       return result.not_found_failure!(resource: "dunning_campaign") unless dunning_campaign
+      return shadow_outbound_failure if params[:applied_to_organization] && shadow_outbound_refused?(organization.id)
 
       ActiveRecord::Base.transaction do
         dunning_campaign.assign_attributes(permitted_attributes)

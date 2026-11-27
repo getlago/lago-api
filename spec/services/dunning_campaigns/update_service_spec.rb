@@ -512,6 +512,15 @@ RSpec.describe DunningCampaigns::UpdateService do
             expect { result }.to not_change { customer_assigned.reload.last_dunning_campaign_attempt }
               .and not_change { customer_assigned.last_dunning_campaign_attempt_at }
           end
+
+          context "when the organization is the shadow of a migration" do
+            before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+            it "unassigns dunning_campaign from the default billing entity" do
+              expect { result }.to change { organization.default_billing_entity.applied_dunning_campaign_id }
+                .from(dunning_campaign.id).to(nil)
+            end
+          end
         end
 
         context "with applied_to_organization true" do
@@ -529,6 +538,8 @@ RSpec.describe DunningCampaigns::UpdateService do
             expect { result }.to change { organization.default_billing_entity.applied_dunning_campaign_id }
               .from(nil).to(dunning_campaign.id)
           end
+
+          it_behaves_like "refused on a shadow organization", -> { billing_entity.reload.applied_dunning_campaign_id }
 
           context "with a previous dunning campaign is applied to the default billing entity" do
             let(:dunning_campaign_2) do

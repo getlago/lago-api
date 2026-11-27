@@ -4,6 +4,8 @@ module Integrations
   module Anrok
     class CreateService < Integrations::CreateService
       def call(**args)
+        return shadow_outbound_failure if shadow_outbound_refused?(args[:organization_id])
+
         organization = Organization.find_by(id: args[:organization_id])
 
         return result.forbidden_failure! unless License.premium?

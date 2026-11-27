@@ -309,6 +309,19 @@ RSpec.describe Api::V1::BillingEntitiesController do
       before { subject }
     end
 
+    context "when the organization is the shadow of a migration" do
+      let(:update_params) { {billing_entity: {email_settings: ["invoice.finalized"]}} }
+
+      before { create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization) }
+
+      it "returns a forbidden error and keeps the email settings" do
+        expect { subject }.not_to change { billing_entity1.reload.email_settings }
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("shadow_organization_outbound_disabled")
+      end
+    end
+
     context "when updating a structured payment_term" do
       let(:update_params) do
         {billing_entity: {payment_term: {term_type: "net_end_of_month", days: 10}}}

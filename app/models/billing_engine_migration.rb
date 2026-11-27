@@ -12,15 +12,28 @@ class BillingEngineMigration < ApplicationRecord
   validate :plan_mapping_is_valid
   validate :organizations_not_in_another_migration
 
+  after_commit :expire_lookup
+  after_rollback :expire_lookup
+
   def shadow_organization_isolated?
-    !WebhookEndpoint.exists?(organization_id: shadow_organization_id) && shadow_billing_entities_sending_outbound.none?
+    !WebhookEndpoint.exists?(organization_id: shadow_organization_id) &&
+      shadow_billing_entities_sending_outbound.none? &&
+      !shadow_customers_with_dunning_campaign.exists?
   end
 
   private
 
+  def expire_lookup
+    BillingEngineMigrations::Lookup.expire!
+  end
+
   def shadow_billing_entities_sending_outbound
     entities = BillingEntity.where(organization_id: shadow_organization_id)
     entities.where("cardinality(email_settings) > 0").or(entities.where.not(applied_dunning_campaign_id: nil))
+  end
+
+  def shadow_customers_with_dunning_campaign
+    Customer.where(applied_dunning_campaign_id: DunningCampaign.where(organization_id: shadow_organization_id).select(:id))
   end
 
   def shadow_organization_differs_from_organization

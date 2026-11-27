@@ -2,6 +2,8 @@
 
 module Integrations
   class CreateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:integration]
 
     # Guarantees security logging for integration creation.
