@@ -32,7 +32,7 @@ module CopyToProduction
       return result.not_found_failure!(resource: item_type) unless source_record
 
       # The create services log and track after the commit, attributed to the user's production membership.
-      CurrentContext.set(membership: production_membership&.then { "membership/#{it.id}" }) do
+      CurrentContext.set(membership_id: production_membership&.id) do
         ActiveRecord::Base.transaction do
           # Membership and activation writes lock production too, so the checks below read their committed state.
           Organizations::SandboxLockService.call!(organization: production)

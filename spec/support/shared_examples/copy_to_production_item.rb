@@ -25,3 +25,13 @@ RSpec.shared_examples "a copy to production item matched by code" do |factory, *
     end
   end
 end
+
+# Every column of the copied model is copied through `ATTRIBUTES` or left out on purpose, so that a new column needs a
+# decision. `left_out` lists the columns copied otherwise or not at all, besides the ids and timestamps.
+RSpec.shared_examples "a copy to production item copying every column" do |model, left_out: []|
+  it "copies every column of #{model} it does not leave out" do
+    ignored = %w[id organization_id created_at updated_at deleted_at] + left_out
+
+    expect(model.column_names - described_class::ATTRIBUTES.map(&:to_s) - ignored).to eq([])
+  end
+end
