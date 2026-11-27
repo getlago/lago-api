@@ -278,7 +278,7 @@ RSpec.describe CopyToProduction::CopyService do
 
       copy = production.features.find_by(code: "seats")
       expect(result).to be_success
-      expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "feature", record: copy))
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "feature", record: copy))
       expect(copy).to have_attributes(name: "Seats", description: "Seats per workspace")
       expect(copy.privileges.order(:created_at, :id).map { [it.code, it.name, it.value_type, it.config, it.organization_id] }).to eq(
         [
