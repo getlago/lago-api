@@ -2,6 +2,8 @@
 
 module Integrations
   class OktaIntegration < BaseIntegration
+    include SsoLoginSelection
+
     validates :client_secret, :client_id, :domain, :organization_name, presence: true
     validate :domain_uniqueness
     validate :validate_host_format, if: -> { setting_changed?("host") }
@@ -13,6 +15,17 @@ module Integrations
     # A bare hostname: the token and userinfo URLs are built by appending a path to it. Also checks
     # `organization_name`, from which the default host is built.
     HOST_FORMAT = /\A[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?\z/i
+
+    scope :with_domain, ->(email_domain) do
+      where("settings->>'domain' IS NOT NULL").where("settings->>'domain' = ?", email_domain)
+    end
+
+    # The integration that handles a login for this email, see SsoLoginSelection.
+    def self.for_login(email:, organization_id: nil)
+      candidates = with_domain(email.split("@").last).includes(:organization).order(:created_at).to_a
+
+      pick_for_login(candidates, email:, organization_id:)
+    end
 
     def host
       get_from_settings("host").presence || "#{organization_name.downcase}.okta.com"
@@ -26,16 +39,22 @@ module Integrations
 
     private
 
+    # NOTE: Another organization can use the same domain only with the same Okta org (same host).
+    #       Checked on every save, so an integration sharing its domain cannot move to another host.
     def domain_uniqueness
       return if domain.blank?
 
-      okta_integration = ::Integrations::OktaIntegration
-        .where("settings->>'domain' IS NOT NULL")
-        .where("settings->>'domain' = ?", domain)
+      shared_with_another_provider = ::Integrations::OktaIntegration
+        .with_domain(domain)
         .where.not(id:)
-        .exists?
+        .any? { !resolvable_host? || !same_identity_provider?(it) }
 
-      errors.add(:domain, "domain_not_unique") if okta_integration
+      errors.add(:domain, "domain_not_unique") if shared_with_another_provider
+    end
+
+    # `host` falls back to `organization_name`, which can be missing on an invalid record.
+    def resolvable_host?
+      get_from_settings("host").present? || organization_name.present?
     end
 
     def validate_host_format
