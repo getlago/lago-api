@@ -316,4 +316,30 @@ describe Invoices::CreateCreditPurchaseService do
       end
     end
   end
+
+  context "with two builds of one entry at the same time", transaction: false do
+    subject(:outcomes) do
+      entry_id = wallet_transaction.id
+
+      with_advisory_lock("customer-#{customer.id}-catalog_wallet", lock_released_after: 1.second) do
+        Array.new(2) do
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              described_class.call(wallet_transaction: CatalogWalletTransaction.find(entry_id))
+            end
+          rescue => e
+            e
+          end
+        end.map(&:value)
+      end
+    end
+
+    it "builds one invoice and one fee" do
+      expect(outcomes.map(&:success?)).to eq([true, true])
+      expect(outcomes.map { it.invoice.id }.uniq.size).to eq(1)
+      expect(Invoice.where(customer:).count).to eq(1)
+      expect(Fee.where(invoiceable: wallet_transaction).count).to eq(1)
+      expect(wallet_transaction.reload.invoice_id).to eq(outcomes.first.invoice.id)
+    end
+  end
 end

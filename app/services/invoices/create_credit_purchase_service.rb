@@ -11,32 +11,34 @@ module Invoices
 
     def call
       return result.forbidden_failure!(code: "wallet_transaction_not_inbound") unless wallet_transaction.inbound?
-      unless wallet_transaction.purchase_amount_cents.positive?
-        return result.forbidden_failure!(code: "wallet_transaction_not_paid")
-      end
+      return result.forbidden_failure!(code: "wallet_transaction_not_paid") unless wallet_transaction.purchase_amount_cents.positive?
 
       ActiveRecord::Base.transaction(requires_new: true) do
-        wallet_transaction.lock!("FOR NO KEY UPDATE")
+        # Same lock order as CatalogWallets::Ledger, which settles or fails this entry.
+        Customers::LockService.call(customer_id: wallet.customer_id, scope: :catalog_wallet) do
+          wallet.lock!("FOR NO KEY UPDATE")
+          wallet_transaction.lock!("FOR NO KEY UPDATE")
 
-        if wallet_transaction.invoice_id
-          result.invoice = wallet_transaction.invoice
-          result.fee = result.invoice.fees.find_by(invoiceable: wallet_transaction)
-          next
+          if wallet_transaction.invoice_id
+            result.invoice = wallet_transaction.invoice
+            result.fee = result.invoice.fees.find_by(invoiceable: wallet_transaction)
+            next
+          end
+          next result.forbidden_failure!(code: "wallet_transaction_not_pending") unless wallet_transaction.pending?
+
+          invoice = create_generating_invoice
+          fee = Fees::CreateCreditPurchaseService.call!(invoice:, wallet_transaction:).fee
+          compute_amounts(invoice, fee)
+          Invoices::ApplyInvoiceCustomSectionsService.call!(
+            invoice:,
+            resources: [Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract)]
+          )
+          invoice.open!
+          wallet_transaction.update!(invoice:)
+
+          result.invoice = invoice
+          result.fee = fee.reload
         end
-        next result.forbidden_failure!(code: "wallet_transaction_not_pending") unless wallet_transaction.pending?
-
-        invoice = create_generating_invoice
-        fee = Fees::CreateCreditPurchaseService.call!(invoice:, wallet_transaction:).fee
-        compute_amounts(invoice, fee)
-        Invoices::ApplyInvoiceCustomSectionsService.call!(
-          invoice:,
-          resources: [Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract)]
-        )
-        invoice.open!
-        wallet_transaction.update!(invoice:)
-
-        result.invoice = invoice
-        result.fee = fee.reload
       end
 
       result
