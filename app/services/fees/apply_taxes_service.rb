@@ -65,6 +65,7 @@ module Fees
       # organization.taxes - are all taxes created on the organization
       return customer.organization.taxes.where(code: tax_codes) if tax_codes
       return product_taxes if fee.product?
+      return purchase_taxes if fee.credit_purchase?
       return fee.add_on.taxes if fee.add_on? && fee.add_on.taxes.any?
       return fee.charge.taxes if fee.charge? && fee.charge.taxes.any?
       return fee.fixed_charge.taxes if fee.fixed_charge? && fee.fixed_charge.taxes.any?
@@ -80,11 +81,33 @@ module Fees
 
     def product_taxes
       rate_card_taxes = fee.rate_card_rate.rate_card.taxes
-      return rate_card_taxes if rate_card_taxes.any?
-      return plan.taxes if plan&.taxes&.any?
-      return customer.taxes if customer.taxes.any?
 
-      billing_entity_taxes(fee.billing_entity_id)
+      if rate_card_taxes.any?
+        rate_card_taxes
+      else
+        catalog_fallback_taxes(plan)
+      end
+    end
+
+    def purchase_taxes
+      wallet = fee.invoiceable.catalog_wallet
+      return Tax.none if wallet.tax_on_consumption?
+
+      if wallet.taxes.any?
+        wallet.taxes
+      else
+        catalog_fallback_taxes(plan || wallet.contract.catalog_plan)
+      end
+    end
+
+    def catalog_fallback_taxes(catalog_plan)
+      return catalog_plan.taxes if catalog_plan&.taxes&.any?
+
+      if customer.taxes.any?
+        customer.taxes
+      else
+        billing_entity_taxes(fee.billing_entity_id)
+      end
     end
 
     def billing_entity_taxes(billing_entity_id)

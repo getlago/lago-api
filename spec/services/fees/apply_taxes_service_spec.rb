@@ -509,6 +509,238 @@ RSpec.describe Fees::ApplyTaxesService do
       end
     end
 
+    context "when fee is a credit_purchase type" do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+      let(:tax_application) { "tax_on_purchase" }
+      let(:wallet) { create(:catalog_wallet, organization:, customer:, contract:, tax_application:) }
+      let(:wallet_transaction) do
+        create(:catalog_wallet_transaction, :pending, organization:, catalog_wallet: wallet, purchase_amount_cents: 8000)
+      end
+      let(:fee) do
+        create(:credit_purchase_fee, invoice:, wallet_transaction:, amount_cents: 8000, precise_amount_cents: 8000.0)
+      end
+      let(:wallet_tax) { create(:tax, organization:, rate: 20) }
+
+      it "falls back to the billing entity taxes" do
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(result.applied_taxes.map(&:tax_code)).to eq([tax3.code])
+      end
+
+      context "when the wallet has taxes" do
+        before { create(:catalog_wallet_applied_tax, organization:, catalog_wallet: wallet, tax: wallet_tax) }
+
+        context "when the contract plan has taxes" do
+          before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax: tax2) }
+
+          context "when the customer has taxes" do
+            before { create(:customer_applied_tax, customer:, tax: tax1) }
+
+            it "applies only the wallet taxes" do
+              result = apply_service.call
+
+              expect(result).to be_success
+              expect(result.applied_taxes).to contain_exactly(
+                have_attributes(
+                  fee:,
+                  tax: wallet_tax,
+                  tax_description: wallet_tax.description,
+                  tax_code: wallet_tax.code,
+                  tax_name: wallet_tax.name,
+                  tax_rate: 20,
+                  amount_currency: fee.currency,
+                  amount_cents: 1600, # 8000 * 20 / 100
+                  precise_amount_cents: 1600.0
+                )
+              )
+              expect(fee).to have_attributes(
+                taxes_amount_cents: 1600, # 8000 * 20 / 100
+                taxes_precise_amount_cents: 1600.0,
+                taxes_rate: 20
+              )
+            end
+          end
+        end
+
+        context "when the customer has a zero-percent tax" do
+          let(:wallet_tax) { tax1 }
+          let(:zero_tax) { create(:tax, organization:, rate: 0) }
+
+          before { create(:customer_applied_tax, customer:, tax: zero_tax) }
+
+          it "applies the wallet tax alone" do
+            result = apply_service.call
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([tax1.code])
+            expect(fee).to have_attributes(
+              taxes_amount_cents: 800, # 8000 * 10 / 100
+              taxes_precise_amount_cents: 800.0,
+              taxes_rate: 10
+            )
+          end
+        end
+
+        context "when the wallet tax is zero-percent" do
+          let(:wallet_tax) { create(:tax, organization:, rate: 0) }
+
+          before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax: tax2) }
+
+          it "applies the zero-percent wallet tax, not the plan's" do
+            result = apply_service.call
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([wallet_tax.code])
+            expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0)
+          end
+        end
+
+        context "when the wallet is discarded" do
+          let(:wallet) do
+            create(:catalog_wallet, organization:, customer:, contract:, tax_application:, deleted_at: Time.current)
+          end
+
+          it "still applies the wallet taxes" do
+            result = apply_service.call
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([wallet_tax.code])
+          end
+        end
+
+        context "when tax_codes are passed" do
+          it "applies the passed taxes, not the wallet's" do
+            result = described_class.call(fee:, tax_codes: [tax2.code])
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([tax2.code])
+          end
+        end
+      end
+
+      context "when the contract plan has taxes" do
+        before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax: tax2) }
+
+        context "when the customer has taxes" do
+          before { create(:customer_applied_tax, customer:, tax: tax1) }
+
+          it "applies the plan taxes, not the customer's" do
+            result = apply_service.call
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([tax2.code])
+            expect(fee).to have_attributes(
+              taxes_amount_cents: 960, # 8000 * 12 / 100
+              taxes_precise_amount_cents: 960.0,
+              taxes_rate: 12
+            )
+          end
+
+          context "when the contract plan is discarded" do
+            let(:catalog_plan) { create(:catalog_plan, organization:, deleted_at: Time.current) }
+
+            it "still applies the plan taxes" do
+              result = apply_service.call
+
+              expect(result).to be_success
+              expect(result.applied_taxes.map(&:tax_code)).to eq([tax2.code])
+              expect(fee).to have_attributes(
+                taxes_amount_cents: 960, # 8000 * 12 / 100
+                taxes_rate: 12
+              )
+            end
+          end
+        end
+
+        context "when a plan is passed" do
+          let(:passed_plan) { create(:catalog_plan, organization:) }
+
+          before { create(:plan_applied_tax, :catalog_plan, catalog_plan: passed_plan, tax: tax1) }
+
+          it "applies the passed plan's taxes, not the contract plan's" do
+            result = described_class.call(fee:, plan: passed_plan)
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([tax1.code])
+          end
+        end
+      end
+
+      context "when the customer has taxes" do
+        before { create(:customer_applied_tax, customer:, tax: tax1) }
+
+        it "applies the customer taxes, not the billing entity's" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to eq([tax1.code])
+        end
+      end
+
+      context "when the contract has no plan" do
+        let(:catalog_plan) { nil }
+
+        it "falls back to the billing entity taxes" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to eq([tax3.code])
+          expect(fee).to have_attributes(
+            taxes_amount_cents: 400, # 8000 * 5 / 100
+            taxes_precise_amount_cents: 400.0,
+            taxes_rate: 5
+          )
+        end
+
+        context "when the customer has taxes" do
+          before { create(:customer_applied_tax, customer:, tax: tax1) }
+
+          it "applies the customer taxes" do
+            result = apply_service.call
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([tax1.code])
+          end
+        end
+      end
+
+      context "when the contract has a billing entity of its own" do
+        let(:contract_billing_entity) { create(:billing_entity, organization:) }
+        let(:contract) do
+          create(:contract, organization:, customer:, catalog_plan:, billing_entity: contract_billing_entity)
+        end
+
+        before { create(:billing_entity_applied_tax, billing_entity: contract_billing_entity, tax: tax2) }
+
+        it "falls back to the taxes of the fee's billing entity" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to eq([tax3.code])
+        end
+      end
+
+      context "when the wallet is taxed on consumption" do
+        let(:tax_application) { "tax_on_consumption" }
+
+        before do
+          create(:catalog_wallet_applied_tax, organization:, catalog_wallet: wallet, tax: wallet_tax)
+          create(:customer_applied_tax, customer:, tax: tax1)
+        end
+
+        it "applies no tax, whatever the wallet, customer and billing entity taxes" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(result.applied_taxes).to be_empty
+          expect(fee.applied_taxes).to be_empty
+          expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_precise_amount_cents: 0, taxes_rate: 0)
+        end
+      end
+    end
+
     context "when fee is a fixed charge type with taxes" do
       let(:fixed_charge) { create(:fixed_charge, organization:) }
       let(:fee) { create(:fixed_charge_fee, invoice:, amount_cents: 1000, precise_amount_cents: 1000.0, fixed_charge:) }
