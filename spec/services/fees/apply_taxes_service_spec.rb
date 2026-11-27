@@ -612,7 +612,7 @@ RSpec.describe Fees::ApplyTaxesService do
 
         context "when tax_codes are passed" do
           it "applies the passed taxes, not the wallet's" do
-            result = described_class.new(fee:, tax_codes: [tax2.code]).call
+            result = described_class.call(fee:, tax_codes: [tax2.code])
 
             expect(result).to be_success
             expect(result.applied_taxes.map(&:tax_code)).to eq([tax2.code])
@@ -660,7 +660,7 @@ RSpec.describe Fees::ApplyTaxesService do
           before { create(:plan_applied_tax, :catalog_plan, catalog_plan: passed_plan, tax: tax1) }
 
           it "applies the passed plan's taxes, not the contract plan's" do
-            result = described_class.new(fee:, plan: passed_plan).call
+            result = described_class.call(fee:, plan: passed_plan)
 
             expect(result).to be_success
             expect(result.applied_taxes.map(&:tax_code)).to eq([tax1.code])
