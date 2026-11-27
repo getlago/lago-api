@@ -5277,7 +5277,7 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN 'wallet_transaction'::text
             WHEN 5 THEN 'add_on'::text
             WHEN 6 THEN 'product'::text
-            WHEN 7 THEN 'wallet_transaction'::text
+            WHEN 7 THEN 'catalog_wallet_transaction'::text
             ELSE 'subscription'::text
         END, 'grouped_by', f.grouped_by) AS item,
     f.pay_in_advance,

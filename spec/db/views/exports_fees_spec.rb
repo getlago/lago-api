@@ -284,7 +284,7 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
         "code" => "credit_purchase",
         "name" => "credit_purchase",
         "description" => "credit_purchase",
-        "item_type" => "wallet_transaction",
+        "item_type" => "catalog_wallet_transaction",
         "lago_item_id" => wallet_transaction.id,
         "invoice_display_name" => "credit_purchase"
       )

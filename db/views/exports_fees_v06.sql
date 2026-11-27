@@ -97,7 +97,7 @@ SELECT
             WHEN 3 THEN 'wallet_transaction' -- 3 is credit
             WHEN 5 THEN 'add_on' -- 5 is fixed_charge, whose item is the add-on behind it
             WHEN 6 THEN 'product' -- 6 is product
-            WHEN 7 THEN 'wallet_transaction' -- 7 is credit_purchase
+            WHEN 7 THEN 'catalog_wallet_transaction' -- 7 is credit_purchase
             ELSE 'subscription' -- everything else is subscription
         END,
         'grouped_by', f.grouped_by
