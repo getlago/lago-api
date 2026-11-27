@@ -104,6 +104,27 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     end
   end
 
+  context "when the customer has no payment provider code and the organization has several providers of its type" do
+    let(:code) { nil }
+    let(:payment_provider) { nil }
+    let(:provider_customer) { nil }
+
+    before do
+      create(:stripe_provider, code: "stripe_1", organization:)
+      create(:stripe_provider, code: "stripe_2", organization:)
+    end
+
+    it "returns its own result without a payment url" do
+      result = generate_payment_url_service.call
+
+      expect(result).to be_a(described_class::Result)
+      expect(result).not_to be_success
+      expect(result.payment_url).to be_nil
+      expect(result.error).to be_a(BaseService::ServiceFailure)
+      expect(result.error.code).to eq("payment_provider_code_missing")
+    end
+  end
+
   context "when provider service return a third party error" do
     let(:provider) { "cashfree" }
     let(:code) { "cashfree_1" }
@@ -150,7 +171,13 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     it "returns a third party error" do
       result = generate_payment_url_service.call
 
-      expect(result).to eq(error_result)
+      expect(result).to be_a(described_class::Result)
+      expect(result).not_to be_success
+      expect(result.payment_url).to be_nil
+      expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+      expect(result.error.third_party).to eq(error_result.error.third_party)
+      expect(result.error.error_code).to eq(error_result.error.error_code)
+      expect(result.error.error_message).to eq(error_result.error.error_message)
     end
   end
 
@@ -179,7 +206,12 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     it "returns an error" do
       result = generate_payment_url_service.call
 
-      expect(result).to eq(error_result)
+      expect(result).to be_a(described_class::Result)
+      expect(result).not_to be_success
+      expect(result.payment_url).to be_nil
+      expect(result.error).to be_a(BaseService::ServiceFailure)
+      expect(result.error.code).to eq(error_result.error.code)
+      expect(result.error.error_message).to eq(error_result.error.error_message)
     end
   end
 end

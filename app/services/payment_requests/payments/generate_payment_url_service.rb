@@ -44,9 +44,9 @@ module PaymentRequests
       rescue BaseService::ThirdPartyFailure => e
         deliver_error_webhook(e)
 
-        e.result
+        result.fail_with_error!(e)
       rescue BaseService::FailedResult => e
-        e.result
+        result.fail_with_error!(e)
       end
 
       private
