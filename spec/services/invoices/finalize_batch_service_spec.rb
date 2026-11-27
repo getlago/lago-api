@@ -17,7 +17,6 @@ RSpec.describe Invoices::FinalizeBatchService do
   end
 
   describe "#call" do
-    let(:finalize_service) { instance_double(Invoices::RefreshDraftAndFinalizeService) }
     let(:result) { Invoices::RefreshDraftAndFinalizeService::Result.new }
     let(:invoice_ids) { invoices.map(&:id) }
     let(:invoices) { create_list(:invoice, 3, status: "draft", customer:) }
@@ -27,8 +26,7 @@ RSpec.describe Invoices::FinalizeBatchService do
 
       result.invoice = Invoice.new
 
-      allow(Invoices::RefreshDraftAndFinalizeService).to receive(:new).and_return(finalize_service)
-      allow(finalize_service).to receive(:call).and_return(result)
+      allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call).and_return(result)
     end
 
     it "returns processed invoices that have correct status" do

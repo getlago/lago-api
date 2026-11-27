@@ -34,11 +34,11 @@ module Api
 
         return method_not_allowed_error(code: "update_on_voided_invoice") if invoice&.voided?
 
-        result = Invoices::UpdateService.new(
+        result = Invoices::UpdateService.call(
           invoice:,
           params: update_params.to_h.deep_symbolize_keys,
           webhook_notification: true
-        ).call
+        )
 
         if result.success?
           render_invoice(result.invoice)
@@ -160,10 +160,10 @@ module Api
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: "invoice") unless invoice
 
-        result = Invoices::Payments::RetryService.new(
+        result = Invoices::Payments::RetryService.call(
           invoice:,
           payment_method_params: retry_payment_params[:payment_method]
-        ).call
+        )
         return render_error_response(result) unless result.success?
 
         head(:ok)
@@ -173,7 +173,7 @@ module Api
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: "invoice") unless invoice
 
-        result = Invoices::RetryService.new(invoice:).call
+        result = Invoices::RetryService.call(invoice:)
         if result.success?
           render_invoice(result.invoice)
         else

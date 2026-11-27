@@ -20,7 +20,7 @@ module Mutations
 
         return not_allowed_error(code: "update_on_voided_invoice") if invoice&.voided?
 
-        result = ::Invoices::UpdateService.new(invoice:, params: args, webhook_notification: true).call
+        result = ::Invoices::UpdateService.call(invoice:, params: args, webhook_notification: true)
 
         result.success? ? result.invoice : result_error(result)
       end

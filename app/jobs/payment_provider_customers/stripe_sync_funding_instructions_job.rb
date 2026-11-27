@@ -10,7 +10,7 @@ module PaymentProviderCustomers
     retry_on ActiveJob::DeserializationError
 
     def perform(stripe_customer)
-      result = PaymentProviderCustomers::Stripe::SyncFundingInstructionsService.new(stripe_customer).call
+      result = PaymentProviderCustomers::Stripe::SyncFundingInstructionsService.call(stripe_customer)
       result.raise_if_error!
     rescue BaseService::UnauthorizedFailure => e
       Rails.logger.warn(e.message)

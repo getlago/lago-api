@@ -23,6 +23,7 @@ require:
   - ./dev/cops/stub_perform_all_later_cop.rb
   - ./dev/cops/no_expect_receive_on_job_cop.rb
   - ./dev/cops/v2_timestamp_format_cop.rb
+  - ./dev/cops/service_new_call_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -95,6 +96,19 @@ Lago/MigrationsIfNotExists:
     - "db/migrate/202[0-5]*.rb"
     - "db/migrate/20260[0-8]*.rb"
     - "db/migrate/202609[0-2]*.rb"
+
+# The autocorrection runs the service middlewares, such as the activity log, that `new(...).call` skips.
+# Webhook services and the allowed receivers do not inherit `BaseService` and have no class-level `call`.
+Lago/ServiceNewCall:
+  SafeAutoCorrect: false
+  AllowedReceivers:
+    # Dates services return a dates object, not a result, which the middlewares cannot read.
+    - Subscriptions::TerminatedDatesService
+    - Commitments::DatesService
+    - Commitments::Minimum::InAdvance::DatesService
+    - Commitments::Minimum::InArrears::DatesService
+  Exclude:
+    - "spec/services/webhooks/**/*.rb"
 
 # TODO: Fix these services
 Lago/ServiceCall:
