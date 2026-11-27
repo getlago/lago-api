@@ -61,4 +61,26 @@ RSpec.describe Mutations::BillableMetrics::Create do
     expect(result_data["weightedInterval"]).to be_nil
     expect(result_data["filters"].count).to eq(1)
   end
+
+  it "returns a validation error for a filter value with surrounding whitespace" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: membership.organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {
+          name: "New Metric",
+          code: "new_metric",
+          description: "New metric description",
+          aggregationType: "count_agg",
+          recurring: false,
+          filters: [{key: "region", values: ["usa", " europe "]}]
+        }
+      }
+    )
+
+    expect_unprocessable_entity(result, details: {"filters[0].values[1]": ["value_is_invalid"]})
+    expect(membership.organization.billable_metrics.count).to eq(0)
+  end
 end

@@ -92,6 +92,19 @@ RSpec.describe Api::V1::BillableMetricsController do
         expect(json[:billable_metric][:lago_id]).to be_present
         expect(json[:billable_metric][:filters]).to eq([{key: "key", values: ["value1", "value2"]}])
       end
+
+      context "when a filter value has surrounding whitespace" do
+        let(:create_params) do
+          {name: "BM1", code: "BM1_code", aggregation_type: "count_agg", filters: [{key: "key", values: ["value1", " value2 "]}]}
+        end
+
+        it "returns a validation error on the value without creating the metric" do
+          expect { subject }.not_to change(BillableMetric, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({"filters[0].values[1]": ["value_is_invalid"]})
+        end
+      end
     end
 
     context "with invalid input" do
