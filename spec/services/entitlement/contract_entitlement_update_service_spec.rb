@@ -83,6 +83,18 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
         expect(Utils::ActivityLog).to have_received(:produce).once
       end
 
+      it "locks the catalog plan so that its writes wait for the logs" do
+        allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+        allow(Utils::KafkaProducer).to receive(:produce_async)
+        queries = []
+        subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { queries << it.payload[:sql] }
+
+        result
+
+        ActiveSupport::Notifications.unsubscribe(subscriber)
+        expect(queries).to include(a_string_matching(/FROM "catalog_plans".*FOR SHARE/m))
+      end
+
       context "when activity logs cannot be sent" do
         before { allow(Utils::ActivityLog).to receive(:available?).and_return(false) }
 
@@ -102,6 +114,52 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
           expect { result }.not_to change(Entitlement::EntitlementValue, :count)
 
           expect(Utils::ActivityLog).to have_received(:produce).once
+        end
+      end
+
+      context "with several changed features" do
+        let(:entitlements_params) { {"seats" => {"max" => 60}, "storage" => {"limit" => 10}} }
+
+        it "logs each one, newest first as the contract read lists them" do
+          result
+
+          expect(Utils::ActivityLog).to have_received(:produce)
+            .with(contract, "contract_entitlement.created", hash_including(activity_object: hash_including(feature_code: "storage")))
+            .ordered
+          expect(Utils::ActivityLog).to have_received(:produce)
+            .with(contract, "contract_entitlement.updated", hash_including(activity_object: hash_including(feature_code: "seats")))
+            .ordered
+          expect(Utils::ActivityLog).to have_received(:produce).twice
+        end
+      end
+
+      context "with an empty body" do
+        let(:entitlements_params) { {} }
+
+        it "reads the contract entitlements once and logs nothing" do
+          allow(Entitlement::SubscriptionEntitlement).to receive(:for_contract).and_call_original
+
+          expect(result).to be_success
+          expect(Entitlement::SubscriptionEntitlement).to have_received(:for_contract).once
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+        end
+      end
+
+      context "when the write fails after the logs are built" do
+        before do
+          allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+          allow(Utils::KafkaProducer).to receive(:produce_async)
+          allow(Utils::ActivityLog).to receive(:produce_after_commit).and_wrap_original do |original, *args, **kwargs|
+            original.call(*args, **kwargs)
+            raise ActiveRecord::RecordInvalid, contract
+          end
+        end
+
+        it "rolls back and sends no log" do
+          expect(result).not_to be_success
+          expect(contract.entitlements.reload).to be_empty
+          expect(Utils::ActivityLog).to have_received(:produce).once
+          expect(Utils::KafkaProducer).not_to have_received(:produce_async)
         end
       end
     end
@@ -131,6 +189,28 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
           expect(contract_entitlement.values.reload).to be_empty
           expect(contract.entitlements.reload).to be_empty
           expect(effective_values("seats")).to eq("max" => 50, "sso" => true)
+        end
+
+        context "with the entitlement_events feature flag" do
+          before { organization.update!(feature_flags: organization.feature_flags | ["entitlement_events"]) }
+
+          it "logs it as updated, back to the catalog plan value" do
+            result
+
+            values_before = [
+              {privilege_code: "sso", value: true, plan_value: true, source: "plan"},
+              {privilege_code: "max", value: 70, plan_value: 50, source: "contract"}
+            ]
+            values_after = [
+              {privilege_code: "sso", value: true, plan_value: true, source: "plan"},
+              {privilege_code: "max", value: 50, plan_value: 50, source: "plan"}
+            ]
+            expect(Utils::ActivityLog).to have_received(:produce).with(
+              contract, "contract_entitlement.updated", after_commit: true,
+              activity_object: hash_including(feature_code: "seats", values: values_after),
+              changes: {"values" => [values_before, values_after]}
+            ).once
+          end
         end
 
         context "when the override has another value" do
@@ -248,6 +328,25 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
         expect(contract.entitlement_removals.reload).to be_empty
         expect(effective_values("seats")).to eq("max" => 60, "sso" => true)
       end
+
+      context "with the entitlement_events feature flag" do
+        before { organization.update!(feature_flags: organization.feature_flags | ["entitlement_events"]) }
+
+        # The removed feature was not in the contract read, so granting it back creates it there, from the plan.
+        it "logs it as created" do
+          result
+
+          values = [
+            {privilege_code: "sso", value: true, plan_value: true, source: "plan"},
+            {privilege_code: "max", value: 60, plan_value: 50, source: "contract"}
+          ]
+          expect(Utils::ActivityLog).to have_received(:produce).with(
+            contract, "contract_entitlement.created", after_commit: true,
+            activity_object: hash_including(feature_code: "seats", source: "plan", values:),
+            changes: {"values" => [nil, values]}
+          ).once
+        end
+      end
     end
 
     context "with a contract without a catalog plan" do
@@ -319,14 +418,11 @@ RSpec.describe Entitlement::ContractEntitlementUpdateService do
     context "with a null feature value" do
       let(:entitlements_params) { {"storage" => {"limit" => 10}, "seats" => nil} }
 
-      before { organization.update!(feature_flags: organization.feature_flags | ["entitlement_events"]) }
-
-      it "fails on the feature entry, rolls back and logs nothing" do
+      it "fails on the feature entry and rolls back" do
         expect(result).not_to be_success
         expect(result.error.codes).to eq("entitlements.seats": ["value_is_invalid"])
         expect(result.failed_field).to be_nil
         expect(contract.entitlements.reload).to be_empty
-        expect(Utils::ActivityLog).not_to have_received(:produce)
       end
     end
 
