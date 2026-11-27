@@ -15,7 +15,7 @@ module Customers
   #   locking (lock_version), concurrent updates will raise StaleObjectError.
   #
   class LockService < BaseLockService
-    VALID_SCOPES = %i[prepaid_credit payment_method credit_note coupon billing_schedule catalog_wallet].freeze
+    VALID_SCOPES = %i[prepaid_credit payment_method credit_note coupon billing_schedule catalog_wallet shadow_copy].freeze
 
     def initialize(scope:, customer: nil, customer_id: nil, timeout_seconds: ACQUIRE_LOCK_TIMEOUT, transaction: true)
       @customer_id = customer_id || customer&.id

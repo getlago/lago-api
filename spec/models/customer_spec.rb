@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "redlock/client"
 
 RSpec.describe Customer do
   subject(:customer) { create(:customer) }
@@ -1207,6 +1208,148 @@ RSpec.describe Customer do
         expect(customer).to be_valid
         expect(customer.sequential_id).to eq(6)
         expect(customer.slug).to eq("ORG-55-006")
+      end
+    end
+  end
+
+  describe "copy to a shadow organization" do
+    let(:migration) { create(:billing_engine_migration, organization:) }
+    let(:customer) { create(:customer, organization:) }
+
+    before do
+      customer
+      migration
+    end
+
+    it "enqueues a copy of a new customer" do
+      new_customer = create(:customer, organization:)
+
+      expect(BillingEngineMigrations::CopyCustomerJob).to have_been_enqueued.with(migration.id, new_customer.id)
+    end
+
+    {name: "New name", address_line2: nil, shipping_city: "Lyon", timezone: "Europe/Paris"}.each do |attribute, value|
+      it "enqueues a copy when #{attribute} changes" do
+        expect { customer.update!(attribute => value) }
+          .to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob).with(migration.id, customer.id)
+      end
+    end
+
+    context "when the billing entity changes" do
+      let(:other_billing_entity) { create(:billing_entity, organization:) }
+
+      it "enqueues a copy" do
+        expect { customer.update!(billing_entity: other_billing_entity) }
+          .to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob).with(migration.id, customer.id)
+      end
+    end
+
+    context "when only attributes that are not copied change" do
+      before { allow(BillingEngineMigrations::Lookup).to receive(:for_source).and_call_original }
+
+      it "enqueues nothing without reading the lookup" do
+        expect { customer.update!(invoice_grace_period: 3, document_locale: "fr") }
+          .not_to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob)
+        expect(BillingEngineMigrations::Lookup).not_to have_received(:for_source)
+      end
+    end
+
+    it "enqueues nothing when the copied attributes are saved unchanged" do
+      expect { customer.update!(name: customer.name, address_line1: customer.address_line1) }
+        .not_to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob)
+    end
+
+    it "enqueues one copy when a transaction saves and reloads the customer several times" do
+      expect do
+        described_class.transaction do
+          customer.update!(name: "New name")
+          customer.reload
+          customer.update!(invoice_grace_period: 3)
+        end
+      end.to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob).with(migration.id, customer.id).exactly(:once)
+    end
+
+    it "enqueues nothing when the transaction rolls back, nor on a later save of other attributes" do
+      expect do
+        described_class.transaction do
+          customer.update!(name: "New name")
+          raise ActiveRecord::Rollback
+        end
+        customer.reload.update!(invoice_grace_period: 3)
+      end.not_to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob)
+    end
+
+    context "when the job cannot be enqueued" do
+      before do
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+          .and_raise(RedisClient::CannotConnectError.new("no connection"))
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "keeps the customer write and reports the error" do
+        expect { customer.update!(name: "New name") }.not_to raise_error
+
+        expect(customer.reload.name).to eq("New name")
+        expect(Sentry).to have_received(:capture_exception).with(RedisClient::CannotConnectError, extra: {customer_id: customer.id})
+      end
+    end
+
+    context "when the uniqueness lock cannot reach Redis" do
+      let(:lock_error) do
+        Redlock::LockAcquisitionError.new("Too many Redis errors", [RedisClient::CannotConnectError.new("no connection")])
+      end
+
+      before do
+        allow(ActiveJob::Uniqueness.lock_manager).to receive(:lock).and_raise(lock_error)
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "keeps the customer write and reports the error" do
+        expect { customer.update!(name: "New name") }.not_to raise_error
+
+        expect(customer.reload.name).to eq("New name")
+        expect(Sentry).to have_received(:capture_exception).with(lock_error, extra: {customer_id: customer.id})
+      end
+    end
+
+    context "when the lookup cannot load the migrations" do
+      before do
+        allow(BillingEngineMigrations::Lookup).to receive(:for_source).and_raise(ActiveRecord::ConnectionNotEstablished)
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "keeps the customer write and reports the error" do
+        expect { customer.update!(name: "New name") }.not_to raise_error
+
+        expect(customer.reload.name).to eq("New name")
+        expect(Sentry).to have_received(:capture_exception).with(ActiveRecord::ConnectionNotEstablished, extra: {customer_id: customer.id})
+      end
+    end
+
+    context "when the migration is paused" do
+      let(:migration) { create(:billing_engine_migration, organization:, status: "paused") }
+
+      it "enqueues nothing" do
+        expect { customer.update!(name: "New name") }.not_to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob)
+      end
+    end
+
+    context "when the organization is the shadow of a migration" do
+      let(:migration) do
+        shadow_organization = Organization.find(organization.id)
+        shadow_organization.update!(clickhouse_events_store: true)
+        create(:billing_engine_migration, organization: create(:organization), shadow_organization:)
+      end
+
+      it "enqueues nothing" do
+        expect { customer.update!(name: "New name") }.not_to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob)
+      end
+    end
+
+    context "when the organization has no migration" do
+      let(:migration) { create(:billing_engine_migration, organization: create(:organization)) }
+
+      it "enqueues nothing" do
+        expect { create(:customer, organization:) }.not_to have_enqueued_job(BillingEngineMigrations::CopyCustomerJob)
       end
     end
   end
