@@ -11,6 +11,10 @@ RSpec.describe CopyToProduction::Items::CouponItem do
 
   it_behaves_like "a copy to production item matched by code", :coupon
 
+  # The expiration date is copied only for a time limit; targets are remapped; a copy starts active.
+  it_behaves_like "a copy to production item copying every column", Coupon,
+    left_out: %w[expiration_at limited_billable_metrics limited_plans status terminated_at]
+
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("coupon")
     expect(item.activity_type).to eq("coupon.copied_to_production")
