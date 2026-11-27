@@ -15,7 +15,7 @@ module CopyToProduction
       # Only metric targets are copied; the copy would activate a terminated coupon, or apply one whose metrics are deleted
       # to every metric. An expired one, which the copy refuses too, gets the copy's own code before the copy.
       def refusal(source)
-        if source.coupon_targets.any? { it.plan_id || it.catalog_plan_id }
+        if source.coupon_targets.any? { !it.billable_metric_id }
           "copy_to_production_unsupported_target"
         elsif source.terminated? || expired?(source)
           "copy_to_production_item_inactive"
@@ -47,7 +47,7 @@ module CopyToProduction
       end
 
       def targeted_metrics(source)
-        source.coupon_targets.filter_map(&:billable_metric).sort_by(&:code)
+        source.coupon_targets.includes(:billable_metric).filter_map(&:billable_metric).sort_by(&:code)
       end
     end
   end

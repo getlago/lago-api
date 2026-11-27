@@ -289,6 +289,43 @@ RSpec.describe CopyToProduction::CopyService do
     end
   end
 
+  context "with a fixed amount coupon on every metric" do
+    let(:item_type) { "coupon" }
+    let(:id) { coupon.id }
+    let(:coupon) do
+      create(
+        :coupon,
+        organization: sandbox,
+        code: "launch",
+        coupon_type: "fixed_amount",
+        amount_cents: 1000,
+        amount_currency: "EUR",
+        percentage_rate: nil,
+        frequency: "once",
+        expiration: "no_expiration",
+        limited_billable_metrics: false
+      )
+    end
+
+    it "copies its amount and applies it to every metric" do
+      expect { result }.not_to change { production.billable_metrics.count }
+
+      copy = production.coupons.find_by(code: "launch")
+      expect(result).to be_success
+      expect(copy).to have_attributes(
+        coupon_type: "fixed_amount",
+        amount_cents: 1000,
+        amount_currency: "EUR",
+        percentage_rate: nil,
+        frequency: "once",
+        expiration: "no_expiration",
+        limited_billable_metrics: false,
+        limited_plans: false
+      )
+      expect(copy.coupon_targets).to be_empty
+    end
+  end
+
   context "with a coupon" do
     let(:item_type) { "coupon" }
     let(:id) { coupon.id }
