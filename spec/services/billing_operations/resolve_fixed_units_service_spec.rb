@@ -75,58 +75,127 @@ RSpec.describe BillingOperations::ResolveFixedUnitsService do
         action_type: "renew_fixed_advance", billing_at: cycle.started_at, target_cycle_started_at: cycle.started_at,
         processed_at: cycle.started_at)
     end
-    let(:fee_properties) do
-      {"from_datetime" => cycle.started_at.iso8601(6), "to_datetime" => BillingSegment.inclusive_end(cycle.ended_at).iso8601(6)}
-    end
-    let(:other_card) { create(:contract_rate_card, organization:, contract:) }
-    let(:other_rate) { create(:rate_card_rate, organization:, rate_card: other_card.rate_card) }
+    let(:saved_units) { 8 }
+    let(:save_segment) { true }
+    let(:saved_ended_at) { cycle.ended_at }
 
     before do
       previous_operation
-      if previous_invoice
-        create(:fee, organization:, invoice: previous_invoice, subscription: nil, contract:, contract_rate_card:,
-          rate_card_rate: rate, invoiceable: product, fee_type: :product, pay_in_advance: true, units: 8, properties: fee_properties)
-        create(:fee, organization:, invoice: previous_invoice, subscription: nil, contract:, contract_rate_card: other_card,
-          rate_card_rate: other_rate, invoiceable: other_card.product, fee_type: :product, pay_in_advance: true, units: 20, properties: fee_properties)
+      if previous_operation && save_segment
+        previous_operation.segments.create!(organization:, position: 0, rate_card_rate: rate,
+          started_at: cycle.started_at, ended_at: saved_ended_at, proration_ratio: 1, units: saved_units)
       end
     end
 
-    it "reads legacy fee coverage and excludes fees for another card" do
+    it "uses the quantities saved on the completed operation" do
       expect(result.segments.sole).to have_attributes(units: 10, prepaid_units: 8)
     end
 
-    it "queries only matching advance fees on the legacy path" do
+    it "does not query invoices or fees to resolve prepaid units" do
       queries = capture_sql { result }
-      fee_queries = queries.grep(/FROM "fees"/)
 
-      expect(fee_queries.size).to eq(1)
-      expect(fee_queries.sole).to include('"fees"."organization_id" =', '"fees"."contract_rate_card_id" =', '"fees"."pay_in_advance" =')
+      expect(result).to be_success
       expect(result.segments.sole.prepaid_units).to eq(8)
+      expect(queries.grep(/FROM "(?:invoices|fees)"/)).to be_empty
     end
 
-    context "with saved pricing inputs" do
-      before do
-        previous_operation.segments.create!(organization:, position: 0, rate_card_rate: rate,
-          started_at: cycle.started_at, ended_at: cycle.ended_at, proration_ratio: 1, units: 9)
-      end
+    context "when saved units are zero" do
+      let(:saved_units) { 0 }
 
-      it "uses the saved coverage instead of reconstructing it from fees" do
-        expect(result.segments.sole).to have_attributes(units: 10, prepaid_units: 9)
+      it "accepts zero as a saved quantity" do
+        expect(result).to be_success
+        expect(result.segments.sole.prepaid_units).to eq(0)
       end
+    end
 
-      it "does not load invoice fees when pricing inputs were saved" do
+    context "when a billed segment has no saved quantity" do
+      let(:saved_units) { nil }
+
+      it "returns an error without querying invoices or fees" do
         queries = capture_sql { result }
 
-        expect(queries.grep(/FROM "fees"/)).to be_empty
-        expect(result.segments.sole.prepaid_units).to eq(9)
+        expect(result).to be_failure
+        expect(result.error.messages).to eq(operation: ["missing_saved_units"])
+        expect(queries.grep(/FROM "(?:invoices|fees)"/)).to be_empty
       end
     end
 
-    context "without an earlier invoice" do
+    context "when billed coverage has no saved segments" do
+      let(:save_segment) { false }
+
+      it "returns an error" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq(operation: ["missing_saved_units"])
+      end
+    end
+
+    context "when only part of billed coverage has a saved quantity" do
+      let(:saved_ended_at) { change_time }
+
+      before do
+        previous_operation.segments.create!(organization:, position: 1, rate_card_rate: rate,
+          started_at: change_time, ended_at: cycle.ended_at, proration_ratio: 1, units: nil)
+      end
+
+      it "returns an error instead of ignoring the incomplete segment" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq(operation: ["missing_saved_units"])
+      end
+    end
+
+    context "when missing quantities belong to other billing work" do
+      let(:other_card) { create(:contract_rate_card, organization:, contract:) }
+
+      before do
+        create(:billing_operation, organization:, customer:, contract_rate_card: other_card, invoice: previous_invoice,
+          action_type: "renew_fixed_advance", target_cycle_started_at: cycle.started_at, processed_at: cycle.started_at)
+        create(:billing_operation, organization:, customer:, contract_rate_card:, invoice: previous_invoice,
+          action_type: "renew_fixed_advance", target_cycle_started_at: cycle.ended_at, processed_at: cycle.started_at)
+        create(:billing_operation, organization:, customer:, contract_rate_card:, invoice: previous_invoice,
+          action_type: "renew_fixed_advance", target_cycle_started_at: cycle.started_at)
+      end
+
+      it "uses only completed coverage for the same card and cycle" do
+        expect(result).to be_success
+        expect(result.segments.sole.prepaid_units).to eq(8)
+      end
+    end
+
+    context "when a billed reconciliation has no saved quantity" do
+      let(:previous_adjustment) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, invoice: previous_invoice,
+          action_type: "reconcile_advance_coverage", billing_at: change_time - 1.day,
+          target_cycle_started_at: cycle.started_at, processed_at: change_time - 1.day,
+          units_before: 8, units_after: 9)
+      end
+
+      before do
+        previous_adjustment.segments.create!(organization:, position: 0, rate_card_rate: rate,
+          started_at: change_time - 1.day, ended_at: cycle.ended_at, proration_ratio: 1, units: nil)
+      end
+
+      it "returns an error even when the renewal has saved quantities" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq(operation: ["missing_saved_units"])
+      end
+    end
+
+    context "when an operation completed without an invoice or saved quantities" do
       let(:previous_invoice) { nil }
+      let(:saved_units) { nil }
+
+      it "does not treat the operation as billed coverage" do
+        expect(result).to be_success
+        expect(result.segments.sole).to have_attributes(units: 10, prepaid_units: 0)
+      end
+    end
+
+    context "without an earlier operation" do
+      let(:previous_operation) { nil }
 
       it "has no prepaid units to subtract" do
-        expect(result.segments.sole).to have_attributes(units: 10, prepaid_units: 0)
+        expect(result).to be_success
+        expect(result.segments.sole.prepaid_units).to eq(0)
       end
     end
   end

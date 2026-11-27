@@ -12,8 +12,8 @@ class AllowScheduledTermsOnRequestDate < ActiveRecord::Migration[8.1]
   end
 
   def down
-    # Keep every row if a request date is shared. The old unique index cannot be
-    # restored until those scheduled terms have been migrated by the operator.
+    # Terms sharing a card and date prevent restoring the old unique index.
+    # If that build fails, terms and current indexes are left unchanged.
     add_retryable_index(:index_contract_rate_cards_terms_on_card_and_effective_date, unique: true)
     remove_index :contract_rate_cards_terms, name: :index_current_contract_rate_card_terms, algorithm: :concurrently, if_exists: true
     remove_index :contract_rate_cards_terms, name: :index_contract_rate_card_terms_by_date, algorithm: :concurrently, if_exists: true

@@ -16,6 +16,9 @@ module BillingOperations
     end
 
     def call
+      validate_saved_units if operation&.units_change?
+      return result if result.failure?
+
       result.segments = segments.filter_map do |segment|
         next segment unless segment.contract_rate_card.product.fixed?
 
@@ -109,18 +112,20 @@ module BillingOperations
     end
 
     def prepaid_units_at(timestamp)
-      quantities = completed_advance_operations.includes(:segments).flat_map do |previous|
-        prepaid_units_from_operation(previous, timestamp)
+      quantities = completed_advance_operations.flat_map do |previous|
+        saved_segments = previous.segments.reject { |segment| segment.units.nil? }
+        prepaid_units_from_segments(saved_segments, timestamp)
       end
       quantities.max || 0.to_d
     end
 
-    def prepaid_units_from_operation(previous, timestamp)
-      saved_segments = previous.segments.reject { |segment| segment.units.nil? }
-      if saved_segments.empty?
-        prepaid_units_from_fees(previous.invoice, timestamp)
-      else
-        prepaid_units_from_segments(saved_segments, timestamp)
+    def validate_saved_units
+      completed_advance_operations.each do |previous|
+        next unless previous.invoice_id
+
+        if previous.segments.empty? || previous.segments.any? { |segment| segment.units.nil? }
+          return result.single_validation_failure!(field: :operation, error_code: "missing_saved_units")
+        end
       end
     end
 
@@ -131,20 +136,12 @@ module BillingOperations
     end
 
     def completed_advance_operations
-      renewals = operation.contract_rate_card.billing_operations.completed
-        .where(organization_id: operation.organization_id, target_cycle_started_at: operation.target_cycle_started_at,
-          cancelled_at: nil, action_type: "renew_fixed_advance")
-      renewals.or(operation.reconciliations.completed.where(cancelled_at: nil).unscope(:order))
-    end
-
-    def prepaid_units_from_fees(invoice, timestamp)
-      return [] unless invoice
-
-      invoice.fees.where(organization_id: operation.organization_id, contract_rate_card_id: operation.contract_rate_card_id,
-        pay_in_advance: true).pluck(:units, :properties).filter_map do |units, properties|
-        from = properties["from_datetime"]
-        to = properties["to_datetime"]
-        units if from && to && timestamp.between?(Time.iso8601(from), Time.iso8601(to))
+      @completed_advance_operations ||= begin
+        renewals = operation.contract_rate_card.billing_operations.completed
+          .where(organization_id: operation.organization_id, target_cycle_started_at: operation.target_cycle_started_at,
+            cancelled_at: nil, action_type: "renew_fixed_advance")
+        renewals.or(operation.reconciliations.completed.where(cancelled_at: nil).unscope(:order))
+          .includes(:segments).to_a
       end
     end
   end

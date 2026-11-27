@@ -178,6 +178,24 @@ RSpec.describe BillingOperations::ProcessPendingService do
     end
   end
 
+  context "when billed advance coverage has no saved quantities" do
+    let(:previous_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
+
+    before do
+      periodic.update!(processed_at: cursor, invoice: previous_invoice)
+      card.update!(next_billing_at: Time.utc(2026, 2, 1))
+    end
+
+    it "leaves the adjustment pending without creating another invoice" do
+      expect(result).to be_failure
+      expect(customer.invoices.count).to eq(1)
+      expect(result.error.messages).to eq(operation: ["missing_saved_units"])
+      expect(result.invoices).to be_empty
+      expect(change.reload).to have_attributes(processed_at: nil, invoice_id: nil)
+      expect(card.reload.next_billing_at).to eq(Time.utc(2026, 2, 1))
+    end
+  end
+
   context "when reconciliation fails" do
     let(:billing_failure) do
       BillingOperations::ComputeInvoiceService::Result.new.tap do |failure|
