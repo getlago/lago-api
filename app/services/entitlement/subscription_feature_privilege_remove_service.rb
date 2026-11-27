@@ -26,11 +26,18 @@ module Entitlement
 
     def call
       return result.not_found_failure!(resource: "subscription") unless owner
-      return result.not_found_failure!(resource: "feature") unless feature
-      return result.not_found_failure!(resource: "privilege") unless privilege
+      # A contract checks its status first, so a contract that cannot be edited refuses any feature or privilege code.
+      unless contract
+        return result.not_found_failure!(resource: "feature") unless feature
+        return result.not_found_failure!(resource: "privilege") unless privilege
+      end
 
       ActiveRecord::Base.transaction do
         lock_override_owner!(owner)
+        if contract
+          result.not_found_failure!(resource: "feature").raise_if_error! unless feature
+          result.not_found_failure!(resource: "privilege").raise_if_error! unless privilege
+        end
         before_render = find_contract_entitlement_before! if contract
         delete_subscription_entitlement_value_if_exists
         add_privilege_removal_if_privilege_is_in_plan
@@ -82,9 +89,11 @@ module Entitlement
       render_contract_entitlement(before) if render_contract_entitlement_events?(contract)
     end
 
-    # The plan still grants the feature, or the contract-only row is kept, so the feature still applies.
+    # The plan still grants the feature, or the contract-only row is kept, so the feature still applies, unless a plan
+    # entitlement or feature delete, which does not lock the contract, committed in between.
     def send_contract_entitlement_updated_events(before_render)
       result.entitlement = contract_entitlement
+      result.not_found_failure!(resource: "feature").raise_if_error! unless result.entitlement
 
       if before_render
         send_contract_entitlement_events(contract, [[before_render, render_contract_entitlement(result.entitlement)]])

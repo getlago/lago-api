@@ -113,7 +113,7 @@ Rails.application.routes.draw do
         patch :entitlements, on: :member, to: "contracts/entitlements#update"
         # Drawn before the feature removal, so that the greedy feature code does not swallow the privilege path.
         delete "entitlements/:code/privileges/:privilege_code", on: :member, to: "contracts/entitlements#destroy_privilege",
-          constraints: {code: /[^\/]+/, privilege_code: /.*/}
+          constraints: {code: /.*/, privilege_code: /.*/}
         delete "entitlements/:code", on: :member, to: "contracts/entitlements#destroy", constraints: {code: /.*/}
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do

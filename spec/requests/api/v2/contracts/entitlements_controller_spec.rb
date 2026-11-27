@@ -875,6 +875,25 @@ RSpec.describe Api::V2::Contracts::EntitlementsController do
       end
     end
 
+    # As on the plan privilege removal: a feature code may contain a slash.
+    context "with a feature code containing a slash" do
+      let(:code) { "storage/v2" }
+
+      before do
+        storage = create(:feature, organization:, code: "storage/v2")
+        limit = create(:privilege, organization:, feature: storage, code: "max", value_type: "integer")
+        storage_entitlement = create(:entitlement, :contract, organization:, contract:, feature: storage)
+        create(:entitlement_value, organization:, entitlement: storage_entitlement, privilege: limit, value: 2)
+      end
+
+      it "removes the value" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(entitlement: contract_entitlement_render(feature_code: "storage/v2", source: "contract", values: []))
+      end
+    end
+
     context "with an unknown feature" do
       let(:code) { "unknown" }
 

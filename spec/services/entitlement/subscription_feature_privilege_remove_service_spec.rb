@@ -450,6 +450,33 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
         expect(contract_value.reload).not_to be_discarded
         expect_no_write_and_no_event
       end
+
+      context "with an unknown feature and privilege" do
+        let(:feature_code) { "unknown" }
+        let(:privilege_code) { "unknown" }
+
+        it "refuses the write as for a known feature" do
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq(base: ["contract_not_editable"])
+        end
+      end
+    end
+
+    context "when the feature stops applying to the contract during the removal" do
+      before do
+        plan_entitlement
+        create(:entitlement_value, organization:, entitlement: plan_entitlement, privilege:, value: "10")
+        before_read = Entitlement::SubscriptionEntitlement.for_contract_feature(contract, feature)
+        # A plan entitlement or feature delete does not lock the contract, so it can commit between the two reads.
+        allow(Entitlement::SubscriptionEntitlement).to receive(:for_contract_feature).and_return(before_read, nil)
+      end
+
+      it "fails with a feature not found, writes nothing and sends nothing" do
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("feature")
+        expect(contract.entitlement_removals.reload).to be_empty
+        expect_no_write_and_no_event
+      end
     end
 
     context "with two concurrent removals of the same value", transaction: false do
