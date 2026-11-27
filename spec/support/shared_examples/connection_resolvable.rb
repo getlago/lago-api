@@ -115,7 +115,9 @@ RSpec.shared_examples "a connection-resolvable billing object" do
       end
 
       it "reports inherit with the customer default's code" do
-        expect(routing["payment"]).to have_attributes(behavior: "inherit", code: default_connection.code)
+        expect(routing["payment"]).to have_attributes(
+          behavior: "inherit", code: default_connection.code, connection_id: default_connection.id
+        )
       end
     end
 
@@ -130,7 +132,9 @@ RSpec.shared_examples "a connection-resolvable billing object" do
       end
 
       it "reports specific with the pinned code" do
-        expect(routing["payment"]).to have_attributes(behavior: "specific", code: "gocardless_eu")
+        expect(routing["payment"]).to have_attributes(
+          behavior: "specific", code: "gocardless_eu", connection_id: override_connection.id
+        )
       end
     end
 
@@ -140,13 +144,13 @@ RSpec.shared_examples "a connection-resolvable billing object" do
       end
 
       it "reports skip with no code" do
-        expect(routing["payment"]).to have_attributes(behavior: "skip", code: nil)
+        expect(routing["payment"]).to have_attributes(behavior: "skip", code: nil, connection_id: nil)
       end
     end
 
     context "when nothing resolves" do
       it "reports inherit with a nil code" do
-        expect(routing["crm"]).to have_attributes(behavior: "inherit", code: nil)
+        expect(routing["crm"]).to have_attributes(behavior: "inherit", code: nil, connection_id: nil)
       end
     end
   end
