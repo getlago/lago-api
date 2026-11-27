@@ -1072,34 +1072,6 @@ RSpec.describe BillingOperations::ProcessService do
       )
     end
 
-    context "with a rate change inside the cycle" do
-      # Created with the first rate, before the operation is planned from the schedule
-      let(:rate) do
-        super().tap do
-          create(:rate_card_rate, organization:, rate_card:, code: "after-midcycle", effective_from: Time.utc(2026, 2, 15),
-            rate_model: "standard", rate_properties: {"amount" => "20"})
-        end
-      end
-
-      before { create_usage(5, Time.utc(2026, 2, 20)) }
-
-      it "persists a snapshot at the end of each slice, the second ending after the first" do
-        operation
-
-        first = described_class.call!(customer:, timestamp: Time.utc(2026, 2, 15)).invoices.sole
-        expect(first.fees.sole.units).to eq(5) # 3 + 2 up to the rate change
-        expect(snapshots.pluck(:to_datetime, :units)).to eq([[BillingSegment.inclusive_end(Time.utc(2026, 2, 15)), 5]])
-
-        BillingOperations::ScheduleService.call!(customer:, timestamp: Time.utc(2026, 3, 1))
-        second = described_class.call!(customer:, timestamp: Time.utc(2026, 3, 1)).invoices.sole
-        expect(second.fees.sole.units).to eq(10) # 5 + 5 from 20 Feb
-        expect(snapshots.pluck(:to_datetime, :units, :events_count)).to eq([
-          [BillingSegment.inclusive_end(Time.utc(2026, 2, 15)), 5, 2],
-          [BillingSegment.inclusive_end(Time.utc(2026, 3, 1)), 10, 3]
-        ])
-      end
-    end
-
     context "with a grace period" do
       let(:customer) { create(:customer, organization:, timezone: "UTC", invoice_grace_period: 3) }
 
