@@ -46,7 +46,7 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
 
     context "when invoice is blank" do
       it "returns an error" do
-        result = described_class.new(invoice: nil).call
+        result = described_class.call(invoice: nil)
 
         expect(result).not_to be_success
         expect(result.error.message).to eq("invoice_not_found")

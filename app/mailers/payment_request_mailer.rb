@@ -35,7 +35,7 @@ class PaymentRequestMailer < ApplicationMailer
 
   def ensure_invoices_pdf
     params[:payment_request].invoices.each do |invoice|
-      Invoices::GeneratePdfService.new(invoice:).call
+      Invoices::GeneratePdfService.call(invoice:)
     end
   end
 end

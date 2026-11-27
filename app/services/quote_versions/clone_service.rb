@@ -77,10 +77,10 @@ module QuoteVersions
       active_draft = quote_version.draft? ? quote_version : quote_version.quote.versions.find_by(status: :draft)
       return if active_draft.nil?
 
-      void_result = QuoteVersions::VoidService.new(
+      void_result = QuoteVersions::VoidService.call(
         quote_version: active_draft,
         reason: :superseded
-      ).call
+      )
 
       raise CloneError.new(source_result: void_result) unless void_result&.success?
     end

@@ -30,7 +30,7 @@ module Api
       end
 
       def create
-        result = BillingEntities::CreateService.new(
+        result = BillingEntities::CreateService.new( # rubocop:disable Lago/ServiceNewCall
           organization: current_organization,
           params: create_params
         ).call

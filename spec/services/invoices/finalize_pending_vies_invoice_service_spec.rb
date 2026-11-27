@@ -68,7 +68,7 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
 
     context "when invoice does not exist" do
       it "returns an error" do
-        result = described_class.new(invoice: nil).call
+        result = described_class.call(invoice: nil)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("invoice_not_found")

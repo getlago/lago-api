@@ -17,10 +17,10 @@ module Mutations
       def resolve(**args)
         customer = current_organization.customers.find_by(id: args[:customer_id])
 
-        result = ::Integrations::Aggregator::Taxes::Invoices::CreateDraftService.new(
+        result = ::Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(
           invoice: invoice(customer, args),
           fees: fees(args)
-        ).call
+        )
 
         result.success? ? result.fees : validation_error(messages: {tax_error: [result.error.code]})
       end

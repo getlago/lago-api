@@ -108,7 +108,7 @@ module Invoices
     end
 
     def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.new(invoice: regenerated_invoice).call!
+      credit_result = Credits::CreditNoteService.call!(invoice: regenerated_invoice)
 
       refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
     end

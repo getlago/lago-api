@@ -1181,8 +1181,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       # The fees cache would answer the second call on its own.
       Rails.cache.delete_matched("charge-usage/*")
 
-      described_class.new(customer: customer.reload, subscription: subscription.reload, apply_taxes: false)
-        .call.usage.fees.map { [it.charge_filter_id, it.units, it.events_count, it.amount_cents] }.sort_by(&:to_s)
+      described_class.call(customer: customer.reload, subscription: subscription.reload, apply_taxes: false).usage.fees.map { [it.charge_filter_id, it.units, it.events_count, it.amount_cents] }.sort_by(&:to_s)
     end
 
     before do
@@ -1243,7 +1242,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
 
       it "reads every event without keeping totals" do
-        usage = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+        usage = described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false).usage
 
         expect(Events::Stores::ChargeFiltersScan::IncrementalCache).not_to have_received(:new)
         expect(usage.fees.map { [it.charge_filter_id, it.units, it.events_count, it.amount_cents] }.sort_by(&:to_s)).to eq(usage_with_flag(false))
@@ -1700,8 +1699,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
 
     it "returns the same units, event count and amount either way" do
-      served = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
-      delegated = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+      served = described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).usage
+      delegated = described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false).usage
 
       expect(served.fees.first).to have_attributes(
         units: delegated.fees.first.units,
@@ -1711,7 +1710,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
 
     it "sums every bucket of the window, rather than the one the events happen to open" do
-      served = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+      served = described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).usage
 
       expect(served.fees.first).to have_attributes(units: 21, events_count: 4, amount_cents: 4200)
     end
@@ -1735,10 +1734,10 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
 
     let(:served) do
-      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+      described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).usage
     end
     let(:delegated) do
-      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+      described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false).usage
     end
 
     def bucket_units(values)
@@ -1830,10 +1829,10 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
 
     let(:served) do
-      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+      described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).usage
     end
     let(:delegated) do
-      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+      described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false).usage
     end
 
     before do
@@ -1910,10 +1909,10 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     let(:bucket_events) { events }
 
     let(:served) do
-      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+      described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).usage
     end
     let(:delegated) do
-      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+      described_class.call(customer:, subscription:, apply_taxes: false, with_cache: false).usage
     end
 
     before do
@@ -2032,16 +2031,16 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
 
     let(:served) do
-      described_class.new(
+      described_class.call(
         customer:, subscription:, apply_taxes: false, with_cache: false,
         usage_filters: UsageFilters.new(skip_grouping: true), use_usage_buckets: true
-      ).call.usage
+      ).usage
     end
     let(:delegated) do
-      described_class.new(
+      described_class.call(
         customer:, subscription:, apply_taxes: false, with_cache: false,
         usage_filters: UsageFilters.new(skip_grouping: true)
-      ).call.usage
+      ).usage
     end
 
     before do

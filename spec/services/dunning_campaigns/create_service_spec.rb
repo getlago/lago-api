@@ -71,7 +71,7 @@ RSpec.describe DunningCampaigns::CreateService do
 
         context "when bcc_emails" do
           it do
-            result = described_class.new(organization:, params: params.merge(bcc_emails: ["earl@example.com"])).call
+            result = described_class.call(organization:, params: params.merge(bcc_emails: ["earl@example.com"]))
 
             expect(result.dunning_campaign.bcc_emails).to eq(["earl@example.com"])
           end

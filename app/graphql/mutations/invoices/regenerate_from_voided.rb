@@ -20,7 +20,7 @@ module Mutations
 
       def resolve(voided_invoice_id:, fees:, purchase_order_number: :inherit)
         invoice = current_organization.invoices.visible.find_by(id: voided_invoice_id)
-        result = ::Invoices::RegenerateFromVoidedService.new(
+        result = ::Invoices::RegenerateFromVoidedService.new( # rubocop:disable Lago/ServiceNewCall
           voided_invoice: invoice,
           fees_params: fees,
           purchase_order_number:

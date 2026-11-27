@@ -30,7 +30,7 @@ RSpec.describe Fees::ApplyTaxesService do
       let(:tax_codes) { [tax2.code, tax3.code] }
 
       it "creates applied_taxes based on the customer taxes" do
-        result = described_class.new(fee:, tax_codes:).call
+        result = described_class.call(fee:, tax_codes:)
 
         expect(result).to be_success
 
@@ -550,7 +550,7 @@ RSpec.describe Fees::ApplyTaxesService do
           create(:plan_applied_tax, plan:, tax: tax2)
           create(:plan_applied_tax, plan: passed_plan, tax: tax1)
 
-          result = described_class.new(fee:, plan: passed_plan).call
+          result = described_class.call(fee:, plan: passed_plan)
 
           expect(result).to be_success
           expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
@@ -563,7 +563,7 @@ RSpec.describe Fees::ApplyTaxesService do
         it "uses the passed customer's taxes, not the invoice customer's" do
           create(:customer_applied_tax, customer: other_customer, tax: tax1)
 
-          result = described_class.new(fee:, customer: other_customer).call
+          result = described_class.call(fee:, customer: other_customer)
 
           expect(result).to be_success
           expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
@@ -581,7 +581,7 @@ RSpec.describe Fees::ApplyTaxesService do
         it "falls back to the subscription's plan taxes" do
           create(:plan_applied_tax, plan:, tax: tax1)
 
-          result = described_class.new(fee:, customer: nil, plan: nil).call
+          result = described_class.call(fee:, customer: nil, plan: nil)
 
           expect(result).to be_success
           expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
@@ -590,7 +590,7 @@ RSpec.describe Fees::ApplyTaxesService do
         it "falls back to the invoice customer's taxes" do
           create(:customer_applied_tax, customer:, tax: tax2)
 
-          result = described_class.new(fee:, customer: nil, plan: nil).call
+          result = described_class.call(fee:, customer: nil, plan: nil)
 
           expect(result).to be_success
           expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax2.code)
@@ -603,7 +603,7 @@ RSpec.describe Fees::ApplyTaxesService do
         it "falls back to the subscription's customer taxes" do
           create(:customer_applied_tax, customer:, tax: tax1)
 
-          result = described_class.new(fee:, customer: nil, plan: nil).call
+          result = described_class.call(fee:, customer: nil, plan: nil)
 
           expect(result).to be_success
           expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax1.code)
@@ -612,7 +612,7 @@ RSpec.describe Fees::ApplyTaxesService do
         it "falls back to the subscription's plan taxes" do
           create(:plan_applied_tax, plan:, tax: tax2)
 
-          result = described_class.new(fee:, customer: nil, plan: nil).call
+          result = described_class.call(fee:, customer: nil, plan: nil)
 
           expect(result).to be_success
           expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax2.code)

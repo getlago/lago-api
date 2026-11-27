@@ -67,10 +67,10 @@ module Commitments
             invoice_subscription.previous_invoice_subscription
           end
 
-          dates_service = Commitments::Minimum::InArrears::DatesService.new(
+          dates_service = Commitments::Minimum::InArrears::DatesService.call(
             commitment: minimum_commitment,
             invoice_subscription: is
-          ).call
+          )
 
           scope = Fee
             .charge

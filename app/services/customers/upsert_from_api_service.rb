@@ -227,11 +227,11 @@ module Customers
       if api_context?
         customer.payment_provider = billing_configuration[:payment_provider]
 
-        payment_provider_result = PaymentProviders::FindService.new(
+        payment_provider_result = PaymentProviders::FindService.call(
           organization_id: customer.organization_id,
           code: billing_configuration[:payment_provider_code].presence,
           payment_provider_type: customer.payment_provider
-        ).call
+        )
         payment_provider_result.raise_if_error!
 
         customer.payment_provider_code = payment_provider_result.payment_provider.code
@@ -258,11 +258,11 @@ module Customers
 
       old_provider_customer = customer.provider_customer
       old_payment_provider = customer.payment_provider
-      payment_provider_result = PaymentProviders::FindService.new(
+      payment_provider_result = PaymentProviders::FindService.call(
         organization_id: customer.organization_id,
         code: customer.payment_provider_code,
         payment_provider_type: old_payment_provider
-      ).call
+      )
       old_payment_provider_id = payment_provider_result.payment_provider&.id
 
       if billing.key?(:payment_provider)

@@ -537,7 +537,7 @@ RSpec.describe AdjustedFees::CreateService do
 
     context "when called from Invoices::RegenerateFromVoidedService flow (with regenerating_voided: true)" do
       it "returns success without calling RefreshDraftService" do
-        result = described_class.new(invoice:, params:, regenerating_voided: true).call
+        result = described_class.call(invoice:, params:, regenerating_voided: true)
 
         expect(result).to be_success
         expect(result.fee).to be_a(Fee)
@@ -557,7 +557,7 @@ RSpec.describe AdjustedFees::CreateService do
 
       context "when called from Invoices::RegenerateFromVoidedService flow (with regenerating_voided: true)" do
         it "skips license check" do
-          result = described_class.new(invoice:, params:, regenerating_voided: true).call
+          result = described_class.call(invoice:, params:, regenerating_voided: true)
           expect(result).to be_success
         end
       end

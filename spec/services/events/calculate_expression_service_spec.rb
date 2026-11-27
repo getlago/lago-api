@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Events::CalculateExpressionService do
   describe "#call" do
-    subject(:service_call) { described_class.new(organization: organization, event: event).call }
+    subject(:service_call) { described_class.call(organization: organization, event: event) }
 
     let(:organization) { create(:organization) }
     let(:event) { create(:event, organization: organization, timestamp: Time.current, code: code, properties: properties) }

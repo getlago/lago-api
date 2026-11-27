@@ -460,12 +460,12 @@ RSpec.describe Invoices::SubscriptionService do
       end
 
       it "preserves the stamped purchase_order_number instead of re-resolving from the subscription" do
-        described_class.new(
+        described_class.call(
           subscriptions:,
           timestamp: timestamp.to_i,
           invoicing_reason:,
           invoice: existing_invoice
-        ).call
+        )
 
         expect(existing_invoice.reload.purchase_order_number).to eq("PO-STAMPED")
       end

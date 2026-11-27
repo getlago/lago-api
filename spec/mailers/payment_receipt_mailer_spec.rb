@@ -122,11 +122,9 @@ RSpec.describe PaymentReceiptMailer do
     end
 
     context "when the payment receipt file is still missing after generation" do
-      let(:pdf_service) { instance_double(PaymentReceipts::GeneratePdfService, call: nil) }
-
       before do
         payment_receipt.file.purge
-        allow(PaymentReceipts::GeneratePdfService).to receive(:new).and_return(pdf_service)
+        allow(PaymentReceipts::GeneratePdfService).to receive(:call)
       end
 
       it "raises FilesNotReadyError" do
@@ -134,7 +132,7 @@ RSpec.describe PaymentReceiptMailer do
           payment_receipt_mailer.with(payment_receipt:).created.deliver_now
         }.to raise_error(PaymentReceipts::FilesNotReadyError)
 
-        expect(PaymentReceipts::GeneratePdfService).to have_received(:new)
+        expect(PaymentReceipts::GeneratePdfService).to have_received(:call).with(payment_receipt:)
       end
     end
 

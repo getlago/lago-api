@@ -87,7 +87,7 @@ RSpec.describe Events::PostValidationService, transaction: false do
       let(:other_organization) { create(:organization) }
 
       it "does not send the webhook" do
-        described_class.new(organization: other_organization).call
+        described_class.call(organization: other_organization)
         expect(SendWebhookJob).not_to have_been_enqueued
       end
     end

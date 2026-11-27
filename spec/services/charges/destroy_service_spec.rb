@@ -50,7 +50,7 @@ RSpec.describe Charges::DestroyService do
 
     context "when charge is not found" do
       it "returns an error" do
-        result = described_class.new(charge: nil).call
+        result = described_class.call(charge: nil)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("charge_not_found")

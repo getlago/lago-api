@@ -59,7 +59,7 @@ RSpec.describe BillableMetrics::DestroyService do
 
     context "when billable metric is not found" do
       it "returns an error" do
-        result = described_class.new(metric: nil).call
+        result = described_class.call(metric: nil)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("billable_metric_not_found")

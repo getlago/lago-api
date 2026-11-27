@@ -100,7 +100,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService do
 
     context "when credit note does not exist" do
       it "returns an error" do
-        result = described_class.new(credit_note: nil).call
+        result = described_class.call(credit_note: nil)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("credit_note_not_found")

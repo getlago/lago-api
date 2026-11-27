@@ -90,7 +90,7 @@ RSpec.describe Customers::GenerateCheckoutUrlService do
 
     context "when customer is blank" do
       it "returns an error" do
-        result = described_class.new(customer: nil).call
+        result = described_class.call(customer: nil)
 
         expect(result).not_to be_success
         expect(result.error.message).to eq("customer_not_found")

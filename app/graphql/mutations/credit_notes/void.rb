@@ -16,9 +16,9 @@ module Mutations
       type Types::CreditNotes::Object
 
       def resolve(id:)
-        result = ::CreditNotes::VoidService.new(
+        result = ::CreditNotes::VoidService.call(
           credit_note: current_organization.credit_notes.not_deleted.find_by(id:)
-        ).call
+        )
 
         result.success? ? result.credit_note : result_error(result)
       end

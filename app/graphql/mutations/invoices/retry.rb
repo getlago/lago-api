@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(**args)
         invoice = current_organization.invoices.visible.find_by(id: args[:id])
-        result = ::Invoices::RetryService.new(invoice:).call
+        result = ::Invoices::RetryService.call(invoice:)
 
         result.success? ? result.invoice : result_error(result)
       end

@@ -17,7 +17,6 @@ RSpec.describe Invoices::RetryBatchService do
   end
 
   describe "#call" do
-    let(:retry_service) { instance_double(Invoices::RetryService) }
     let(:result) { Invoices::RetryService::Result.new }
     let(:invoice_ids) { [invoice_first.id, invoice_second.id] }
     let(:invoice_first) do
@@ -49,8 +48,7 @@ RSpec.describe Invoices::RetryBatchService do
 
       result.invoice = Invoice.new
 
-      allow(Invoices::RetryService).to receive(:new).and_return(retry_service)
-      allow(retry_service).to receive(:call).and_return(result)
+      allow(Invoices::RetryService).to receive(:call).and_return(result)
     end
 
     it "returns processed invoices that have correct status" do

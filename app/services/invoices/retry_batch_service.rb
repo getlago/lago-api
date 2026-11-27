@@ -21,7 +21,7 @@ module Invoices
     def call(invoice_ids)
       processed_invoices = []
       Invoice.where(id: invoice_ids).find_each do |invoice|
-        result = Invoices::RetryService.new(invoice:).call
+        result = Invoices::RetryService.call(invoice:)
 
         return result unless result.success?
 
