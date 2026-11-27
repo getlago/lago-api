@@ -14,6 +14,10 @@ module Payments
 
     def call
       if payment.provider_payment_method_id == provider_payment_method_id
+        if payment.provider_payment_method_data.present?
+          payment.payment_method&.update!(details: payment.provider_payment_method_data)
+        end
+
         result.payment = payment
         return result
       end
