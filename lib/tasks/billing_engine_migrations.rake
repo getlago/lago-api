@@ -143,15 +143,101 @@ class BillingEngineSubscriptionsBackfill
   end
 end
 
-namespace :billing_engine_migrations do
-  desc "Copy the active subscriptions of a shadowing organization to its shadow organization"
-  task :backfill_subscriptions, [:organization_id] => :environment do |_task, args|
-    organization_id = args[:organization_id]
-    abort "Missing organization_id argument\n\nUsage: rake billing_engine_migrations:backfill_subscriptions[organization_id]" if organization_id.blank?
+class BillingEnginePlanEntitlementsCopy
+  DONE = {"create" => "created", "update" => "updated", "remove" => "removed"}.freeze
+
+  def initialize(migration:, dry_run:)
+    @migration = migration
+    @dry_run = dry_run
+  end
+
+  def run
+    puts "Starting plan entitlements copy [#{mode}] for organization #{migration.organization_id}..."
+
+    ActiveRecord::Base.transaction(requires_new: true) do
+      report(BillingEngineMigrations::CopyEntitlementsService.call!(migration:))
+      raise ActiveRecord::Rollback if dry_run
+    end
+  end
+
+  private
+
+  attr_reader :migration, :dry_run
+
+  def mode
+    dry_run ? "DRY RUN" : "LIVE"
+  end
+
+  def report(result)
+    list("create", "feature", result.created_features)
+    list("create", "privilege", result.created_privileges)
+    list("update", "privilege", result.updated_privileges)
+    list("remove", "privilege", result.removed_privileges)
+    result.catalog_plans.each { |code, plan_result| report_catalog_plan(code, plan_result) }
+    result.missing_plan_codes.each { puts "  [#{mode}] skipped plan #{it} (plan_not_found)" }
+    result.missing_catalog_plan_codes.each { puts "  [#{mode}] skipped catalog plan #{it} (catalog_plan_not_found)" }
+    result.conflicting_catalog_plan_codes.each do
+      puts "  [#{mode}] skipped catalog plan #{it} (mapped_plans_have_different_entitlements)"
+    end
+    puts summary(result)
+  end
+
+  def report_catalog_plan(code, plan_result)
+    list("create", "entitlement", plan_result.created_entitlements, code)
+    list("remove", "entitlement", plan_result.removed_entitlements, code)
+    list("create", "value", plan_result.created_values, code)
+    list("update", "value", plan_result.updated_values, code)
+    list("remove", "value", plan_result.removed_values, code)
+  end
+
+  def list(action, record, codes, catalog_plan_code = nil)
+    on_plan = " on catalog plan #{catalog_plan_code}" if catalog_plan_code
+    codes.each { puts "  [#{mode}] #{verb(action)} #{record} #{it}#{on_plan}" }
+  end
+
+  def verb(action)
+    dry_run ? "would #{action}" : DONE.fetch(action)
+  end
+
+  def summary(result)
+    "Features: #{result.created_features.size} created. " \
+      "Privileges: #{result.created_privileges.size} created, #{result.updated_privileges.size} updated, " \
+      "#{result.removed_privileges.size} removed. " \
+      "Catalog plans: #{result.catalog_plans.size} synced. Mappings skipped: #{skipped_mappings(result)}. " \
+      "Entitlements: #{plan_count(result, :created_entitlements)} created, #{plan_count(result, :removed_entitlements)} removed. " \
+      "Values: #{plan_count(result, :created_values)} created, #{plan_count(result, :updated_values)} updated, " \
+      "#{plan_count(result, :removed_values)} removed. [#{mode}]"
+  end
+
+  def skipped_mappings(result)
+    migration.plan_mapping.count do |plan_code, catalog_plan_code|
+      result.missing_plan_codes.include?(plan_code) || !result.catalog_plans.key?(catalog_plan_code)
+    end
+  end
+
+  def plan_count(result, field)
+    result.catalog_plans.values.sum { it.public_send(field).size }
+  end
+end
+
+module BillingEngineMigrationTask
+  def self.shadowing_migration!(task_name, organization_id)
+    if organization_id.blank?
+      abort "Missing organization_id argument\n\nUsage: rake billing_engine_migrations:#{task_name}[organization_id]"
+    end
 
     migration = BillingEngineMigration.find_by(organization_id:)
     abort "No billing engine migration for organization #{organization_id}" unless migration
     abort "Billing engine migration #{migration.id} is #{migration.status}, not shadowing" unless migration.shadowing?
+
+    migration
+  end
+end
+
+namespace :billing_engine_migrations do
+  desc "Copy the active subscriptions of a shadowing organization to its shadow organization"
+  task :backfill_subscriptions, [:organization_id] => :environment do |_task, args|
+    migration = BillingEngineMigrationTask.shadowing_migration!("backfill_subscriptions", args[:organization_id])
     unless migration.shadow_organization_isolated?
       abort "Shadow organization #{migration.shadow_organization_id} has webhook endpoints, invoice emails or a dunning campaign"
     end
@@ -172,5 +258,14 @@ namespace :billing_engine_migrations do
       customer_limit:,
       after_customer_id:
     ).run
+  end
+
+  desc "Copy the features, privileges and plan entitlements of a shadowing organization to its shadow organization"
+  task :copy_plan_entitlements, [:organization_id] => :environment do |_task, args|
+    migration = BillingEngineMigrationTask.shadowing_migration!("copy_plan_entitlements", args[:organization_id])
+
+    BillingEnginePlanEntitlementsCopy.new(migration:, dry_run: ENV.fetch("DRY_RUN", "true") != "false").run
+  rescue BaseService::FailedResult => e
+    abort "Plan entitlements copy failed: #{e.message}"
   end
 end
