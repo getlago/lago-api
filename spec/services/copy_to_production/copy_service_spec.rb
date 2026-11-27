@@ -43,7 +43,7 @@ RSpec.describe CopyToProduction::CopyService do
 
     copy = production.billable_metrics.find_by(code: "api_calls")
     expect(result).to be_success
-    expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "billable_metric", record: copy))
+    expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "billable_metric", record: copy))
     expect(copy).to have_attributes(
       name: "API calls",
       description: "Calls to the public API",
@@ -382,7 +382,7 @@ RSpec.describe CopyToProduction::CopyService do
       expect(result).to be_success
 
       live_category = production.product_categories.find_by!(code: "compute")
-      expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "product_category", record: live_category))
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "product_category", record: live_category))
       expect(live_category).to have_attributes(name: "Compute", description: category.description)
 
       live_api = production.products.find_by!(code: "api")
@@ -485,6 +485,7 @@ RSpec.describe CopyToProduction::CopyService do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("copy_to_production_parent_missing")
+        expect(result.missing_parent).to eq(CopyToProduction::CopyService::Entry.new(item_type: "product_category", record: category))
       end
     end
 
@@ -497,7 +498,7 @@ RSpec.describe CopyToProduction::CopyService do
         expect(result).to be_success
 
         live_product = production.products.find_by!(code: "api")
-        expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "product", record: live_product))
+        expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "product", record: live_product))
         expect(live_product.product_category).to eq(live_category)
         expect(live_product.rate_cards.sole.rates.count).to eq(1)
       end
