@@ -12,7 +12,7 @@ module Entitlement
       @feature = feature
       @plan_entitlement = plan_entitlement
       @sub_entitlement = sub_entitlement
-      @privilege_params = privilege_params.to_h.with_indifferent_access
+      @privilege_params = privilege_params
       @partial = partial
       super
     end
@@ -22,6 +22,17 @@ module Entitlement
     # The outer services will handle that
     def call
       return result.not_found_failure!(resource: "feature") unless feature
+
+      # The privilege values of a feature are a map of privilege codes to values; a blank one is ignored as before.
+      unless privilege_params.is_a?(Hash) || privilege_params.blank?
+        result.single_validation_failure!(field: :"entitlements.#{feature.code}", error_code: "value_is_invalid").raise_if_error!
+      end
+
+      # Validate every value before comparing it with the plan or the override: an invalid value that casts to the
+      # same one would otherwise be accepted.
+      @privilege_params = (privilege_params.presence || {}).to_h do |privilege_code, value|
+        [privilege_code.to_s, validate_value(value, find_privilege!(privilege_code.to_s))]
+      end.with_indifferent_access
 
       ActiveRecord::Base.transaction do
         process_single_entitlement
@@ -112,7 +123,7 @@ module Entitlement
 
           create_entitlement_value(sub_entitlement, privilege, value)
         elsif sub_val && !value_is_the_same?(privilege.value_type, value, sub_val.value)
-          sub_val.update!(value: validate_value(value, privilege))
+          sub_val.update!(value:)
         end
       end
     end
@@ -129,7 +140,7 @@ module Entitlement
       entitlement.values.create!(
         organization: organization,
         privilege: privilege,
-        value: validate_value(value, privilege)
+        value:
       )
     end
 
