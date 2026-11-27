@@ -98,6 +98,11 @@ enum ActivityTypeEnum {
   applied_coupon_deleted
 
   """
+  billable_metric.copied_to_production
+  """
+  billable_metric_copied_to_production
+
+  """
   billable_metric.created
   """
   billable_metric_created
@@ -188,6 +193,11 @@ enum ActivityTypeEnum {
   contract_wallet_updated
 
   """
+  coupon.copied_to_production
+  """
+  coupon_copied_to_production
+
+  """
   coupon.created
   """
   coupon_created
@@ -236,6 +246,11 @@ enum ActivityTypeEnum {
   email.sent
   """
   email_sent
+
+  """
+  feature.copied_to_production
+  """
+  feature_copied_to_production
 
   """
   feature.created
@@ -373,6 +388,11 @@ enum ActivityTypeEnum {
   payment_request_created
 
   """
+  plan.copied_to_production
+  """
+  plan_copied_to_production
+
+  """
   plan.created
   """
   plan_created
@@ -396,6 +416,11 @@ enum ActivityTypeEnum {
   plan_entitlement.updated
   """
   plan_entitlement_updated
+
+  """
+  plan_rate_card.copied_to_production
+  """
+  plan_rate_card_copied_to_production
 
   """
   plan_rate_card.created
@@ -433,6 +458,11 @@ enum ActivityTypeEnum {
   plan_wallet_updated
 
   """
+  product_category.copied_to_production
+  """
+  product_category_copied_to_production
+
+  """
   product_category.created
   """
   product_category_created
@@ -446,6 +476,11 @@ enum ActivityTypeEnum {
   product_category.updated
   """
   product_category_updated
+
+  """
+  product.copied_to_production
+  """
+  product_copied_to_production
 
   """
   product.created
@@ -501,6 +536,11 @@ enum ActivityTypeEnum {
   quote.voided
   """
   quote_voided
+
+  """
+  rate_card.copied_to_production
+  """
+  rate_card_copied_to_production
 
   """
   rate_card.created
@@ -2252,6 +2292,45 @@ enum ContractStatusEnum {
   draft
   pending
   terminated
+}
+
+"""
+Copy to production input arguments
+"""
+input CopyToProductionInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  ID of the item in the sandbox
+  """
+  id: ID!
+  itemType: CopyToProductionItemTypeEnum!
+}
+
+"""
+A production item created by Copy to production
+"""
+type CopyToProductionItem {
+  code: String
+  id: ID!
+  itemType: CopyToProductionItemTypeEnum!
+  name: String
+}
+
+"""
+Item types a user can copy from a sandbox to its production organization
+"""
+enum CopyToProductionItemTypeEnum {
+  billable_metric
+  catalog_plan
+  coupon
+  feature
+  plan_rate_card
+  product
+  product_category
 }
 
 enum CountryCode {
@@ -9406,6 +9485,16 @@ type Mutation {
   ): LoginUser
 
   """
+  Copies a sandbox item, with the items it references, to the sandbox's production organization
+  """
+  copyToProduction(
+    """
+    Parameters for CopyToProduction
+    """
+    input: CopyToProductionInput!
+  ): CopyToProductionItem
+
+  """
   Creates a new add-on
   """
   createAddOn(
@@ -12424,6 +12513,7 @@ enum PermissionEnum {
   contracts_terminate
   contracts_update
   contracts_view
+  copy_to_production_create
   coupons_attach
   coupons_create
   coupons_delete
@@ -12561,6 +12651,7 @@ type Permissions {
   contractsTerminate: Boolean!
   contractsUpdate: Boolean!
   contractsView: Boolean!
+  copyToProductionCreate: Boolean!
   couponsAttach: Boolean!
   couponsCreate: Boolean!
   couponsDelete: Boolean!

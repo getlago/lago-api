@@ -17,7 +17,7 @@ RSpec.describe EInvoices::Payments::Cii::CreateService, :premium do
         allow(EInvoices::Payments::Cii::Builder).to receive(:serialize)
           .with(xml: xml_builder_double, payment:)
 
-        result = described_class.new(payment:).call
+        result = described_class.call(payment:)
         expect(result).to be_success
         expect(result.xml).to be(xml_content)
       end
@@ -27,7 +27,7 @@ RSpec.describe EInvoices::Payments::Cii::CreateService, :premium do
       let(:payment) { nil }
 
       it "returns a failed result" do
-        result = described_class.new(payment:).call
+        result = described_class.call(payment:)
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.error_code).to eq("payment_not_found")
@@ -40,7 +40,7 @@ RSpec.describe EInvoices::Payments::Cii::CreateService, :premium do
       end
 
       it "returns a failed result" do
-        result = described_class.new(payment:).call
+        result = described_class.call(payment:)
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.message).to eq("feature_unavailable")

@@ -9,8 +9,9 @@ module RecurringAggregationSnapshots
     end
 
     # inherited: the period was closed by the previous subscription, whose invoices are not this one's
-    Period = Data.define(:to_datetime, :watermark, :inherited) do
-      def initialize(inherited: false, **)
+    # reads_older: the key can tell whether an invoice closed a later period (SubscriptionKey only)
+    Period = Data.define(:to_datetime, :watermark, :inherited, :reads_older) do
+      def initialize(inherited: false, reads_older: true, **)
         super
       end
 
@@ -20,7 +21,7 @@ module RecurringAggregationSnapshots
       def weighted_sum_start?(from_datetime)
         if to_datetime.between?(from_datetime - 1.second, from_datetime)
           true
-        elsif inherited || to_datetime >= from_datetime
+        elsif inherited || !reads_older || to_datetime >= from_datetime
           false
         else
           last_billed_charges_to_datetime = yield
@@ -36,8 +37,10 @@ module RecurringAggregationSnapshots
     # grouped_by_values: returns only the snapshots of that group, as pay in advance reads one group
     # all_buckets: false loads only the filter's bucket, as pay in advance reads one. A charge_period
     # given carries its own choice, which the previous owner lookup follows too.
+    # period_attributes: what the period must have been closed with (RecurringAggregationSnapshot.period_attributes)
     def initialize(
-      key:, filter:, grouped_by_keys:, from_datetime:, charge_period: nil, grouped_by_values: nil, all_buckets: true
+      key:, filter:, grouped_by_keys:, from_datetime:, charge_period: nil, grouped_by_values: nil, all_buckets: true,
+      period_attributes: {}
     )
       @key = key
       @filter = filter
@@ -46,7 +49,7 @@ module RecurringAggregationSnapshots
       @grouped_by_values = grouped_by_values.presence && normalized_group(grouped_by_values)
       @charge_period = charge_period || ChargePeriod.new(
         key:, from_datetime:, grouped_by_values: @grouped_by_values, grouped_by_keys: Array(grouped_by_keys),
-        filter_ids: (all_buckets ? nil : [filter&.id].compact)
+        filter_ids: (all_buckets ? nil : [filter&.id].compact), period_attributes:
       )
 
       super
@@ -59,7 +62,10 @@ module RecurringAggregationSnapshots
       marker, records = own || previous_period
       return result unless marker && records.all? { same_grouped_by_keys?(it) }
 
-      result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark, inherited: own.nil?)
+      result.period = Period.new(
+        to_datetime: marker.to_datetime, watermark: marker.watermark, inherited: own.nil?,
+        reads_older: key.weighted_sum_reads_older_periods?
+      )
       result.snapshots = records.select { in_group?(it) }.map { to_snapshot(it) }
       result
     end

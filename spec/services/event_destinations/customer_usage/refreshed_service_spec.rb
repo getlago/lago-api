@@ -57,7 +57,7 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
         first = create(:wallet, customer:, organization:, currency: "EUR", priority: 10,
           ongoing_usage_balance_cents: 1500, credits_ongoing_usage_balance: "15.0")
 
-        described_class.new(object: customer).call
+        described_class.call(object: customer)
 
         expect(producer_calls.first[:data][:customer_usage][:wallets].map { it[:lago_id] })
           .to eq([first.id, second.id])
@@ -67,7 +67,7 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
         create(:wallet, customer:, organization:, currency: "USD", priority: 10,
           ongoing_usage_balance_cents: 200, credits_ongoing_usage_balance: "2.0")
 
-        described_class.new(object: customer).call
+        described_class.call(object: customer)
 
         expect(producer_calls.first[:data][:customer_usage][:wallets].map { it[:amount_currency] })
           .to eq(["USD"])
@@ -80,7 +80,7 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
           ongoing_usage_balance_cents: 1500, credits_ongoing_usage_balance: "15.0")
         create(:subscription, customer:, plan: create(:plan, organization:))
 
-        described_class.new(object: customer).call
+        described_class.call(object: customer)
 
         wallets = producer_calls.map { it[:data][:customer_usage][:wallets] }
 
@@ -189,18 +189,18 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
         usage = precomputed
         allow(Invoices::CustomerUsageService).to receive(:call)
 
-        described_class.new(object: customer, usages: {subscription => usage}).call
+        described_class.call(object: customer, usages: {subscription => usage})
 
         expect(Invoices::CustomerUsageService).not_to have_received(:call)
         expect(producer).to have_received(:produce).once
       end
 
       it "produces the same envelope as computing it here would" do
-        described_class.new(object: customer).call
+        described_class.call(object: customer)
         computed = producer_calls.first[:data]
 
         producer_calls.clear
-        described_class.new(object: customer, usages: {subscription => precomputed}).call
+        described_class.call(object: customer, usages: {subscription => precomputed})
         supplied = producer_calls.first[:data]
 
         expect(supplied.except(:event_id, :version)).to eq(computed.except(:event_id, :version))
@@ -209,7 +209,7 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
       it "falls back to computing a subscription the caller did not supply" do
         other = create(:subscription, customer:, plan: create(:plan, organization:))
 
-        described_class.new(object: customer, usages: {subscription => precomputed}).call
+        described_class.call(object: customer, usages: {subscription => precomputed})
 
         expect(producer_calls.map { it[:data][:subscription_external_id] })
           .to match_array([subscription.external_id, other.external_id])

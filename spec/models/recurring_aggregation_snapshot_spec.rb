@@ -141,16 +141,36 @@ RSpec.describe RecurringAggregationSnapshot do
       it { is_expected.to be(false) }
     end
 
-    context "with a billing segment" do
-      let(:billing_segment) { build_stubbed(:billing_segment) }
-
-      it { is_expected.to be(false) }
-    end
-
     context "with a contract billing context" do
       let(:billing_context) { Billing::Context.from(contract: build_stubbed(:contract)) }
 
       it { is_expected.to be(false) }
+    end
+
+    context "with a billing segment" do
+      let(:billing_segment) { build_stubbed(:billing_segment) }
+
+      it { is_expected.to be(false) }
+
+      context "with a contract billing context" do
+        let(:billing_context) { Billing::Context.from(contract: build_stubbed(:contract)) }
+
+        it { is_expected.to be(true) }
+
+        context "with another aggregation type" do
+          let(:billable_metric) { build_stubbed(:billable_metric, aggregation_type: "count_agg") }
+
+          it { is_expected.to be(false) }
+        end
+
+        context "with a card billed in advance" do
+          let(:billing_segment) do
+            build_stubbed(:billing_segment, contract_rate_card: build_stubbed(:contract_rate_card, rate_card: build_stubbed(:rate_card, :advance)))
+          end
+
+          it { is_expected.to be(false) }
+        end
+      end
     end
   end
 
@@ -183,6 +203,61 @@ RSpec.describe RecurringAggregationSnapshot do
 
       it { is_expected.to be(false) }
     end
+
+    context "with a billing segment in a contract billing context" do
+      let(:metered_item) { instance_double(Fees::ChargeService::MeteredItem, billable_metric:, billing_segment: build_stubbed(:billing_segment)) }
+      let(:billing_context) { Billing::Context.from(contract: build_stubbed(:contract, organization:)) }
+
+      it { is_expected.to be(true) }
+
+      context "without the persisted_recurring_values feature flag" do
+        before { organization.disable_feature_flag!(:persisted_recurring_values) }
+
+        it { is_expected.to be(false) }
+      end
+    end
+
+    context "with a billing segment in a subscription billing context" do
+      let(:metered_item) { instance_double(Fees::ChargeService::MeteredItem, billable_metric:, billing_segment: build_stubbed(:billing_segment)) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe ".key" do
+    subject(:key) { described_class.key(metered_item:, billing_context:) }
+
+    let(:subscription) { build_stubbed(:subscription) }
+    let(:charge) { build_stubbed(:standard_charge) }
+    let(:billing_context) { Billing::Context.from(subscription:) }
+    let(:metered_item) { instance_double(Fees::ChargeService::MeteredItem, billing_segment: nil, charge:) }
+
+    it { is_expected.to eq(RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:)) }
+
+    context "with a billing segment" do
+      let(:contract) { build_stubbed(:contract) }
+      let(:product) { build_stubbed(:product) }
+      let(:product_filter) { build_stubbed(:product_filter, product:) }
+      let(:rate_card) { build_stubbed(:rate_card, product:, product_filter:) }
+      let(:contract_rate_card) { build_stubbed(:contract_rate_card, contract:, rate_card:) }
+      let(:billing_context) { Billing::Context.from(contract:) }
+      let(:metered_item) do
+        instance_double(
+          Fees::ChargeService::MeteredItem,
+          billing_segment: build_stubbed(:billing_segment), invoiceable: product, contract_rate_card:
+        )
+      end
+
+      it "keys the snapshots on the contract and the slice its rate card prices" do
+        expect(key).to eq(RecurringAggregationSnapshots::ContractKey.new(contract:, product:, product_filter:))
+      end
+
+      context "with a rate card without product filter" do
+        let(:product_filter) { nil }
+
+        it { is_expected.to eq(RecurringAggregationSnapshots::ContractKey.new(contract:, product:, product_filter: nil)) }
+      end
+    end
   end
 
   describe ".fetch_arguments" do
@@ -195,7 +270,10 @@ RSpec.describe RecurringAggregationSnapshot do
     let(:from_datetime) { Time.zone.parse("2026-10-01T00:00:00") }
     let(:boundaries) { instance_double(BillingPeriodBoundaries, charges_from_datetime: from_datetime) }
     let(:metered_item) do
-      instance_double(Fees::ChargeService::MeteredItem, charge:, charge_filter:, pricing_group_keys: %w[region], boundaries:)
+      instance_double(
+        Fees::ChargeService::MeteredItem,
+        billing_segment: nil, charge:, selected_filter: charge_filter, pricing_group_keys: %w[region], boundaries:
+      )
     end
 
     it "returns the subscription key, filter, grouping keys and period start" do
@@ -203,8 +281,46 @@ RSpec.describe RecurringAggregationSnapshot do
         key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge:),
         filter: charge_filter,
         grouped_by_keys: %w[region],
-        from_datetime:
+        from_datetime:,
+        period_attributes: {}
       )
+    end
+
+    context "with a billing segment" do
+      let(:contract) { create(:contract) }
+      let(:organization) { contract.organization }
+      let(:product) { create(:product, organization:) }
+      let(:eu_filter) { create(:product_filter, organization:, product:) }
+      let(:us_filter) { create(:product_filter, organization:, product:) }
+      let(:rate_card) { create(:rate_card, organization:, product:, product_filter: eu_filter) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: from_datetime.to_date) }
+      let(:billing_context) { Billing::Context.from(contract:) }
+      let(:billing_segment) do
+        build(:billing_segment, organization:, customer: contract.customer, contract:, contract_rate_card:,
+          started_at: from_datetime, ended_at: BillingSegment.inclusive_end(from_datetime + 1.month))
+      end
+      let(:metered_item) do
+        instance_double(
+          Fees::ChargeService::MeteredItem,
+          billing_segment:, invoiceable: product, contract_rate_card:, selected_filter: eu_filter,
+          pricing_group_keys: [], boundaries:
+        )
+      end
+
+      before do
+        create(:contract_rate_card, organization:, contract:, effective_date: from_datetime.to_date,
+          rate_card: create(:rate_card, organization:, product:, product_filter: us_filter))
+      end
+
+      it "returns the contract key, the product filter and the filters the segment prices" do
+        expect(arguments).to eq(
+          key: RecurringAggregationSnapshots::ContractKey.new(contract:, product:, product_filter: eu_filter),
+          filter: eu_filter,
+          grouped_by_keys: [],
+          from_datetime:,
+          period_attributes: {priced_product_filter_ids: [eu_filter.id, us_filter.id].sort}
+        )
+      end
     end
 
     context "with grouping keys given" do

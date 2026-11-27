@@ -111,6 +111,12 @@ RSpec.describe RecurringAggregationSnapshots::ContractKey do
     end
   end
 
+  describe "#weighted_sum_reads_older_periods?" do
+    it "returns false, as no contract invoice is checked for a later period" do
+      expect(key.weighted_sum_reads_older_periods?).to be(false)
+    end
+  end
+
   describe "#previous_period" do
     it "returns nothing, as a contract has no predecessor" do
       expect(key.previous_period(filter: product_filter, all_buckets: true, grouped_by_values: nil, grouped_by_keys: [])).to be_nil

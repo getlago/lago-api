@@ -592,12 +592,13 @@ module Fees
         # Only weighted sum reads its breakdowns back, and a sum's are not bounded by the watermark
         breakdowns_by_group = {} unless selected_metered_item.billable_metric.weighted_sum_agg?
 
-        results = snapshot_results(aggregation_results, default_bucket: selected_metered_item.charge_filter&.id.nil?)
+        filter = selected_metered_item.selected_filter
+        results = snapshot_results(aggregation_results, marker: recurring_snapshot_key.bucket_id(filter) == recurring_snapshot_key.marker_bucket_id)
 
         # A weighted sum has no events count: its read never counts the events of a closed period.
         # Blank group values ("" and " ") are stored as one null group, so their units add up.
         recurring_snapshots << {
-          filter: selected_metered_item.charge_filter,
+          filter:,
           values: results.group_by { it.grouped_by || {} }.map do |grouped_by, group_results|
             {
               grouped_by:,
@@ -611,11 +612,11 @@ module Fees
     end
 
     # Empty groups are not stored, as a charge can have hundreds of filters and groups.
-    # The default bucket keeps one row to mark the period closed, a missing row means a full scan.
-    def snapshot_results(aggregation_results, default_bucket:)
+    # The marker bucket keeps one row to mark the period closed, a missing row means a full scan.
+    def snapshot_results(aggregation_results, marker:)
       used_results = aggregation_results.reject { it.recurring_units.zero? && it.recurring_events_count.to_i.zero? }
 
-      if used_results.none? && default_bucket
+      if used_results.none? && marker
         aggregation_results.first(1)
       else
         used_results
@@ -631,13 +632,15 @@ module Fees
 
     def snapshot_recurring_units?(selected_metered_item)
       return false if options.current_usage? || options.invoice_preview?
+      # Units stopped at max_timestamp do not close the period written under its end
+      return false if options.advance_renewal? || selected_metered_item.boundaries.max_timestamp
       # A backfill is run by hand on the organizations its caller picked
       return false unless options.snapshot_backfill? || billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
 
       # A progressive billing invoice stops mid-period, its units do not close the period
       # Only the subscription and the one following it read its snapshots: the invoice deletes them instead
       !invoice&.progressive_billing? && snapshot_eligible?(selected_metered_item) &&
-        !subscription.ended_without_next_subscription?
+        !subscription&.ended_without_next_subscription?
     end
 
     def snapshot_eligible?(selected_metered_item)
@@ -650,26 +653,27 @@ module Fees
       return unless RecurringAggregationSnapshot.readable?(metered_item: selected_metered_item, billing_context:)
       return if options.usage_filters.filter_by_group.present?
 
-      arguments = RecurringAggregationSnapshot.fetch_arguments(
-        metered_item: selected_metered_item, billing_context:, grouped_by_keys: grouped_by_keys(selected_metered_item:)
-      )
-
       lambda do
-        RecurringAggregationSnapshots::FetchService.call!(
-          **arguments,
-          charge_period: recurring_charge_period(arguments[:key], arguments[:from_datetime])
+        arguments = RecurringAggregationSnapshot.fetch_arguments(
+          metered_item: selected_metered_item, billing_context:, grouped_by_keys: grouped_by_keys(selected_metered_item:)
         )
+        RecurringAggregationSnapshots::FetchService.call!(**arguments, charge_period: recurring_charge_period(arguments))
       end
     end
 
     # One per key, as the marker and the filter check are the same for all its buckets
-    def recurring_charge_period(key, from_datetime)
+    def recurring_charge_period(arguments)
+      period_arguments = arguments.slice(:key, :from_datetime, :period_attributes)
       @recurring_charge_periods ||= {}
-      @recurring_charge_periods[[key, from_datetime]] ||= RecurringAggregationSnapshots::ChargePeriod.new(key:, from_datetime:)
+      @recurring_charge_periods[period_arguments] ||= RecurringAggregationSnapshots::ChargePeriod.new(**period_arguments)
     end
 
     def recurring_snapshots
       @recurring_snapshots ||= []
+    end
+
+    def recurring_snapshot_key
+      @recurring_snapshot_key ||= RecurringAggregationSnapshot.key(metered_item:, billing_context:)
     end
 
     # All buckets or none: the marker of the default bucket stands for every filter of the charge
@@ -677,10 +681,11 @@ module Fees
       return if recurring_snapshots.empty? || recurring_snapshots.size != metered_item.pricing_buckets.size
 
       RecurringAggregationSnapshots::PersistService.call!(
-        key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription:, charge: metered_item.charge),
+        key: recurring_snapshot_key,
         to_datetime: metered_item.boundaries.charges_to_datetime,
         watermark: @recurring_watermark,
-        buckets: recurring_snapshots
+        buckets: recurring_snapshots,
+        period_attributes: RecurringAggregationSnapshot.period_attributes(metered_item:)
       )
     end
 

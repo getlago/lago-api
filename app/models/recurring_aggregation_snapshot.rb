@@ -12,11 +12,17 @@ class RecurringAggregationSnapshot < ApplicationRecord
   # The default bucket keeps a row for every closed period, which marks the period for all buckets
   scope :period_markers, -> { where(charge_filter_id: nil) }
 
-  # Snapshots are keyed on a subscription, which billing segments do not bill
+  # A charge is snapshotted under its subscription, a billing segment under its contract.
+  # An advance card bills its segments at their start and never closes one, so it has no snapshot to read.
   def self.eligible?(metered_item:, billing_context:)
-    metered_item.billing_segment.nil? &&
-      billing_context.subscription? &&
-      AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
+    billing_segment = metered_item.billing_segment
+    owner_context = if billing_segment
+      billing_context.contract? && !billing_segment.contract_rate_card.rate_card.advance?
+    else
+      billing_context.subscription?
+    end
+
+    owner_context && AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
   end
 
   # Invoicing and pay in advance both check it, so they start the same charge from the same units
@@ -26,15 +32,38 @@ class RecurringAggregationSnapshot < ApplicationRecord
       RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
   end
 
+  # A contract prices each product and filter with one card (ContractRateCards::CreateService), so the card is left out
+  def self.key(metered_item:, billing_context:)
+    if metered_item.billing_segment
+      RecurringAggregationSnapshots::ContractKey.new(
+        contract: billing_context.contract,
+        product: metered_item.invoiceable,
+        product_filter: metered_item.contract_rate_card.rate_card.product_filter
+      )
+    else
+      RecurringAggregationSnapshots::SubscriptionKey.new(subscription: billing_context.subscription, charge: metered_item.charge)
+    end
+  end
+
   # Arguments of RecurringAggregationSnapshots::FetchService shared by invoicing and pay in advance,
   # so both select the same snapshots. grouped_by_keys follows the aggregation's own grouping.
   def self.fetch_arguments(metered_item:, billing_context:, grouped_by_keys: metered_item.pricing_group_keys)
     {
-      key: RecurringAggregationSnapshots::SubscriptionKey.new(subscription: billing_context.subscription, charge: metered_item.charge),
-      filter: metered_item.charge_filter,
+      key: key(metered_item:, billing_context:),
+      filter: metered_item.selected_filter,
       grouped_by_keys:,
-      from_datetime: metered_item.boundaries.charges_from_datetime
+      from_datetime: metered_item.boundaries.charges_from_datetime,
+      period_attributes: period_attributes(metered_item:)
     }
+  end
+
+  # Columns every row of a period stores, which a read must match to reuse the period.
+  # Priced filters take precedence over the product's other filters, and a segment's set can change
+  # with no row changing (BillingSegment#priced_product_filter_ids).
+  def self.period_attributes(metered_item:)
+    return {} unless metered_item.billing_segment
+
+    {priced_product_filter_ids: metered_item.billing_segment.priced_product_filter_ids.uniq.sort}
   end
 
   # A filter or filter value created, edited or removed since the marker moves older events between

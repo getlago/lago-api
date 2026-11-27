@@ -10,7 +10,7 @@ class PaymentReceiptMailer < DocumentMailer
   private
 
   def ensure_pdf
-    PaymentReceipts::GeneratePdfService.new(payment_receipt: document).call
+    PaymentReceipts::GeneratePdfService.call(payment_receipt: document)
 
     invoices = document.payment.payable.is_a?(Invoice) ? [document.payment.payable] : document.payment.payable.invoices
 

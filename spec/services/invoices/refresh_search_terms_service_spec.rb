@@ -85,7 +85,7 @@ RSpec.describe Invoices::RefreshSearchTermsService do
       before { refresh_service.call }
 
       it "is idempotent" do
-        expect { described_class.new(invoice:).call }.not_to change { search_terms }
+        expect { described_class.call(invoice:) }.not_to change { search_terms }
       end
     end
 

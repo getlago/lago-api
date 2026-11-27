@@ -46,7 +46,7 @@ class Tax < ApplicationRecord
   }
 
   validates :name, :rate, presence: true
-  validates :code, presence: true, uniqueness: {scope: :organization_id}
+  validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

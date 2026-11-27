@@ -67,6 +67,8 @@ module Commitments
             invoice_subscription.previous_invoice_subscription
           end
 
+          # Dates services return a dates object, not a result, so they skip `.call` and its middlewares,
+          # which read `success?` on the returned value.
           dates_service = Commitments::Minimum::InArrears::DatesService.new(
             commitment: minimum_commitment,
             invoice_subscription: is

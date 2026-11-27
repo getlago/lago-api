@@ -10,7 +10,7 @@ class InvoiceMailer < DocumentMailer
   private
 
   def ensure_pdf
-    Invoices::GeneratePdfService.new(invoice: document).call
+    Invoices::GeneratePdfService.call(invoice: document)
   end
 
   def create_mail
