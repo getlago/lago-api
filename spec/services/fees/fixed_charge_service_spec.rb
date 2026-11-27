@@ -617,6 +617,76 @@ RSpec.describe Fees::FixedChargeService, :premium do
               )
             end
 
+            context "when multiple fees were paid during the previous subscription period" do
+              let(:additional_previous_timestamp) { Time.zone.parse("1 Apr 2022 00:01:00") }
+              let(:additional_previous_boundaries) do
+                BillingPeriodBoundaries.new(
+                  from_datetime: additional_previous_timestamp,
+                  to_datetime: started_at.end_of_month,
+                  charges_from_datetime: additional_previous_timestamp,
+                  charges_to_datetime: started_at.end_of_month,
+                  fixed_charges_from_datetime: additional_previous_timestamp,
+                  fixed_charges_to_datetime: started_at.end_of_month,
+                  charges_duration: 30,
+                  fixed_charges_duration: 30,
+                  timestamp: additional_previous_timestamp
+                )
+              end
+              let(:additional_previous_fee) do
+                create(
+                  :fee,
+                  fixed_charge: previous_fixed_charge,
+                  subscription: previous_subscription,
+                  properties: additional_previous_boundaries.to_h,
+                  amount_cents: 3000,
+                  organization:,
+                  billing_entity: subscription.customer.billing_entity
+                )
+              end
+
+              before { additional_previous_fee }
+
+              it "deducts every already paid fee" do
+                result = fixed_charge_service.call
+
+                expect(result).to be_success
+                expect(result.fee).to have_attributes(
+                  id: String,
+                  invoice_id: invoice.id,
+                  fixed_charge_id: fixed_charge.id,
+                  # new proration: 6000 * 14 / 30 * 10 = 28000
+                  # previous fees: 2000 * 14 / 20 + 3000 * 14 / 30 = 2800
+                  amount_cents: 25200,
+                  taxes_precise_amount_cents: 0.0,
+                  amount_currency: "EUR",
+                  units: 10
+                )
+              end
+
+              context "when the additional fee belongs to an earlier fixed charge period" do
+                let(:additional_previous_boundaries) do
+                  BillingPeriodBoundaries.new(
+                    from_datetime: additional_previous_timestamp.prev_month,
+                    to_datetime: additional_previous_timestamp.prev_month.end_of_month,
+                    charges_from_datetime: additional_previous_timestamp.prev_month,
+                    charges_to_datetime: additional_previous_timestamp.prev_month.end_of_month,
+                    fixed_charges_from_datetime: additional_previous_timestamp.prev_month,
+                    fixed_charges_to_datetime: additional_previous_timestamp.prev_month.end_of_month,
+                    charges_duration: 31,
+                    fixed_charges_duration: 31,
+                    timestamp: additional_previous_timestamp.prev_month
+                  )
+                end
+
+                it "does not deduct the fee" do
+                  result = fixed_charge_service.call
+
+                  expect(result).to be_success
+                  expect(result.fee.amount_cents).to eq(26600)
+                end
+              end
+            end
+
             context "when previous fee was issued during the billing period" do
               let(:previous_boundaries) do
                 BillingPeriodBoundaries.new(
