@@ -8,6 +8,8 @@ module Charges
       :full_units_number, :precise_total_amount_cents, :custom_aggregation, :options, keyword_init: true
     ) do
       alias_method :billable_units, :aggregation
+
+      def closing_units = nil
     end
 
     def initialize(units:, charge:, charge_filter: nil)
