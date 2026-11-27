@@ -82,6 +82,40 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       .and not_change { shadow_organization.contracts.count }
   end
 
+  it "does not enqueue the alert copy of a subscription without alerts" do
+    expect { result }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
+
+    expect(result.contract).to be_persisted
+  end
+
+  context "when the subscription has an alert", :premium do
+    before do
+      Organization.find(shadow_organization.id).update!(feature_flags: %w[product_catalog contract_alerts])
+      create(
+        :usage_current_amount_alert,
+        organization:,
+        subscription_external_id: subscription.external_id,
+        code: "spend",
+        thresholds: [10_00]
+      )
+    end
+
+    it "enqueues the alert copy of the subscription once the contract exists" do
+      expect { result }
+        .to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription).exactly(:once)
+
+      expect(result.contract).to be_persisted
+    end
+
+    it "copies it to the new contract once the enqueued copy runs" do
+      result
+      perform_enqueued_jobs(only: BillingEngineMigrations::CopySubscriptionAlertsJob)
+
+      expect(shadow_organization.contract_alerts.where(code: "spend"))
+        .to contain_exactly(have_attributes(alert_type: "usage_amount", contract_external_id: subscription.external_id))
+    end
+  end
+
   context "when the customer has a payment provider, metadata and taxes" do
     let(:customer) do
       create(
@@ -139,6 +173,10 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
 
       expect(result).to be_success
       expect(result.contract).to be_nil
+    end
+
+    it "does not enqueue the alert copy" do
+      expect { result }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
     end
   end
 
@@ -255,6 +293,10 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
           "migration #{migration.id}"
         )
       )
+    end
+
+    it "does not enqueue the alert copy" do
+      expect { result }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
     end
   end
 
@@ -380,6 +422,10 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       expect(result.contract).to be_nil
       expect(Rails.logger).not_to have_received(:warn)
     end
+
+    it "does not enqueue the alert copy" do
+      expect { result }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
+    end
   end
 
   context "when the contract is created concurrently with the same code" do
@@ -451,6 +497,10 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
         )
       )
     end
+
+    it "does not enqueue the alert copy" do
+      expect { result }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
+    end
   end
 
   context "when the shadow organization has a webhook endpoint" do
@@ -501,6 +551,10 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
     it "terminates the contract when the subscription was terminated" do
       expect(result).to be_success
       expect(contract.reload).to have_attributes(status: "terminated", terminated_at:)
+    end
+
+    it "does not enqueue the alert copy" do
+      expect { result }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
     end
 
     context "when the contract was terminated concurrently" do
@@ -684,6 +738,15 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
         .to contain_exactly(have_attributes(code: subscription.id, catalog_plan:))
     end
 
+    context "when the subscription has an alert" do
+      before { create(:usage_current_amount_alert, organization:, subscription_external_id: subscription.external_id) }
+
+      it "enqueues the alert copy of the new subscription" do
+        expect { result }
+          .to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob).with(migration.id, subscription).exactly(:once)
+      end
+    end
+
     context "when the new subscription runs on an override of a mapped plan" do
       let(:override_plan) { create(:plan, organization:, code: plan.code, parent: plan) }
       let(:subscription) { create(:subscription, organization:, customer:, plan: override_plan, started_at:, subscription_at:) }
@@ -743,6 +806,10 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionService do
       expect(result).to be_success
       expect(result.contract).to eq(contract)
       expect(contract.reload.ended_at).to eq(ending_at)
+    end
+
+    it "does not enqueue the alert copy" do
+      expect { result }.not_to have_enqueued_job(BillingEngineMigrations::CopySubscriptionAlertsJob)
     end
 
     context "when the subscription end date is removed" do

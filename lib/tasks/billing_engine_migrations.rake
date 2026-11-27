@@ -241,6 +241,10 @@ namespace :billing_engine_migrations do
     unless migration.shadow_organization_isolated?
       abort "Shadow organization #{migration.shadow_organization_id} has webhook endpoints, invoice emails or a dunning campaign"
     end
+    unless License.premium? && migration.shadow_organization.feature_flag_enabled?(:contract_alerts)
+      abort "Shadow organization #{migration.shadow_organization_id} cannot hold contract alerts: " \
+        "enable its contract_alerts feature flag on a premium instance first"
+    end
 
     customers_per_minute = Integer(ENV.fetch("CUSTOMERS_PER_MINUTE", "60"), exception: false)
     abort "CUSTOMERS_PER_MINUTE must be a positive integer" unless customers_per_minute&.positive?
