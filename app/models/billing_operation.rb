@@ -46,6 +46,7 @@ class BillingOperation < ApplicationRecord
   scope :completed, -> { where.not(processed_at: nil) }
   scope :periodic, -> { where(action_type: PERIODIC_ACTIONS.keys).where.not(reason: :late_payment) }
   scope :due_for_processing, ->(timestamp) { pending.where(billing_at: ..timestamp) }
+  scope :units_changes, -> { where(action_type: "reconcile_advance_coverage", reason: "contract_units_change") }
   scope :earliest_per_contract_rate_card, -> {
     select("DISTINCT ON (billing_operations.contract_rate_card_id) billing_operations.*")
       .reorder(:contract_rate_card_id, :billing_at,
@@ -57,13 +58,14 @@ class BillingOperation < ApplicationRecord
   end
 
   def units_change?
-    reason == "contract_units_change"
+    action_type == "reconcile_advance_coverage" && reason == "contract_units_change"
   end
 
   private
 
   def validate_units_change_immutability
-    return unless persisted? && reason_in_database == "contract_units_change"
+    return unless persisted? && action_type_in_database == "reconcile_advance_coverage" &&
+      reason_in_database == "contract_units_change"
 
     %w[units_before units_after billing_at target_cycle_started_at contract_rate_card_id customer_id organization_id action_type reason].each do |attribute|
       errors.add(attribute, :readonly) if will_save_change_to_attribute?(attribute)

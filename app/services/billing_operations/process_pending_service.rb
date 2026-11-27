@@ -40,8 +40,8 @@ module BillingOperations
     attr_reader :customer, :timestamp
 
     def units_changes_pending?
-      customer.billing_operations.pending.where(organization_id: customer.organization_id,
-        reason: "contract_units_change", billing_at: ..timestamp).exists?
+      customer.billing_operations.pending.units_changes
+        .where(organization_id: customer.organization_id, billing_at: ..timestamp).exists?
     end
   end
 end

@@ -23,6 +23,8 @@ RSpec.describe ContractRateCardUnitsHistoryQuery do
     change
     create(:billing_operation, organization:, customer:, contract_rate_card: first_card, action_type: "reconcile_advance_coverage",
       reason: :rate_change, billing_at: timestamp + 1.hour, units_before: 5, units_after: 99)
+    create(:billing_operation, organization:, customer:, contract_rate_card: first_card, action_type: "close_fixed_arrears",
+      reason: :contract_units_change, billing_at: timestamp + 30.minutes)
     create(:billing_operation, organization:, customer: second_card.contract.customer, contract_rate_card: second_card, action_type: "reconcile_advance_coverage",
       units_before: 4, units_after: 6, billing_at: timestamp)
   end

@@ -142,6 +142,24 @@ RSpec.describe BillingOperation do
         end
       end
     end
+
+    describe ".units_changes" do
+      let(:units_change) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage")
+      end
+
+      before do
+        units_change
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "reconcile_advance_coverage",
+          reason: :rate_change)
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+          reason: :contract_units_change)
+      end
+
+      it "returns only reconciliations recorded for a units change" do
+        expect(described_class.units_changes).to eq([units_change])
+      end
+    end
   end
 
   describe "validations" do
