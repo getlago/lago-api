@@ -479,6 +479,57 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
       end
     end
 
+    context "when the feature or the privilege is deleted while the removal waits for it", transaction: false do
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      # Committed before the threads start, which only read them.
+      before do
+        create(:entitlement_value, organization:, entitlement: plan_entitlement, privilege:, value: "10")
+        contract
+      end
+
+      # Frees the lock holder left waiting by a failed expectation.
+      after { release << true }
+
+      def remove_while_deleting(resource, &delete)
+        deleter = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              feature = Entitlement::Feature.lock.find(privilege.entitlement_feature_id)
+              yield(feature)
+              locked << true
+              release.pop
+            end
+          end
+        end
+        locked.pop
+
+        remover = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(owner: Contract.find(contract.id), feature_code:, privilege_code:)
+          end
+        end
+        # The removal found the feature and the privilege before the delete committed, then waits on the feature lock.
+        expect(remover.join(0.5)).to be_nil
+
+        release << true
+        deleter.join
+
+        expect(remover.value.error.resource).to eq(resource)
+        expect(Entitlement::SubscriptionFeatureRemoval.unscoped.where(contract_id: contract.id)).to be_empty
+        expect(sent_webhooks).to be_empty
+      end
+
+      it "fails with a feature not found when the feature is deleted, and stores no removal" do
+        remove_while_deleting("feature") { |feature| feature.discard! }
+      end
+
+      it "fails with a privilege not found when the privilege is deleted, and stores no removal" do
+        remove_while_deleting("privilege") { Entitlement::Privilege.find(privilege.id).discard! }
+      end
+    end
+
     context "with two concurrent removals of the same value", transaction: false do
       let(:locked) { Queue.new }
       let(:release) { Queue.new }

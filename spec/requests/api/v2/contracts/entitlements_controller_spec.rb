@@ -541,6 +541,30 @@ RSpec.describe Api::V2::Contracts::EntitlementsController do
       end
     end
 
+    # The privilege removal route matches a literal /privileges/, so an encoded code reaches the feature removal.
+    context "with an encoded feature code containing /privileges/" do
+      let(:code) { "storage%2Fprivileges%2Flimit" }
+      let(:storage) { create(:feature, organization:, code: "storage/privileges/limit") }
+      let(:limit) { create(:privilege, organization:, feature: storage, code: "limit", value_type: "integer") }
+      let(:storage_entitlement) { create(:entitlement, :contract, organization:, contract:, feature: storage) }
+
+      before { create(:entitlement_value, organization:, entitlement: storage_entitlement, privilege: limit, value: 10) }
+
+      it "removes the feature" do
+        request
+
+        expect(response).to have_http_status(:success)
+        expect(json).to eq(
+          entitlement: contract_entitlement_render(
+            feature_code: "storage/privileges/limit",
+            source: "contract",
+            values: [{privilege_code: "limit", value: 10, plan_value: nil, source: "contract"}]
+          )
+        )
+        expect(storage_entitlement.reload).to be_discarded
+      end
+    end
+
     context "with an unknown feature" do
       let(:code) { "unknown" }
 

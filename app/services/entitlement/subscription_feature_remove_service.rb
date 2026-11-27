@@ -6,6 +6,7 @@ module Entitlement
     include Concerns::OwnerLockConcern
     include Concerns::OverrideOwnerConcern
     include Concerns::ContractEntitlementEventsConcern
+    include Concerns::ContractRemovalsConcern
 
     # entitlement: for a contract, the feature as it applied to the contract before the removal.
     Result = BaseResult[:feature_code, :entitlement]
@@ -31,7 +32,7 @@ module Entitlement
       ActiveRecord::Base.transaction do
         lock_override_owner!(owner)
         if contract
-          lock_feature!
+          lock_feature_for_contract_removal!(feature)
           find_contract_entitlement!
         end
         delete_subscription_entitlement_if_exists
@@ -59,13 +60,6 @@ module Entitlement
 
     def contract
       owner if owner.is_a?(Contract)
-    end
-
-    # FOR KEY SHARE waits for a feature delete in progress, which discards the contract removals of the feature, so
-    # no removal is stored for a deleted feature. lock! reloads unscoped, hence the discarded? check.
-    def lock_feature!
-      feature&.lock!("FOR KEY SHARE")
-      result.not_found_failure!(resource: "feature").raise_if_error! if feature.nil? || feature.discarded?
     end
 
     # Read under the contract lock, so that of two concurrent removals the second one finds nothing.

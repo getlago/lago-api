@@ -6,6 +6,7 @@ module Entitlement
     include Concerns::OwnerLockConcern
     include Concerns::OverrideOwnerConcern
     include Concerns::ContractEntitlementEventsConcern
+    include Concerns::ContractRemovalsConcern
 
     # entitlement: for a contract, the feature as it applies to the contract after the removal.
     Result = BaseResult[:feature_code, :privilege_code, :entitlement]
@@ -35,8 +36,9 @@ module Entitlement
       ActiveRecord::Base.transaction do
         lock_override_owner!(owner)
         if contract
-          result.not_found_failure!(resource: "feature").raise_if_error! unless feature
-          result.not_found_failure!(resource: "privilege").raise_if_error! unless privilege
+          lock_feature_for_contract_removal!(feature)
+          # A privilege delete holds the feature lock, so the privilege read before it may be discarded since.
+          result.not_found_failure!(resource: "privilege").raise_if_error! if privilege.nil? || privilege.reload.discarded?
         end
         before_render = find_contract_entitlement_before! if contract
         delete_subscription_entitlement_value_if_exists
