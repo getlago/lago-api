@@ -10,9 +10,9 @@ module BillingOperations
 
       def cycle_started_at = obligation.cycle.started_at
 
-      def coverage_started_at = obligation.segments.first.started_at
+      delegate :coverage_started_at, to: :obligation
 
-      def coverage_ended_at = obligation.segments.last.ended_at
+      delegate :coverage_ended_at, to: :obligation
     end
   end
 end

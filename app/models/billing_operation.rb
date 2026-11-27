@@ -45,6 +45,11 @@ class BillingOperation < ApplicationRecord
   scope :pending, -> { where(processed_at: nil, cancelled_at: nil) }
   scope :completed, -> { where.not(processed_at: nil) }
   scope :periodic, -> { where(action_type: PERIODIC_ACTIONS.keys).where.not(reason: :late_payment) }
+  scope :reconciliation_sources, ->(at:) {
+    periodic.where(action_type: "renew_fixed_advance", cancelled_at: nil, created_at: ..at)
+      .where("processed_at IS NULL OR processed_at >= ?", at)
+      .order(:target_cycle_started_at, :billing_at, :id)
+  }
   scope :to_cancel_on_termination, ->(timestamp:, effective_end:, include_renewals:) {
     future = pending.where("billing_at > ?", timestamp)
     if include_renewals

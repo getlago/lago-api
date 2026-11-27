@@ -37,6 +37,43 @@ RSpec.describe BillingOperation do
   end
 
   describe "Scopes" do
+    describe ".reconciliation_sources" do
+      subject(:sources) { contract_rate_card.billing_operations.reconciliation_sources(at:) }
+
+      let(:at) { Time.utc(2026, 1, 15) }
+      let(:pending) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at - 1.day, billing_at: at - 3.days)
+      end
+      let(:completed_at_edit) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at,
+          processed_at: at, billing_at: at - 2.days)
+      end
+      let(:completed_after_edit) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at - 1.day,
+          processed_at: at + 1.hour, billing_at: at - 1.day)
+      end
+
+      before do
+        pending
+        completed_at_edit
+        completed_after_edit
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at - 1.day, processed_at: at - 1.second)
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at + 1.second)
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at - 1.day, reason: :late_payment)
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at - 1.day,
+          cancelled_at: at, cancellation_reason: :rate_change)
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at - 1.day,
+          action_type: "renew_recurring_metered_advance")
+        create(:billing_operation, organization:, customer:, contract_rate_card:, created_at: at - 1.day,
+          action_type: "reconcile_advance_coverage")
+        create(:billing_operation, created_at: at - 1.day)
+      end
+
+      it "returns only this card's eligible fixed advance snapshots in billing order" do
+        expect(sources).to eq([pending, completed_at_edit, completed_after_edit])
+      end
+    end
+
     describe ".pending" do
       let(:pending_operation) { create(:billing_operation) }
       let(:cancelled_operation) do

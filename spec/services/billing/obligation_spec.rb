@@ -29,6 +29,18 @@ RSpec.describe Billing::Obligation do
   let(:segment) { Billing::Segments::Segment.new(started_at:, ended_at:, rate: base_rate) }
   let(:obligation) { described_class.new(cycle:, segments: [segment], billing_at: cycle_ended_at, terms:) }
 
+  describe "coverage bounds" do
+    let(:started_at) { cycle_started_at + 1.day }
+    let(:ended_at) { cycle_ended_at - 2.days }
+    let(:last_segment) { segment.with(started_at: ended_at, ended_at: cycle_ended_at - 1.day) }
+    let(:obligation) { super().with(segments: [segment, last_segment]) }
+
+    it "uses the first and last priced segments rather than the cycle bounds" do
+      expect(obligation.coverage_started_at).to eq(started_at)
+      expect(obligation.coverage_ended_at).to eq(cycle_ended_at - 1.day)
+    end
+  end
+
   describe "#starts_on_or_after?" do
     let(:started_at) { cycle_started_at + 1.day }
 

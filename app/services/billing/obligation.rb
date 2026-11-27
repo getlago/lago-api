@@ -6,6 +6,10 @@ module Billing
       super
     end
 
+    def coverage_started_at = segments.first.started_at
+
+    def coverage_ended_at = segments.last.ended_at
+
     def operation_billing_at(after: nil)
       if after && billing_at > after
         termination_billing_at || billing_at
@@ -15,7 +19,7 @@ module Billing
     end
 
     def starts_on_or_after?(timestamp)
-      segments.first.started_at >= timestamp
+      coverage_started_at >= timestamp
     end
 
     def pricing_inputs_for(segment)
