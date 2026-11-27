@@ -12,7 +12,7 @@ module BillingOperations
 
       delegate :coverage_started_at, to: :obligation
 
-      def coverage_ended_at = obligation.segments.last.ended_at
+      delegate :coverage_ended_at, to: :obligation
     end
   end
 end

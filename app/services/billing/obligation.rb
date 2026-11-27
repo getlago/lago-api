@@ -18,7 +18,9 @@ module Billing
     # on January 1 but the first rate takes effect on January 5, coverage starts on January 5.
     def coverage_started_at = segments.first.started_at
 
-    def cycle_coverage_window = coverage_started_at...segments.last.ended_at
+    def coverage_ended_at = segments.last.ended_at
+
+    def cycle_coverage_window = coverage_started_at...coverage_ended_at
 
     def starts_on_or_after?(timestamp)
       coverage_started_at >= timestamp
