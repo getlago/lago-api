@@ -98,6 +98,11 @@ enum ActivityTypeEnum {
   applied_coupon_deleted
 
   """
+  billable_metric.copied_to_production
+  """
+  billable_metric_copied_to_production
+
+  """
   billable_metric.created
   """
   billable_metric_created
@@ -2252,6 +2257,39 @@ enum ContractStatusEnum {
   draft
   pending
   terminated
+}
+
+"""
+Copy to production input arguments
+"""
+input CopyToProductionInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+
+  """
+  ID of the item in the sandbox
+  """
+  id: ID!
+  itemType: CopyToProductionItemTypeEnum!
+}
+
+"""
+A production item created by Copy to production
+"""
+type CopyToProductionItem {
+  code: String
+  id: ID!
+  itemType: CopyToProductionItemTypeEnum!
+  name: String
+}
+
+"""
+Item types a sandbox can move to its production organization
+"""
+enum CopyToProductionItemTypeEnum {
+  billable_metric
 }
 
 enum CountryCode {
@@ -9406,6 +9444,16 @@ type Mutation {
   ): LoginUser
 
   """
+  Copies a sandbox item, with the items it references, to the sandbox's production organization
+  """
+  copyToProduction(
+    """
+    Parameters for CopyToProduction
+    """
+    input: CopyToProductionInput!
+  ): CopyToProductionItem
+
+  """
   Creates a new add-on
   """
   createAddOn(
@@ -12424,6 +12472,7 @@ enum PermissionEnum {
   contracts_terminate
   contracts_update
   contracts_view
+  copy_to_production_create
   coupons_attach
   coupons_create
   coupons_delete
@@ -12561,6 +12610,7 @@ type Permissions {
   contractsTerminate: Boolean!
   contractsUpdate: Boolean!
   contractsView: Boolean!
+  copyToProductionCreate: Boolean!
   couponsAttach: Boolean!
   couponsCreate: Boolean!
   couponsDelete: Boolean!
