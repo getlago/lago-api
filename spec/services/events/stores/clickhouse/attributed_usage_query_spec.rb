@@ -327,5 +327,44 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
         expect(cells(row("eng"))).to eq([[115, 1_105, 3], [1, 0, 1]])
       end
     end
+
+    context "when ClickHouse fails the request" do
+      let(:connection) { ::Clickhouse::BaseRecord.lease_connection }
+      let(:errors) { [EOFError.new("end of file reached")] }
+
+      before do
+        failures = errors.dup
+
+        allow(connection).to receive(:request).and_wrap_original do |original, *args, **kwargs|
+          error = failures.shift
+          raise error if error
+
+          original.call(*args, **kwargs)
+        end
+      end
+
+      it "runs the query again when the connection was dropped" do
+        expect(attributed_usage_query.rows.map { it["node"] }).to eq(["eng", "data", ""])
+        expect(connection).to have_received(:request).twice
+      end
+
+      context "when the connection is dropped twice" do
+        let(:errors) { Array.new(2) { EOFError.new("end of file reached") } }
+
+        it "raises" do
+          expect { attributed_usage_query.rows }.to raise_error(ActiveRecord::ActiveRecordError, "Response: end of file reached")
+          expect(connection).to have_received(:request).twice
+        end
+      end
+
+      context "when the query fails" do
+        let(:errors) { [ActiveRecord::ActiveRecordError.new("Code: 159. DB::Exception: Timeout exceeded. (TIMEOUT_EXCEEDED)")] }
+
+        it "raises without running the query again" do
+          expect { attributed_usage_query.rows }.to raise_error(ActiveRecord::ActiveRecordError, /TIMEOUT_EXCEEDED/)
+          expect(connection).to have_received(:request).once
+        end
+      end
+    end
   end
 end
