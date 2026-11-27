@@ -133,6 +133,36 @@ RSpec.describe IntegrationCustomers::CreateConnectionService do
         expect(integration_customer.external_customer_id).to eq(external_customer_id)
         expect(integration_customer).to be_is_default
       end
+
+      context "when sync_with_provider is true" do
+        let(:params) { {integration_id: integration.id, sync_with_provider: true} }
+        let(:create_result) do
+          result = Integrations::Aggregator::Contacts::CreateService::Result.new
+          result.contact_id = "1042"
+          result
+        end
+
+        before do
+          allow(Integrations::Aggregator::Contacts::CreateService)
+            .to receive(:call).and_return(create_result)
+        end
+
+        it "creates the customer in QuickBooks and returns the connection" do
+          integration_customer = result.integration_customer
+
+          expect(result).to be_success
+          expect(integration_customer).to be_a(IntegrationCustomers::QuickbooksCustomer)
+          expect(integration_customer).to have_attributes(
+            external_customer_id: "1042",
+            sync_with_provider: true,
+            category: "accounting",
+            code: "qbo_main",
+            is_default: true
+          )
+          expect(Integrations::Aggregator::Contacts::CreateService)
+            .to have_received(:call).with(integration:, customer:, subsidiary_id: nil)
+        end
+      end
     end
 
     context "when no code is given" do

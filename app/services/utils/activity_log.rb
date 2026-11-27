@@ -3,7 +3,7 @@
 module Utils
   class ActivityLog
     IGNORED_FIELDS = %i[updated_at].freeze
-    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan CatalogPlan BillingEntity Entitlement::Feature ProductCategory Product ProductFilter RateCard RateCardRate PlanRateCard PlanWallet].freeze
+    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan CatalogPlan BillingEntity Entitlement::Feature Entitlement::Entitlement ProductCategory Product ProductFilter RateCard RateCardRate PlanRateCard PlanWallet].freeze
     MAX_SERIALIZED_FEES = 25
     MAX_SERIALIZED_CHARGES = 50
     MAX_SERIALIZED_CHARGE_FILTERS = 100
@@ -42,17 +42,23 @@ module Utils
     # This method is used to produce an activity log after a commit.
     #
     # It is meant to avoid race-conditions where a asynchronous post-processing run before changes are commited to the DB.
-    def self.produce_after_commit(object, activity_type, activity_id: nil, &)
-      kwargs = {after_commit: true, activity_id:}.compact
+    def self.produce_after_commit(object, activity_type, activity_id: nil, changes: nil, activity_object: nil, &)
+      kwargs = {after_commit: true, activity_id:, changes:, activity_object:}.compact
       produce(object, activity_type, **kwargs, &)
     end
 
-    def initialize(object, activity_type, activity_id: SecureRandom.uuid, after_commit: false, &block)
+    # changes: a diff the caller computed, logged as given for any activity type, in place of the one
+    # a block computes from the object.
+    # activity_object: a render the caller built, logged in place of the object serialized when the log is sent,
+    # for a record whose state at that time is not the one to log (a deleted record with its last values).
+    def initialize(object, activity_type, activity_id: SecureRandom.uuid, after_commit: false, changes: nil, activity_object: nil, &block)
       @object = object
       @activity_type = activity_type
       @activity_id = activity_id
       @block = block
       @after_commit = after_commit
+      @given_changes = changes
+      @given_activity_object = activity_object
     end
 
     def produce
@@ -82,7 +88,7 @@ module Utils
 
     private
 
-    attr_reader :object, :activity_type, :activity_id, :block, :after_commit
+    attr_reader :object, :activity_type, :activity_id, :block, :after_commit, :given_changes, :given_activity_object
 
     def run_maybe_after_commit(&block)
       if after_commit
@@ -111,7 +117,7 @@ module Utils
           resource_id: resource.id,
           resource_type: resource.class.name,
           organization_id: organization_id,
-          activity_object: object_serialized,
+          activity_object: given_activity_object || object_serialized,
           activity_object_changes: object_changes(changes),
           external_customer_id: external_customer_id,
           external_subscription_id: external_subscription_id
@@ -137,6 +143,7 @@ module Utils
       # Applied-card model names differ from their public V2 serializer names.
       serializer = case object
       when PlanRateCard then V2::PlanRateCardSerializer
+      when ::Entitlement::Entitlement then V2::PlanEntitlementSerializer
       when ContractRateCard then V2::ContractAppliedRateCardSerializer
       when CatalogWallet then V2::ContractWalletSerializer
       # A catalog invoice logs the body its webhooks send.
@@ -184,6 +191,7 @@ module Utils
     end
 
     def object_changes(changes)
+      return given_changes if given_changes
       return {} unless activity_type.include?("updated")
 
       changes.except(*IGNORED_FIELDS, *IGNORED_FIELDS.map(&:to_s))
@@ -210,6 +218,9 @@ module Utils
         # The quote lifecycle events are named quote.*: anchor them on the quote so a single
         # resource carries the whole timeline, while activity_object keeps the version payload.
         object.quote
+      when "Entitlement::Entitlement"
+        # A plan entitlement change is filed under its catalog plan, while activity_object keeps the entitlement.
+        object.catalog_plan
       else
         object
       end

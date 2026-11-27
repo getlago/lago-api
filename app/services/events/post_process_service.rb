@@ -13,6 +13,7 @@ module Events
     def call
       create_enriched_events
       track_subscription_activity
+      track_contract_activity
       customer&.flag_wallets_for_refresh
       # TODO: update also event-processor to process targeted wallets
       check_targeted_wallets
@@ -98,6 +99,14 @@ module Events
         date = Time.current.in_time_zone(customer.applicable_timezone).to_date
         UsageMonitoring::TrackSubscriptionActivityService.call(organization:, subscription:, date:)
       end
+    end
+
+    def track_contract_activity
+      return unless organization.product_catalog_enabled?
+      return unless organization.feature_flag_enabled?(:contract_alerts)
+
+      contract = organization.contracts.active.find_by(external_id: event.external_subscription_id)
+      UsageMonitoring::TrackContractActivityService.call!(contract:) if contract
     end
 
     def check_targeted_wallets

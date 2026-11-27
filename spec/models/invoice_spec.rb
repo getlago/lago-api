@@ -358,12 +358,12 @@ RSpec.describe Invoice do
 
     before { stub_const("ENV", ENV.to_hash.merge("LAGO_API_URL" => api_url)) }
 
-    it { is_expected.to eq("https://api.example.com/x402/invoice_payments/#{"ab" * 32}") }
+    it { is_expected.to eq("https://api.example.com/api/v1/x402/invoice_payments/#{"ab" * 32}") }
 
     context "with a trailing slash on LAGO_API_URL" do
       let(:api_url) { "https://api.example.com/" }
 
-      it { is_expected.to eq("https://api.example.com/x402/invoice_payments/#{"ab" * 32}") }
+      it { is_expected.to eq("https://api.example.com/api/v1/x402/invoice_payments/#{"ab" * 32}") }
     end
 
     context "without a token" do

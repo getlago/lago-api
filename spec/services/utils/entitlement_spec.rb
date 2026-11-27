@@ -5,6 +5,82 @@ require "rails_helper"
 RSpec.describe Utils::Entitlement do
   subject(:utils_entitlement) { described_class }
 
+  describe ".privileges_param_invalid?" do
+    subject(:invalid) { utils_entitlement.privileges_param_invalid?(privileges_params) }
+
+    context "when privileges params are blank" do
+      let(:privileges_params) { {} }
+
+      it { expect(invalid).to be(false) }
+    end
+
+    context "when privileges params are nil" do
+      let(:privileges_params) { nil }
+
+      it { expect(invalid).to be(false) }
+    end
+
+    context "when privileges params are an array" do
+      let(:privileges_params) { [{code: "max"}] }
+
+      it { expect(invalid).to be(false) }
+    end
+
+    context "when privileges params are a single object" do
+      let(:privileges_params) { {code: "max"} }
+
+      it { expect(invalid).to be(true) }
+    end
+
+    context "when privileges params are keyed by index" do
+      let(:privileges_params) { {"0" => {code: "max"}} }
+
+      it { expect(invalid).to be(true) }
+    end
+  end
+
+  describe ".privilege_code_is_duplicated?" do
+    subject(:duplicated) { utils_entitlement.privilege_code_is_duplicated?(privileges_params) }
+
+    context "when privileges params are blank" do
+      let(:privileges_params) { nil }
+
+      it { expect(duplicated).to be(false) }
+    end
+
+    context "when codes are distinct" do
+      let(:privileges_params) { [{code: "max"}, {code: "min"}] }
+
+      it { expect(duplicated).to be(false) }
+    end
+
+    context "when a code is not a string" do
+      let(:privileges_params) { [{code: nil}, {code: "max"}] }
+
+      it { expect(duplicated).to be(false) }
+    end
+
+    context "when two codes are equal" do
+      let(:privileges_params) { [{code: "max"}, {code: "max"}] }
+
+      it { expect(duplicated).to be(true) }
+    end
+
+    context "when two codes are equal once stripped" do
+      let(:privileges_params) { [{code: "max"}, {code: " max "}] }
+
+      it { expect(duplicated).to be(true) }
+    end
+  end
+
+  describe ".stripped_code" do
+    it "strips a string and keeps any other value" do
+      expect(utils_entitlement.stripped_code(" max ")).to eq("max")
+      expect(utils_entitlement.stripped_code(nil)).to be_nil
+      expect(utils_entitlement.stripped_code(1)).to eq(1)
+    end
+  end
+
   describe ".cast_value" do
     context "when value is blank" do
       it "returns nil for empty string" do

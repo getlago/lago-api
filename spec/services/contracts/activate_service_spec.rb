@@ -128,13 +128,15 @@ RSpec.describe Contracts::ActivateService do
       create(:rate_card_rate, organization:, rate_card:, effective_from: rate_effective_from, billing_interval_count: 1, billing_interval_unit: "month")
     end
 
-    it "persists the initial operation and cursor without predicted segments" do
+    it "persists the initial operation with its planned coverage and advances the cursor to its billing date" do
       expect { result }.to change(BillingOperation, :count).by(1)
       expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 10, 30))
       expect(contract_rate_card.billing_operations.sole).to have_attributes(
         action_type: "close_fixed_arrears", reason: "contract_activation",
-        billing_at: Time.utc(2026, 10, 30), target_cycle_started_at: started_at
+        billing_at: Time.utc(2026, 10, 30), target_cycle_started_at: started_at,
+        coverage_started_at: started_at, coverage_ended_at: Time.utc(2026, 10, 30)
       )
+      expect(contract_rate_card.billing_operations.sole.segments.sole).to have_attributes(started_at:, ended_at: Time.utc(2026, 10, 30))
       expect(LegacyBillingSegment.count).to eq(0)
     end
 

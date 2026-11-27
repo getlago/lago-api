@@ -1,0 +1,20 @@
+{
+  "error": {
+    "code": "action_script_failure",
+    "message": "Failed to create the customer in QuickBooks",
+    "payload": {
+      "Fault": {
+        "Error": [
+          {
+            "Message": "Duplicate Name Exists Error",
+            "Detail": "The name supplied already exists. : Another customer is already using this name.",
+            "code": "6240",
+            "element": ""
+          }
+        ],
+        "type": "ValidationFault"
+      },
+      "time": "2026-01-05T02:00:00.000-08:00"
+    }
+  }
+}

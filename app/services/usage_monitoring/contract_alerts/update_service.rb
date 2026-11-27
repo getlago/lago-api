@@ -7,7 +7,7 @@ module UsageMonitoring
 
       Result = BaseResult[:alert]
 
-      UNCHANGEABLE_FIELDS = %i[code alert_type product_code product_filter_code product_id product_filter_id with_product_filters].freeze
+      UNCHANGEABLE_FIELDS = %i[code alert_type scope].freeze
 
       def initialize(alert:, params:)
         @alert = alert
@@ -35,8 +35,10 @@ module UsageMonitoring
           alert.save!
 
           if params.key?(:thresholds)
-            replace_thresholds(alert, contracts.active.take, keep_previous_notify_on(alert, params[:thresholds]))
+            replace_thresholds(alert, active_contract, keep_previous_notify_on(alert, params[:thresholds]))
           end
+
+          after_commit { UsageMonitoring::TrackContractActivityService.call!(contract: active_contract) } if active_contract
         end
         return result unless result.success?
 
@@ -52,6 +54,11 @@ module UsageMonitoring
 
       def contracts
         alert.organization.contracts.where(external_id: alert.contract_external_id)
+      end
+
+      # The only contract evaluated: a pending replacement waits for its activation
+      def active_contract
+        @active_contract ||= contracts.active.take
       end
     end
   end

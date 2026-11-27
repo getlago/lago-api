@@ -86,7 +86,12 @@ RSpec.describe Mutations::IntegrationCustomers::Update do
       GQL
     end
 
-    it "stores the new external customer id without calling the provider" do
+    before do
+      allow(Integrations::Aggregator::Contacts::UpdateService)
+        .to receive(:call).and_return(Integrations::Aggregator::Contacts::UpdateService::Result.new)
+    end
+
+    it "stores the new external customer id and updates the customer in the provider" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -102,7 +107,8 @@ RSpec.describe Mutations::IntegrationCustomers::Update do
       expect(data["id"]).to eq(integration_customer.id)
       expect(data["integrationType"]).to eq("quickbooks")
       expect(integration_customer.reload).to have_attributes(external_customer_id: "58", code: "new_code")
-      expect(a_request(:any, /.*/)).not_to have_been_made
+      expect(Integrations::Aggregator::Contacts::UpdateService)
+        .to have_received(:call).with(integration:, integration_customer:)
     end
   end
 

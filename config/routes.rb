@@ -83,6 +83,12 @@ Rails.application.routes.draw do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
           end
         end
+        # Ahead of the legacy nested routes: every entitlement action, privilege destroy included, is native.
+        # The privilege destroy stays in the block, which is drawn before the greedy :code destroy.
+        resources :entitlements, only: %i[index show create destroy], param: :code, code: /.*/, controller: "plans/entitlements" do
+          delete "privileges/:privilege_code", action: :destroy_privilege, on: :member, privilege_code: /.*/
+        end
+        patch :entitlements, controller: "plans/entitlements", action: :update
         # The route with an alert code is drawn first, so an alert coded `alerts` is not read as a
         # wallet code by the index.
         resources :wallets, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_wallets" do
@@ -92,6 +98,10 @@ Rails.application.routes.draw do
           end
         end
         draw(:plan_nested_api)
+        draw(:plan_metadata_api)
+        # Without it, the fallback's greedy DELETE /plans/:code would destroy a plan coded "{code}/entitlements" through v1.
+        # Drawn last so the greedy :plan_code does not take charge or metadata paths ending in "entitlements".
+        delete :entitlements, to: "/application#not_found"
       end
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
@@ -110,6 +120,8 @@ Rails.application.routes.draw do
           scope module: :contract_wallets do
             resources :alerts, param: :code, code: /.*/, only: %i[show update destroy]
             resources :alerts, only: %i[index create]
+            # Drawn before the wallet routes, so a path that ends with `transactions` is not read as a wallet code.
+            resources :transactions, only: %i[index show]
           end
         end
       end
@@ -172,11 +184,6 @@ Rails.application.routes.draw do
     post "gocardless/:organization_id", to: "webhooks#gocardless", on: :collection, as: :gocardless
     post "adyen/:organization_id", to: "webhooks#adyen", on: :collection, as: :adyen
     post "moneyhash/:organization_id", to: "webhooks#moneyhash", on: :collection, as: :moneyhash
-  end
-
-  namespace :x402 do
-    get "invoice_payments/:token", to: "invoice_payments#show", as: :invoice_payment
-    post "invoice_payments/:token", to: "invoice_payments#create"
   end
 
   # The only admin route outside local environments, drawn when self-serve is on and its key is set; anything else

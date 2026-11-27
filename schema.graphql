@@ -383,6 +383,21 @@ enum ActivityTypeEnum {
   plan_deleted
 
   """
+  plan_entitlement.created
+  """
+  plan_entitlement_created
+
+  """
+  plan_entitlement.deleted
+  """
+  plan_entitlement_deleted
+
+  """
+  plan_entitlement.updated
+  """
+  plan_entitlement_updated
+
+  """
   plan_rate_card.created
   """
   plan_rate_card_created
@@ -2087,15 +2102,9 @@ type ContractAlert {
   Last observed value, judged against the threshold values and carrying the same scale.
   """
   previousValue: String!
-  product: Product
-  productFilter: ProductFilter
+  scope: [ContractAlertScope!]!
   thresholds: [AlertThreshold!]!
   updatedAt: ISO8601DateTime!
-
-  """
-  On a product scope, whether the usage of the product's filters counts too. False counts the product's own fees only.
-  """
-  withProductFilters: Boolean!
 }
 
 """
@@ -2111,6 +2120,24 @@ type ContractAlertCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type ContractAlertScope {
+  product: Product!
+  productFilters: [ProductFilter!]
+  type: ContractAlertScopeTypeEnum!
+  withProductFilters: Boolean
+}
+
+input ContractAlertScopeInput {
+  productCode: String!
+  productFilterCodes: [String!]
+  type: ContractAlertScopeTypeEnum!
+  withProductFilters: Boolean
+}
+
+enum ContractAlertScopeTypeEnum {
+  contract
 }
 
 enum ContractAlertTypeEnum {
@@ -3763,10 +3790,8 @@ input CreateContractAlertInput {
   code: String!
   contractId: ID!
   name: String
-  productFilterId: ID
-  productId: ID
+  scope: [ContractAlertScopeInput!]!
   thresholds: [ThresholdInput!]!
-  withProductFilters: Boolean
 }
 
 """
@@ -3807,6 +3832,7 @@ input CreateContractInput {
   planCode: String
   purchaseOrderNumber: String
   startedAt: ISO8601DateTime
+  status: CreateContractStatusEnum
 }
 
 """
@@ -3824,6 +3850,10 @@ input CreateContractRatePhaseInput {
   name: String
   position: Int
   rateOverride: RateOverrideInput
+}
+
+enum CreateContractStatusEnum {
+  draft
 }
 
 """
@@ -7537,6 +7567,9 @@ enum EventTypeEnum {
   payment_succeeded
   plan_created
   plan_deleted
+  plan_entitlement_created
+  plan_entitlement_deleted
+  plan_entitlement_updated
   plan_rate_card_created
   plan_rate_card_deleted
   plan_rate_card_updated
@@ -7633,6 +7666,7 @@ enum FeatureFlagEnum {
   catalog_wallets
   charge_filters_single_scan
   contract_alerts
+  entitlement_events
   fixed_charge_usage_delta_migration
   incremental_charge_cache
   invoice_usage_on_wallet_expiration
@@ -7704,11 +7738,13 @@ type Fee implements InvoiceItem {
   id: ID!
   invoiceDisplayName: String
   invoiceId: ID
+  invoiceIsRegeneration: Boolean!
   invoiceName: String
   itemCode: String!
   itemName: String!
   itemType: String!
   offsettableAmountCents: BigInt!
+  originalFeeId: ID
   payInAdvance: Boolean!
   preciseAmountCents: Float!
   preciseCouponsAmountCents: Float!
@@ -10774,6 +10810,16 @@ type Mutation {
   ): Fee
 
   """
+  Publishes a draft contract so billing can start
+  """
+  publishContract(
+    """
+    Parameters for PublishContract
+    """
+    input: PublishContractInput!
+  ): Contract
+
+  """
   Refresh a draft invoice
   """
   refreshInvoice(
@@ -13176,6 +13222,17 @@ enum ProviderTypeEnum {
   stripe
 }
 
+"""
+Publish contract input arguments
+"""
+input PublishContractInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
+}
+
 type Query {
   """
   Query a single activity log of an organization
@@ -13742,6 +13799,16 @@ type Query {
   Query features of an organization
   """
   features(limit: Int, page: Int, searchTerm: String): FeatureObjectCollection!
+
+  """
+  Query a single fee of an organization
+  """
+  fee(
+    """
+    Uniq ID of the fee
+    """
+    id: ID!
+  ): Fee
 
   """
   Get Google auth url.

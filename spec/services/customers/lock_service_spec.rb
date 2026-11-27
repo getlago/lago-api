@@ -15,6 +15,14 @@ RSpec.describe Customers::LockService do
         end.to raise_error(ArgumentError, /Invalid scope: invalid_scope/)
       end
     end
+
+    context "without a customer" do
+      it "raises ArgumentError" do
+        expect do
+          described_class.new(scope: :prepaid_credit)
+        end.to raise_error(ArgumentError, "customer or customer_id is required")
+      end
+    end
   end
 
   describe "lock scoping" do
@@ -49,6 +57,16 @@ RSpec.describe Customers::LockService do
         end
 
         expect(lock_service).not_to be_locked
+      end
+    end
+
+    context "with a customer id" do
+      let(:lock_service) { described_class.new(customer_id: customer.id, scope: :prepaid_credit, timeout_seconds:) }
+
+      it "takes the lock of that customer" do
+        lock_service.call do
+          expect(described_class.new(customer:, scope: :prepaid_credit)).to be_locked
+        end
       end
     end
 

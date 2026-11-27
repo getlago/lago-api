@@ -129,5 +129,88 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(Entitlement::Entitlement.where(plan_id: plan.id).count).to eq(0)
       end
     end
+
+    context "with a catalog plan", transaction: false do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      before do
+        catalog_plan
+        privilege
+      end
+
+      # Frees a lock holder left waiting by a failed expectation.
+      after { release << ->(_) {} }
+
+      def write(catalog_plan_id, value)
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(
+              organization: Organization.find(organization.id),
+              plan: CatalogPlan.find(catalog_plan_id),
+              entitlements_params: {feature.code => {privilege.code => value}},
+              partial: true
+            )
+          end
+        end
+      end
+
+      it "serializes two concurrent writes adding the same feature" do
+        arrived = Queue.new
+
+        allow(Entitlement::Entitlement).to receive(:create!).and_wrap_original do |original, *args, **kwargs|
+          arrived << true
+          deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 2
+          sleep 0.05 while arrived.size < 2 && Process.clock_gettime(Process::CLOCK_MONOTONIC) < deadline
+          original.call(*args, **kwargs)
+        end
+
+        results = [write(catalog_plan.id, 10), write(catalog_plan.id, 20)].map(&:value)
+
+        expect(results).to all(be_success)
+        expect(Entitlement::Entitlement.where(catalog_plan_id: catalog_plan.id, entitlement_feature_id: feature.id).count).to eq(1)
+      end
+
+      it "answers value_already_exist on feature when the insert hits the catalog plan unique index" do
+        # The concurrent writer inserts its row after this one read the plan entitlements.
+        allow(Entitlement::Entitlement).to receive(:create!).and_wrap_original do |original, **attributes|
+          original.call(**attributes)
+          original.call(**attributes)
+        end
+
+        result = write(catalog_plan.id, 10).value
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(feature: ["value_already_exist"])
+        expect(Entitlement::Entitlement.where(catalog_plan_id: catalog_plan.id).count).to eq(0)
+      end
+
+      it "refuses a write on a catalog plan discarded while it waits for the lock" do
+        holder = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              locked_plan = CatalogPlan.lock("FOR NO KEY UPDATE").find(catalog_plan.id)
+              locked << true
+              release.pop.call(locked_plan)
+            end
+          end
+        end
+        locked.pop
+
+        writer = write(catalog_plan.id, 20)
+        expect(writer.join(0.5)).to be_nil
+
+        release << ->(locked_plan) { locked_plan.discard! }
+        holder.join
+        result = writer.value
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("plan")
+        expect(Entitlement::Entitlement.where(catalog_plan_id: catalog_plan.id).count).to eq(0)
+      end
+    end
   end
 end

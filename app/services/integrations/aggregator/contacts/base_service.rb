@@ -40,6 +40,30 @@ module Integrations
           result.contact_id = body
         end
 
+        def process_quickbooks_result(body)
+          contact_id = body["id"] if body.is_a?(Hash)
+
+          if contact_id.present?
+            result.contact_id = contact_id.to_s
+          else
+            code = "customer_id_missing"
+            message = "QuickBooks returned no customer id"
+
+            deliver_error_webhook(customer:, code:, message:)
+            result.service_failure!(code:, message:)
+          end
+        end
+
+        def trigger_quickbooks_action(body)
+          throttle!(:quickbooks)
+          process_quickbooks_result(JSON.parse(trigger_action(body).body))
+        end
+
+        # A QuickBooks rate limit waits for the next window instead of failing the job.
+        def raise_if_quickbooks_rate_limited!(http_error)
+          raise throttling_error(:quickbooks) if provider == "quickbooks" && quickbooks_rate_limited?(http_error)
+        end
+
         def webhook_code
           case provider
           when "hubspot"

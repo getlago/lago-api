@@ -136,9 +136,11 @@ describe ContractWallets::DestroyService do
   context "when a purchase for the wallet has failed" do
     before { create(:catalog_wallet_transaction, :failed, organization:, catalog_wallet: contract_wallet) }
 
-    it "soft deletes the wallet" do
-      expect(result).to be_success
-      expect(result.contract_wallet).to be_discarded
+    it "refuses it and keeps the wallet" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      expect(result.error.code).to eq("wallet_holds_credit")
+      expect(contract_wallet.reload).to be_kept
     end
   end
 

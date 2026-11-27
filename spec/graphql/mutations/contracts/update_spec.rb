@@ -92,6 +92,18 @@ RSpec.describe Mutations::Contracts::Update do
     end
   end
 
+  context "when the contract is a draft" do
+    let(:contract) { create(:contract, :draft, organization:, customer:, catalog_plan:, started_at: 1.month.from_now) }
+    let(:input) { {id: contract.id, name: "Renamed", startedAt: "2026-10-01T00:00:00Z"} }
+
+    before { travel_to(Time.zone.parse("2026-11-01")) }
+
+    it "updates it and keeps it a draft, even with a start that has passed" do
+      expect(execution["data"]["updateContract"]["name"]).to eq("Renamed")
+      expect(contract.reload).to have_attributes(status: "draft", started_at: Time.zone.parse("2026-10-01"))
+    end
+  end
+
   context "when the contract is already active" do
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 

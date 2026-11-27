@@ -367,8 +367,10 @@ RSpec.describe BillingOperations::ApplyRateChangeService do
       )
       expect(reconciliation).to have_attributes(
         billing_at: planned_operations.sole.billing_at,
-        target_cycle_started_at: planned_operations.sole.cycle_started_at
+        target_cycle_started_at: planned_operations.sole.cycle_started_at,
+        coverage_started_at: effective_from, coverage_ended_at: Time.utc(2026, 12, 1)
       )
+      expect(reconciliation.reload.segments.sole).to have_attributes(rate_card_rate: new_rate, started_at: effective_from, ended_at: Time.utc(2026, 12, 1))
       expect(contract_rate_card.reload.next_billing_at).to eq(effective_from)
       expect(BillingOperations::ProcessJob).to have_been_enqueued.with(customer.id).once
       expect { described_class.call!(customer:, rate_card_rate_id: new_rate.id) }.to change(BillingOperation, :count).by(1)

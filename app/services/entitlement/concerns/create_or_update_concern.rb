@@ -5,7 +5,8 @@ module Entitlement
     module CreateOrUpdateConcern
       extend ActiveSupport::Concern
 
-      def validate_value(value, privilege)
+      # path: the field native v2 renders the failure on, the v1 key when nil.
+      def validate_value(value, privilege, path: nil)
         return value if value.nil?
 
         if privilege.value_type == "select"
@@ -13,7 +14,7 @@ module Entitlement
             return value
           end
 
-          raise BaseService::ValidationFailure.new(result, messages: {"#{privilege.code}_privilege_value": ["value_not_in_select_options"]})
+          raise value_failure(privilege, "value_not_in_select_options", path, allowed_values: privilege.config["select_options"].map(&:to_s))
         end
 
         if privilege.value_type == "boolean" && [true, false, "true", "false"].include?(value)
@@ -26,7 +27,22 @@ module Entitlement
         end
         return value if privilege.value_type == "string" && value.is_a?(String)
 
-        raise BaseService::ValidationFailure.new(result, messages: {"#{privilege.code}_privilege_value": ["value_is_invalid"]})
+        raise value_failure(privilege, "value_is_invalid", path)
+      end
+
+      private
+
+      # v1 and GraphQL clients read <privilege>_privilege_value.
+      def value_failure(privilege, code, path, **meta)
+        field = :"#{privilege.code}_privilege_value"
+        path ||= field
+
+        BaseService::ValidationFailure.new(
+          result,
+          messages: {field => [code]},
+          codes: {path => [code]},
+          meta: {path => meta}.compact_blank
+        )
       end
     end
   end

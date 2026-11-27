@@ -92,6 +92,32 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, :premium do
       end
     end
 
+    context "when the privilege code is padded with spaces" do
+      let(:privilege) do
+        create(:privilege, feature:, code: "max", name: "Old Name", value_type: "select", config: {select_options: %w[one two]})
+      end
+      let(:plan_value) { create(:entitlement_value, entitlement: create(:entitlement, feature:), privilege:, value: "one") }
+      let(:subscription_value) do
+        create(:entitlement_value, entitlement: create(:entitlement, :subscription, feature:), privilege:, value: "two")
+      end
+      let(:input) { {id: feature.id, privileges: [{code: " max ", name: "New Name"}]} }
+
+      before do
+        plan_value
+        subscription_value
+      end
+
+      it "keeps the stored privilege, its config and its entitlement values" do
+        result = subject
+
+        expect(result["data"]["updateFeature"]["privileges"]).to eq([{"code" => "max", "name" => "New Name"}])
+        expect(Entitlement::Privilege.with_discarded.where(feature:).pluck(:id, :code, :config)).to eq([
+          [privilege.id, "max", {"select_options" => %w[one two]}]
+        ])
+        expect(Entitlement::EntitlementValue.where(privilege:)).to match_array([plan_value, subscription_value])
+      end
+    end
+
     context "when privilege is new" do
       let(:new_privilege_code) { "new_privilege" }
       let(:new_privilege_name) { "New Privilege" }
@@ -114,6 +140,33 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, :premium do
         expect(result_data["privileges"].size).to eq(1)
         expect(result_data["privileges"].sole["code"]).to eq(new_privilege_code)
         expect(result_data["privileges"].sole["name"]).to eq(new_privilege_name)
+      end
+    end
+
+    context "when the update replaces the existing privilege with 50 new ones" do
+      let(:input) { {id: feature.id, privileges: Array.new(50) { |i| {code: "privilege_#{i}"} }} }
+
+      before { create(:privilege, feature:, code: "seats") }
+
+      it "counts the privileges after the removal" do
+        result = subject
+
+        expect(result["data"]["updateFeature"]["privileges"].size).to eq(50)
+      end
+    end
+
+    context "when the update ends with 51 privileges" do
+      let(:input) { {id: feature.id, name: "Renamed", privileges: Array.new(51) { |i| {code: "privilege_#{i}"} }} }
+
+      before { create(:privilege, feature:, code: "seats") }
+
+      it "returns too_many_privileges and writes nothing" do
+        result = nil
+        expect { result = subject }.not_to change(Entitlement::Privilege, :count)
+
+        expect_graphql_error(result:, message: "unprocessable_entity", details: {base: ["too_many_privileges"]})
+        expect(feature.reload.name).to eq("Feature Name")
+        expect(feature.privileges.pluck(:code)).to eq(["seats"])
       end
     end
   end

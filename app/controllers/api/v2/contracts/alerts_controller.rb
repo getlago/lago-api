@@ -38,7 +38,7 @@ module Api
           result = ::UsageMonitoring::ContractAlerts::CreateService.call(
             organization: current_organization,
             contract:,
-            params: input_params
+            params: input_params.with_defaults(scope: nil)
           )
 
           if result.success?
@@ -88,11 +88,12 @@ module Api
         end
 
         def input_params
-          alert_params = params.require(:alert)
-          input = alert_params.permit(:alert_type, :code, :name, :product_code, :product_filter_code, :with_product_filters).to_h
+          alert = params.require(:alert)
+          input = alert.permit(:alert_type, :code, :name).to_h
+          sent = alert.to_unsafe_h
+          input[:scope] = sent[:scope] if alert.key?(:scope)
           # A null list leaves the thresholds as they are, as strong params did
-          thresholds = alert_params.to_unsafe_h[:thresholds]
-          input[:thresholds] = sent_thresholds(thresholds) unless thresholds.nil?
+          input[:thresholds] = sent_thresholds(sent[:thresholds]) unless sent[:thresholds].nil?
           input
         end
 

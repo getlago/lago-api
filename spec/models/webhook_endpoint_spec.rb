@@ -290,7 +290,9 @@ RSpec.describe WebhookEndpoint do
           "product_filter" => Webhooks::ProductFilters,
           "rate_card" => Webhooks::RateCards,
           "rate_card_rate" => Webhooks::RateCardRates,
+          "plan" => Webhooks::Plans,
           "plan_rate_card" => Webhooks::PlanRateCards,
+          "plan_entitlement" => Webhooks::PlanEntitlements,
           "contract_rate_card" => Webhooks::ContractRateCards,
           "contract" => Webhooks::Contracts
         }

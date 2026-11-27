@@ -9,10 +9,10 @@ class CatalogWallet < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
 
   has_many :credit_allocations, class_name: "CatalogWalletCreditAllocation"
-  has_many :transactions, class_name: "CatalogWalletTransaction"
+  has_many :transactions, class_name: "CatalogWalletTransaction", inverse_of: :catalog_wallet
   has_many :alerts, class_name: "UsageMonitoring::CatalogWalletAlert", dependent: :delete_all, inverse_of: :catalog_wallet
 
-  validates :code, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
+  validates :code, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}, if: :will_save_change_to_code?
   validate :currency_matches_contract, if: -> { currency_changed? || contract_id_changed? }
 
   # Its alerts seed the lines already in alarm only once it holds money: at 0 every balance line is in alarm

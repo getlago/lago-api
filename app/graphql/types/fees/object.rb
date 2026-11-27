@@ -20,7 +20,9 @@ module Types
       field :grouped_by, GraphQL::Types::JSON, null: false
       field :invoice_display_name, String, null: true
       field :invoice_id, ID, null: true
+      field :invoice_is_regeneration, Boolean, null: false
       field :invoice_name, String, null: true
+      field :original_fee_id, ID, null: true
       field :product, Types::Products::Object, null: true
       field :product_filter, Types::ProductFilters::Object, null: true
       field :rate_card_rate, Types::RateCardRates::Object, null: true
@@ -63,6 +65,10 @@ module Types
 
       def wallet_transaction
         object.invoiceable if object.credit?
+      end
+
+      def invoice_is_regeneration
+        dataloader.with(Sources::ActiveRecordAssociation, :invoice).load(object)&.voided_invoice_id.present?
       end
 
       def item_type

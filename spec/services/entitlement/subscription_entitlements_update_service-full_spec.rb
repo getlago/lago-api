@@ -386,5 +386,23 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService do
         expect(result.error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
       end
     end
+
+    context "when privilege value is not in select_options" do
+      let(:privilege) { create(:privilege, organization:, feature:, code: "invitation", value_type: "select", config: {select_options: ["email", "phone"]}) }
+      let(:entitlements_params) do
+        {
+          "seats" => {
+            "invitation" => "okta"
+          }
+        }
+      end
+
+      it "returns validation failure with the allowed values in its meta" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({invitation_privilege_value: ["value_not_in_select_options"]})
+        expect(result.error.codes).to eq({invitation_privilege_value: ["value_not_in_select_options"]})
+        expect(result.error.meta).to eq({invitation_privilege_value: {allowed_values: ["email", "phone"]}})
+      end
+    end
   end
 end

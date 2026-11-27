@@ -109,22 +109,17 @@ module Api
           invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
 
-        # permit drops a non-scalar status, which would create a contract that
-        # bills instead of a draft: keep it so the service refuses it.
-        if params[:contract].key?(:status) && !permitted.key?(:status)
-          permitted[:status] = params[:contract][:status].to_s
-        end
-
-        permitted
+        keep_status(permitted)
       end
 
       # external_customer_id and external_id are set at creation and address the
       # contract. Contracts::UpdateService decides which of the rest may change
       # for the contract's status.
       def update_params
-        params.require(:contract).permit(
+        permitted = params.require(:contract).permit(
           :name,
           :plan_code,
+          :status,
           :billing_anchor_date,
           :started_at,
           :ended_at,
@@ -132,6 +127,19 @@ module Api
           :purchase_order_number,
           invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
+
+        keep_status(permitted)
+      end
+
+      # permit drops a non-scalar status, which the services would then read as
+      # omitted (a contract that bills instead of a draft, an ignored update):
+      # keep it so they refuse it.
+      def keep_status(permitted)
+        if params[:contract].key?(:status) && !permitted.key?(:status)
+          permitted[:status] = params[:contract][:status].to_s
+        end
+
+        permitted
       end
 
       def resource_name

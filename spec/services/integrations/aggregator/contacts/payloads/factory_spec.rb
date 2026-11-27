@@ -45,6 +45,14 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Factory do
         expect(subject).to be_a(Integrations::Aggregator::Contacts::Payloads::Hubspot)
       end
     end
+
+    context "when customer is a quickbooks customer" do
+      let(:integration_customer) { FactoryBot.create(:quickbooks_customer) }
+
+      it "returns payload" do
+        expect(subject).to be_a(Integrations::Aggregator::Contacts::Payloads::Quickbooks)
+      end
+    end
   end
 
   describe "#create_body" do
@@ -73,6 +81,15 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Factory do
 
       it "returns payload body" do
         expect(subject.first["name"]).to eq(customer.display_name(prefer_legal_name: false))
+      end
+    end
+
+    context "when customer is a quickbooks customer" do
+      let(:integration_customer) { FactoryBot.create(:quickbooks_customer) }
+
+      it "returns payload body" do
+        expect(subject["DisplayName"]).to eq(customer.name)
+        expect(subject["Notes"]).to eq("Lago customer: #{customer.id} (#{customer.external_id})")
       end
     end
   end
@@ -107,6 +124,16 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Factory do
       it "returns payload body" do
         expect(subject.first["id"]).to eq(integration_customer.external_customer_id)
         expect(subject.first["name"]).to eq(customer.display_name(prefer_legal_name: false))
+      end
+    end
+
+    context "when customer is a quickbooks customer" do
+      let(:integration_customer) { FactoryBot.create(:quickbooks_customer) }
+
+      it "returns payload body" do
+        expect(subject["Id"]).to eq(integration_customer.external_customer_id)
+        expect(subject["sparse"]).to be(true)
+        expect(subject["DisplayName"]).to eq(customer.name)
       end
     end
   end

@@ -16,6 +16,10 @@ module Resolvers
       unless context[:current_organization]&.product_catalog_enabled?
         event_types = event_types.reject { |_, event_type| event_type[:product_catalog_only] }
       end
+      # Event types behind a rollout flag are listed once the organization has it.
+      event_types = event_types.reject do |_, event_type|
+        event_type[:feature_flag] && !context[:current_organization]&.feature_flag_enabled?(event_type[:feature_flag])
+      end
 
       event_types.map do |_, event_type|
         {

@@ -44,6 +44,18 @@ RSpec.describe Api::V2::ContractRateCardsController do
       end
     end
 
+    context "when the contract is a draft" do
+      let(:contract) { create(:contract, :draft, organization:, customer:, started_at: 1.month.ago) }
+
+      it "attaches the rate card, even with a start that has passed" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
+        expect(contract.reload).to be_draft
+      end
+    end
+
     context "when the rate card does not exist" do
       let(:create_params) { {rate_card_code: "unknown"} }
 

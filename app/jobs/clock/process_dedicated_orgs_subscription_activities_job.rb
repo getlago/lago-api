@@ -17,6 +17,14 @@ module Clock
         .each do |organization_id|
           UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob.perform_later(organization_id)
         end
+
+      UsageMonitoring::ContractActivity
+        .where(organization_id: organization_ids, enqueued: false)
+        .distinct
+        .pluck(:organization_id)
+        .each do |organization_id|
+          UsageMonitoring::ProcessOrganizationContractActivitiesJob.perform_later(organization_id)
+        end
     end
   end
 end

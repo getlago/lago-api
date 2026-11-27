@@ -21,17 +21,14 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     )
   end
 
-  def alert_json(alert, thresholds:)
+  def alert_json(alert, thresholds:, scope: [{type: "contract", product_code: "llm_tokens", product_filter_codes: ["opus"]}])
     {
       lago_id: alert.id,
       external_contract_id: "ctr_123",
       code: alert.code,
       name: alert.name,
       alert_type: alert.alert_type,
-      applies_to: {type: "contract"},
-      product_code: alert.product&.code,
-      product_filter_code: alert.product_filter&.code,
-      with_product_filters: alert.with_product_filters,
+      scope:,
       direction: "increasing",
       thresholds:,
       previous_value: "0.0",
@@ -51,8 +48,7 @@ RSpec.describe Api::V2::Contracts::AlertsController do
         code: "opus_tokens",
         name: "Opus tokens",
         alert_type: "usage_units",
-        product_code: "llm_tokens",
-        product_filter_code: "opus",
+        scope: [{type: "contract", product_code: "llm_tokens", product_filter_codes: ["opus"]}],
         thresholds: [
           {code: "warn", value: "1000000"},
           {code: "high", value: "2000000", notify_on: %w[triggered resolved]},
@@ -142,7 +138,7 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     context "when the product is not priced on the contract" do
       before { create(:product, organization:, code: "video_minutes") }
 
-      let(:create_params) { super().merge(product_code: "video_minutes", product_filter_code: nil) }
+      let(:create_params) { super().merge(scope: [{type: "contract", product_code: "video_minutes"}]) }
 
       it "returns a not found error" do
         subject
@@ -152,18 +148,19 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     end
 
     context "with with_product_filters on the product" do
-      let(:create_params) { super().except(:product_filter_code).merge(with_product_filters: true) }
+      let(:create_params) { super().merge(scope: [{type: "contract", product_code: "llm_tokens", with_product_filters: true}]) }
 
-      it "creates the alert on the product and its filters" do
+      it "creates the alert on the product and its filters, and renders the scope as it was sent" do
         subject
 
         expect(response).to have_http_status(:ok)
-        expect(json[:alert]).to include(product_code: "llm_tokens", product_filter_code: nil, with_product_filters: true)
+        expect(json[:alert][:scope]).to eq([{type: "contract", product_code: "llm_tokens", with_product_filters: true}])
+        expect(organization.contract_alerts.sole).to have_attributes(product:, product_filter: nil, with_product_filters: true)
       end
     end
 
     context "with a with_product_filters that is not a boolean" do
-      let(:create_params) { super().except(:product_filter_code).merge(with_product_filters: "no") }
+      let(:create_params) { super().merge(scope: [{type: "contract", product_code: "llm_tokens", with_product_filters: "no"}]) }
 
       it "returns a validation error on with_product_filters" do
         subject
@@ -171,13 +168,15 @@ RSpec.describe Api::V2::Contracts::AlertsController do
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(
           code: "validation_errors",
-          details: [{code: "value_is_invalid", field: "with_product_filters", meta: {}}]
+          details: [{code: "value_is_invalid", field: "scope[0].with_product_filters", meta: {}}]
         )
       end
     end
 
-    context "with with_product_filters on a product filter" do
-      let(:create_params) { super().merge(with_product_filters: true) }
+    context "with with_product_filters next to product_filter_codes, even false" do
+      let(:create_params) do
+        super().merge(scope: [{type: "contract", product_code: "llm_tokens", product_filter_codes: ["opus"], with_product_filters: false}])
+      end
 
       it "returns a validation error on with_product_filters" do
         subject
@@ -185,21 +184,77 @@ RSpec.describe Api::V2::Contracts::AlertsController do
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(
           code: "validation_errors",
-          details: [{code: "value_is_invalid", field: "with_product_filters", meta: {}}]
+          details: [{code: "value_is_invalid", field: "scope[0].with_product_filters", meta: {}}]
         )
       end
     end
 
-    context "with a units alert without a product" do
-      let(:create_params) { super().except(:product_code, :product_filter_code) }
+    context "with an empty scope on an amount alert" do
+      let(:create_params) { super().merge(alert_type: "usage_amount", scope: []) }
 
-      it "returns a validation error on the product code" do
+      it "creates the alert on the whole contract and renders an empty scope" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alert]).to include(alert_type: "usage_amount", scope: [])
+        expect(organization.contract_alerts.sole).to have_attributes(product: nil, product_filter: nil)
+      end
+    end
+
+    context "with an empty scope on a units alert" do
+      let(:create_params) { super().merge(scope: []) }
+
+      it "returns product_required_for_units on the scope" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "product_required_for_units", field: "scope", meta: {}}])
+      end
+    end
+
+    context "with the product fields of the previous shape and no scope" do
+      let(:create_params) { super().except(:scope).merge(product_code: "llm_tokens", product_filter_code: "opus") }
+
+      it "returns a validation error on the scope rather than creating an alert on the whole contract" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "scope", meta: {}}])
+        expect(organization.contract_alerts).to be_empty
+      end
+    end
+
+    {
+      "the product_filter_code of the previous shape" => [{type: "contract", product_code: "llm_tokens", product_filter_code: "opus"}, "scope[0].product_filter_code"],
+      "product_filter_codes that is not a list" => [{type: "contract", product_code: "llm_tokens", product_filter_codes: "opus"}, "scope[0].product_filter_codes"],
+      "a blank product filter code" => [{type: "contract", product_code: "llm_tokens", product_filter_codes: [""]}, "scope[0].product_filter_codes"],
+      "an entry that is not an object" => ["contract", "scope[0]"]
+    }.each do |description, (entry, field)|
+      context "with #{description}" do
+        let(:create_params) { super().merge(alert_type: "usage_amount", scope: [entry]) }
+
+        it "returns a validation error on #{field} rather than creating an alert on a wider scope" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field:, meta: {}}])
+          expect(organization.contract_alerts).to be_empty
+        end
+      end
+    end
+
+    context "with two product filter codes" do
+      let(:create_params) do
+        super().merge(scope: [{type: "contract", product_code: "llm_tokens", product_filter_codes: %w[opus sonnet]}])
+      end
+
+      it "returns a validation error on the codes with their limit" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(
           code: "validation_errors",
-          details: [{code: "product_required_for_units", field: "product_code", meta: {}}]
+          details: [{code: "value_is_invalid", field: "scope[0].product_filter_codes", meta: {max_items: 1}}]
         )
       end
     end
@@ -267,7 +322,7 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     context "when the code is taken on the contract" do
       before { alert }
 
-      let(:create_params) { super().merge(alert_type: "usage_amount", product_code: nil, product_filter_code: nil) }
+      let(:create_params) { super().merge(alert_type: "usage_amount") }
 
       it "returns a validation error on the code" do
         subject
@@ -333,9 +388,7 @@ RSpec.describe Api::V2::Contracts::AlertsController do
           name: "Opus spend",
           code: "new_code",
           alert_type: "usage_amount",
-          product_code: "llm_tokens",
-          product_filter_code: "opus",
-          with_product_filters: true
+          scope: [{type: "contract", product_code: "llm_tokens", with_product_filters: true}]
         }
       end
 
@@ -348,9 +401,7 @@ RSpec.describe Api::V2::Contracts::AlertsController do
           details: [
             {code: "value_cannot_be_changed", field: "code", meta: {}},
             {code: "value_cannot_be_changed", field: "alert_type", meta: {}},
-            {code: "value_cannot_be_changed", field: "product_code", meta: {}},
-            {code: "value_cannot_be_changed", field: "product_filter_code", meta: {}},
-            {code: "value_cannot_be_changed", field: "with_product_filters", meta: {}}
+            {code: "value_cannot_be_changed", field: "scope", meta: {}}
           ]
         )
         expect(alert.reload.name).to eq("Opus tokens")
@@ -523,7 +574,7 @@ RSpec.describe Api::V2::Contracts::AlertsController do
       expect(response).to have_http_status(:ok)
       expect(json).to eq(
         alerts: [
-          alert_json(amount_alert, thresholds: [
+          alert_json(amount_alert, scope: [], thresholds: [
             {code: "warn500000", value: "500000.0", recurring: false, notify_on: %w[triggered]}
           ]),
           alert_json(alert, thresholds: [

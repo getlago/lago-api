@@ -30,6 +30,7 @@ class BillingOperation < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :contract_rate_card, -> { with_discarded }
   belongs_to :invoice, optional: true
+  has_many :segments, -> { order(:position) }, class_name: "BillingOperationSegment", inverse_of: :billing_operation
 
   enum :reason, REASONS, validate: true
   enum :cancellation_reason, CANCELLATION_REASONS, prefix: true, validate: {allow_nil: true}
@@ -106,6 +107,8 @@ end
 #  billing_at              :datetime         not null
 #  cancellation_reason     :enum
 #  cancelled_at            :datetime
+#  coverage_ended_at       :datetime
+#  coverage_started_at     :datetime
 #  processed_at            :datetime
 #  reason                  :enum             not null
 #  target_cycle_started_at :datetime         not null

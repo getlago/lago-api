@@ -227,6 +227,57 @@ RSpec.describe Events::PostProcessService do
       end
     end
 
+    context "when the event targets a contract with an alert", :premium do
+      let(:organization) { create(:organization, feature_flags:) }
+      let(:feature_flags) { %w[product_catalog contract_alerts] }
+      let(:external_subscription_id) { contract.external_id }
+      let(:charge) { nil }
+      let(:contract) { create(:contract, organization:, customer:) }
+
+      before { create(:contract_usage_amount_alert, organization:, contract_external_id: contract.external_id) }
+
+      it "tracks the contract activity" do
+        expect { process_service.call }.to change(UsageMonitoring::ContractActivity, :count).by(1)
+        expect(UsageMonitoring::ContractActivity.sole).to have_attributes(
+          organization_id: organization.id,
+          contract_id: contract.id
+        )
+      end
+
+      context "when the contract_alerts flag is off" do
+        let(:feature_flags) { %w[product_catalog] }
+
+        it "does not track the contract activity" do
+          expect { process_service.call }.not_to change(UsageMonitoring::ContractActivity, :count)
+        end
+      end
+
+      context "when the product_catalog flag is off" do
+        let(:feature_flags) { %w[contract_alerts] }
+
+        it "does not track the contract activity" do
+          expect { process_service.call }.not_to change(UsageMonitoring::ContractActivity, :count)
+        end
+      end
+
+      context "when the only contract on the external id is pending" do
+        let(:contract) { create(:contract, :pending, organization:, customer:) }
+
+        it "does not track the contract activity" do
+          expect { process_service.call }.not_to change(UsageMonitoring::ContractActivity, :count)
+        end
+      end
+
+      context "when a pending replacement shares the external id" do
+        before { create(:contract, :pending, organization:, customer:, external_id: contract.external_id) }
+
+        it "tracks the active contract only" do
+          expect { process_service.call }.to change(UsageMonitoring::ContractActivity, :count).by(1)
+          expect(UsageMonitoring::ContractActivity.sole.contract_id).to eq(contract.id)
+        end
+      end
+    end
+
     describe "#check_targeted_wallets", :premium do
       let(:charge) { create(:standard_charge, plan:, billable_metric:, organization:) }
       let(:accepts_target_wallet) { false }

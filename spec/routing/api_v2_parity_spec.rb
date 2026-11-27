@@ -55,6 +55,57 @@ RSpec.describe "API v2 routing parity" do
     expect(recognized[:plan_code]).to eq("foo")
   end
 
+  it "keeps the plan entitlement routes on the v1 controllers under /api/v1" do
+    {
+      [:get, "/plans/foo/entitlements"] => {controller: "api/v1/plans/entitlements", action: "index", plan_code: "foo"},
+      [:post, "/plans/foo/entitlements"] => {controller: "api/v1/plans/entitlements", action: "create", plan_code: "foo"},
+      [:patch, "/plans/foo/entitlements"] => {controller: "api/v1/plans/entitlements", action: "update", plan_code: "foo"},
+      [:get, "/plans/foo/entitlements/seats.v2"] => {controller: "api/v1/plans/entitlements", action: "show", plan_code: "foo", code: "seats.v2"},
+      [:delete, "/plans/foo/entitlements/seats.v2"] => {controller: "api/v1/plans/entitlements", action: "destroy", plan_code: "foo", code: "seats.v2"},
+      [:delete, "/plans/foo/entitlements/seats.v2/privileges/max.v1"] => {
+        controller: "api/v1/plans/entitlements/privileges", action: "destroy", plan_code: "foo", entitlement_code: "seats.v2", code: "max.v1"
+      },
+      # Feature and privilege codes may be "metadata" or end in "/metadata": the metadata routes must not take them.
+      [:delete, "/plans/foo/entitlements/metadata"] => {controller: "api/v1/plans/entitlements", action: "destroy", plan_code: "foo", code: "metadata"},
+      [:delete, "/plans/foo/entitlements/x/metadata"] => {controller: "api/v1/plans/entitlements", action: "destroy", plan_code: "foo", code: "x/metadata"},
+      [:delete, "/plans/foo/entitlements/seats/privileges/metadata"] => {
+        controller: "api/v1/plans/entitlements/privileges", action: "destroy", plan_code: "foo", entitlement_code: "seats", code: "metadata"
+      },
+      [:delete, "/plans/foo/metadata"] => {controller: "api/v1/plans/metadata", action: "destroy", plan_code: "foo"}
+    }.each do |(method, path), expected|
+      expect(Rails.application.routes.recognize_path("/api/v1#{path}", method:)).to eq(expected)
+    end
+  end
+
+  it "routes the plan entitlement routes to the v2 controller under /api/v2" do
+    {
+      [:get, "/plans/foo/entitlements"] => {action: "index", plan_code: "foo"},
+      [:post, "/plans/foo/entitlements"] => {action: "create", plan_code: "foo"},
+      [:patch, "/plans/foo/entitlements"] => {action: "update", plan_code: "foo"},
+      [:get, "/plans/foo/entitlements/seats.v2"] => {action: "show", plan_code: "foo", code: "seats.v2"},
+      [:delete, "/plans/foo/entitlements/seats.v2"] => {action: "destroy", plan_code: "foo", code: "seats.v2"},
+      [:delete, "/plans/foo/entitlements/seats.v2/privileges/max.v1"] => {
+        action: "destroy_privilege", plan_code: "foo", code: "seats.v2", privilege_code: "max.v1"
+      }
+    }.each do |(method, path), expected|
+      expect(Rails.application.routes.recognize_path("/api/v2#{path}", method:)).to eq(controller: "api/v2/plans/entitlements", **expected)
+    end
+  end
+
+  it "does not route the plan entitlements collection DELETE to the v1 plan destroy under /api/v2" do
+    expect(Rails.application.routes.recognize_path("/api/v2/plans/foo/entitlements", method: :delete).slice(:controller, :action))
+      .to eq(controller: "application", action: "not_found")
+  end
+
+  it "keeps charge and metadata paths ending in entitlements on their v1 controllers under /api/v2" do
+    {
+      [:delete, "/plans/foo/metadata/entitlements"] => {controller: "api/v1/plans/metadata", action: "destroy_key", plan_code: "foo", key: "entitlements"},
+      [:delete, "/plans/p/charges/x/entitlements"] => {controller: "api/v1/plans/charges", action: "destroy", plan_code: "p", code: "x/entitlements"}
+    }.each do |(method, path), expected|
+      expect(Rails.application.routes.recognize_path("/api/v2#{path}", method:)).to eq(expected)
+    end
+  end
+
   it "keeps customer-nested paths on their shared controllers" do
     recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/credit_notes", method: :get)
 

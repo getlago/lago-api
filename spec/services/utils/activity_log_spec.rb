@@ -240,6 +240,32 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           end
         end
 
+        it "files a plan entitlement under its catalog plan, with the entitlement render and the changes it is given" do
+          entitlement = create(:entitlement, :catalog_plan, organization:, catalog_plan: create(:catalog_plan, organization:, code: "premium"))
+          changes = {"values" => [nil, [{privilege_code: "max", value: 10}]]}
+
+          activity_log.produce(entitlement, "plan_entitlement.created", changes:)
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "CatalogPlan", "resource_id" => entitlement.catalog_plan_id, "external_customer_id" => nil)
+            expect(payload.fetch("activity_object")).to eq(JSON.parse(V2::PlanEntitlementSerializer.new(entitlement).serialize.to_json))
+            expect(payload.fetch("activity_object_changes")).to eq("values" => [nil, [{"privilege_code" => "max", "value" => 10}]])
+          end
+        end
+
+        it "logs the activity object it is given in place of the serialized object" do
+          entitlement = create(:entitlement, :catalog_plan, organization:, catalog_plan: create(:catalog_plan, organization:, code: "premium"))
+          activity_object = {lago_id: entitlement.id, values: [{privilege_code: "max", value: 10}]}
+
+          activity_log.produce(entitlement, "plan_entitlement.deleted", activity_object:)
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload.fetch("activity_object")).to eq("lago_id" => entitlement.id, "values" => [{"privilege_code" => "max", "value" => 10}])
+          end
+        end
+
         it "uses the applied contract card serializer and its customer" do
           activity_log.produce(contract_rate_card, "contract_rate_card.created")
 

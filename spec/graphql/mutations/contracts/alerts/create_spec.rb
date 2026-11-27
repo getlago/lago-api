@@ -27,8 +27,7 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
       alertType: "usage_units",
       code: "opus_tokens",
       name: "Opus tokens",
-      productId: product.id,
-      productFilterId: product_filter.id,
+      scope: [entry],
       thresholds: [
         {code: "warn", value: "1000000"},
         {code: "high", value: "2000000", notifyOn: %w[triggered resolved]},
@@ -36,13 +35,13 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
       ]
     }
   end
+  let(:entry) { {type: "contract", productCode: product.code, productFilterCodes: [product_filter.code]} }
   let(:mutation) do
     <<~GQL
       mutation($input: CreateContractAlertInput!) {
         createContractAlert(input: $input) {
-          id alertType code name contractExternalId withProductFilters
-          product { id }
-          productFilter { id }
+          id alertType code name contractExternalId
+          scope { type product { id } productFilters { id } withProductFilters }
           thresholds { code value recurring notifyOn }
         }
       }
@@ -76,9 +75,9 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
       "code" => "opus_tokens",
       "name" => "Opus tokens",
       "contractExternalId" => contract.external_id,
-      "withProductFilters" => false,
-      "product" => {"id" => product.id},
-      "productFilter" => {"id" => product_filter.id},
+      "scope" => [
+        {"type" => "contract", "product" => {"id" => product.id}, "productFilters" => [{"id" => product_filter.id}], "withProductFilters" => nil}
+      ],
       "thresholds" => [
         {"code" => "warn", "value" => "1000000.0", "recurring" => false, "notifyOn" => ["triggered"]},
         {"code" => "high", "value" => "2000000.0", "recurring" => false, "notifyOn" => %w[triggered resolved]},
@@ -88,12 +87,21 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
   end
 
   context "with withProductFilters on the product" do
-    let(:input) { super().except(:productFilterId).merge(withProductFilters: true) }
+    let(:entry) { {type: "contract", productCode: product.code, withProductFilters: true} }
 
     it "creates the alert on the product and its filters" do
-      response = execution["data"]["createContractAlert"]
+      expect(execution["data"]["createContractAlert"]["scope"]).to eq([
+        {"type" => "contract", "product" => {"id" => product.id}, "productFilters" => nil, "withProductFilters" => true}
+      ])
+    end
+  end
 
-      expect(response).to include("withProductFilters" => true, "product" => {"id" => product.id}, "productFilter" => nil)
+  context "with an empty scope on an amount alert" do
+    let(:input) { super().merge(alertType: "usage_amount", scope: []) }
+
+    it "creates the alert on the whole contract" do
+      expect(execution["data"]["createContractAlert"]["scope"]).to eq([])
+      expect(organization.contract_alerts.sole).to have_attributes(product: nil, product_filter: nil)
     end
   end
 
@@ -146,7 +154,7 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
   end
 
   context "with a product that the contract does not price" do
-    let(:input) { super().except(:productFilterId).merge(productId: create(:product, organization:).id) }
+    let(:entry) { {type: "contract", productCode: create(:product, organization:).code} }
 
     it "returns a not found error" do
       expect_not_found(execution, details: {product: ["not_found"]})
@@ -154,37 +162,38 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
   end
 
   context "with a filter that the contract does not price for the product" do
-    let(:input) { super().merge(productFilterId: create(:product_filter, organization:, product:).id) }
+    let(:entry) { super().merge(productFilterCodes: [create(:product_filter, organization:, product:).code]) }
 
     it "returns a not found error" do
       expect_not_found(execution, details: {productFilter: ["not_found"]})
     end
   end
 
-  context "with usage units and no product" do
-    let(:input) { super().except(:productId, :productFilterId) }
+  context "with usage units and an empty scope" do
+    let(:input) { super().merge(scope: []) }
 
-    it "returns a validation error on the product" do
-      expect_unprocessable_entity(execution, details: {productCode: ["product_required_for_units"]})
+    it "returns a validation error on the scope" do
+      expect_unprocessable_entity(execution, details: {scope: ["product_required_for_units"]})
     end
   end
 
-  context "with a filter and no product" do
-    let(:input) { super().except(:productId).merge(alertType: "usage_amount") }
+  context "with a blank product filter code" do
+    let(:entry) { super().merge(productFilterCodes: [""]) }
 
-    it "returns a validation error on the product" do
-      expect_unprocessable_entity(execution, details: {productCode: ["value_is_mandatory"]})
+    it "returns a validation error on the codes" do
+      expect_unprocessable_entity(execution, details: {"scope[0].productFilterCodes": ["value_is_invalid"]})
     end
   end
 
   context "with a fixed product" do
     let(:fixed_product) { create(:product, :fixed, organization:) }
-    let(:input) { super().except(:productFilterId).merge(alertType: "usage_amount", productId: fixed_product.id) }
+    let(:input) { super().merge(alertType: "usage_amount") }
+    let(:entry) { {type: "contract", productCode: fixed_product.code} }
 
     before { price_on(contract, fixed_product) }
 
     it "returns a validation error on the product" do
-      expect_unprocessable_entity(execution, details: {productCode: ["value_is_invalid"]})
+      expect_unprocessable_entity(execution, details: {"scope[0].productCode": ["value_is_invalid"]})
     end
   end
 

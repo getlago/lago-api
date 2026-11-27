@@ -157,6 +157,49 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:process_contract_activity" do
+    let(:job) { "schedule:process_contract_activity" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 00:31:00") }
+
+    it "enqueues a process contract activities job every minute" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(30)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ProcessAllContractActivitiesJob).to have_been_enqueued.once
+    end
+
+    context "with a custom interval configured" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS").and_return("150")
+      end
+
+      it 'uses the interval of the subscription activities, ENV["LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS"]' do
+        Clockwork::Test.run(
+          file: clock_file,
+          start_time:,
+          end_time:,
+          tick_speed: 1.second
+        )
+
+        expect(Clockwork::Test).to be_ran_job(job)
+        expect(Clockwork::Test.times_run(job)).to eq(12)
+
+        Clockwork::Test.block_for(job).call
+        expect(Clock::ProcessAllContractActivitiesJob).to have_been_enqueued.once
+      end
+    end
+  end
+
   describe "schedule:post_validate_events" do
     let(:job) { "schedule:post_validate_events" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 01:00:00") }

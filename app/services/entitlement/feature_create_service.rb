@@ -18,14 +18,27 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "organization") unless organization
 
+      if Utils::Entitlement.privileges_param_invalid?(params[:privileges])
+        return result.single_validation_failure!(field: :privileges, error_code: "value_is_invalid")
+      end
+
       if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges])
         return result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated")
+      end
+
+      # Each privilege param creates at most one privilege.
+      if Array(params[:privileges]).size > PrivilegeCreateService::MAX_PRIVILEGES
+        return result.single_validation_failure!(
+          field: :base,
+          error_code: "too_many_privileges",
+          meta: {max_items: PrivilegeCreateService::MAX_PRIVILEGES}
+        )
       end
 
       ActiveRecord::Base.transaction do
         feature = Feature.create!(
           organization:,
-          code: stripped(params[:code]),
+          code: Utils::Entitlement.stripped_code(params[:code]),
           name: params[:name],
           description: params[:description]
         )
@@ -55,16 +68,11 @@ module Entitlement
 
     attr_reader :organization, :params
 
-    # A code that is not a string is left to the model validation.
-    def stripped(code)
-      code.is_a?(String) ? code.strip : code
-    end
-
     def create_privileges(feature, privileges_params)
       privileges_params.each do |privilege_params|
         privilege = feature.privileges.new(
           organization:,
-          code: stripped(privilege_params[:code]),
+          code: Utils::Entitlement.stripped_code(privilege_params[:code]),
           name: privilege_params[:name]
         )
         privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type

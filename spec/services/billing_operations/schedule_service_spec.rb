@@ -83,7 +83,11 @@ RSpec.describe BillingOperations::ScheduleService do
 
     it "continues the same cycle at the next due date" do
       expect(result.billing_operations.sole).to have_attributes(
-        billing_at: Time.utc(2026, 2, 1), target_cycle_started_at: Time.utc(2026, 1, 1)
+        billing_at: Time.utc(2026, 2, 1), target_cycle_started_at: Time.utc(2026, 1, 1),
+        coverage_started_at: Time.utc(2026, 1, 15), coverage_ended_at: Time.utc(2026, 2, 1)
+      )
+      expect(result.billing_operations.sole.reload.segments.sole).to have_attributes(
+        started_at: Time.utc(2026, 1, 15), ended_at: Time.utc(2026, 2, 1)
       )
       expect(completed_operation.reload.processed_at).to eq(Time.utc(2026, 1, 15))
     end
