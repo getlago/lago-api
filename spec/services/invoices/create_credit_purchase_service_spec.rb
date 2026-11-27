@@ -200,6 +200,17 @@ describe Invoices::CreateCreditPurchaseService do
     end
   end
 
+  context "when the contract skips invoice custom sections" do
+    let(:contract) { create(:contract, organization:, customer:, skip_invoice_custom_sections: true) }
+
+    before { create(:customer_applied_invoice_custom_section, organization:, customer:) }
+
+    it "applies no section, not the customer's" do
+      expect(result).to be_success
+      expect(result.invoice.applied_invoice_custom_sections).to be_empty
+    end
+  end
+
   context "when the entry already has its invoice" do
     let(:first_result) { described_class.call(wallet_transaction: CatalogWalletTransaction.find(wallet_transaction.id)) }
 
@@ -297,8 +308,12 @@ describe Invoices::CreateCreditPurchaseService do
   end
 
   context "with a premium license", :premium do
-    it "keeps the invoice hidden" do
-      expect(result.invoice.status).to eq("open")
+    context "when the customer has an invoice grace period" do
+      let(:customer) { create(:customer, organization:, timezone: "America/New_York", invoice_grace_period: 3) }
+
+      it "keeps the invoice hidden" do
+        expect(result.invoice.status).to eq("open")
+      end
     end
   end
 end
