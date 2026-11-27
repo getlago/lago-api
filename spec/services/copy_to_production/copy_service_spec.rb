@@ -21,8 +21,11 @@ RSpec.describe CopyToProduction::CopyService do
       code: "api_calls",
       name: "API calls",
       description: "Calls to the public API",
-      aggregation_type: "sum_agg",
+      aggregation_type: "weighted_sum_agg",
+      weighted_interval: "seconds",
+      recurring: true,
       field_name: "amount",
+      expression: "round(event.properties.amount * 2)",
       rounding_function: "round",
       rounding_precision: 2
     )
@@ -44,11 +47,13 @@ RSpec.describe CopyToProduction::CopyService do
     expect(copy).to have_attributes(
       name: "API calls",
       description: "Calls to the public API",
-      aggregation_type: "sum_agg",
+      aggregation_type: "weighted_sum_agg",
+      weighted_interval: "seconds",
+      recurring: true,
       field_name: "amount",
+      expression: "round(event.properties.amount * 2)",
       rounding_function: "round",
-      rounding_precision: 2,
-      recurring: false
+      rounding_precision: 2
     )
     expect(copy.filters.map { [it.key, it.values, it.organization_id] })
       .to eq([["region", %w[eu us], production.id], ["tier", %w[free paid], production.id]])
