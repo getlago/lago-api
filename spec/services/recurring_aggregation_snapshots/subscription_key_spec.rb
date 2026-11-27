@@ -60,6 +60,12 @@ RSpec.describe RecurringAggregationSnapshots::SubscriptionKey do
     end
   end
 
+  describe "#weighted_sum_reads_older_periods?" do
+    it "returns true" do
+      expect(key.weighted_sum_reads_older_periods?).to be(true)
+    end
+  end
+
   describe "#lock_key" do
     it "keeps the lock key of the subscription's charge and period" do
       expect(key.lock_key(Time.zone.parse("2026-09-30T23:59:59.999999")))

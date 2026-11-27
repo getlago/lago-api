@@ -40,6 +40,12 @@ module RecurringAggregationSnapshots
       model.filters_changed_since?(organization_id:, contract_id: contract.id, product_id: product.id, watermark:)
     end
 
+    # Billing::Context#last_billed_charges_to_datetime does not read billing operations: a weighted sum
+    # only starts from the period closing right before its own.
+    def weighted_sum_reads_older_periods?
+      false
+    end
+
     # A replacement contract has no link to its predecessor yet: it full scans once.
     def previous_period(**)
       nil
