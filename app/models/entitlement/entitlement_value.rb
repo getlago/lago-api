@@ -8,6 +8,9 @@ module Entitlement
 
     default_scope -> { kept }
 
+    # Booleans were stored as "t" or "f" before they were stored as words: rows not backfilled yet read as words.
+    LEGACY_BOOLEANS = {"t" => "true", "f" => "false"}.freeze
+
     belongs_to :organization
     belongs_to :privilege, class_name: "Entitlement::Privilege", foreign_key: :entitlement_privilege_id
     belongs_to :entitlement, class_name: "Entitlement::Entitlement", foreign_key: :entitlement_entitlement_id
@@ -15,6 +18,18 @@ module Entitlement
     validates :entitlement_privilege_id, presence: true
     validates :entitlement_entitlement_id, presence: true
     validates :value, presence: true
+
+    def self.read_value(value, value_type)
+      (value_type == "boolean") ? LEGACY_BOOLEANS.fetch(value, value) : value
+    end
+
+    # The privilege is loaded only for a value that may be a legacy boolean.
+    def value
+      stored = super
+      return stored unless LEGACY_BOOLEANS.key?(stored)
+
+      self.class.read_value(stored, privilege&.value_type)
+    end
   end
 end
 

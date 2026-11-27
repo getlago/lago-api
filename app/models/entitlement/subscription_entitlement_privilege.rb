@@ -21,6 +21,18 @@ module Entitlement
     attribute :plan_entitlement_value_id, :string
     attribute :sub_entitlement_value_id, :string
 
+    def value
+      EntitlementValue.read_value(super, value_type)
+    end
+
+    def plan_value
+      EntitlementValue.read_value(super, value_type)
+    end
+
+    def subscription_value
+      EntitlementValue.read_value(super, value_type)
+    end
+
     def config
       super.then { it.is_a?(String) ? JSON.parse(it) : it }
     end

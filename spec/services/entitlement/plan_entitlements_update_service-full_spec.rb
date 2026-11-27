@@ -263,13 +263,13 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
       context "when a value stored as t is sent back" do
         let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
         let(:stored_value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: true) }
-        let(:entitlements_params) { {"seats" => {"enabled" => stored_value.value}} }
+        let(:entitlements_params) { {"seats" => {"enabled" => stored_value.read_attribute(:value)}} }
 
         it "accepts it and stores true" do
-          expect(stored_value.value).to eq("t")
+          expect(stored_value.read_attribute(:value)).to eq("t")
 
           expect(result).to be_success
-          expect(stored_value.reload.value).to eq("true")
+          expect(stored_value.reload.read_attribute(:value)).to eq("true")
         end
       end
 

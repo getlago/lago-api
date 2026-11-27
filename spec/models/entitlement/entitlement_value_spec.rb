@@ -25,4 +25,35 @@ RSpec.describe Entitlement::EntitlementValue do
       expect(subject).to validate_presence_of(:value)
     end
   end
+
+  describe ".read_value" do
+    it "reads a legacy boolean as a word" do
+      expect(described_class.read_value("t", "boolean")).to eq("true")
+      expect(described_class.read_value("f", "boolean")).to eq("false")
+      expect(described_class.read_value("true", "boolean")).to eq("true")
+    end
+
+    it "leaves the values of other types" do
+      expect(described_class.read_value("t", "string")).to eq("t")
+    end
+  end
+
+  describe "#value" do
+    subject(:entitlement_value) { create(:entitlement_value, privilege:, value: "t") }
+
+    let(:privilege) { create(:privilege, value_type: "boolean") }
+
+    it "reads a boolean stored as t as a word" do
+      expect(entitlement_value.value).to eq("true")
+      expect(entitlement_value.read_attribute(:value)).to eq("t")
+    end
+
+    context "when the privilege is a string" do
+      let(:privilege) { create(:privilege, value_type: "string") }
+
+      it "returns the stored value" do
+        expect(entitlement_value.value).to eq("t")
+      end
+    end
+  end
 end
