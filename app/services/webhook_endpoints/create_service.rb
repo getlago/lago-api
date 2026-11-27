@@ -2,6 +2,8 @@
 
 module WebhookEndpoints
   class CreateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:webhook_endpoint]
 
     def initialize(organization:, params:, signature_algo_rule: nil)
@@ -13,6 +15,8 @@ module WebhookEndpoints
     end
 
     def call
+      return shadow_outbound_failure if shadow_outbound_refused?(organization.id)
+
       signature_algo = params[:signature_algo].nil? ? signature_algo_rule.default : params[:signature_algo]
       return invalid_signature_algo_failure unless signature_algo_rule.allow?(signature_algo)
 

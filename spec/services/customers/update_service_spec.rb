@@ -1081,6 +1081,10 @@ RSpec.describe Customers::UpdateService do
           expect(customers_service.call).to be_success
         end
 
+        it_behaves_like "refused on a shadow organization", -> { customer.reload.attributes } do
+          subject { customers_service.call }
+        end
+
         context "when the dunning campaign belongs to another organization" do
           let(:dunning_campaign) { create(:dunning_campaign, organization: create(:organization)) }
 
@@ -1145,6 +1149,14 @@ RSpec.describe Customers::UpdateService do
               .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
 
             expect(customers_service.call).to be_success
+          end
+
+          context "when the organization is the shadow of a migration" do
+            before { create_migration_shadowed_by(organization) }
+
+            it "removes the dunning campaign" do
+              expect { customers_service.call }.to change { customer.reload.applied_dunning_campaign_id }.to(nil)
+            end
           end
         end
 

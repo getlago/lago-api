@@ -1356,5 +1356,27 @@ RSpec.describe Api::V2::CustomersController do
         expect(response).to be_v2_not_found_error("customer")
       end
     end
+
+    context "when the organization is the shadow of a migration" do
+      let(:contract) { create(:contract, :pending, customer:) }
+      let(:invoice) { create(:invoice, :draft, customer:) }
+
+      before do
+        create(:billing_engine_migration, organization: create(:organization), shadow_organization: organization)
+        contract
+        invoice
+      end
+
+      it "discards the customer, cancels its contract and deletes its drafts" do
+        expect do
+          perform_enqueued_jobs(only: Customers::TerminateRelationsJob) { request }
+        end.not_to have_enqueued_job(Invoices::FinalizeJob)
+
+        expect(response).to have_http_status(:ok)
+        expect(customer.reload).to be_discarded
+        expect(invoice.reload).to be_deleted
+        expect(contract.reload).to be_canceled
+      end
+    end
   end
 end

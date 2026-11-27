@@ -2,6 +2,8 @@
 
 module DunningCampaigns
   class CreateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:dunning_campaign]
 
     def initialize(organization:, params:)
@@ -14,6 +16,7 @@ module DunningCampaigns
     def call
       return result.forbidden_failure! unless organization.auto_dunning_enabled?
       return result.validation_failure!(errors: {thresholds: ["can't be blank"]}) if params[:thresholds].blank?
+      return shadow_outbound_failure if params[:applied_to_organization] && shadow_outbound_refused?(organization.id)
 
       ActiveRecord::Base.transaction do
         if params[:applied_to_organization]

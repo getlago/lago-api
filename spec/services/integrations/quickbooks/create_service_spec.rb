@@ -123,6 +123,8 @@ RSpec.describe Integrations::Quickbooks::CreateService do
           it_behaves_like "produces a security log", "integration.created" do
             before { service_call }
           end
+
+          it_behaves_like "refused on a shadow organization", Integrations::QuickbooksIntegration
         end
 
         context "when the sync flags are omitted" do

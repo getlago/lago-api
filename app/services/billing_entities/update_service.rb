@@ -2,6 +2,8 @@
 
 module BillingEntities
   class UpdateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:billing_entity]
 
     def initialize(billing_entity:, params:)
@@ -18,6 +20,7 @@ module BillingEntities
 
     def call
       return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+      return shadow_outbound_failure if sends_outbound? && shadow_outbound_refused?(billing_entity.organization_id)
 
       unless PaymentTerms::ValidateService.new(result, **params.slice(:payment_term, :net_payment_term)).valid?
         return result
@@ -94,6 +97,10 @@ module BillingEntities
     private
 
     attr_reader :billing_entity, :params
+
+    def sends_outbound?
+      params[:email_settings].present? || ActiveModel::Type::Boolean.new.cast(params[:eu_tax_management])
+    end
 
     def register_security_log(billing_entity, original_attributes, old_tax_codes)
       diff = original_attributes.except("updated_at").each_with_object({}) do |(key, old_val), hash|

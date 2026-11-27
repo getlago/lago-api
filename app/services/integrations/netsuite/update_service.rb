@@ -12,6 +12,7 @@ module Integrations
 
       def call
         return result.not_found_failure!(resource: "integration") unless integration
+        return shadow_outbound_failure if shadow_outbound_refused?(integration.organization_id)
 
         unless integration.organization.netsuite_enabled?
           return result.forbidden_failure!(code: "premium_integration_missing")

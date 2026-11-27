@@ -77,6 +77,22 @@ Yabeda.configure do
       buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]
   end
 
+  # Raw topic events copied to the shadow organization of a billing engine migration. Like the
+  # other lanes, no organization or subscription id is ever a tag.
+  group :billing_engine_migrations do
+    counter :events_copy_total,
+      comment: "Events of migrated organizations read from the raw topic, by what the copy did with them (copied, unmapped, invalid, replayed)",
+      tags: %i[outcome]
+
+    counter :events_copy_failures_total,
+      comment: "Raw topic batches whose copy raised and will be retried"
+
+    histogram :events_copy_lag,
+      comment: "Age of the last message of each batch the copy consumer reads",
+      unit: :seconds,
+      buckets: [1, 5, 15, 30, 60, 120, 300, 900]
+  end
+
   # Draft tax requests answered from the cache instead of the tax provider. Tags are bounded by
   # the provider list.
   group :tax_providers do

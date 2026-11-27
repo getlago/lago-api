@@ -4,6 +4,7 @@ module Customers
   class UpdateService < BaseService
     extend Forwardable
     include Customers::PaymentProviderFinder
+    include BillingEngineMigrations::ShadowOutboundGuard
 
     Result = BaseResult[:customer]
 
@@ -21,6 +22,7 @@ module Customers
 
     def call
       return result.not_found_failure!(resource: "customer") unless customer
+      return shadow_outbound_failure if args[:applied_dunning_campaign_id].present? && shadow_outbound_refused?(customer.organization_id)
 
       unless valid_metadata_count?(metadata: args[:metadata])
         return result.single_validation_failure!(

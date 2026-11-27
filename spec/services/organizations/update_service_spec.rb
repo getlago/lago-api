@@ -231,6 +231,25 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.timezone).to eq("Europe/Paris")
       end
 
+      context "when the organization is the shadow of a migration" do
+        let(:organization) { create(:organization, email_settings: [], webhook_url: nil) }
+        let(:params) { {email_settings: ["invoice.finalized"]} }
+
+        before do
+          organization.default_billing_entity.update!(email_settings: [])
+          create_migration_shadowed_by(organization)
+        end
+
+        it "refuses the update and saves no email setting" do
+          result = update_service.call
+
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("shadow_organization_outbound_disabled")
+          expect(organization.reload.email_settings).to eq([])
+          expect(organization.default_billing_entity.reload.email_settings).to eq([])
+        end
+      end
+
       context "when updating invoice grace period" do
         let(:customer) { create(:customer, organization:) }
         let(:invoice_grace_period) { 2 }
@@ -572,6 +591,20 @@ RSpec.describe Organizations::UpdateService do
           end
 
           expect(security_logger).to have_received(:produce).with(hash_including(log_event: "webhook_endpoint.created"))
+        end
+      end
+
+      context "when the organization is the shadow of a migration" do
+        let(:organization) { create(:organization, webhook_url: nil) }
+
+        before { create_migration_shadowed_by(organization) }
+
+        it "refuses the update and creates no endpoint" do
+          result = update_service.call
+
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("shadow_organization_outbound_disabled")
+          expect(organization.webhook_endpoints.reload).to be_empty
         end
       end
 

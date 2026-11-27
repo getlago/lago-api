@@ -220,6 +220,17 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       end
     end
 
+    context "when the organization is the shadow of a migration" do
+      before { create_migration_shadowed_by(organization) }
+
+      it "returns a forbidden error and creates nothing" do
+        expect { request }.not_to change(WebhookEndpoint, :count)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("shadow_organization_outbound_disabled")
+      end
+    end
+
     context "when the webhook_endpoint wrapper is missing" do
       subject(:request) { post_with_token(organization, "/api/v2/webhook_endpoints", create_params) }
 

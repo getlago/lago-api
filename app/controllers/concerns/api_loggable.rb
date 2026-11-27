@@ -44,7 +44,7 @@ module ApiLoggable
       Utils::ApiLog.produce(
         request,
         response,
-        organization: current_organization,
+        organization: api_log_organization,
         filtered_params: audit_log_filtered_params,
         filtered_response: audit_log_filtered_response
       )
@@ -55,5 +55,9 @@ module ApiLoggable
     ensure
       request.body.rewind
     end
+  end
+
+  def api_log_organization
+    current_organization
   end
 end

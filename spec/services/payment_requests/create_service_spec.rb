@@ -245,6 +245,10 @@ RSpec.describe PaymentRequests::CreateService, :premium do
       expect { create_service.call }.to change { customer.payment_requests.count }.by(1)
     end
 
+    it_behaves_like "refused on a shadow organization", PaymentRequest do
+      subject { create_service.call }
+    end
+
     it "assigns the invoices to the created payment request" do
       result = create_service.call
 

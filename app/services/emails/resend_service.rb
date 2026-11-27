@@ -2,6 +2,8 @@
 
 module Emails
   class ResendService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult
 
     # The parameters a refusal can name as its field on native v2, which puts the others on base.
@@ -17,6 +19,7 @@ module Emails
 
     def call
       return result.not_found_failure!(resource: resource_type) unless resource
+      return shadow_outbound_failure if shadow_outbound_refused?(resource.organization_id)
       return result.not_allowed_failure!(code: "payable_not_found") if missing_payable?
       return result.not_allowed_failure!(code: "#{resource_type}_not_finalized") unless valid_status?
       return result.forbidden_failure!(code: "premium_license_required") unless License.premium?

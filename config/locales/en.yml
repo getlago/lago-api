@@ -85,6 +85,7 @@ en:
         payment_request_is_already_succeeded: payment_request_is_already_succeeded
         present: value_must_be_blank
         required: relation_must_exist
+        requires_clickhouse_events_store: requires_clickhouse_events_store
         requires_recurring_metric: requires_recurring_metric
         single_plan_target: single_plan_target
         taken: value_already_exist

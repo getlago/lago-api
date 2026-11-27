@@ -6,6 +6,8 @@ module Api
     class BaseController < Api::BaseController
       # The v2 error body, in place of the Api::V1Errors and ApiResponses renderers that v1 keeps.
       include Api::V2Errors
+      # Ahead of the catalog check, which then reads the shadow organization's flag.
+      include Api::ShadowOrganizationReads
       # Every native v2 endpoint belongs to the product catalog. Included ahead of the cursor
       # callback, so that a disabled catalog is a 403 before any pagination parameter is read.
       include Api::RequiresProductCatalog

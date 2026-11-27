@@ -54,6 +54,20 @@ RSpec.describe PaymentProviders::GocardlessService do
       end
     end
 
+    it_behaves_like "refused on a shadow organization", PaymentProviders::GocardlessProvider do
+      subject { gocardless_service.create_or_update(organization:, access_code:, code:, name:, success_redirect_url:) }
+    end
+
+    context "when the organization is the shadow of a migration" do
+      before { create_migration_shadowed_by(organization) }
+
+      it "does not exchange the OAuth code" do
+        gocardless_service.create_or_update(organization:, access_code:, code:, name:, success_redirect_url:)
+
+        expect(auth_code_strategy).not_to have_received(:get_token)
+      end
+    end
+
     context "when code was changed" do
       let(:new_code) { "updated_code_3" }
       let(:gocardless_customer) { create(:gocardless_customer, payment_provider:, customer:) }

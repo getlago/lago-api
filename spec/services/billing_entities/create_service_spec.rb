@@ -185,6 +185,8 @@ RSpec.describe BillingEntities::CreateService do
           allow(Taxes::AutoGenerateService).to receive(:call)
         end
 
+        it_behaves_like "refused on a shadow organization", BillingEntity
+
         it "creates a billing entity with full data" do
           expect(result).to be_success
           expect(result.billing_entity).to be_persisted
@@ -218,6 +220,26 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.eu_tax_management).to eq(true)
           expect(result.billing_entity.logo).to be_attached
           expect(Taxes::AutoGenerateService).to have_received(:call).with(organization:)
+        end
+      end
+
+      context "when the organization is the shadow of a migration" do
+        before { create_migration_shadowed_by(organization) }
+
+        it "creates a billing entity that sends nothing out" do
+          expect(result).to be_success
+          expect(result.billing_entity).to be_persisted
+        end
+
+        context "with eu_tax_management" do
+          let(:params) { {name: "Billing Entity", code: "billing-entity", country: "fr", eu_tax_management: true} }
+
+          it "refuses with shadow_organization_outbound_disabled" do
+            expect { result }.not_to change(BillingEntity, :count)
+
+            expect(result.error).to be_a(BaseService::ForbiddenFailure)
+            expect(result.error.code).to eq("shadow_organization_outbound_disabled")
+          end
         end
       end
 

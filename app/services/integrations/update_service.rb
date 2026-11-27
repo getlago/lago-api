@@ -2,6 +2,8 @@
 
 module Integrations
   class UpdateService < BaseService
+    include BillingEngineMigrations::ShadowOutboundGuard
+
     Result = BaseResult[:integration]
 
     # Guarantees security logging for integration updates.

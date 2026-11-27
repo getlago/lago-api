@@ -41,6 +41,17 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       end
     end
 
+    context "when the organization is the shadow of a migration" do
+      before { create_migration_shadowed_by(organization) }
+
+      it "returns a forbidden error and creates nothing" do
+        expect { subject }.not_to change(WebhookEndpoint, :count)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("shadow_organization_outbound_disabled")
+      end
+    end
+
     context "without a signature_algo" do
       let(:create_params) { super().except(:signature_algo) }
 
