@@ -123,19 +123,20 @@ RSpec.describe "Billing operation coverage across a rate change" do
   end
 
   shared_examples "fixed advance continuation" do
-    let(:reconciliation_start) { (billing_scope == "cycle") ? start_at : change_at }
-
     it "keeps one pending reconciliation across duplicate rate-change jobs and scheduling" do
       operation = first_operation
       expect(operation).to have_attributes(coverage_started_at: start_at, coverage_ended_at: end_at)
       add_rate_and_apply_change
       reconciliations = card.billing_operations.pending.where(action_type: BillingOperation::ACTION_TYPES.fetch(:reconcile_advance_coverage))
       reconciliation = reconciliations.sole
-      expect(reconciliation).to have_attributes(target_cycle_started_at: start_at, billing_at: reconciliation_start,
-        coverage_started_at: reconciliation_start, coverage_ended_at: end_at, invoice_id: nil)
+      expect(reconciliation).to have_attributes(target_cycle_started_at: start_at, billing_at: start_at,
+        coverage_started_at: start_at, coverage_ended_at: end_at, invoice_id: nil)
       fields = %i[started_at ended_at rate_card_rate_id proration_ratio]
-      expected_segments = [[change_at, end_at, new_rate.id, (16.to_d / 30).round(10)]]
-      expected_segments.unshift([start_at, change_at, old_rate.id, (14.to_d / 30).round(10)]) if billing_scope == "cycle"
+      # November's 30 days split into 14 days at the old rate and 16 at the new rate.
+      expected_segments = [
+        [start_at, change_at, old_rate.id, (14.to_d / 30).round(10)],
+        [change_at, end_at, new_rate.id, (16.to_d / 30).round(10)]
+      ]
       expect(operation.segments.pluck(*fields)).to eq([[start_at, end_at, old_rate.id, 1]])
       expect(reconciliation.segments.pluck(*fields)).to eq(expected_segments)
       travel_to(Time.utc(2026, 11, 12)) { BillingOperations::ApplyRateChangeJob.perform_now(customer.id, new_rate.id) }
@@ -177,7 +178,7 @@ RSpec.describe "Billing operation coverage across a rate change" do
         expect(operation.reload.attributes.slice(*snapshot.keys)).to eq(snapshot)
         expect(reconciliation.reload).to have_attributes(
           processed_at: nil, invoice_id: nil,
-          coverage_started_at: reconciliation_start, coverage_ended_at: covered_until
+          coverage_started_at: start_at, coverage_ended_at: covered_until
         )
         expect(renewal).to have_attributes(
           processed_at: Time.current, coverage_started_at: covered_until, coverage_ended_at: Time.utc(2027, 1, 1)
