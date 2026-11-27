@@ -1322,6 +1322,12 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
       expect(result.aggregation).to eq(48.44)
     end
+
+    it "keeps the units raw when rounding is skipped" do
+      result = sum_service.aggregate(options:, round: false)
+
+      expect(result.aggregation).to eq(48.434)
+    end
   end
 
   context "when bypass_aggregation is set to true" do
@@ -1536,6 +1542,13 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
           expect(aggregation.count).to eq(1)
           expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
         end
+      end
+
+      it "keeps the units of each group raw when rounding is skipped" do
+        result = sum_service.aggregate(options:, round: false)
+
+        expect(result.aggregations.map { [it.grouped_by["agent_name"], it.aggregation] })
+          .to match_array(agent_names.map { [it, (it == last_event.properties["agent_name"]) ? 12.434 : 12] })
       end
     end
 

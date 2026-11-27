@@ -20,12 +20,12 @@ module BillableMetrics
       end
 
       def compute_aggregation(options: {})
-        return base_aggregator.aggregate(options:) if bill_full_amount?(options)
+        return aggregate_without_proration(options:) if bill_full_amount?(options)
 
         @recurring_sum_result = base_aggregator.recurring_sum(options)
 
-        # NOTE: Hand the result to the non-prorated aggregator to avoid duplicated queries
-        aggregation_without_proration = base_aggregator.aggregate(
+        # NOTE: Hand the result to the non-prorated aggregator to avoid duplicated queries.
+        aggregation_without_proration = aggregate_without_proration(
           options: options.merge(precomputed_aggregation: non_prorated_sum_result)
         )
 
@@ -66,12 +66,12 @@ module BillableMetrics
       #       as pay in advance aggregation will be computed on a single group
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
-        return base_aggregator.aggregate(options:) if bill_full_amount?(options)
+        return aggregate_without_proration(options:) if bill_full_amount?(options)
 
         @grouped_recurring_sum_result = base_aggregator.grouped_recurring_sum(options)
 
-        # NOTE: Hand the result to the non-prorated aggregator to avoid duplicated queries
-        aggregation_without_proration = base_aggregator.aggregate(
+        # NOTE: Hand the result to the non-prorated aggregator to avoid duplicated queries.
+        aggregation_without_proration = aggregate_without_proration(
           options: options.merge(precomputed_grouped_aggregations: non_prorated_grouped_sum_result)
         )
 

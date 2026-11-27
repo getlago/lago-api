@@ -109,6 +109,12 @@ module BillableMetrics
       private
 
       attr_reader :base_aggregator
+
+      # Units stay raw so handle_current_usage compares them with the raw cached aggregation:
+      # the outer aggregate rounds them once.
+      def aggregate_without_proration(options:)
+        base_aggregator.aggregate(options:, round: false)
+      end
     end
   end
 end
