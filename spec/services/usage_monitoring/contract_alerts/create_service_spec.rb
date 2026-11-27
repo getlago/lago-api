@@ -333,8 +333,8 @@ RSpec.describe UsageMonitoring::ContractAlerts::CreateService, :premium do
   context "with invalid thresholds" do
     before { params[:thresholds] = [{value: 10}, {value: "abc"}] }
 
-    it "returns the failure of the thresholds" do
-      expect(result.error.messages).to eq({thresholds: ["value_is_invalid"]})
+    it "returns the failure of the thresholds, on the second one's value" do
+      expect(result.error.messages).to eq({"thresholds[1].value": ["value_is_invalid"]})
     end
   end
 

@@ -200,16 +200,16 @@ RSpec.describe Mutations::Contracts::Alerts::Create, :premium do
   context "with a threshold value that is not a number" do
     let(:input) { super().merge(thresholds: [{value: "abc"}]) }
 
-    it "returns a validation error on the thresholds" do
-      expect_unprocessable_entity(execution, details: {thresholds: ["value_is_invalid"]})
+    it "returns a validation error on its value" do
+      expect_unprocessable_entity(execution, details: {"thresholds[0].value": ["value_is_invalid"]})
     end
   end
 
   context "with two recurring thresholds" do
     let(:input) { super().merge(thresholds: [{value: "10", recurring: true}, {value: "20", recurring: true}]) }
 
-    it "returns a validation error on the thresholds" do
-      expect_unprocessable_entity(execution, details: {thresholds: ["value_is_invalid"]})
+    it "returns a validation error on the second one's recurring" do
+      expect_unprocessable_entity(execution, details: {"thresholds[1].recurring": ["value_is_invalid"]})
     end
   end
 

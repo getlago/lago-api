@@ -125,7 +125,7 @@ RSpec.describe UsageMonitoring::ContractAlerts::UpdateService do
     let(:params) { {thresholds: [{value: 10}, {value: 10}]} }
 
     it "returns the failure of the thresholds" do
-      expect(result.error.messages).to eq({thresholds: ["duplicate_threshold_values"]})
+      expect(result.error.messages).to eq({"thresholds[1].value": ["duplicate_threshold_values"]})
       expect(alert.thresholds.pluck(:value)).to eq([50])
     end
   end

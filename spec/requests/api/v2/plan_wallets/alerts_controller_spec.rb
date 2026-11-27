@@ -326,11 +326,11 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
     context "with a fraction of a cent" do
       let(:create_params) { super().merge(thresholds: [{value: "1000.5"}]) }
 
-      it "returns a validation error on the thresholds and creates nothing" do
+      it "returns a validation error on its value and creates nothing" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[0].value", meta: {}}])
         expect(plan_wallet.alerts).to be_empty
       end
     end
@@ -338,11 +338,23 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
     context "with a plain notify_on" do
       let(:create_params) { super().merge(thresholds: [{code: "low", value: 1000, notify_on: "resolved"}]) }
 
-      it "returns a validation error on the thresholds rather than ignoring it" do
+      it "returns a validation error on its notify_on rather than ignoring it" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[0].notify_on", meta: {}}])
+      end
+    end
+
+    context "with a value that is not a number in the second threshold" do
+      let(:create_params) { super().merge(thresholds: [{value: 1000}, {value: "abc"}]) }
+
+      it "returns a validation error on that threshold's value and creates nothing" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[1].value", meta: {}}])
+        expect(plan_wallet.alerts).to be_empty
       end
     end
 
@@ -493,11 +505,11 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
     context "with a threshold that is not an object" do
       let(:update_params) { {thresholds: [{code: "low", value: "5000"}, 2000]} }
 
-      it "returns a validation error on the thresholds rather than dropping it" do
+      it "returns a validation error on the item rather than dropping it" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[1]", meta: {}}])
         expect(alert.thresholds.pluck(:value)).to eq([10_000])
       end
     end
@@ -507,11 +519,11 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
         context "with a notify_on that is #{shape}" do
           let(:update_params) { {thresholds: [{code: "low", value: "5000", notify_on:}]} }
 
-          it "returns a validation error on the thresholds and keeps them" do
+          it "returns a validation error on its notify_on and keeps the thresholds" do
             subject
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[0].notify_on", meta: {}}])
             expect(alert.thresholds.pluck(:value, :notify_on)).to eq([[10_000, %w[triggered resolved]]])
           end
         end
@@ -521,11 +533,11 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
       context "with a #{field} that is a list" do
         let(:update_params) { {thresholds: [{code: "low", value: "5000"}.merge(field => value)]} }
 
-        it "returns a validation error on the thresholds and keeps them" do
+        it "returns a validation error on its #{field} and keeps the thresholds" do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[0].#{field}", meta: {}}])
           expect(alert.thresholds.pluck(:value)).to eq([10_000])
         end
       end
@@ -576,11 +588,11 @@ RSpec.describe Api::V2::PlanWallets::AlertsController do
     context "with a negative balance threshold" do
       let(:update_params) { {thresholds: [{value: "-100"}]} }
 
-      it "returns a validation error on the thresholds and keeps them" do
+      it "returns a validation error on its value and keeps the thresholds" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[0].value", meta: {}}])
         expect(alert.thresholds.pluck(:value)).to eq([10_000])
       end
     end

@@ -276,11 +276,46 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     context "with a plain notify_on" do
       let(:create_params) { super().merge(thresholds: [{code: "warn", value: 10, notify_on: "resolved"}]) }
 
-      it "returns a validation error on the thresholds rather than ignoring it" do
+      it "returns a validation error on its notify_on rather than ignoring it" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[0].notify_on", meta: {}}])
+      end
+    end
+
+    context "with a value that is not a number in the second threshold" do
+      let(:create_params) { super().merge(thresholds: [{value: 10}, {value: "abc"}]) }
+
+      it "returns a validation error on that threshold's value" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[1].value", meta: {}}])
+      end
+    end
+
+    {["x", {value: 10}, {value: "abc"}] => "thresholds[0]", [{value: 10}, "x"] => "thresholds[1]"}.each do |thresholds, field|
+      context "with thresholds #{thresholds.inspect}" do
+        let(:create_params) { super().merge(thresholds:) }
+
+        it "returns a validation error on the item rather than dropping it, and creates nothing" do
+          expect { subject }.not_to change(UsageMonitoring::ContractAlert, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field:, meta: {}}])
+        end
+      end
+    end
+
+    context "with a threshold that names another organization" do
+      let(:create_params) { super().merge(thresholds: [{value: "1000", organization_id: create(:organization).id}]) }
+
+      it "creates the threshold in the alert's organization" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(UsageMonitoring::ContractAlert.sole.thresholds.pluck(:organization_id)).to eq([organization.id])
       end
     end
 
@@ -376,13 +411,49 @@ RSpec.describe Api::V2::Contracts::AlertsController do
     context "with invalid thresholds" do
       let(:update_params) { {thresholds: [{value: 10}, {value: "10.0"}]} }
 
-      it "returns a validation error on the thresholds" do
+      it "returns a validation error on the later threshold's value" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(
           code: "validation_errors",
-          details: [{code: "duplicate_threshold_values", field: "thresholds", meta: {}}]
+          details: [{code: "duplicate_threshold_values", field: "thresholds[1].value", meta: {}}]
+        )
+      end
+    end
+
+    context "with a threshold that is not an object" do
+      let(:update_params) { {thresholds: ["x", {value: 10}]} }
+
+      it "returns a validation error on the item" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "thresholds[0]", meta: {}}])
+      end
+    end
+
+    context "with a threshold that names another organization" do
+      let(:update_params) { {thresholds: [{value: "5000", organization_id: create(:organization).id}]} }
+
+      it "replaces the thresholds in the alert's organization" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(alert.reload.thresholds.pluck(:organization_id)).to eq([organization.id])
+      end
+    end
+
+    context "with null thresholds" do
+      let(:update_params) { {name: "Opus spend", thresholds: nil} }
+
+      it "updates the name and keeps the thresholds" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(alert.reload.name).to eq("Opus spend")
+        expect(json).to eq(
+          alert: alert_json(alert, thresholds: [{code: "warn1000000", value: "1000000.0", recurring: false, notify_on: %w[triggered]}])
         )
       end
     end
