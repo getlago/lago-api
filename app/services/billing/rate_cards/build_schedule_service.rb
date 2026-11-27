@@ -5,9 +5,8 @@ module Billing
     class BuildScheduleService < BaseService
       Result = BaseResult[:schedule]
 
-      def initialize(contract_rate_card:, ends_at: nil)
+      def initialize(contract_rate_card:)
         @contract_rate_card = contract_rate_card
-        @ends_at = ends_at
         super
       end
 
@@ -18,6 +17,7 @@ module Billing
         if rates.empty?
           result.not_found_failure!(resource: "rate")
         else
+          contract = contract_rate_card.contract
           terms = Terms.new(
             timing: rate_card.billing_timing, prorated: rate_card.proration?,
             billing_scope: contract_rate_card.billing_scope,
@@ -28,8 +28,9 @@ module Billing
             rates:,
             terms:,
             phases:,
-            starts_at: contract_rate_card.effective_date.in_time_zone(timezone),
-            ends_at: schedule_ends_at,
+            starts_at: contract_rate_card.effective_date_in_customer_timezone,
+            ends_at: contract.billing_ends_at,
+            termination_billing_at: contract.terminated_at,
             anchor_date: contract_rate_card.billing_anchor_date,
             timezone:
           )
@@ -42,14 +43,10 @@ module Billing
 
       private
 
-      attr_reader :contract_rate_card, :ends_at
+      attr_reader :contract_rate_card
 
       def timezone
         contract_rate_card.contract.customer.applicable_timezone
-      end
-
-      def schedule_ends_at
-        [ends_at, contract_rate_card.contract.billing_ends_at].compact.min
       end
 
       def phases

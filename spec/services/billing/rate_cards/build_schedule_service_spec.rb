@@ -314,6 +314,11 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       it "closes at the planned end" do
         expect(final_slice.ended_at).to eq(ended_at)
       end
+
+      it "carries termination as the continuation date at the actual billing end" do
+        expect(final_obligation.billing_at).to eq(ended_at)
+        expect(final_obligation.operation_billing_at(after: Time.utc(2026, 1, 15))).to eq(terminated_at)
+      end
     end
   end
 

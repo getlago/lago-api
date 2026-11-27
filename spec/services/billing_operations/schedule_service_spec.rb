@@ -143,6 +143,18 @@ RSpec.describe BillingOperations::ScheduleService do
     end
   end
 
+  context "when the schedule cannot be built" do
+    before do
+      allow(Billing::RateCards::BuildScheduleService).to receive(:call!)
+        .and_return(Billing::RateCards::BuildScheduleService::Result.new)
+    end
+
+    it "keeps the existing cursor without creating operations" do
+      expect(result.billing_operations).to be_empty
+      expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+    end
+  end
+
   context "with a future activation and a new rate in the current cycle" do
     let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:segment) }
     let(:started_at) { Time.utc(2026, 11, 1) }
@@ -169,6 +181,19 @@ RSpec.describe BillingOperations::ScheduleService do
       )
     end
 
+    context "when the future activation falls before the next natural close" do
+      let(:pending_activation) do
+        create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+          reason: "contract_activation", billing_at: Time.utc(2026, 11, 20),
+          target_cycle_started_at: Time.utc(2026, 11, 1))
+      end
+
+      it "does not use the future pending operation as the anchor" do
+        expect(result.billing_operations.sole.billing_at).to eq(Time.utc(2026, 11, 15))
+        expect(pending_activation.reload.processed_at).to be_nil
+      end
+    end
+
     context "when the scope covers the cycle" do
       let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:cycle) }
 
@@ -180,6 +205,109 @@ RSpec.describe BillingOperations::ScheduleService do
           processed_at: nil, reason: "contract_activation"
         )
       end
+    end
+  end
+
+  context "with overdue daily obligations" do
+    let(:started_at) { Time.utc(2026, 10, 31) }
+    let(:cursor) { Time.utc(2026, 11, 2) }
+    let(:timestamp) { Time.utc(2026, 11, 19) }
+    let(:rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at,
+        billing_interval_count: 1, billing_interval_unit: "day", rate_properties: {"amount" => "31"})
+    end
+    let(:anchor_at) { Time.utc(2026, 11, 1) }
+    let(:anchor_cycle) { started_at }
+    let(:anchor_action) { "close_fixed_arrears" }
+    let(:anchor_processed_at) { anchor_at }
+    let(:anchor) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: anchor_action,
+        billing_at: anchor_at, target_cycle_started_at: anchor_cycle, processed_at: anchor_processed_at)
+    end
+
+    before { anchor }
+
+    it "creates every missing due operation without advancing the processing cursor" do
+      expect(result.billing_operations.map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
+      expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+      expect(contract_rate_card.billing_operations.where(billing_at: Time.utc(2026, 11, 20)..)).to be_empty
+      expect(described_class.call!(customer:, timestamp:).billing_operations).to be_empty
+    end
+
+    context "when the anchor is pending" do
+      let(:anchor_processed_at) { nil }
+
+      it "preserves the pending operation and fills the following days" do
+        expect(result.billing_operations.map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
+        expect(anchor.reload.processed_at).to be_nil
+      end
+    end
+
+    context "with advance billing" do
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+      let(:anchor_action) { "renew_fixed_advance" }
+      let(:anchor_cycle) { anchor_at }
+
+      it "persists all missing renewals through the cutoff" do
+        expect(result.billing_operations.map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it) })
+        expect(result.billing_operations.map(&:action_type).uniq).to eq(["renew_fixed_advance"])
+      end
+    end
+
+    context "with a Los Angeles customer" do
+      let(:timezone) { "America/Los_Angeles" }
+      let(:started_at) { Time.utc(2026, 10, 31, 7) }
+      let(:effective_date) { Date.new(2026, 10, 31) }
+      let(:anchor_at) { Time.utc(2026, 11, 1, 7) }
+      let(:cursor) { Time.utc(2026, 11, 2, 8) }
+      let(:timestamp) { Time.utc(2026, 11, 19, 8) }
+
+      it "uses local billing boundaries across daylight saving" do
+        expect(result.billing_operations.map(&:billing_at)).to eq((2..19).map { Time.utc(2026, 11, it, 8) })
+      end
+    end
+
+    context "when a later operation creation fails" do
+      let(:calls) { [] }
+      let(:failure) { BaseService::Result.new.single_validation_failure!(field: :base, error_code: "cannot_schedule") }
+
+      before do
+        allow(BillingOperations::CreateService).to receive(:call!).and_wrap_original do |original, **attributes|
+          calls << attributes
+          raise BaseService::FailedResult.new(failure, "cannot schedule") if calls.size == 2
+
+          original.call(**attributes)
+        end
+      end
+
+      it "rolls back the partial batch and reset cursor" do
+        expect(result).to be_failure
+        expect(result.billing_operations).to be_empty
+        expect(contract_rate_card.billing_operations.reload).to eq([anchor])
+        expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+      end
+    end
+  end
+
+  context "with a finite terminated schedule" do
+    let(:started_at) { Time.utc(2026, 11, 1) }
+    let(:contract) do
+      create(:contract, :terminated, organization:, customer:, started_at:,
+        ended_at: Time.utc(2026, 11, 4), terminated_at: Time.utc(2026, 11, 5))
+    end
+    let(:rate) do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at,
+        billing_interval_count: 1, billing_interval_unit: "day", rate_properties: {"amount" => "31"})
+    end
+    let(:cursor) { Time.utc(2026, 11, 2) }
+    let(:timestamp) { Time.utc(2026, 11, 6) }
+
+    it "fills all remaining due closes even without a future obligation" do
+      expect(result.billing_operations.map(&:billing_at)).to eq(
+        [Time.utc(2026, 11, 2), Time.utc(2026, 11, 3), Time.utc(2026, 11, 5)]
+      )
+      expect(contract_rate_card.reload.next_billing_at).to eq(cursor)
+      expect(described_class.call!(customer:, timestamp:).billing_operations).to be_empty
     end
   end
 
