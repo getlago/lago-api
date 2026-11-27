@@ -142,6 +142,67 @@ RSpec.describe BillingOperation do
         end
       end
     end
+
+    describe ".to_cancel_on_termination" do
+      subject(:operations) { card.billing_operations.to_cancel_on_termination(timestamp:, effective_end:, include_renewals: !card.discarded?) }
+
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:card) { create(:contract_rate_card, organization:, contract:, deleted_at:) }
+      let(:deleted_at) { nil }
+      let(:timestamp) { Time.utc(2026, 1, 15) }
+      let(:effective_end) { timestamp }
+      let(:started_at) { Time.utc(2026, 1, 1) }
+      let(:ended_at) { Time.utc(2026, 2, 1) }
+      let(:renewal) do
+        create(:billing_operation, organization:, contract_rate_card: card, billing_at: timestamp,
+          coverage_started_at: started_at, coverage_ended_at: ended_at)
+      end
+      let(:future) do
+        create(:billing_operation, organization:, contract_rate_card: card, action_type: "close_fixed_arrears",
+          billing_at: timestamp + 1.day, coverage_started_at: started_at, coverage_ended_at: ended_at)
+      end
+
+      before do
+        renewal
+        future
+        create(:billing_operation, organization:, contract_rate_card: card, billing_at: started_at,
+          coverage_started_at: started_at, coverage_ended_at: effective_end)
+        create(:billing_operation, organization:, contract_rate_card: card, action_type: "close_fixed_arrears",
+          billing_at: timestamp, coverage_started_at: started_at, coverage_ended_at: ended_at)
+        create(:billing_operation, organization:, contract_rate_card: card, action_type: "reconcile_advance_coverage",
+          billing_at: timestamp, coverage_started_at: started_at, coverage_ended_at: ended_at)
+        create(:billing_operation, organization:, contract_rate_card: card, reason: :late_payment,
+          billing_at: timestamp, coverage_started_at: started_at, coverage_ended_at: ended_at)
+        create(:billing_operation, organization:, contract_rate_card: card, billing_at: timestamp + 1.day,
+          processed_at: timestamp, coverage_started_at: started_at, coverage_ended_at: ended_at)
+        create(:billing_operation, organization:, contract_rate_card: card, billing_at: timestamp + 1.day,
+          cancelled_at: timestamp, cancellation_reason: :contract_termination,
+          coverage_started_at: started_at, coverage_ended_at: ended_at)
+        create(:billing_operation, billing_at: timestamp + 1.day)
+      end
+
+      it "selects future pending work and due renewals extending beyond coverage end on this card only" do
+        expect(operations).to match_array([future, renewal])
+      end
+
+      context "when the card is discarded" do
+        let(:deleted_at) { timestamp }
+
+        it "selects only future pending work" do
+          expect(operations).to eq([future])
+        end
+      end
+
+      context "when the natural end precedes termination" do
+        let(:effective_end) { Time.utc(2026, 1, 10) }
+
+        it "uses the earlier coverage end" do
+          expect(operations).to match_array([future, renewal])
+        end
+      end
+    end
   end
 
   describe "validations" do

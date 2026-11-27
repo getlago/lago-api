@@ -25,22 +25,22 @@ module Contracts
       Customers::LockService.call(customer: contract.customer, scope: :billing_schedule) do
         # Re-read under lock: a pending contract the clock just activated has
         # taken effect, so it is terminated rather than canceled.
-        contract.lock!
+        contract.with_lock(requires_new: true) do
+          unless Contract::LIVE_STATUSES.include?(contract.status)
+            return result.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
+          end
 
-        unless Contract::LIVE_STATUSES.include?(contract.status)
-          return result.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
+          event_type = contract.active? ? "contract.terminated" : "contract.canceled"
+          if contract.active?
+            terminate
+          else
+            contract.update!(status: :canceled, canceled_at: timestamp)
+          end
+          delete_wallet_alerts
+
+          SendWebhookJob.perform_after_commit(event_type, contract)
+          Utils::ActivityLog.produce_after_commit(contract, event_type)
         end
-
-        event_type = contract.active? ? "contract.terminated" : "contract.canceled"
-        if contract.active?
-          terminate
-        else
-          contract.update!(status: :canceled, canceled_at: timestamp)
-        end
-        delete_wallet_alerts
-
-        SendWebhookJob.perform_after_commit(event_type, contract)
-        Utils::ActivityLog.produce_after_commit(contract, event_type)
       end
 
       result.contract = contract
