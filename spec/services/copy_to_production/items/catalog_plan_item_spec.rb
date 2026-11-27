@@ -10,6 +10,7 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
   let(:plan) { create(:catalog_plan, organization: sandbox, code: "pro") }
 
   it_behaves_like "a copy to production item matched by code", :catalog_plan
+  it_behaves_like "a copy to production item copying every column", CatalogPlan
 
   it "answers its item type and activity type" do
     expect(item.item_type).to eq("catalog_plan")
