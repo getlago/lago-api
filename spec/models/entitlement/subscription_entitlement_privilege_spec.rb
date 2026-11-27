@@ -31,6 +31,24 @@ RSpec.describe Entitlement::SubscriptionEntitlementPrivilege do
     end
   end
 
+  describe "values" do
+    it "reads legacy booleans as words" do
+      privilege = described_class.new(value_type: "boolean", value: "t", plan_value: "f", subscription_value: "t")
+
+      expect(privilege.value).to eq("true")
+      expect(privilege.plan_value).to eq("false")
+      expect(privilege.subscription_value).to eq("true")
+    end
+
+    it "leaves the values of other types" do
+      privilege = described_class.new(value_type: "string", value: "t", plan_value: "f", subscription_value: "t")
+
+      expect(privilege.value).to eq("t")
+      expect(privilege.plan_value).to eq("f")
+      expect(privilege.subscription_value).to eq("t")
+    end
+  end
+
   describe "#to_h" do
     it "returns a hash" do
       entitlement = described_class.new(code: "seats", config: {json: true}.to_json)

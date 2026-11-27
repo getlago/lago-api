@@ -246,10 +246,62 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         }
       end
 
-      it "converts boolean to string" do
-        result
-        entitlement_value = plan.entitlements.first.values.first
-        expect(entitlement_value.value).to eq("t")
+      it "stores the boolean as true" do
+        expect(result).to be_success
+        expect(plan.entitlements.first.values.first.value).to eq("true")
+      end
+
+      context "when false" do
+        let(:entitlements_params) { {"seats" => {"enabled" => false}} }
+
+        it "stores false" do
+          expect(result).to be_success
+          expect(plan.entitlements.first.values.first.value).to eq("false")
+        end
+      end
+
+      context "when a value stored as t is sent back" do
+        let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
+        let(:stored_value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: true) }
+        let(:entitlements_params) { {"seats" => {"enabled" => stored_value.read_attribute(:value)}} }
+
+        it "accepts it and keeps the stored value" do
+          expect(stored_value.read_attribute(:value)).to eq("t")
+
+          expect(result).to be_success
+          expect(stored_value.reload.read_attribute(:value)).to eq("t")
+        end
+
+        context "when the stored value is false" do
+          let(:stored_value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: false) }
+          let(:entitlements_params) { {"seats" => {"enabled" => "t"}} }
+
+          before { stored_value }
+
+          it "stores true" do
+            expect(result).to be_success
+            expect(stored_value.reload.read_attribute(:value)).to eq("true")
+          end
+        end
+      end
+
+      context "when f is sent" do
+        let(:entitlements_params) { {"seats" => {"enabled" => "f"}} }
+
+        it "stores false" do
+          expect(result).to be_success
+          expect(plan.entitlements.first.values.first.value).to eq("false")
+        end
+      end
+
+      context "when the value is not a boolean" do
+        let(:entitlements_params) { {"seats" => {"enabled" => "yes"}} }
+
+        it "fails with value_is_invalid" do
+          expect(result).to be_failure
+          expect(result.error.messages).to eq({enabled_privilege_value: ["value_is_invalid"]})
+          expect(result.error.codes).to eq({"entitlements.seats.enabled": ["value_is_invalid"]})
+        end
       end
     end
 
@@ -466,7 +518,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         expect(entitlement.catalog_plan_id).to eq(plan.id)
         expect(entitlement.plan_id).to be_nil
         expect(entitlement.values.to_h { [it.privilege.code, it.value] })
-          .to eq("max" => "25", "provider" => "okta", "enabled" => "t", "invitation" => "phone")
+          .to eq("max" => "25", "provider" => "okta", "enabled" => "true", "invitation" => "phone")
         expect(old_entitlement.reload).to be_discarded
         expect(old_value.reload).to be_discarded
         expect(result.entitlements).to eq([entitlement])
@@ -586,6 +638,28 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
           it "enqueues no webhook" do
             expect { result }.not_to have_enqueued_job(SendWebhookJob)
           end
+        end
+      end
+
+      context "when a boolean stored as t is sent back unchanged" do
+        let(:entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan: plan, feature:) }
+        let(:stored_value) { create(:entitlement_value, organization:, entitlement:, privilege: boolean_privilege, value: true) }
+        let(:entitlements_params) { {"sso" => {"provider" => "okta"}, "seats" => {"enabled" => true}} }
+
+        before do
+          stored_value
+          entitlement.update_columns(updated_at: 1.day.ago) # rubocop:disable Rails/SkipsModelValidations
+        end
+
+        it "keeps the stored value and does not touch the entitlement" do
+          updated_at = entitlement.reload.updated_at
+          expect(stored_value.read_attribute(:value)).to eq("t")
+
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(result).to be_success
+          expect(stored_value.reload.read_attribute(:value)).to eq("t")
+          expect(entitlement.reload.updated_at).to eq(updated_at)
         end
       end
 

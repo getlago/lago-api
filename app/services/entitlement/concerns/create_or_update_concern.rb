@@ -5,6 +5,9 @@ module Entitlement
     module CreateOrUpdateConcern
       extend ActiveSupport::Concern
 
+      # The value column is a string: a boolean is stored as "true" or "false".
+      BOOLEAN_VALUES = {true => "true", "true" => "true", "t" => "true", false => "false", "false" => "false", "f" => "false"}.freeze
+
       # path: the field native v2 renders the failure on, the v1 key when nil.
       def validate_value(value, privilege, path: nil)
         return value if value.nil?
@@ -17,8 +20,9 @@ module Entitlement
           raise value_failure(privilege, "value_not_in_select_options", path, allowed_values: privilege.config["select_options"].map(&:to_s))
         end
 
-        if privilege.value_type == "boolean" && [true, false, "true", "false"].include?(value)
-          return value
+        # Rows written before booleans were stored as words hold "t" or "f", which a copy of them sends back.
+        if privilege.value_type == "boolean" && BOOLEAN_VALUES.key?(value)
+          return BOOLEAN_VALUES[value]
         end
 
         if privilege.value_type == "integer"
