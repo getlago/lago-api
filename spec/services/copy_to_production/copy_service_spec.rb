@@ -616,7 +616,7 @@ RSpec.describe CopyToProduction::CopyService do
 
       live_plan = production.catalog_plans.find_by!(code: "pro")
       expect(result).to be_success
-      expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "catalog_plan", record: live_plan))
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "catalog_plan", record: live_plan))
       expect(live_plan).to have_attributes(name: "Pro", description: "For teams", invoice_display_name: "Pro plan",
         currency: "EUR", taxes: [live_vat])
 
@@ -702,7 +702,7 @@ RSpec.describe CopyToProduction::CopyService do
       expect(result).to be_success
 
       live_plan_rate_card = live_plan.applied_rate_cards.sole
-      expect(result.item).to eq(CopyToProduction::BaseService::Entry.new(item_type: "plan_rate_card", record: live_plan_rate_card))
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "plan_rate_card", record: live_plan_rate_card))
       expect(live_plan_rate_card).to have_attributes(units: 3, rate_card: production.rate_cards.find_by!(code: "seat_eur"))
       expect(live_plan_rate_card.rate_phases.map(&:code)).to eq(["default"])
     end

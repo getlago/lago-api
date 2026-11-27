@@ -16,13 +16,13 @@ RSpec.describe Types::CopyToProduction::Item do
     let(:plan_rate_card) { create(:plan_rate_card, rate_card:) }
 
     it "answers those of the record" do
-      type = described_class.authorized_new(CopyToProduction::BaseService::Entry.new(item_type: "rate_card", record: rate_card), context)
+      type = described_class.authorized_new(CopyToProduction::CopyService::Entry.new(item_type: "rate_card", record: rate_card), context)
 
       expect([type.code, type.name]).to eq(["seat_eur", "Seat EUR"])
     end
 
     it "answers those of the rate card of a plan rate card" do
-      type = described_class.authorized_new(CopyToProduction::BaseService::Entry.new(item_type: "plan_rate_card", record: plan_rate_card), context)
+      type = described_class.authorized_new(CopyToProduction::CopyService::Entry.new(item_type: "plan_rate_card", record: plan_rate_card), context)
 
       expect([type.code, type.name]).to eq(["seat_eur", "Seat EUR"])
     end
