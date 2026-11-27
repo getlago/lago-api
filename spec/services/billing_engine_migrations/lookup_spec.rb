@@ -9,7 +9,14 @@ RSpec.describe BillingEngineMigrations::Lookup do
 
   let(:status) { "shadowing" }
   let(:migration) do
-    create(:billing_engine_migration, organization:, shadow_organization:, status:, plan_mapping: {"legacy" => "catalog"})
+    create(
+      :billing_engine_migration,
+      organization:,
+      shadow_organization:,
+      status:,
+      plan_mapping: {"legacy" => "catalog"},
+      v2_read_endpoints: %w[contracts contracts/usage]
+    )
   end
 
   before { migration }
@@ -21,7 +28,8 @@ RSpec.describe BillingEngineMigrations::Lookup do
         organization_id: organization.id,
         shadow_organization_id: shadow_organization.id,
         status: "shadowing",
-        plan_mapping: {"legacy" => "catalog"}
+        plan_mapping: {"legacy" => "catalog"},
+        v2_read_endpoints: %w[contracts contracts/usage]
       )
     end
 
@@ -31,6 +39,8 @@ RSpec.describe BillingEngineMigrations::Lookup do
       expect(entry).to be_frozen
       expect(entry.plan_mapping).to be_frozen
       expect(entry.plan_mapping.values).to all(be_frozen)
+      expect(entry.v2_read_endpoints).to be_frozen
+      expect(entry.v2_read_endpoints).to all(be_frozen)
     end
 
     it { expect(described_class.for_source(shadow_organization.id)).to be_nil }
@@ -68,6 +78,14 @@ RSpec.describe BillingEngineMigrations::Lookup do
 
       it { expect(described_class.for_shadow(shadow_organization.id)).to be_nil }
     end
+  end
+
+  describe "Entry#serves_v2_reads?" do
+    subject(:entry) { described_class.for_source(organization.id) }
+
+    it { expect(entry.serves_v2_reads?("contracts/usage")).to be(true) }
+    it { expect(entry.serves_v2_reads?("customers")).to be(false) }
+    it { expect(entry.serves_v2_reads?(nil)).to be(false) }
   end
 
   describe ".shadow_organization?" do

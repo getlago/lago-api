@@ -7,13 +7,17 @@ module BillingEngineMigrations
     REFRESH_INTERVAL = 60.seconds
     RETRY_INTERVAL = 5.seconds
 
-    Entry = Data.define(:id, :organization_id, :shadow_organization_id, :status, :plan_mapping) do
+    Entry = Data.define(:id, :organization_id, :shadow_organization_id, :status, :plan_mapping, :v2_read_endpoints) do
       def shadowing?
         status == BillingEngineMigration::STATUSES[:shadowing]
       end
 
       def paused?
         status == BillingEngineMigration::STATUSES[:paused]
+      end
+
+      def serves_v2_reads?(endpoint)
+        v2_read_endpoints.include?(endpoint)
       end
     end
 
@@ -82,7 +86,7 @@ module BillingEngineMigrations
       def load_snapshot
         entries = BillingEngineMigration
           .where.not(status: BillingEngineMigration::STATUSES[:aborted])
-          .pluck(:id, :organization_id, :shadow_organization_id, :status, :plan_mapping)
+          .pluck(:id, :organization_id, :shadow_organization_id, :status, :plan_mapping, :v2_read_endpoints)
           .map { |row| build_entry(*row) }
 
         Snapshot.new(
@@ -92,8 +96,15 @@ module BillingEngineMigrations
         )
       end
 
-      def build_entry(id, organization_id, shadow_organization_id, status, plan_mapping)
-        Entry.new(id:, organization_id:, shadow_organization_id:, status:, plan_mapping: plan_mapping.each_value(&:freeze).freeze)
+      def build_entry(id, organization_id, shadow_organization_id, status, plan_mapping, v2_read_endpoints)
+        Entry.new(
+          id:,
+          organization_id:,
+          shadow_organization_id:,
+          status:,
+          plan_mapping: plan_mapping.each_value(&:freeze).freeze,
+          v2_read_endpoints: v2_read_endpoints.each(&:freeze).freeze
+        )
       end
     end
   end

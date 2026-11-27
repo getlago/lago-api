@@ -3180,7 +3180,8 @@ CREATE TABLE public.billing_engine_migrations (
     status public.billing_engine_migration_status DEFAULT 'shadowing'::public.billing_engine_migration_status NOT NULL,
     plan_mapping jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    v2_read_endpoints character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
 
@@ -19304,6 +19305,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261123221111'),
 ('20261123213837'),
 ('20261123185222'),
+('20261123160012'),
 ('20261123142220'),
 ('20261123142148'),
 ('20261123142145'),
